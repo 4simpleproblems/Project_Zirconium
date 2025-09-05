@@ -12,12 +12,14 @@ document.addEventListener('DOMContentLoaded', function () {
         { href: "#", text: "Dashboard", active: true },
         { href: "#", text: "Soundboard" },
         { href: "#", text: "Playlists" },
+        { href: "#", text: "Apps" },
         { href: "#", text: "Games" },
         { href: "#", text: "Notes" },
         { href: "#", text: "Requests" },
         { href: "#", text: "Testing Site" },
-        { href: "#", text: "Apps" }
-        { href: "#"  text: "Settings" }
+        { href: "#", text: "Apps" },
+        { href: "#", text: "Apps" },
+        { href: "#",  text: "Settings" }
     ];
 
     function setTheme(theme) {
