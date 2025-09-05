@@ -58,13 +58,39 @@ body.dark-mode { background-color: var(--bg-primary-dark); color: var(--text-pri
 .light-mode .nav-arrow:hover { background-color: var(--border-light); }
 #nav-arrow-left { left: -40px; }
 #nav-arrow-right { right: -40px; }
-.nav-link { transition: all 0.2s ease; padding: 10px 16px; border-radius: 10px; white-space: nowrap; border-bottom: 2px solid transparent; }
+.nav-link { 
+    position: relative;
+    transition: all 0.2s ease; 
+    padding: 10px 16px; 
+    border-radius: 10px; 
+    white-space: nowrap; 
+    border-bottom: 2px solid transparent; 
+}
 .dark-mode .nav-link { color: var(--text-secondary-dark); }
 .light-mode .nav-link { color: var(--text-secondary-light); }
 .dark-mode .nav-link:hover { color: var(--text-primary-dark); }
 .light-mode .nav-link:hover { color: var(--text-primary-light); }
-.nav-link.active { border-bottom-color: var(--accent-dark); color: var(--text-primary-dark) !important; }
-.light-mode .nav-link.active { border-bottom-color: var(--accent-light); }
+
+.nav-link.active {
+    color: var(--text-primary-dark) !important;
+}
+.light-mode .nav-link.active {
+    color: var(--text-primary-light) !important;
+}
+
+.nav-link.active::after {
+    content: '';
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    bottom: 0;
+    height: 2px;
+    background-color: var(--accent-dark);
+}
+.light-mode .nav-link.active::after {
+    background-color: var(--accent-light);
+}
+
 
 /* Account Menu */
 .account-menu { transition: all 0.2s ease-out; transform-origin: top right; border-radius: 10px; }
