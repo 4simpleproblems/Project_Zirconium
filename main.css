@@ -1,6 +1,12 @@
 /* main.css */
 @import url('https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css');
 
+/* --- Global & Theme --- */
+
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
 :root {
     /* Font Families */
     --font-primary: 'Primary', sans-serif;
@@ -16,7 +22,7 @@
     --accent-text-light: #FFFFFF;
 
     /* Dark Theme Colors */
-    --bg-primary-dark: #121212; 
+    --bg-primary-dark: #121212;
     --bg-secondary-dark: #1E1E1E;
     --text-primary-dark: #EAEAEA;
     --text-secondary-dark: #AAAAAA;
@@ -25,7 +31,6 @@
     --accent-text-dark: #000000;
 }
 
-/* Apply theme variables */
 body {
     transition: background-color 0.3s ease, color 0.3s ease;
 }
@@ -36,36 +41,92 @@ body.dark-mode { background-color: var(--bg-primary-dark); color: var(--text-pri
 .primary-font { font-family: var(--font-primary); }
 .secondary-font { font-family: var(--font-secondary); }
 
-/* Component Styling */
+/* --- Navbar --- */
+
 #navbar {
     transition: background-color 0.3s ease, border-color 0.3s ease, opacity 0.3s ease;
     backdrop-filter: blur(12px) saturate(150%);
     -webkit-backdrop-filter: blur(12px) saturate(150%);
 }
+
 .light-mode #navbar { background-color: rgba(240, 242, 245, 0.8); border-bottom: 1px solid var(--border-light); }
 .dark-mode #navbar { background-color: rgba(18, 18, 18, 0.75); border-bottom: 1px solid var(--border-dark); }
 
-/* Scrollable Nav Menu */
-.nav-tabs-container { flex-grow: 1; display: flex; justify-content: center; align-items: center; }
-.nav-scroll-wrapper { position: relative; }
-.nav-tabs-scroller { display: flex; overflow-x: scroll; scrollbar-width: none; -ms-overflow-style: none; padding: 0 5px; }
-.nav-tabs-scroller::-webkit-scrollbar { display: none; }
-.nav-arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 10; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; opacity: 0; pointer-events: none; }
-.nav-arrow.visible { opacity: 1; pointer-events: auto; }
+/* --- Scrollable Nav Menu (Updated) --- */
+
+.nav-tabs-container {
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+.nav-scroll-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    /* Add padding to make space for the arrows INSIDE the container */
+    padding-left: 2.5rem;  /* 40px */
+    padding-right: 2.5rem; /* 40px */
+}
+
+.nav-tabs-scroller {
+    display: flex;
+    /* This is crucial: hides the native scrollbar for a cleaner look */
+    overflow-x: hidden;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    scroll-behavior: smooth; /* Ensures smooth scrolling via JS */
+}
+
+.nav-tabs-scroller::-webkit-scrollbar {
+    display: none;
+}
+
+.nav-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.nav-arrow.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
 .dark-mode .nav-arrow { background-color: rgba(42, 42, 42, 0.9); }
 .light-mode .nav-arrow { background-color: rgba(234, 234, 234, 0.9); }
 .dark-mode .nav-arrow:hover { background-color: var(--border-dark); }
 .light-mode .nav-arrow:hover { background-color: var(--border-light); }
-#nav-arrow-left { left: -40px; }
-#nav-arrow-right { right: -40px; }
-.nav-link { 
+
+/* Corrected arrow positioning to be inside the padded wrapper */
+#nav-arrow-left { left: 4px; }
+#nav-arrow-right { right: 4px; }
+
+.nav-link {
     position: relative;
-    transition: all 0.2s ease; 
-    padding: 10px 16px; 
-    border-radius: 10px; 
-    white-space: nowrap; 
-    border-bottom: 2px solid transparent; 
+    transition: all 0.2s ease;
+    padding: 10px 16px;
+    border-radius: 10px;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    /* Prevents links from shrinking in the flex container */
+    flex-shrink: 0;
 }
+
 .dark-mode .nav-link { color: var(--text-secondary-dark); }
 .light-mode .nav-link { color: var(--text-secondary-light); }
 .dark-mode .nav-link:hover { color: var(--text-primary-dark); }
@@ -91,60 +152,104 @@ body.dark-mode { background-color: var(--bg-primary-dark); color: var(--text-pri
     background-color: var(--accent-light);
 }
 
+/* --- Account Menu --- */
 
-/* Account Menu */
-.account-menu { transition: all 0.2s ease-out; transform-origin: top right; border-radius: 10px; }
+.account-menu {
+    transition: all 0.2s ease-out;
+    transform-origin: top right;
+    border-radius: 10px;
+}
 .dark-mode .account-menu { background-color: #222222; border: 1px solid var(--border-dark); }
 .light-mode .account-menu { background-color: var(--bg-secondary-light); border: 1px solid var(--border-light); }
+
 .menu-hidden { opacity: 0; transform: scale(0.95) translateY(-10px); pointer-events: none; }
 .menu-visible { opacity: 1; transform: scale(1) translateY(0); pointer-events: auto; }
-.menu-item { transition: background-color 0.2s ease; display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 10px 16px; border-radius: 6px; }
+
+.menu-item {
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    text-align: left;
+    padding: 10px 16px;
+    border-radius: 6px;
+}
 .dark-mode .menu-item:hover { background-color: var(--bg-secondary-dark); }
 .light-mode .menu-item:hover { background-color: var(--bg-primary-light); }
 .menu-item svg { width: 18px; height: 18px; }
 .dark-mode .menu-item svg { color: var(--text-secondary-dark); }
 .light-mode .menu-item svg { color: var(--text-secondary-light); }
 
-/* Theme Switcher */
+/* --- Theme Switcher --- */
+
 .light-mode .theme-switcher { background-color: #E2E8F0; }
 .dark-mode .theme-switcher { background-color: var(--bg-primary-dark); }
+
 .light-mode .theme-switcher button { color: var(--text-secondary-light); }
 .dark-mode .theme-switcher button { color: var(--text-secondary-dark); }
+
 .light-mode .theme-switcher button.active { background-color: var(--accent-light) !important; color: var(--accent-text-light) !important; }
 .dark-mode .theme-switcher button.active { background-color: var(--accent-dark) !important; color: var(--accent-text-dark) !important; }
 
-/* Dashboard Styles */
-.main-content { flex: 1; overflow-y: auto; position: relative; }
+/* --- Dashboard Styles --- */
+
+.main-content {
+    flex: 1;
+    overflow-y: auto;
+    position: relative;
+}
+
 .dashboard-header { margin-bottom: 2.5rem; }
 .dashboard-title { margin: 0; font-size: 2.5em; text-shadow: 0 0 15px rgba(103, 32, 189, 0.6); }
 .light-mode .dashboard-title { text-shadow: 0 0 15px rgba(103, 32, 189, 0.4); }
 
-/* Redesigned Widgets */
-.dashboard-grid { display: grid; grid-template-columns: repeat(1, 1fr); gap: 1rem; }
-@media (min-width: 768px) { .dashboard-grid { grid-template-columns: repeat(6, 1fr); gap: 1.5rem; } }
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 1rem;
+}
+@media (min-width: 768px) {
+    .dashboard-grid {
+        grid-template-columns: repeat(6, 1fr);
+        gap: 1.5rem;
+    }
+}
 
 .dashboard-card-v2 {
-    border-radius: 16px; padding: 1.5rem; transition: all 0.3s ease;
-    display: flex; flex-direction: column; min-height: 180px;
+    border-radius: 16px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    min-height: 180px;
 }
 .dark-mode .dashboard-card-v2 { background-color: var(--bg-secondary-dark); box-shadow: 0 8px 30px rgba(0,0,0,0.2); border: 1px solid var(--border-dark); }
 .light-mode .dashboard-card-v2 { background-color: var(--bg-secondary-light); box-shadow: 0 8px 30px rgba(0,0,0,0.08); border: 1px solid var(--border-light); }
+
 .dashboard-card-v2:hover { transform: translateY(-5px); }
 .dark-mode .dashboard-card-v2:hover { box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
 .light-mode .dashboard-card-v2:hover { box-shadow: 0 12px 40px rgba(0,0,0,0.12); }
 
-.widget-settings-btn {
-    opacity: 0.5; transition: all 0.2s ease-in-out;
-}
+.widget-settings-btn { opacity: 0.5; transition: all 0.2s ease-in-out; }
 .dashboard-card-v2:hover .widget-settings-btn { opacity: 1; }
 .widget-settings-btn:hover { color: #ac8cff; transform: rotate(45deg); }
 .light-mode .widget-settings-btn:hover { color: #6720BD; }
 .light-mode .text-\\[var\\(--text-secondary-dark\\)\\] { color: var(--text-secondary-light); }
 
-.quick-link-item { border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; padding: 1rem; font-family: var(--font-primary); transition: all 0.2s ease-in-out; }
+.quick-link-item {
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    font-family: var(--font-primary);
+    transition: all 0.2s ease-in-out;
+}
 .dark-mode .quick-link-item { background-color: rgba(255, 255, 255, 0.05); }
 .light-mode .quick-link-item { background-color: #F7FAFC; border: 1px solid var(--border-light); }
 .dark-mode .quick-link-item:hover { background-color: rgba(255, 255, 255, 0.1); color: #ac8cff; transform: scale(1.05); }
 .light-mode .quick-link-item:hover { background-color: #EDF2F7; color: #6720BD; transform: scale(1.05); }
 .quick-link-item i { width: 32px; height: 32px; }
-
