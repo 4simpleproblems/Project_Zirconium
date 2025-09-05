@@ -3,26 +3,190 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP V5 - Home</title>
+    <title>4SP - DASHBOARD</title>
+    <!-- Local font stylesheet -->
     <link rel="stylesheet" href="fontface.css">
     <link rel="stylesheet" href="main.css">
+    <!-- Icon library for widgets -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Firebase for demonstration -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
 </head>
+<!-- Default theme is dark mode -->
 <body class="dark-mode">
 
-    <div id="main-content" class="p-8">
-        <header class="mb-8 text-center">
-            <h1 class="text-6xl font-bold primary-font">4SP V5</h1>
-            <p class="text-lg secondary-font">The Future of Student Multi-Tool Platforms. Releasing in 2026.</p>
-        </header>
+    <!-- The main content is the redesigned dashboard -->
+    <main id="main-content" class="main-content fade-in p-4 md:p-8">
+      <div class="dashboard-header">
+        <div class="dashboard-title-wrapper">
+            <h2 class="dashboard-title">Dashboard</h2>
+        </div>
+        <div class="dashboard-controls">
+          <div class="search-container">
+            <input type="text" id="dashboardSearch" placeholder="🔍 Search pages & features...">
+            <div id="searchSuggestions" class="suggestions-container"></div>
+          </div>
+        </div>
+      </div>
 
-        <main>
-            <div class="text-center">
-                <p>Welcome to the preview of 4SP V5.</p>
-                <p>All existing tools will be enhanced with a new futuristic UI and more features.</p>
-            </div>
-        </main>
-    </div>
+      <div class="dashboard-grid" id="dashboardGrid">
+        <!-- New, redesigned widgets will be dynamically inserted here by the script -->
+      </div>
+    </main>
 
     <script src="navbar-loading.js"></script>
+
+    <!-- In-line script to control the new dashboard widgets -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const dashboardGrid = document.getElementById('dashboardGrid');
+
+            // --- WIDGET TEMPLATES & LOGIC ---
+
+            const dashboardWidgets = [
+                {
+                    widgetId: 'greeting_widget',
+                    gridSpan: 'md:col-span-2', // Spans 2 columns on medium screens and up
+                    onMount: (cardElement) => {
+                        const timeEl = cardElement.querySelector('.widget-time');
+                        const dateEl = cardElement.querySelector('.widget-date');
+                        const greetingEl = cardElement.querySelector('.widget-greeting');
+
+                        function updateTime() {
+                            const now = new Date('2025-09-05T10:08:00'); // Set to specified time
+                            const hour = now.getHours();
+
+                            if (hour < 12) {
+                                greetingEl.textContent = 'Good Morning';
+                            } else if (hour < 18) {
+                                greetingEl.textContent = 'Good Afternoon';
+                            } else {
+                                greetingEl.textContent = 'Good Evening';
+                            }
+                            
+                            timeEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            dateEl.textContent = now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+                        }
+                        updateTime();
+                        // In a real scenario, this would be an interval
+                        // setInterval(updateTime, 1000); 
+                    }
+                },
+                {
+                    widgetId: 'weather_widget',
+                    gridSpan: 'md:col-span-2',
+                    onMount: async (cardElement) => {
+                        const locationEl = cardElement.querySelector('.weather-location');
+                        const tempEl = cardElement.querySelector('.weather-temp');
+                        const iconEl = cardElement.querySelector('.weather-icon');
+                        const conditionEl = cardElement.querySelector('.weather-condition');
+                        
+                        locationEl.textContent = 'Massillon, OH';
+                        iconEl.innerHTML = '<i data-lucide="cloudy"></i>';
+                        lucide.createIcons();
+                        tempEl.textContent = '68°F';
+                        conditionEl.textContent = 'Partly Cloudy';
+                    }
+                },
+                {
+                    widgetId: 'quick_links_widget',
+                    gridSpan: 'md:col-span-2',
+                    onMount: (cardElement) => {
+                        // No dynamic logic needed, content is static HTML
+                    }
+                },
+                {
+                    widgetId: 'on_this_day_widget',
+                    gridSpan: 'md:col-span-3',
+                    onMount: (cardElement) => {
+                        // Static content for demonstration
+                    }
+                },
+                {
+                    widgetId: 'quote_widget',
+                    gridSpan: 'md:col-span-3',
+                    onMount: (cardElement) => {
+                        // Static content for demonstration
+                    }
+                }
+            ];
+
+            function getWidgetContent(widgetId) {
+                switch (widgetId) {
+                    case 'greeting_widget':
+                        return `
+                            <div class="flex flex-col justify-between h-full">
+                                <div>
+                                    <h3 class="widget-greeting text-2xl primary-font">Loading...</h3>
+                                    <p class="secondary-font text-base text-[var(--text-secondary-dark)]">Welcome back to 4SP V5.</p>
+                                </div>
+                                <div class="text-right">
+                                    <div class="widget-time text-5xl primary-font font-bold">--:--</div>
+                                    <div class="widget-date text-lg secondary-font text-[var(--text-secondary-dark)]">---</div>
+                                </div>
+                            </div>`;
+                    case 'weather_widget':
+                        return `
+                            <div class="flex items-start justify-between">
+                                <h3 class="weather-location text-2xl primary-font">Loading...</h3>
+                                <div class="weather-icon text-[var(--text-secondary-dark)] w-10 h-10"></div>
+                            </div>
+                            <div class="flex items-end justify-between mt-auto">
+                                <span class="weather-temp text-6xl primary-font font-bold">--°</span>
+                                <span class="weather-condition text-lg secondary-font text-right">--</span>
+                            </div>`;
+                    case 'quick_links_widget':
+                        return `
+                             <h3 class="text-2xl primary-font mb-4">Quick Links</h3>
+                             <div class="grid grid-cols-2 gap-3 h-full">
+                                <a href="#" class="quick-link-item"><i data-lucide="music-4"></i><span>Soundboard</span></a>
+                                <a href="#" class="quick-link-item"><i data-lucide="gamepad-2"></i><span>Games</span></a>
+                                <a href="#" class="quick-link-item"><i data-lucide="list-music"></i><span>Playlists</span></a>
+                                <a href="#" class="quick-link-item"><i data-lucide="settings"></i><span>Settings</span></a>
+                             </div>`;
+                    case 'on_this_day_widget':
+                        return `
+                            <h3 class="text-2xl primary-font">On This Day</h3>
+                            <p class="secondary-font text-base text-[var(--text-secondary-dark)] mb-3">September 5th, 1774</p>
+                            <p class="primary-font text-lg">The First Continental Congress assembled at Carpenters' Hall in Philadelphia, marking a major step toward American independence.</p>
+                        `;
+                    case 'quote_widget':
+                        return `
+                             <h3 class="text-2xl primary-font mb-4">Insight of the Day</h3>
+                             <blockquote class="text-lg primary-font italic">
+                                <p>"The future belongs to those who believe in the beauty of their dreams."</p>
+                             </blockquote>
+                             <cite class="secondary-font text-base text-[var(--text-secondary-dark)] block text-right mt-2">- Eleanor Roosevelt</cite>
+                        `;
+                    default:
+                        return '<p>Widget failed to load.</p>';
+                }
+            }
+            
+            function renderDashboard() {
+                dashboardGrid.innerHTML = '';
+                dashboardWidgets.forEach(widget => {
+                    const card = document.createElement('div');
+                    card.className = `dashboard-card-v2 ${widget.gridSpan}`;
+                    card.innerHTML = getWidgetContent(widget.widgetId);
+                    dashboardGrid.appendChild(card);
+                    
+                    if (widget.onMount) {
+                        try {
+                            widget.onMount(card);
+                        } catch(e) {
+                            console.error(`Error mounting widget ${widget.widgetId}:`, e);
+                            card.innerHTML = `<p class="text-red-500">Error loading widget.</p>`;
+                        }
+                    }
+                });
+                lucide.createIcons(); // Initialize any new icons
+            }
+
+            renderDashboard();
+        });
+    </script>
 </body>
 </html>
+
