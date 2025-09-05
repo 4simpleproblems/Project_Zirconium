@@ -21,12 +21,13 @@
 
             // --- Local Project Scripts ---
             // These paths will be prefixed with the 'path' value above.
-            { src: 'firebase-config.js' },
-            { src: 'ban-enforcer.js' },
-            { src: 'panic-key.js' },
-            { src: 'url-changer.js' }
-            { src: 'navbar-loading.js' }
-        ]
+            { src: './firebase-config.js' },
+            { src: './ban-enforcer.js' },
+            { src: './panic-key.js' },
+            { src: './url-changer.js' }
+            { src: './navbar-loading.js' }
+      
+            ]
     };
 
     /**
