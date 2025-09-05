@@ -1,4 +1,3 @@
-// navbar-loading.js
 document.addEventListener('DOMContentLoaded', function () {
     let loggedIn = true; // Assume logged in for demo
     let currentTheme = 'dark';
@@ -6,31 +5,24 @@ document.addEventListener('DOMContentLoaded', function () {
     const logoBaseUrl = 'https://raw.githubusercontent.com/4simpleproblems/Proj-Vanadium/main/images/';
     const scrollAmount = 300; 
 
-    // Define navigation links here for easier management. 
-    // Add more to test the scrolling feature (9+ items activate it).
+    // Define navigation links here. With 11 items, the scrolling will be active.
     const navLinks = [
         { href: "#", text: "Dashboard", active: true },
         { href: "#", text: "Soundboard" },
         { href: "#", text: "Playlists" },
-        { href: "#", text: "Apps" },
         { href: "#", text: "Games" },
         { href: "#", text: "Notes" },
         { href: "#", text: "Requests" },
-        { href: "#", text: "Testing Site" },
-        { href: "#", text: "Apps" },
-        { href: "#", text: "Apps" },
-        { href: "#",  text: "Settings" }
+        { href: "#", text: "Scheduler" },
+        { href: "#", text: "Calculator" },
+        { href: "#", text: "Timer" },
+        { href: "#", text: "Others" },
+        { href: "#", text: "Settings" }
     ];
 
     function setTheme(theme) {
         currentTheme = theme;
-        if (theme === 'light') {
-            document.body.classList.remove('dark-mode');
-            document.body.classList.add('light-mode');
-        } else {
-            document.body.classList.remove('light-mode');
-            document.body.classList.add('dark-mode');
-        }
+        document.body.className = theme === 'light' ? 'light-mode' : 'dark-mode';
         updateNavbarContent();
     }
 
@@ -42,53 +34,38 @@ document.addEventListener('DOMContentLoaded', function () {
         navbar.style.opacity = '0';
         document.body.prepend(navbar);
         
-        // Attach persistent event listeners once
         attachDelegatedEventListeners();
-        
-        // Set initial theme and render content
         setTheme(currentTheme);
 
         document.body.style.marginTop = navbarHeight;
         setTimeout(() => { navbar.style.opacity = '1'; }, 10);
     }
 
-    // This function uses event delegation and is only called ONCE.
     function attachDelegatedEventListeners() {
-        const navbar = document.getElementById('navbar');
-        if (!navbar) return;
-
-        navbar.addEventListener('click', (e) => {
-            const accountButton = e.target.closest('#account-button');
-            if (accountButton) {
+        // Event delegation for static buttons
+        document.getElementById('navbar').addEventListener('click', (e) => {
+            if (e.target.closest('#account-button')) {
                 e.stopPropagation();
-                const menu = document.getElementById('account-menu');
-                if (menu) {
-                    menu.classList.toggle('menu-hidden');
-                    menu.classList.toggle('menu-visible');
-                }
-                return;
-            }
-
-            if (e.target.closest('#logout-btn')) {
-                loggedIn = false;
-                updateNavbarContent();
-                return;
-            }
-
-            if (e.target.closest('#login-btn')) {
-                loggedIn = true;
-                updateNavbarContent();
-                return;
-            }
-
-            if (e.target.closest('#theme-light-btn')) {
+                document.getElementById('account-menu')?.classList.toggle('menu-hidden');
+                document.getElementById('account-menu')?.classList.toggle('menu-visible');
+            } else if (e.target.closest('#logout-btn')) {
+                loggedIn = false; updateNavbarContent();
+            } else if (e.target.closest('#login-btn')) {
+                loggedIn = true; updateNavbarContent();
+            } else if (e.target.closest('#theme-light-btn')) {
                 setTheme('light');
-                return;
-            }
-
-            if (e.target.closest('#theme-dark-btn')) {
+            } else if (e.target.closest('#theme-dark-btn')) {
                 setTheme('dark');
-                return;
+            }
+        });
+
+        // Close account menu if clicking outside
+        document.addEventListener('click', (event) => {
+            const menu = document.getElementById('account-menu');
+            const button = document.getElementById('account-button');
+            if (menu && button && !menu.contains(event.target) && !button.contains(event.target)) {
+                menu.classList.remove('menu-visible');
+                menu.classList.add('menu-hidden');
             }
         });
     }
@@ -96,44 +73,65 @@ document.addEventListener('DOMContentLoaded', function () {
     function checkNavArrows() {
         const scroller = document.getElementById('nav-tabs-scroller');
         if (!scroller) return;
-
-        const tolerance = 1;
-        const maxScroll = scroller.scrollWidth - scroller.clientWidth;
-        
         const rightArrow = document.getElementById('nav-arrow-right');
         const leftArrow = document.getElementById('nav-arrow-left');
 
+        // Use a small tolerance (1 pixel) to prevent floating point inaccuracies from
+        // causing the arrows to flicker when at the very edge of the scroll area.
+        const tolerance = 1;
+        const maxScroll = scroller.scrollWidth - scroller.clientWidth;
+        
         if (rightArrow) rightArrow.classList.toggle('visible', scroller.scrollLeft < maxScroll - tolerance);
         if (leftArrow) leftArrow.classList.toggle('visible', scroller.scrollLeft > tolerance);
     }
     
-    // This function is called after every content update to attach listeners to the dynamic scroll elements.
     function setupNavScroll() {
         const scroller = document.getElementById('nav-tabs-scroller');
-        if (!scroller) return; 
+        if (!scroller) return;
 
+        // --- UPDATED ---
+        // This event listener now correctly handles horizontal scrolling from devices 
+        // like a Chromebook touchpad (which uses e.deltaX) as well as a standard 
+        // vertical mouse wheel (e.deltaY), providing a versatile scrolling experience.
         scroller.addEventListener('wheel', (e) => {
             e.preventDefault();
-            scroller.scrollLeft += e.deltaY;
+            scroller.scrollLeft += e.deltaX + e.deltaY;
         }, { passive: false });
 
-        const rightArrow = document.getElementById('nav-arrow-right');
-        if (rightArrow) {
-            rightArrow.addEventListener('click', () => {
-                scroller.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-            });
-        }
+        // --- UPDATED ---
+        // The arrow buttons now scroll the user directly to the end or the beginning
+        // of the tab list for quick and "satisfying" navigation.
+        document.getElementById('nav-arrow-right')?.addEventListener('click', () => {
+            // scrollTo scrolls to an absolute position. scroller.scrollWidth is the very end.
+            scroller.scrollTo({ left: scroller.scrollWidth, behavior: 'smooth' });
+        });
+        document.getElementById('nav-arrow-left')?.addEventListener('click', () => {
+            // Scrolls back to the absolute start (position 0).
+            scroller.scrollTo({ left: 0, behavior: 'smooth' });
+        });
         
-        const leftArrow = document.getElementById('nav-arrow-left');
-        if (leftArrow) {
-            leftArrow.addEventListener('click', () => {
-                scroller.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
-            });
-        }
+        // --- UPDATED ---
+        // Added e.preventDefault() to the keyboard event listener. This stops the arrow keys 
+        // from scrolling the entire page, ensuring they only affect the tab menu.
+        document.addEventListener('keydown', (e) => {
+            // Ignore if the user is typing in an input field to prevent interference.
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
+            if (e.key === 'ArrowRight') {
+                e.preventDefault(); // Prevent default browser horizontal scroll.
+                scroller.scrollBy({ left: scrollAmount / 2, behavior: 'smooth' });
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault(); // Prevent default browser horizontal scroll.
+                scroller.scrollBy({ left: -scrollAmount / 2, behavior: 'smooth' });
+            }
+        });
+
+        // These listeners ensure the visibility of the scroll arrows is always correct.
         scroller.addEventListener('scroll', checkNavArrows);
         window.addEventListener('resize', checkNavArrows);
-        setTimeout(checkNavArrows, 150); // Check arrows after render
+        
+        // Check arrows after a brief delay to ensure the DOM is fully rendered.
+        setTimeout(checkNavArrows, 150);
     }
 
     function updateNavbarContent() {
@@ -147,10 +145,11 @@ document.addEventListener('DOMContentLoaded', function () {
         ).join('');
 
         let navTabs;
+        const needsScrolling = navLinks.length > 8;
 
-        if (navLinks.length > 8) {
+        if (needsScrolling) {
             navTabs = `
-                <div class="nav-tabs-container">
+                <div class="nav-tabs-container scrolling">
                     <div id="nav-scroll-wrapper" class="nav-scroll-wrapper">
                         <div id="nav-arrow-left" class="nav-arrow">
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
@@ -180,7 +179,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     <div class="flex items-center">
                         <img src="${logoUrl}" alt="4SP Logo" class="h-8 w-8 object-contain" loading="eager" decoding="async">
                     </div>
-                    <div class="flex-grow flex justify-center">${navTabs}</div>
+                    <div class="flex-grow flex justify-center min-w-0">${navTabs}</div>
                     <div class="relative">
                         <button id="account-button" class="w-9 h-9 bg-gray-700 rounded-full flex items-center justify-center font-bold text-gray-300 hover:bg-gray-600 focus:outline-none primary-font">S</button>
                         <div id="account-menu" class="account-menu menu-hidden absolute right-0 mt-2 w-64 shadow-lg p-2 z-50">
@@ -190,7 +189,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             </div>
                             <div class="mt-2 flex flex-col space-y-1">
                                 <a href="#" class="menu-item primary-font"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M4 13h6c.55 0 1-.45 1-1V4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v8c0 .55.45 1 1 1zm0 8h6c.55 0 1-.45 1-1v-4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v4c0 .55.45 1 1 1zm10 0h6c.55 0 1-.45 1-1v-8c0-.55-.45-1-1-1h-6c-.55 0-1 .45-1 1v8c0 .55.45 1 1 1zM13 4v4c0 .55.45 1 1 1h6c.55 0 1-.45 1-1V4c0-.55-.45-1-1-1h-6c-.55 0-1 .45-1 1z"/></svg>Dashboard</a>
-                                <a href="#" class="menu-item primary-font"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.44.17-.48.41l-.36 2.54c-.59-.24-1.13-.57-1.62-.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.34 8.85c-.11.2-.06.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12-.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.04.24.24.41.48.41h3.84c.24 0 .44-.17-.48-.41l.36-2.54c.59-.24-1.13-.57-1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.06-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>Settings</a>
+                                <a href="#" class="menu-item primary-font"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.44.17-.48.41l-.36 2.54c-.59-.24-1.13-.57-1.62-.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.34 8.85c-.11.2-.06.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12-.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.04.24.24.41.48.41h3.84c.24 0 .44-.17-.48.41l.36 2.54c.59-.24-1.13-.57-1.62-.94l2.39.96c.22.08.47 0 .59.22l1.92-3.32c.12-.22.06-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>Settings</a>
                             </div>
                             <div class="border-t border-[var(--border-dark)] light:border-[var(--border-light)] mt-2 pt-2">
                                 <div class="px-2 py-1 text-xs secondary-font text-[var(--text-secondary-dark)] light:text-[var(--text-secondary-light)]">Theme</div>
@@ -220,12 +219,10 @@ document.addEventListener('DOMContentLoaded', function () {
             `;
         }
         
-        // Setup scroll-specific listeners after the DOM is updated
-        if (navLinks.length > 8) {
+        if (needsScrolling) {
             setupNavScroll();
         }
     }
 
     createNavbar();
 });
-
