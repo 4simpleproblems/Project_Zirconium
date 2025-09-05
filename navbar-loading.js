@@ -1,228 +1,161 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - DASHBOARD</title>
-    <!-- Local font stylesheet -->
-    <link rel="stylesheet" href="fontface.css">
-    <link rel="stylesheet" href="main.css">
-    <!-- Icon library for widgets -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Firebase for demonstration -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
-    <script>
-        // Mock Firebase config for demonstration purposes
-        const firebaseConfig = {
-            apiKey: "AIzaSy...Example",
-            authDomain: "example.firebaseapp.com",
-            projectId: "example-project"
-        };
-        firebase.initializeApp(firebaseConfig);
-    </script>
-</head>
-<body class="dark-mode">
+// navbar-loading.js
+document.addEventListener('DOMContentLoaded', function () {
+    let loggedIn = true; // Assume logged in for demo
+    let currentTheme = 'dark';
+    const navbarHeight = '65px';
+    const logoBaseUrl = 'https://raw.githubusercontent.com/4simpleproblems/Proj-Vanadium/main/images/';
+    const scrollAmount = 300; 
 
-    <!-- The main content is the redesigned dashboard -->
-    <main id="main-content" class="main-content fade-in p-4 md:p-8">
-      <div class="dashboard-header">
-        <h2 class="dashboard-title">Dashboard</h2>
-      </div>
+    function setTheme(theme) {
+        currentTheme = theme;
+        if (theme === 'light') {
+            document.body.classList.remove('dark-mode');
+            document.body.classList.add('light-mode');
+        } else {
+            document.body.classList.remove('light-mode');
+            document.body.classList.add('dark-mode');
+        }
+        updateNavbarContent();
+    }
 
-      <div class="dashboard-grid" id="dashboardGrid">
-        <!-- New, redesigned widgets will be dynamically inserted here by the script -->
-      </div>
-    </main>
+    function createNavbar() {
+        const navbar = document.createElement('nav');
+        navbar.id = 'navbar';
+        navbar.className = 'fixed top-0 left-0 right-0 z-50';
+        navbar.style.height = navbarHeight;
+        navbar.style.opacity = '0';
+        document.body.prepend(navbar);
+        setTheme(currentTheme);
 
-    <script src="navbar-loading.js"></script>
+        document.body.style.marginTop = navbarHeight;
+        setTimeout(() => { navbar.style.opacity = '1'; }, 10);
 
-    <!-- In-line script to control the new dashboard widgets -->
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const dashboardGrid = document.getElementById('dashboardGrid');
-
-            // --- WIDGET TEMPLATES & LOGIC ---
-
-            const WIDGET_CONFIG = [
-                {
-                    widgetId: 'greeting_widget',
-                    gridSpan: 'md:col-span-2',
-                    onMount: (cardElement) => {
-                        const timeEl = cardElement.querySelector('.widget-time');
-                        const dateEl = cardElement.querySelector('.widget-date');
-                        const greetingEl = cardElement.querySelector('.widget-greeting');
-
-                        function updateTime() {
-                            const now = new Date();
-                            const hour = now.getHours();
-
-                            if (hour < 12) {
-                                greetingEl.textContent = 'Good Morning';
-                            } else if (hour < 18) {
-                                greetingEl.textContent = 'Good Afternoon';
-                            } else {
-                                greetingEl.textContent = 'Good Evening';
-                            }
-                            
-                            timeEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                            dateEl.textContent = now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
-                        }
-                        updateTime();
-                        setInterval(updateTime, 60000); // Update every minute
-                    }
-                },
-                {
-                    widgetId: 'weather_widget',
-                    gridSpan: 'md:col-span-2',
-                    headerContent: `<button class="widget-settings-btn"><i data-lucide="settings-2" class="w-5 h-5"></i></button>`,
-                    onMount: (cardElement) => {
-                        const locationEl = cardElement.querySelector('.weather-location');
-                        const tempEl = cardElement.querySelector('.weather-temp');
-                        const iconEl = cardElement.querySelector('.weather-icon');
-                        const conditionEl = cardElement.querySelector('.weather-condition');
-                        
-                        const WMO_ICONS = { 0: 'sun', 1: 'sun', 2: 'cloud-sun', 3: 'cloud', 45: 'cloud-fog', 48: 'cloud-fog', 51: 'cloud-drizzle', 53: 'cloud-drizzle', 55: 'cloud-drizzle', 56: 'cloud-drizzle', 57: 'cloud-drizzle', 61: 'cloud-rain', 63: 'cloud-rain', 65: 'cloud-rain', 66: 'cloud-rain', 67: 'cloud-rain', 71: 'cloud-snow', 73: 'cloud-snow', 75: 'cloud-snow', 77: 'cloud-snow', 80: 'cloud-rain', 81: 'cloud-rain', 82: 'cloud-lightning', 85: 'cloud-snow', 86: 'cloud-snow', 95: 'cloud-lightning', 96: 'cloud-lightning', 99: 'cloud-lightning' };
-
-                        async function fetchWeather(lat, lon, city) {
-                            try {
-                                const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&temperature_unit=fahrenheit`);
-                                if (!response.ok) throw new Error('Failed to fetch weather');
-                                const data = await response.json();
-                                const weather = data.current;
-                                
-                                locationEl.textContent = city || 'Current Location';
-                                tempEl.textContent = `${Math.round(weather.temperature_2m)}°F`;
-                                conditionEl.textContent = getWeatherDescription(weather.weather_code);
-                                iconEl.innerHTML = `<i data-lucide="${WMO_ICONS[weather.weather_code] || 'cloud-question'}"></i>`;
-                                lucide.createIcons();
-
-                            } catch (error) {
-                                console.error("Weather fetch error:", error);
-                                locationEl.textContent = 'Weather Error';
-                            }
-                        }
-                        
-                        function getWeatherDescription(code) {
-                            const descriptions = {0: "Clear sky",1: "Mainly clear",2: "Partly cloudy",3: "Overcast",45: "Fog",48: "Rime fog",51: "Light drizzle",53: "Drizzle",55: "Dense drizzle",61: "Slight rain",63: "Rain",65: "Heavy rain",71: "Slight snow",73: "Snow",75: "Heavy snow",80: "Rain showers",81: "Rain showers",82: "Violent showers",95: "Thunderstorm",96: "Thunderstorm",99: "Thunderstorm"};
-                            return descriptions[code] || "Unknown";
-                        }
-
-                        // Get user location
-                        navigator.geolocation.getCurrentPosition(
-                            position => {
-                                fetchWeather(position.coords.latitude, position.coords.longitude);
-                            },
-                            () => {
-                                // Fallback to Massillon, OH if geolocation fails or is denied
-                                fetchWeather(40.79, -81.52, 'Massillon, OH');
-                            }
-                        );
-                    }
-                },
-                {
-                    widgetId: 'shortcuts_widget',
-                    gridSpan: 'md:col-span-2',
-                    headerContent: `<button class="widget-settings-btn"><i data-lucide="settings-2" class="w-5 h-5"></i></button>`,
-                    onMount: (cardElement) => { /* Static content */ }
-                },
-                {
-                    widgetId: 'on_this_day_widget',
-                    gridSpan: 'md:col-span-3',
-                    onMount: (cardElement) => {
-                        const eventTextEl = cardElement.querySelector('.event-text');
-                        const dateTextEl = cardElement.querySelector('.event-date');
-                        
-                        const today = new Date();
-                        const month = String(today.getMonth() + 1);
-                        const day = String(today.getDate());
-                        
-                        dateTextEl.textContent = today.toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
-
-                        fetch(`https://en.wikipedia.org/api/rest_v1/feed/onthisday/events/${month}/${day}`)
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.events && data.events.length > 0) {
-                                    const randomEvent = data.events[Math.floor(Math.random() * data.events.length)];
-                                    eventTextEl.innerHTML = `${randomEvent.text} <span class="text-[var(--text-secondary-dark)] light:text-[var(--text-secondary-light)]">(${randomEvent.year})</span>`;
-                                } else {
-                                    eventTextEl.textContent = 'No significant events found for today.';
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error fetching On This Day:', error);
-                                eventTextEl.textContent = 'Could not load historical event.';
-                            });
-                    }
-                },
-                {
-                    widgetId: 'quote_widget',
-                    gridSpan: 'md:col-span-3',
-                    onMount: (cardElement) => {
-                        const quoteEl = cardElement.querySelector('blockquote p');
-                        const authorEl = cardElement.querySelector('cite');
-                        fetch('https://api.quotable.io/random')
-                            .then(response => response.json())
-                            .then(data => {
-                                quoteEl.textContent = `"${data.content}"`;
-                                authorEl.textContent = `- ${data.author}`;
-                            })
-                            .catch(error => {
-                                console.error("Quote fetch error:", error);
-                                quoteEl.textContent = '"The best way to predict the future is to create it."';
-                                authorEl.textContent = '- Peter Drucker';
-                            });
-                    }
-                }
-            ];
-
-            function getWidgetContent(widget) {
-                const header = `
-                    <div class="flex justify-between items-start mb-4">
-                        <h3 class="text-2xl primary-font">${widget.widgetId.replace('_widget', '').replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</h3>
-                        ${widget.headerContent || ''}
-                    </div>`;
-
-                let body = '';
-                switch (widget.widgetId) {
-                    case 'greeting_widget':
-                        return `<div class="flex flex-col justify-between h-full"><div><h3 class="widget-greeting text-2xl primary-font">Loading...</h3><p class="secondary-font text-base text-[var(--text-secondary-dark)] light:text-[var(--text-secondary-light)]">Welcome back.</p></div><div class="text-right mt-auto"><div class="widget-time text-5xl primary-font font-bold">--:--</div><div class="widget-date text-lg secondary-font text-[var(--text-secondary-dark)] light:text-[var(--text-secondary-light)]">---</div></div></div>`;
-                    case 'weather_widget':
-                        return `${header}<div class="flex flex-col h-full"><div class="flex items-start justify-between"><h3 class="weather-location text-2xl primary-font">Loading...</h3><div class="weather-icon w-10 h-10"></div></div><div class="flex items-end justify-between mt-auto"><span class="weather-temp text-6xl primary-font font-bold">--°</span><span class="weather-condition text-lg secondary-font text-right">--</span></div></div>`;
-                    case 'shortcuts_widget':
-                        return `${header}<div class="grid grid-cols-2 gap-3 h-full"><a href="#" class="quick-link-item"><i data-lucide="music-4"></i><span>Soundboard</span></a><a href="#" class="quick-link-item"><i data-lucide="gamepad-2"></i><span>Games</span></a><a href="#" class="quick-link-item"><i data-lucide="list-music"></i><span>Playlists</span></a><a href="#" class="quick-link-item"><i data-lucide="user"></i><span>Account</span></a></div>`;
-                    case 'on_this_day_widget':
-                        return `${header}<div class="flex flex-col"><p class="event-date secondary-font text-base text-[var(--text-secondary-dark)] light:text-[var(--text-secondary-light)] mb-2">Loading date...</p><p class="event-text primary-font text-lg">Fetching historical event...</p></div>`;
-                    case 'quote_widget':
-                        return `${header}<blockquote class="text-lg primary-font italic flex-grow"><p>"Loading quote..."</p></blockquote><cite class="secondary-font text-base text-[var(--text-secondary-dark)] light:text-[var(--text-secondary-light)] block text-right mt-2">-</cite>`;
-                    default:
-                        return '<p>Widget failed to load.</p>';
-                }
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('account-menu');
+            const button = document.getElementById('account-button');
+            if (menu && button && !menu.contains(event.target) && !button.contains(event.target)) {
+                menu.classList.remove('menu-visible');
+                menu.classList.add('menu-hidden');
             }
-            
-            function renderDashboard() {
-                dashboardGrid.innerHTML = '';
-                WIDGET_CONFIG.forEach(widget => {
-                    const card = document.createElement('div');
-                    card.className = `dashboard-card-v2 ${widget.gridSpan}`;
-                    card.innerHTML = getWidgetContent(widget);
-                    dashboardGrid.appendChild(card);
-                    
-                    if (widget.onMount) {
-                        try {
-                            widget.onMount(card);
-                        } catch(e) {
-                            console.error(`Error mounting widget ${widget.widgetId}:`, e);
-                            card.innerHTML = `<p class="text-red-500">Error loading widget.</p>`;
-                        }
-                    }
-                });
-                lucide.createIcons(); // Initialize any new icons
-            }
-
-            renderDashboard();
         });
-    </script>
-</body>
-</html>
+    }
+
+    function attachEventListeners() {
+        if (loggedIn) {
+            document.getElementById('account-button')?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const menu = document.getElementById('account-menu');
+                menu.classList.toggle('menu-hidden');
+                menu.classList.toggle('menu-visible');
+            });
+            
+            document.getElementById('logout-btn')?.addEventListener('click', () => { loggedIn = false; updateNavbarContent(); });
+            document.getElementById('theme-light-btn')?.addEventListener('click', () => setTheme('light'));
+            document.getElementById('theme-dark-btn')?.addEventListener('click', () => setTheme('dark'));
+        } else {
+            document.getElementById('login-btn')?.addEventListener('click', () => { loggedIn = true; updateNavbarContent(); });
+        }
+        setupNavScroll();
+    }
+    
+    function checkNavArrows() {
+        const scroller = document.getElementById('nav-tabs-scroller');
+        if (!scroller) return;
+        const rightArrow = document.getElementById('nav-arrow-right');
+        const leftArrow = document.getElementById('nav-arrow-left');
+        const maxScroll = scroller.scrollWidth - scroller.clientWidth;
+        rightArrow.classList.toggle('visible', scroller.scrollLeft < maxScroll - 1);
+        leftArrow.classList.toggle('visible', scroller.scrollLeft > 1);
+    }
+    
+    function setupNavScroll() {
+        const scroller = document.getElementById('nav-tabs-scroller');
+        if (!scroller) return;
+        scroller.addEventListener('scroll', checkNavArrows);
+        window.addEventListener('resize', checkNavArrows);
+        setTimeout(checkNavArrows, 150);
+        document.getElementById('nav-arrow-right')?.addEventListener('click', () => scroller.scrollBy({ left: scrollAmount, behavior: 'smooth' }));
+        document.getElementById('nav-arrow-left')?.addEventListener('click', () => scroller.scrollBy({ left: -scrollAmount, behavior: 'smooth' }));
+    }
+
+    function updateNavbarContent() {
+        const navbar = document.getElementById('navbar');
+        if (!navbar) return;
+        
+        const logoUrl = currentTheme === 'light' ? `${logoBaseUrl}logo-dark.png` : `${logoBaseUrl}logo.png`;
+        const navTabs = `
+            <div class="nav-tabs-container">
+                <div id="nav-scroll-wrapper" class="nav-scroll-wrapper">
+                    <div id="nav-arrow-left" class="nav-arrow">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                    </div>
+                    <div id="nav-tabs-scroller" class="nav-tabs-scroller">
+                        <div class="flex items-center space-x-2 primary-font">
+                            <a href="#" class="nav-link active">Dashboard</a>
+                            <a href="#" class="nav-link">Soundboard</a>
+                            <a href="#" class="nav-link">Playlists</a>
+                            <a href="#" class="nav-link">Games</a>
+                            <a href="#" class="nav-link">Notes</a>
+                            <a href="#" class="nav-link">Requests</a>
+                            <a href="#" class="nav-link">Others</a>
+                            <a href="#" class="nav-link">Settings</a>
+                        </div>
+                    </div>
+                    <div id="nav-arrow-right" class="nav-arrow">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        if (loggedIn) {
+            navbar.innerHTML = `
+                <div class="navbar-container h-full flex items-center justify-between px-4 sm:px-8">
+                    <div class="flex items-center">
+                        <img src="${logoUrl}" alt="4SP Logo" class="h-8 w-8 object-contain" loading="eager" decoding="async">
+                    </div>
+                    <div class="flex-grow flex justify-center">${navTabs}</div>
+                    <div class="relative">
+                        <button id="account-button" class="w-9 h-9 bg-gray-700 rounded-full flex items-center justify-center font-bold text-gray-300 hover:bg-gray-600 focus:outline-none primary-font">S</button>
+                        <div id="account-menu" class="account-menu menu-hidden absolute right-0 mt-2 w-64 shadow-lg p-2 z-50">
+                            <div class="px-2 py-2 border-b border-[var(--border-dark)] light:border-[var(--border-light)]">
+                                <p class="text-sm truncate primary-font">student@school.edu</p>
+                                <p class="text-xs secondary-font text-[var(--text-secondary-dark)] light:text-[var(--text-secondary-light)]">StudentUsername</p>
+                            </div>
+                            <div class="mt-2 flex flex-col space-y-1">
+                                <a href="#" class="menu-item primary-font"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M4 13h6c.55 0 1-.45 1-1V4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v8c0 .55.45 1 1 1zm0 8h6c.55 0 1-.45 1-1v-4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v4c0 .55.45 1 1 1zm10 0h6c.55 0 1-.45 1-1v-8c0-.55-.45-1-1-1h-6c-.55 0-1 .45-1 1v8c0 .55.45 1 1 1zM13 4v4c0 .55.45 1 1 1h6c.55 0 1-.45 1-1V4c0-.55-.45-1-1-1h-6c-.55 0-1 .45-1 1z"/></svg>Dashboard</a>
+                                <a href="#" class="menu-item primary-font"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.44.17-.48.41l-.36 2.54c-.59-.24-1.13-.57-1.62-.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.34 8.85c-.11.2-.06.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.04.24.24.41.48.41h3.84c.24 0 .44-.17-.48-.41l.36-2.54c.59-.24-1.13-.57-1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.06-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>Settings</a>
+                            </div>
+                            <div class="border-t border-[var(--border-dark)] light:border-[var(--border-light)] mt-2 pt-2">
+                                <div class="px-2 py-1 text-xs secondary-font text-[var(--text-secondary-dark)] light:text-[var(--text-secondary-light)]">Theme</div>
+                                <div class="theme-switcher p-1 rounded-md flex justify-around">
+                                    <button id="theme-light-btn" class="primary-font text-sm py-1 w-full rounded-md transition-colors ${currentTheme === 'light' ? 'active' : ''}">Light</button>
+                                    <button id="theme-dark-btn" class="primary-font text-sm py-1 w-full rounded-md transition-colors ${currentTheme === 'dark' ? 'active' : ''}">Dark</button>
+                                </div>
+                            </div>
+                            <div class="border-t border-[var(--border-dark)] light:border-[var(--border-light)] mt-2 pt-2">
+                                <button id="logout-btn" class="menu-item primary-font text-red-400"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>Logout</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else {
+             navbar.innerHTML = `
+                <div class="navbar-container h-full flex items-center justify-between px-4 sm:px-8">
+                    <div class="flex items-center">
+                         <img src="${logoUrl}" alt="4SP Logo" class="h-8 w-8 object-contain" loading="eager" decoding="async">
+                    </div>
+                    <div class="flex-grow flex justify-center">${navTabs}</div>
+                    <div class="flex items-center space-x-4">
+                        <button id="login-btn" class="btn-primary primary-font text-sm">Login</button>
+                    </div>
+                </div>
+            `;
+        }
+        attachEventListeners();
+    }
+
+    createNavbar();
+});
 
