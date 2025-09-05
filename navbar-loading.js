@@ -15,8 +15,9 @@ document.addEventListener('DOMContentLoaded', function () {
         { href: "#", text: "Games" },
         { href: "#", text: "Notes" },
         { href: "#", text: "Requests" },
-        { href: "#", text: "Others" },
-        { href: "#", text: "Settings" }
+        { href: "#", text: "Testing Site" },
+        { href: "#", text: "Apps" }
+        { href: "#"  text: "Settings" }
     ];
 
     function setTheme(theme) {
