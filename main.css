@@ -1,0 +1,170 @@
+/* main.css */
+@import url('https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css');
+
+:root {
+    /* Font Families - Updated to use local fonts */
+    --font-primary: 'Primary', sans-serif;
+    --font-secondary: 'Secondary', monospace;
+
+    /* Light Theme Colors */
+    --bg-primary-light: #F5F5F5; /* Very light grey */
+    --bg-secondary-light: #EAEAEA;
+    --text-primary-light: #2A2A2A; /* Lightish black */
+    --text-secondary-light: #555555;
+    --border-light: #DCDCDC;
+    --accent-light: #000000;
+    --accent-text-light: #FFFFFF;
+
+    /* Dark Theme Colors */
+    --bg-primary-dark: #1C1C1C; /* Darker background */
+    --bg-secondary-dark: #2A2A2A;
+    --text-primary-dark: #EAEAEA; /* Very light grey */
+    --text-secondary-dark: #AAAAAA;
+    --border-dark: #3A3A3A;
+    --accent-dark: #FFFFFF;
+    --accent-text-dark: #000000;
+}
+
+/* Apply theme variables */
+body {
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body.light-mode {
+    background-color: var(--bg-primary-light);
+    color: var(--text-primary-light);
+}
+
+body.dark-mode {
+    background-color: var(--bg-primary-dark);
+    color: var(--text-primary-dark);
+}
+
+.primary-font { font-family: var(--font-primary); }
+.secondary-font { font-family: var(--font-secondary); }
+
+/* Component Styling with Variables */
+#navbar {
+    transition: background-color 0.3s ease, border-color 0.3s ease, opacity 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.light-mode #navbar {
+    background-color: rgba(245, 245, 245, 0.8);
+    border-bottom: 1px solid var(--border-light);
+}
+
+.dark-mode #navbar {
+    background-color: rgba(28, 28, 28, 0.8); /* Darker navbar background */
+    border-bottom: 1px solid var(--border-dark);
+}
+
+#main-content p {
+    color: var(--text-secondary-light);
+}
+
+.dark-mode #main-content p {
+    color: var(--text-secondary-dark);
+}
+
+/* Reusable animated link/button style */
+.nav-link {
+    transition: background-color 0.2s ease, color 0.2s ease;
+    padding: 8px 16px;
+    border-radius: 10px; /* More rounded */
+    white-space: nowrap; /* Prevent tabs from wrapping */
+}
+.light-mode .nav-link { color: var(--text-secondary-light); }
+.dark-mode .nav-link { color: var(--text-secondary-dark); }
+.light-mode .nav-link:hover { background-color: var(--bg-secondary-light); color: var(--text-primary-light); }
+.dark-mode .nav-link:hover { background-color: var(--bg-secondary-dark); color: var(--text-primary-dark); }
+
+/* New Styles for Horizontally Scrollable Menu */
+.nav-tabs-container {
+    position: relative;
+    overflow: hidden;
+    max-width: 500px; /* Adjust as needed */
+}
+.nav-tabs-wrapper {
+    display: flex;
+    align-items: center;
+    transition: transform 0.4s ease-in-out;
+}
+.nav-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease, opacity 0.2s ease;
+    opacity: 0;
+    pointer-events: none;
+}
+.nav-arrow.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+.light-mode .nav-arrow { background-color: rgba(234, 234, 234, 0.9); }
+.dark-mode .nav-arrow { background-color: rgba(58, 58, 58, 0.9); }
+.light-mode .nav-arrow:hover { background-color: var(--border-light); }
+.dark-mode .nav-arrow:hover { background-color: var(--border-dark); }
+#nav-arrow-left { left: -10px; }
+#nav-arrow-right { right: -10px; }
+
+
+/* Account Menu */
+.account-menu {
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+    transform-origin: top right;
+    border-radius: 10px; /* More rounded */
+}
+.light-mode .account-menu { background-color: var(--bg-primary-light); border: 1px solid var(--border-light); }
+.dark-mode .account-menu { background-color: var(--bg-secondary-dark); border: 1px solid var(--border-dark); }
+
+.menu-hidden {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+    pointer-events: none;
+}
+
+.menu-visible {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    pointer-events: auto;
+}
+
+/* Login/Logout/Settings Buttons */
+.btn-primary {
+    transition: background-color 0.2s ease, color 0.2s ease;
+    border-radius: 10px; /* More rounded */
+    padding: 8px 16px;
+    font-weight: 600;
+}
+.light-mode .btn-primary { background-color: var(--accent-light); color: var(--accent-text-light); }
+.dark-mode .btn-primary { background-color: var(--accent-dark); color: var(--accent-text-dark); }
+.light-mode .btn-primary:hover { background-color: #333; }
+.dark-mode .btn-primary:hover { background-color: #DDD; }
+
+.menu-item {
+    transition: background-color 0.2s ease;
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 10px 16px; /* Increased padding */
+    border-radius: 6px;
+    margin: 4px;
+}
+.light-mode .menu-item:hover { background-color: var(--bg-secondary-light); }
+.dark-mode .menu-item:hover { background-color: var(--bg-secondary-dark); }
+
+.theme-switcher button.active {
+    font-weight: bold;
+}
+.light-mode .theme-switcher button.active { color: var(--accent-light); }
+.dark-mode .theme-switcher button.active { color: var(--accent-dark); }
