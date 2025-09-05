@@ -61,21 +61,39 @@ document.addEventListener('DOMContentLoaded', function () {
     function checkNavArrows() {
         const scroller = document.getElementById('nav-tabs-scroller');
         if (!scroller) return;
+
+        const tolerance = 1;
+        const maxScroll = scroller.scrollWidth - scroller.clientWidth;
+        
         const rightArrow = document.getElementById('nav-arrow-right');
         const leftArrow = document.getElementById('nav-arrow-left');
-        const maxScroll = scroller.scrollWidth - scroller.clientWidth;
-        rightArrow.classList.toggle('visible', scroller.scrollLeft < maxScroll - 1);
-        leftArrow.classList.toggle('visible', scroller.scrollLeft > 1);
+
+        if(rightArrow) rightArrow.classList.toggle('visible', scroller.scrollLeft < maxScroll - tolerance);
+        if(leftArrow) leftArrow.classList.toggle('visible', scroller.scrollLeft > tolerance);
     }
     
     function setupNavScroll() {
         const scroller = document.getElementById('nav-tabs-scroller');
-        if (!scroller) return;
+        if (!scroller) return; // Exit if the scrolling container doesn't exist
+
+        // Mouse wheel scrolling (up/down wheel scrolls left/right)
+        scroller.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            scroller.scrollLeft += e.deltaY;
+        }, { passive: false });
+
+        // Arrow button click scrolling
+        document.getElementById('nav-arrow-right')?.addEventListener('click', () => {
+            scroller.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+        });
+        document.getElementById('nav-arrow-left')?.addEventListener('click', () => {
+            scroller.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+        });
+
+        // Update arrow visibility on scroll and resize
         scroller.addEventListener('scroll', checkNavArrows);
         window.addEventListener('resize', checkNavArrows);
         setTimeout(checkNavArrows, 150);
-        document.getElementById('nav-arrow-right')?.addEventListener('click', () => scroller.scrollBy({ left: scrollAmount, behavior: 'smooth' }));
-        document.getElementById('nav-arrow-left')?.addEventListener('click', () => scroller.scrollBy({ left: -scrollAmount, behavior: 'smooth' }));
     }
 
     function updateNavbarContent() {
@@ -83,30 +101,56 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!navbar) return;
         
         const logoUrl = currentTheme === 'light' ? `${logoBaseUrl}logo-dark.png` : `${logoBaseUrl}logo.png`;
-        const navTabs = `
-            <div class="nav-tabs-container">
-                <div id="nav-scroll-wrapper" class="nav-scroll-wrapper">
-                    <div id="nav-arrow-left" class="nav-arrow">
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
-                    </div>
-                    <div id="nav-tabs-scroller" class="nav-tabs-scroller">
-                        <div class="flex items-center space-x-2 primary-font">
-                            <a href="#" class="nav-link active">Dashboard</a>
-                            <a href="#" class="nav-link">Soundboard</a>
-                            <a href="#" class="nav-link">Playlists</a>
-                            <a href="#" class="nav-link">Games</a>
-                            <a href="#" class="nav-link">Notes</a>
-                            <a href="#" class="nav-link">Requests</a>
-                            <a href="#" class="nav-link">Others</a>
-                            <a href="#" class="nav-link">Settings</a>
+        
+        // Define navigation links in an array for easier management
+        const navLinks = [
+            { href: "#", text: "Dashboard", active: true },
+            { href: "#", text: "Soundboard" },
+            { href: "#", text: "Playlists" },
+            { href: "#", text: "Games" },
+            { href: "#", text: "Notes" },
+            { href: "#", text: "Requests" },
+            { href: "#", text: "Others" },
+            { href: "#", text: "Settings" }
+            { href: "#", text: "New Page" }
+        ];
+
+        const linkHTML = navLinks.map(link => 
+            `<a href="${link.href}" class="nav-link ${link.active ? 'active' : ''}">${link.text}</a>`
+        ).join('');
+
+        let navTabs;
+
+        if (navLinks.length > 8) {
+            // Use the scrollable container if there are 9 or more tabs
+            navTabs = `
+                <div class="nav-tabs-container">
+                    <div id="nav-scroll-wrapper" class="nav-scroll-wrapper">
+                        <div id="nav-arrow-left" class="nav-arrow">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                        </div>
+                        <div id="nav-tabs-scroller" class="nav-tabs-scroller">
+                            <div class="flex items-center space-x-2 primary-font">
+                                ${linkHTML}
+                            </div>
+                        </div>
+                        <div id="nav-arrow-right" class="nav-arrow">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
                         </div>
                     </div>
-                    <div id="nav-arrow-right" class="nav-arrow">
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                </div>
+            `;
+        } else {
+            // Use a simple non-scrolling flex container if 8 or fewer tabs
+            navTabs = `
+                <div class="nav-tabs-container">
+                    <div class="flex items-center space-x-2 primary-font">
+                        ${linkHTML}
                     </div>
                 </div>
-            </div>
-        `;
+            `;
+        }
+
 
         if (loggedIn) {
             navbar.innerHTML = `
