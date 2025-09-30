@@ -21,6 +21,7 @@
 
 // This script no longer uses ES6 imports to improve compatibility.
 // It relies on the Firebase SDK and firebaseConfig being available globally.
+<script src="../firebase-config.js"></script>
 
 document.addEventListener('DOMContentLoaded', () => {
     const NavbarManager = {
