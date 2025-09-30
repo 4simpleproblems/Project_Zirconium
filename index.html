@@ -6,91 +6,45 @@
     <title>4SP - Dashboard</title>
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="navbar-loading.js"></script>
-    
+    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <!-- Load Navbar CSS and Logic First -->
+    <script src="navbar-loading.js"></script>
     <style>
-        /* Custom Styles for Dashboard */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #121212;
-            color: #EAEAEA;
-            overflow-x: hidden;
-        }
-        .main-content {
-            opacity: 0;
-            animation: fadeIn 0.5s 0.2s ease-in-out forwards;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .dashboard-section {
-            border-radius: 1.5rem;
-            padding: 2rem;
-            transition: background-color 0.5s ease-in-out, color 0.5s ease-in-out;
-            position: relative;
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #121212; color: #EAEAEA; overflow-x: hidden; }
+        .main-content { opacity: 0; animation: fadeIn 0.5s 0.2s ease-in-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .dashboard-section { border-radius: 1.5rem; padding: 2rem; transition: background-color 0.5s ease-in-out, color 0.5s ease-in-out; position: relative; }
         .theme-clear { background-color: #3B82F6; color: #FFFFFF; }
         .theme-cloudy { background-color: #4B5563; color: #FFFFFF; }
         .theme-rainy { background-color: #374151; color: #FFFFFF; }
         .theme-snowy { background-color: #60A5FA; color: #1F2937; }
-        
-        .info-card {
-            background-color: #1E1E1E;
-            border-radius: 1.25rem;
-            padding: 1.5rem;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-        }
-
-        .settings-btn {
-            position: absolute;
-            top: 1.5rem;
-            right: 1.5rem;
-            color: rgba(255, 255, 255, 0.6);
-            cursor: pointer;
-            transition: color 0.2s ease, transform 0.2s ease;
-            z-index: 10;
-        }
-        .settings-btn:hover {
-            color: rgba(255, 255, 255, 1);
-            transform: rotate(45deg);
-        }
+        .info-card { background-color: #1E1E1E; border-radius: 1.25rem; padding: 1.5rem; display: flex; flex-direction: column; position: relative; }
+        .settings-btn { position: absolute; top: 1.5rem; right: 1.5rem; color: rgba(255, 255, 255, 0.6); cursor: pointer; transition: color 0.2s ease, transform 0.2s ease; z-index: 10; }
+        .settings-btn:hover { color: rgba(255, 255, 255, 1); transform: rotate(45deg); }
         .theme-snowy .settings-btn { color: rgba(0,0,0,0.6); }
         .theme-snowy .settings-btn:hover { color: rgba(0,0,0,1); }
-
-        /* Modal Styles */
-        .modal-overlay {
-            background-color: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            transition: opacity 0.3s ease-in-out;
-        }
-        .modal-overlay:not(.flex) {
-            opacity: 0;
-        }
-        .modal-content {
-            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
-            transform: scale(0.95);
-            opacity: 0;
-        }
-        .modal-overlay.flex .modal-content {
-            transform: scale(1);
-            opacity: 1;
-        }
+        .modal-overlay { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: opacity 0.3s ease-in-out; }
+        .modal-overlay:not(.flex) { opacity: 0; }
+        .modal-content { transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out; transform: scale(0.95); opacity: 0; }
+        .modal-overlay.flex .modal-content { transform: scale(1); opacity: 1; }
+        .skeleton { background-color: #2a2a2a; border-radius: 0.5rem; animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
     </style>
 </head>
 <body class="dark-mode">
 
-    <!-- Navbar is dynamically injected by navbar-loading.js -->
-
-    <main id="main-content" class="main-content p-4 md:p-8 max-w-7xl mx-auto">
+    <main id="main-content" class="p-4 md:p-8 max-w-7xl mx-auto">
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-3xl font-bold">Dashboard</h1>
+                <p id="last-updated" class="text-sm text-gray-400">Last updated: --</p>
+            </div>
+            <button id="refresh-dashboard-btn" class="text-gray-400 hover:text-white transition-transform duration-300"><i class="fa-solid fa-arrows-rotate fa-lg"></i></button>
+        </div>
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div class="lg:col-span-2 flex flex-col gap-6">
-                <!-- Greeting and Weather Section -->
                 <section id="weather-greeting-section" class="dashboard-section theme-cloudy flex flex-col justify-between min-h-[300px]">
                     <button id="weather-settings-btn" class="settings-btn"><i class="fas fa-gear fa-lg"></i></button>
                     <div>
@@ -105,206 +59,40 @@
                         <p id="weather-temp" class="text-6xl md:text-7xl font-extrabold leading-none">--°</p>
                     </div>
                 </section>
-
-                <!-- Quick Actions Section -->
                 <section class="info-card">
                     <button id="actions-settings-btn" class="settings-btn"><i class="fas fa-gear fa-lg"></i></button>
                     <h3 class="text-2xl font-bold mb-4">Quick Actions</h3>
-                    <div id="quick-actions-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                        <!-- Quick Actions will be dynamically inserted here -->
-                    </div>
+                    <div id="quick-actions-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-4"></div>
                 </section>
             </div>
-
             <div class="lg:col-span-1 flex flex-col gap-6">
-                 <!-- On This Day Section -->
                 <section class="info-card flex-grow">
                     <h3 class="text-2xl font-bold mb-2">On This Day</h3>
-                    <p id="event-date" class="text-gray-400 mb-4">Loading date...</p>
-                    <p id="event-text" class="text-lg flex-grow">Fetching historical event...</p>
+                    <p id="event-date" class="text-gray-400 mb-4"><span class="skeleton h-4 w-28 block"></span></p>
+                    <p id="event-text" class="text-lg flex-grow"><span class="skeleton h-4 w-full block mt-1"></span><span class="skeleton h-4 w-3/4 block mt-1"></span></p>
                 </section>
-
-                <!-- Quote of the Day Section -->
                 <section class="info-card flex-grow">
                      <h3 class="text-2xl font-bold mb-4">Quote of the Day</h3>
-                    <blockquote class="text-lg italic flex-grow">
-                        <p id="quote-text">"Loading quote..."</p>
-                    </blockquote>
-                    <cite id="quote-author" class="block text-right mt-4 not-italic text-gray-400">-</cite>
+                    <blockquote class="text-lg italic flex-grow"><p id="quote-text"><span class="skeleton h-5 w-full block"></span><span class="skeleton h-5 w-1/2 block mt-1"></span></p></blockquote>
+                    <cite id="quote-author" class="block text-right mt-4 not-italic text-gray-400"><span class="skeleton h-4 w-32 ml-auto block"></span></cite>
                 </section>
             </div>
         </div>
     </main>
     
     <!-- Modals -->
-    <div id="weather-settings-modal" class="modal-overlay fixed inset-0 z-50 items-center justify-center hidden">
-        <div class="modal-content bg-gray-800 rounded-2xl shadow-xl p-6 w-full max-w-md m-4 relative">
-            <button id="close-weather-modal-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"><i class="fas fa-times fa-lg"></i></button>
-            <h3 class="text-2xl font-bold mb-4">Weather Settings</h3>
-            <div class="space-y-4">
-                <div>
-                    <label for="location-input" class="block text-sm font-medium text-gray-300 mb-1">Enter a city name</label>
-                    <input type="text" id="location-input" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., New York">
-                    <p id="modal-error" class="text-red-400 text-sm mt-1 hidden"></p>
-                </div>
-                <button id="save-location-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save Location</button>
-                <div class="relative flex py-2 items-center"><div class="flex-grow border-t border-gray-600"></div><span class="flex-shrink mx-4 text-gray-400">or</span><div class="flex-grow border-t border-gray-600"></div></div>
-                <button id="use-current-location-btn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"><i class="fa-solid fa-location-crosshairs"></i>Use My Current Location</button>
-            </div>
-        </div>
-    </div>
+    <div id="auth-modal-container"></div>
+    <div id="weather-settings-modal" class="modal-overlay fixed inset-0 z-50 items-center justify-center hidden"><div class="modal-content bg-gray-800 rounded-2xl shadow-xl p-6 w-full max-w-md m-4 relative"><button id="close-weather-modal-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white"><i class="fas fa-times fa-lg"></i></button><h3 class="text-2xl font-bold mb-4">Weather Settings</h3><div class="space-y-4"><div><label for="location-input" class="block text-sm font-medium text-gray-300 mb-1">Enter a city name</label><input type="text" id="location-input" class="w-full bg-gray-700 rounded-lg px-3 py-2 text-white" placeholder="e.g., New York"><p id="modal-error" class="text-red-400 text-sm mt-1 hidden"></p></div><button id="save-location-btn" class="w-full bg-blue-600 hover:bg-blue-700 font-bold py-2 px-4 rounded-lg">Save</button><div class="relative flex py-2 items-center"><div class="flex-grow border-t border-gray-600"></div><span class="flex-shrink mx-4 text-gray-400">or</span><div class="flex-grow border-t border-gray-600"></div></div><button id="use-current-location-btn" class="w-full bg-gray-600 hover:bg-gray-700 font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2"><i class="fa-solid fa-location-crosshairs"></i>Use My Current Location</button></div></div></div>
+    <div id="actions-settings-modal" class="modal-overlay fixed inset-0 z-50 items-center justify-center hidden"><div class="modal-content bg-gray-800 rounded-2xl shadow-xl p-6 w-full max-w-md m-4 relative"><button id="close-actions-modal-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white"><i class="fas fa-times fa-lg"></i></button><h3 class="text-2xl font-bold mb-4">Customize Quick Actions</h3><p class="text-gray-400 mb-4">Select up to 4 pages for shortcuts.</p><div id="actions-checklist" class="space-y-3 max-h-60 overflow-y-auto pr-2"></div></div></div>
+
+    <!-- SCRIPT LOADING ORDER IS CRITICAL -->
+    <script> const firebaseConfig = { apiKey: "YOUR_API_KEY", authDomain: "YOUR_AUTH_DOMAIN", projectId: "YOUR_PROJECT_ID", storageBucket: "YOUR_STORAGE_BUCKET", messagingSenderId: "YOUR_SENDER_ID", appId: "YOUR_APP_ID" }; </script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" defer></script>
     
-    <div id="actions-settings-modal" class="modal-overlay fixed inset-0 z-50 items-center justify-center hidden">
-        <div class="modal-content bg-gray-800 rounded-2xl shadow-xl p-6 w-full max-w-md m-4 relative">
-            <button id="close-actions-modal-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"><i class="fas fa-times fa-lg"></i></button>
-            <h3 class="text-2xl font-bold mb-4">Customize Quick Actions</h3>
-            <p class="text-gray-400 mb-4">Select up to 4 pages to display as shortcuts.</p>
-            <div id="actions-checklist" class="space-y-3 max-h-60 overflow-y-auto pr-2">
-                <!-- Checkboxes for pages will be dynamically inserted here -->
-            </div>
-        </div>
-    </div>
-
-    <!-- SCRIPTS -->
-    <script> const firebaseConfig = { apiKey: "YOUR_API_KEY", authDomain: "YOUR_AUTH_DOMAIN", projectId: "YOUR_PROJECT_ID" }; </script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            const G_ELEMENTS = {
-                greeting: document.getElementById('greeting-text'),
-                weatherSection: document.getElementById('weather-greeting-section'),
-                location: document.getElementById('weather-location'),
-                temp: document.getElementById('weather-temp'),
-                condition: document.getElementById('weather-condition'),
-                eventDate: document.getElementById('event-date'),
-                eventText: document.getElementById('event-text'),
-                quoteText: document.getElementById('quote-text'),
-                quoteAuthor: document.getElementById('quote-author'),
-                quickActionsGrid: document.getElementById('quick-actions-grid'),
-                weatherModal: {
-                    self: document.getElementById('weather-settings-modal'),
-                    openBtn: document.getElementById('weather-settings-btn'),
-                    closeBtn: document.getElementById('close-weather-modal-btn'),
-                    input: document.getElementById('location-input'),
-                    saveBtn: document.getElementById('save-location-btn'),
-                    currentBtn: document.getElementById('use-current-location-btn'),
-                    error: document.getElementById('modal-error')
-                },
-                actionsModal: {
-                    self: document.getElementById('actions-settings-modal'),
-                    openBtn: document.getElementById('actions-settings-btn'),
-                    closeBtn: document.getElementById('close-actions-modal-btn'),
-                    checklist: document.getElementById('actions-checklist')
-                }
-            };
-
-            let allPages = [];
-
-            // --- DATA FETCHING ---
-            async function fetchPages() {
-                try {
-                    const response = await fetch('./Pages.json');
-                    if (!response.ok) throw new Error('Network response was not ok');
-                    allPages = await response.json();
-                } catch (error) {
-                    console.error('Failed to fetch Pages.json:', error);
-                    G_ELEMENTS.quickActionsGrid.innerHTML = `<p class="text-red-400 col-span-4">Could not load quick actions.</p>`;
-                }
-            }
-
-            // --- UI RENDERING & LOGIC ---
-            function renderQuickActions() {
-                const savedActions = JSON.parse(localStorage.getItem('quickActions')) || ['dashboard', 'soundboard', 'playlists', 'games'];
-                const actionsToRender = allPages.filter(p => savedActions.includes(p.id));
-                G_ELEMENTS.quickActionsGrid.innerHTML = actionsToRender.map(page => `
-                    <a href="${page.path}" class="flex flex-col items-center justify-center p-4 bg-gray-700/50 hover:bg-gray-700 rounded-xl transition-colors text-center">
-                        <i class="${page.icon} fa-2x mb-2"></i>
-                        <span>${page.name}</span>
-                    </a>
-                `).join('');
-            }
-            
-            function populateActionsSettings() {
-                const savedActions = JSON.parse(localStorage.getItem('quickActions')) || ['dashboard', 'soundboard', 'playlists', 'games'];
-                G_ELEMENTS.actionsModal.checklist.innerHTML = allPages.map(page => `
-                    <label class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-700 cursor-pointer">
-                        <input type="checkbox" data-page-id="${page.id}" class="h-5 w-5 rounded bg-gray-600 border-gray-500 text-blue-500 focus:ring-blue-500" ${savedActions.includes(page.id) ? 'checked' : ''}>
-                        <span class="text-white">${page.name}</span>
-                    </label>
-                `).join('');
-
-                const checkboxes = G_ELEMENTS.actionsModal.checklist.querySelectorAll('input[type="checkbox"]');
-                checkboxes.forEach(checkbox => checkbox.addEventListener('change', handleActionSelection));
-            }
-
-            function handleActionSelection() {
-                const checkboxes = G_ELEMENTS.actionsModal.checklist.querySelectorAll('input[type="checkbox"]');
-                let selected = Array.from(checkboxes).filter(c => c.checked).map(c => c.dataset.pageId);
-                
-                if (selected.length > 4) {
-                    this.checked = false; // Prevent selecting more than 4
-                    selected = Array.from(checkboxes).filter(c => c.checked).map(c => c.dataset.pageId);
-                }
-
-                localStorage.setItem('quickActions', JSON.stringify(selected));
-                renderQuickActions();
-            }
-
-            // --- MODAL CONTROL ---
-            function openModal(modal) {
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
-            }
-            function closeModal(modal) {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            }
-
-            // --- DYNAMIC CONTENT LOGIC (Weather, Quote, etc.) ---
-            const updateGreeting = () => { /* ... (same as before) ... */ };
-            const fetchWeather = async (lat, lon, city) => { /* ... (same as before) ... */ };
-            const geocodeAndFetchWeather = async (city) => { /* ... (same as before) ... */ };
-            const getUserLocation = () => { /* ... (same as before) ... */ };
-            const initializeWeather = () => { /* ... (same as before) ... */ };
-            const fetchOnThisDay = () => { /* ... (same as before) ... */ };
-            const fetchQuote = () => { /* ... (same as before) ... */ };
-
-            // Re-implementing functions here for completeness, no changes needed to their internals
-            function updateGreeting(){const hour=new Date().getHours();if(hour<12)G_ELEMENTS.greeting.textContent='Good Morning';else if(hour<18)G_ELEMENTS.greeting.textContent='Good Afternoon';else G_ELEMENTS.greeting.textContent='Good Evening'}
-            async function fetchWeather(lat,lon,city){try{const res=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&temperature_unit=fahrenheit`);if(!res.ok)throw new Error('Failed to fetch');const data=await res.json();const w=data.current;G_ELEMENTS.location.textContent=city;G_ELEMENTS.temp.textContent=`${Math.round(w.temperature_2m)}°`;const desc={0:"Clear",1:"Mainly Clear",2:"Partly Cloudy",3:"Overcast",45:"Fog",48:"Rime Fog",51:"Light Drizzle",53:"Drizzle",55:"Dense Drizzle",61:"Slight Rain",63:"Rain",65:"Heavy Rain",71:"Slight Snow",73:"Snow",75:"Heavy Snow",80:"Rain Showers",81:"Violent Showers",82:"Violent Showers",95:"Thunderstorm",96:"Thunderstorm",99:"Thunderstorm"};G_ELEMENTS.condition.textContent=desc[w.weather_code]||"Unknown";G_ELEMENTS.weatherSection.className='dashboard-section flex flex-col justify-between min-h-[300px]';if([0,1].includes(w.weather_code))G_ELEMENTS.weatherSection.classList.add('theme-clear');else if([2,3,45,48].includes(w.weather_code))G_ELEMENTS.weatherSection.classList.add('theme-cloudy');else if(w.weather_code>=51&&w.weather_code<=82||[95,96,99].includes(w.weather_code))G_ELEMENTS.weatherSection.classList.add('theme-rainy');else if(w.weather_code>=71&&w.weather_code<=86)G_ELEMENTS.weatherSection.classList.add('theme-snowy');else G_ELEMENTS.weatherSection.classList.add('theme-cloudy');localStorage.setItem('userLocation',JSON.stringify({lat,lon,city}))}catch(err){console.error("Weather error:",err);G_ELEMENTS.location.textContent='Weather Error'}}
-            async function geocodeAndFetchWeather(city){G_ELEMENTS.weatherModal.error.classList.add('hidden');try{const res=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city)}&format=json&limit=1`);if(!res.ok)throw new Error('Geocoding failed');const data=await res.json();if(data.length===0){G_ELEMENTS.weatherModal.error.textContent='Could not find location.';G_ELEMENTS.weatherModal.error.classList.remove('hidden');return}const{lat,lon,display_name}=data[0];await fetchWeather(lat,lon,display_name.split(',')[0]);closeModal(G_ELEMENTS.weatherModal.self)}catch(err){console.error("Geocoding error:",err);G_ELEMENTS.weatherModal.error.textContent='Failed to fetch location.';G_ELEMENTS.weatherModal.error.classList.remove('hidden')}}
-            function getUserLocation(){navigator.geolocation.getCurrentPosition(pos=>fetchWeather(pos.coords.latitude,pos.coords.longitude,'Current Location'),()=>fetchWeather(40.79,-81.52,'Massillon, OH'))}
-            function initializeWeather(){const loc=localStorage.getItem('userLocation');if(loc){const{lat,lon,city}=JSON.parse(loc);fetchWeather(lat,lon,city)}else{getUserLocation()}}
-            function fetchOnThisDay(){const d=new Date(),m=String(d.getMonth()+1),day=String(d.getDate());G_ELEMENTS.eventDate.textContent=d.toLocaleDateString(undefined,{month:'long',day:'numeric'});fetch(`https://en.wikipedia.org/api/rest_v1/feed/onthisday/events/${m}/${day}`).then(res=>res.json()).then(data=>{if(data.events&&data.events.length>0){const evt=data.events[Math.floor(Math.random()*data.events.length)];G_ELEMENTS.eventText.innerHTML=`${evt.text} <span class="text-gray-400">(${evt.year})</span>`}else{G_ELEMENTS.eventText.textContent='No significant events found.'}}).catch(err=>{console.error('OnThisDay error:',err);G_ELEMENTS.eventText.textContent='Could not load event.'})}
-            function fetchQuote(){fetch('https://api.quotable.io/random').then(res=>res.json()).then(data=>{G_ELEMENTS.quoteText.textContent=`"${data.content}"`;G_ELEMENTS.quoteAuthor.textContent=`- ${data.author}`}).catch(err=>{console.error("Quote error:",err);G_ELEMENTS.quoteText.textContent='"The best way to predict the future is to create it."';G_ELEMENTS.quoteAuthor.textContent='- Peter Drucker'})}
-
-            // --- EVENT LISTENERS ---
-            G_ELEMENTS.weatherModal.openBtn.addEventListener('click', () => openModal(G_ELEMENTS.weatherModal.self));
-            G_ELEMENTS.weatherModal.closeBtn.addEventListener('click', () => closeModal(G_ELEMENTS.weatherModal.self));
-            G_ELEMENTS.weatherModal.self.addEventListener('click', (e) => { if (e.target === G_ELEMENTS.weatherModal.self) closeModal(G_ELEMENTS.weatherModal.self); });
-            G_ELEMENTS.weatherModal.saveBtn.addEventListener('click', () => { if (G_ELEMENTS.weatherModal.input.value.trim()) geocodeAndFetchWeather(G_ELEMENTS.weatherModal.input.value.trim()); });
-            G_ELEMENTS.weatherModal.input.addEventListener('keydown', (e) => { if (e.key === 'Enter') G_ELEMENTS.weatherModal.saveBtn.click(); });
-            G_ELEMENTS.weatherModal.currentBtn.addEventListener('click', () => { localStorage.removeItem('userLocation'); getUserLocation(); closeModal(G_ELEMENTS.weatherModal.self); });
-            
-            G_ELEMENTS.actionsModal.openBtn.addEventListener('click', () => openModal(G_ELEMENTS.actionsModal.self));
-            G_ELEMENTS.actionsModal.closeBtn.addEventListener('click', () => closeModal(G_ELEMENTS.actionsModal.self));
-            G_ELEMENTS.actionsModal.self.addEventListener('click', (e) => { if (e.target === G_ELEMENTS.actionsModal.self) closeModal(G_ELEMENTS.actionsModal.self); });
-
-            // --- INITIALIZATION ---
-            async function main() {
-                await fetchPages();
-                renderQuickActions();
-                populateActionsSettings();
-                updateGreeting();
-                initializeWeather();
-                fetchOnThisDay();
-                fetchQuote();
-            }
-
-            main();
-        });
-    </script>
+    <!-- Dashboard Logic -->
+    <script src="dashboard.js" defer></script>
 </body>
 </html>
 
