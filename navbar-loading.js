@@ -3,22 +3,24 @@
  * @description A self-contained module to create, style, and manage a dynamic, Firebase-integrated navigation bar.
  * This script injects its own CSS, creates the navbar HTML, and handles all interactive
  * functionality, including a responsive, scrollable tab menu and authentication state.
+ *
+ * IMPORTANT: This script relies on the Firebase v8 compatibility libraries and expects
+ * them to be loaded in your HTML *before* this script. It also expects a global `firebaseConfig` object.
+ * * Your HTML's <head> or <body> should include scripts in this order:
+ * <!-- 1. Your Firebase Configuration File -->
+ * <!-- This file must define a global variable: const firebaseConfig = { ... }; -->
+ * <script src="../firebase-config.js"></script>
+ *
+ * <!-- 2. Firebase SDK (v8 Compatibility Mode) -->
+ * <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+ * <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+ *
+ * <!-- 3. This Navbar Script -->
+ * <script src="path/to/navbar-loading.js"></script>
  */
 
-// IMPORTANT: Assumes you have a firebase-config.js file in the parent directory ('../')
-// It should look like this:
-// export const firebaseConfig = {
-//   apiKey: "YOUR_API_KEY",
-//   authDomain: "YOUR_AUTH_DOMAIN",
-//   projectId: "YOUR_PROJECT_ID",
-//   storageBucket: "YOUR_STORAGE_BUCKET",
-//   messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-//   appId: "YOUR_APP_ID"
-// };
-import { firebaseConfig } from '../firebase-config.js';
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
+// This script no longer uses ES6 imports to improve compatibility.
+// It relies on the Firebase SDK and firebaseConfig being available globally.
 
 document.addEventListener('DOMContentLoaded', () => {
     const NavbarManager = {
@@ -39,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 { href: "#", text: "Calculator" },
                 { href: "#", text: "Timer" },
                 { href: "#", text: "Others" },
-                { href: "#", text: "Settings" }
+                { href: "#", "text": "Settings" }
             ]
         },
 
@@ -68,16 +70,23 @@ document.addEventListener('DOMContentLoaded', () => {
             this._injectCSS();
             this._createNavbarContainer();
             this._initializeFirebase();
-            this._attachGlobalEventListeners();
-            // Initial render will be handled by the auth state change listener
+            // Initial render is now handled by the auth state change listener or after a fallback render.
         },
         
         _initializeFirebase() {
+            // Check if Firebase and the config are loaded globally
+            if (typeof firebase === 'undefined' || typeof firebaseConfig === 'undefined') {
+                console.error("Firebase is not loaded or firebaseConfig is not defined. Please ensure you have included the Firebase SDK and your firebase-config.js file in your HTML before this script.");
+                this.render(); // Render in a logged-out state as a fallback
+                return;
+            }
+
             try {
-                this.firebase.app = initializeApp(firebaseConfig);
-                this.firebase.auth = getAuth(this.firebase.app);
+                // Use the v8 compat syntax
+                this.firebase.app = firebase.initializeApp(firebaseConfig);
+                this.firebase.auth = firebase.auth();
                 
-                onAuthStateChanged(this.firebase.auth, (user) => {
+                this.firebase.auth.onAuthStateChanged((user) => {
                     if (user) {
                         this.state.isLoggedIn = true;
                         this.state.user = {
@@ -248,6 +257,9 @@ document.addEventListener('DOMContentLoaded', () => {
             this.dom.navbar = navbar;
             document.body.style.marginTop = this.config.navbarHeight;
             setTimeout(() => { this.dom.navbar.style.opacity = '1'; }, 10);
+            
+            // We need to attach listeners here because render might be called multiple times
+            this._attachGlobalEventListeners();
         },
 
         // --- RENDERING ---
@@ -349,19 +361,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- EVENT HANDLING & ACTIONS ---
         _attachGlobalEventListeners() {
-            this.dom.navbar.addEventListener('click', (e) => {
+            // Use event delegation on the document body to ensure listeners are always active
+            document.body.addEventListener('click', (e) => {
                 const target = e.target;
                 if (target.closest('#account-button-toggle') || target.closest('#account-button-in-menu')) { this._toggleAccountMenu(e); }
-                else if (target.closest('#logout-btn')) { signOut(this.firebase.auth); } 
+                else if (target.closest('#logout-btn')) { this.firebase.auth.signOut(); } 
                 else if (target.closest('#login-btn')) { console.log("Login clicked - Add your Firebase login logic here (e.g., signInWithPopup)"); }
                 else if (target.closest('#signup-btn')) { console.log("Sign up clicked - Add your Firebase signup logic here"); }
-            });
-            document.addEventListener('click', (e) => {
+                
+                // Close menu if clicking outside
                 const accountControls = document.getElementById('account-controls');
-                if (this.dom.accountMenu && accountControls && !accountControls.contains(e.target)) {
+                if (this.dom.accountMenu && !this.dom.accountMenu.classList.contains('menu-hidden') && !accountControls.contains(target)) {
                     this._closeAccountMenu();
                 }
             });
+
             document.addEventListener('keydown', (e) => {
                 if (!this.dom.scroller || (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
                 if (e.key === 'ArrowRight') { e.preventDefault(); this.dom.scroller.scrollBy({ left: this.config.keyboardScrollAmount, behavior: 'smooth' }); } 
@@ -371,6 +385,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         _setupScrollMechanics() {
             if (!this.dom.scroller) return;
+            // Use a flag to prevent multiple attachments
+            if (this.dom.scroller.dataset.eventsAttached) return;
+            this.dom.scroller.dataset.eventsAttached = 'true';
+
             this.dom.scroller.addEventListener('wheel', (e) => { e.preventDefault(); this.dom.scroller.scrollLeft += e.deltaX + e.deltaY; }, { passive: false });
             this.dom.rightArrow?.addEventListener('click', () => { this.dom.scroller.scrollTo({ left: this.dom.scroller.scrollWidth, behavior: 'smooth' }); });
             this.dom.leftArrow?.addEventListener('click', () => { this.dom.scroller.scrollTo({ left: 0, behavior: 'smooth' }); });
@@ -421,3 +439,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     NavbarManager.init();
 });
+
