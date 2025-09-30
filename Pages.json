@@ -63,6 +63,13 @@
     "showInNav": false
   },
   {
+    "id": "timer-again",
+    "name": "Timer Again",
+    "path": "#",
+    "icon": "fa-solid fa-stopwatch",
+    "showInNav": false
+  },
+  {
     "id": "account",
     "name": "Account",
     "path": "#",
