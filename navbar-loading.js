@@ -8,12 +8,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- CONFIGURATION & STATE ---
         config: {
             navbarHeight: '65px',
-            logoUrl: 'https://raw.githubusercontent.com/4simpleproblems/Proj-Vanadium/main/images/logo.png'
         },
         state: {
             isLoggedIn: false,
             user: null,
             navLinks: [],
+            siteConfig: {}, // Will be populated from Pages.json
             isMenuOpen: false
         },
         dom: {
@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
         async init() {
             this._injectCSS();
             this._createNavbarContainer();
-            await this._fetchNavLinks();
+            await this._fetchSiteData();
             this._initializeFirebase();
         },
         
@@ -72,15 +72,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
-        async _fetchNavLinks() {
+        async _fetchSiteData() {
             try {
                 const response = await fetch('./Pages.json');
                 if (!response.ok) throw new Error('Network response failed for Pages.json');
-                const pages = await response.json();
-                this.state.navLinks = pages.filter(p => p.showInNav);
+                const data = await response.json();
+                this.state.siteConfig = data.config || {};
+                this.state.navLinks = data.pages.filter(p => p.showInNav);
             } catch (error) {
-                console.error("Navbar Link Error:", error);
-                // Provide a default link if the fetch fails so the navbar isn't empty.
+                console.error("Navbar Site Data Error:", error);
+                // Provide default values if the fetch fails so the navbar isn't broken.
+                this.state.siteConfig = { logoUrl: 'https://raw.githubusercontent.com/4simpleproblems/Proj-Vanadium/main/images/logo.png', siteName: '4SP' };
                 this.state.navLinks = [{ name: "Dashboard", path: "./dashboard.html", id: "dashboard" }];
             }
         },
@@ -182,11 +184,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!this.dom.navbar) return;
             const navTabsHTML = this._generateNavTabsHTML();
             const accountControlsHTML = this._generateAccountControlsHTML();
+            const logoUrl = this.state.siteConfig.logoUrl || '';
+            const siteName = this.state.siteConfig.siteName || 'App';
+            
             this.dom.navbar.innerHTML = `
                 <div class="h-full flex items-center justify-between px-4 sm:px-6 max-w-screen-2xl mx-auto">
                     <a href="./dashboard.html" class="flex items-center gap-3">
-                        <img src="${this.config.logoUrl}" alt="Logo" class="h-8 w-8 object-contain">
-                        <span class="font-bold text-xl hidden sm:inline" style="font-family: var(--font-special);">4SP</span>
+                        <img src="${logoUrl}" alt="Logo" class="h-8 w-8 object-contain">
+                        <span class="font-bold text-xl hidden sm:inline" style="font-family: var(--font-special);">${siteName}</span>
                     </a>
                     ${navTabsHTML}
                     ${accountControlsHTML}
