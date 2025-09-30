@@ -16,17 +16,17 @@
         .main-content { opacity: 0; animation: fadeIn 0.5s 0.2s ease-in-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .dashboard-section { border-radius: 1.5rem; padding: 2rem; transition: background-color 0.5s ease-in-out, color 0.5s ease-in-out; position: relative; }
-        .theme-clear { background-color: #3B82F6; color: #FFFFFF; }
-        .theme-cloudy { background-color: #4B5563; color: #FFFFFF; }
-        .theme-rainy { background-color: #374151; color: #FFFFFF; }
-        .theme-snowy { background-color: #60A5FA; color: #1F2937; }
+        .theme-clear { background: linear-gradient(135deg, #3B82F6, #60A5FA); color: #FFFFFF; }
+        .theme-cloudy { background: linear-gradient(135deg, #4B5563, #6B7280); color: #FFFFFF; }
+        .theme-rainy { background: linear-gradient(135deg, #374151, #4B5563); color: #FFFFFF; }
+        .theme-snowy { background: linear-gradient(135deg, #93C5FD, #EBF8FF); color: #1F2937; }
         .info-card { background-color: #1E1E1E; border-radius: 1.25rem; padding: 1.5rem; display: flex; flex-direction: column; position: relative; }
         .settings-btn { position: absolute; top: 1.5rem; right: 1.5rem; color: rgba(255, 255, 255, 0.6); cursor: pointer; transition: color 0.2s ease, transform 0.2s ease; z-index: 10; }
         .settings-btn:hover { color: rgba(255, 255, 255, 1); transform: rotate(45deg); }
         .theme-snowy .settings-btn { color: rgba(0,0,0,0.6); }
         .theme-snowy .settings-btn:hover { color: rgba(0,0,0,1); }
-        .modal-overlay { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: opacity 0.3s ease-in-out; }
-        .modal-overlay:not(.flex) { opacity: 0; }
+        .modal-overlay { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: opacity 0.3s ease-in-out; opacity: 0; pointer-events: none; }
+        .modal-overlay.flex { opacity: 1; pointer-events: auto; }
         .modal-content { transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out; transform: scale(0.95); opacity: 0; }
         .modal-overlay.flex .modal-content { transform: scale(1); opacity: 1; }
         .skeleton { background-color: #2a2a2a; border-radius: 0.5rem; animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
@@ -81,18 +81,239 @@
     </main>
     
     <!-- Modals -->
-    <div id="auth-modal-container"></div>
     <div id="weather-settings-modal" class="modal-overlay fixed inset-0 z-50 items-center justify-center hidden"><div class="modal-content bg-gray-800 rounded-2xl shadow-xl p-6 w-full max-w-md m-4 relative"><button id="close-weather-modal-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white"><i class="fas fa-times fa-lg"></i></button><h3 class="text-2xl font-bold mb-4">Weather Settings</h3><div class="space-y-4"><div><label for="location-input" class="block text-sm font-medium text-gray-300 mb-1">Enter a city name</label><input type="text" id="location-input" class="w-full bg-gray-700 rounded-lg px-3 py-2 text-white" placeholder="e.g., New York"><p id="modal-error" class="text-red-400 text-sm mt-1 hidden"></p></div><button id="save-location-btn" class="w-full bg-blue-600 hover:bg-blue-700 font-bold py-2 px-4 rounded-lg">Save</button><div class="relative flex py-2 items-center"><div class="flex-grow border-t border-gray-600"></div><span class="flex-shrink mx-4 text-gray-400">or</span><div class="flex-grow border-t border-gray-600"></div></div><button id="use-current-location-btn" class="w-full bg-gray-600 hover:bg-gray-700 font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2"><i class="fa-solid fa-location-crosshairs"></i>Use My Current Location</button></div></div></div>
     <div id="actions-settings-modal" class="modal-overlay fixed inset-0 z-50 items-center justify-center hidden"><div class="modal-content bg-gray-800 rounded-2xl shadow-xl p-6 w-full max-w-md m-4 relative"><button id="close-actions-modal-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white"><i class="fas fa-times fa-lg"></i></button><h3 class="text-2xl font-bold mb-4">Customize Quick Actions</h3><p class="text-gray-400 mb-4">Select up to 4 pages for shortcuts.</p><div id="actions-checklist" class="space-y-3 max-h-60 overflow-y-auto pr-2"></div></div></div>
 
     <!-- SCRIPT LOADING ORDER IS CRITICAL -->
-    <script> const firebaseConfig = { apiKey: "YOUR_API_KEY", authDomain: "YOUR_AUTH_DOMAIN", projectId: "YOUR_PROJECT_ID", storageBucket: "YOUR_STORAGE_BUCKET", messagingSenderId: "YOUR_SENDER_ID", appId: "YOUR_APP_ID" }; </script>
+    <!-- 1. Firebase Config -->
+    <script src="../firebase-config.js"></script>
+    <!-- 2. Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" defer></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js" defer></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" defer></script>
     
-    <!-- Dashboard Logic -->
-    <script src="dashboard.js" defer></script>
+    <!-- 3. Dashboard Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const G_ELEMENTS = {
+                greeting: document.getElementById('greeting-text'),
+                weatherSection: document.getElementById('weather-greeting-section'),
+                location: document.getElementById('weather-location'),
+                temp: document.getElementById('weather-temp'),
+                condition: document.getElementById('weather-condition'),
+                eventDate: document.getElementById('event-date'),
+                eventText: document.getElementById('event-text'),
+                quoteText: document.getElementById('quote-text'),
+                quoteAuthor: document.getElementById('quote-author'),
+                quickActionsGrid: document.getElementById('quick-actions-grid'),
+                lastUpdated: document.getElementById('last-updated'),
+                refreshBtn: document.getElementById('refresh-dashboard-btn'),
+                weatherModal: {
+                    self: document.getElementById('weather-settings-modal'),
+                    openBtn: document.getElementById('weather-settings-btn'),
+                    closeBtn: document.getElementById('close-weather-modal-btn'),
+                    input: document.getElementById('location-input'),
+                    saveBtn: document.getElementById('save-location-btn'),
+                    currentBtn: document.getElementById('use-current-location-btn'),
+                    error: document.getElementById('modal-error')
+                },
+                actionsModal: {
+                    self: document.getElementById('actions-settings-modal'),
+                    openBtn: document.getElementById('actions-settings-btn'),
+                    closeBtn: document.getElementById('close-actions-modal-btn'),
+                    checklist: document.getElementById('actions-checklist')
+                }
+            };
+
+            let allPages = [];
+
+            // --- DATA FETCHING & RENDERING ---
+            async function fetchPages() {
+                try {
+                    const response = await fetch('./Pages.json');
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    allPages = await response.json();
+                } catch (error) {
+                    console.error('Failed to fetch Pages.json:', error);
+                    G_ELEMENTS.quickActionsGrid.innerHTML = `<p class="text-red-400 col-span-4">Could not load quick actions.</p>`;
+                }
+            }
+
+            function renderQuickActions() {
+                const savedActions = JSON.parse(localStorage.getItem('quickActions')) || ['dashboard', 'soundboard', 'playlists', 'games'];
+                const actionsToRender = allPages.filter(p => savedActions.includes(p.id));
+                G_ELEMENTS.quickActionsGrid.innerHTML = actionsToRender.map(page => `
+                    <a href="${page.path}" class="flex flex-col items-center justify-center p-4 bg-gray-700/50 hover:bg-gray-700 rounded-xl transition-colors text-center">
+                        <i class="${page.icon} fa-2x mb-2"></i>
+                        <span>${page.name}</span>
+                    </a>
+                `).join('');
+            }
+
+            // --- MODAL & SETTINGS LOGIC ---
+            function populateActionsSettings() {
+                const savedActions = JSON.parse(localStorage.getItem('quickActions')) || ['dashboard', 'soundboard', 'playlists', 'games'];
+                G_ELEMENTS.actionsModal.checklist.innerHTML = allPages.map(page => `
+                    <label class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-700 cursor-pointer">
+                        <input type="checkbox" data-page-id="${page.id}" class="h-5 w-5 rounded bg-gray-600 border-gray-500 text-blue-500 focus:ring-blue-500" ${savedActions.includes(page.id) ? 'checked' : ''}>
+                        <span class="text-white">${page.name}</span>
+                    </label>
+                `).join('');
+                const checkboxes = G_ELEMENTS.actionsModal.checklist.querySelectorAll('input[type="checkbox"]');
+                checkboxes.forEach(checkbox => checkbox.addEventListener('change', handleActionSelection));
+            }
+
+            function handleActionSelection(e) {
+                const checkboxes = G_ELEMENTS.actionsModal.checklist.querySelectorAll('input[type="checkbox"]');
+                let selected = Array.from(checkboxes).filter(c => c.checked).map(c => c.dataset.pageId);
+                
+                if (selected.length > 4) {
+                    e.target.checked = false; 
+                    return;
+                }
+                localStorage.setItem('quickActions', JSON.stringify(selected));
+                renderQuickActions();
+            }
+
+            function openModal(modal) { modal.classList.remove('hidden'); modal.classList.add('flex'); }
+            function closeModal(modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
+
+            // --- DYNAMIC CONTENT WIDGETS ---
+            const updateGreeting = () => { const hour = new Date().getHours(); G_ELEMENTS.greeting.textContent = hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening'; };
+            
+            async function fetchWeather(lat, lon, city) {
+                try {
+                    const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&temperature_unit=fahrenheit`);
+                    const data = await response.json();
+                    const weather = data.current;
+                    G_ELEMENTS.location.textContent = city || 'Current Location';
+                    G_ELEMENTS.temp.textContent = `${Math.round(weather.temperature_2m)}°`;
+                    
+                    const descriptions = {0:"Clear",1:"Clear",2:"Cloudy",3:"Cloudy",45:"Fog",48:"Fog",51:"Drizzle",53:"Drizzle",55:"Drizzle",61:"Rain",63:"Rain",65:"Rain",71:"Snow",73:"Snow",75:"Snow",80:"Rain",81:"Rain",82:"Thunderstorm",95:"Thunderstorm",96:"Thunderstorm",99:"Thunderstorm"};
+                    G_ELEMENTS.condition.textContent = descriptions[weather.weather_code] || "Cloudy";
+                    
+                    const themes = {0:"theme-clear",1:"theme-clear",2:"theme-cloudy",3:"theme-cloudy",45:"theme-cloudy",48:"theme-cloudy",51:"theme-rainy",53:"theme-rainy",55:"theme-rainy",61:"theme-rainy",63:"theme-rainy",65:"theme-rainy",71:"theme-snowy",73:"theme-snowy",75:"theme-snowy",80:"theme-rainy",81:"theme-rainy",82:"theme-rainy",95:"theme-rainy",96:"theme-rainy",99:"theme-rainy"};
+                    G_ELEMENTS.weatherSection.className = `dashboard-section flex flex-col justify-between min-h-[300px] ${themes[weather.weather_code] || 'theme-cloudy'}`;
+
+                } catch (error) {
+                    console.error("Weather fetch error:", error);
+                    G_ELEMENTS.location.textContent = 'Weather Unavailable';
+                }
+            }
+            
+            async function geocodeAndFetchWeather(city) {
+                G_ELEMENTS.weatherModal.error.classList.add('hidden');
+                try {
+                    const response = await fetch(`https://geocode.maps.co/search?q=${encodeURIComponent(city)}`);
+                    const data = await response.json();
+                    if (data && data.length > 0) {
+                        const { lat, lon, display_name } = data[0];
+                        fetchWeather(lat, lon, display_name.split(',')[0]);
+                        localStorage.setItem('weatherLocation', JSON.stringify({type: 'city', value: city}));
+                        closeModal(G_ELEMENTS.weatherModal.self);
+                    } else {
+                        G_ELEMENTS.weatherModal.error.textContent = "Could not find that location. Please try again.";
+                        G_ELEMENTS.weatherModal.error.classList.remove('hidden');
+                    }
+                } catch (error) {
+                    G_ELEMENTS.weatherModal.error.textContent = "Failed to fetch location data.";
+                    G_ELEMENTS.weatherModal.error.classList.remove('hidden');
+                }
+            }
+
+            const getUserLocation = () => {
+                navigator.geolocation.getCurrentPosition(
+                    position => {
+                        fetchWeather(position.coords.latitude, position.coords.longitude);
+                        localStorage.setItem('weatherLocation', JSON.stringify({type: 'coords', value: {lat: position.coords.latitude, lon: position.coords.longitude}}));
+                        closeModal(G_ELEMENTS.weatherModal.self);
+                    },
+                    () => { // Fallback if user denies location
+                        geocodeAndFetchWeather('New York'); 
+                    }
+                );
+            };
+
+            const initializeWeather = () => {
+                const savedLocation = JSON.parse(localStorage.getItem('weatherLocation'));
+                if (savedLocation) {
+                    if (savedLocation.type === 'city') geocodeAndFetchWeather(savedLocation.value);
+                    else if (savedLocation.type === 'coords') fetchWeather(savedLocation.value.lat, savedLocation.value.lon);
+                } else {
+                    getUserLocation(); // Default to geolocation
+                }
+            };
+            
+            async function fetchOnThisDay() {
+                G_ELEMENTS.eventText.innerHTML = `<span class="skeleton h-4 w-full block mt-1"></span><span class="skeleton h-4 w-3/4 block mt-1"></span>`;
+                const today = new Date();
+                const month = String(today.getMonth() + 1);
+                const day = String(today.getDate());
+                G_ELEMENTS.eventDate.textContent = today.toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+                try {
+                    const response = await fetch(`https://en.wikipedia.org/api/rest_v1/feed/onthisday/events/${month}/${day}`);
+                    if (!response.ok) throw new Error('Wikipedia API fetch failed');
+                    const data = await response.json();
+                    if (data.events && data.events.length > 0) {
+                        const randomEvent = data.events[Math.floor(Math.random() * data.events.length)];
+                        G_ELEMENTS.eventText.innerHTML = `${randomEvent.text} <span class="text-gray-400">(${randomEvent.year})</span>`;
+                    } else { G_ELEMENTS.eventText.textContent = 'No significant events found for today.'; }
+                } catch (error) { console.error('On This Day fetch error:', error); G_ELEMENTS.eventText.textContent = 'Could not load historical event.'; }
+            }
+
+            async function fetchQuote() {
+                G_ELEMENTS.quoteText.innerHTML = `<span class="skeleton h-5 w-full block"></span><span class="skeleton h-5 w-1/2 block mt-1"></span>`;
+                G_ELEMENTS.quoteAuthor.innerHTML = `<span class="skeleton h-4 w-32 ml-auto block"></span>`;
+                try {
+                    const response = await fetch('https://api.quotable.io/random');
+                    if (!response.ok) throw new Error('Quotable API fetch failed');
+                    const data = await response.json();
+                    G_ELEMENTS.quoteText.textContent = `"${data.content}"`;
+                    G_ELEMENTS.quoteAuthor.textContent = `- ${data.author}`;
+                } catch (error) {
+                    console.error("Quote fetch error:", error);
+                    G_ELEMENTS.quoteText.textContent = '"The best way to predict the future is to create it."';
+                    G_ELEMENTS.quoteAuthor.textContent = '- Peter Drucker';
+                }
+            }
+
+            function updateTimestamp() {
+                G_ELEMENTS.lastUpdated.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+            }
+
+            async function refreshDashboard() {
+                const refreshButtonIcon = G_ELEMENTS.refreshBtn.querySelector('i');
+                refreshButtonIcon.classList.add('animate-spin');
+                await Promise.all([
+                    initializeWeather(),
+                    fetchOnThisDay(),
+                    fetchQuote()
+                ]);
+                updateTimestamp();
+                setTimeout(() => refreshButtonIcon.classList.remove('animate-spin'), 500);
+            }
+
+            // --- EVENT LISTENERS ---
+            G_ELEMENTS.refreshBtn.addEventListener('click', refreshDashboard);
+            G_ELEMENTS.weatherModal.openBtn.addEventListener('click', () => openModal(G_ELEMENTS.weatherModal.self));
+            G_ELEMENTS.weatherModal.closeBtn.addEventListener('click', () => closeModal(G_ELEMENTS.weatherModal.self));
+            G_ELEMENTS.weatherModal.saveBtn.addEventListener('click', () => geocodeAndFetchWeather(G_ELEMENTS.weatherModal.input.value));
+            G_ELEMENTS.weatherModal.currentBtn.addEventListener('click', getUserLocation);
+            G_ELEMENTS.actionsModal.openBtn.addEventListener('click', () => openModal(G_ELEMENTS.actionsModal.self));
+            G_ELEMENTS.actionsModal.closeBtn.addEventListener('click', () => closeModal(G_ELEMENTS.actionsModal.self));
+
+            // --- INITIALIZATION ---
+            async function main() {
+                updateGreeting();
+                await fetchPages();
+                renderQuickActions();
+                populateActionsSettings();
+                await refreshDashboard();
+            }
+
+            main();
+        });
+    </script>
 </body>
 </html>
 
