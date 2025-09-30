@@ -16,7 +16,6 @@ document.addEventListener('DOMContentLoaded', () => {
             await this._fetchNavLinks();
             this._injectCSS();
             this._createNavbarContainer();
-            // Auth modals are no longer created, as Google Sign-In uses a popup.
             this._initializeFirebase();
         },
 
@@ -33,10 +32,18 @@ document.addEventListener('DOMContentLoaded', () => {
         
         _initializeFirebase() {
              if (typeof firebase === 'undefined') {
-                console.error("Firebase is not loaded. Ensure Firebase SDKs are included in your HTML.");
-                this.render(); // Render in a logged-out state as a fallback.
+                console.error("Firebase SDK not loaded. Ensure Firebase scripts are included in your HTML before this script.");
+                this.render(); // Render in a logged-out state.
                 return;
             }
+            // CRITICAL CHECK: Ensure the user has replaced placeholder credentials.
+            if (typeof firebaseConfig === 'undefined' || firebaseConfig.apiKey.includes("YOUR_API_KEY")) {
+                console.error("Firebase Configuration Error: Please replace the placeholder firebaseConfig in your HTML file with your actual project credentials.");
+                // Render the navbar in a logged-out/error state so the UI doesn't break.
+                this.render();
+                return;
+            }
+
             try {
                  if (!firebase.apps.length) {
                     firebase.initializeApp(firebaseConfig);
@@ -44,16 +51,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.firebase.app = firebase.app();
                 this.firebase.auth = firebase.auth();
                 this.firebase.db = firebase.firestore();
-                // Set up the Google Auth Provider
                 this.firebase.provider = new firebase.auth.GoogleAuthProvider();
 
                 this.firebase.auth.onAuthStateChanged(user => {
+                    const wasLoggedIn = this.state.isLoggedIn;
                     this.state.isLoggedIn = !!user;
                     this.state.user = user ? { uid: user.uid, email: user.email, displayName: user.displayName, photoURL: user.photoURL } : null;
-                    this.render();
+                    
+                    // Re-render only if the login state changes to avoid unnecessary redraws.
+                    if (wasLoggedIn !== this.state.isLoggedIn) {
+                        this.render();
+                    }
                 });
             } catch (error) {
-                console.error("Firebase init failed:", error);
+                console.error("Firebase initialization failed:", error);
                 this.render();
             }
         },
@@ -123,8 +134,8 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         
         _getProfileContent() {
-            if (this.state.isLoggedIn && this.state.user.photoURL) return `<img src="${this.state.user.photoURL}" alt="Profile">`;
-            if (this.state.isLoggedIn && this.state.user.displayName) return this.state.user.displayName.charAt(0).toUpperCase();
+            if (this.state.isLoggedIn && this.state.user && this.state.user.photoURL) return `<img src="${this.state.user.photoURL}" alt="Profile">`;
+            if (this.state.isLoggedIn && this.state.user && this.state.user.displayName) return this.state.user.displayName.charAt(0).toUpperCase();
             return `<i class="fa-solid fa-user"></i>`;
         },
         
@@ -168,17 +179,28 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         async _handleGoogleSignIn() {
+            // Ensure Firebase is initialized before trying to sign in
+            if (!this.firebase.auth || !this.firebase.provider) {
+                console.error("Firebase Auth not initialized. Cannot sign in.");
+                return;
+            }
             try {
                 const result = await this.firebase.auth.signInWithPopup(this.firebase.provider);
-                const isNewUser = firebase.auth.getAdditionalUserInfo(result).isNewUser;
+                const isNewUser = result.additionalUserInfo.isNewUser;
                 
+                // If it's a new user, create their document in Firestore.
                 if (isNewUser) {
                     await this._createUserDocument(result.user);
                 }
                 this._closeAccountMenu();
             } catch (error) {
                 console.error("Google Sign-In Error:", error);
-                // You could show a user-facing error message here
+                // Handle specific errors, like popup blocked
+                if (error.code === 'auth/popup-blocked') {
+                    alert('Popup blocked! Please allow popups for this site to sign in with Google.');
+                } else if (error.code === 'auth/popup-closed-by-user') {
+                    console.log('Sign-in popup closed by user.');
+                }
             }
         },
 
@@ -192,6 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     uid: user.uid,
                     username: user.displayName,
                     email: user.email,
+                    photoURL: user.photoURL,
                     creationDate: firebase.firestore.FieldValue.serverTimestamp()
                 });
             }
