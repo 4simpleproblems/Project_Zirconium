@@ -1,0 +1,79 @@
+[
+  {
+    "id": "dashboard",
+    "name": "Dashboard",
+    "path": "./dashboard.html",
+    "icon": "fa-solid fa-house",
+    "showInNav": true
+  },
+  {
+    "id": "soundboard",
+    "name": "Soundboard",
+    "path": "#",
+    "icon": "fa-solid fa-sliders",
+    "showInNav": true
+  },
+  {
+    "id": "playlists",
+    "name": "Playlists",
+    "path": "#",
+    "icon": "fa-solid fa-list-music",
+    "showInNav": true
+  },
+  {
+    "id": "games",
+    "name": "Games",
+    "path": "#",
+    "icon": "fa-solid fa-gamepad",
+    "showInNav": true
+  },
+  {
+    "id": "notes",
+    "name": "Notes",
+    "path": "#",
+    "icon": "fa-solid fa-note-sticky",
+    "showInNav": true
+  },
+  {
+    "id": "requests",
+    "name": "Requests",
+    "path": "#",
+    "icon": "fa-solid fa-paper-plane",
+    "showInNav": true
+  },
+  {
+    "id": "scheduler",
+    "name": "Scheduler",
+    "path": "#",
+    "icon": "fa-solid fa-calendar-days",
+    "showInNav": true
+  },
+  {
+    "id": "calculator",
+    "name": "Calculator",
+    "path": "#",
+    "icon": "fa-solid fa-calculator",
+    "showInNav": false
+  },
+  {
+    "id": "timer",
+    "name": "Timer",
+    "path": "#",
+    "icon": "fa-solid fa-stopwatch",
+    "showInNav": false
+  },
+  {
+    "id": "account",
+    "name": "Account",
+    "path": "#",
+    "icon": "fa-solid fa-user-circle",
+    "showInNav": false
+  },
+  {
+    "id": "settings",
+    "name": "Settings",
+    "path": "#",
+    "icon": "fa-solid fa-gear",
+    "showInNav": true
+  }
+]
