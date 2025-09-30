@@ -21,7 +21,9 @@ document.addEventListener('DOMContentLoaded', () => {
             scroller: null,
             leftArrow: null,
             rightArrow: null,
-            accountMenu: null
+            accountMenu: null,
+            accountControls: null,
+            accountButton: null
         },
         firebase: {},
 
@@ -86,7 +88,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- DOM & STYLING ---
         _injectCSS() {
             const css = `
-                :root { --nav-bg: rgba(18,18,18,0.7); --nav-border: #2A2A2A; --text-primary: #EAEAEA; --text-secondary: #AAAAAA; --accent: #FFFFFF; }
+                @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
+                :root { 
+                    --nav-bg: rgba(18,18,18,0.7); 
+                    --nav-border: #2A2A2A; 
+                    --text-primary: #EAEAEA; 
+                    --text-secondary: #AAAAAA; 
+                    --accent: #FFFFFF; 
+                    --font-primary: 'Inter', sans-serif;
+                    --font-special: 'Poppins', sans-serif;
+                }
+                body { font-family: var(--font-primary); }
                 #navbar { z-index: 1000; position: fixed; top: 0; left: 0; right: 0; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); background-color: var(--nav-bg); border-bottom: 1px solid var(--nav-border); transition: top 0.3s ease-in-out; }
                 .nav-tabs-container { flex-grow: 1; display: flex; justify-content: center; align-items: center; min-width: 0; opacity: 0; transition: opacity .4s ease; }
                 .nav-tabs-container.visible { opacity: 1; }
@@ -100,21 +112,55 @@ document.addEventListener('DOMContentLoaded', () => {
                 .nav-link { font-size: 0.95rem; text-decoration: none; transition: all .2s ease; padding: 10px 16px; border-radius: 8px; white-space: nowrap; color: var(--text-secondary); }
                 .nav-link:hover { color: var(--text-primary); background-color: #2a2a2a; }
                 .nav-link.active { color: var(--text-primary); font-weight: 500; }
-                .account-menu { position: absolute; top: calc(100% + 12px); right: 0; width: 300px; background-color: rgba(30,30,30,0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.3); transition: all .3s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: top right; border-radius: 12px; padding: 8px; }
-                .account-menu.hidden { opacity: 0; transform: scale(.95) translateY(-10px); pointer-events: none; }
-                .account-menu-header { display: flex; align-items: center; padding: 8px; border-bottom: 1px solid var(--nav-border); }
-                .user-info { overflow: hidden; white-space: nowrap; margin-left: 12px; }
-                .user-info .name { font-weight: 600; color: var(--text-primary); display: block; font-size: 1rem; }
-                .user-info .email { font-size: .8rem; color: var(--text-secondary); display: block; text-overflow: ellipsis; overflow: hidden; }
-                .profile-pic { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background-color: #4A5568; color: var(--text-primary); font-weight: bold; cursor: pointer; transition: filter .2s ease; flex-shrink: 0; border: 2px solid transparent; }
+                
+                #account-controls.menu-active .account-menu {
+                    opacity: 1;
+                    transform: scale(1) translateY(0);
+                    pointer-events: auto;
+                }
+                #account-controls.menu-active #account-button {
+                    position: absolute;
+                    top: 16px;
+                    right: 16px;
+                    border-color: #3B82F6;
+                    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3);
+                }
+
+                .account-menu { 
+                    position: absolute; 
+                    top: calc(100% - 20px); 
+                    right: -10px; 
+                    width: 320px; 
+                    background-color: rgba(30,30,30,0.8); 
+                    backdrop-filter: blur(24px); 
+                    -webkit-backdrop-filter: blur(24px); 
+                    border: 1px solid rgba(255,255,255,0.1); 
+                    box-shadow: 0 10px 40px rgba(0,0,0,0.4); 
+                    transition: all .3s cubic-bezier(0.4, 0, 0.2, 1); 
+                    transform-origin: top right; 
+                    border-radius: 16px; 
+                    padding-top: 64px;
+                    opacity: 0; 
+                    transform: scale(.90) translateY(-20px); 
+                    pointer-events: none;
+                }
+                .account-menu-header { padding: 8px 16px 16px; border-bottom: 1px solid var(--nav-border); text-align: center; }
+                .user-info .name { font-family: var(--font-special); font-weight: 600; color: var(--text-primary); display: block; font-size: 1.25rem; }
+                .user-info .email { font-size: .9rem; color: var(--text-secondary); display: block; text-overflow: ellipsis; overflow: hidden; }
+                
+                .profile-pic { 
+                    width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background-color: #4A5568; 
+                    color: var(--text-primary); font-weight: bold; cursor: pointer; transition: all .3s ease; flex-shrink: 0; border: 2px solid transparent; 
+                    position: relative; z-index: 10;
+                }
                 .profile-pic:hover { filter: brightness(1.2); }
-                .profile-pic.active { border-color: #3B82F6; }
                 .profile-pic img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
-                .menu-button { width: 100%; text-align: left; padding: 10px 12px; border-radius: 8px; background-color: transparent; color: var(--text-secondary); transition: background-color .2s ease, color .2s ease; display: flex; align-items: center; gap: 12px; border: none; font-size: 0.9rem; }
-                .menu-button:hover { background-color: rgba(255,255,255,0.1); color: var(--text-primary); }
+                
+                .menu-button { width: 100%; text-align: left; padding: 12px 16px; border-radius: 8px; background-color: transparent; color: var(--text-secondary); transition: background-color .2s ease, color .2s ease; display: flex; align-items: center; gap: 14px; border: none; font-size: 1rem; }
+                .menu-button:hover { background-color: rgba(255,255,255,0.08); color: var(--text-primary); }
                 .menu-button.danger:hover { background-color: rgba(239,68,68,0.15); color: #F87171; }
-                .menu-button i { width: 20px; text-align: center; }
-                .google-btn { background-color: #4285F4; color: white !important; font-weight: 500; }
+                .menu-button i { width: 22px; text-align: center; }
+                .google-btn { background-color: #4285F4; color: white !important; font-weight: 500; font-family: var(--font-special); }
                 .google-btn:hover { background-color: #5a95f5; }
             `;
             const style = document.createElement('style');
@@ -138,9 +184,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const accountControlsHTML = this._generateAccountControlsHTML();
             this.dom.navbar.innerHTML = `
                 <div class="h-full flex items-center justify-between px-4 sm:px-6 max-w-screen-2xl mx-auto">
-                    <a href="#" class="flex items-center gap-3">
+                    <a href="./dashboard.html" class="flex items-center gap-3">
                         <img src="${this.config.logoUrl}" alt="Logo" class="h-8 w-8 object-contain">
-                        <span class="font-bold text-xl hidden sm:inline">4SP</span>
+                        <span class="font-bold text-xl hidden sm:inline" style="font-family: var(--font-special);">4SP</span>
                     </a>
                     ${navTabsHTML}
                     ${accountControlsHTML}
@@ -160,24 +206,43 @@ document.addEventListener('DOMContentLoaded', () => {
         _generateAccountControlsHTML() {
             const user = this.state.user;
             const profilePicContent = user?.photoURL ? `<img src="${user.photoURL}" alt="Profile">` : (user?.displayName ? user.displayName.charAt(0).toUpperCase() : `<i class="fa-solid fa-user"></i>`);
-            const menuState = this.state.isMenuOpen ? '' : 'hidden';
-            const buttonActiveState = this.state.isMenuOpen ? 'active' : '';
+            const menuContainerState = this.state.isMenuOpen ? 'menu-active' : '';
 
-            let menuHeader, menuActions;
+            let menuContent;
 
             if (this.state.isLoggedIn && user) {
-                menuHeader = `<div class="account-menu-header"><div class="profile-pic">${profilePicContent}</div><div class="user-info"><span class="name">${user.displayName}</span><span class="email">${user.email}</span></div></div>`;
-                menuActions = `
-                    <a href="./dashboard.html" class="menu-button"><i class="fa-solid fa-table-columns"></i>Dashboard</a>
-                    <button id="settings-btn" class="menu-button"><i class="fa-solid fa-gear"></i>Settings</button>
-                    <button id="logout-btn" class="menu-button danger"><i class="fa-solid fa-right-from-bracket"></i>Logout</button>
+                menuContent = `
+                    <div class="account-menu-header">
+                        <div class="user-info">
+                            <span class="name">${user.displayName}</span>
+                            <span class="email">${user.email}</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-1 p-2">
+                        <a href="./dashboard.html" class="menu-button"><i class="fa-solid fa-table-columns"></i>Dashboard</a>
+                        <button id="settings-btn" class="menu-button"><i class="fa-solid fa-gear"></i>Settings</button>
+                        <button id="logout-btn" class="menu-button danger"><i class="fa-solid fa-right-from-bracket"></i>Logout</button>
+                    </div>
                 `;
             } else {
-                menuHeader = `<div class="p-4 text-center"><p class="font-semibold text-lg">Welcome</p><p class="text-sm text-gray-400">Sign in to access your dashboard</p></div>`;
-                menuActions = `<button id="google-signin-btn" class="menu-button google-btn m-2"><i class="fa-brands fa-google"></i>Sign In with Google</button>`;
+                menuContent = `
+                    <div class="p-4 text-center">
+                        <p class="font-semibold text-xl" style="font-family: var(--font-special);">Welcome</p>
+                        <p class="text-md text-gray-400 mt-1">Sign in to continue</p>
+                    </div>
+                    <div class="p-2">
+                        <button id="google-signin-btn" class="menu-button google-btn"><i class="fa-brands fa-google"></i>Sign In with Google</button>
+                    </div>
+                `;
             }
 
-            return `<div id="account-controls" class="relative"><button id="account-button" class="profile-pic ${buttonActiveState}">${profilePicContent}</button><div id="account-menu" class="account-menu ${menuState}">${menuHeader}<div class="flex flex-col gap-1 p-2">${menuActions}</div></div></div>`;
+            return `
+                <div id="account-controls" class="relative ${menuContainerState}">
+                    <button id="account-button" class="profile-pic">${profilePicContent}</button>
+                    <div id="account-menu" class="account-menu">
+                        ${menuContent}
+                    </div>
+                </div>`;
         },
         
         // --- EVENT HANDLING & ACTIONS ---
@@ -185,34 +250,44 @@ document.addEventListener('DOMContentLoaded', () => {
             this.dom.scroller = document.getElementById('nav-tabs-scroller');
             this.dom.leftArrow = document.getElementById('nav-arrow-left');
             this.dom.rightArrow = document.getElementById('nav-arrow-right');
+            this.dom.accountControls = document.getElementById('account-controls');
             this.dom.accountMenu = document.getElementById('account-menu');
+            this.dom.accountButton = document.getElementById('account-button');
         },
 
         _attachEventListeners() {
+            // A single, delegated event listener is more efficient.
             document.body.addEventListener('click', this._handleGlobalClick.bind(this));
             if (this.dom.scroller) {
                 this.dom.scroller.addEventListener('scroll', this._updateArrowVisibility.bind(this));
             }
             window.addEventListener('resize', this._updateArrowVisibility.bind(this));
         },
-
+        
         _handleGlobalClick(e) {
             const target = e.target;
+            // Toggle menu
             if (target.closest('#account-button')) {
                 this.state.isMenuOpen = !this.state.isMenuOpen;
-                this.render();
-            } else if (target.closest('#logout-btn')) {
+                this.dom.accountControls.classList.toggle('menu-active', this.state.isMenuOpen);
+            } 
+            // Handle actions inside the menu
+            else if (target.closest('#logout-btn')) {
                 this.firebase.auth.signOut();
                 this.state.isMenuOpen = false;
             } else if (target.closest('#google-signin-btn')) {
                 this._handleGoogleSignIn();
-            } else if (target.closest('#nav-arrow-left')) {
+            } 
+            // Handle nav arrows
+            else if (target.closest('#nav-arrow-left')) {
                 this.dom.scroller.scrollBy({ left: -250, behavior: 'smooth' });
             } else if (target.closest('#nav-arrow-right')) {
                 this.dom.scroller.scrollBy({ left: 250, behavior: 'smooth' });
-            } else if (this.state.isMenuOpen && !target.closest('#account-menu')) {
+            } 
+            // Close menu if clicking outside
+            else if (this.state.isMenuOpen && !target.closest('#account-menu')) {
                 this.state.isMenuOpen = false;
-                this.render();
+                this.dom.accountControls.classList.remove('menu-active');
             }
         },
 
@@ -226,7 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (result.additionalUserInfo.isNewUser) {
                     await this._createUserDocument(result.user);
                 }
-                this.state.isMenuOpen = false;
+                this.state.isMenuOpen = false; // This will trigger a re-render which hides the menu.
             } catch (error) {
                 console.error("Google Sign-In Failed:", error.message);
             }
