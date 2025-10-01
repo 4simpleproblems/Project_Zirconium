@@ -2,7 +2,7 @@
  * @file navbar-loading.js
  * @description A completely re-architected, performance-focused module for the site's navigation bar.
  * This version uses targeted DOM updates instead of full re-renders for a faster, smoother experience.
- * It includes a "hide on scroll" feature and robust, JSON-driven configuration.
+ * It includes a "hide on scroll" feature, robust JSON-driven configuration, and enhanced scrolling features.
  */
 document.addEventListener('DOMContentLoaded', () => {
     const NavbarManager = {
@@ -53,11 +53,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.state.isLoggedIn = !!user;
                     this.state.user = user ? { uid: user.uid, email: user.email, displayName: user.displayName, photoURL: user.photoURL } : null;
                     
-                    // If this is the first time loading, render the whole navbar. Otherwise, just update it.
                     if (this.dom.navbar.innerHTML === '') {
                          this._renderInitialDOM();
                     } else {
-                        // Only update if the login state actually changed
                         if (wasLoggedIn !== this.state.isLoggedIn) {
                             this._updateUIForAuthStateChange();
                         }
@@ -74,9 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const response = await fetch('./Pages.json');
                 if (!response.ok) throw new Error('Network response failed for Pages.json');
                 const data = await response.json();
-                // **FIX**: The JSON file is an array at its root. Changed `data.pages` to `data`.
                 this.state.navLinks = data.filter(p => p.showInNav);
-                // For siteConfig, you might want a separate config file later, but for now we can default it.
                 this.state.siteConfig = data.config || {}; 
             } catch (error) {
                 console.error("Navbar Site Data Error:", error);
@@ -98,7 +94,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 #navbar.nav-hidden { top: -${this.config.navbarHeight}; }
                 .nav-tabs-container { flex-grow: 1; display: flex; justify-content: center; align-items: center; min-width: 0; opacity: 0; transition: opacity .4s ease; pointer-events: none; }
                 .nav-tabs-container.visible { opacity: 1; pointer-events: auto; }
-                .nav-scroll-wrapper { position: relative; display: flex; align-items: center; width: 100%; max-width: 1000px; }
+                .nav-scroll-wrapper { 
+                    position: relative; 
+                    display: flex; 
+                    align-items: center; 
+                    width: 100%; 
+                    max-width: 1000px; 
+                    /* **NEW**: Added CSS mask to create the fading effect on the sides */
+                    -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+                    mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+                }
                 .nav-tabs-scroller { display: flex; overflow-x: hidden; scrollbar-width: none; -ms-overflow-style: none; scroll-behavior: smooth; width: 100%; justify-content: center; }
                 .nav-tabs-scroller::-webkit-scrollbar { display: none; }
                 .nav-arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 10; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all .2s ease; opacity: 0; pointer-events: none; background-color: rgba(40,40,40,0.8); }
@@ -110,30 +115,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 .nav-link.active { color: var(--text-primary); font-weight: 500; }
                 
                 #account-controls.menu-active .account-menu { opacity: 1; transform: scale(1) translateY(0); pointer-events: auto; }
-                /* **FIX**: Removed 'position: absolute' and related properties to keep the icon stationary. */
-                #account-controls.menu-active #account-button { 
-                    border-color: #3B82F6; 
-                    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3); 
-                }
-                /* **FIX**: Adjusted menu position to be relative to the button's static position. */
-                .account-menu { 
-                    position: absolute; 
-                    top: calc(100% + 12px); 
-                    right: 0; 
-                    width: 300px; 
-                    background-color: rgba(30,30,30,0.8); 
-                    backdrop-filter: blur(24px); 
-                    -webkit-backdrop-filter: blur(24px); 
-                    border: 1px solid rgba(255,255,255,0.1); 
-                    box-shadow: 0 10px 40px rgba(0,0,0,0.4); 
-                    transition: all .3s cubic-bezier(0.4, 0, 0.2, 1); 
-                    transform-origin: top right; 
-                    border-radius: 12px; 
-                    padding: 8px; 
-                    opacity: 0; 
-                    transform: scale(.95) translateY(-10px); 
-                    pointer-events: none; 
-                }
+                #account-controls.menu-active #account-button { border-color: #3B82F6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3); }
+                .account-menu { position: absolute; top: calc(100% + 12px); right: 0; width: 300px; background-color: rgba(30,30,30,0.8); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 40px rgba(0,0,0,0.4); transition: all .3s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: top right; border-radius: 12px; padding: 8px; opacity: 0; transform: scale(.95) translateY(-10px); pointer-events: none; }
                 .profile-pic { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background-color: #4A5568; color: var(--text-primary); font-weight: bold; cursor: pointer; transition: all .3s ease; flex-shrink: 0; border: 2px solid transparent; position: relative; z-index: 10; }
                 .profile-pic:hover { filter: brightness(1.2); }
                 .profile-pic img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
@@ -203,7 +186,6 @@ document.addEventListener('DOMContentLoaded', () => {
         _generateMenuContent() {
             const user = this.state.user;
             if (this.state.isLoggedIn && user) {
-                // **FIX**: Removed the anchor tag for the Dashboard button from this template literal.
                 return `<div class="account-menu-header" style="text-align: center; padding: 8px 16px 16px; border-bottom: 1px solid var(--nav-border);"><div class="user-info"><span style="font-family: var(--font-special); font-weight: 600; color: var(--text-primary); display: block; font-size: 1.25rem;">${user.displayName}</span><span style="font-size: .9rem; color: var(--text-secondary); display: block; text-overflow: ellipsis; overflow: hidden;">${user.email}</span></div></div><div class="flex flex-col gap-1 p-2"><button id="settings-btn" class="menu-button"><i class="fa-solid fa-gear" style="width: 22px; text-align: center;"></i>Settings</button><button id="logout-btn" class="menu-button danger"><i class="fa-solid fa-right-from-bracket" style="width: 22px; text-align: center;"></i>Logout</button></div>`;
             } else {
                 return `<div class="p-4 text-center"><p class="font-semibold text-xl" style="font-family: var(--font-special);">Welcome</p><p class="text-md text-gray-400 mt-1">Sign in to continue</p></div><div class="p-2"><button id="google-signin-btn" class="menu-button" style="background-color: #4285F4; color: white !important; font-weight: 500; font-family: var(--font-special);"><i class="fa-brands fa-google" style="width: 22px; text-align: center;"></i>Sign In with Google</button></div>`;
@@ -230,9 +212,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (this.dom.scroller) {
                 this.dom.scroller.addEventListener('scroll', this._updateArrowVisibility.bind(this));
                 window.addEventListener('resize', this._updateArrowVisibility.bind(this));
+                // **NEW**: Added wheel event listener for touchpad/mouse wheel horizontal scrolling
+                this.dom.scroller.addEventListener('wheel', this._handleWheelScroll.bind(this), { passive: false });
             }
         },
         
+        // **NEW**: Added this handler for the wheel event
+        _handleWheelScroll(e) {
+            // This prevents the default vertical page scroll when scrolling over the nav tabs
+            e.preventDefault();
+            // This takes the vertical scroll amount (deltaY) and applies it to the horizontal scroll position
+            this.dom.scroller.scrollLeft += e.deltaY;
+        },
+
         _handleGlobalClick(e) {
             const target = e.target;
             if (target.closest('#account-button')) {
