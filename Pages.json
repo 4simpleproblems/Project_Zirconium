@@ -53,28 +53,28 @@
     "name": "Calculator",
     "path": "#",
     "icon": "fa-solid fa-calculator",
-    "showInNav": false
+    "showInNav": true
   },
   {
     "id": "timer",
     "name": "Timer",
     "path": "#",
     "icon": "fa-solid fa-stopwatch",
-    "showInNav": false
+    "showInNav": true
   },
   {
     "id": "timer-again",
     "name": "Timer Again",
     "path": "#",
     "icon": "fa-solid fa-stopwatch",
-    "showInNav": false
+    "showInNav": true
   },
   {
     "id": "account",
     "name": "Account",
     "path": "#",
     "icon": "fa-solid fa-user-circle",
-    "showInNav": false
+    "showInNav": true
   },
   {
     "id": "settings",
