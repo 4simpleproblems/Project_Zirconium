@@ -6,7 +6,83 @@
     <title>4SP - Login</title>
     <meta name="description" content="Log in to 4simpleproblems (4SP), the essential student toolkit.">
     
-    </head>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        /* Custom CSS to mimic a modern, dark theme and use the Geist font */
+        :root {
+            --geist-foreground: 255, 255, 255;
+            --geist-background: 0, 0, 0;
+            --geist-accent-7: 156, 163, 175; /* gray-400 */
+        }
+        
+        .dark {
+            color-scheme: dark;
+        }
+
+        body {
+            /* Applying Geist font */
+            font-family: 'Geist', sans-serif;
+        }
+        
+        /* Input Styling */
+        input[type="email"], input[type="password"], input[type="text"] {
+            background-color: #1a1a1a; /* Darker background */
+            border: 1px solid #374151; /* gray-700 */
+            color: #ffffff;
+        }
+        /* Strict Grey Focus: Removed the pink/blue focus tint */
+        input[type="email"]:focus, input[type="password"]:focus, input[type="text"]:focus {
+            border-color: #4b5563; /* gray-600 */
+            outline: none;
+            box-shadow: 0 0 0 1px #4b5563; 
+        }
+
+        /* Pure Grey Button Style */
+        .pure-grey-button {
+            background-color: rgba(255, 255, 255, 0.1); /* white/10 */
+            border: 1px solid rgba(255, 255, 255, 0.2); /* white/20 */
+            transition: all 0.2s ease;
+        }
+        .pure-grey-button:hover {
+            background-color: rgba(255, 255, 255, 0.2); /* white/20 */
+        }
+        .pure-grey-button:focus {
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+        }
+
+        /* Wide Frame Styling */
+        .login-frame {
+            max-width: 56rem; /* Tailwind 'max-w-4xl' equivalent */
+        }
+
+        /* Divider Visibility for Wide Layout */
+        .lg-hidden-divider {
+            display: block; /* Default for mobile/smaller screens */
+        }
+        @media (min-width: 1024px) {
+            .lg-hidden-divider {
+                display: none; /* Hidden on large screens */
+            }
+        }
+        
+        /* Custom style for the grey links in the disclaimer */
+        .disclaimer-link {
+            color: #d1d5db; /* gray-300 */
+            text-decoration: underline;
+            transition: color 0.15s;
+        }
+        .disclaimer-link:hover {
+            color: #ffffff; /* white */
+        }
+    </style>
+</head>
 <body class="bg-black text-white min-h-screen flex flex-col">
 
     <div id="navbar-container"></div>
@@ -284,7 +360,7 @@
             // --- Redirect if already logged in ---
             auth.onAuthStateChanged(user => {
                 if (user && window.location.pathname.endsWith('login.html')) {
-                    window.location.href = '../logged-in/dashboard.html';
+                    window.location.href = '../logged-in/soundboard.html';
                 }
             });
         });
