@@ -32,466 +32,252 @@
         
         /* Input Styling */
         input[type="email"], input[type="password"], input[type="text"] {
-            background-color: #1a1a1a; /* Darker background */
-            border: 1px solid #374151; /* gray-700 */
-            color: #ffffff;
-        }
-        /* Strict Grey Focus */
-        input:focus {
-            border-color: #4b5563; /* gray-600 */
-            outline: none;
-            box-shadow: 0 0 0 1px #4b5563; 
-        }
-
-        /* Pure Grey Button Style */
-        .pure-grey-button {
-            background-color: rgba(255, 255, 255, 0.1); /* white/10 */
-            border: 1px solid rgba(255, 255, 255, 0.2); /* white/20 */
-            transition: all 0.2s ease;
-        }
-        .pure-grey-button:hover {
-            background-color: rgba(255, 255, 255, 0.2); /* white/20 */
-        }
-        .pure-grey-button:focus {
-            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
-        }
-
-        /* Wide Frame Styling */
-        .signup-frame {
-            max-width: 56rem; /* Tailwind 'max-w-4xl' equivalent */
+            background-color: rgb(24 24 27 / var(--tw-bg-opacity)); /* zinc-900 equivalent */
+            border-color: rgb(39 39 42 / var(--tw-border-opacity)); /* zinc-800 equivalent */
         }
         
-        .disclaimer-link {
-            color: #d1d5db; /* gray-300 */
-            text-decoration: underline;
-            transition: color 0.15s;
-        }
-        .disclaimer-link:hover {
-            color: #ffffff; /* white */
+        /* Button Focus Ring */
+        .signup-btn:focus-visible {
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+            box-shadow: 0 0 0 2px #000000, 0 0 0 4px #0070f3; /* Black + Vercel Blue */
         }
     </style>
 </head>
-<body class="bg-black text-white min-h-screen flex flex-col">
-
+<body class="bg-black text-white min-h-screen">
     <div id="navbar-container"></div>
-    <main class="flex-grow flex items-center justify-center py-12">
-        <div class="w-full max-w-4xl p-6 sm:p-8 bg-gray-900/50 backdrop-blur-md rounded-2xl border border-gray-800 shadow-2xl signup-frame">
+
+    <main class="flex items-center justify-center min-h-[calc(100vh-64px)] py-12 px-4 sm:px-6 lg:px-8">
+        <div class="w-full max-w-md space-y-8 rounded-xl p-8 bg-gray-900/50 backdrop-blur-md border border-gray-800 shadow-2xl">
+            <div class="text-center">
+                <h2 class="mt-6 text-3xl font-bold tracking-tight text-white">
+                    Create a new account
+                </h2>
+                <p class="mt-2 text-sm text-gray-400">
+                    Already have an account? <a href="login.html" class="font-medium text-blue-400 hover:text-blue-300 transition">Log in</a>
+                </p>
+            </div>
+
+            <div id="status-message" class="hidden p-3 text-sm rounded-lg text-red-400 bg-red-900/30 border border-red-800/50"></div>
+
+            <form class="mt-8 space-y-6" id="signup-form">
+                <div class="-space-y-px rounded-md shadow-sm">
+                    <div>
+                        <label for="email-address" class="sr-only">Email address</label>
+                        <input id="email-address" name="email" type="email" autocomplete="email" required 
+                               class="relative block w-full appearance-none rounded-none rounded-t-lg border border-gray-700 px-3 py-3 text-white placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                               placeholder="Email address">
+                    </div>
+                    <div>
+                        <label for="password" class="sr-only">Password</label>
+                        <input id="password" name="password" type="password" autocomplete="new-password" required minlength="6"
+                               class="relative block w-full appearance-none rounded-none border border-gray-700 px-3 py-3 text-white placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                               placeholder="Password (min 6 characters)">
+                    </div>
+                    <div>
+                        <label for="confirm-password" class="sr-only">Confirm Password</label>
+                        <input id="confirm-password" name="confirm-password" type="password" autocomplete="new-password" required minlength="6"
+                               class="relative block w-full appearance-none rounded-none rounded-b-lg border border-gray-700 px-3 py-3 text-white placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                               placeholder="Confirm Password">
+                    </div>
+                </div>
+
+                <div>
+                    <button type="submit" id="signup-button"
+                            class="signup-btn group relative flex w-full justify-center rounded-lg border border-transparent bg-blue-600 py-3 px-4 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                            disabled>
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+                            <i class="fas fa-user-plus h-5 w-5 text-blue-300 group-hover:text-blue-200 transition"></i>
+                        </span>
+                        Sign up
+                    </button>
+                </div>
+            </form>
             
-            <h1 class="text-3xl font-semibold text-center mb-1">
-                Create Your Account
-            </h1>
-            <p class="text-center text-gray-400 mb-8">
-                Get started with your free student toolkit in seconds.
-            </p>
-
-            <div id="status-message" class="hidden p-3 mb-4 text-sm rounded-lg" role="alert"></div>
-
-            <div class="lg:grid lg:grid-cols-2 lg:gap-10">
-
-                <!-- Social Sign Up -->
-                <div>
-                    <h2 class="text-xl font-medium mb-4 text-center lg:text-left text-gray-300">Quick Access</h2>
-                    <div class="space-y-3 mb-4">
-                        <button id="google-login" class="w-full flex items-center justify-center p-3 border border-gray-700 rounded-xl text-white hover:bg-gray-800 transition duration-200">
-                            <!-- Using local image file -->
-                            <img src="images/google-icon.png" alt="Google Logo" class="w-5 h-5 mr-3 rounded-full">
-                            Sign up with Google
-                        </button>
-                        <button id="github-login" class="w-full flex items-center justify-center p-3 border border-gray-700 rounded-xl text-white hover:bg-gray-800 transition duration-200">
-                            <!-- Using local image file -->
-                            <img src="images/github-mark-white.png" alt="GitHub Logo" class="w-5 h-5 mr-3">
-                            Sign up with GitHub
-                        </button>
-                        <button id="microsoft-login" class="w-full flex items-center justify-center p-3 border border-gray-700 rounded-xl text-white hover:bg-gray-800 transition duration-200">
-                            <!-- Using local image file -->
-                            <img src="images/microsoft.png" alt="Microsoft Logo" class="w-5 h-5 mr-3">
-                            Sign up with Microsoft
-                        </button>
-                    </div>
-
-                    <p class="text-xs text-gray-500 italic text-center mb-6">
-                        By logging in or using the platform, you agree to our 
-                        <a href="legal.html#terms" class="disclaimer-link">Terms of Service</a> 
-                        and 
-                        <a href="legal.html#privacy" class="disclaimer-link">Privacy Policy</a>.
-                    </p>
-                    <div class="flex items-center mb-6 lg:hidden">
-                        <div class="flex-grow border-t border-gray-700"></div>
-                        <span class="flex-shrink mx-4 text-gray-500 text-sm">or</span>
-                        <div class="flex-grow border-t border-gray-700"></div>
-                    </div>
+            <div class="relative">
+                <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                    <div class="w-full border-t border-gray-700"></div>
                 </div>
-
-                <!-- Email/Password Sign Up -->
-                <div>
-                    <h2 class="text-xl font-medium mb-4 text-center lg:text-left text-gray-300">Email & Password</h2>
-                    
-                    <form id="email-signup-form" class="space-y-4">
-                        <div>
-                            <label for="username" class="block text-sm font-medium text-gray-300 mb-1">Username</label>
-                            <!-- UPDATED MIN/MAX LENGTH TO 4-24 -->
-                            <input type="text" id="username" required autocomplete="username" minlength="4" maxlength="24"
-                                   class="w-full px-4 py-3 rounded-xl focus:ring-1 transition duration-150"
-                                   placeholder="StudentName">
-                            <p id="username-requirements" class="text-xs mt-2 space-y-1 text-gray-400">
-                                Username must be 4-24 characters long and cannot contain profanity.
-                            </p>
-                        </div>
-                        <div>
-                            <label for="email" class="block text-sm font-medium text-gray-300 mb-1">Email Address</label>
-                            <input type="email" id="email" required autocomplete="email"
-                                   class="w-full px-4 py-3 rounded-xl focus:ring-1 transition duration-150"
-                                   placeholder="you@example.com">
-                        </div>
-                        <div>
-                            <label for="password" class="block text-sm font-medium text-gray-300 mb-1">Password</label>
-                            <input type="password" id="password" required autocomplete="new-password"
-                                   class="w-full px-4 py-3 rounded-xl focus:ring-1 transition duration-150"
-                                   placeholder="••••••••">
-                            <p id="password-requirements" class="text-xs mt-2 space-y-1 text-gray-400">
-                                Password must be 8-48 characters and contain:
-                                <span id="req-number" class="block text-red-500"><i class="fas fa-times mr-1"></i> A number</span>
-                                <span id="req-special" class="block text-red-500"><i class="fas fa-times mr-1"></i> A special character (!@#$...)</span>
-                                <span id="req-uppercase" class="block text-red-500"><i class="fas fa-times mr-1"></i> An uppercase letter</span>
-                            </p>
-                        </div>
-
-                        <div class="pt-2">
-                            <button type="submit" id="signup-button" disabled
-                                    class="pure-grey-button w-full px-4 py-3 text-base font-medium rounded-xl text-white opacity-50 cursor-not-allowed">
-                                Sign Up
-                            </button>
-                        </div>
-                    </form>
+                <div class="relative flex justify-center text-sm">
+                    <span class="bg-gray-900/50 backdrop-blur-sm px-2 text-gray-500">
+                        Or sign up with
+                    </span>
                 </div>
-                </div>
-            <p class="mt-8 text-center text-sm text-gray-400">
-                Already have an account? 
-                <a href="login.html" class="font-medium text-gray-300 hover:text-white transition duration-150">
-                    Log In here
-                </a>
-            </p>
+            </div>
+
+            <div class="flex space-x-3">
+                <button id="google-login-btn" type="button" class="signup-btn w-full inline-flex justify-center rounded-lg border border-gray-700 bg-gray-800 py-3 text-sm font-medium text-white hover:bg-gray-700 transition">
+                    <i class="fab fa-google h-5 w-5 mr-2"></i> Google
+                </button>
+                <button id="github-login-btn" type="button" class="signup-btn w-full inline-flex justify-center rounded-lg border border-gray-700 bg-gray-800 py-3 text-sm font-medium text-white hover:bg-gray-700 transition">
+                    <i class="fab fa-github h-5 w-5 mr-2"></i> GitHub
+                </button>
+                <button id="microsoft-login-btn" type="button" class="signup-btn w-full inline-flex justify-center rounded-lg border border-gray-700 bg-gray-800 py-3 text-sm font-medium text-white hover:bg-gray-700 transition">
+                    <i class="fab fa-microsoft h-5 w-5 mr-2"></i> Microsoft
+                </button>
+            </div>
         </div>
     </main>
-
-    <footer class="border-t border-gray-900 py-6">
-        <div class="mx-auto max-w-7xl px-4 text-center text-gray-500 text-sm">
-            &copy; 2024 4simpleproblems (4SP). Built for students.
-        </div>
-    </footer>
-    
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
-    <script src="../firebase-config.js"></script>
 
     <script src="../navigation-mini.js"></script>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { 
-            getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, 
-            createUserWithEmailAndPassword, sendEmailVerification, updateProfile, 
-            signInWithPopup, GoogleAuthProvider, GithubAuthProvider, OAuthProvider 
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { 
-            getFirestore, doc, getDoc, setDoc, serverTimestamp, setLogLevel 
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // -------------------------------------------------------------
+        // NEW: Get the global navigation function into the module's scope
+        const initMiniNavigation = window.initMiniNavigation;
+        // -------------------------------------------------------------
+        
+        // 1. IMPORT: Import your local configuration (Loads firebase-config.js)
+        import { firebaseConfig } from '../firebase-config.js';
 
-        // --- GLOBAL SETUP (Canvas Mandated) ---
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        // 2. IMPORT: Updated Firebase module imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { 
+            getAuth, createUserWithEmailAndPassword, updateProfile, 
+            signInWithPopup, GoogleAuthProvider, GithubAuthProvider, OAuthProvider,
+            onAuthStateChanged
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { 
+            getFirestore, doc, setDoc, serverTimestamp, setLogLevel 
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+        // --- GLOBAL SETUP ---
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const auth = getAuth(app);
-        setLogLevel('debug');
-
-        let userId = null;
-        let isAuthReady = false;
-        let isUsernameCensored = false; // NEW STATE FLAG
-
-        // Initial Authentication and Listener
-        onAuthStateChanged(auth, async (user) => {
-             if (user) {
-                // If a user is already signed in (from a previous session or token), redirect them.
-                if (window.location.pathname.endsWith('signup.html')) {
-                    if (user.emailVerified || user.providerData.some(p => p.providerId !== 'password')) {
-                         window.location.href = '../logged-in/dashboard.html';
-                    } else if (user.email && user.providerData.some(p => p.providerId === 'password')) {
-                         // Email/password user not verified
-                         window.location.href = 'verify.html';
-                    }
-                }
-            } else {
-                if (typeof __initial_auth_token !== 'undefined') {
-                    try {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } catch(e) {
-                        console.error("Custom token sign in failed. Signing in anonymously.", e);
-                        await signInAnonymously(auth);
-                    }
-                } else {
-                    await signInAnonymously(auth);
-                }
-            }
-            userId = auth.currentUser?.uid || crypto.randomUUID();
-            isAuthReady = true;
-        });
-
-        /**
-         * Checks if a user's Firestore document exists and creates it if not.
-         */
-        async function checkAndCreateUserDataset(user, provider, username = null) {
-            if (!isAuthReady) {
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
-            
-            const uid = user.uid;
-            // Canvas Private Data Path: /artifacts/{appId}/users/{userId}/user_data/profile_details
-            const userRef = doc(db, `artifacts/${appId}/users/${uid}/user_data/profile_details`);
-            
-            try {
-                const docSnap = await getDoc(userRef);
-                
-                if (!docSnap.exists()) {
-                    const finalUsername = username 
-                        || user.displayName 
-                        || (user.email ? user.email.split('@')[0] : 'user_' + uid.substring(0, 8));
-                        
-                    await setDoc(userRef, {
-                        username: finalUsername,
-                        email: user.email || 'N/A',
-                        authenticationMethod: provider,
-                        isVerified: user.emailVerified || (provider !== 'Email/Password'),
-                        creationDate: serverTimestamp(),
-                    }, { merge: true });
-
-                    console.log(`User data created/checked for ${uid} via ${provider}.`);
-                }
-
-                // Redirect logic: Social users or verified email users go to dashboard
-                if (user.emailVerified || (provider !== 'Email/Password')) {
-                     window.location.href = '../logged-in/dashboard.html';
-                } else {
-                     // For email/password signup, redirect to verification page
-                     window.location.href = 'verify.html';
-                }
-
-            } catch (error) {
-                console.error("Error with user data initialization:", error);
-                throw new Error("An error occurred during user data creation/check.");
-            }
+        const auth = getAuth(app); 
+        setLogLevel('debug'); // Keep for debugging if needed
+        
+        // -------------------------------------------------------------
+        // NEW: Call the navigation initialization function, passing the auth object
+        if (initMiniNavigation) {
+            initMiniNavigation(auth);
         }
-
-
-        // --- UI ELEMENTS ---
-        const emailSignupForm = document.getElementById('email-signup-form');
-        const usernameInput = document.getElementById('username');
-        const emailInput = document.getElementById('email');
-        const passwordInput = document.getElementById('password');
+        // -------------------------------------------------------------
+        
+        // --- DOM Elements ---
+        const signupForm = document.getElementById('signup-form');
         const signupButton = document.getElementById('signup-button');
+        const emailInput = document.getElementById('email-address');
+        const passwordInput = document.getElementById('password');
+        const confirmPasswordInput = document.getElementById('confirm-password');
+        const googleLoginBtn = document.getElementById('google-login-btn');
+        const githubLoginBtn = document.getElementById('github-login-btn');
+        const microsoftLoginBtn = document.getElementById('microsoft-login-btn');
         const statusMessage = document.getElementById('status-message');
-        const googleLoginBtn = document.getElementById('google-login');
-        const githubLoginBtn = document.getElementById('github-login');
-        const microsoftLoginBtn = document.getElementById('microsoft-login');
-
-        const reqNumber = document.getElementById('req-number');
-        const reqSpecial = document.getElementById('req-special');
-        const reqUppercase = document.getElementById('req-uppercase');
-        const checkIcon = '<i class="fas fa-check mr-1"></i>';
-        const timesIcon = '<i class="fas fa-times mr-1"></i>';
 
 
-        // --- UTILITY FUNCTIONS ---
-        function showStatus(message, type = 'error') {
+        // --- Utility Functions ---
+        function showStatus(message, isError = true) {
             statusMessage.textContent = message;
-            statusMessage.classList.remove('hidden', 'bg-red-900/50', 'text-red-300', 'bg-green-900/50', 'text-green-300', 'bg-gray-900/50', 'text-gray-300');
-            if (type === 'success') {
-                statusMessage.classList.add('bg-green-900/50', 'text-green-300');
-            } else if (type === 'error') {
-                statusMessage.classList.add('bg-red-900/50', 'text-red-300');
-            } else { // info
-                 statusMessage.classList.add('bg-gray-900/50', 'text-gray-300');
+            statusMessage.classList.remove('hidden');
+            // Ensure status colors are correct
+            if (isError) {
+                statusMessage.classList.add('text-red-400', 'bg-red-900/30', 'border-red-800/50');
+                statusMessage.classList.remove('text-green-400', 'bg-green-900/30', 'border-green-800/50');
+            } else {
+                statusMessage.classList.add('text-green-400', 'bg-green-900/30', 'border-green-800/50');
+                statusMessage.classList.remove('text-red-400', 'bg-red-900/30', 'border-red-800/50');
             }
         }
+
         function hideStatus() {
-             statusMessage.classList.add('hidden');
+            statusMessage.classList.add('hidden');
         }
 
-        // --- CENSORING API LOGIC ---
-
-        /**
-         * Checks a given username string for profanity using Purgomalum API.
-         * Uses exponential backoff for retries.
-         * @param {string} username - The username to check.
-         * @returns {Promise<boolean>} - True if clean (no profanity), False otherwise.
-         */
-        async function checkProfanity(username, retries = 3) {
-            const apiUrl = `https://purgomalum.com/service/containsprofanity?text=${encodeURIComponent(username)}`;
+        function checkSignupButtonState() {
+            const passwordsMatch = passwordInput.value === confirmPasswordInput.value;
+            const isEmailValid = emailInput.checkValidity();
+            const isPasswordLongEnough = passwordInput.value.length >= 6;
             
-            for (let i = 0; i < retries; i++) {
-                try {
-                    const response = await fetch(apiUrl);
-                    if (!response.ok) {
-                        // If API fails, default to allowing to prevent blocking signups, but log warning.
-                        console.warn(`Purgomalum API failed (Attempt ${i+1}/${retries}). Status: ${response.status}. Allowing username for now.`);
-                        return true; 
-                    }
-                    const result = await response.text();
-                    // API returns 'true' or 'false' as a string
-                    return result.toLowerCase().trim() === 'false';
-                } catch (error) {
-                    // Exponential backoff
-                    console.error(`Fetch error during profanity check (Attempt ${i+1}/${retries}):`, error);
-                    if (i < retries - 1) {
-                        const delay = Math.pow(2, i) * 1000;
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                    }
-                }
+            if (isEmailValid && isPasswordLongEnough && passwordsMatch) {
+                signupButton.disabled = false;
+                signupButton.classList.remove('disabled:opacity-50', 'disabled:cursor-not-allowed');
+            } else {
+                signupButton.disabled = true;
+                signupButton.classList.add('disabled:opacity-50', 'disabled:cursor-not-allowed');
             }
-            // If all retries fail, default to safe assumption to allow registration 
-            return true; 
+        }
+        
+        // Creates the basic user data entry in Firestore
+        async function checkAndCreateUserDataset(user, loginMethod = 'email') {
+            const userDocRef = doc(db, "users", user.uid);
+            
+            // Check if the document already exists (for social sign-in where user might be returning)
+            const userDoc = await getDoc(userDocRef);
+
+            if (userDoc.exists()) {
+                console.log("Existing user logged in. Redirecting.");
+            } else {
+                // New user - create the initial data
+                const userData = {
+                    email: user.email,
+                    displayName: user.displayName || user.email.split('@')[0],
+                    provider: loginMethod,
+                    createdAt: serverTimestamp(),
+                    lastLogin: serverTimestamp(),
+                    settings: {
+                        theme: 'dark',
+                        panicKey: 'Shift + Esc'
+                    },
+                    // Initialize empty or default structures
+                    notes: '', 
+                    playlists: [],
+                };
+
+                await setDoc(userDocRef, userData);
+                console.log("New user dataset created.");
+            }
+            
+            // Redirect to the dashboard upon successful sign-up and data creation
+            window.location.href = '../logged-in/dashboard.html';
         }
 
-        /**
-         * Handles username length check and profanity check (async).
-         */
-        async function validateUsername() {
-            const username = usernameInput.value.trim();
+        // --- EVENT HANDLERS ---
+        
+        // Handle Email/Password Sign Up
+        signupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
             hideStatus();
 
-            // 1. Length Check (4-24)
-            const minLength = 4;
-            const maxLength = 24;
-            const lengthValid = username.length >= minLength && username.length <= maxLength;
+            const email = emailInput.value;
+            const password = passwordInput.value;
             
-            if (!lengthValid) {
-                showStatus(`Username must be between ${minLength} and ${maxLength} characters.`, 'error');
-                isUsernameCensored = false;
+            if (password !== confirmPasswordInput.value) {
+                showStatus("Passwords do not match.");
                 return;
             }
-            
-            // 2. Profanity Check (Async)
-            showStatus("Checking username for profanity...", 'info'); 
-            
-            const isClean = await checkProfanity(username);
-            
-            if (!isClean) {
-                showStatus("Username contains inappropriate language. Please choose a different one.", 'error');
-                isUsernameCensored = false;
-            } else {
-                // If profanity check passed, clear the info status and mark as censored=true (meaning clean)
-                hideStatus();
-                isUsernameCensored = true;
-            }
-            updateSignupButtonState();
-        }
 
-        // Attach validation events
-        usernameInput.addEventListener('blur', validateUsername);
-        usernameInput.addEventListener('input', () => {
-             // Basic input check to clear status, and allow re-check on blur/submit
-            const lengthValid = usernameInput.value.trim().length >= 4 && usernameInput.value.trim().length <= 24;
-            if (lengthValid) hideStatus(); 
+            signupButton.disabled = true;
+            try {
+                // 1. Create User in Firebase Auth
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+                
+                // 2. Set Display Name (simple version)
+                const defaultDisplayName = email.split('@')[0];
+                await updateProfile(user, { displayName: defaultDisplayName });
+
+                // 3. Create Firestore Data and Redirect
+                await checkAndCreateUserDataset(user);
+                
+            } catch (error) {
+                let errorMessage = "Sign up failed.";
+                if (error.code === 'auth/email-already-in-use') {
+                    errorMessage = "This email address is already in use. Please log in instead.";
+                } else if (error.code === 'auth/invalid-email') {
+                    errorMessage = "The email address is not valid.";
+                } else if (error.code === 'auth/weak-password') {
+                    errorMessage = "Password is too weak. Please use at least 6 characters.";
+                }
+                
+                showStatus(errorMessage);
+                console.error("Sign Up Error:", error);
+            } finally {
+                checkSignupButtonState(); // Re-check button state
+            }
         });
 
-        // --- PASSWORD VALIDATION LOGIC ---
-        function validatePassword(password) {
-            // Min 8, Max 48
-            const lengthValid = password.length >= 8 && password.length <= 48;
-            // Has a number (0-9)
-            const numberValid = /\d/.test(password); 
-            // Has a special character (e.g., !@#$%^&*)
-            const specialValid = /[!@#$%^&*()_+={}[\]:;"'<,>.?/|\\~`]/.test(password);
-            // Has an uppercase letter (A-Z)
-            const uppercaseValid = /[A-Z]/.test(password); 
-
-            // Update UI for requirements
-            function updateRequirementUI(element, isValid) {
-                element.innerHTML = (isValid ? checkIcon : timesIcon) + element.textContent.substring(element.textContent.indexOf(' '));
-                element.classList.toggle('text-green-500', isValid);
-                element.classList.toggle('text-red-500', !isValid);
-            }
-
-            updateRequirementUI(reqNumber, numberValid);
-            updateRequirementUI(reqSpecial, specialValid);
-            updateRequirementUI(reqUppercase, uppercaseValid);
-            
-            return lengthValid && numberValid && specialValid && uppercaseValid;
-        }
-        
-        // Function to update the signup button state based on ALL valid inputs
-        function updateSignupButtonState() {
-            const isPasswordValid = validatePassword(passwordInput.value);
-            const isUsernameEntered = usernameInput.value.trim().length >= 4; 
-            
-            // isUsernameCensored is true if the profanity check passed and the length is fine
-            const isReady = isPasswordValid && isUsernameEntered && isUsernameCensored; 
-
-            signupButton.disabled = !isReady;
-            signupButton.classList.toggle('opacity-100', isReady);
-            signupButton.classList.toggle('cursor-not-allowed', !isReady);
-            signupButton.classList.toggle('pure-grey-button', isReady);
-        }
-        
-        // Listeners for enabling the button
-        passwordInput.addEventListener('input', updateSignupButtonState);
-        // The username check runs asynchronously on blur, and calls updateSignupButtonState() upon completion
-
-        // --- EMAIL/PASSWORD SIGN UP ---
-        if (emailSignupForm) {
-            emailSignupForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                hideStatus();
-
-                const username = usernameInput.value.trim();
-                const email = emailInput.value.trim();
-                const password = passwordInput.value;
-                
-                // Perform final validation checks
-                await validateUsername(); // Ensure profanity check is complete
-                const isPasswordValid = validatePassword(password);
-                
-                if (!isPasswordValid || !isUsernameCensored) {
-                    if (!isPasswordValid) showStatus("Please ensure your password meets all requirements.", 'error');
-                    if (!isUsernameCensored) showStatus("Please choose a valid username that is not profane and is 4-24 characters long.", 'error');
-                    return;
-                }
-                
-                signupButton.textContent = 'Signing Up...';
-                signupButton.disabled = true;
-
-                try {
-                    // 1. Create the user
-                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                    const user = userCredential.user;
-
-                    // 2. Update the user's profile with the chosen username
-                    await updateProfile(user, { displayName: username });
-
-                    // 3. Send verification email
-                    await sendEmailVerification(user);
-                    
-                    // 4. Create Firestore dataset (this function handles the redirect to verify.html)
-                    await checkAndCreateUserDataset(user, 'Email/Password', username);
-
-                } catch (error) {
-                    let errorMessage = "Sign up failed.";
-                    if (error.code === 'auth/email-already-in-use') {
-                        errorMessage = "This email is already associated with an account.";
-                    } else if (error.code === 'auth/invalid-email') {
-                        errorMessage = "The email address is not valid.";
-                    }
-                    showStatus(errorMessage);
-                    signupButton.textContent = 'Sign Up';
-                    signupButton.disabled = false;
-                    updateSignupButtonState(); // Re-check button state
-                }
-            });
-        }
-        
-        // --- SOCIAL LOGINS ---
+        // --- SOCIAL LOGINS ---\
         async function handleSocialLogin(providerInstance, providerName) {
             hideStatus();
             try {
@@ -509,6 +295,10 @@
             }
         }
 
+        // --- EVENT LISTENERS ---
+        signupForm.addEventListener('input', checkSignupButtonState);
+        document.addEventListener('DOMContentLoaded', checkSignupButtonState); // Initial check
+        
         if(googleLoginBtn) googleLoginBtn.addEventListener('click', () => handleSocialLogin(new GoogleAuthProvider(), 'Google'));
         if(microsoftLoginBtn) microsoftLoginBtn.addEventListener('click', () => handleSocialLogin(new OAuthProvider('microsoft.com'), 'Microsoft'));
         if(githubLoginBtn) githubLoginBtn.addEventListener('click', () => handleSocialLogin(new GithubAuthProvider(), 'GitHub'));
