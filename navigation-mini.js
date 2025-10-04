@@ -66,8 +66,9 @@ function setupAuthMenuLogic() {
 }
 
 // 3. NAVBAR RENDERING FUNCTIONS
+
 function renderLoggedOutNavbar() {
-    // Note: All Tailwind classes are retained here for the HTML structure
+    // Standard Logged Out State
     return `
         <div class="relative">
             <button 
@@ -98,15 +99,26 @@ function renderLoggedInNavbar(user) {
     const username = user.displayName || user.email.split('@')[0];
     const email = user.email;
 
+    // Determine the profile picture content for the button
+    let profileContent;
+    
+    if (user.photoURL) {
+        // If photoURL exists (typically from Google/Social sign-in), use the image
+        profileContent = `<img src="${user.photoURL}" alt="${username} Profile" class="w-full h-full object-cover rounded-full" />`;
+    } else {
+        // Fallback to the Font Awesome icon for Email/Password or missing photo
+        profileContent = `<i class="fas fa-circle-user text-white text-base"></i>`;
+    }
+
     return `
         <div class="relative">
             <button 
                 id="auth-toggle"
                 aria-expanded="false"
                 aria-controls="auth-menu-container"
-                class="w-8 h-8 rounded-full border border-white flex items-center justify-center bg-black/50 hover:bg-gray-900/50 transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-white"
+                class="w-8 h-8 rounded-full border border-white flex items-center justify-center bg-black/50 hover:bg-gray-900/50 transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-white overflow-hidden"
             >
-                <i class="fas fa-circle-user text-white text-base"></i>
+                ${profileContent}
             </button>
             
             <div 
@@ -168,7 +180,8 @@ function injectAuthNavbar() {
                 logoutButton.addEventListener('click', async () => {
                     try {
                         await firebase.auth().signOut();
-                        window.location.reload(); 
+                        // Redirect to the login page after logout
+                        window.location.href = 'login.html'; 
                     } catch (error) {
                         console.error("Logout failed:", error);
                     }
