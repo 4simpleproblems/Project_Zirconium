@@ -1,7 +1,7 @@
 /**
  * @file navigation.js (Updated Vercel-style Navbar for 4simpleproblems)
  * @description A re-architected module for the site's navigation bar using Vercel's structural conventions.
- * This version uses targeted DOM updates for speed, robust JSON-driven configuration, and integrated Firebase auth.
+ * The navbar is now a standard, static (non-fixed) element that pushes down the page content.
  */
 document.addEventListener('DOMContentLoaded', () => {
     // --- CONFIGURATION FOR 4SIMPLEPROBLEMS ---
@@ -38,30 +38,27 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const NavbarManager = {
-        // ... (existing CONFIG, STATE, DOM, FIREBASE kept for compatibility)
+        // --- CONFIGURATION & STATE ---
         config: {
             navbarHeight: '65px',
-            scrollThreshold: 10,
         },
         state: {
             isLoggedIn: false,
             user: null,
-            navLinks: [], // Using custom links defined above
-            siteConfig: {},
             isMenuOpen: false,
-            lastScrollTop: 0,
+            activeDropdown: null,
+            closeTimer: null,
         },
-        dom: {},
-        firebase: {},
+        dom: {}, 
+        firebase: {}, 
+        
         // --- INITIALIZATION ---
         async init() {
             this._injectCSS();
             this._createNavbarContainer();
-            // Assuming the original logic for fetching data and firebase initialization is kept
-            // await this._fetchSiteData(); 
-            // this._initializeFirebase();
-
-            // Set up event listeners for the mobile menu and dropdowns
+            // await this._fetchSiteData(); // Placeholder for data fetching
+            // this._initializeFirebase(); // Placeholder for Firebase
+            
             this._bindEvents();
         },
 
@@ -97,9 +94,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 </a>
             `).join('');
 
-
+            // NOTE: The 'static-nav' class replaces 'fixed top-0 left-0 right-0 z-50'
             return `
-                <nav class="vercel-nav fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-background-200 backdrop-blur-md shadow-lg" data-geist-navigation-header>
+                <nav class="vercel-nav static-nav w-full z-50 bg-background-200 shadow-lg" data-geist-navigation-header>
                     <div class="geist-page-width flex items-center justify-between h-[var(--navbar-height)] px-6">
                         <a href="/" class="link-module__Q1NRQq__link flex items-center h-full mr-4">
                             <span class="text-xl font-bold text-gray-1000">4simpleproblems</span>
@@ -137,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>
 
-                    <div class="absolute w-full top-[var(--navbar-height)] left-0 right-0 bg-background-200 hidden shadow-xl" data-dropdown-container>
+                    <div class="absolute w-full top-[var(--navbar-height)] left-0 right-0 bg-background-200 shadow-xl hidden" data-dropdown-container>
                         <div data-menu-content="toolkit" class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-7xl mx-auto hidden">
                             ${toolkitMenu}
                         </div>
@@ -146,7 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>
                     
-                    <div class="lg:hidden absolute w-full top-[var(--navbar-height)] left-0 right-0 bg-background-100 shadow-xl p-4 flex flex-col gap-2 transition-transform duration-300 transform -translate-y-full" data-mobile-menu>
+                    <div class="lg:hidden absolute w-full top-[var(--navbar-height)] left-0 right-0 bg-background-100 shadow-xl p-4 flex flex-col gap-2 transition-transform duration-300 transform -translate-y-full hidden" data-mobile-menu>
                         <a href="/toolkit" class="link-module__Q1NRQq__link p-3 rounded-lg hover:bg-gray-200">Toolkit</a>
                         <a href="/games" class="link-module__Q1NRQq__link p-3 rounded-lg hover:bg-gray-200">Games</a>
                         <a href="/community" class="link-module__Q1NRQq__link p-3 rounded-lg hover:bg-gray-200">Community</a>
@@ -158,20 +155,29 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         },
 
-        // Overrides the creation method to inject the new structure
         _createNavbarContainer() {
             const navbarHTML = this._getNavbarHTML(this.state.isLoggedIn, this.state.user?.displayName);
-            // Create a wrapper div to hold the navigation HTML
+            
             const navWrapper = document.createElement('div');
             navWrapper.id = 'navbar-container';
             navWrapper.style.setProperty('--navbar-height', this.config.navbarHeight);
             navWrapper.innerHTML = navbarHTML;
+            
+            // Prepend the navbar wrapper to the <body> so it sits at the top and pushes content down
             document.body.prepend(navWrapper);
+            
+            // Cache DOM elements
             this.dom.nav = navWrapper.querySelector('[data-geist-navigation-header]');
             this.dom.dropdownContainer = navWrapper.querySelector('[data-dropdown-container]');
             this.dom.mobileMenu = navWrapper.querySelector('[data-mobile-menu]');
             this.dom.menuToggle = navWrapper.querySelector('[data-menu-toggle]');
             this.dom.menuTriggers = navWrapper.querySelectorAll('[data-menu-target]');
+            
+            this._renderInitialDOM();
+        },
+
+        _renderInitialDOM() {
+            // Fallback rendering is simple since the main HTML is injected.
         },
 
         // --- INTERACTIVITY HANDLERS ---
@@ -181,30 +187,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 trigger.addEventListener('mouseenter', () => this._openDropdown(trigger.dataset.menuTarget));
                 trigger.addEventListener('click', (e) => {
                     e.preventDefault();
-                    if (this.dom.mobileMenu.classList.contains('translate-y-0')) {
-                        // If mobile menu is open, click acts as a close/mobile menu toggle
-                        this._toggleMobileMenu();
+                    if (window.innerWidth >= 1024) { // Lg breakpoint
+                        this._openDropdown(trigger.dataset.menuTarget, true); // Toggle mode for click
                     } else {
-                        // If mobile menu is closed, click acts as an open/toggle
-                        this._openDropdown(trigger.dataset.menuTarget);
+                        this._toggleMobileMenu();
                     }
                 });
             });
 
-            this.dom.nav.addEventListener('mouseleave', () => this._closeAllDropdowns());
+            // Close dropdowns when mouse leaves the entire header/dropdown area
+            this.dom.nav.addEventListener('mouseleave', () => this._setCloseTimer());
             this.dom.dropdownContainer.addEventListener('mouseenter', () => this._clearCloseTimer());
             this.dom.dropdownContainer.addEventListener('mouseleave', () => this._setCloseTimer());
 
             // Mobile Menu Toggle
             this.dom.menuToggle.addEventListener('click', () => this._toggleMobileMenu());
 
-            // Scroll Logic (simplified from original snippet)
-            window.addEventListener('scroll', () => this._handleScroll());
+            // Note: _handleScroll is REMOVED as the navbar is now static (non-fixed) and does not hide.
         },
 
-        _openDropdown(target) {
+        _openDropdown(target, isClick = false) {
             this._clearCloseTimer();
+
+            if (isClick && this.state.activeDropdown === target) {
+                this._closeAllDropdowns();
+                return;
+            }
+            
+            // If another dropdown is open, close it before opening the new one
+            if (this.state.activeDropdown !== null && this.state.activeDropdown !== target) {
+                 this._closeAllDropdowns(0); // Close immediately
+            }
+
+            this.state.activeDropdown = target;
             this.dom.dropdownContainer.classList.remove('hidden');
+
             this.dom.nav.querySelectorAll('[data-menu-content]').forEach(content => {
                 content.classList.add('hidden');
             });
@@ -213,29 +230,46 @@ document.addEventListener('DOMContentLoaded', () => {
                 targetContent.classList.remove('hidden');
             }
 
-            // Update active state on triggers
+            // Update active state (for visual indicator on the button)
             this.dom.menuTriggers.forEach(t => {
-                t.setAttribute('data-active', t.dataset.menuTarget === target ? 'open' : 'closed');
+                const chevron = t.querySelector('.navigation-menu-module__AENi4G__chevron');
+                if (t.dataset.menuTarget === target) {
+                    t.setAttribute('data-active', 'open');
+                    if (chevron) chevron.style.transform = 'rotate(180deg)';
+                } else {
+                    t.setAttribute('data-active', 'closed');
+                    if (chevron) chevron.style.transform = 'rotate(0deg)';
+                }
             });
+            
+            if (this.state.isMenuOpen) this._toggleMobileMenu();
         },
 
-        _closeAllDropdowns() {
-            this.closeTimer = setTimeout(() => {
+        _closeAllDropdowns(delay = 100) {
+            this.state.closeTimer = setTimeout(() => {
+                this.state.activeDropdown = null;
                 this.dom.dropdownContainer.classList.add('hidden');
+                
                 this.dom.nav.querySelectorAll('[data-menu-content]').forEach(content => {
                     content.classList.add('hidden');
                 });
-                this.dom.menuTriggers.forEach(t => t.setAttribute('data-active', 'closed'));
-            }, 100); // Small delay to allow moving between menu areas
+                
+                // Reset active state and chevron rotation
+                this.dom.menuTriggers.forEach(t => {
+                    t.setAttribute('data-active', 'closed');
+                    const chevron = t.querySelector('.navigation-menu-module__AENi4G__chevron');
+                    if (chevron) chevron.style.transform = 'rotate(0deg)';
+                });
+            }, delay); 
         },
 
         _clearCloseTimer() {
-            if (this.closeTimer) {
-                clearTimeout(this.closeTimer);
-                this.closeTimer = null;
+            if (this.state.closeTimer) {
+                clearTimeout(this.state.closeTimer);
+                this.state.closeTimer = null;
             }
         },
-
+        
         _setCloseTimer() {
             this._closeAllDropdowns();
         },
@@ -245,109 +279,192 @@ document.addEventListener('DOMContentLoaded', () => {
             const menu = this.dom.mobileMenu;
             if (this.state.isMenuOpen) {
                 menu.classList.remove('-translate-y-full', 'hidden');
-                menu.classList.add('translate-y-0');
+                setTimeout(() => menu.classList.add('translate-y-0'), 10);
+                this._closeAllDropdowns(0); // Close desktop dropdowns immediately
             } else {
                 menu.classList.remove('translate-y-0');
                 menu.classList.add('-translate-y-full');
-                setTimeout(() => menu.classList.add('hidden'), 300); // Match CSS transition duration
+                setTimeout(() => menu.classList.add('hidden'), 300); 
             }
         },
-
-        _handleScroll() {
-            const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop;
-            const nav = this.dom.nav;
-
-            if (currentScrollTop > this.config.scrollThreshold) {
-                // Scrolled down past threshold
-                if (currentScrollTop > this.state.lastScrollTop) {
-                    // Hide on scroll down
-                    nav.style.transform = `translateY(-${this.config.navbarHeight})`;
-                } else {
-                    // Show on scroll up
-                    nav.style.transform = 'translateY(0)';
-                }
-            } else {
-                // Always visible at the top
-                nav.style.transform = 'translateY(0)';
-            }
-            this.state.lastScrollTop = currentScrollTop <= 0 ? 0 : currentScrollTop;
-        },
-
-        // --- FIREBASE (retained from original file) ---
-        _initializeFirebase() {
-             // ... (original firebase initialization logic)
-        },
-
+        
+        // --- CSS INJECTION ---
         _injectCSS() {
-            // Injects basic CSS required for the JS functionality, assumes Vercel's utility classes handle the rest.
             const style = document.createElement('style');
             style.textContent = `
-                /* CSS variables defined in Vercel's geist environment, assumed to be loaded for proper styling */
-                .vercel-nav {
-                    --navbar-height: 65px; /* Injects the variable for JS/CSS sync */
-                    transition: transform 0.3s ease-in-out;
+                /* --- VERCEL COLOR PALETTE (Minimal Subset) --- */
+                :root {
+                    /* Assuming dark mode from the Vercel HTML provided */
+                    --ds-gray-1000: #fff; /* White */
+                    --ds-gray-900: #eaeaea; /* Light Gray */
+                    --ds-gray-800: #888; /* Medium Gray */
+                    --ds-gray-700: #666; /* Darker Gray */
+                    --background-100: #000; /* Primary Background (Black) */
+                    --background-200: #111; /* Navbar Background (Slightly Lighter) */
+                    --geist-space: 16px;
+                    --geist-radius: 5px;
+                    --geist-success: #0070f3;
+                    --geist-error: #ff001c;
+                    --geist-icon-size: 16px;
                 }
+                
+                /* --- GENERAL LAYOUT --- */
+                .vercel-nav {
+                    --navbar-height: 65px;
+                    height: var(--navbar-height);
+                    position: relative; /* Container for absolute dropdowns */
+                }
+                
                 .geist-page-width {
                     max-width: 1500px;
                     margin: 0 auto;
                     width: 100%;
                 }
-                /* Utility classes to avoid external dependencies (e.g. Tailwind) */
+                
+                /* --- UTILITY CLASSES (Mimicking Vercel/Tailwind) --- */
                 .flex { display: flex; }
+                .flex-row { flex-direction: row; }
+                .flex-col { flex-direction: column; }
+                .flex-1 { flex: 1; }
+                .flex-none { flex: none; }
                 .items-center { align-items: center; }
                 .justify-between { justify-content: space-between; }
+                .justify-center { justify-content: center; }
                 .h-full { height: 100%; }
-                .mr-4 { margin-right: 1rem; }
-                .gap-1 > * + * { margin-left: 0.25rem; }
-                .gap-3 > * + * { margin-left: 0.75rem; }
-                .p-6 { padding: 1.5rem; }
-                .grid { display: grid; }
-                .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-                .grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-                .max-w-7xl { max-width: 80rem; }
-                .max-w-5xl { max-width: 64rem; }
-                .mx-auto { margin-left: auto; margin-right: auto; }
-                .transition-all { transition-property: all; transition-duration: 300ms; }
-                .duration-300 { transition-duration: 0.3s; }
-                .absolute { position: absolute; }
                 .w-full { width: 100%; }
+                .hidden { display: none !important; }
+                .absolute { position: absolute; }
                 .top-0 { top: 0; }
                 .left-0 { left: 0; }
                 .right-0 { right: 0; }
                 .z-50 { z-index: 50; }
-                .hidden { display: none !important; }
-
-                /* Mobile-specific styles for the mobile menu */
+                .px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
+                .p-3 { padding: 0.75rem; }
+                .p-4 { padding: 1rem; }
+                .p-6 { padding: 1.5rem; }
+                .mx-auto { margin-left: auto; margin-right: auto; }
+                .mr-3 { margin-right: 0.75rem; }
+                .mr-4 { margin-right: 1rem; }
+                .gap-1 > * + * { margin-left: 0.25rem; }
+                .gap-2 > * + * { margin-left: 0.5rem; }
+                .gap-3 > * + * { margin-left: 0.75rem; }
+                .gap-6 { gap: 1.5rem; }
+                .rounded-md { border-radius: var(--geist-radius); }
+                .rounded-lg { border-radius: 8px; }
+                .shadow-lg { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1); }
+                .shadow-xl { box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); }
+                .transition-transform { transition-property: transform; transition-duration: 300ms; }
+                .duration-200 { transition-duration: 200ms; }
+                .duration-300 { transition-duration: 300ms; }
                 .transform { transform: var(--tw-transform); }
                 .-translate-y-full { transform: translateY(-100%); }
                 .translate-y-0 { transform: translateY(0); }
-                .shadow-xl { box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); }
+                .grid { display: grid; }
+                .grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
                 
-                /* Responsive utilities (simplified) */
+                /* --- COLOR AND FONT STYLES --- */
+                .bg-background-200 { background-color: var(--background-200); }
+                .bg-background-100 { background-color: var(--background-100); }
+                .text-xl { font-size: 1.25rem; }
+                .text-xs { font-size: 0.75rem; }
+                .font-bold { font-weight: 700; }
+                .font-medium { font-weight: 500; }
+                .text-gray-1000 { color: var(--ds-gray-1000); }
+                .text-gray-900 { color: var(--ds-gray-900); }
+                .text-gray-800 { color: var(--ds-gray-800); }
+                .text-gray-700 { color: var(--ds-gray-700); }
+
+                /* --- VERCEL MODULE STYLE REPLICATION --- */
+                
+                /* geist-new-themed (General Vercel Button Base) */
+                .geist-new-themed {
+                    --geist-button-bg: var(--ds-gray-900);
+                    --geist-button-color: var(--ds-gray-1000);
+                    border: none;
+                    cursor: pointer;
+                    line-height: 1;
+                    padding: 0;
+                }
+                
+                /* link-module__Q1NRQq__link (The base link style) */
+                .link-module__Q1NRQq__link {
+                    text-decoration: none;
+                    color: inherit;
+                    cursor: pointer;
+                }
+
+                /* button-module__QyrFCa__invert (Primary Button) */
+                .button-module__QyrFCa__invert {
+                    background-color: var(--ds-gray-1000);
+                    color: var(--background-100);
+                }
+                .button-module__QyrFCa__invert:hover {
+                    opacity: 0.9;
+                }
+
+                /* button-module__QyrFCa__base (Button common properties) */
+                .button-module__QyrFCa__base {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: var(--geist-radius);
+                }
+                .button-module__QyrFCa__small {
+                    height: 32px;
+                    min-width: 32px;
+                    padding: 0 16px;
+                    font-size: 14px;
+                }
+                .button-module__QyrFCa__content {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    white-space: nowrap;
+                }
+
+                /* navigation-menu-module__AENi4G__trigger (Nav menu link/button) */
+                .navigation-menu-module__AENi4G__trigger {
+                    display: flex;
+                    align-items: center;
+                    background: none;
+                    border: none;
+                    cursor: pointer;
+                    text-decoration: none;
+                    transition: background-color 0.15s ease, color 0.15s ease;
+                }
+                .navigation-menu-module__AENi4G__trigger[data-active="open"] {
+                    color: var(--ds-gray-1000);
+                    background-color: var(--ds-gray-900);
+                }
+                .navigation-menu-module__AENi4G__chevron {
+                    margin-left: 4px;
+                }
+
+                /* Hover states for internal menu items */
+                .hover\\:bg-gray-100:hover {
+                    background-color: rgba(255, 255, 255, 0.05); /* Light hover effect for dark mode */
+                }
+                
+                /* --- RESPONSIVE ADJUSTMENTS --- */
+                @media (min-width: 768px) {
+                    .md\\:inline-flex { display: inline-flex !important; }
+                    .md\\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+                }
                 @media (min-width: 1024px) {
-                    .lg\\:flex { display: flex; }
-                    .lg\\:hidden { display: none; }
+                    .lg\\:flex { display: flex !important; }
+                    .lg\\:hidden { display: none !important; }
+                    .md\\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
                 }
             `;
             document.head.appendChild(style);
         },
 
-        // --- AUTH LOGIC (retained from original file) ---
-        async _googleSignIn() {
-            // ... (original _googleSignIn logic)
-        },
-
-        async _signOut() {
-            // ... (original _signOut logic)
-        },
-
-        async _createUserDocument(user) {
-            // ... (original _createUserDocument logic)
-        },
-
-        // The original `_updateArrowVisibility` is for a scrollable nav bar, not a mega menu, so we'll omit it
-        // _updateArrowVisibility() { /* ... */ }
-
+        // --- AUTH LOGIC (Placeholders) ---
+        async _fetchSiteData() { return new Promise(resolve => setTimeout(resolve, 10)); },
+        _initializeFirebase() {},
+        async _googleSignIn() { console.log("Google Sign-In Placeholder called."); },
+        async _signOut() { console.log("Sign Out Placeholder called."); },
+        async _createUserDocument(user) {},
     };
 
     NavbarManager.init();
