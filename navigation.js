@@ -1,7 +1,7 @@
 /**
- * @file navigation.js (Updated Vercel-style Navbar for 4simpleproblems)
- * @description A re-architected module for the site's navigation bar using Vercel's structural conventions.
- * The navbar is now a standard, static (non-fixed) element that pushes down the page content.
+ * @file navigation.js (Final Vercel-style Navbar for 4simpleproblems)
+ * @description Implements the fixed, dark-themed Vercel navbar with circular icon buttons (Notifications/User).
+ * The content is tailored for 4simpleproblems (Toolkit/Games).
  */
 document.addEventListener('DOMContentLoaded', () => {
     // --- CONFIGURATION FOR 4SIMPLEPROBLEMS ---
@@ -43,8 +43,8 @@ document.addEventListener('DOMContentLoaded', () => {
             navbarHeight: '65px',
         },
         state: {
-            isLoggedIn: false,
-            user: null,
+            isLoggedIn: false, // Set to true to test logged-in buttons
+            user: { initials: '4S', avatarUrl: null },
             isMenuOpen: false,
             activeDropdown: null,
             closeTimer: null,
@@ -56,23 +56,43 @@ document.addEventListener('DOMContentLoaded', () => {
         async init() {
             this._injectCSS();
             this._createNavbarContainer();
-            // await this._fetchSiteData(); // Placeholder for data fetching
-            // this._initializeFirebase(); // Placeholder for Firebase
-            
+            // In a real app, initialize Firebase here and listen for auth state changes
+            // this._initializeFirebase(); 
             this._bindEvents();
         },
 
         // --- CORE RENDERING LOGIC ---
 
+        _getAuthControls(isLoggedIn = false, user = {}) {
+            if (isLoggedIn) {
+                // Logged-in state: Circle buttons for notifications and profile/settings
+                const initials = user.initials || (user.displayName ? user.displayName.split(' ').map(n => n[0]).join('') : 'U');
+                const avatar = user.avatarUrl 
+                    ? `<img src="${user.avatarUrl}" alt="User Avatar" class="w-full h-full object-cover rounded-full"/>` 
+                    : `<span class="text-xs font-semibold">${initials}</span>`;
+
+                return `
+                    <button data-circle-button class="circle-button-module__AENi4G__base circle-button-module__AENi4G__small geist-new-tertiary">
+                        <i class="fa-solid fa-bell"></i> 
+                    </button>
+                    <button data-circle-button data-menu-target="user-settings" class="circle-button-module__AENi4G__base circle-button-module__AENi4G__small circle-button-module__AENi4G__user">
+                        ${avatar}
+                    </button>
+                `;
+            } else {
+                // Logged-out state: Standard sign-in button
+                return `
+                    <button data-testid="sign-in-btn" class="button-module__QyrFCa__base reset-module__ylizOa__reset button-module__QyrFCa__button geist-new-themed button-module__QyrFCa__invert button-module__QyrFCa__small" onclick="NavbarManager._googleSignIn()">
+                        <span class="button-module__QyrFCa__content button-module__QyrFCa__flex">Sign In</span>
+                    </button>
+                `;
+            }
+        },
+
         // Generates the Vercel-style HTML markup for the main navigation bar
-        _getNavbarHTML(isLoggedIn = false, userName = 'User') {
-            const authButton = isLoggedIn ?
-                `<button data-testid="sign-out-btn" class="button-module__QyrFCa__base reset-module__ylizOa__reset button-module__QyrFCa__button geist-new-themed geist-new-tertiary button-module__QyrFCa__small" onclick="NavbarManager._signOut()">
-                    <span class="button-module__QyrFCa__content button-module__QyrFCa__flex">Dashboard</span>
-                </button>` :
-                `<button data-testid="sign-in-btn" class="button-module__QyrFCa__base reset-module__ylizOa__reset button-module__QyrFCa__button geist-new-themed button-module__QyrFCa__invert button-module__QyrFCa__small" onclick="NavbarManager._googleSignIn()">
-                    <span class="button-module__QyrFCa__content button-module__QyrFCa__flex">Sign In</span>
-                </button>`;
+        _getNavbarHTML() {
+            const { isLoggedIn, user } = this.state;
+            const authControls = this._getAuthControls(isLoggedIn, user);
 
             const toolkitMenu = NAV_CONFIG.TOOLKIT_LINKS.map(item => `
                 <a href="${item.href}" class="link-module__Q1NRQq__link navigation-menu-module__AENi4G__link flex flex-row items-center p-3 hover:bg-gray-100 rounded-md">
@@ -94,9 +114,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 </a>
             `).join('');
 
-            // NOTE: The 'static-nav' class replaces 'fixed top-0 left-0 right-0 z-50'
+            // Uses 'fixed' positioning to match the typical Vercel navbar seen in the screenshots
             return `
-                <nav class="vercel-nav static-nav w-full z-50 bg-background-200 shadow-lg" data-geist-navigation-header>
+                <nav class="vercel-nav fixed top-0 left-0 right-0 z-50 bg-background-200 backdrop-blur-md shadow-lg" data-geist-navigation-header>
                     <div class="geist-page-width flex items-center justify-between h-[var(--navbar-height)] px-6">
                         <a href="/" class="link-module__Q1NRQq__link flex items-center h-full mr-4">
                             <span class="text-xl font-bold text-gray-1000">4simpleproblems</span>
@@ -126,8 +146,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                         </div>
 
-                        <div class="flex items-center gap-3">
-                            <span class="hidden md:inline-flex">${authButton}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="hidden md:flex items-center gap-2">${authControls}</span>
                             <button class="lg:hidden p-2 rounded-lg" data-menu-toggle>
                                 <svg data-testid="geist-icon" height="20" width="20" viewBox="0 0 16 16"><path fill="currentColor" d="M14.5 3.75H1.5C1.36193 3.75 1.25 3.63807 1.25 3.5C1.25 3.36193 1.36193 3.25 1.5 3.25H14.5C14.6381 3.25 14.75 3.36193 14.75 3.5C14.75 3.63807 14.6381 3.75 14.5 3.75ZM14.5 8.75H1.5C1.36193 8.75 1.25 8.63807 1.25 8.5C1.25 8.36193 1.36193 8.25 1.5 8.25H14.5C14.6381 8.25 14.75 8.36193 14.75 8.5C14.75 8.63807 14.6381 8.75 14.5 8.75ZM14.5 13.75H1.5C1.36193 13.75 1.25 13.6381 1.25 13.5C1.25 13.3619 1.36193 13.25 1.5 13.25H14.5C14.6381 13.25 14.75 13.3619 14.75 13.5C14.75 13.6381 14.6381 13.75 14.5 13.75Z"/></svg>
                             </button>
@@ -149,23 +169,35 @@ document.addEventListener('DOMContentLoaded', () => {
                         <a href="/community" class="link-module__Q1NRQq__link p-3 rounded-lg hover:bg-gray-200">Community</a>
                         <a href="/docs" class="link-module__Q1NRQq__link p-3 rounded-lg hover:bg-gray-200">Docs</a>
                         <a href="/pricing" class="link-module__Q1NRQq__link p-3 rounded-lg hover:bg-gray-200">Pricing</a>
-                        <div class="p-2 md:hidden">${authButton}</div>
+                        <div class="p-2 md:hidden">
+                            ${isLoggedIn ? 
+                                `<button class="button-module__QyrFCa__base reset-module__ylizOa__reset button-module__QyrFCa__button geist-new-themed button-module__QyrFCa__invert button-module__QyrFCa__small w-full" onclick="NavbarManager._signOut()">
+                                    <span class="button-module__QyrFCa__content button-module__QyrFCa__flex">Sign Out</span>
+                                </button>` : 
+                                `<button class="button-module__QyrFCa__base reset-module__ylizOa__reset button-module__QyrFCa__button geist-new-themed button-module__QyrFCa__invert button-module__QyrFCa__small w-full" onclick="NavbarManager._googleSignIn()">
+                                    <span class="button-module__QyrFCa__content button-module__QyrFCa__flex">Sign In</span>
+                                </button>`
+                            }
+                        </div>
                     </div>
                 </nav>
             `;
         },
 
         _createNavbarContainer() {
-            const navbarHTML = this._getNavbarHTML(this.state.isLoggedIn, this.state.user?.displayName);
+            const navbarHTML = this._getNavbarHTML();
             
             const navWrapper = document.createElement('div');
             navWrapper.id = 'navbar-container';
             navWrapper.style.setProperty('--navbar-height', this.config.navbarHeight);
             navWrapper.innerHTML = navbarHTML;
             
-            // Prepend the navbar wrapper to the <body> so it sits at the top and pushes content down
+            // Inject the navbar at the top
             document.body.prepend(navWrapper);
             
+            // Add margin to the body to ensure content starts below the fixed navbar
+            document.body.style.paddingTop = this.config.navbarHeight;
+
             // Cache DOM elements
             this.dom.nav = navWrapper.querySelector('[data-geist-navigation-header]');
             this.dom.dropdownContainer = navWrapper.querySelector('[data-dropdown-container]');
@@ -177,33 +209,29 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         _renderInitialDOM() {
-            // Fallback rendering is simple since the main HTML is injected.
+             // In a real app, you would update the auth controls here based on initial Firebase state
+             // For this example, it's covered by the initial _getNavbarHTML call based on this.state.isLoggedIn.
         },
 
         // --- INTERACTIVITY HANDLERS ---
         _bindEvents() {
-            // Desktop Dropdown Logic
             this.dom.menuTriggers.forEach(trigger => {
                 trigger.addEventListener('mouseenter', () => this._openDropdown(trigger.dataset.menuTarget));
                 trigger.addEventListener('click', (e) => {
                     e.preventDefault();
-                    if (window.innerWidth >= 1024) { // Lg breakpoint
-                        this._openDropdown(trigger.dataset.menuTarget, true); // Toggle mode for click
+                    if (window.innerWidth >= 1024) { 
+                        this._openDropdown(trigger.dataset.menuTarget, true);
                     } else {
                         this._toggleMobileMenu();
                     }
                 });
             });
 
-            // Close dropdowns when mouse leaves the entire header/dropdown area
             this.dom.nav.addEventListener('mouseleave', () => this._setCloseTimer());
             this.dom.dropdownContainer.addEventListener('mouseenter', () => this._clearCloseTimer());
             this.dom.dropdownContainer.addEventListener('mouseleave', () => this._setCloseTimer());
 
-            // Mobile Menu Toggle
             this.dom.menuToggle.addEventListener('click', () => this._toggleMobileMenu());
-
-            // Note: _handleScroll is REMOVED as the navbar is now static (non-fixed) and does not hide.
         },
 
         _openDropdown(target, isClick = false) {
@@ -214,9 +242,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
-            // If another dropdown is open, close it before opening the new one
             if (this.state.activeDropdown !== null && this.state.activeDropdown !== target) {
-                 this._closeAllDropdowns(0); // Close immediately
+                 this._closeAllDropdowns(0); 
             }
 
             this.state.activeDropdown = target;
@@ -230,7 +257,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 targetContent.classList.remove('hidden');
             }
 
-            // Update active state (for visual indicator on the button)
             this.dom.menuTriggers.forEach(t => {
                 const chevron = t.querySelector('.navigation-menu-module__AENi4G__chevron');
                 if (t.dataset.menuTarget === target) {
@@ -254,7 +280,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     content.classList.add('hidden');
                 });
                 
-                // Reset active state and chevron rotation
                 this.dom.menuTriggers.forEach(t => {
                     t.setAttribute('data-active', 'closed');
                     const chevron = t.querySelector('.navigation-menu-module__AENi4G__chevron');
@@ -280,7 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (this.state.isMenuOpen) {
                 menu.classList.remove('-translate-y-full', 'hidden');
                 setTimeout(() => menu.classList.add('translate-y-0'), 10);
-                this._closeAllDropdowns(0); // Close desktop dropdowns immediately
+                this._closeAllDropdowns(0); 
             } else {
                 menu.classList.remove('translate-y-0');
                 menu.classList.add('-translate-y-full');
@@ -294,17 +319,14 @@ document.addEventListener('DOMContentLoaded', () => {
             style.textContent = `
                 /* --- VERCEL COLOR PALETTE (Minimal Subset) --- */
                 :root {
-                    /* Assuming dark mode from the Vercel HTML provided */
                     --ds-gray-1000: #fff; /* White */
                     --ds-gray-900: #eaeaea; /* Light Gray */
                     --ds-gray-800: #888; /* Medium Gray */
                     --ds-gray-700: #666; /* Darker Gray */
+                    --ds-gray-300: #333; /* Dark background hover/tertiary */
                     --background-100: #000; /* Primary Background (Black) */
                     --background-200: #111; /* Navbar Background (Slightly Lighter) */
-                    --geist-space: 16px;
                     --geist-radius: 5px;
-                    --geist-success: #0070f3;
-                    --geist-error: #ff001c;
                     --geist-icon-size: 16px;
                 }
                 
@@ -312,7 +334,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 .vercel-nav {
                     --navbar-height: 65px;
                     height: var(--navbar-height);
-                    position: relative; /* Container for absolute dropdowns */
+                    position: fixed; /* Fixed position for overlay look */
+                    top: 0; left: 0; right: 0;
+                    width: 100%;
+                    box-sizing: border-box;
+                    background-color: var(--background-200);
+                    transition: transform 0.3s ease-in-out;
+                    z-index: 1000; /* High z-index to overlay content */
                 }
                 
                 .geist-page-width {
@@ -334,9 +362,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 .w-full { width: 100%; }
                 .hidden { display: none !important; }
                 .absolute { position: absolute; }
-                .top-0 { top: 0; }
-                .left-0 { left: 0; }
-                .right-0 { right: 0; }
                 .z-50 { z-index: 50; }
                 .px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
                 .p-3 { padding: 0.75rem; }
@@ -368,12 +393,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 .text-xl { font-size: 1.25rem; }
                 .text-xs { font-size: 0.75rem; }
                 .font-bold { font-weight: 700; }
+                .font-semibold { font-weight: 600; }
                 .font-medium { font-weight: 500; }
                 .text-gray-1000 { color: var(--ds-gray-1000); }
                 .text-gray-900 { color: var(--ds-gray-900); }
                 .text-gray-800 { color: var(--ds-gray-800); }
                 .text-gray-700 { color: var(--ds-gray-700); }
-
+                .hover\\:bg-gray-100:hover {
+                    background-color: var(--ds-gray-300); 
+                }
+                
                 /* --- VERCEL MODULE STYLE REPLICATION --- */
                 
                 /* geist-new-themed (General Vercel Button Base) */
@@ -393,7 +422,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     cursor: pointer;
                 }
 
-                /* button-module__QyrFCa__invert (Primary Button) */
+                /* Standard Auth Button */
                 .button-module__QyrFCa__invert {
                     background-color: var(--ds-gray-1000);
                     color: var(--background-100);
@@ -401,8 +430,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 .button-module__QyrFCa__invert:hover {
                     opacity: 0.9;
                 }
-
-                /* button-module__QyrFCa__base (Button common properties) */
                 .button-module__QyrFCa__base {
                     display: inline-flex;
                     align-items: center;
@@ -422,6 +449,38 @@ document.addEventListener('DOMContentLoaded', () => {
                     white-space: nowrap;
                 }
 
+                /* CIRCULAR BUTTON STYLES (for notifications/user) */
+                .circle-button-module__AENi4G__base {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border: 1px solid transparent;
+                    background: none;
+                    color: var(--ds-gray-900);
+                    cursor: pointer;
+                    transition: all 0.15s ease;
+                }
+                .circle-button-module__AENi4G__small {
+                    height: 32px;
+                    width: 32px;
+                    border-radius: 50%;
+                }
+                .circle-button-module__AENi4G__base:hover {
+                    background-color: var(--ds-gray-300); 
+                    color: var(--ds-gray-1000);
+                }
+                .circle-button-module__AENi4G__user {
+                    background-color: var(--ds-gray-700);
+                    color: var(--ds-gray-1000);
+                    font-size: 12px;
+                    line-height: 30px; /* Center initials */
+                    overflow: hidden;
+                }
+                .circle-button-module__AENi4G__user img {
+                    border-radius: 50%;
+                }
+
+
                 /* navigation-menu-module__AENi4G__trigger (Nav menu link/button) */
                 .navigation-menu-module__AENi4G__trigger {
                     display: flex;
@@ -434,19 +493,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 .navigation-menu-module__AENi4G__trigger[data-active="open"] {
                     color: var(--ds-gray-1000);
-                    background-color: var(--ds-gray-900);
+                    background-color: var(--ds-gray-300);
                 }
                 .navigation-menu-module__AENi4G__chevron {
                     margin-left: 4px;
                 }
 
-                /* Hover states for internal menu items */
-                .hover\\:bg-gray-100:hover {
-                    background-color: rgba(255, 255, 255, 0.05); /* Light hover effect for dark mode */
-                }
                 
                 /* --- RESPONSIVE ADJUSTMENTS --- */
                 @media (min-width: 768px) {
+                    .md\\:flex { display: flex !important; }
                     .md\\:inline-flex { display: inline-flex !important; }
                     .md\\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
                 }
@@ -460,10 +516,30 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         // --- AUTH LOGIC (Placeholders) ---
+        // In a real application, you would implement the Firebase logic here.
         async _fetchSiteData() { return new Promise(resolve => setTimeout(resolve, 10)); },
-        _initializeFirebase() {},
-        async _googleSignIn() { console.log("Google Sign-In Placeholder called."); },
-        async _signOut() { console.log("Sign Out Placeholder called."); },
+        _initializeFirebase() { /* console.log("Firebase initialized"); */ },
+        async _googleSignIn() { 
+            // Simulate successful login for testing the circular buttons
+            NavbarManager.state.isLoggedIn = true;
+            NavbarManager._renderAuthControls();
+            console.log("Google Sign-In Placeholder: Logged in (Simulated).");
+        },
+        async _signOut() { 
+            // Simulate sign out
+            NavbarManager.state.isLoggedIn = false;
+            NavbarManager._renderAuthControls();
+            console.log("Sign Out Placeholder: Logged out (Simulated).");
+        },
+        _renderAuthControls() {
+            // Re-render only the right-side controls after login/logout
+            const newAuthControls = this._getAuthControls(this.state.isLoggedIn, this.state.user);
+            const authContainer = this.dom.nav.querySelector('.items-center.gap-2 > span.md\\:flex');
+            if (authContainer) {
+                authContainer.innerHTML = newAuthControls;
+                // Rebind events for the new buttons if necessary (like dropdown toggles)
+            }
+        },
         async _createUserDocument(user) {},
     };
 
