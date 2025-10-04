@@ -188,9 +188,8 @@
             GoogleAuthProvider,
             GithubAuthProvider,
             OAuthProvider,
-            // --- FIX 1: Use signInWithRedirect and getRedirectResult ---
-            signInWithRedirect,
-            getRedirectResult 
+            // --- REVERTED TO signInWithPopup ---
+            signInWithPopup
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         
         import { 
@@ -328,37 +327,7 @@
                 throw new Error('Failed to create user document during login.');
             }
         };
-        
-        // --- FIX 2: Check for Redirect Result on Load ---
-        const checkRedirectResult = async (loginMessageDiv) => {
-            try {
-                // Get the result from the redirect
-                const result = await getRedirectResult(auth);
 
-                if (result) {
-                    const user = result.user;
-                    
-                    // Re-use your existing logic for checking/creating user documents
-                    const userDocSnap = await getDoc(doc(db, 'users', user.uid));
-                    if (userDocSnap.exists()) {
-                        await handleSuccessfulLogin(user, loginMessageDiv);
-                    } else {
-                        // This handles new sign-ups via social login or incomplete user records
-                        const providerId = result.providerId || user.providerData[0].providerId;
-                        const providerName = providerId.split('.')[0];
-                        await repairOrCreateUserDocument(user, providerName, loginMessageDiv);
-                    }
-                }
-            } catch (error) {
-                console.error('Redirect Result Error:', error);
-                let message = `An error occurred during sign-in. Please try again.`;
-                if (error.code === 'auth/account-exists-with-different-credential') {
-                    message = 'An account with this email already exists using a different sign-in method.';
-                }
-                showMessage(loginMessageDiv, message);
-            }
-        };
-        
         // --- Login Page-Specific Logic ---
         document.addEventListener('DOMContentLoaded', () => {
             const loginContainer = document.getElementById('loginContainer');
@@ -368,9 +337,6 @@
             const googleLoginBtn = document.getElementById('googleLoginBtn');
             const githubLoginBtn = document.getElementById('githubLoginBtn');
             const microsoftLoginBtn = document.getElementById('microsoftLoginBtn');
-
-            // --- Run redirect check on load (FIX 2 part 2) ---
-            checkRedirectResult(loginMessageDiv);
 
             document.getElementById('forgotPasswordLink').addEventListener('click', () => {
                 loginContainer.style.display = 'none';
@@ -437,12 +403,18 @@
             const handleProviderLogin = async (provider) => {
                 loginMessageDiv.innerHTML = '';
                 try {
-                    // --- FIX 1: Use signInWithRedirect (This will cause a full page reload) ---
-                    await signInWithRedirect(auth, provider);
+                    // --- REVERTED TO signInWithPopup as requested ---
+                    const result = await signInWithPopup(auth, provider);
+                    const user = result.user;
                     
-                    // The rest of the login logic (user check, document creation, redirection) 
-                    // is now handled by checkRedirectResult() when the page loads back.
+                    const userDocSnap = await getDoc(doc(db, 'users', user.uid));
 
+                    if (userDocSnap.exists()) {
+                        await handleSuccessfulLogin(user, loginMessageDiv);
+                    } else {
+                        const providerName = provider.providerId.split('.')[0];
+                        await repairOrCreateUserDocument(user, providerName, loginMessageDiv);
+                    }
                 } catch (error) {
                     console.error('Provider Sign-In error:', error);
                     let message = `A problem occurred. Please try again.`;
