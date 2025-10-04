@@ -13,87 +13,124 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        // NEW DARKER PALETTE
+                        'custom-darkest-gray': '#0a0a0a', // Almost pure black for background
+                        'custom-dark-gray': '#181818',   // Very dark background for left panel
+                        'custom-medium-gray': '#252525', // Darker border, input background, and button base
+                        'custom-light-gray': '#505050',  // Darker Text, labels, and borders
+                        'custom-lighter-gray': '#808080', // Darker Hover states, subtle text, and messages
+                        'custom-white-gray': '#c0c0c0',  // Darker Main text, headings
+                    }
+                }
+            }
+        }
+    </script>
 
     <script src="panic-key.js"></script>
     <script src="url-changer.js"></script>
 
     <style>
-        /* Custom CSS to match the Geist font and dark theme variables */
+        /* Updated RGB values for the darker custom colors */
         :root {
-            --geist-foreground: 255, 255, 255; /* White */
-            --geist-background: 0, 0, 0; /* Black */
+            --geist-foreground: 192, 192, 192; /* custom-white-gray */
+            --geist-background: 10, 10, 10;   /* custom-darkest-gray */
         }
 
         body {
-            /* Applying Geist font, setting up full height layout */
             font-family: 'Geist', sans-serif;
+            background-color: var(--geist-background);
+            color: var(--geist-foreground);
         }
 
-        /* Styling for the login buttons to match the new dark theme */
         .btn-google {
             transition: background-color 0.3s ease, border-color 0.3s ease;
         }
         .btn-google:hover {
-            /* Original: hover:bg-gray-700/50 */
-            background-color: rgb(55 65 81 / 0.5); 
+            background-color: rgba(37, 37, 37, 0.7); /* custom-medium-gray with transparency */
+            border-color: #383838; /* A slightly darker hover border */
         }
         
-        /* Error/Success/Warning colors converted to black/white/gray for B&W theme */
-        /* These should be clearly differentiated using only gray scale, e.g., a lighter gray for success, and a darker/bolder gray for error. */
-        .error-message { color: rgb(156 163 175); font-weight: bold; } /* text-gray-400, but bold for emphasis */
-        .success-message { color: rgb(107 114 128); } /* text-gray-500 */
-        .warning-message { color: rgb(156 163 175); } /* text-gray-400 */
+        /* Message colors using the new darker custom grays */
+        .error-message { color: var(--custom-lighter-gray); font-weight: bold; }
+        .success-message { color: var(--custom-light-gray); }
+        .warning-message { color: var(--custom-light-gray); }
+
+        /* Footer specific styling for blur, fixed position, and size */
+        .fixed-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 40px; 
+            background-color: rgba(24, 24, 24, 0.7); /* custom-dark-gray with transparency */
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-top: 1px solid rgba(37, 37, 37, 0.7); /* Slim border top */
+        }
+        
+        main {
+            padding-bottom: 60px;
+        }
     </style>
 </head>
-<body class="bg-black text-white min-h-screen flex flex-col">
+<body class="bg-custom-darkest-gray text-custom-white-gray min-h-screen flex flex-col">
 
     <div id="navbar-container"></div>
 
     <main class="flex-grow flex items-stretch justify-center p-0">
         <div class="
             auth-split-container
-            bg-gray-950 rounded-none shadow-none
-            flex flex-wrap w-full max-w-7xl
+            bg-custom-darkest-gray rounded-none shadow-none
+            flex flex-wrap w-full
             border-0 overflow-hidden
             p-0
         ">
             <div class="
                 auth-col left-col
                 flex-1 p-8 flex flex-col justify-center items-center
-                bg-gray-900 border-r border-gray-800 min-w-[300px]
+                bg-custom-dark-gray border-r border-custom-medium-gray min-w-[300px]
                 sm:rounded-none sm:border-r 
             ">
 
                 <div id="loginContainer" class="w-full flex flex-col items-center">
-                    <h2 class="text-3xl font-bold text-white mb-6 text-center w-full tracking-tighter">Login to Your Account</h2>
-                    <form id="loginForm" novalidate class="w-full max-w-md">
+                    <h2 class="text-3xl font-bold text-custom-white-gray mb-6 text-center w-full tracking-tighter">Login to Your Account</h2>
+                    <form id="loginForm" novalidate class="w-full max-w-md"> 
                         <div class="mb-5">
-                            <label for="loginEmail" class="block mb-2 text-gray-400 text-sm font-medium text-left">Email</label>
-                            <input type="email" id="loginEmail" placeholder="Enter your email" required class="w-full p-3 border border-gray-700 bg-gray-800 rounded-lg text-white transition focus:border-gray-500 focus:ring focus:ring-gray-500/50 focus:outline-none">
+                            <label for="loginEmail" class="block mb-2 text-custom-light-gray text-sm font-medium text-left">Email</label>
+                            <input type="email" id="loginEmail" placeholder="Enter your email" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-lg text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
                         </div>
                         <div class="mb-5">
-                            <label for="loginPassword" class="block mb-2 text-gray-400 text-sm font-medium text-left">Password</label>
-                            <input type="password" id="loginPassword" placeholder="Enter your password" required class="w-full p-3 border border-gray-700 bg-gray-800 rounded-lg text-white transition focus:border-gray-500 focus:ring focus:ring-gray-500/50 focus:outline-none">
+                            <label for="loginPassword" class="block mb-2 text-custom-light-gray text-sm font-medium text-left">Password</label>
+                            <input type="password" id="loginPassword" placeholder="Enter your password" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-lg text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
                         </div>
-                        <button type="submit" class="w-full p-3 bg-gray-700 text-white rounded-lg font-semibold text-lg cursor-pointer transition hover:bg-gray-600 hover:shadow-lg hover:shadow-gray-500/30">LOGIN</button>
+                        <button type="submit" class="w-full p-3 bg-custom-medium-gray text-custom-white-gray rounded-lg font-semibold text-lg cursor-pointer transition hover:bg-custom-light-gray hover:shadow-lg hover:shadow-custom-medium-gray/30">LOGIN</button>
                     </form>
                     <div id="loginMessage" class="message-area w-full max-w-md mt-4 min-h-[20px] text-center text-sm"></div>
-                    <div class="w-full max-w-md mt-4 text-center"> <a id="forgotPasswordLink" class="text-gray-400 hover:text-gray-300 font-medium text-sm cursor-pointer">Forgot Password?</a> </div>
-                    <p class="text-sm text-gray-500 mt-6 text-center w-full max-w-md">Don't have an account? <a href="signup.html" class="text-gray-400 font-semibold hover:text-gray-300 transition">Sign up here</a></p>
+                    <div class="w-full max-w-md mt-4 text-center"> <a id="forgotPasswordLink" class="text-custom-light-gray hover:text-custom-lighter-gray font-medium text-sm cursor-pointer">Forgot Password?</a> </div>
+                    <p class="text-sm text-custom-light-gray mt-6 text-center w-full max-w-md">Don't have an account? <a href="signup.html" class="text-custom-light-gray font-semibold hover:text-custom-lighter-gray transition">Sign up here</a></p>
                 </div>
 
                 <div id="resetPasswordContainer" class="w-full flex flex-col items-center" style="display: none;">
-                    <h2 class="text-3xl font-bold text-white mb-6 text-center w-full tracking-tighter">Reset Your Password</h2>
-                    <p class="text-gray-400 text-base mb-6 text-center max-w-md">Enter your email address and we'll send you a link to reset your password.</p>
+                    <h2 class="text-3xl font-bold text-custom-white-gray mb-6 text-center w-full tracking-tighter">Reset Your Password</h2>
+                    <p class="text-custom-light-gray text-base mb-6 text-center max-w-md">Enter your email address and we'll send you a link to reset your password.</p>
                     <form id="resetPasswordForm" novalidate class="w-full max-w-md">
                         <div class="mb-5">
-                            <label for="resetEmail" class="block mb-2 text-gray-400 text-sm font-medium text-left">Email</label>
-                            <input type="email" id="resetEmail" placeholder="Enter your registered email" required class="w-full p-3 border border-gray-700 bg-gray-800 rounded-lg text-white transition focus:border-gray-500 focus:ring focus:ring-gray-500/50 focus:outline-none">
+                            <label for="resetEmail" class="block mb-2 text-custom-light-gray text-sm font-medium text-left">Email</label>
+                            <input type="email" id="resetEmail" placeholder="Enter your registered email" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-lg text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
                         </div>
-                        <button type="submit" class="w-full p-3 bg-gray-700 text-white rounded-lg font-semibold text-lg cursor-pointer transition hover:bg-gray-600 hover:shadow-lg hover:shadow-gray-500/30">SEND RESET LINK</button>
+                        <button type="submit" class="w-full p-3 bg-custom-medium-gray text-custom-white-gray rounded-lg font-semibold text-lg cursor-pointer transition hover:bg-custom-light-gray hover:shadow-lg hover:shadow-custom-medium-gray/30">SEND RESET LINK</button>
                     </form>
                     <div id="resetMessage" class="message-area w-full max-w-md mt-4 min-h-[20px] text-center text-sm"></div>
-                    <div class="w-full max-w-md mt-6 text-center"> <a id="backToLoginLink" class="text-gray-400 hover:text-gray-300 font-medium text-sm cursor-pointer">&larr; Back to Login</a> </div>
+                    <div class="w-full max-w-md mt-6 text-center"> <a id="backToLoginLink" class="text-custom-light-gray hover:text-custom-lighter-gray font-medium text-sm cursor-pointer">&larr; Back to Login</a> </div>
                 </div>
 
             </div>
@@ -101,35 +138,35 @@
             <div class="
                 auth-col right-col
                 flex-1 p-8 flex flex-col justify-center items-center
-                bg-gray-950
+                bg-custom-darkest-gray
                 sm:rounded-none
             ">
                 <div class="right-panel-content w-full flex flex-col items-center justify-center">
-                    <h2 class="text-3xl font-bold text-white mb-6 text-center w-full tracking-tighter">Sign in instantly</h2>
-                    <p class="text-lg text-gray-400 mb-8 text-center max-w-md">
+                    <h2 class="text-3xl font-bold text-custom-white-gray mb-6 text-center w-full tracking-tighter">Sign in instantly</h2>
+                    <p class="text-lg text-custom-light-gray mb-8 text-center max-w-md">
                         Use a trusted provider like Google or GitHub to sign in instantly. It's the fastest way to access your account without needing to remember another password.
                     </p>
                     
-                    <button id="googleLoginBtn" class="btn-google flex items-center justify-center w-full max-w-md p-3 bg-gray-800 text-white border border-gray-700 rounded-lg font-medium cursor-pointer transition hover:bg-gray-700/50 mb-3">
-                        <img src="images/google-icon.png" alt="Google Icon" class="w-5 h-5 mr-3 filter grayscale"> Login with Google
+                    <button id="googleLoginBtn" class="btn-google flex items-center justify-center w-full max-w-md p-3 bg-custom-dark-gray text-custom-white-gray border border-custom-medium-gray rounded-lg font-medium cursor-pointer transition hover:bg-custom-medium-gray/50 mb-3">
+                        <img src="images/google-icon.png" alt="Google Icon" class="w-5 h-5 mr-3"> Login with Google
                     </button>
-                    <button id="githubLoginBtn" class="btn-google flex items-center justify-center w-full max-w-md p-3 bg-gray-800 text-white border border-gray-700 rounded-lg font-medium cursor-pointer transition hover:bg-gray-700/50 mb-3">
+                    <button id="githubLoginBtn" class="btn-google flex items-center justify-center w-full max-w-md p-3 bg-custom-dark-gray text-custom-white-gray border border-custom-medium-gray rounded-lg font-medium cursor-pointer transition hover:bg-custom-medium-gray/50 mb-3">
                         <img src="images/github-mark.png" alt="GitHub Icon" class="w-5 h-5 mr-3 filter invert"> Login with GitHub
                     </button>
-                    <button id="microsoftLoginBtn" class="btn-google flex items-center justify-center w-full max-w-md p-3 bg-gray-800 text-white border border-gray-700 rounded-lg font-medium cursor-pointer transition hover:bg-gray-700/50 mb-3">
-                        <img src="images/microsoft.png" alt="Microsoft Icon" class="w-5 h-5 mr-3 filter grayscale"> Login with Microsoft
+                    <button id="microsoftLoginBtn" class="btn-google flex items-center justify-center w-full max-w-md p-3 bg-custom-dark-gray text-custom-white-gray border border-custom-medium-gray rounded-lg font-medium cursor-pointer transition hover:bg-custom-medium-gray/50 mb-3">
+                        <img src="images/microsoft.png" alt="Microsoft Icon" class="w-5 h-5 mr-3"> Login with Microsoft
                     </button>
                     
-                    <p class="oauth-agreement-text text-xs italic text-gray-500 text-center max-w-md mt-4 leading-relaxed">
-                         By logging in with third-party providers or via email, you agree to our <a href="legal.html" target="_blank" class="text-gray-400 hover:text-gray-300">Terms of Service</a>, and our <a href="legal.html" target="_blank" class="text-gray-400 hover:text-gray-300">Privacy Policy</a>.
+                    <p class="oauth-agreement-text text-xs italic text-custom-light-gray text-center max-w-md mt-4 leading-relaxed">
+                         By logging in with third-party providers or via email, you agree to our <a href="legal.html" target="_blank" class="text-custom-light-gray hover:text-custom-lighter-gray">Terms of Service</a>, and our <a href="legal.html" target="_blank" class="text-custom-light-gray hover:text-custom-lighter-gray">Privacy Policy</a>.
                     </p>
                 </div>
             </div>
         </div>
     </main>
 
-    <footer class="border-t border-gray-900 py-6">
-        <div class="mx-auto max-w-7xl px-4 text-center text-gray-500 text-sm">
+    <footer class="fixed-footer">
+        <div class="text-center text-custom-light-gray text-xs">
             &copy; 2024 4simpleproblems (4SP). Built for students.
         </div>
     </footer>
@@ -204,11 +241,9 @@
 
             const showMessage = (element, text, type = 'error') => {
                 element.innerHTML = text;
-                // Using the updated B&W classes from the <style> block
                 element.className = `message-area w-full max-w-md mt-4 min-h-[20px] text-center text-sm ${type}-message`;
             };
 
-            // Simplified profanity check for this context
             const checkProfanity = async (text) => {
                 if (!text || !text.trim()) return false;
                 try {
@@ -243,7 +278,7 @@
             };
             
             const handleSuccessfulLogin = async (user, isNewOrRepaired = false, newUsername = '') => {
-                await user.reload(); // Reload to ensure user properties are current
+                await user.reload(); 
 
                 if (isNewOrRepaired) {
                     let countdown = 5;
@@ -267,7 +302,6 @@
                     return;
                 }
 
-                // Check for provider login (which implies verification)
                 const isProviderLogin = user.providerData.some((provider) => 
                     provider.providerId === 'google.com' || 
                     provider.providerId === 'github.com' || 
@@ -277,15 +311,13 @@
                 if (user.emailVerified || isProviderLogin) {
                     window.location.href = 'logged-in/dashboard.html';
                 } else {
-                    // Accent color for resend link changed from indigo/blue to gray
-                    loginMessageDiv.innerHTML = 'Your email is not verified. Please check your inbox. <a href="#" id="resend-link" class="text-gray-400 hover:text-gray-300 underline cursor-pointer">Resend verification email</a>';
+                    loginMessageDiv.innerHTML = 'Your email is not verified. Please check your inbox. <a href="#" id="resend-link" class="text-custom-light-gray hover:text-custom-lighter-gray underline cursor-pointer">Resend verification email</a>';
                     loginMessageDiv.className = 'message-area w-full max-w-md mt-4 min-h-[20px] text-center text-sm error-message';
                     
                     document.getElementById('resend-link').addEventListener('click', async (event) => {
                         event.preventDefault();
                         try {
                             await user.sendEmailVerification();
-                            // Note: 'success' message color is now a shade of gray
                             showMessage(loginMessageDiv, 'A new verification link has been sent!', 'success');
                         } catch (err) { showMessage(loginMessageDiv, `Error sending email: ${err.message}`); }
                     });
@@ -296,7 +328,7 @@
             const repairOrCreateUserDocument = async (user, providerName) => {
                 let userEmail = user.email;
                 let proposedUsername = user.displayName || userEmail.split('@')[0] || 'User';
-                proposedUsername = proposedUsername.replace(/[^a-zA-Z0-9]/g, '').slice(0, 16); // Cleaned special chars for username
+                proposedUsername = proposedUsername.replace(/[^a-zA-Z0-9]/g, '').slice(0, 16); 
 
                 if (proposedUsername.length < 4) { proposedUsername = `User${user.uid.substring(0, 8)}`; } 
                 if (await checkProfanity(proposedUsername)) { proposedUsername = `User${user.uid.substring(0, 8)}`; }
@@ -319,7 +351,6 @@
                 }
             };
 
-            // Reset Password Form Submission
             document.getElementById('resetPasswordForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 resetMessageDiv.innerHTML = '';
@@ -332,13 +363,11 @@
                     } 
                     else { 
                         await sendPasswordResetEmail(auth, email); 
-                        // Note: 'success' message color is now a shade of gray
                         showMessage(resetMessageDiv, 'Password reset link sent! Please check your inbox.', 'success'); 
                     }
                 } catch (error) { showMessage(resetMessageDiv, 'An error occurred. Please try again.'); }
             });
 
-            // Email/Password Login Form Submission
             document.getElementById('loginForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 loginMessageDiv.innerHTML = '';
@@ -370,7 +399,6 @@
                 }
             });
 
-            // OAuth Provider Login Handler
             const handleProviderLogin = async (provider) => {
                 loginMessageDiv.innerHTML = '';
                 try {
@@ -395,12 +423,10 @@
                 }
             };
 
-            // OAuth Button Event Listeners
             googleLoginBtn.addEventListener('click', () => handleProviderLogin(new GoogleAuthProvider()));
             githubLoginBtn.addEventListener('click', () => handleProviderLogin(new GithubAuthProvider()));
             microsoftLoginBtn.addEventListener('click', () => handleProviderLogin(new OAuthProvider('microsoft.com')));
 
-            // Initial view setup
             loginContainer.style.display = 'flex';
             loginContainer.style.flexDirection = 'column';
             resetPasswordContainer.style.display = 'none';
