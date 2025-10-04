@@ -36,7 +36,7 @@
             font-family: 'Geist', sans-serif;
         }
         
-        /* Utility styles for messages and buttons, adapted from old CSS but using Tailwind color scale */
+        /* Utility styles for messages and buttons */
         .message-area {
             width: 100%;
             max-width: 350px;
@@ -57,34 +57,68 @@
             cursor: pointer;
         }
 
-        /* The custom color for the primary button is #6720bd (a dark violet) */
-        .btn-primary-custom {
+        /* 1. Primary Button (Matching the index.html game section button style - bright, bold, and interactive) */
+        .btn-primary-action {
             width: 100%;
             padding: 14px;
-            background-color: #6720bd; /* Old: #6720bd */
-            color: #fff;
+            /* Using a bright violet/purple (like amber from the game button) */
+            background-color: #a78bfa; /* violet-400 */
+            color: #111827; /* dark text on bright button */
             border: none;
             border-radius: 8px;
             font-family: 'Geist', sans-serif;
             font-size: 1.1em;
             cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.2s ease;
+            transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+            font-weight: 500; /* Slightly bolder for the button */
+            /* Added shadow similar to the game button */
+            box-shadow: 0 4px 6px -1px rgba(167, 139, 250, 0.4), 0 2px 4px -2px rgba(167, 139, 250, 0.4);
         }
 
-        .btn-primary-custom:hover {
-            background-color: #5a1aa8; /* Old: #5a1aa8 */
-            transform: translateY(-2px);
+        .btn-primary-action:hover {
+            background-color: #8b5cf6; /* violet-500 */
+            transform: translateY(-1px);
+            /* Updated hover shadow */
+            box-shadow: 0 6px 10px -1px rgba(139, 92, 246, 0.5), 0 4px 6px -2px rgba(139, 92, 246, 0.5);
         }
         
+        /* 2. Provider Buttons (Matching the index.html secondary/grey button style - subtle) */
+        .btn-provider-action {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            max-width: 350px;
+            padding: 12px 14px;
+            /* Subtle border/background like the top-bar button */
+            border: 1px solid #374151; /* gray-700 */
+            border-radius: 8px;
+            background-color: transparent; /* Black background */
+            color: #fff;
+            font-weight: 300;
+            font-size: 1.0em;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+        }
+        
+        .btn-provider-action:hover {
+            background-color: #1f2937; /* gray-800 subtle hover */
+            border-color: #4b5563; /* gray-600 */
+        }
+        .btn-provider-action img {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+        }
+
+
         /* UPDATED STYLES FOR FULL-HEIGHT SPLIT CONTAINER */
         .auth-split-container {
             display: flex;
             flex-wrap: wrap;
-            /* Fills the remaining space */
             flex: 1; 
             overflow: hidden;
-            background-color: #111827; /* gray-900 */
-            /* Removed fixed width/margin/border/shadow to make it full-page */
+            background-color: black;
         }
 
         .auth-col {
@@ -94,22 +128,21 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            min-height: 500px; /* Ensure content area is not too small */
+            min-height: 500px;
         }
 
         .auth-col.left-col {
-            background-color: #1f2937; /* gray-800 */
-            /* Removed border-right */
+            background-color: black;
             min-width: 300px;
         }
 
         .auth-col.right-col {
-            background-color: #111827; /* gray-900 */
+            background-color: black;
         }
         
         @media (min-width: 769px) {
             .auth-col.left-col { 
-                 border-right: 1px solid #374151; /* Re-add border for large screens */
+                 border-right: 1px solid #374151;
             }
         }
         
@@ -118,7 +151,7 @@
             .auth-col.left-col { border-right: none; border-bottom: 1px solid #374151; }
         }
         
-        /* Copied Auth Menu Styling from index.html */
+        /* Auth Menu Styling */
         .auth-menu-container {
             transition: transform 0.3s ease-out, opacity 0.3s ease-out;
             transform-origin: top right;
@@ -134,6 +167,16 @@
             pointer-events: none;
             transform: translateY(-10px) scale(0.95);
         }
+        
+        /* Make text thinner by default in the main content area */
+        .auth-col * {
+            font-weight: 300;
+        }
+        /* Override headings and important elements to be slightly bolder (Semibold: 600) or Medium (500) */
+        .auth-col h1 { font-weight: 600; }
+        .auth-col h2 { font-weight: 500; }
+        .auth-col label { font-weight: 500; }
+        .auth-col .font-bold { font-weight: 600; }
 
     </style>
 </head>
@@ -162,8 +205,8 @@
                     id="auth-menu-container" 
                     class="auth-menu-container closed absolute right-0 top-10 w-40 p-2 rounded-xl bg-black/70 backdrop-blur-lg border border-gray-800 shadow-xl"
                 >
-                    <a href="index.html" class="block px-3 py-2 text-sm font-normal text-white hover:bg-gray-800 rounded-lg transition-colors">
-                        Home
+                    <a href="login.html" class="block px-3 py-2 text-sm font-normal text-white hover:bg-gray-800 rounded-lg transition-colors">
+                        Login
                     </a>
                     <a href="signup.html" class="block px-3 py-2 text-sm font-normal text-white hover:bg-gray-800 rounded-lg transition-colors mt-1">
                         Sign Up
@@ -173,25 +216,27 @@
         </nav>
     </header>
 
-    <main class="flex flex-col flex-1"> <div class="auth-split-container">
+    <main class="flex flex-col flex-1">
+        
+        <div class="auth-split-container">
             <div class="auth-col left-col">
                 
                 <div id="loginContainer" class="w-full flex flex-col items-center max-w-sm">
-                    <h1 class="text-3xl sm:text-4xl font-semibold tracking-tighter text-white mb-6">LOG INTO 4SP</h1>
-                    <h2 class="font-medium text-2xl text-white mb-6 text-center w-full">Login to Your Account</h2>
+                    <h1 class="text-3xl sm:text-4xl tracking-tighter text-white mb-6">LOG INTO 4SP</h1>
+                    <h2 class="text-2xl text-white mb-6 text-center w-full">Login to Your Account</h2>
                     
                     <form id="loginForm" novalidate class="w-full">
                         <div class="mb-5"> 
-                            <label for="loginEmail" class="block mb-2 text-sm font-medium text-gray-300">Email</label> 
+                            <label for="loginEmail" class="block mb-2 text-sm text-gray-300">Email</label> 
                             <input type="email" id="loginEmail" placeholder="Enter your email" required 
                                 class="w-full px-4 py-3 border border-gray-700 rounded-lg bg-gray-900 text-white placeholder-gray-500 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition"> 
                         </div>
                         <div class="mb-5"> 
-                            <label for="loginPassword" class="block mb-2 text-sm font-medium text-gray-300">Password</label> 
+                            <label for="loginPassword" class="block mb-2 text-sm text-gray-300">Password</label> 
                             <input type="password" id="loginPassword" placeholder="Enter your password" required 
                                 class="w-full px-4 py-3 border border-gray-700 rounded-lg bg-gray-900 text-white placeholder-gray-500 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition"> 
                         </div>
-                        <button type="submit" class="btn-primary-custom">LOGIN</button>
+                        <button type="submit" class="btn-primary-action">Login with Email</button>
                     </form>
                     
                     <div id="loginMessage" class="message-area"></div>
@@ -206,17 +251,17 @@
                 </div>
 
                 <div id="resetPasswordContainer" style="display: none;" class="w-full flex flex-col items-center max-w-sm">
-                    <h1 class="text-3xl sm:text-4xl font-semibold tracking-tighter text-white mb-6">RESET PASSWORD</h1>
-                    <h2 class="font-medium text-2xl text-white mb-6 text-center w-full">Reset Your Password</h2>
+                    <h1 class="text-3xl sm:text-4xl tracking-tighter text-white mb-6">RESET PASSWORD</h1>
+                    <h2 class="text-2xl text-white mb-6 text-center w-full">Reset Your Password</h2>
                     <p class="text-center w-full text-gray-400 mb-6">Enter your email address and we'll send you a link to reset your password.</p>
                     
                     <form id="resetPasswordForm" novalidate class="w-full">
                         <div class="mb-5"> 
-                            <label for="resetEmail" class="block mb-2 text-sm font-medium text-gray-300">Email</label> 
+                            <label for="resetEmail" class="block mb-2 text-sm text-gray-300">Email</label> 
                             <input type="email" id="resetEmail" placeholder="Enter your registered email" required
                                 class="w-full px-4 py-3 border border-gray-700 rounded-lg bg-gray-900 text-white placeholder-gray-500 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition"> 
                         </div>
-                        <button type="submit" class="btn-primary-custom">SEND RESET LINK</button>
+                        <button type="submit" class="btn-primary-action">SEND RESET LINK</button>
                     </form>
                     
                     <div id="resetMessage" class="message-area"></div>
@@ -230,19 +275,19 @@
 
             <div class="auth-col right-col">
                 <div class="right-panel-content w-full flex flex-col items-center max-w-sm">
-                    <h2 class="font-medium text-3xl text-white mb-6 text-center w-full">Other ways to login</h2>
+                    <h2 class="text-3xl text-white mb-6 text-center w-full">Other ways to login</h2>
                     <p class="text-center mb-8 w-full text-gray-400">Use a trusted provider like Google or GitHub to sign in instantly. It's the fastest way to access your account without needing to remember another password.</p>
                     
-                    <button id="googleLoginBtn" class="btn-google flex items-center justify-center w-full max-w-sm px-4 py-3 border border-gray-700 rounded-lg bg-gray-900 text-white font-medium hover:bg-gray-800 transition mb-4"> 
-                        <img src="images/google-icon.png" alt="Google Icon" class="w-5 h-5 mr-3"> Login with Google 
+                    <button id="googleLoginBtn" class="btn-provider-action mb-4"> 
+                        <img src="images/google-icon.png" alt="Google Icon"> Login with Google 
                     </button>
                     
-                    <button id="githubLoginBtn" class="btn-google flex items-center justify-center w-full max-w-sm px-4 py-3 border border-gray-700 rounded-lg bg-gray-900 text-white font-medium hover:bg-gray-800 transition mb-4"> 
-                        <img src="images/github-mark-white.png" alt="GitHub Icon" class="w-5 h-5 mr-3"> Login with GitHub 
+                    <button id="githubLoginBtn" class="btn-provider-action mb-4"> 
+                        <img src="images/github-mark-white.png" alt="GitHub Icon"> Login with GitHub 
                     </button>
                     
-                    <button id="microsoftLoginBtn" class="btn-google flex items-center justify-center w-full max-w-sm px-4 py-3 border border-gray-700 rounded-lg bg-gray-900 text-white font-medium hover:bg-gray-800 transition"> 
-                        <img src="../images/microsoft.png" alt="Microsoft Icon" class="w-5 h-5 mr-3"> Login with Microsoft 
+                    <button id="microsoftLoginBtn" class="btn-provider-action"> 
+                        <img src="../images/microsoft.png" alt="Microsoft Icon"> Login with Microsoft 
                     </button>
                     
                     <p class="oauth-agreement-text w-full mt-6 text-xs italic text-gray-500"> 
@@ -255,7 +300,8 @@
         </div>
         </main>
 
-    <footer class="border-t border-gray-900 py-6 mt-auto"> <div class="mx-auto max-w-7xl px-4 text-center text-gray-500 text-sm">
+    <footer class="border-t border-gray-900 py-6 mt-auto">
+        <div class="mx-auto max-w-7xl px-4 text-center text-gray-500 text-sm">
             &copy; 2024 4simpleproblems (4SP). Built for students.
         </div>
     </footer>
