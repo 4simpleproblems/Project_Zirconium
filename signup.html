@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>4SP - SIGN UP</title>
+    <meta name="description" content="Sign up for 4simpleproblems (4SP), the essential student toolkit.">
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
@@ -11,6 +13,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <style>
         /* Custom CSS to mimic a modern, dark theme and use the Geist font */
         :root {
@@ -90,15 +93,18 @@
                     <h2 class="text-xl font-medium mb-4 text-center lg:text-left text-gray-300">Quick Access</h2>
                     <div class="space-y-3 mb-4">
                         <button id="google-login" class="w-full flex items-center justify-center p-3 border border-gray-700 rounded-xl text-white hover:bg-gray-800 transition duration-200">
-                            <img src="https://placehold.co/20x20/ffffff/000000?text=G" alt="Google Logo" class="w-5 h-5 mr-3 rounded-full">
+                            <!-- Using local image file -->
+                            <img src="images/google-icon.png" alt="Google Logo" class="w-5 h-5 mr-3 rounded-full">
                             Sign up with Google
                         </button>
                         <button id="github-login" class="w-full flex items-center justify-center p-3 border border-gray-700 rounded-xl text-white hover:bg-gray-800 transition duration-200">
-                            <img src="https://placehold.co/20x20/000000/ffffff?text=GH" alt="GitHub Logo" class="w-5 h-5 mr-3">
+                            <!-- Using local image file -->
+                            <img src="images/github-mark-white.png" alt="GitHub Logo" class="w-5 h-5 mr-3">
                             Sign up with GitHub
                         </button>
                         <button id="microsoft-login" class="w-full flex items-center justify-center p-3 border border-gray-700 rounded-xl text-white hover:bg-gray-800 transition duration-200">
-                            <img src="https://placehold.co/20x20/0078D4/ffffff?text=MS" alt="Microsoft Logo" class="w-5 h-5 mr-3">
+                            <!-- Using local image file -->
+                            <img src="images/microsoft.png" alt="Microsoft Logo" class="w-5 h-5 mr-3">
                             Sign up with Microsoft
                         </button>
                     </div>
@@ -173,14 +179,9 @@
             &copy; 2024 4simpleproblems (4SP). Built for students.
         </div>
     </footer>
-
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
-    <script src="../firebase-config.js"></script>
-
-    <script src="../navigation-mini.js"></script>
     
+    <script src="navigation-mini.js"></script>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { 
