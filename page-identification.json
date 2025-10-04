@@ -29,8 +29,13 @@
         "icon": "fa-cloud-sun",
         "url": "../logged-in/weather.html"
     },
+    "dictionary": {
+        "name": "Dictionary",
+        "icon": "fa-book",
+        "url": "../logged-in/dictionary.html"
+    },
     "messenger-v2": {
-        "name": "Messenger V2",
+        "name": "Messenger",
         "icon": "fa-comments",
         "url": "../logged-in/messenger-v2.html"
     },
