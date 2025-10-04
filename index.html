@@ -160,33 +160,6 @@
         </div>
     </footer>
 
-    <script src="../navigation-mini.js"></script>
-    
-    <script type="module">
-        // Access the global navigation function you created
-        const initMiniNavigation = window.initMiniNavigation;
-        
-        // Import your local configuration (firebase-config.js is not loaded with a <script> tag)
-        import { firebaseConfig } from '../firebase-config.js';
-
-        // Import the new Firebase Modular SDK
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        // import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"; // Uncomment if you need firestore
-
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        // const db = getFirestore(app); // Uncomment if you need firestore
-
-        // Call the Navigation Bar Initialization
-        if (initMiniNavigation) {
-            initMiniNavigation(auth);
-        }
-
-        // --- Your Page-Specific Logic Goes Here ---
-        // You can add your custom index.html logic here if needed.
-        
-    </script>
+    <script type="module" src=".../navigation-mini.js"></script>
 </body>
 </html>
