@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4SP - Verify Email</title>
+    <meta name="description" content="Please verify your email address to complete your registration for 4SP.">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        /* Custom CSS to mimic a modern, dark theme and use the Geist font */
+        :root {
+            --geist-foreground: 255, 255, 255;
+            --geist-background: 0, 0, 0;
+        }
+        
+        .dark {
+            color-scheme: dark;
+        }
+
+        body {
+            /* Applying Geist font */
+            font-family: 'Geist', sans-serif;
+        }
+        
+        /* Pure Grey Button Style */
+        .pure-grey-button {
+            background-color: rgba(255, 255, 255, 0.1); /* white/10 */
+            border: 1px solid rgba(255, 255, 255, 0.2); /* white/20 */
+            transition: all 0.2s ease;
+        }
+        .pure-grey-button:hover {
+            background-color: rgba(255, 255, 255, 0.2); /* white/20 */
+        }
+    </style>
+</head>
+<body class="bg-black text-white min-h-screen flex flex-col">
+
+    <div id="navbar-container"></div>
+    <main class="flex-grow flex items-center justify-center py-12 px-4">
+        <div class="w-full max-w-lg p-8 bg-gray-900/50 backdrop-blur-md rounded-2xl border border-gray-800 shadow-2xl text-center">
+            
+            <i class="fas fa-envelope-open-text text-6xl text-gray-400 mb-6"></i>
+
+            <h1 class="text-3xl font-semibold mb-3">
+                Verify Your Email Address
+            </h1>
+            <p class="text-gray-400 mb-6">
+                We've sent a verification link to your email. Please check your inbox and click the link to confirm your account.
+            </p>
+
+            <div id="status-message" class="hidden p-3 mb-4 text-sm rounded-lg bg-red-900/50 text-red-300" role="alert"></div>
+
+            <p class="text-sm text-gray-500 mb-6">
+                Verification can sometimes take a minute to arrive. Please check your spam folder!
+            </p>
+            
+            <div class="space-y-4">
+                <button id="resend-email-button"
+                        class="pure-grey-button w-full px-4 py-3 text-base font-medium rounded-xl text-white focus:outline-none focus:ring-2">
+                    Resend Verification Email
+                </button>
+                <button id="check-status-button"
+                        class="bg-white text-black w-full px-4 py-3 text-base font-medium rounded-xl hover:bg-gray-200 transition duration-150">
+                    I have verified my email. Log In!
+                </button>
+            </div>
+            
+        </div>
+    </main>
+
+    <footer class="border-t border-gray-900 py-6">
+        <div class="mx-auto max-w-7xl px-4 text-center text-gray-500 text-sm">
+            &copy; 2024 4simpleproblems (4SP). Built for students.
+        </div>
+    </footer>
+    
+    <script src="navigation-mini.js"></script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, onAuthStateChanged, sendEmailVerification, signOut, reload 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- GLOBAL SETUP ---
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app); // Initialized but not strictly needed for this page
+        setLogLevel('debug');
+
+
+        // --- UI ELEMENTS ---
+        const statusMessage = document.getElementById('status-message');
+        const resendButton = document.getElementById('resend-email-button');
+        const checkStatusButton = document.getElementById('check-status-button');
+        let currentUser = null;
+
+        // --- UTILITY FUNCTIONS ---
+        function showStatus(message, type = 'error') {
+            statusMessage.textContent = message;
+            statusMessage.classList.remove('hidden', 'bg-red-900/50', 'text-red-300', 'bg-green-900/50', 'text-green-300');
+            if (type === 'success') {
+                statusMessage.classList.add('bg-green-900/50', 'text-green-300');
+            } else {
+                statusMessage.classList.add('bg-red-900/50', 'text-red-300');
+            }
+        }
+        function hideStatus() {
+             statusMessage.classList.add('hidden');
+        }
+
+        // --- AUTH STATE LISTENER ---
+        onAuthStateChanged(auth, (user) => {
+            if (user && user.email) {
+                currentUser = user;
+                // If the user somehow lands here and is already verified, redirect them
+                if (user.emailVerified) {
+                    window.location.href = '../logged-in/dashboard.html';
+                    return;
+                }
+            } else {
+                // If no user is logged in, send them back to login
+                window.location.href = 'login.html';
+            }
+        });
+
+        // --- RESEND EMAIL LOGIC ---
+        resendButton.addEventListener('click', async () => {
+            if (!currentUser) {
+                showStatus("Error: No logged-in user detected. Please log in again.", 'error');
+                await signOut(auth);
+                return;
+            }
+
+            resendButton.textContent = 'Sending...';
+            resendButton.disabled = true;
+
+            try {
+                await sendEmailVerification(currentUser);
+                showStatus("Verification email successfully resent! Check your inbox.", 'success');
+            } catch (error) {
+                showStatus("Failed to resend verification email. Please try again later.", 'error');
+                console.error("Resend verification error:", error);
+            } finally {
+                resendButton.textContent = 'Resend Verification Email';
+                resendButton.disabled = false;
+            }
+        });
+
+        // --- CHECK STATUS LOGIC ---
+        checkStatusButton.addEventListener('click', async () => {
+             if (!currentUser) {
+                showStatus("Error: No logged-in user detected. Please log in again.", 'error');
+                await signOut(auth);
+                return;
+            }
+            
+            checkStatusButton.textContent = 'Checking Status...';
+            checkStatusButton.disabled = true;
+
+            try {
+                // Force Firebase to check the latest verification status
+                await reload(currentUser);
+                currentUser = auth.currentUser; // Update the local user object
+
+                if (currentUser && currentUser.emailVerified) {
+                    showStatus("Email verified! Redirecting to dashboard...", 'success');
+                    // Give a small delay for the user to see the success message
+                    setTimeout(() => {
+                        window.location.href = '../logged-in/dashboard.html';
+                    }, 1500);
+                } else {
+                    showStatus("Email is still not verified. Please check your inbox and click the link.", 'error');
+                }
+
+            } catch (error) {
+                showStatus("An error occurred while checking verification status.", 'error');
+                console.error("Reload error:", error);
+            } finally {
+                checkStatusButton.textContent = 'I have verified my email. Log In!';
+                checkStatusButton.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
