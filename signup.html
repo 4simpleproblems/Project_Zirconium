@@ -113,7 +113,7 @@
                     <form id="usernameForm" novalidate class="w-full max-w-md"> 
                         <div class="mb-5">
                             <label for="signupUsername" class="block mb-2 text-custom-light-gray text-sm font-medium text-left">Username</label>
-                            <input type="text" id="signupUsername" placeholder="4-24 character limit" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-lg text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
+                            <input type="text" id="signupUsername" placeholder="4-24 characters, including symbols" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-lg text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
                             <p class="text-xs text-custom-lighter-gray mt-2 text-left">Allowed symbols: .,-+\_!?$</p>
                         </div>
                         <button type="submit" id="nextStepBtn" class="w-full p-3 bg-custom-medium-gray text-custom-white-gray rounded-lg font-semibold text-lg cursor-pointer transition hover:bg-custom-light-gray hover:shadow-lg hover:shadow-custom-medium-gray/30">NEXT</button>
@@ -331,7 +331,7 @@
 
             // Handler for provider login (used for sign up with Google/GitHub/Microsoft)
             const handleProviderSignup = async (provider) => {
-                signupMessageDiv.innerHTML = '';
+                usernameMessageDiv.innerHTML = ''; 
                 try {
                     const result = await signInWithPopup(auth, provider);
                     const user = result.user;
@@ -339,7 +339,7 @@
                     const userDocSnap = await getDoc(doc(db, 'users', user.uid));
 
                     if (userDocSnap.exists()) {
-                        // User already exists, redirect to dashboard or show login message
+                        // User already exists, redirect to dashboard
                         window.location.href = 'logged-in/dashboard.html';
                         return;
                     } 
@@ -393,9 +393,32 @@
                 } catch (error) {
                     console.error('Provider Sign-In error:', error);
                     let message = `A problem occurred during sign up. Please try again.`;
-                    if (error.code === 'auth/account-exists-with-different-credential') {
-                        message = 'An account with this email already exists using a different sign-in method. Please use the Login page.';
-                    } else if (error.code === 'auth/popup-closed-by-user') { return; }
+                    
+                    // Logic for provider signup redirect on existing account
+                    if (error.code === 'auth/account-exists-with-different-credential' || error.code === 'auth/credential-already-in-use') {
+                        let countdown = 5;
+                        const redirectMessage = () => {
+                            showMessage(usernameMessageDiv, 
+                                `An account with this email already exists! You must use the **Login** page.<br>Redirecting to login in ${countdown}...`, 
+                                'error'
+                            );
+                            countdown--;
+                        };
+                        
+                        redirectMessage(); 
+                        const interval = setInterval(() => {
+                            if (countdown < 0) {
+                                clearInterval(interval);
+                                window.location.href = 'login.html'; // Redirect to login
+                            } else {
+                                redirectMessage();
+                            }
+                        }, 1000);
+                        return; 
+                    } else if (error.code === 'auth/popup-closed-by-user') { 
+                        return; 
+                    }
+
                     showMessage(usernameMessageDiv, message);
                 }
             };
@@ -481,12 +504,34 @@
                 } catch (error) {
                     console.error("Signup Error:", error);
                     let message = 'An unknown sign up error occurred. Please try again.';
+                    
+                    // Logic for email/password signup redirect on existing account
+                    if (error.code === 'auth/email-already-in-use') {
+                        let countdown = 5;
+                        const redirectMessage = () => {
+                            showMessage(signupMessageDiv, 
+                                `This email is already in use by another account! You must use the **Login** page.<br>Redirecting in ${countdown}...`, 
+                                'error'
+                            );
+                            countdown--;
+                        };
+                        
+                        redirectMessage(); 
+                        const interval = setInterval(() => {
+                            if (countdown < 0) {
+                                clearInterval(interval);
+                                window.location.href = 'login.html'; // Redirect to login
+                            } else {
+                                redirectMessage();
+                            }
+                        }, 1000);
+                        return; 
+                    } 
+
+                    // Existing error message switch (only for non-redirect errors)
                     switch (error.code) {
-                        case 'auth/email-already-in-use': 
-                            message = 'This email is already in use by another account.'; break;
                         case 'auth/invalid-email':
                             message = 'The email address is not valid.'; break;
-                        // Password validation is primarily done client-side, but this is a fallback
                         case 'auth/weak-password':
                             message = 'Password is too weak. Please choose a stronger one.'; break;
                     }
