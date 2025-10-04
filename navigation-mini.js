@@ -154,7 +154,7 @@ function injectAuthNavbar(auth) {
     if (!navbarContainer) return;
 
     // Wait for Firebase Auth to be ready
-    auth.onAuthStateChanged((user) => { // Uses the passed auth object
+    auth.onAuthStateChanged((user) => {
         let authContent;
         if (user) {
             authContent = renderLoggedInNavbar(user);
@@ -185,7 +185,8 @@ function injectAuthNavbar(auth) {
             if (logoutButton) {
                 logoutButton.addEventListener('click', async () => {
                     try {
-                        await auth.signOut(); // Uses the signOut method on the passed auth object
+                        // FIX: Use the method on the passed auth object
+                        await auth.signOut(); 
                         // Redirect to the login page after logout
                         window.location.href = 'login.html'; 
                     } catch (error) {
@@ -200,5 +201,6 @@ function injectAuthNavbar(auth) {
 // Execute the injection functions when the script is loaded
 window.initMiniNavigation = (auth) => {
     injectTopbarCSS();
+    // Only proceed after DOM content is ready
     document.addEventListener('DOMContentLoaded', () => injectAuthNavbar(auth));
 };
