@@ -2,20 +2,31 @@
  * navigation-mini.js
  * Renders the full header dynamically based on authentication state.
  * Contains ONLY the CSS required for the dynamic topbar functionality.
- * NOTE: This script is now initialized via the global function `window.initMiniNavigation(auth)` 
+ * NOTE: This script is now initialized via the global function `window.initMiniNavigation(auth, db)` 
  * called from the main <script type="module"> block.
  */
 
 // 1. INJECT ONLY TOPBAR-SPECIFIC STYLES INTO THE HEAD
 function injectTopbarCSS() {
-    // ... (CSS injection code remains the same)
     const head = document.head;
+    
+    // Inject Poppins font for the profile initial (as requested)
+    if (!document.querySelector('link[href*="Poppins"]')) {
+        const poppinsLink = document.createElement('link');
+        poppinsLink.rel = 'stylesheet';
+        poppinsLink.href = 'https://fonts.googleapis.com/css2?family=Poppins:wght@600&display=swap';
+        head.appendChild(poppinsLink);
+    }
+    
     const style = document.createElement('style');
     style.textContent = `
         /* --- AUTH MENU STYLES (Required for dropdown) --- */
         .auth-menu-container {
             transition: transform 0.3s ease-out, opacity 0.3s ease-out;
             transform-origin: top right;
+            /* Make the blur effect more pronounced and definite */
+            backdrop-filter: blur(16px); 
+            -webkit-backdrop-filter: blur(16px);
         }
         
         .auth-menu-container.open {
@@ -27,6 +38,20 @@ function injectTopbarCSS() {
             opacity: 0;
             pointer-events: none;
             transform: translateY(-10px) scale(0.95);
+        }
+        
+        /* New: Gradient profile avatar style */
+        .initial-avatar {
+            /* Black to Gray Gradient Background for the circle */
+            background: linear-gradient(135deg, #1f1f1f 0%, #444444 100%); 
+            font-family: 'Poppins', sans-serif; 
+            text-transform: uppercase;
+        }
+
+        /* Ensure smooth animation and proper positioning for the avatar */
+        #auth-toggle {
+            position: relative;
+            z-index: 10;
         }
         /* --- END AUTH MENU STYLES --- */
     `;
@@ -65,8 +90,9 @@ function setupAuthMenuLogic() {
     }
 }
 
-// 3. NAVBAR RENDERING FUNCTIONS (remains the same)
+// 3. NAVBAR RENDERING FUNCTIONS
 function renderLoggedOutNavbar() {
+    // Kept existing blurred background for consistency with the logged-in menu
     return `
         <div class="relative">
             <button 
@@ -80,7 +106,7 @@ function renderLoggedOutNavbar() {
             
             <div 
                 id="auth-menu-container" 
-                class="auth-menu-container closed absolute right-0 top-10 w-40 p-2 rounded-xl bg-black/70 backdrop-blur-lg border border-gray-800 shadow-xl"
+                class="auth-menu-container closed absolute right-0 top-10 w-40 p-2 rounded-xl bg-black/70 backdrop-blur-xl border border-gray-800 shadow-xl"
             >
                 <a href="login.html" class="block px-3 py-2 text-sm font-normal text-white hover:bg-gray-800 rounded-lg transition-colors">
                     Login
@@ -94,15 +120,27 @@ function renderLoggedOutNavbar() {
 }
 
 function renderLoggedInNavbar(user) {
-    const username = user.displayName || user.email.split('@')[0];
+    // Use data fetched from Firestore, or fallback to Auth data
+    const username = user.username;
     const email = user.email;
+    
+    // Get the first letter of the username (or email) for the initial, capitalized
+    const initial = username 
+        ? username.charAt(0).toUpperCase() 
+        : (email ? email.charAt(0).toUpperCase() : '?');
 
     let profileContent;
     
+    // Check for photoURL. If not available, use the new initial avatar.
     if (user.photoURL) {
         profileContent = `<img src="${user.photoURL}" alt="${username} Profile" class="w-full h-full object-cover rounded-full" />`;
     } else {
-        profileContent = `<i class="fas fa-circle-user text-white text-base"></i>`;
+        // New gradient initial avatar
+        profileContent = `
+            <div class="initial-avatar w-full h-full flex items-center justify-center text-white text-sm font-semibold">
+                ${initial}
+            </div>
+        `;
     }
 
     return `
@@ -118,7 +156,7 @@ function renderLoggedInNavbar(user) {
             
             <div 
                 id="auth-menu-container" 
-                class="auth-menu-container closed absolute right-0 top-10 w-64 p-3 rounded-xl bg-black/70 backdrop-blur-lg border border-gray-800 shadow-xl"
+                class="auth-menu-container closed absolute right-0 top-10 w-64 p-3 rounded-xl bg-black/70 backdrop-blur-xl border border-gray-800 shadow-xl"
             >
                 <div class="px-3 py-1 mb-2 border-b border-gray-700">
                     <p class="text-sm font-semibold text-white truncate">${username}</p>
@@ -142,16 +180,49 @@ function renderLoggedInNavbar(user) {
 }
 
 // 4. MAIN INJECTION FUNCTION
-// MODIFIED: Accepts the auth object
-function injectAuthNavbar(auth) {
+// MODIFIED: Accepts the auth and db objects
+async function injectAuthNavbar(auth, db) {
     const navbarContainer = document.getElementById('navbar-container');
     if (!navbarContainer) return;
 
-    // MODIFIED: Use the passed auth object
-    auth.onAuthStateChanged((user) => {
+    // Use global functions for Firestore (assuming they are loaded in the HTML file)
+    // NOTE: This relies on 'doc' and 'getDoc' being accessible in the execution environment
+    const docFn = typeof doc !== 'undefined' ? doc : null;
+    const getDocFn = typeof getDoc !== 'undefined' ? getDoc : null;
+
+    auth.onAuthStateChanged(async (user) => {
         let authContent;
+        
         if (user) {
-            authContent = renderLoggedInNavbar(user);
+            let userData = null;
+
+            // Fetch user data from Firestore if `db` and required functions are available
+            if (db && docFn && getDocFn) {
+                try {
+                    const userDocRef = docFn(db, 'users', user.uid);
+                    const userDocSnap = await getDocFn(userDocRef);
+                    if (userDocSnap.exists()) {
+                        userData = userDocSnap.data();
+                    } else {
+                        console.warn("Firestore user document not found. Falling back to Auth object data.");
+                    }
+                } catch (e) {
+                    console.error("Error fetching user data from Firestore:", e);
+                }
+            } else if (user && db) {
+                 // Warn if Firestore functions are missing but db object is present
+                 console.warn("Firestore functions (doc, getDoc) are not available. Ensure they are globally imported in your main HTML script.");
+            }
+
+            // Combine Firebase Auth and Firestore data
+            const combinedUser = {
+                ...user,
+                // Prioritize Firestore data, then Auth display name, then Auth email prefix
+                username: userData?.username || user.displayName || user.email.split('@')[0],
+                email: userData?.email || user.email
+            };
+
+            authContent = renderLoggedInNavbar(combinedUser);
         } else {
             authContent = renderLoggedOutNavbar();
         }
@@ -177,7 +248,6 @@ function injectAuthNavbar(auth) {
             if (logoutButton) {
                 logoutButton.addEventListener('click', async () => {
                     try {
-                        // MODIFIED: Use the passed auth object's signOut method
                         await auth.signOut();
                         window.location.href = 'login.html'; 
                     } catch (error) {
@@ -190,8 +260,9 @@ function injectAuthNavbar(auth) {
 }
 
 // Execute the injection functions when the script is loaded
-window.initMiniNavigation = (auth) => {
+// MODIFIED: Accepts the auth and db objects
+window.initMiniNavigation = (auth, db) => {
     injectTopbarCSS();
     // Only proceed after DOM content is ready
-    document.addEventListener('DOMContentLoaded', () => injectAuthNavbar(auth));
+    document.addEventListener('DOMContentLoaded', () => injectAuthNavbar(auth, db));
 };
