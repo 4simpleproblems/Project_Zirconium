@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>4SP - LOGIN</title>
-    <meta name="description" content="Log in to 4simpleproblems (4SP), the essential student toolkit.">
+    <meta name="description" content="Log in or automatically create an account to access 4simpleproblems.">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -29,288 +29,406 @@
         body {
             /* Applying Geist font */
             font-family: 'Geist', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-color: rgb(var(--geist-background));
+            color: rgb(var(--geist-foreground));
         }
-        
-        /* Input Styling */
-        input[type="email"], input[type="password"], input[type="text"] {
-            background-color: rgb(24 24 27 / var(--tw-bg-opacity)); /* zinc-900 equivalent */
-            border-color: rgb(39 39 42 / var(--tw-border-opacity)); /* zinc-800 equivalent */
+
+        /* Utility class for primary button focus/hover effects */
+        .btn-primary {
+            transition: transform 0.1s, box-shadow 0.1s, background-color 0.1s;
         }
-        
-        /* Button Focus Ring */
-        .login-btn:focus-visible {
-            outline: 2px solid transparent;
-            outline-offset: 2px;
-            box-shadow: 0 0 0 2px #000000, 0 0 0 4px #0070f3; /* Black + Vercel Blue */
+        .btn-primary:hover {
+            box-shadow: 0 4px 15px rgba(100, 116, 139, 0.4); /* slate-500 shadow */
+        }
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        /* Main content styling */
+        .auth-container {
+            max-width: 448px;
+            width: 90%;
+            padding: 2.5rem;
+            background-color: #0d0d0d;
+            border: 1px solid #1a1a1a;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            margin-top: -6rem; /* Pull up to overlay the header slightly */
+        }
+
+        .input-field {
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+            color: white;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .input-field:focus {
+            border-color: #64748b; /* slate-500 */
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.5);
         }
     </style>
 </head>
-<body class="bg-black text-white min-h-screen">
-    <div id="navbar-container"></div>
+<body class="flex flex-col min-h-screen">
+    
+    <!-- The Mini Navigation Bar will be injected here by navigation-mini.js -->
+    <div id="auth-navbar-container"></div>
+    
+    <main class="flex-grow flex items-center justify-center py-16 px-4">
+        
+        <div class="auth-container rounded-xl">
+            <h1 class="text-3xl font-bold text-center mb-6">Welcome Back</h1>
+            <p class="text-center text-gray-400 mb-8">Login with credentials or a provider below.</p>
 
-    <main class="flex items-center justify-center min-h-[calc(100vh-64px)] py-12 px-4 sm:px-6 lg:px-8">
-        <div class="w-full max-w-md space-y-8 rounded-xl p-8 bg-gray-900/50 backdrop-blur-md border border-gray-800 shadow-2xl">
-            <div class="text-center">
-                <h2 class="mt-6 text-3xl font-bold tracking-tight text-white">
-                    Sign in to your account
-                </h2>
-                <p class="mt-2 text-sm text-gray-400">
-                    Or <a href="signup.html" class="font-medium text-blue-400 hover:text-blue-300 transition">create a new one</a>
-                </p>
-            </div>
-            
-            <div id="status-message" class="hidden p-3 text-sm rounded-lg text-red-400 bg-red-900/30 border border-red-800/50"></div>
-
-            <form class="mt-8 space-y-6" id="login-form">
-                <input type="hidden" name="remember" value="true">
-                <div class="-space-y-px rounded-md shadow-sm">
-                    <div>
-                        <label for="email-address" class="sr-only">Email address</label>
-                        <input id="email-address" name="email" type="email" autocomplete="email" required 
-                               class="relative block w-full appearance-none rounded-none rounded-t-lg border border-gray-700 px-3 py-3 text-white placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                               placeholder="Email address">
-                    </div>
-                    <div>
-                        <label for="password" class="sr-only">Password</label>
-                        <input id="password" name="password" type="password" autocomplete="current-password" required 
-                               class="relative block w-full appearance-none rounded-none rounded-b-lg border border-gray-700 px-3 py-3 text-white placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                               placeholder="Password">
-                    </div>
-                </div>
-
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center">
-                        <input id="remember-me" name="remember-me" type="checkbox" 
-                               class="h-4 w-4 rounded border-gray-700 bg-gray-900 text-blue-500 focus:ring-blue-500">
-                        <label for="remember-me" class="ml-2 block text-sm text-gray-400">
-                            Remember me
-                        </label>
-                    </div>
-
-                    <div class="text-sm">
-                        <a href="#" id="forgot-password" class="font-medium text-blue-400 hover:text-blue-300 transition">
-                            Forgot your password?
-                        </a>
-                    </div>
-                </div>
-
+            <form id="login-form" class="space-y-6">
                 <div>
-                    <button type="submit" id="login-button"
-                            class="login-btn group relative flex w-full justify-center rounded-lg border border-transparent bg-blue-600 py-3 px-4 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition">
-                        <span class="absolute inset-y-0 left-0 flex items-center pl-3">
-                            <i class="fas fa-lock h-5 w-5 text-blue-300 group-hover:text-blue-200 transition"></i>
-                        </span>
-                        Sign in
-                    </button>
+                    <label for="username" class="block text-sm font-medium text-gray-300 mb-2">Username</label>
+                    <input type="text" id="username" required 
+                           class="input-field w-full p-3 rounded-lg"
+                           placeholder="Enter your username"
+                           minlength="4" maxlength="24">
                 </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-300 mb-2">Password</label>
+                    <input type="password" id="password" required 
+                           class="input-field w-full p-3 rounded-lg"
+                           placeholder="Enter your password"
+                           minlength="8" maxlength="48">
+                </div>
+
+                <div id="error-message" class="text-red-400 text-sm hidden bg-red-900/30 p-3 rounded-lg border border-red-800"></div>
+
+                <button type="submit" id="login-button" 
+                        class="btn-primary w-full bg-slate-600 hover:bg-slate-500 text-white font-semibold py-3 rounded-lg text-lg flex items-center justify-center disabled:opacity-50">
+                    <span id="button-text">Log In / Sign Up</span>
+                    <i id="loading-spinner" class="fas fa-spinner fa-spin ml-3 hidden"></i>
+                </button>
             </form>
             
-            <div class="relative">
-                <div class="absolute inset-0 flex items-center" aria-hidden="true">
-                    <div class="w-full border-t border-gray-700"></div>
-                </div>
-                <div class="relative flex justify-center text-sm">
-                    <span class="bg-gray-900/50 backdrop-blur-sm px-2 text-gray-500">
-                        Or continue with
-                    </span>
-                </div>
+            <!-- NEW: Social Login Separator and Buttons -->
+            <div class="relative flex items-center py-5">
+                <div class="flex-grow border-t border-gray-800"></div>
+                <span class="flex-shrink mx-4 text-gray-500 text-sm font-medium">OR USE A SOCIAL ACCOUNT</span>
+                <div class="flex-grow border-t border-gray-800"></div>
             </div>
 
-            <div class="flex space-x-3">
-                <button id="google-login-btn" type="button" class="login-btn w-full inline-flex justify-center rounded-lg border border-gray-700 bg-gray-800 py-3 text-sm font-medium text-white hover:bg-gray-700 transition">
-                    <i class="fab fa-google h-5 w-5 mr-2"></i> Google
+            <div class="space-y-4">
+                <button id="google-login-button" 
+                        class="w-full flex items-center justify-center p-3 rounded-lg border border-gray-700 bg-white/5 text-white hover:bg-white/10 transition duration-150 btn-primary"
+                        data-initial-text="Sign in with Google">
+                    <i class="fab fa-google text-red-500 text-xl mr-3"></i>
+                    Sign in with Google
                 </button>
-                <button id="github-login-btn" type="button" class="login-btn w-full inline-flex justify-center rounded-lg border border-gray-700 bg-gray-800 py-3 text-sm font-medium text-white hover:bg-gray-700 transition">
-                    <i class="fab fa-github h-5 w-5 mr-2"></i> GitHub
-                </button>
-                <button id="microsoft-login-btn" type="button" class="login-btn w-full inline-flex justify-center rounded-lg border border-gray-700 bg-gray-800 py-3 text-sm font-medium text-white hover:bg-gray-700 transition">
-                    <i class="fab fa-microsoft h-5 w-5 mr-2"></i> Microsoft
+                <button id="github-login-button" 
+                        class="w-full flex items-center justify-center p-3 rounded-lg border border-gray-700 bg-white/5 text-white hover:bg-white/10 transition duration-150 btn-primary"
+                        data-initial-text="Sign in with GitHub">
+                    <i class="fab fa-github text-white text-xl mr-3"></i>
+                    Sign in with GitHub
                 </button>
             </div>
+            <!-- END NEW -->
+
+            <p class="text-center text-gray-500 text-sm mt-6">
+                New to 4SP? <a href="signup.html" class="text-slate-400 hover:text-slate-300 font-medium transition duration-150">Sign Up</a>
+            </p>
         </div>
-    </main>
-    
-    <script src="../navigation-mini.js"></script>
-
-    <script type="module">
-        // -------------------------------------------------------------
-        // NEW: Get the global navigation function into the module's scope
-        const initMiniNavigation = window.initMiniNavigation;
-        // -------------------------------------------------------------
         
-        // 1. IMPORT: Import your local configuration (Loads firebase-config.js)
-        import { firebaseConfig } from '../firebase-config.js';
+    </main>
 
-        // 2. IMPORT: Updated Firebase module imports
+    <footer class="border-t border-gray-900 py-6">
+        <div class="mx-auto max-w-7xl px-4 text-center text-gray-500 text-sm">
+            &copy; 2024 4simpleproblems (4SP). Built for students.
+        </div>
+    </footer>
+
+    <script src="../navigation-mini.js"></script>
+    
+    <script type="module">
+        // Global variables for Canvas environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        if (!firebaseConfig) {
+            console.error("Firebase configuration not found.");
+            document.getElementById('error-message').textContent = "Application setup error: Missing Firebase config.";
+            document.getElementById('error-message').classList.remove('hidden');
+        }
+
+        // Import the new Firebase Modular SDK
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { 
-            getAuth, signInWithEmailAndPassword, sendPasswordResetEmail, 
-            signInWithPopup, GoogleAuthProvider, GithubAuthProvider, OAuthProvider, 
-            onAuthStateChanged
+            getAuth, 
+            signInWithEmailAndPassword, 
+            createUserWithEmailAndPassword,
+            signInWithCustomToken,
+            signInAnonymously,
+            onAuthStateChanged,
+            GoogleAuthProvider,
+            GithubAuthProvider,
+            signInWithPopup
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { 
-            getFirestore, doc, getDoc
+            getFirestore, 
+            doc, 
+            setDoc
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        setLogLevel('debug'); // Enable Firestore logs
 
-        // --- GLOBAL SETUP ---
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app); 
-        
-        // -------------------------------------------------------------
-        // NEW: Call the navigation initialization function, passing the auth object
+        // Initialize Firebase
+        let app, auth, db;
+        if (firebaseConfig) {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+        }
+
+        // Access the global navigation function
+        const initMiniNavigation = window.initMiniNavigation;
         if (initMiniNavigation) {
             initMiniNavigation(auth);
         }
-        // -------------------------------------------------------------
+
+        // --- Authentication & Firestore Logic ---
         
-        // --- DOM Elements ---
-        const loginForm = document.getElementById('login-form');
+        const form = document.getElementById('login-form');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const errorDiv = document.getElementById('error-message');
         const loginButton = document.getElementById('login-button');
-        const forgotPasswordLink = document.getElementById('forgot-password');
-        const googleLoginBtn = document.getElementById('google-login-btn');
-        const githubLoginBtn = document.getElementById('github-login-btn');
-        const microsoftLoginBtn = document.getElementById('microsoft-login-btn');
-        const statusMessage = document.getElementById('status-message');
-
-        // --- Utility Functions ---
-        function showStatus(message, isError = true) {
-            statusMessage.textContent = message;
-            statusMessage.classList.remove('hidden');
-            // Toggle classes based on whether it's an error or success if needed
-            if (isError) {
-                statusMessage.classList.add('text-red-400', 'bg-red-900/30', 'border-red-800/50');
-            }
-        }
-
-        function hideStatus() {
-            statusMessage.classList.add('hidden');
-        }
-
-        function checkFormValidity() {
-            if (loginForm.checkValidity()) {
-                loginButton.disabled = false;
-                loginButton.classList.remove('disabled:opacity-50', 'disabled:cursor-not-allowed');
-            } else {
-                loginButton.disabled = true;
-                loginButton.classList.add('disabled:opacity-50', 'disabled:cursor-not-allowed');
-            }
-        }
-
-        // Checks if user data exists in Firestore; redirects if successful
-        async function checkAndRedirect(user) {
-            if (!user) return; // Should not happen here, but for safety
-
-            try {
-                const userDocRef = doc(db, "users", user.uid);
-                const userDoc = await getDoc(userDocRef);
-
-                if (userDoc.exists()) {
-                    console.log("User data exists. Redirecting to dashboard.");
-                    window.location.href = '../logged-in/dashboard.html';
-                } else {
-                    // This means a new user was created via social login but Firestore setup failed,
-                    // or a user signed up on the login page (shouldn't happen).
-                    console.warn("User authenticated but missing Firestore data. Logging out.");
-                    await auth.signOut();
-                    showStatus("Account setup failed. Please contact support.", true);
-                }
-            } catch (error) {
-                console.error("Error during login redirect/check:", error);
-                await auth.signOut();
-                showStatus("An error occurred during sign-in verification. Please try again.", true);
-            }
-        }
-
-        // --- EVENT HANDLERS ---
+        const buttonText = document.getElementById('button-text');
+        const loadingSpinner = document.getElementById('loading-spinner');
         
-        // Handle Email/Password Login
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            hideStatus();
-            
-            const email = loginForm.elements['email'].value;
-            const password = loginForm.elements['password'].value;
-            
-            loginButton.disabled = true;
+        // Social Login Buttons
+        const googleLoginButton = document.getElementById('google-login-button');
+        const githubLoginButton = document.getElementById('github-login-button');
 
-            try {
-                const userCredential = await signInWithEmailAndPassword(auth, email, password);
-                // checkAndRedirect will handle success and navigation
-                await checkAndRedirect(userCredential.user);
-            } catch (error) {
-                let errorMessage = "Login failed.";
-                if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-                    errorMessage = "Invalid email or password.";
-                } else if (error.code === 'auth/too-many-requests') {
-                    errorMessage = "Account locked due to too many failed attempts. Try again later.";
-                }
-                
-                showStatus(errorMessage);
-                console.error("Login Error:", error);
 
-            } finally {
-                loginButton.disabled = false;
+        // Helper to show/hide loading state for the main form
+        const toggleLoading = (isLoading) => {
+            loginButton.disabled = isLoading;
+            loadingSpinner.classList.toggle('hidden', !isLoading);
+            buttonText.textContent = isLoading ? 'Processing...' : 'Log In / Sign Up';
+            errorDiv.classList.add('hidden');
+            // Disable social buttons while form login is active
+            googleLoginButton.disabled = isLoading;
+            githubLoginButton.disabled = isLoading;
+        };
+        
+        // Helper to show error
+        const showError = (message) => {
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
+            // Ensure all states are reset when an error occurs
+            toggleLoading(false); 
+            toggleSocialButtonLoading(googleLoginButton, false);
+            toggleSocialButtonLoading(githubLoginButton, false);
+        };
+        
+        // Helper to manage loading state for social buttons
+        const toggleSocialButtonLoading = (button, isLoading) => {
+            if (!button) return;
+            const initialText = button.dataset.initialText || 'Sign in';
+            button.disabled = isLoading;
+            button.classList.toggle('opacity-50', isLoading);
+            if (isLoading) {
+                // Store initial text if not already stored
+                if (!button.dataset.initialText) button.dataset.initialText = button.textContent.trim();
+                // Find and keep the icon, but change the text
+                const icon = button.querySelector('i')?.outerHTML || '';
+                button.innerHTML = `<i class="fas fa-spinner fa-spin mr-3"></i> Connecting...`;
+            } else {
+                // Restore original text and icon
+                button.innerHTML = button.dataset.initialText === 'Sign in with Google' 
+                    ? '<i class="fab fa-google text-red-500 text-xl mr-3"></i> Sign in with Google'
+                    : '<i class="fab fa-github text-white text-xl mr-3"></i> Sign in with GitHub';
             }
-        });
-
-        // Handle Forgot Password
-        forgotPasswordLink.addEventListener('click', async (e) => {
-            e.preventDefault();
-            hideStatus();
-            
-            const email = loginForm.elements['email'].value;
-
-            if (!email) {
-                showStatus("Please enter your email in the field above to reset your password.", false);
+        };
+        
+        // Helper to create a user profile in Firestore
+        const createFirestoreProfile = async (user, username = null) => {
+            if (!db || !user) {
+                console.error("Cannot create profile: Missing DB or user data.");
                 return;
             }
             
+            // Derive username for social/auto-signup if not explicitly passed
+            let finalUsername = username;
+            if (!finalUsername) {
+                // Use display name, or the part of email before @, or a default user ID
+                finalUsername = user.displayName || user.email?.split('@')[0] || ('user' + user.uid.substring(0, 8));
+                // Sanitize derived username to be alphanumeric for safety
+                finalUsername = finalUsername.replace(/[^a-zA-Z0-9]/g, ''); 
+                if (finalUsername.length < 4) finalUsername = 'user' + user.uid.substring(0, 4);
+            }
+            
             try {
-                await sendPasswordResetEmail(auth, email);
-                showStatus(`Password reset link sent to ${email}! Check your inbox.`, false);
-            } catch (error) {
-                let errorMessage = "Password reset failed.";
-                if (error.code === 'auth/user-not-found') {
-                    errorMessage = `No user found with email: ${email}.`;
+                // Private data path: /artifacts/{appId}/users/{userId}/users/profile
+                const userProfileRef = doc(db, `artifacts/${appId}/users/${user.uid}/users`, 'profile');
+                await setDoc(userProfileRef, {
+                    username: finalUsername,
+                    email: user.email || 'N/A',
+                    provider: user.providerData[0]?.providerId || 'password',
+                    createdAt: Date.now()
+                });
+                console.log("Firestore profile created successfully for user:", finalUsername);
+            } catch (e) {
+                console.error("Error adding document to Firestore:", e);
+            }
+        };
+
+        // Check auth status and redirect if already logged in
+        onAuthStateChanged(auth, async (user) => {
+            if (user && !user.isAnonymous) {
+                window.location.href = 'index.html'; 
+            } else if (user && user.isAnonymous) {
+                await auth.signOut();
+            } else if (!user && initialAuthToken) {
+                try {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } catch (error) {
+                    console.error("Custom token sign-in failed, proceeding with form:", error);
                 }
-                showStatus(errorMessage);
+            } else if (!user) {
+                try {
+                     await signInAnonymously(auth);
+                } catch (error) {
+                    console.error("Anonymous sign-in failed:", error);
+                }
             }
         });
 
-        // --- SOCIAL LOGINS ---
-        async function handleSocialLogin(providerInstance, providerName) {
-            hideStatus();
-            try {
-                const result = await signInWithPopup(auth, providerInstance);
-                // checkAndRedirect will handle existing user logic and redirection
-                await checkAndRedirect(result.user);
-            } catch (error) {
-                let errorMessage = `Login with ${providerName} failed.`;
-                if (error.code === 'auth/account-exists-with-different-credential') {
-                     errorMessage = `You already have an account with this email. Please log in or use the original method.`;
-                } else if (error.code === 'auth/popup-closed-by-user') {
-                     errorMessage = `Login window closed. Please try again.`;
-                } else if (error.code === 'auth/cancelled-popup-request') {
-                     errorMessage = `The login popup was blocked or canceled.`;
-                }
-                console.error("Social Login Error:", error);
-                showStatus(errorMessage);
-            }
-        }
+        
+        // --- NEW: Social Login Handler ---
 
-        // EVENT LISTENERS: The original IDs are used here.
-        if(googleLoginBtn) googleLoginBtn.addEventListener('click', () => handleSocialLogin(new GoogleAuthProvider(), 'Google'));
-        if(githubLoginBtn) githubLoginBtn.addEventListener('click', () => handleSocialLogin(new GithubAuthProvider(), 'GitHub'));
-        if(microsoftLoginBtn) microsoftLoginBtn.addEventListener('click', () => {
-            const provider = new OAuthProvider('microsoft.com');
-            // provider.setCustomParameters({ prompt: 'select_account' }); // Optional: Force account selection
-            handleSocialLogin(provider, 'Microsoft');
+        const handleSocialLogin = async (provider, button) => {
+            if (!auth) return showError("Firebase not initialized.");
+
+            toggleSocialButtonLoading(button, true);
+
+            try {
+                const result = await signInWithPopup(auth, provider);
+                const user = result.user;
+                const additionalUserInfo = result.additionalUserInfo;
+
+                if (additionalUserInfo && additionalUserInfo.isNewUser) {
+                    // Only create the profile document if it's a brand new user
+                    await createFirestoreProfile(user); 
+                }
+                
+                console.log("Social login successful!");
+                window.location.href = 'index.html';
+
+            } catch (error) {
+                let errorMessage = "Social login failed.";
+                if (error.code === 'auth/popup-closed-by-user') {
+                    errorMessage = "Login cancelled: The pop-up window was closed.";
+                } else if (error.code === 'auth/account-exists-with-different-credential') {
+                    errorMessage = "An account already exists with this email address using a different login method. Please use that method to sign in.";
+                } else {
+                    errorMessage = `Login failed: ${error.message}`;
+                }
+                showError(errorMessage);
+            } finally {
+                toggleSocialButtonLoading(button, false);
+            }
+        };
+
+        // --- Event Listeners ---
+
+        // Google Login
+        googleLoginButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            const provider = new GoogleAuthProvider();
+            handleSocialLogin(provider, googleLoginButton);
         });
 
-        // Initial form check
-        loginForm.addEventListener('input', checkFormValidity);
-        document.addEventListener('DOMContentLoaded', checkFormValidity);
+        // GitHub Login
+        githubLoginButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            const provider = new GithubAuthProvider();
+            handleSocialLogin(provider, githubLoginButton);
+        });
+        
+        // Form submission handler (existing logic)
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            toggleLoading(true);
+
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value;
+            // Firebase Auth requires an email format, so we append a fixed domain
+            const email = `${username}@4sp.com`;
+
+            if (username.length < 4 || username.length > 24) {
+                 showError("Username must be between 4 and 24 characters.");
+                 return;
+            }
+
+            try {
+                // 1. Attempt to log in with the provided credentials
+                await signInWithEmailAndPassword(auth, email, password);
+                console.log("Login successful!");
+                window.location.href = 'index.html';
+
+            } catch (loginError) {
+                // 2. If login fails, check if the error indicates "user-not-found"
+                if (loginError.code === 'auth/user-not-found') {
+                    console.log("User not found. Attempting automatic sign-up...");
+                    
+                    try {
+                        // 3. Attempt to create the new account (auto sign-up)
+                        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                        
+                        // 4. Create the Firestore profile
+                        await createFirestoreProfile(userCredential.user, username);
+                        
+                        console.log("Auto Sign-Up successful!");
+                        window.location.href = 'index.html';
+
+                    } catch (signupError) {
+                        // 5. Handle sign-up specific errors (e.g., weak password, invalid email format)
+                        let errorMessage = "Sign up failed.";
+                        if (signupError.code === 'auth/weak-password') {
+                            errorMessage = "Password is too weak. Must be at least 6 characters.";
+                        } else if (signupError.code === 'auth/email-already-in-use') {
+                             errorMessage = "Account already exists (internal error: try logging in again).";
+                        } else {
+                            errorMessage = `Sign up failed: ${signupError.message}`;
+                        }
+                        showError(errorMessage);
+                    }
+
+                } else if (loginError.code === 'auth/wrong-password') {
+                    showError("Invalid username or password.");
+                } else if (loginError.code === 'auth/invalid-email') {
+                    showError("Invalid username format (should be text).");
+                } else {
+                    showError(`Login failed: ${loginError.message}`);
+                }
+            } finally {
+                toggleLoading(false);
+            }
+        });
+
+        // Attach event listeners for input validation feedback
+        const validateInput = (input) => {
+            if (input.validity.tooShort) {
+                input.setCustomValidity(`Must be at least ${input.minLength} characters.`);
+            } else if (input.validity.tooLong) {
+                input.setCustomValidity(`Must be at most ${input.maxLength} characters.`);
+            } else {
+                input.setCustomValidity('');
+            }
+        };
+
+        usernameInput.addEventListener('input', () => validateInput(usernameInput));
+        passwordInput.addEventListener('input', () => validateInput(passwordInput));
+
     </script>
 </body>
 </html>
