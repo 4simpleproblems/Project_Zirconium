@@ -259,7 +259,7 @@
     <script src="../firebase-config.js"></script>
 
     <script>
-        // --- Header Dropdown Logic (Copied from index.html) ---
+        // --- Header Dropdown Logic (From index.html) ---
         document.addEventListener('DOMContentLoaded', () => {
             const toggleButton = document.getElementById('auth-toggle');
             const menuContainer = document.getElementById('auth-menu-container');
@@ -289,173 +289,183 @@
                     }
                 });
             }
+            
+            // Initialize Firebase services and attach event listeners once DOM is ready
+            initializeAuthLogic();
         });
-        // --- End Header Dropdown Logic ---
-
-        // Initialize Firebase services
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-
-        // UI elements
-        const emailLoginForm = document.getElementById('email-login-form');
-        const emailInput = document.getElementById('email');
-        const passwordInput = document.getElementById('password');
-        const statusMessage = document.getElementById('status-message');
-        const googleLoginBtn = document.getElementById('google-login');
-        const githubLoginBtn = document.getElementById('github-login');
-        const microsoftLoginBtn = document.getElementById('microsoft-login');
-        const forgotPasswordToggle = document.getElementById('forgot-password-toggle');
-        const forgotPasswordArea = document.getElementById('forgot-password-area');
-        const forgotPasswordForm = document.getElementById('forgot-password-form');
-        const resetEmailInput = document.getElementById('reset-email');
-        const loginButton = document.getElementById('login-button');
-
-        // Utility function to display status/error messages
-        function showStatus(message, type = 'error') {
-            statusMessage.textContent = message;
-            statusMessage.classList.remove('hidden', 'bg-red-900/50', 'text-red-300', 'bg-green-900/50', 'text-green-300');
-            
-            // Error/Success colors use red/green for semantic meaning.
-            if (type === 'success') {
-                statusMessage.classList.add('bg-green-900/50', 'text-green-300');
-            } else {
-                statusMessage.classList.add('bg-red-900/50', 'text-red-300');
-            }
-        }
-
-        function hideStatus() {
-             statusMessage.classList.add('hidden');
-        }
-
-        function toggleLoginButton(isDisabled) {
-            loginButton.disabled = isDisabled;
-            loginButton.textContent = isDisabled ? 'Logging In...' : 'Log In';
-        }
-
-        /**
-         * Checks if a user's Firestore document exists and creates it if not.
-         * @param {firebase.User} user - The authenticated Firebase user.
-         * @param {string} provider - The authentication method used (e.g., 'Email/Password', 'Google').
-         */
-        async function checkAndCreateUserDataset(user, provider) {
-            const userRef = db.collection('users').doc(user.uid);
-            
-            try {
-                const doc = await userRef.get();
-                
-                if (!doc.exists) {
-                    // User exists in Auth but not in Firestore - create dataset
-                    await userRef.set({
-                        username: user.displayName || user.email.split('@')[0], // Use display name or part of email
-                        email: user.email,
-                        authenticationMethod: provider,
-                        creationDate: firebase.firestore.FieldValue.serverTimestamp(),
-                    });
-                    console.log("New user dataset created successfully in Firestore.");
-                }
-                
-                // Redirect on success
-                window.location.href = '../logged-in/soundboard.html'; // Assuming this is the main app page
-
-            } catch (error) {
-                console.error("Error checking or creating user dataset:", error);
-                showStatus("An error occurred with user data initialization. Please try again.");
-                await auth.signOut();
-            }
-        }
         
-        // --- Email/Password Login ---
-        emailLoginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            hideStatus();
-            toggleLoginButton(true);
-            
-            const email = emailInput.value.trim();
-            const password = passwordInput.value;
-
-            if (!email || !password) {
-                showStatus("Please enter both email and password.");
-                toggleLoginButton(false);
+        // Function wrapping the Firebase/Auth logic to be called after DOMContentLoaded
+        function initializeAuthLogic() {
+            // Check if firebase is defined (requires firebase-config.js to be loaded)
+            if (typeof firebase === 'undefined') {
+                console.error("Firebase is not loaded. Please ensure firebase-config.js is correctly linked and configured.");
                 return;
             }
 
-            try {
-                const userCredential = await auth.signInWithEmailAndPassword(email, password);
-                const user = userCredential.user;
-                
-                await checkAndCreateUserDataset(user, 'Email/Password');
-                
-            } catch (error) {
-                let errorMessage = "Login failed. Please check your credentials.";
-                if (error.code === 'auth/user-not-found') {
-                    errorMessage = "No account found with this email. Please sign up.";
-                } else if (error.code === 'auth/wrong-password') {
-                    errorMessage = "Incorrect password. Please try again.";
-                }
-                showStatus(errorMessage);
-                toggleLoginButton(false);
-            }
-        });
+            const auth = firebase.auth();
+            const db = firebase.firestore();
 
-        // --- Social Logins ---
-        async function handleSocialLogin(providerInstance, providerName) {
-            hideStatus();
-            try {
-                const result = await auth.signInWithPopup(providerInstance);
-                const user = result.user;
-                await checkAndCreateUserDataset(user, providerName);
-            } catch (error) {
-                let errorMessage = `Login with ${providerName} failed: ${error.message}`;
-                if (error.code === 'auth/account-exists-with-different-credential') {
-                     errorMessage = `You already have an account with this email. Please log in using the original method.`;
+            // UI elements
+            const emailLoginForm = document.getElementById('email-login-form');
+            const emailInput = document.getElementById('email');
+            const passwordInput = document.getElementById('password');
+            const statusMessage = document.getElementById('status-message');
+            const googleLoginBtn = document.getElementById('google-login');
+            const githubLoginBtn = document.getElementById('github-login');
+            const microsoftLoginBtn = document.getElementById('microsoft-login');
+            const forgotPasswordToggle = document.getElementById('forgot-password-toggle');
+            const forgotPasswordArea = document.getElementById('forgot-password-area');
+            const forgotPasswordForm = document.getElementById('forgot-password-form');
+            const resetEmailInput = document.getElementById('reset-email');
+            const loginButton = document.getElementById('login-button');
+
+            // Utility function to display status/error messages
+            function showStatus(message, type = 'error') {
+                statusMessage.textContent = message;
+                statusMessage.classList.remove('hidden', 'bg-red-900/50', 'text-red-300', 'bg-green-900/50', 'text-green-300');
+                
+                // Error/Success colors use red/green for semantic meaning.
+                if (type === 'success') {
+                    statusMessage.classList.add('bg-green-900/50', 'text-green-300');
+                } else {
+                    statusMessage.classList.add('bg-red-900/50', 'text-red-300');
                 }
-                showStatus(errorMessage);
-                console.error(`${providerName} login error:`, error);
             }
+
+            function hideStatus() {
+                 statusMessage.classList.add('hidden');
+            }
+
+            function toggleLoginButton(isDisabled) {
+                loginButton.disabled = isDisabled;
+                loginButton.textContent = isDisabled ? 'Logging In...' : 'Log In';
+            }
+
+            /**
+             * Checks if a user's Firestore document exists and creates it if not.
+             * @param {firebase.User} user - The authenticated Firebase user.
+             * @param {string} provider - The authentication method used (e.g., 'Email/Password', 'Google').
+             */
+            async function checkAndCreateUserDataset(user, provider) {
+                const userRef = db.collection('users').doc(user.uid);
+                
+                try {
+                    const doc = await userRef.get();
+                    
+                    if (!doc.exists) {
+                        // User exists in Auth but not in Firestore - create dataset
+                        await userRef.set({
+                            username: user.displayName || user.email.split('@')[0], // Use display name or part of email
+                            email: user.email,
+                            authenticationMethod: provider,
+                            creationDate: firebase.firestore.FieldValue.serverTimestamp(),
+                        });
+                        console.log("New user dataset created successfully in Firestore.");
+                    }
+                    
+                    // Redirect on success
+                    window.location.href = '../logged-in/soundboard.html'; // Assuming this is the main app page
+
+                } catch (error) {
+                    console.error("Error checking or creating user dataset:", error);
+                    showStatus("An error occurred with user data initialization. Please try again.");
+                    await auth.signOut();
+                }
+            }
+            
+            // --- Email/Password Login ---
+            emailLoginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                hideStatus();
+                toggleLoginButton(true);
+                
+                const email = emailInput.value.trim();
+                const password = passwordInput.value;
+
+                if (!email || !password) {
+                    showStatus("Please enter both email and password.");
+                    toggleLoginButton(false);
+                    return;
+                }
+
+                try {
+                    const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                    const user = userCredential.user;
+                    
+                    await checkAndCreateUserDataset(user, 'Email/Password');
+                    
+                } catch (error) {
+                    let errorMessage = "Login failed. Please check your credentials.";
+                    if (error.code === 'auth/user-not-found') {
+                        errorMessage = "No account found with this email. Please sign up.";
+                    } else if (error.code === 'auth/wrong-password') {
+                        errorMessage = "Incorrect password. Please try again.";
+                    }
+                    showStatus(errorMessage);
+                    toggleLoginButton(false);
+                }
+            });
+
+            // --- Social Logins ---
+            async function handleSocialLogin(providerInstance, providerName) {
+                hideStatus();
+                try {
+                    const result = await auth.signInWithPopup(providerInstance);
+                    const user = result.user;
+                    await checkAndCreateUserDataset(user, providerName);
+                } catch (error) {
+                    let errorMessage = `Login with ${providerName} failed: ${error.message}`;
+                    if (error.code === 'auth/account-exists-with-different-credential') {
+                         errorMessage = `You already have an account with this email. Please log in using the original method.`;
+                    }
+                    showStatus(errorMessage);
+                    console.error(`${providerName} login error:`, error);
+                }
+            }
+
+            googleLoginBtn.addEventListener('click', () => handleSocialLogin(new firebase.auth.GoogleAuthProvider(), 'Google'));
+            githubLoginBtn.addEventListener('click', () => handleSocialLogin(new firebase.auth.GithubAuthProvider(), 'GitHub'));
+            microsoftLoginBtn.addEventListener('click', () => handleSocialLogin(new firebase.auth.OAuthProvider('microsoft.com'), 'Microsoft'));
+
+            // --- Forgot Password ---
+            forgotPasswordToggle.addEventListener('click', () => {
+                forgotPasswordArea.classList.toggle('hidden');
+                if (!forgotPasswordArea.classList.contains('hidden')) {
+                     resetEmailInput.focus();
+                }
+            });
+
+            forgotPasswordForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                hideStatus();
+                const email = resetEmailInput.value.trim();
+
+                if (!email) {
+                    showStatus("Please enter your email to reset your password.");
+                    return;
+                }
+
+                try {
+                    await auth.sendPasswordResetEmail(email);
+                    showStatus(`A password reset link has been sent to ${email}. Check your spam folder!`, 'success');
+                    forgotPasswordArea.classList.add('hidden'); // Hide on success
+                } catch (error) {
+                    let errorMessage = "Failed to send reset email.";
+                    if (error.code === 'auth/user-not-found') {
+                        errorMessage = "No user found with that email.";
+                    }
+                    showStatus(errorMessage);
+                }
+            });
+            
+            // --- Auth State Listener to Handle Existing Sessions ---
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    // If the user is signed in, redirect them to the main app page.
+                    window.location.href = '../logged-in/soundboard.html';
+                }
+            });
         }
-
-        googleLoginBtn.addEventListener('click', () => handleSocialLogin(new firebase.auth.GoogleAuthProvider(), 'Google'));
-        githubLoginBtn.addEventListener('click', () => handleSocialLogin(new firebase.auth.GithubAuthProvider(), 'GitHub'));
-        microsoftLoginBtn.addEventListener('click', () => handleSocialLogin(new firebase.auth.OAuthProvider('microsoft.com'), 'Microsoft'));
-
-        // --- Forgot Password ---
-        forgotPasswordToggle.addEventListener('click', () => {
-            forgotPasswordArea.classList.toggle('hidden');
-            if (!forgotPasswordArea.classList.contains('hidden')) {
-                 resetEmailInput.focus();
-            }
-        });
-
-        forgotPasswordForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            hideStatus();
-            const email = resetEmailInput.value.trim();
-
-            if (!email) {
-                showStatus("Please enter your email to reset your password.");
-                return;
-            }
-
-            try {
-                await auth.sendPasswordResetEmail(email);
-                showStatus(`A password reset link has been sent to ${email}. Check your spam folder!`, 'success');
-                forgotPasswordArea.classList.add('hidden'); // Hide on success
-            } catch (error) {
-                let errorMessage = "Failed to send reset email.";
-                if (error.code === 'auth/user-not-found') {
-                    errorMessage = "No user found with that email.";
-                }
-                showStatus(errorMessage);
-            }
-        });
-        
-        // --- Auth State Listener to Handle Existing Sessions ---
-        auth.onAuthStateChanged(user => {
-            if (user) {
-                // If the user is signed in, redirect them to the main app page.
-                window.location.href = '../logged-in/soundboard.html';
-            }
-        });
     </script>
 </body>
 </html>
