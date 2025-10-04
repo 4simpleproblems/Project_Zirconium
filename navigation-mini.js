@@ -130,6 +130,10 @@ function renderLoggedInNavbar(user) {
                     <p class="text-xs text-gray-400 truncate">${email}</p>
                 </div>
 
+                <a href="../logged-in/dashboard.html" class="block px-3 py-2 text-sm font-normal text-white hover:bg-gray-800 rounded-lg transition-colors">
+                    <i class="fas fa-house-user mr-2"></i> Dashboard
+                </a>
+                
                 <a href="../logged-in/settings.html" class="block px-3 py-2 text-sm font-normal text-white hover:bg-gray-800 rounded-lg transition-colors">
                     <i class="fas fa-cog mr-2"></i> Settings
                 </a>
