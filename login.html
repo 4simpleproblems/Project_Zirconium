@@ -57,32 +57,33 @@
             cursor: pointer;
         }
 
-        /* 1. Primary Button (Matching the index.html game section button style - bright, bold, and interactive) */
+        /* 1. Primary Button (MATCHING index.html 'Start Playing Now' style, but VIOLET) */
         .btn-primary-action {
             width: 100%;
             padding: 14px;
-            /* Using a bright violet/purple (like amber from the game button) */
-            background-color: #a78bfa; /* violet-400 */
-            color: #111827; /* dark text on bright button */
-            border: none;
-            border-radius: 8px;
-            font-family: 'Geist', sans-serif;
+            border: 1px solid #7c3aed; /* Violet-600 for border */
+            border-radius: 12px; /* rounded-xl */
             font-size: 1.1em;
             cursor: pointer;
-            transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-            font-weight: 500; /* Slightly bolder for the button */
-            /* Added shadow similar to the game button */
-            box-shadow: 0 4px 6px -1px rgba(167, 139, 250, 0.4), 0 2px 4px -2px rgba(167, 139, 250, 0.4);
+            /* Updated font weight to 500 (medium) to match 'Start Playing Now' */
+            font-weight: 500; 
+            
+            /* Background and text colors based on index.html's Games section button */
+            color: #d8b4fe; /* text-violet-300 - Light text for bright button */
+            background-color: #5b21b6; /* bg-violet-700/30 */
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1); /* default shadow */
+            
+            transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
         }
 
         .btn-primary-action:hover {
-            background-color: #8b5cf6; /* violet-500 */
+            background-color: #6d28d9; /* bg-violet-600/50 */
             transform: translateY(-1px);
-            /* Updated hover shadow */
-            box-shadow: 0 6px 10px -1px rgba(139, 92, 246, 0.5), 0 4px 6px -2px rgba(139, 92, 246, 0.5);
+            box-shadow: 0 4px 6px -1px rgba(139, 92, 246, 0.4), 0 2px 4px -2px rgba(139, 92, 246, 0.4); /* Custom lift shadow */
+            border-color: #8b5cf6; /* Violet-500 hover border */
         }
         
-        /* 2. Provider Buttons (Matching the index.html secondary/grey button style - subtle) */
+        /* 2. Provider Buttons (MATCHING index.html 'Get Started Instantly' style) */
         .btn-provider-action {
             width: 100%;
             display: flex;
@@ -90,20 +91,22 @@
             justify-content: center;
             max-width: 350px;
             padding: 12px 14px;
-            /* Subtle border/background like the top-bar button */
-            border: 1px solid #374151; /* gray-700 */
-            border-radius: 8px;
-            background-color: transparent; /* Black background */
+            /* Matching 'Get Started Instantly' button style */
+            border: 1px solid rgba(255, 255, 255, 0.2); /* ring-white/20 */
+            border-radius: 12px; /* rounded-xl */
+            background-color: rgba(255, 255, 255, 0.1); /* bg-white/10 */
             color: #fff;
-            font-weight: 300;
+            /* Updated font weight to 400 (normal) to match 'Get Started Instantly' */
+            font-weight: 400; 
             font-size: 1.0em;
             cursor: pointer;
             transition: background-color 0.2s ease, border-color 0.2s ease;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
         }
         
         .btn-provider-action:hover {
-            background-color: #1f2937; /* gray-800 subtle hover */
-            border-color: #4b5563; /* gray-600 */
+            background-color: rgba(255, 255, 255, 0.2); /* hover:bg-white/20 */
+            border-color: rgba(255, 255, 255, 0.3); /* Slightly brighter on hover */
         }
         .btn-provider-action img {
             width: 20px;
@@ -178,6 +181,25 @@
         .auth-col label { font-weight: 500; }
         .auth-col .font-bold { font-weight: 600; }
 
+        /* Input Field Styling Update: Change border-radius from 8px to 12px (rounded-xl) */
+        .auth-input {
+            border-radius: 12px; 
+            /* Kept other styles from the original input */
+            width: 100%; 
+            padding: 12px 16px; /* slightly increased padding for larger rounded corners */
+            border: 1px solid #374151; /* gray-700 */
+            background-color: #1f2937; /* gray-800 or similar dark color */
+            color: #fff;
+            placeholder-color: #9ca3af; /* gray-400 */
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+            font-weight: 300;
+        }
+        
+        .auth-input:focus {
+            border-color: #8b5cf6; /* violet-500 */
+            box-shadow: 0 0 0 1px #8b5cf6;
+        }
     </style>
 </head>
 <body class="bg-black text-white min-h-screen flex flex-col">
@@ -229,12 +251,12 @@
                         <div class="mb-5"> 
                             <label for="loginEmail" class="block mb-2 text-sm text-gray-300">Email</label> 
                             <input type="email" id="loginEmail" placeholder="Enter your email" required 
-                                class="w-full px-4 py-3 border border-gray-700 rounded-lg bg-gray-900 text-white placeholder-gray-500 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition"> 
+                                class="auth-input"> 
                         </div>
                         <div class="mb-5"> 
                             <label for="loginPassword" class="block mb-2 text-sm text-gray-300">Password</label> 
                             <input type="password" id="loginPassword" placeholder="Enter your password" required 
-                                class="w-full px-4 py-3 border border-gray-700 rounded-lg bg-gray-900 text-white placeholder-gray-500 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition"> 
+                                class="auth-input"> 
                         </div>
                         <button type="submit" class="btn-primary-action">Login with Email</button>
                     </form>
@@ -259,7 +281,7 @@
                         <div class="mb-5"> 
                             <label for="resetEmail" class="block mb-2 text-sm text-gray-300">Email</label> 
                             <input type="email" id="resetEmail" placeholder="Enter your registered email" required
-                                class="w-full px-4 py-3 border border-gray-700 rounded-lg bg-gray-900 text-white placeholder-gray-500 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition"> 
+                                class="auth-input"> 
                         </div>
                         <button type="submit" class="btn-primary-action">SEND RESET LINK</button>
                     </form>
