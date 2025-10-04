@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - HOME</title>
+    <title>4simpleproblems (4SP) — The Essential Student Toolkit</title>
     <meta name="description" content="A multi-tool toolkit for students, featuring soundboards, games, utility apps, and QOL features like Tab Disguising and Panic keys.">
     
     <!-- Google Fonts: Geist -->
@@ -73,7 +73,6 @@
                     <source srcset="../images/logo-dark.png" media="(prefers-color-scheme: dark)">
                     <img src="../images/logo.png" alt="4simpleproblems Logo" class="h-6 w-auto">
                 </picture>
-                <span class="font-medium text-lg">4simpleproblems</span> <!-- Changed from font-semibold (600) to font-medium (500) -->
             </a>
             
             <!-- Auth Button & Menu (Right Side) -->
@@ -133,7 +132,7 @@
             <!-- Reduced mb from 10 to 8. Reduced font-semibold (600) to font-medium (500) -->
             <h2 class="text-4xl font-medium text-center mb-8">Core Features of 4SP</h2> 
 
-            <!-- Feature 1: Soundboard (Text Left, Visual Right) -->
+            <!-- Feature 1: Soundboard (Text Left, Visual Right - UPDATED TO SIMPLER VISUAL) -->
             <div class="lg:grid lg:grid-cols-2 lg:gap-12 items-center">
                 
                 <!-- Text Component (Left - order 1 on desktop) -->
@@ -143,15 +142,17 @@
                     <p class="text-xl text-gray-400 mb-5">
                         Access and create custom playlists of sounds. Use our dynamic, low-latency soundboards to focus, meme, or just relax. Save and share your favorite sound sequences with friends.
                     </p>
-                    <a href="/soundboard" class="inline-flex items-center text-green-400 font-normal hover:text-green-300 transition"> <!-- Changed from font-medium (500) to font-normal (400) -->
+                    <a href="../logged-in/soundboard.html" class="inline-flex items-center text-green-400 font-normal hover:text-green-300 transition"> <!-- Changed from font-medium (500) to font-normal (400) -->
                         Explore Soundboard &rarr;
                     </a>
                 </div>
 
-                <!-- Visual Component (Right - order 2 on desktop) -->
+                <!-- Visual Component (Right - order 2 on desktop) - UPDATED TO SIMPLER VISUAL -->
                 <div class="relative p-8 rounded-3xl border border-green-800/50 overflow-hidden shadow-2xl bg-gray-900 h-40 flex items-center justify-center order-1 lg:order-2 mb-6 lg:mb-0">
-                    <h3 class="text-3xl font-medium text-green-400 z-10">Soundboard in Action</h3> <!-- Changed from font-semibold (600) to font-medium (500) -->
-                    <p class="absolute bottom-4 right-4 text-xs text-green-500/50 z-10">Custom playlists supported via Firebase</p>
+                    <!-- Icons for Soundboard and Playlists -->
+                    <i class="fas fa-list-alt text-6xl text-green-400 opacity-20 absolute top-4 right-4"></i>
+                    <i class="fas fa-volume-up text-7xl text-green-400 z-10"></i>
+                    <p class="absolute bottom-4 left-4 text-xs text-green-500/50 z-10">Custom Playlists and Low-Latency Audio</p>
                 </div>
             </div>
 
@@ -192,7 +193,7 @@
                     </p>
                     <ul class="space-y-2 text-lg text-gray-300"> 
                         <li class="flex items-center"><i class="fas fa-eye-slash w-5 mr-3 text-purple-500"></i><span class="font-normal mr-2">Tab Disguising:</span>Instantly change the tab title/favicon to blend in.</li> <!-- Changed from font-medium (500) to font-normal (400) -->
-                        <li class="flex items-center"><i class="fas fa-hand-paper w-5 mr-3 text-purple-500"></i><span class="font-normal mr-2">Panic Keys:</span>Customizable quick key combination to redirect.</li> <!-- Changed from font-medium (500) to font-normal (400) -->
+                        <li class="flex items-center"><i class="fas fa-hand-paper w-5 mr-3 text-purple-500"></i><span class="font-normal mr-2">Panic Keys:</span>A quick key combination to redirect.</li> <!-- Changed from font-medium (500) to font-normal (400) -->
                         <li class="flex items-center"><i class="fas fa-palette w-5 mr-3 text-purple-500"></i><span class="font-normal mr-2">Customizable UI:</span>Adjust themes for maximum discretion.</li> <!-- Changed from font-medium (500) to font-normal (400) -->
                     </ul>
                 </div>
@@ -213,7 +214,7 @@
                 <p class="text-gray-300 max-w-2xl mx-auto text-lg mb-4">
                     Need a break? Recharge with simple, fun, in-browser games designed for quick sessions. We know sometimes you just need to let off steam.
                 </p>
-                <a href="/games" class="mt-4 inline-flex items-center justify-center px-6 py-2 border border-yellow-700/50 text-base font-normal rounded-xl shadow-sm text-yellow-400 bg-yellow-900/30 hover:bg-yellow-800/50 transition"> <!-- Changed from font-medium (500) to font-normal (400) -->
+                <a href="../GAMES/index.html" class="mt-4 inline-flex items-center justify-center px-6 py-2 border border-yellow-700/50 text-base font-normal rounded-xl shadow-sm text-yellow-400 bg-yellow-900/30 hover:bg-yellow-800/50 transition"> <!-- Changed from font-medium (500) to font-normal (400) -->
                     Start Playing Now &rarr;
                 </a>
             </div>
