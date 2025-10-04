@@ -16,9 +16,5 @@ export const firebaseConfig = {
   appId: "1:1096564243475:web:6d0956a70125eeea1ad3e6",
   measurementId: "G-1D4F692C1Q"
 };
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
 // Optional: Log to the console for debugging to confirm successful initialization.
 console.log("Firebase initialized successfully.");
