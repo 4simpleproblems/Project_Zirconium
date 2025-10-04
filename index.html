@@ -1,294 +1,248 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4simpleproblems (4SP) — The Essential Student Toolkit</title>
-    <meta name="description" content="A multi-tool toolkit for students, featuring soundboards, games, utility apps, and QOL features like Tab Disguising and Panic keys.">
-    
-    <!-- Google Fonts: Geist -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
-    
-    <!-- Font Awesome for Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <style>
-        /* Custom CSS to mimic a modern, dark theme and use the Geist font */
-        :root {
-            --geist-foreground: 255, 255, 255;
-            --geist-background: 0, 0, 0;
-            --geist-accent-7: 156, 163, 175; /* gray-400 */
-        }
-        
-        .dark {
-            color-scheme: dark;
-        }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4simpleproblems (4SP) — The Essential Student Toolkit</title>
+    <meta name="description" content="A multi-tool toolkit for students, featuring soundboards, games, utility apps, and QOL features like Tab Disguising and Panic keys.">
+    
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+        <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        /* Custom CSS to mimic a modern, dark theme and use the Geist font */
+        :root {
+            --geist-foreground: 255, 255, 255;
+            --geist-background: 0, 0, 0;
+            --geist-accent-7: 156, 163, 175; /* gray-400 */
+        }
+        
+        .dark {
+            color-scheme: dark;
+        }
 
-        body {
-            /* Applying Geist font */
-            font-family: 'Geist', sans-serif;
-        }
-        
-        /* Gradient Text */
-        .gradient-text {
-            background-image: linear-gradient(90deg, #0070f3, #f81ce5);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
+        body {
+            /* Applying Geist font */
+            font-family: 'Geist', sans-serif;
+        }
+        
+        /* Gradient Text */
+        .gradient-text {
+            background-image: linear-gradient(90deg, #0070f3, #f81ce5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
 
-        /* Auth Button and Menu Styling */
-        .auth-menu-container {
-            /* This is where the magic happens for the morph effect visualization */
-            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
-            transform-origin: top right;
-        }
-        
-        .auth-menu-container.open {
-            opacity: 1;
-            /* Simple scale/translate to give it a smooth drop-down feel */
-            transform: translateY(0) scale(1);
-        }
+        /* Auth Button and Menu Styling */
+        .auth-menu-container {
+            /* This is where the magic happens for the morph effect visualization */
+            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+            transform-origin: top right;
+        }
+        
+        .auth-menu-container.open {
+            opacity: 1;
+            /* Simple scale/translate to give it a smooth drop-down feel */
+            transform: translateY(0) scale(1);
+        }
 
-        .auth-menu-container.closed {
-            opacity: 0;
-            pointer-events: none;
-            transform: translateY(-10px) scale(0.95);
-        }
-    </style>
+        .auth-menu-container.closed {
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-10px) scale(0.95);
+        }
+
+        /* NEW: Glass Menu Style for Login/Signup Dropdown */
+        .glass-menu {
+            /* This adds the strong blur effect */
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px); /* For Safari support */
+        }
+    </style>
 </head>
 <body class="bg-black text-white min-h-screen">
 
-    <!-- Header / Navigation -->
-    <header class="sticky top-0 z-50 backdrop-blur-md bg-black/80 border-b border-gray-900">
-        <nav class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <!-- Logo Section (Left Side) -->
-            <a href="/" class="flex items-center space-x-2">
-                <picture>
-                    <source srcset="../images/logo.png" media="(prefers-color-scheme: dark)">
-                    <img src="../images/logo.png" alt="4simpleproblems Logo" class="h-6 w-auto">
-                </picture>
-            </a>
-            
-            <!-- Auth Button & Menu (Right Side) -->
-            <div class="relative">
-                <!-- Circular Button with Thinner White Outline and User Icon -->
-                <button 
-                    id="auth-toggle"
-                    aria-expanded="false"
-                    aria-controls="auth-menu-container"
-                    class="w-8 h-8 rounded-full border border-white flex items-center justify-center bg-black/50 hover:bg-gray-900/50 transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-white"
-                >
-                    <i class="fas fa-user text-white text-base"></i>
-                </button>
-                
-                <!-- Dropdown Menu -->
-                <div 
-                    id="auth-menu-container" 
-                    class="auth-menu-container closed absolute right-0 top-10 w-40 p-2 rounded-xl bg-gray-900 border border-gray-800 shadow-xl"
-                >
-                    <a href="/login" class="block px-3 py-2 text-sm font-normal text-white hover:bg-gray-800 rounded-lg transition-colors"> <!-- Changed from font-medium (500) to font-normal (400) -->
-                        Login
-                    </a>
-                    <a href="/signup" class="block px-3 py-2 text-sm font-normal text-white hover:bg-gray-800 rounded-lg transition-colors mt-1"> <!-- Changed from font-medium (500) to font-normal (400) -->
-                        Sign Up
-                    </a>
-                </div>
-            </div>
-        </nav>
-    </header>
+        <header class="sticky top-0 z-50 backdrop-blur-md bg-black/80 border-b border-gray-900">
+                <nav class="mx-auto max-w-7xl h-16 flex items-center justify-between">
+                        <a href="/" class="flex items-center pl-4 sm:pl-6 lg:pl-8">
+                <picture>
+                    <source srcset="../images/logo.png" media="(prefers-color-scheme: dark)">
+                                        <img src="../images/logo.png" alt="4simpleproblems Logo" class="h-8 w-auto">
+                </picture>
+            </a>
+            
+                        <div class="relative pr-4 sm:pr-6 lg:pr-8">
+                                <button 
+                    id="auth-toggle"
+                    aria-expanded="false"
+                    aria-controls="auth-menu-container"
+                    class="w-8 h-8 rounded-full border border-white flex items-center justify-center bg-black/50 hover:bg-gray-900/50 transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-white"
+                >
+                    <i class="fas fa-user text-white text-base"></i>
+                </button>
+                
+                                <div 
+                    id="auth-menu-container" 
+                                        class="auth-menu-container closed absolute right-0 top-10 w-40 p-2 rounded-xl bg-black/40 glass-menu backdrop-blur-md border border-white/20 shadow-xl"
+                >
+                                        <a href="/login" class="block px-3 py-2 text-sm font-normal text-white hover:bg-white/10 rounded-lg transition-colors">
+                        Login
+                    </a>
+                                        <a href="/signup" class="block px-3 py-2 text-sm font-normal text-white hover:bg-white/10 rounded-lg transition-colors mt-1">
+                        Sign Up
+                    </a>
+                </div>
+            </div>
+        </nav>
+    </header>
 
-    <main>
-        <!-- Hero Section -->
-        <section class="text-center py-12 sm:py-20 border-b border-gray-900">
-            <div class="mx-auto max-w-4xl px-4">
-                
-                <!-- H1: Social Proof (The requested text, prominently displayed) -->
-                <h1 class="text-3xl sm:text-4xl font-normal text-gray-300 tracking-tighter mb-4 leading-tight">
-                    Over 160 users, and counting.
-                </h1>
-                
-                <!-- H2: Main Product Headline (Now featuring the gradient) -->
-                <h2 class="text-5xl sm:text-6xl font-semibold tracking-tighter mb-4 leading-tight">
-                    <span class="gradient-text font-bold">The Essential Student Toolkit.</span>
-                </h2>
+    <main>
+                <section class="text-center py-12 sm:py-20 border-b border-gray-900">
+            <div class="mx-auto max-w-4xl px-4">
+                
+                                <h1 class="text-3xl sm:text-4xl font-normal text-gray-300 tracking-tighter mb-4 leading-tight">
+                    Over 160 users, and counting.
+                </h1>
+                
+                                <h2 class="text-5xl sm:text-6xl font-semibold tracking-tighter mb-4 leading-tight">
+                    <span class="gradient-text font-bold">The Essential Student Toolkit.</span>
+                </h2>
 
-                <p class="text-xl text-gray-400 max-w-2xl mx-auto mb-6"> <!-- Font is naturally normal/400 -->
-                    4simpleproblems (4SP) is a multi-tool platform offering soundboards, study apps, and essential Quality-of-Life (QOL) features like Tab Disguising and Panic Keys—all designed to make student life easier and more fun.
-                </p>
-                <a href="/start" class="inline-flex items-center justify-center px-8 py-3 border border-transparent text-base font-normal rounded-xl shadow-sm text-white bg-white/10 ring-1 ring-white/20 hover:bg-white/20 transition"> <!-- Changed from font-medium (500) to font-normal (400) -->
-                    Get Started Instantly &rarr;
-                </a>
-            </div>
-        </section>
+                <p class="text-xl text-gray-400 max-w-2xl mx-auto mb-6">                     4simpleproblems (4SP) is a multi-tool platform offering soundboards, study apps, and essential Quality-of-Life (QOL) features like Tab Disguising and Panic Keys—all designed to make student life easier and more fun.
+                </p>
+                <a href="/start" class="inline-flex items-center justify-center px-8 py-3 border border-transparent text-base font-normal rounded-xl shadow-sm text-white bg-white/10 ring-1 ring-white/20 hover:bg-white/20 transition">                     Get Started Instantly &rarr;
+                </a>
+            </div>
+        </section>
 
-        <!-- Features Alternating Horizontal Sections (Compacted Layout) -->
-        <section id="features" class="py-16 mx-auto max-w-7xl px-4 space-y-16">
-            <!-- Reduced mb from 10 to 8. Reduced font-semibold (600) to font-medium (500) -->
-            <h2 class="text-4xl font-medium text-center mb-8">Core Features of 4SP</h2> 
+                <section id="features" class="py-16 mx-auto max-w-7xl px-4 space-y-16">
+                        <h2 class="text-4xl font-medium text-center mb-8">Core Features of 4SP</h2> 
 
-            <!-- Feature 1: Soundboard (Text Left, Visual Right - UPDATED TO SIMPLER VISUAL) -->
-            <div class="lg:grid lg:grid-cols-2 lg:gap-12 items-center">
-                
-                <!-- Text Component (Left - order 1 on desktop) -->
-                <div class="lg:pr-4 order-2 lg:order-1 mb-6 lg:mb-0">
-                    <span class="text-sm font-medium text-green-400 uppercase tracking-widest mb-2 block">Toolkit Core</span> <!-- Changed from font-semibold (600) to font-medium (500) -->
-                    <h3 class="text-4xl font-medium mb-3 mt-2">Soundboard & Playlists</h3> <!-- Changed from font-semibold (600) to font-medium (500) -->
-                    <p class="text-xl text-gray-400 mb-5">
-                        Access and create custom playlists of sounds. Use our dynamic, low-latency soundboards to focus, meme, or just relax. Save and share your favorite sound sequences with friends.
-                    </p>
-                    <a href="../logged-in/soundboard.html" class="inline-flex items-center text-green-400 font-normal hover:text-green-300 transition"> <!-- Changed from font-medium (500) to font-normal (400) -->
-                        Explore Soundboard &rarr;
-                    </a>
-                </div>
+                        <div class="lg:grid lg:grid-cols-2 lg:gap-12 items-center">
+                
+                                <div class="lg:pr-4 order-2 lg:order-1 mb-6 lg:mb-0">
+                    <span class="text-sm font-medium text-green-400 uppercase tracking-widest mb-2 block">Toolkit Core</span>                     <h3 class="text-4xl font-medium mb-3 mt-2">Soundboard & Playlists</h3>                     <p class="text-xl text-gray-400 mb-5">
+                        Access and create custom playlists of sounds. Use our dynamic, low-latency soundboards to focus, meme, or just relax. Save and share your favorite sound sequences with friends.
+                    </p>
+                    <a href="../logged-in/soundboard.html" class="inline-flex items-center text-green-400 font-normal hover:text-green-300 transition">                         Explore Soundboard &rarr;
+                    </a>
+                </div>
 
-                <!-- Visual Component (Right - order 2 on desktop) - UPDATED TO SIMPLER VISUAL -->
-                <div class="relative p-8 rounded-3xl border border-green-800/50 overflow-hidden shadow-2xl bg-gray-900 h-40 flex items-center justify-center order-1 lg:order-2 mb-6 lg:mb-0">
-                    <!-- Icons for Soundboard and Playlists -->
-                    <i class="fas fa-list-alt text-6xl text-green-400 opacity-20 absolute top-4 right-4"></i>
-                    <i class="fas fa-volume-up text-7xl text-green-400 z-10"></i>
-                    <p class="absolute bottom-4 left-4 text-xs text-green-500/50 z-10">Custom Playlists and Low-Latency Audio</p>
-                </div>
-            </div>
+                                <div class="relative p-8 rounded-3xl border border-green-800/50 overflow-hidden shadow-2xl bg-gray-900 h-40 flex items-center justify-center order-1 lg:order-2 mb-6 lg:mb-0">
+                                        <i class="fas fa-list-alt text-6xl text-green-400 opacity-20 absolute top-4 right-4"></i>
+                    <i class="fas fa-volume-up text-7xl text-green-400 z-10"></i>
+                    <p class="absolute bottom-4 left-4 text-xs text-green-500/50 z-10">Custom Playlists and Low-Latency Audio</p>
+                </div>
+            </div>
 
-            <!-- Feature 2: Essential Apps (Text Right, Visual Left) - RE-ADDED CONTAINER -->
-            <div class="lg:grid lg:grid-cols-2 lg:gap-12 items-center"> <!-- Changed items-start to items-center -->
+                        <div class="lg:grid lg:grid-cols-2 lg:gap-12 items-center">                                 <div class="relative p-8 rounded-3xl border border-blue-800/50 overflow-hidden shadow-2xl bg-gray-900 h-40 flex items-center justify-center order-1 lg:order-1 mb-6 lg:mb-0">
+                                        <i class="fas fa-tasks text-6xl text-blue-400 opacity-20 absolute top-4 left-4"></i>
+                    <i class="fas fa-clock text-7xl text-blue-400 z-10"></i>
+                    <p class="absolute bottom-4 right-4 text-xs text-blue-500/50 z-10">Notes, Countdowns, and Task Lists</p>
+                </div>
 
-                <!-- Visual Component (Left - order 1 on desktop) -->
-                <div class="relative p-8 rounded-3xl border border-blue-800/50 overflow-hidden shadow-2xl bg-gray-900 h-40 flex items-center justify-center order-1 lg:order-1 mb-6 lg:mb-0">
-                    <!-- Icons for Notes, Countdowns, and Task Lists -->
-                    <i class="fas fa-tasks text-6xl text-blue-400 opacity-20 absolute top-4 left-4"></i>
-                    <i class="fas fa-clock text-7xl text-blue-400 z-10"></i>
-                    <p class="absolute bottom-4 right-4 text-xs text-blue-500/50 z-10">Notes, Countdowns, and Task Lists</p>
-                </div>
+                                <div class="lg:pl-4 order-2 lg:order-2 mb-6 lg:mb-0">
+                    <span class="text-sm font-medium text-blue-400 uppercase tracking-widest mb-2 block">Productivity Suite</span>                     <h3 class="text-4xl font-medium mb-3 mt-2">Essential Apps for Success</h3>                     <p class="text-xl text-gray-400 mb-5">
+                        A suite of utilities built for academic success, keeping your notes, deadlines, and schedule organized in one place.
+                    </p>
+                    <ul class="space-y-2 text-lg text-gray-300"> 
+                        <li class="flex items-center"><i class="fas fa-sticky-note w-5 mr-3 text-blue-500"></i><span class="font-normal mr-2">Notes:</span>Simple, persistent storage for quick thoughts.</li>                         <li class="flex items-center"><i class="fas fa-clock w-5 mr-3 text-blue-500"></i><span class="font-normal mr-2">Countdowns:</span>Track due dates and exam times seamlessly.</li>                         <li class="flex items-center"><i class="fas fa-list-alt w-5 mr-3 text-blue-500"></i><span class="font-normal mr-2">Soundboard Playlists:</span>Organize your favorite sound sequences.</li>                     </ul>
+                </div>
+            </div>
+            
+                        <div class="lg:grid lg:grid-cols-2 lg:gap-12 items-center">                                 <div class="lg:pr-4 order-2 lg:order-1 mb-6 lg:mb-0">
+                    <span class="text-sm font-medium text-purple-400 uppercase tracking-widest mb-2 block">Stealth & Utility</span>                     <h3 class="text-4xl font-medium mb-3 mt-2">QOL & Discreet Features</h3>                     <p class="text-xl text-gray-400 mb-5">
+                        Quality-of-Life tools designed to help you manage distractions instantly and discreetly, without drawing unwanted attention.
+                    </p>
+                    <ul class="space-y-2 text-lg text-gray-300"> 
+                        <li class="flex items-center"><i class="fas fa-eye-slash w-5 mr-3 text-purple-500"></i><span class="font-normal mr-2">Tab Disguising:</span>Instantly change the tab title/favicon to blend in.</li>                         <li class="flex items-center"><i class="fas fa-hand-paper w-5 mr-3 text-purple-500"></i><span class="font-normal mr-2">Panic Keys:</span>A quick key combination to redirect.</li>                         <li class="flex items-center"><i class="fas fa-palette w-5 mr-3 text-purple-500"></i><span class="font-normal mr-2">Customizable UI:</span>Adjust themes for maximum discretion.</li>                     </ul>
+                </div>
+                
+                                <div class="relative p-8 rounded-3xl border border-purple-800/50 overflow-hidden shadow-2xl bg-gray-900 h-40 flex items-center justify-center order-1 lg:order-2 mb-6 lg:mb-0">
+                                        <i class="fas fa-mask text-6xl text-purple-400 opacity-20 absolute top-4 right-4"></i>
+                    <i class="fas fa-eye-slash text-7xl text-purple-400 z-10"></i>
+                    <p class="absolute bottom-4 left-4 text-xs text-purple-500/50 z-10">Discretion and Quick Hiding</p>
+                </div>
+            </div>
+            
+                        <div class="p-10 rounded-3xl border border-yellow-800/50 bg-gray-900/50 text-center transition hover:scale-[1.01] duration-300 mt-16">
+                                <h3 class="text-3xl font-medium mb-3 text-yellow-400">Games (Distraction Included)</h3>
+                <p class="text-gray-300 max-w-2xl mx-auto text-lg mb-4">
+                    Need a break? Recharge with simple, fun, in-browser games designed for quick sessions. We know sometimes you just need to let off steam.
+                </p>
+                <a href="../GAMES/index.html" class="mt-4 inline-flex items-center justify-center px-6 py-2 border border-yellow-700/50 text-base font-normal rounded-xl shadow-sm text-yellow-400 bg-yellow-900/30 hover:bg-yellow-800/50 transition">                     Start Playing Now &rarr;
+                </a>
+            </div>
 
-                <!-- Text Component (Right - order 2 on desktop) -->
-                <div class="lg:pl-4 order-2 lg:order-2 mb-6 lg:mb-0">
-                    <span class="text-sm font-medium text-blue-400 uppercase tracking-widest mb-2 block">Productivity Suite</span> <!-- Changed from font-semibold (600) to font-medium (500) -->
-                    <h3 class="text-4xl font-medium mb-3 mt-2">Essential Apps for Success</h3> <!-- Changed from font-semibold (600) to font-medium (500) -->
-                    <p class="text-xl text-gray-400 mb-5">
-                        A suite of utilities built for academic success, keeping your notes, deadlines, and schedule organized in one place.
-                    </p>
-                    <ul class="space-y-2 text-lg text-gray-300"> 
-                        <li class="flex items-center"><i class="fas fa-sticky-note w-5 mr-3 text-blue-500"></i><span class="font-normal mr-2">Notes:</span>Simple, persistent storage for quick thoughts.</li> <!-- Changed from font-medium (500) to font-normal (400) -->
-                        <li class="flex items-center"><i class="fas fa-clock w-5 mr-3 text-blue-500"></i><span class="font-normal mr-2">Countdowns:</span>Track due dates and exam times seamlessly.</li> <!-- Changed from font-medium (500) to font-normal (400) -->
-                        <li class="flex items-center"><i class="fas fa-list-alt w-5 mr-3 text-blue-500"></i><span class="font-normal mr-2">Soundboard Playlists:</span>Organize your favorite sound sequences.</li> <!-- Changed from font-medium (500) to font-normal (400) -->
-                    </ul>
-                </div>
-            </div>
-            
-            <!-- Feature 3: QOL & Discreet Features (Text Left, Visual Right) - RE-ADDED CONTAINER -->
-            <div class="lg:grid lg:grid-cols-2 lg:gap-12 items-center"> <!-- Changed items-start to items-center -->
-                <!-- Text Component (Left - order 1 on desktop) -->
-                <div class="lg:pr-4 order-2 lg:order-1 mb-6 lg:mb-0">
-                    <span class="text-sm font-medium text-purple-400 uppercase tracking-widest mb-2 block">Stealth & Utility</span> <!-- Changed from font-semibold (600) to font-medium (500) -->
-                    <h3 class="text-4xl font-medium mb-3 mt-2">QOL & Discreet Features</h3> <!-- Changed from font-semibold (600) to font-medium (500) -->
-                    <p class="text-xl text-gray-400 mb-5">
-                        Quality-of-Life tools designed to help you manage distractions instantly and discreetly, without drawing unwanted attention.
-                    </p>
-                    <ul class="space-y-2 text-lg text-gray-300"> 
-                        <li class="flex items-center"><i class="fas fa-eye-slash w-5 mr-3 text-purple-500"></i><span class="font-normal mr-2">Tab Disguising:</span>Instantly change the tab title/favicon to blend in.</li> <!-- Changed from font-medium (500) to font-normal (400) -->
-                        <li class="flex items-center"><i class="fas fa-hand-paper w-5 mr-3 text-purple-500"></i><span class="font-normal mr-2">Panic Keys:</span>A quick key combination to redirect.</li> <!-- Changed from font-medium (500) to font-normal (400) -->
-                        <li class="flex items-center"><i class="fas fa-palette w-5 mr-3 text-purple-500"></i><span class="font-normal mr-2">Customizable UI:</span>Adjust themes for maximum discretion.</li> <!-- Changed from font-medium (500) to font-normal (400) -->
-                    </ul>
-                </div>
-                
-                <!-- Visual Component (Right - order 2 on desktop) -->
-                <div class="relative p-8 rounded-3xl border border-purple-800/50 overflow-hidden shadow-2xl bg-gray-900 h-40 flex items-center justify-center order-1 lg:order-2 mb-6 lg:mb-0">
-                    <!-- Icons for Discretion -->
-                    <i class="fas fa-mask text-6xl text-purple-400 opacity-20 absolute top-4 right-4"></i>
-                    <i class="fas fa-eye-slash text-7xl text-purple-400 z-10"></i>
-                    <p class="absolute bottom-4 left-4 text-xs text-purple-500/50 z-10">Discretion and Quick Hiding</p>
-                </div>
-            </div>
-            
-            <!-- Feature 4: Games (Full Width Center CTA) -->
-            <div class="p-10 rounded-3xl border border-yellow-800/50 bg-gray-900/50 text-center transition hover:scale-[1.01] duration-300 mt-16">
-                <!-- Reduced font-semibold (600) to font-medium (500). Reduced mb from 3 to 2 -->
-                <h3 class="text-3xl font-medium mb-3 text-yellow-400">Games (Distraction Included)</h3>
-                <p class="text-gray-300 max-w-2xl mx-auto text-lg mb-4">
-                    Need a break? Recharge with simple, fun, in-browser games designed for quick sessions. We know sometimes you just need to let off steam.
-                </p>
-                <a href="../GAMES/index.html" class="mt-4 inline-flex items-center justify-center px-6 py-2 border border-yellow-700/50 text-base font-normal rounded-xl shadow-sm text-yellow-400 bg-yellow-900/30 hover:bg-yellow-800/50 transition"> <!-- Changed from font-medium (500) to font-normal (400) -->
-                    Start Playing Now &rarr;
-                </a>
-            </div>
+        </section>
 
-        </section>
+                <section class="py-12 mx-auto max-w-7xl px-4 text-center border-t border-gray-900">
+                        <h2 class="text-xl font-medium text-gray-400 mb-2">Powered by Modern Cloud Tools</h2>             <p class="text-gray-500 text-lg">
+                <strong class="text-white font-medium">Authentication and Backend Infrastructure</strong>                 are handled robustly using
+                <strong class="text-white font-medium">Firebase</strong>,                 ensuring secure, reliable, and scalable user management for all your student tools.
+            </p>
+        </section>
+        
+    </main>
 
-        <!-- Firebase / Technology Section -->
-        <section class="py-12 mx-auto max-w-7xl px-4 text-center border-t border-gray-900">
-            <!-- Reduced mb from 3 to 2 -->
-            <h2 class="text-xl font-medium text-gray-400 mb-2">Powered by Modern Cloud Tools</h2> <!-- Changed from font-semibold (600) to font-medium (500) -->
-            <p class="text-gray-500 text-lg">
-                <strong class="text-white font-medium">Authentication and Backend Infrastructure</strong> <!-- Changed from font-semibold (600) to font-medium (500) -->
-                are handled robustly using
-                <strong class="text-white font-medium">Firebase</strong>, <!-- Changed from font-semibold (600) to font-medium (500) -->
-                ensuring secure, reliable, and scalable user management for all your student tools.
-            </p>
-        </section>
-        
-    </main>
+        <footer class="border-t border-gray-900 py-6">
+        <div class="mx-auto max-w-7xl px-4 text-center text-gray-500 text-sm">
+            &copy; 2024 4simpleproblems (4SP). Built for students.
+        </div>
+    </footer>
 
-    <!-- Footer -->
-    <footer class="border-t border-gray-900 py-6">
-        <div class="mx-auto max-w-7xl px-4 text-center text-gray-500 text-sm">
-            &copy; 2024 4simpleproblems (4SP). Built for students.
-        </div>
-    </footer>
+        <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const toggleButton = document.getElementById('auth-toggle');
+            const menuContainer = document.getElementById('auth-menu-container');
 
-    <!-- JavaScript for Auth Menu Toggle -->
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const toggleButton = document.getElementById('auth-toggle');
-            const menuContainer = document.getElementById('auth-menu-container');
+            toggleButton.addEventListener('click', () => {
+                const isExpanded = toggleButton.getAttribute('aria-expanded') === 'true';
+                
+                // Toggle ARIA attribute
+                toggleButton.setAttribute('aria-expanded', String(!isExpanded));
+                
+                // Toggle visibility/transition class
+                if (isExpanded) {
+                    menuContainer.classList.remove('open');
+                    menuContainer.classList.add('closed');
+                } else {
+                    menuContainer.classList.remove('closed');
+                    menuContainer.classList.add('open');
+                }
+            });
 
-            toggleButton.addEventListener('click', () => {
-                const isExpanded = toggleButton.getAttribute('aria-expanded') === 'true';
-                
-                // Toggle ARIA attribute
-                toggleButton.setAttribute('aria-expanded', String(!isExpanded));
-                
-                // Toggle visibility/transition class
-                if (isExpanded) {
-                    menuContainer.classList.remove('open');
-                    menuContainer.classList.add('closed');
-                } else {
-                    menuContainer.classList.remove('closed');
-                    menuContainer.classList.add('open');
-                }
-            });
+            // Close menu if user clicks outside
+            document.addEventListener('click', (event) => {
+                if (!menuContainer.contains(event.target) && !toggleButton.contains(event.target)) {
+                    if (toggleButton.getAttribute('aria-expanded') === 'true') {
+                        toggleButton.setAttribute('aria-expanded', 'false');
+                        menuContainer.classList.remove('open');
+                        menuContainer.classList.add('closed');
+                    }
+                }
+            });
+        });
 
-            // Close menu if user clicks outside
-            document.addEventListener('click', (event) => {
-                if (!menuContainer.contains(event.target) && !toggleButton.contains(event.target)) {
-                    if (toggleButton.getAttribute('aria-expanded') === 'true') {
-                        toggleButton.setAttribute('aria-expanded', 'false');
-                        menuContainer.classList.remove('open');
-                        menuContainer.classList.add('closed');
-                    }
-                }
-            });
-        });
+        // Placeholder for Firebase SDK initialization
+        // This is where you would initialize Firebase when the actual SDKs are included
+        function initializeFirebase() {
+             console.log("Firebase initialization placeholder...");
+             // Example (uncomment if Firebase SDK is fully integrated):
+             // const app = initializeApp(firebaseConfig);
+             // const auth = getAuth(app);
+             // const db = getFirestore(app);
+        }
 
-        // Placeholder for Firebase SDK initialization
-        // This is where you would initialize Firebase when the actual SDKs are included
-        function initializeFirebase() {
-             console.log("Firebase initialization placeholder...");
-             // Example (uncomment if Firebase SDK is fully integrated):
-             // const app = initializeApp(firebaseConfig);
-             // const auth = getAuth(app);
-             // const db = getFirestore(app);
-        }
+        // Call initialization on load
+        initializeFirebase();
 
-        // Call initialization on load
-        initializeFirebase();
-
-    </script>
+    </script>
 </body>
 </html>
