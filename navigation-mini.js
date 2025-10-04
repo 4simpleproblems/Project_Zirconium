@@ -1,16 +1,41 @@
+import { firebaseConfig } from '../firebase-config.js'; 
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
 /**
  * navigation-mini.js
- * Renders the full header dynamically based on authentication state.
- * Contains ONLY the CSS required for the dynamic topbar functionality.
- * NOTE: This script is now initialized via the global function `window.initMiniNavigation(auth, db, doc, getDoc)` 
- * called from the main <script type="module"> block.
+ * Renders the full header dynamically based on the real Firebase authentication state.
+ * This script is now self-executing and handles all its Firebase dependencies internally
+ * by importing the necessary libraries and the external firebase-config.js.
+ * * NOTE: For this script to work, the HTML file loading it MUST use <script type="module" src=".../navigation-mini.js">.
  */
 
-// 1. INJECT ONLY TOPBAR-SPECIFIC STYLES INTO THE HEAD
+// --- 1. CONFIGURATION & INITIALIZATION ---
+// These are initialized once when the module loads
+let app, auth, db;
+
+try {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+} catch (error) {
+    console.error("Firebase initialization failed. Ensure firebaseConfig is correct and dependencies are loaded.", error);
+}
+
+// --- 2. INJECT TOPBAR-SPECIFIC STYLES INTO THE HEAD ---
 function injectTopbarCSS() {
     const head = document.head;
     
-    // Inject Poppins font for the profile initial (as requested)
+    // Inject Font Awesome for icons
+    if (!document.querySelector('link[href*="fontawesome.com"]')) {
+        const faLink = document.createElement('link');
+        faLink.rel = 'stylesheet';
+        faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css';
+        head.appendChild(faLink);
+    }
+
+    // Inject Poppins font for the profile initial
     if (!document.querySelector('link[href*="Poppins"]')) {
         const poppinsLink = document.createElement('link');
         poppinsLink.rel = 'stylesheet';
@@ -24,7 +49,6 @@ function injectTopbarCSS() {
         .auth-menu-container {
             transition: transform 0.3s ease-out, opacity 0.3s ease-out;
             transform-origin: top right;
-            /* Make the blur effect more pronounced and definite */
             backdrop-filter: blur(16px); 
             -webkit-backdrop-filter: blur(16px);
         }
@@ -40,9 +64,8 @@ function injectTopbarCSS() {
             transform: translateY(-10px) scale(0.95);
         }
         
-        /* New: Gradient profile avatar style */
+        /* Gradient profile avatar style */
         .initial-avatar {
-            /* Black to Gray Gradient Background for the circle */
             background: linear-gradient(135deg, #1f1f1f 0%, #444444 100%); 
             font-family: 'Poppins', sans-serif; 
             text-transform: uppercase;
@@ -59,7 +82,7 @@ function injectTopbarCSS() {
 }
 
 
-// 2. AUTH MENU DROPDOWN LOGIC (remains the same)
+// --- 3. AUTH MENU DROPDOWN LOGIC ---
 function setupAuthMenuLogic() {
     const toggleButton = document.getElementById('auth-toggle');
     const menuContainer = document.getElementById('auth-menu-container');
@@ -67,7 +90,8 @@ function setupAuthMenuLogic() {
     if (toggleButton && menuContainer) {
         const toggleMenu = () => {
             const isExpanded = toggleButton.getAttribute('aria-expanded') === 'true';
-            toggleButton.setAttribute('aria-expanded', String(!isExpanded));
+            const newExpandedState = String(!isExpanded);
+            toggleButton.setAttribute('aria-expanded', newExpandedState);
             
             if (isExpanded) {
                 menuContainer.classList.remove('open');
@@ -80,6 +104,7 @@ function setupAuthMenuLogic() {
 
         toggleButton.addEventListener('click', toggleMenu);
 
+        // Close when clicking outside the menu or toggle button
         document.addEventListener('click', (event) => {
             if (!menuContainer.contains(event.target) && !toggleButton.contains(event.target)) {
                 if (toggleButton.getAttribute('aria-expanded') === 'true') {
@@ -90,9 +115,8 @@ function setupAuthMenuLogic() {
     }
 }
 
-// 3. NAVBAR RENDERING FUNCTIONS
+// --- 4. NAVBAR RENDERING FUNCTIONS ---
 function renderLoggedOutNavbar() {
-    // Kept existing blurred background for consistency with the logged-in menu
     return `
         <div class="relative">
             <button 
@@ -108,6 +132,7 @@ function renderLoggedOutNavbar() {
                 id="auth-menu-container" 
                 class="auth-menu-container closed absolute right-0 top-10 w-40 p-2 rounded-xl bg-black/70 backdrop-blur-xl border border-gray-800 shadow-xl"
             >
+                <!-- Links relative to the current page -->
                 <a href="login.html" class="block px-3 py-2 text-sm font-normal text-white hover:bg-gray-800 rounded-lg transition-colors">
                     Login
                 </a>
@@ -120,22 +145,20 @@ function renderLoggedOutNavbar() {
 }
 
 function renderLoggedInNavbar(user) {
-    // Use data fetched from Firestore, or fallback to Auth data
-    const username = user.username;
-    const email = user.email;
+    const { username, email, photoURL } = user;
     
-    // Get the first letter of the username (or email) for the initial, capitalized
+    // Get the first letter of the username (or email) for the initial
     const initial = username 
         ? username.charAt(0).toUpperCase() 
         : (email ? email.charAt(0).toUpperCase() : '?');
 
     let profileContent;
     
-    // Check for photoURL. If not available, use the new initial avatar.
-    if (user.photoURL) {
-        profileContent = `<img src="${user.photoURL}" alt="${username} Profile" class="w-full h-full object-cover rounded-full" />`;
+    // Check for photoURL
+    if (photoURL) {
+        profileContent = `<img src="${photoURL}" alt="${username} Profile" class="w-full h-full object-cover rounded-full" />`;
     } else {
-        // New gradient initial avatar
+        // Gradient initial avatar
         profileContent = `
             <div class="initial-avatar w-full h-full flex items-center justify-center text-white text-sm font-semibold">
                 ${initial}
@@ -163,6 +186,7 @@ function renderLoggedInNavbar(user) {
                     <p class="text-xs text-gray-400 truncate">${email}</p>
                 </div>
 
+                <!-- Links relative to the current page's parent directory -->
                 <a href="../logged-in/dashboard.html" class="block px-3 py-2 text-sm font-normal text-white hover:bg-gray-800 rounded-lg transition-colors">
                     <i class="fas fa-house-user mr-2"></i> Dashboard
                 </a>
@@ -179,44 +203,42 @@ function renderLoggedInNavbar(user) {
     `;
 }
 
-// 4. MAIN INJECTION FUNCTION
-// MODIFIED: Accepts the auth, db, doc, and getDoc functions for safe module usage
-async function injectAuthNavbar(auth, db, docFn, getDocFn) {
+// --- 5. MAIN INJECTION FUNCTION (Handles Auth State) ---
+async function injectAuthNavbar() {
+    if (!auth || !db) {
+        console.error("Firebase services were not initialized. Cannot run navigation logic.");
+        return;
+    }
+    
     const navbarContainer = document.getElementById('navbar-container');
     if (!navbarContainer) return;
 
-    // The Firestore functions (docFn, getDocFn) are now passed directly.
-    
-    auth.onAuthStateChanged(async (user) => {
+    // Use onAuthStateChanged for real-time state management
+    onAuthStateChanged(auth, async (user) => {
         let authContent;
         
         if (user) {
             let userData = null;
 
-            // Fetch user data from Firestore if `db` and required functions are available
-            if (db && docFn && getDocFn && user.uid) { 
+            // Fetch user data from Firestore
+            if (db && user.uid) { 
                 try {
-                    const userDocRef = docFn(db, 'users', user.uid);
-                    const userDocSnap = await getDocFn(userDocRef);
+                    const userDocRef = doc(db, 'users', user.uid);
+                    const userDocSnap = await getDoc(userDocRef);
                     if (userDocSnap.exists()) {
                         userData = userDocSnap.data();
-                    } else {
-                        console.warn("Firestore user document not found. Falling back to Auth object data.");
                     }
                 } catch (e) {
                     console.error("Error fetching user data from Firestore:", e);
                 }
-            } else if (user && db) {
-                 // Warning updated to reflect the new calling pattern
-                 console.warn("Could not fetch user data. Check if Firestore functions (doc, getDoc) were passed to initMiniNavigation.");
             }
 
-            // Combine Firebase Auth and Firestore data
+            // Combine Firebase Auth and Firestore data, prioritizing Firestore
             const combinedUser = {
-                ...user,
-                // Prioritize Firestore data, then Auth display name, then Auth email prefix
+                // Prioritize Firestore username, then Auth display name, then Auth email prefix
                 username: userData?.username || user.displayName || user.email.split('@')[0],
-                email: userData?.email || user.email
+                email: userData?.email || user.email,
+                photoURL: user.photoURL // Use Auth photoURL unless explicitly stored differently
             };
 
             authContent = renderLoggedInNavbar(combinedUser);
@@ -224,6 +246,7 @@ async function injectAuthNavbar(auth, db, docFn, getDocFn) {
             authContent = renderLoggedOutNavbar();
         }
 
+        // Inject the full header structure
         navbarContainer.innerHTML = `
             <header class="sticky top-0 z-50 backdrop-blur-md bg-black/80 border-b border-gray-900">
                 <nav class="h-16 flex items-center justify-between px-4">
@@ -238,6 +261,7 @@ async function injectAuthNavbar(auth, db, docFn, getDocFn) {
             </header>
         `;
 
+        // Setup logic for the menu dropdown
         setupAuthMenuLogic();
 
         if (user) {
@@ -245,7 +269,8 @@ async function injectAuthNavbar(auth, db, docFn, getDocFn) {
             if (logoutButton) {
                 logoutButton.addEventListener('click', async () => {
                     try {
-                        await auth.signOut();
+                        await signOut(auth); // Use the imported signOut function
+                        // Redirect to the login page
                         window.location.href = 'login.html'; 
                     } catch (error) {
                         console.error("Logout failed:", error);
@@ -256,10 +281,8 @@ async function injectAuthNavbar(auth, db, docFn, getDocFn) {
     });
 }
 
-// Execute the injection functions when the script is loaded
-// MODIFIED: Accepts the auth, db, and required Firestore utility functions
-window.initMiniNavigation = (auth, db, docFn, getDocFn) => {
-    injectTopbarCSS();
-    // Only proceed after DOM content is ready
-    document.addEventListener('DOMContentLoaded', () => injectAuthNavbar(auth, db, docFn, getDocFn));
-};
+// --- 6. SELF-EXECUTION ENTRY POINT ---
+// 1. Inject CSS immediately
+injectTopbarCSS(); 
+// 2. Start the main logic once the DOM is ready
+document.addEventListener('DOMContentLoaded', injectAuthNavbar);
