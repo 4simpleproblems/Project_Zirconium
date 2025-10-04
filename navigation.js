@@ -10,6 +10,7 @@
 const PIN_STORAGE_KEY = '4sp-pinned-pages';
 const MAX_PINS = 3;
 let ALL_PAGES = {}; // Will store page data from JSON
+let isNavbarStructureInjected = false; // New flag to track initial injection
 
 // 1. INJECT TOPBAR-SPECIFIC STYLES
 function injectTopbarCSS() {
@@ -313,14 +314,17 @@ function setupAuthMenuLogic() {
     }
 }
 
-// Function that is called multiple times (for updates)
-// MODIFIED: Accepts the auth object
+/**
+ * Injects or updates the authentication and page menu content.
+ * @param {object} auth - The Firebase auth object.
+ * @param {boolean} isUpdate - True if only content needs updating, false for initial injection.
+ */
 function injectAuthNavbar(auth, isUpdate = false) {
     const navbarContainer = document.getElementById('navbar-container');
     if (!navbarContainer) return;
 
-    // The first time, inject the entire structure
-    if (!isUpdate) {
+    // The first time, inject the entire structural HTML
+    if (!isUpdate && !isNavbarStructureInjected) {
         navbarContainer.innerHTML = `
             <header id="full-header" class="sticky top-0 z-50 backdrop-blur-md bg-black/80 border-b border-gray-900">
                 <nav class="h-16 flex items-center justify-between px-4">
@@ -335,17 +339,19 @@ function injectAuthNavbar(auth, isUpdate = false) {
                 <div id="page-menu-container"></div>
             </header>
         `;
+        isNavbarStructureInjected = true; // Mark structure as injected
     }
     
-    // Get containers for content update
+    // Get containers for content update (They are guaranteed to exist now if we proceeded)
     const authControlsContainer = document.getElementById('auth-controls-container');
     const pageMenuContainer = document.getElementById('page-menu-container');
+    if (!authControlsContainer || !pageMenuContainer) return; // Should not happen after initial injection
+    
     const currentPageId = getCurrentPageId();
 
 
     // MODIFIED: Use the passed auth object
     auth.onAuthStateChanged((user) => {
-        if (!authControlsContainer || !pageMenuContainer) return;
         
         // 1. Render Auth/Account Controls
         if (user) {
@@ -380,11 +386,12 @@ function injectAuthNavbar(auth, isUpdate = false) {
 
 // 6. INITIALIZATION: Expose a global function for the module script to call
 window.initFullNavigation = async (auth) => {
-    // Ensure DOM is ready before trying to inject elements
+    // Only proceed after the DOM is fully loaded to ensure 'navbar-container' exists.
     document.addEventListener('DOMContentLoaded', async () => {
         injectTopbarCSS();
         await loadPageData();
-        injectAuthNavbar(auth); // Pass auth
-        setupPinningEvents(auth); // Pass auth
+        // The first call to injectAuthNavbar will inject the structure and attach the auth listener.
+        injectAuthNavbar(auth); 
+        setupPinningEvents(auth); 
     });
 };
