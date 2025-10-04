@@ -57,7 +57,8 @@ function injectTopbarCSS() {
 // 2. DATA LOADING
 async function loadPageData() {
     try {
-        const response = await fetch('../page-identification.json');
+        // Corrected path to assume navigation is in a subdirectory (e.g., /js/)
+        const response = await fetch('../page-identification.json'); 
         if (!response.ok) throw new Error('Failed to load page-identification.json');
         ALL_PAGES = await response.json();
     } catch (error) {
@@ -128,11 +129,11 @@ function renderPageMenu(currentPageId) {
         const page = ALL_PAGES[id];
         const isActive = id === currentPageId;
         
-        // Use a consistent base URL path for the link generation
-        // For the home page, ALL_PAGES is not used, so we include 'index.html' explicitly here
-        if (id === 'games' && window.location.pathname.includes('/logged-in/')) {
-            // Adjust path for /logged-in/ pages linking to /GAMES/index.html
-            page.url = '../GAMES/index.html'; 
+        // Corrected URL logic for internal pages, assuming standard structure
+        let url = page.url;
+        if (currentPageId && currentPageId !== 'index' && !url.startsWith('.')) {
+             // If we are on a page like /logged-in/dashboard.html, adjust link to other internal sections
+             url = '../' + url;
         }
 
         const activeClass = isActive 
@@ -140,7 +141,7 @@ function renderPageMenu(currentPageId) {
             : 'text-gray-400 hover:bg-gray-900 border-gray-900';
 
         return `
-            <a href="${page.url}" 
+            <a href="${url}" 
                class="flex-shrink-0 px-4 py-2 mr-2 rounded-lg text-sm font-medium border-b-2 transition-colors ${activeClass}">
                 <i class="fas ${page.icon} mr-1"></i> ${page.name}
             </a>
@@ -385,7 +386,8 @@ function injectAuthNavbar(auth, isUpdate = false) {
             if (logoutButton) {
                 logoutButton.addEventListener('click', async () => {
                     try {
-                        await auth.signOut(); // Uses the signOut method on the passed auth object
+                        // FIX: Use the method on the passed auth object
+                        await auth.signOut(); 
                         // Redirect to the login page after logout
                         window.location.href = 'login.html'; 
                     } catch (error) {
@@ -399,8 +401,11 @@ function injectAuthNavbar(auth, isUpdate = false) {
 
 // 6. INITIALIZATION: The function to be called from the main script
 window.initFullNavigation = async (auth) => {
-    injectTopbarCSS();
-    await loadPageData();
-    injectAuthNavbar(auth);
-    setupPinningEvents(auth); // Pass auth to setupPinningEvents as well
+    // Only proceed after DOM content is ready
+    document.addEventListener('DOMContentLoaded', async () => {
+        injectTopbarCSS();
+        await loadPageData();
+        injectAuthNavbar(auth); // Pass auth object
+        setupPinningEvents(auth); // Pass auth object
+    });
 };
