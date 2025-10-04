@@ -2,7 +2,9 @@
  * navigation.js
  * Renders the full-featured top navigation bar, including the scrolling page menu
  * and the user account menu with pinning functionality.
- * Assumes core dependencies (Tailwind, Font Awesome, Firebase) are loaded in the host HTML file.
+ * Assumes core dependencies (Tailwind, Font Awesome) are loaded in the host HTML file.
+ * NOTE: This script is now initialized via the global function `initFullNavigation(auth)` 
+ * called from the main <script type="module"> block.
  */
 
 // --- CONFIGURATION ---
@@ -281,7 +283,7 @@ function renderLoggedOutNavbar() {
 }
 
 // 5. MAIN INJECTION & EVENT SETUP
-function setupPinningEvents() {
+function setupPinningEvents(auth) {
     const navbarContainer = document.getElementById('navbar-container');
     if (!navbarContainer) return;
 
@@ -294,13 +296,44 @@ function setupPinningEvents() {
             if (action === 'pin' || action === 'unpin') {
                 togglePin(pageId);
                 // Re-render the navbar to update the pin buttons immediately
-                injectAuthNavbar(true); 
+                injectAuthNavbar(auth, true); 
             }
         }
     });
 }
 
-function injectAuthNavbar(isUpdate = false) {
+function setupAuthMenuLogic() {
+    const toggleButton = document.getElementById('auth-toggle');
+    const menuContainer = document.getElementById('auth-menu-container');
+
+    if (toggleButton && menuContainer) {
+        const toggleMenu = () => {
+            const isExpanded = toggleButton.getAttribute('aria-expanded') === 'true';
+            toggleButton.setAttribute('aria-expanded', String(!isExpanded));
+            
+            if (isExpanded) {
+                menuContainer.classList.remove('open');
+                menuContainer.classList.add('closed');
+            } else {
+                menuContainer.classList.remove('closed');
+                menuContainer.classList.add('open');
+            }
+        };
+
+        toggleButton.addEventListener('click', toggleMenu);
+
+        document.addEventListener('click', (event) => {
+            if (!menuContainer.contains(event.target) && !toggleButton.contains(event.target)) {
+                if (toggleButton.getAttribute('aria-expanded') === 'true') {
+                    toggleMenu();
+                }
+            }
+        });
+    }
+}
+
+// Function that is called multiple times (for updates)
+function injectAuthNavbar(auth, isUpdate = false) {
     const navbarContainer = document.getElementById('navbar-container');
     if (!navbarContainer) return;
 
@@ -329,7 +362,7 @@ function injectAuthNavbar(isUpdate = false) {
 
 
     // Wait for Firebase Auth and ALL_PAGES data to be ready
-    firebase.auth().onAuthStateChanged((user) => {
+    auth.onAuthStateChanged((user) => {
         if (!authControlsContainer || !pageMenuContainer) return;
         
         // 1. Render Auth/Account Controls
@@ -352,7 +385,7 @@ function injectAuthNavbar(isUpdate = false) {
             if (logoutButton) {
                 logoutButton.addEventListener('click', async () => {
                     try {
-                        await firebase.auth().signOut();
+                        await auth.signOut(); // Uses the signOut method on the passed auth object
                         // Redirect to the login page after logout
                         window.location.href = 'login.html'; 
                     } catch (error) {
@@ -364,10 +397,10 @@ function injectAuthNavbar(isUpdate = false) {
     });
 }
 
-// 6. INITIALIZATION
-document.addEventListener('DOMContentLoaded', async () => {
+// 6. INITIALIZATION: The function to be called from the main script
+window.initFullNavigation = async (auth) => {
     injectTopbarCSS();
     await loadPageData();
-    injectAuthNavbar();
-    setupPinningEvents();
-});
+    injectAuthNavbar(auth);
+    setupPinningEvents(auth); // Pass auth to setupPinningEvents as well
+};
