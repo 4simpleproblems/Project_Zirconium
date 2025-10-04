@@ -33,377 +33,258 @@
         
         /* Input Styling */
         input[type="email"], input[type="password"], input[type="text"] {
-            background-color: #1a1a1a; /* Darker background */
-            border: 1px solid #374151; /* gray-700 */
-            color: #ffffff;
-        }
-        /* Strict Grey Focus */
-        input:focus {
-            border-color: #4b5563; /* gray-600 */
-            outline: none;
-            box-shadow: 0 0 0 1px #4b5563; 
-        }
-
-        /* Pure Grey Button Style */
-        .pure-grey-button {
-            background-color: rgba(255, 255, 255, 0.1); /* white/10 */
-            border: 1px solid rgba(255, 255, 255, 0.2); /* white/20 */
-            transition: all 0.2s ease;
-        }
-        .pure-grey-button:hover {
-            background-color: rgba(255, 255, 255, 0.2); /* white/20 */
-        }
-        .pure-grey-button:focus {
-            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
-        }
-
-        /* Wide Frame Styling (Matching Signup) */
-        .login-frame {
-            max-width: 56rem; 
+            background-color: rgb(24 24 27 / var(--tw-bg-opacity)); /* zinc-900 equivalent */
+            border-color: rgb(39 39 42 / var(--tw-border-opacity)); /* zinc-800 equivalent */
         }
         
-        .disclaimer-link {
-            color: #d1d5db; /* gray-300 */
-            text-decoration: underline;
-            transition: color 0.15s;
-        }
-        .disclaimer-link:hover {
-            color: #ffffff; /* white */
+        /* Button Focus Ring */
+        .login-btn:focus-visible {
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+            box-shadow: 0 0 0 2px #000000, 0 0 0 4px #0070f3; /* Black + Vercel Blue */
         }
     </style>
 </head>
-<body class="bg-black text-white min-h-screen flex flex-col">
-
+<body class="bg-black text-white min-h-screen">
     <div id="navbar-container"></div>
-    <main class="flex-grow flex items-center justify-center py-12">
-        <div class="w-full max-w-4xl p-6 sm:p-8 bg-gray-900/50 backdrop-blur-md rounded-2xl border border-gray-800 shadow-2xl login-frame">
+
+    <main class="flex items-center justify-center min-h-[calc(100vh-64px)] py-12 px-4 sm:px-6 lg:px-8">
+        <div class="w-full max-w-md space-y-8 rounded-xl p-8 bg-gray-900/50 backdrop-blur-md border border-gray-800 shadow-2xl">
+            <div class="text-center">
+                <h2 class="mt-6 text-3xl font-bold tracking-tight text-white">
+                    Sign in to your account
+                </h2>
+                <p class="mt-2 text-sm text-gray-400">
+                    Or <a href="signup.html" class="font-medium text-blue-400 hover:text-blue-300 transition">create a new one</a>
+                </p>
+            </div>
             
-            <h1 class="text-3xl font-semibold text-center mb-1">
-                Welcome Back
-            </h1>
-            <p class="text-center text-gray-400 mb-8">
-                Log in to continue using your essential student toolkit.
-            </p>
+            <div id="status-message" class="hidden p-3 text-sm rounded-lg text-red-400 bg-red-900/30 border border-red-800/50"></div>
 
-            <div id="status-message" class="hidden p-3 mb-4 text-sm rounded-lg" role="alert"></div>
+            <form class="mt-8 space-y-6" id="login-form">
+                <input type="hidden" name="remember" value="true">
+                <div class="-space-y-px rounded-md shadow-sm">
+                    <div>
+                        <label for="email-address" class="sr-only">Email address</label>
+                        <input id="email-address" name="email" type="email" autocomplete="email" required 
+                               class="relative block w-full appearance-none rounded-none rounded-t-lg border border-gray-700 px-3 py-3 text-white placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                               placeholder="Email address">
+                    </div>
+                    <div>
+                        <label for="password" class="sr-only">Password</label>
+                        <input id="password" name="password" type="password" autocomplete="current-password" required 
+                               class="relative block w-full appearance-none rounded-none rounded-b-lg border border-gray-700 px-3 py-3 text-white placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                               placeholder="Password">
+                    </div>
+                </div>
 
-            <div class="lg:grid lg:grid-cols-2 lg:gap-10">
-                <div>
-                    <h2 class="text-xl font-medium mb-4 text-center lg:text-left text-gray-300">Quick Access</h2>
-                    <div class="space-y-3 mb-4">
-                        <button id="google-login" class="w-full flex items-center justify-center p-3 border border-gray-700 rounded-xl text-white hover:bg-gray-800 transition duration-200">
-                            <img src="images/google-icon.png" alt="Google Logo" class="w-5 h-5 mr-3 rounded-full">
-                            Log in with Google
-                        </button>
-                        <button id="github-login" class="w-full flex items-center justify-center p-3 border border-gray-700 rounded-xl text-white hover:bg-gray-800 transition duration-200">
-                            <img src="images/github-mark-white.png" alt="GitHub Logo" class="w-5 h-5 mr-3">
-                            Log in with GitHub
-                        </button>
-                        <button id="microsoft-login" class="w-full flex items-center justify-center p-3 border border-gray-700 rounded-xl text-white hover:bg-gray-800 transition duration-200">
-                            <img src="images/microsoft.png" alt="Microsoft Logo" class="w-5 h-5 mr-3">
-                            Log in with Microsoft
-                        </button>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <input id="remember-me" name="remember-me" type="checkbox" 
+                               class="h-4 w-4 rounded border-gray-700 bg-gray-900 text-blue-500 focus:ring-blue-500">
+                        <label for="remember-me" class="ml-2 block text-sm text-gray-400">
+                            Remember me
+                        </label>
                     </div>
 
-                    <p class="text-xs text-gray-500 italic text-center mb-6">
-                        By logging in or using the platform, you agree to our 
-                        <a href="legal.html#terms" class="disclaimer-link">Terms of Service</a> 
-                        and 
-                        <a href="legal.html#privacy" class="disclaimer-link">Privacy Policy</a>.
-                    </p>
-                    <div class="flex items-center mb-6 lg:hidden">
-                        <div class="flex-grow border-t border-gray-700"></div>
-                        <span class="flex-shrink mx-4 text-gray-500 text-sm">or</span>
-                        <div class="flex-grow border-t border-gray-700"></div>
+                    <div class="text-sm">
+                        <a href="#" id="forgot-password" class="font-medium text-blue-400 hover:text-blue-300 transition">
+                            Forgot your password?
+                        </a>
                     </div>
                 </div>
 
                 <div>
-                    <h2 class="text-xl font-medium mb-4 text-center lg:text-left text-gray-300">Email & Password</h2>
-                    
-                    <form id="email-login-form" class="space-y-4">
-                        <div>
-                            <label for="email" class="block text-sm font-medium text-gray-300 mb-1">Email Address</label>
-                            <input type="email" id="email" required autocomplete="email"
-                                   class="w-full px-4 py-3 rounded-xl focus:ring-1 transition duration-150"
-                                   placeholder="you@example.com">
-                        </div>
-                        <div>
-                            <label for="password" class="block text-sm font-medium text-gray-300 mb-1">Password</label>
-                            <input type="password" id="password" required autocomplete="current-password"
-                                   class="w-full px-4 py-3 rounded-xl focus:ring-1 transition duration-150"
-                                   placeholder="••••••••">
-                            <div class="text-right mt-2">
-                                <a href="#" id="forgot-password-link" class="text-sm text-gray-400 hover:text-white transition duration-150">
-                                    Forgot Password?
-                                </a>
-                            </div>
-                        </div>
-
-                        <div class="pt-2">
-                            <button type="submit" id="login-button" 
-                                    class="pure-grey-button w-full px-4 py-3 text-base font-medium rounded-xl text-white">
-                                Log In
-                            </button>
-                        </div>
-                    </form>
-
-                    <div id="forgot-password-area" class="hidden mt-6 p-4 rounded-xl border border-gray-700 bg-gray-800/50">
-                        <h3 class="text-lg font-medium mb-3 text-gray-300">Password Reset</h3>
-                        <form id="forgot-password-form" class="space-y-4">
-                            <div>
-                                <label for="reset-email" class="block text-sm font-medium text-gray-300 mb-1">Enter your email</label>
-                                <input type="email" id="reset-email" required
-                                       class="w-full px-4 py-3 rounded-xl focus:ring-1 transition duration-150"
-                                       placeholder="you@example.com">
-                            </div>
-                            <button type="submit" id="reset-button" 
-                                    class="pure-grey-button w-full px-4 py-2 text-sm font-medium rounded-xl text-white">
-                                Send Reset Link
-                            </button>
-                        </form>
-                        <p id="back-to-login-link" class="text-sm text-center mt-3 text-gray-400 hover:text-white cursor-pointer transition duration-150">
-                            &larr; Back to Login
-                        </p>
-                    </div>
+                    <button type="submit" id="login-button"
+                            class="login-btn group relative flex w-full justify-center rounded-lg border border-transparent bg-blue-600 py-3 px-4 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+                            <i class="fas fa-lock h-5 w-5 text-blue-300 group-hover:text-blue-200 transition"></i>
+                        </span>
+                        Sign in
+                    </button>
+                </div>
+            </form>
+            
+            <div class="relative">
+                <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                    <div class="w-full border-t border-gray-700"></div>
+                </div>
+                <div class="relative flex justify-center text-sm">
+                    <span class="bg-gray-900/50 backdrop-blur-sm px-2 text-gray-500">
+                        Or continue with
+                    </span>
                 </div>
             </div>
 
-            <p class="mt-8 text-center text-sm text-gray-400">
-                Don't have an account? 
-                <a href="signup.html" class="font-medium text-gray-300 hover:text-white transition duration-150">
-                    Sign Up here
-                </a>
-            </p>
+            <div class="flex space-x-3">
+                <button id="google-login-btn" type="button" class="login-btn w-full inline-flex justify-center rounded-lg border border-gray-700 bg-gray-800 py-3 text-sm font-medium text-white hover:bg-gray-700 transition">
+                    <i class="fab fa-google h-5 w-5 mr-2"></i> Google
+                </button>
+                <button id="github-login-btn" type="button" class="login-btn w-full inline-flex justify-center rounded-lg border border-gray-700 bg-gray-800 py-3 text-sm font-medium text-white hover:bg-gray-700 transition">
+                    <i class="fab fa-github h-5 w-5 mr-2"></i> GitHub
+                </button>
+                <button id="microsoft-login-btn" type="button" class="login-btn w-full inline-flex justify-center rounded-lg border border-gray-700 bg-gray-800 py-3 text-sm font-medium text-white hover:bg-gray-700 transition">
+                    <i class="fab fa-microsoft h-5 w-5 mr-2"></i> Microsoft
+                </button>
+            </div>
         </div>
     </main>
-
-    <footer class="border-t border-gray-900 py-6">
-        <div class="mx-auto max-w-7xl px-4 text-center text-gray-500 text-sm">
-            &copy; 2024 4simpleproblems (4SP). Built for students.
-        </div>
-    </footer>
     
     <script src="../navigation-mini.js"></script>
 
     <script type="module">
-        // 1. IMPORT: Import your local configuration first (assuming it exports the config object)
+        // -------------------------------------------------------------
+        // NEW: Get the global navigation function into the module's scope
+        const initMiniNavigation = window.initMiniNavigation;
+        // -------------------------------------------------------------
+        
+        // 1. IMPORT: Import your local configuration (Loads firebase-config.js)
         import { firebaseConfig } from '../firebase-config.js';
 
-        // 2. IMPORT: Updated Firebase module imports (using a stable v10 version)
+        // 2. IMPORT: Updated Firebase module imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { 
-            getAuth, signInAnonymously, onAuthStateChanged, 
-            signInWithEmailAndPassword, sendPasswordResetEmail, 
-            signInWithPopup, GoogleAuthProvider, GithubAuthProvider, OAuthProvider 
+            getAuth, signInWithEmailAndPassword, sendPasswordResetEmail, 
+            signInWithPopup, GoogleAuthProvider, GithubAuthProvider, OAuthProvider, 
+            onAuthStateChanged
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { 
-            getFirestore, doc, getDoc, setDoc, serverTimestamp, setLogLevel 
+            getFirestore, doc, getDoc
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         // --- GLOBAL SETUP ---
-        const appId = '4sp-default'; // Use a consistent appId for Firestore paths
-        
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const auth = getAuth(app);
-        setLogLevel('debug');
+        const auth = getAuth(app); 
+        
+        // -------------------------------------------------------------
+        // NEW: Call the navigation initialization function, passing the auth object
+        if (initMiniNavigation) {
+            initMiniNavigation(auth);
+        }
+        // -------------------------------------------------------------
+        
+        // --- DOM Elements ---
+        const loginForm = document.getElementById('login-form');
+        const loginButton = document.getElementById('login-button');
+        const forgotPasswordLink = document.getElementById('forgot-password');
+        const googleLoginBtn = document.getElementById('google-login-btn');
+        const githubLoginBtn = document.getElementById('github-login-btn');
+        const microsoftLoginBtn = document.getElementById('microsoft-login-btn');
+        const statusMessage = document.getElementById('status-message');
 
-        let userId = null;
-        let isAuthReady = false;
-
-        // Initial Authentication and Listener
-        onAuthStateChanged(auth, async (user) => {
-            if (user && !user.isAnonymous) {
-                // Redirect logged-in, non-anonymous users
-                if (window.location.pathname.endsWith('login.html')) {
-                    window.location.href = '../logged-in/dashboard.html';
-                }
-            } else if (!user) {
-                // Sign in anonymously if no user is present
-                await signInAnonymously(auth).catch(e => console.error("Anonymous sign in failed:", e));
+        // --- Utility Functions ---
+        function showStatus(message, isError = true) {
+            statusMessage.textContent = message;
+            statusMessage.classList.remove('hidden');
+            // Toggle classes based on whether it's an error or success if needed
+            if (isError) {
+                statusMessage.classList.add('text-red-400', 'bg-red-900/30', 'border-red-800/50');
             }
-            userId = auth.currentUser?.uid || crypto.randomUUID();
-            isAuthReady = true;
+        }
+
+        function hideStatus() {
+            statusMessage.classList.add('hidden');
+        }
+
+        function checkFormValidity() {
+            if (loginForm.checkValidity()) {
+                loginButton.disabled = false;
+                loginButton.classList.remove('disabled:opacity-50', 'disabled:cursor-not-allowed');
+            } else {
+                loginButton.disabled = true;
+                loginButton.classList.add('disabled:opacity-50', 'disabled:cursor-not-allowed');
+            }
+        }
+
+        // Checks if user data exists in Firestore; redirects if successful
+        async function checkAndRedirect(user) {
+            if (!user) return; // Should not happen here, but for safety
+
+            try {
+                const userDocRef = doc(db, "users", user.uid);
+                const userDoc = await getDoc(userDocRef);
+
+                if (userDoc.exists()) {
+                    console.log("User data exists. Redirecting to dashboard.");
+                    window.location.href = '../logged-in/dashboard.html';
+                } else {
+                    // This means a new user was created via social login but Firestore setup failed,
+                    // or a user signed up on the login page (shouldn't happen).
+                    console.warn("User authenticated but missing Firestore data. Logging out.");
+                    await auth.signOut();
+                    showStatus("Account setup failed. Please contact support.", true);
+                }
+            } catch (error) {
+                console.error("Error during login redirect/check:", error);
+                await auth.signOut();
+                showStatus("An error occurred during sign-in verification. Please try again.", true);
+            }
+        }
+
+        // --- EVENT HANDLERS ---
+        
+        // Handle Email/Password Login
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideStatus();
+            
+            const email = loginForm.elements['email'].value;
+            const password = loginForm.elements['password'].value;
+            
+            loginButton.disabled = true;
+
+            try {
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                // checkAndRedirect will handle success and navigation
+                await checkAndRedirect(userCredential.user);
+            } catch (error) {
+                let errorMessage = "Login failed.";
+                if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                    errorMessage = "Invalid email or password.";
+                } else if (error.code === 'auth/too-many-requests') {
+                    errorMessage = "Account locked due to too many failed attempts. Try again later.";
+                }
+                
+                showStatus(errorMessage);
+                console.error("Login Error:", error);
+
+            } finally {
+                loginButton.disabled = false;
+            }
         });
 
-        /**
-         * Checks if a user's Firestore document exists and creates it if not.
-         */
-        async function checkAndCreateUserDataset(user, provider) {
-            if (!isAuthReady) {
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
+        // Handle Forgot Password
+        forgotPasswordLink.addEventListener('click', async (e) => {
+            e.preventDefault();
+            hideStatus();
             
-            const uid = user.uid;
-            // Canvas Private Data Path: /artifacts/{appId}/users/{userId}/user_data/profile_details
-            const userRef = doc(db, `artifacts/${appId}/users/${uid}/user_data/profile_details`);
+            const email = loginForm.elements['email'].value;
+
+            if (!email) {
+                showStatus("Please enter your email in the field above to reset your password.", false);
+                return;
+            }
             
             try {
-                const docSnap = await getDoc(userRef);
-                
-                if (!docSnap.exists()) {
-                    const finalUsername = user.displayName 
-                        || (user.email ? user.email.split('@')[0] : 'user_' + uid.substring(0, 8));
-                        
-                    await setDoc(userRef, {
-                        username: finalUsername,
-                        email: user.email || 'N/A',
-                        authenticationMethod: provider,
-                        isVerified: user.emailVerified || (provider !== 'Email/Password'),
-                        creationDate: serverTimestamp(),
-                    }, { merge: true });
-
-                    console.log(`User data created/checked for ${uid} via ${provider}.`);
-                }
-
-                // Redirect to dashboard on successful login
-                window.location.href = '../logged-in/dashboard.html';
-
+                await sendPasswordResetEmail(auth, email);
+                showStatus(`Password reset link sent to ${email}! Check your inbox.`, false);
             } catch (error) {
-                console.error("Error with user data initialization/redirection:", error);
-                // Allow login to continue even if data check fails
-                window.location.href = '../logged-in/dashboard.html';
+                let errorMessage = "Password reset failed.";
+                if (error.code === 'auth/user-not-found') {
+                    errorMessage = `No user found with email: ${email}.`;
+                }
+                showStatus(errorMessage);
             }
-        }
+        });
 
-        // --- UI ELEMENTS ---
-        const emailLoginForm = document.getElementById('email-login-form');
-        const emailInput = document.getElementById('email');
-        const passwordInput = document.getElementById('password');
-        const loginButton = document.getElementById('login-button');
-        const statusMessage = document.getElementById('status-message');
-        const forgotPasswordLink = document.getElementById('forgot-password-link');
-        const backToLoginLink = document.getElementById('back-to-login-link');
-        const forgotPasswordArea = document.getElementById('forgot-password-area');
-        const forgotPasswordForm = document.getElementById('forgot-password-form');
-        const resetEmailInput = document.getElementById('reset-email');
-        
-        // --- SOCIAL BUTTON ELEMENTS (IDs are correct now) ---
-        const googleLoginBtn = document.getElementById('google-login');
-        const githubLoginBtn = document.getElementById('github-login');
-        const microsoftLoginBtn = document.getElementById('microsoft-login');
-
-        // --- UTILITY FUNCTIONS ---
-        function showStatus(message, type = 'error') {
-            statusMessage.textContent = message;
-            statusMessage.classList.remove('hidden', 'bg-red-900/50', 'text-red-300', 'bg-green-900/50', 'text-green-300', 'bg-gray-900/50', 'text-gray-300');
-            if (type === 'success') {
-                statusMessage.classList.add('bg-green-900/50', 'text-green-300');
-            } else if (type === 'error') {
-                statusMessage.classList.add('bg-red-900/50', 'text-red-300');
-            } else { // info
-                 statusMessage.classList.add('bg-gray-900/50', 'text-gray-300');
-            }
-        }
-        function hideStatus() {
-             statusMessage.classList.add('hidden');
-        }
-
-        // --- FORM LOGIC (Unchanged from your original logic) ---
-
-        // Toggle Forgot Password Area
-        if(forgotPasswordLink) {
-            forgotPasswordLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                emailLoginForm.classList.add('hidden');
-                forgotPasswordArea.classList.remove('hidden');
-                hideStatus();
-            });
-        }
-        if(backToLoginLink) {
-            backToLoginLink.addEventListener('click', () => {
-                forgotPasswordArea.classList.add('hidden');
-                emailLoginForm.classList.remove('hidden');
-                hideStatus();
-            });
-        }
-
-        // Email/Password Login
-        if (emailLoginForm) {
-            emailLoginForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                hideStatus();
-
-                const email = emailInput.value.trim();
-                const password = passwordInput.value;
-                
-                loginButton.textContent = 'Logging In...';
-                loginButton.disabled = true;
-
-                try {
-                    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-                    const user = userCredential.user;
-
-                    // Check if email is verified
-                    if (!user.emailVerified) {
-                        window.location.href = 'verify.html';
-                        return;
-                    }
-                    
-                    await checkAndCreateUserDataset(user, 'Email/Password');
-                    
-                } catch (error) {
-                    let errorMessage = "Login failed.";
-                    if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-                        errorMessage = "Invalid email or password.";
-                    } else if (error.code === 'auth/too-many-requests') {
-                        errorMessage = "Access temporarily blocked due to too many failed attempts. Try again later.";
-                    } else if (error.code === 'auth/invalid-email') {
-                         errorMessage = "The email address is not valid.";
-                    }
-                    console.error("Email/Password Login Error:", error);
-                    showStatus(errorMessage);
-                    loginButton.textContent = 'Log In';
-                    loginButton.disabled = false;
-                }
-            });
-        }
-
-        // Forgot Password Form
-        if(forgotPasswordForm) {
-            forgotPasswordForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                hideStatus();
-                const email = resetEmailInput.value.trim();
-                const resetButton = document.getElementById('reset-button');
-
-                if (!email) {
-                    showStatus("Please enter your email to reset your password.");
-                    return;
-                }
-
-                resetButton.textContent = 'Sending...';
-                resetButton.disabled = true;
-
-                try {
-                    await sendPasswordResetEmail(auth, email);
-                    showStatus(`A password reset link has been sent to ${email}. Check your spam folder!`, 'success');
-                    resetButton.textContent = 'Send Reset Link';
-                    resetButton.disabled = false;
-                } catch (error) {
-                    let errorMessage = "Failed to send reset email.";
-                    if (error.code === 'auth/user-not-found') {
-                        errorMessage = "No user found with that email.";
-                    }
-                    console.error("Forgot Password Error:", error);
-                    showStatus(errorMessage);
-                    resetButton.textContent = 'Send Reset Link';
-                    resetButton.disabled = false;
-                }
-            });
-        }
-
-        
         // --- SOCIAL LOGINS ---
         async function handleSocialLogin(providerInstance, providerName) {
             hideStatus();
             try {
-                // This is where Firebase opens the popup and handles the OAuth flow.
                 const result = await signInWithPopup(auth, providerInstance);
-                
-                // On success, create the user's data in Firestore and redirect.
-                await checkAndCreateUserDataset(result.user, providerName);
+                // checkAndRedirect will handle existing user logic and redirection
+                await checkAndRedirect(result.user);
             } catch (error) {
                 let errorMessage = `Login with ${providerName} failed.`;
                 if (error.code === 'auth/account-exists-with-different-credential') {
@@ -420,13 +301,16 @@
 
         // EVENT LISTENERS: The original IDs are used here.
         if(googleLoginBtn) googleLoginBtn.addEventListener('click', () => handleSocialLogin(new GoogleAuthProvider(), 'Google'));
+        if(githubLoginBtn) githubLoginBtn.addEventListener('click', () => handleSocialLogin(new GithubAuthProvider(), 'GitHub'));
         if(microsoftLoginBtn) microsoftLoginBtn.addEventListener('click', () => {
             const provider = new OAuthProvider('microsoft.com');
-            // Optionally add Microsoft-specific scopes or tenants here if needed
-            // provider.setCustomParameters({ prompt: 'select_account' });
+            // provider.setCustomParameters({ prompt: 'select_account' }); // Optional: Force account selection
             handleSocialLogin(provider, 'Microsoft');
         });
-        if(githubLoginBtn) githubLoginBtn.addEventListener('click', () => handleSocialLogin(new GithubAuthProvider(), 'GitHub'));
+
+        // Initial form check
+        loginForm.addEventListener('input', checkFormValidity);
+        document.addEventListener('DOMContentLoaded', checkFormValidity);
     </script>
 </body>
 </html>
