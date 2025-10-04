@@ -2,16 +2,14 @@
  * navigation-mini.js
  * Renders the full header dynamically based on authentication state.
  * Contains ONLY the CSS required for the dynamic topbar functionality.
- * Assumes core Tailwind, Fonts, and Form CSS are loaded in the host HTML file.
- * NOTE: This script is now initialized via the global function `initMiniNavigation(auth)` 
+ * NOTE: This script is now initialized via the global function `window.initMiniNavigation(auth)` 
  * called from the main <script type="module"> block.
  */
 
 // 1. INJECT ONLY TOPBAR-SPECIFIC STYLES INTO THE HEAD
 function injectTopbarCSS() {
+    // ... (CSS injection code remains the same)
     const head = document.head;
-    
-    // Custom Styles (ONLY Topbar/Menu animation)
     const style = document.createElement('style');
     style.textContent = `
         /* --- AUTH MENU STYLES (Required for dropdown) --- */
@@ -36,7 +34,7 @@ function injectTopbarCSS() {
 }
 
 
-// 2. AUTH MENU DROPDOWN LOGIC
+// 2. AUTH MENU DROPDOWN LOGIC (remains the same)
 function setupAuthMenuLogic() {
     const toggleButton = document.getElementById('auth-toggle');
     const menuContainer = document.getElementById('auth-menu-container');
@@ -67,10 +65,8 @@ function setupAuthMenuLogic() {
     }
 }
 
-// 3. NAVBAR RENDERING FUNCTIONS
-
+// 3. NAVBAR RENDERING FUNCTIONS (remains the same)
 function renderLoggedOutNavbar() {
-    // Standard Logged Out State
     return `
         <div class="relative">
             <button 
@@ -101,14 +97,11 @@ function renderLoggedInNavbar(user) {
     const username = user.displayName || user.email.split('@')[0];
     const email = user.email;
 
-    // Determine the profile picture content for the button
     let profileContent;
     
     if (user.photoURL) {
-        // If photoURL exists (typically from Google/Social sign-in), use the image
         profileContent = `<img src="${user.photoURL}" alt="${username} Profile" class="w-full h-full object-cover rounded-full" />`;
     } else {
-        // Fallback to the Font Awesome icon for Email/Password or missing photo
         profileContent = `<i class="fas fa-circle-user text-white text-base"></i>`;
     }
 
@@ -149,11 +142,12 @@ function renderLoggedInNavbar(user) {
 }
 
 // 4. MAIN INJECTION FUNCTION
+// MODIFIED: Accepts the auth object
 function injectAuthNavbar(auth) {
     const navbarContainer = document.getElementById('navbar-container');
     if (!navbarContainer) return;
 
-    // Wait for Firebase Auth to be ready
+    // MODIFIED: Use the passed auth object
     auth.onAuthStateChanged((user) => {
         let authContent;
         if (user) {
@@ -176,18 +170,15 @@ function injectAuthNavbar(auth) {
             </header>
         `;
 
-        // Setup interactivity
         setupAuthMenuLogic();
 
-        // Setup logout button listener if user is logged in
         if (user) {
             const logoutButton = document.getElementById('logout-button');
             if (logoutButton) {
                 logoutButton.addEventListener('click', async () => {
                     try {
-                        // FIX: Use the method on the passed auth object
-                        await auth.signOut(); 
-                        // Redirect to the login page after logout
+                        // MODIFIED: Use the passed auth object's signOut method
+                        await auth.signOut();
                         window.location.href = 'login.html'; 
                     } catch (error) {
                         console.error("Logout failed:", error);
