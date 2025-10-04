@@ -1,16 +1,103 @@
 /**
- * authNavbar.js
- * Renders the top navigation bar dynamically based on authentication state.
+ * navigation-mini.js
+ * Renders the full head/header of the document dynamically based on authentication state.
  * Assumes Firebase Auth is initialized and available globally.
  */
 
-// Function to handle the authentication dropdown menu logic
+// 1. INJECT REQUIRED STYLES AND LINKS INTO THE HEAD
+function injectHeadContent() {
+    const head = document.head;
+
+    // Tailwind CSS
+    const tailwindScript = document.createElement('script');
+    tailwindScript.src = "https://cdn.tailwindcss.com";
+    head.appendChild(tailwindScript);
+
+    // Font Awesome (Icons)
+    const faLink = document.createElement('link');
+    faLink.rel = "stylesheet";
+    faLink.href = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css";
+    head.appendChild(faLink);
+
+    // Geist Font
+    const geistLink = document.createElement('link');
+    geistLink.rel = "stylesheet";
+    geistLink.href = "https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap";
+    head.appendChild(geistLink);
+
+    // Custom Styles (Dark theme, Navbar, and Form styling)
+    const style = document.createElement('style');
+    style.textContent = `
+        /* Custom CSS to mimic a modern, dark theme and use the Geist font */
+        :root {
+            --geist-foreground: 255, 255, 255;
+            --geist-background: 0, 0, 0;
+            --geist-accent-7: 156, 163, 175; /* gray-400 */
+        }
+        
+        .dark {
+            color-scheme: dark;
+        }
+
+        body {
+            /* Applying Geist font */
+            font-family: 'Geist', sans-serif;
+        }
+        
+        /* Input Styling */
+        input[type="email"], input[type="password"], input[type="text"] {
+            background-color: #1a1a1a; /* Darker background */
+            border: 1px solid #374151; /* gray-700 */
+            color: #ffffff;
+        }
+        /* Strict Grey Focus: Removed the pink/blue focus tint */
+        input[type="email"]:focus, input[type="password"]:focus, input[type="text"]:focus {
+            border-color: #4b5563; /* gray-600 */
+            outline: none;
+            box-shadow: 0 0 0 1px #4b5563; 
+        }
+
+        /* Pure Grey Button Style */
+        .pure-grey-button {
+            background-color: rgba(255, 255, 255, 0.1); /* white/10 */
+            border: 1px solid rgba(255, 255, 255, 0.2); /* white/20 */
+            transition: all 0.2s ease;
+        }
+        .pure-grey-button:hover {
+            background-color: rgba(255, 255, 255, 0.2); /* white/20 */
+        }
+        .pure-grey-button:focus {
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+        }
+
+        /* --- AUTH MENU STYLES (Required for dropdown) --- */
+        .auth-menu-container {
+            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+            transform-origin: top right;
+        }
+        
+        .auth-menu-container.open {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        .auth-menu-container.closed {
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-10px) scale(0.95);
+        }
+        /* --- END AUTH MENU STYLES --- */
+    `;
+    head.appendChild(style);
+}
+
+
+// 2. AUTH MENU DROPDOWN LOGIC
 function setupAuthMenuLogic() {
     const toggleButton = document.getElementById('auth-toggle');
     const menuContainer = document.getElementById('auth-menu-container');
 
     if (toggleButton && menuContainer) {
-        // Toggle function
         const toggleMenu = () => {
             const isExpanded = toggleButton.getAttribute('aria-expanded') === 'true';
             toggleButton.setAttribute('aria-expanded', String(!isExpanded));
@@ -26,20 +113,17 @@ function setupAuthMenuLogic() {
 
         toggleButton.addEventListener('click', toggleMenu);
 
-        // Close menu when clicking outside
         document.addEventListener('click', (event) => {
             if (!menuContainer.contains(event.target) && !toggleButton.contains(event.target)) {
                 if (toggleButton.getAttribute('aria-expanded') === 'true') {
-                    toggleMenu(); // Use toggle to set state correctly
+                    toggleMenu();
                 }
             }
         });
     }
 }
 
-/**
- * Renders the Logged-Out Navbar Content (Profile Icon with Login/Sign Up dropdown).
- */
+// 3. NAVBAR RENDERING FUNCTIONS
 function renderLoggedOutNavbar() {
     return `
         <div class="relative">
@@ -67,11 +151,8 @@ function renderLoggedOutNavbar() {
     `;
 }
 
-/**
- * Renders the Logged-In Navbar Content (User Info with Settings/Logout dropdown).
- * @param {firebase.User} user - The current authenticated user object.
- */
 function renderLoggedInNavbar(user) {
+    // Default username if displayName is null, using the part of the email before @
     const username = user.displayName || user.email.split('@')[0];
     const email = user.email;
 
@@ -107,21 +188,17 @@ function renderLoggedInNavbar(user) {
     `;
 }
 
-/**
- * Main function to build and inject the navbar.
- */
+// 4. MAIN INJECTION FUNCTION
 function injectAuthNavbar() {
     const navbarContainer = document.getElementById('navbar-container');
     if (!navbarContainer) return;
 
-    // Check Firebase Auth state
+    // Wait for Firebase Auth to be ready
     firebase.auth().onAuthStateChanged((user) => {
         let authContent;
         if (user) {
-            // Logged In State
             authContent = renderLoggedInNavbar(user);
         } else {
-            // Logged Out State
             authContent = renderLoggedOutNavbar();
         }
 
@@ -139,7 +216,7 @@ function injectAuthNavbar() {
             </header>
         `;
 
-        // Setup the dropdown menu functionality
+        // Setup interactivity
         setupAuthMenuLogic();
 
         // Setup logout button listener if user is logged in
@@ -149,11 +226,11 @@ function injectAuthNavbar() {
                 logoutButton.addEventListener('click', async () => {
                     try {
                         await firebase.auth().signOut();
-                        // Redirect to home or login page after successful logout
-                        window.location.href = 'index.html'; 
+                        // Reload the page to transition back to the Logged Out state
+                        window.location.reload(); 
                     } catch (error) {
                         console.error("Logout failed:", error);
-                        alert("Logout failed. Please try again.");
+                        // Optional: Show error message on the screen
                     }
                 });
             }
@@ -161,5 +238,6 @@ function injectAuthNavbar() {
     });
 }
 
-// Attach the main function to the document load event
+// Execute the injection functions when the script is loaded
+injectHeadContent();
 document.addEventListener('DOMContentLoaded', injectAuthNavbar);
