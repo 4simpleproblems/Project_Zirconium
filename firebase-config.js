@@ -7,7 +7,7 @@
 // --- Firebase Configuration ---
 // IMPORTANT: Replace the placeholder values below with your actual Firebase project configuration.
 // You can find these details in your project's settings on the Firebase console.
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro",
   authDomain: "project-zirconium.firebaseapp.com",
   projectId: "project-zirconium",
