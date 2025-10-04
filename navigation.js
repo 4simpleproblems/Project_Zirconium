@@ -2,8 +2,7 @@
  * navigation.js
  * Renders the full-featured top navigation bar, including the scrolling page menu
  * and the user account menu with pinning functionality.
- * Assumes core dependencies (Tailwind, Font Awesome) are loaded in the host HTML file.
- * NOTE: This script is now initialized via the global function `initFullNavigation(auth)` 
+ * NOTE: This script is now initialized via the global function `window.initFullNavigation(auth)` 
  * called from the main <script type="module"> block.
  */
 
@@ -14,9 +13,8 @@ let ALL_PAGES = {}; // Will store page data from JSON
 
 // 1. INJECT TOPBAR-SPECIFIC STYLES
 function injectTopbarCSS() {
+    // ... (CSS injection code remains the same)
     const head = document.head;
-    
-    // Custom Styles (ONLY Topbar/Menu animation)
     const style = document.createElement('style');
     style.textContent = `
         /* --- AUTH MENU & PINNING STYLES --- */
@@ -54,27 +52,25 @@ function injectTopbarCSS() {
     head.appendChild(style);
 }
 
-// 2. DATA LOADING
+// 2. DATA LOADING (remains the same)
 async function loadPageData() {
     try {
-        // Corrected path to assume navigation is in a subdirectory (e.g., /js/)
-        const response = await fetch('../page-identification.json'); 
+        const response = await fetch('../page-identification.json');
         if (!response.ok) throw new Error('Failed to load page-identification.json');
         ALL_PAGES = await response.json();
     } catch (error) {
         console.error("Error loading page data:", error);
-        // Fallback to minimal data if loading fails
         ALL_PAGES = { "default": { "name": "Error", "icon": "fa-exclamation-triangle", "url": "#" } };
     }
 }
 
-// 3. PINNING LOGIC (CRUD)
+// 3. PINNING LOGIC (CRUD - remains the same)
 function getPinnedPages() {
     try {
         const pinned = JSON.parse(localStorage.getItem(PIN_STORAGE_KEY) || '[]');
         return pinned.slice(0, MAX_PINS);
     } catch {
-        return []; // Return empty array on error
+        return [];
     }
 }
 
@@ -90,10 +86,8 @@ function togglePin(pageId) {
     const existingIndex = pins.findIndex(p => p.id === pageId);
 
     if (existingIndex > -1) {
-        // Unpin
         pins.splice(existingIndex, 1);
     } else if (pins.length < MAX_PINS) {
-        // Pin (only if not already at max)
         pins.push({
             id: pageId,
             name: pageData.name,
@@ -107,16 +101,12 @@ function togglePin(pageId) {
 }
 
 
-// 4. RENDERING FUNCTIONS
-
-// Finds the current page ID based on the URL and the page data map
+// 4. RENDERING FUNCTIONS (remains the same)
 function getCurrentPageId() {
     const path = window.location.pathname;
-    // Handle the special case for the root index.html
     if (path.endsWith('index.html')) return 'index'; 
     
     for (const id in ALL_PAGES) {
-        // Check if the current path matches the page's URL suffix
         if (path.endsWith(ALL_PAGES[id].url.split('/').pop())) {
             return id;
         }
@@ -129,11 +119,8 @@ function renderPageMenu(currentPageId) {
         const page = ALL_PAGES[id];
         const isActive = id === currentPageId;
         
-        // Corrected URL logic for internal pages, assuming standard structure
-        let url = page.url;
-        if (currentPageId && currentPageId !== 'index' && !url.startsWith('.')) {
-             // If we are on a page like /logged-in/dashboard.html, adjust link to other internal sections
-             url = '../' + url;
+        if (id === 'games' && window.location.pathname.includes('/logged-in/')) {
+            page.url = '../GAMES/index.html'; 
         }
 
         const activeClass = isActive 
@@ -141,7 +128,7 @@ function renderPageMenu(currentPageId) {
             : 'text-gray-400 hover:bg-gray-900 border-gray-900';
 
         return `
-            <a href="${url}" 
+            <a href="${page.url}" 
                class="flex-shrink-0 px-4 py-2 mr-2 rounded-lg text-sm font-medium border-b-2 transition-colors ${activeClass}">
                 <i class="fas ${page.icon} mr-1"></i> ${page.name}
             </a>
@@ -155,7 +142,6 @@ function renderPageMenu(currentPageId) {
     `;
 }
 
-// Renders the three pin slots in the account menu
 function renderPinButtons(currentPageId) {
     const pins = getPinnedPages();
     const pinButtons = [];
@@ -166,22 +152,18 @@ function renderPinButtons(currentPageId) {
         let buttonContent, buttonClasses, buttonAction, buttonTitle;
 
         if (pin) {
-            // Pinned button content
             buttonContent = `<i class="fas ${pin.icon} text-white"></i>`;
             buttonClasses = 'bg-gray-700/50 border-gray-600';
             buttonAction = `data-pin-action="unpin" data-page-id="${pin.id}"`;
             buttonTitle = `Click to UNPIN '${pin.name}'`;
         } else {
-            // Empty slot or Pin current page
             if (currentPageId && !currentIsPinned) {
-                 // Empty slot, but can pin the current page
                 const currentPage = ALL_PAGES[currentPageId];
                 buttonContent = `<i class="fas ${currentPage.icon} text-blue-400"></i>`;
                 buttonClasses = 'bg-gray-900/50 border-gray-700 cursor-pointer';
                 buttonAction = `data-pin-action="pin" data-page-id="${currentPageId}"`;
                 buttonTitle = `Click to PIN this page (${currentPage.name})`;
             } else {
-                 // Truly empty slot or current page is already pinned
                 buttonContent = `<i class="fas fa-thumbtack text-gray-600"></i>`;
                 buttonClasses = 'bg-gray-900/50 border-gray-800 cursor-default';
                 buttonAction = '';
@@ -209,7 +191,6 @@ function renderLoggedInNavbar(user) {
     const email = user.email;
     const currentPageId = getCurrentPageId();
 
-    // Determine the profile picture content for the button
     let profileContent;
     if (user.photoURL) {
         profileContent = `<img src="${user.photoURL}" alt="${username} Profile" class="w-full h-full object-cover rounded-full" />`;
@@ -256,7 +237,6 @@ function renderLoggedInNavbar(user) {
 }
 
 function renderLoggedOutNavbar() {
-    // Standard Logged Out State
     return `
         <div class="relative">
             <button 
@@ -284,7 +264,7 @@ function renderLoggedOutNavbar() {
 }
 
 // 5. MAIN INJECTION & EVENT SETUP
-function setupPinningEvents(auth) {
+function setupPinningEvents(auth) { // Now accepts auth
     const navbarContainer = document.getElementById('navbar-container');
     if (!navbarContainer) return;
 
@@ -297,7 +277,7 @@ function setupPinningEvents(auth) {
             if (action === 'pin' || action === 'unpin') {
                 togglePin(pageId);
                 // Re-render the navbar to update the pin buttons immediately
-                injectAuthNavbar(auth, true); 
+                injectAuthNavbar(auth, true); // Pass auth to re-render
             }
         }
     });
@@ -334,6 +314,7 @@ function setupAuthMenuLogic() {
 }
 
 // Function that is called multiple times (for updates)
+// MODIFIED: Accepts the auth object
 function injectAuthNavbar(auth, isUpdate = false) {
     const navbarContainer = document.getElementById('navbar-container');
     if (!navbarContainer) return;
@@ -362,7 +343,7 @@ function injectAuthNavbar(auth, isUpdate = false) {
     const currentPageId = getCurrentPageId();
 
 
-    // Wait for Firebase Auth and ALL_PAGES data to be ready
+    // MODIFIED: Use the passed auth object
     auth.onAuthStateChanged((user) => {
         if (!authControlsContainer || !pageMenuContainer) return;
         
@@ -370,7 +351,6 @@ function injectAuthNavbar(auth, isUpdate = false) {
         if (user) {
             authControlsContainer.innerHTML = renderLoggedInNavbar(user);
         } else {
-            // For logged-out users, we only show the main controls, not pins
             authControlsContainer.innerHTML = renderLoggedOutNavbar();
         }
 
@@ -386,9 +366,8 @@ function injectAuthNavbar(auth, isUpdate = false) {
             if (logoutButton) {
                 logoutButton.addEventListener('click', async () => {
                     try {
-                        // FIX: Use the method on the passed auth object
-                        await auth.signOut(); 
-                        // Redirect to the login page after logout
+                        // MODIFIED: Use the passed auth object's signOut method
+                        await auth.signOut();
                         window.location.href = 'login.html'; 
                     } catch (error) {
                         console.error("Logout failed:", error);
@@ -399,13 +378,13 @@ function injectAuthNavbar(auth, isUpdate = false) {
     });
 }
 
-// 6. INITIALIZATION: The function to be called from the main script
+// 6. INITIALIZATION: Expose a global function for the module script to call
 window.initFullNavigation = async (auth) => {
-    // Only proceed after DOM content is ready
+    // Ensure DOM is ready before trying to inject elements
     document.addEventListener('DOMContentLoaded', async () => {
         injectTopbarCSS();
         await loadPageData();
-        injectAuthNavbar(auth); // Pass auth object
-        setupPinningEvents(auth); // Pass auth object
+        injectAuthNavbar(auth); // Pass auth
+        setupPinningEvents(auth); // Pass auth
     });
 };
