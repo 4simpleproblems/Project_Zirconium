@@ -1,75 +1,17 @@
 /**
  * navigation-mini.js
- * Renders the full head/header of the document dynamically based on authentication state.
- * Assumes Firebase Auth is initialized and available globally.
+ * Renders the full header dynamically based on authentication state.
+ * Contains ONLY the CSS required for the dynamic topbar functionality.
+ * Assumes core Tailwind, Fonts, and Form CSS are loaded in the host HTML file.
  */
 
-// 1. INJECT REQUIRED STYLES AND LINKS INTO THE HEAD
-function injectHeadContent() {
+// 1. INJECT ONLY TOPBAR-SPECIFIC STYLES INTO THE HEAD
+function injectTopbarCSS() {
     const head = document.head;
-
-    // Tailwind CSS
-    const tailwindScript = document.createElement('script');
-    tailwindScript.src = "https://cdn.tailwindcss.com";
-    head.appendChild(tailwindScript);
-
-    // Font Awesome (Icons)
-    const faLink = document.createElement('link');
-    faLink.rel = "stylesheet";
-    faLink.href = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css";
-    head.appendChild(faLink);
-
-    // Geist Font
-    const geistLink = document.createElement('link');
-    geistLink.rel = "stylesheet";
-    geistLink.href = "https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap";
-    head.appendChild(geistLink);
-
-    // Custom Styles (Dark theme, Navbar, and Form styling)
+    
+    // Custom Styles (ONLY Topbar/Menu animation)
     const style = document.createElement('style');
     style.textContent = `
-        /* Custom CSS to mimic a modern, dark theme and use the Geist font */
-        :root {
-            --geist-foreground: 255, 255, 255;
-            --geist-background: 0, 0, 0;
-            --geist-accent-7: 156, 163, 175; /* gray-400 */
-        }
-        
-        .dark {
-            color-scheme: dark;
-        }
-
-        body {
-            /* Applying Geist font */
-            font-family: 'Geist', sans-serif;
-        }
-        
-        /* Input Styling */
-        input[type="email"], input[type="password"], input[type="text"] {
-            background-color: #1a1a1a; /* Darker background */
-            border: 1px solid #374151; /* gray-700 */
-            color: #ffffff;
-        }
-        /* Strict Grey Focus: Removed the pink/blue focus tint */
-        input[type="email"]:focus, input[type="password"]:focus, input[type="text"]:focus {
-            border-color: #4b5563; /* gray-600 */
-            outline: none;
-            box-shadow: 0 0 0 1px #4b5563; 
-        }
-
-        /* Pure Grey Button Style */
-        .pure-grey-button {
-            background-color: rgba(255, 255, 255, 0.1); /* white/10 */
-            border: 1px solid rgba(255, 255, 255, 0.2); /* white/20 */
-            transition: all 0.2s ease;
-        }
-        .pure-grey-button:hover {
-            background-color: rgba(255, 255, 255, 0.2); /* white/20 */
-        }
-        .pure-grey-button:focus {
-            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
-        }
-
         /* --- AUTH MENU STYLES (Required for dropdown) --- */
         .auth-menu-container {
             transition: transform 0.3s ease-out, opacity 0.3s ease-out;
@@ -125,6 +67,7 @@ function setupAuthMenuLogic() {
 
 // 3. NAVBAR RENDERING FUNCTIONS
 function renderLoggedOutNavbar() {
+    // Note: All Tailwind classes are retained here for the HTML structure
     return `
         <div class="relative">
             <button 
@@ -152,7 +95,6 @@ function renderLoggedOutNavbar() {
 }
 
 function renderLoggedInNavbar(user) {
-    // Default username if displayName is null, using the part of the email before @
     const username = user.displayName || user.email.split('@')[0];
     const email = user.email;
 
@@ -226,11 +168,9 @@ function injectAuthNavbar() {
                 logoutButton.addEventListener('click', async () => {
                     try {
                         await firebase.auth().signOut();
-                        // Reload the page to transition back to the Logged Out state
                         window.location.reload(); 
                     } catch (error) {
                         console.error("Logout failed:", error);
-                        // Optional: Show error message on the screen
                     }
                 });
             }
@@ -239,5 +179,5 @@ function injectAuthNavbar() {
 }
 
 // Execute the injection functions when the script is loaded
-injectHeadContent();
+injectTopbarCSS();
 document.addEventListener('DOMContentLoaded', injectAuthNavbar);
