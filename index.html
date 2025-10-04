@@ -38,8 +38,6 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-        
-        /* NOTE: .auth-menu-container styles removed from here. They are now injected by navigation-mini.js. */
     </style>
 </head>
 <body class="bg-black text-white min-h-screen">
@@ -162,11 +160,33 @@
         </div>
     </footer>
 
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
-    <script src="../firebase-config.js"></script>
-
     <script src="../navigation-mini.js"></script>
+    
+    <script type="module">
+        // Access the global navigation function you created
+        const initMiniNavigation = window.initMiniNavigation;
+        
+        // Import your local configuration (firebase-config.js is not loaded with a <script> tag)
+        import { firebaseConfig } from '../firebase-config.js';
+
+        // Import the new Firebase Modular SDK
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        // import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"; // Uncomment if you need firestore
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        // const db = getFirestore(app); // Uncomment if you need firestore
+
+        // Call the Navigation Bar Initialization
+        if (initMiniNavigation) {
+            initMiniNavigation(auth);
+        }
+
+        // --- Your Page-Specific Logic Goes Here ---
+        // You can add your custom index.html logic here if needed.
+        
+    </script>
 </body>
 </html>
