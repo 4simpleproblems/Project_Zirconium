@@ -61,15 +61,16 @@
         .btn-primary-action {
             width: 100%;
             padding: 14px;
-            border: 1px solid #7c3aed; /* Violet-600 for border */
-            border-radius: 12px; /* rounded-xl */
+            /* Changed border to match the index.html yellow button: solid border from a darker shade */
+            border: 1px solid #7c3aed; /* Violet-600 */
+            border-radius: 12px; /* Corrected to rounded-xl (12px) to match input field request */
             font-size: 1.1em;
             cursor: pointer;
-            /* Updated font weight to 500 (medium) to match 'Start Playing Now' */
+            /* Font weight to match index.html 'Start Playing Now' button */
             font-weight: 500; 
             
-            /* Background and text colors based on index.html's Games section button */
-            color: #d8b4fe; /* text-violet-300 - Light text for bright button */
+            /* Background and text colors to be purple-tinted and vibrant */
+            color: #d8b4fe; /* text-violet-300 */
             background-color: #5b21b6; /* bg-violet-700/30 */
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1); /* default shadow */
             
@@ -79,7 +80,8 @@
         .btn-primary-action:hover {
             background-color: #6d28d9; /* bg-violet-600/50 */
             transform: translateY(-1px);
-            box-shadow: 0 4px 6px -1px rgba(139, 92, 246, 0.4), 0 2px 4px -2px rgba(139, 92, 246, 0.4); /* Custom lift shadow */
+            /* Custom lift shadow matching the interactive feel */
+            box-shadow: 0 4px 6px -1px rgba(139, 92, 246, 0.4), 0 2px 4px -2px rgba(139, 92, 246, 0.4); 
             border-color: #8b5cf6; /* Violet-500 hover border */
         }
         
@@ -91,12 +93,12 @@
             justify-content: center;
             max-width: 350px;
             padding: 12px 14px;
-            /* Matching 'Get Started Instantly' button style */
+            /* Matching 'Get Started Instantly' button style (subtle border, white text) */
             border: 1px solid rgba(255, 255, 255, 0.2); /* ring-white/20 */
-            border-radius: 12px; /* rounded-xl */
+            border-radius: 12px; /* Corrected to rounded-xl (12px) */
             background-color: rgba(255, 255, 255, 0.1); /* bg-white/10 */
             color: #fff;
-            /* Updated font weight to 400 (normal) to match 'Get Started Instantly' */
+            /* Font weight to match index.html 'Get Started Instantly' button */
             font-weight: 400; 
             font-size: 1.0em;
             cursor: pointer;
@@ -114,8 +116,7 @@
             margin-right: 12px;
         }
 
-
-        /* UPDATED STYLES FOR FULL-HEIGHT SPLIT CONTAINER */
+        /* UPDATED STYLES FOR FULL-HEIGHT SPLIT CONTAINER (unchanged) */
         .auth-split-container {
             display: flex;
             flex-wrap: wrap;
@@ -154,7 +155,7 @@
             .auth-col.left-col { border-right: none; border-bottom: 1px solid #374151; }
         }
         
-        /* Auth Menu Styling */
+        /* Auth Menu Styling (unchanged) */
         .auth-menu-container {
             transition: transform 0.3s ease-out, opacity 0.3s ease-out;
             transform-origin: top right;
@@ -171,28 +172,29 @@
             transform: translateY(-10px) scale(0.95);
         }
         
-        /* Make text thinner by default in the main content area */
+        /* Font Weight Overrides to match the index.html Geist Font usage */
         .auth-col * {
-            font-weight: 300;
+            font-weight: 400; /* Thinner text by default */
         }
-        /* Override headings and important elements to be slightly bolder (Semibold: 600) or Medium (500) */
+        /* Override headings and important elements to be slightly bolder */
         .auth-col h1 { font-weight: 600; }
         .auth-col h2 { font-weight: 500; }
         .auth-col label { font-weight: 500; }
         .auth-col .font-bold { font-weight: 600; }
 
-        /* Input Field Styling Update: Change border-radius from 8px to 12px (rounded-xl) */
+        /* Input Field Styling: Added .auth-input class for consistent styling */
         .auth-input {
+            /* Input fields now share the 12px border radius of the purple button */
             border-radius: 12px; 
-            /* Kept other styles from the original input */
             width: 100%; 
-            padding: 12px 16px; /* slightly increased padding for larger rounded corners */
+            padding: 12px 16px;
             border: 1px solid #374151; /* gray-700 */
             background-color: #1f2937; /* gray-800 or similar dark color */
             color: #fff;
             placeholder-color: #9ca3af; /* gray-400 */
             transition: border-color 0.2s, box-shadow 0.2s;
             outline: none;
+            /* Font thickness is thinner (300) to match the overall thin text in index.html */
             font-weight: 300;
         }
         
