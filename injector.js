@@ -24,8 +24,8 @@
             { src: 'firebase-config.js' },
             { src: 'ban-enforcer.js' },
             { src: 'panic-key.js' },
-            { src: 'url-changer.js' }
-            { src: 'navbar-loading.js' }
+            { src: 'url-tab-title-changer.js' },
+            { src: 'navigation.js' }
       
             ]
     };
