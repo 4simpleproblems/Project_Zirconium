@@ -2,7 +2,7 @@
  * navigation-mini.js
  * Renders the full header dynamically based on authentication state.
  * Contains ONLY the CSS required for the dynamic topbar functionality.
- * NOTE: This script is now initialized via the global function `window.initMiniNavigation(auth, db)` 
+ * NOTE: This script is now initialized via the global function `window.initMiniNavigation(auth, db, doc, getDoc)` 
  * called from the main <script type="module"> block.
  */
 
@@ -180,16 +180,13 @@ function renderLoggedInNavbar(user) {
 }
 
 // 4. MAIN INJECTION FUNCTION
-// MODIFIED: Accepts the auth and db objects
-async function injectAuthNavbar(auth, db) {
+// MODIFIED: Accepts the auth, db, doc, and getDoc functions for safe module usage
+async function injectAuthNavbar(auth, db, docFn, getDocFn) {
     const navbarContainer = document.getElementById('navbar-container');
     if (!navbarContainer) return;
 
-    // Use global functions for Firestore (assuming they are loaded in the HTML file)
-    // NOTE: This relies on 'doc' and 'getDoc' being accessible in the execution environment
-    const docFn = typeof doc !== 'undefined' ? doc : null;
-    const getDocFn = typeof getDoc !== 'undefined' ? getDoc : null;
-
+    // The Firestore functions (docFn, getDocFn) are now passed directly.
+    
     auth.onAuthStateChanged(async (user) => {
         let authContent;
         
@@ -197,7 +194,7 @@ async function injectAuthNavbar(auth, db) {
             let userData = null;
 
             // Fetch user data from Firestore if `db` and required functions are available
-            if (db && docFn && getDocFn) {
+            if (db && docFn && getDocFn && user.uid) { 
                 try {
                     const userDocRef = docFn(db, 'users', user.uid);
                     const userDocSnap = await getDocFn(userDocRef);
@@ -210,8 +207,8 @@ async function injectAuthNavbar(auth, db) {
                     console.error("Error fetching user data from Firestore:", e);
                 }
             } else if (user && db) {
-                 // Warn if Firestore functions are missing but db object is present
-                 console.warn("Firestore functions (doc, getDoc) are not available. Ensure they are globally imported in your main HTML script.");
+                 // Warning updated to reflect the new calling pattern
+                 console.warn("Could not fetch user data. Check if Firestore functions (doc, getDoc) were passed to initMiniNavigation.");
             }
 
             // Combine Firebase Auth and Firestore data
@@ -260,9 +257,9 @@ async function injectAuthNavbar(auth, db) {
 }
 
 // Execute the injection functions when the script is loaded
-// MODIFIED: Accepts the auth and db objects
-window.initMiniNavigation = (auth, db) => {
+// MODIFIED: Accepts the auth, db, and required Firestore utility functions
+window.initMiniNavigation = (auth, db, docFn, getDocFn) => {
     injectTopbarCSS();
     // Only proceed after DOM content is ready
-    document.addEventListener('DOMContentLoaded', () => injectAuthNavbar(auth, db));
+    document.addEventListener('DOMContentLoaded', () => injectAuthNavbar(auth, db, docFn, getDocFn));
 };
