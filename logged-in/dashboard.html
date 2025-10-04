@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4SP - Dashboard</title>
+    <meta name="description" content="A central hub for all 4simpleproblems tools and features.">
+    
+    <!-- CORE PAGE CSS & FONTS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        /* Custom CSS to mimic a modern, dark theme and use the Geist font */
+        :root {
+            --geist-foreground: 255, 255, 255;
+            --geist-background: 0, 0, 0;
+            --geist-accent-7: 156, 163, 175; /* gray-400 */
+        }
+        
+        .dark {
+            color-scheme: dark;
+        }
+
+        body {
+            /* Applying Geist font */
+            font-family: 'Geist', sans-serif;
+        }
+        
+        /* Ensure the main content pushes past the fixed/sticky header */
+        main {
+            padding-top: 2rem; /* Initial padding, header may cover more */
+        }
+        
+        /* Gradient Text */
+        .gradient-text {
+            background-image: linear-gradient(90deg, #0070f3, #f81ce5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+    </style>
+</head>
+<body class="bg-black text-white min-h-screen flex flex-col">
+
+    <!-- HEADER: Dynamic Navbar Placeholder. HTML is injected by navigation.js -->
+    <!-- NOTE: This page needs an ID for the pinning feature to recognize it, 
+         even though it's not in the JSON. The current URL "dashboard.html" 
+         will not match any page in the navigation menu, so the pin buttons 
+         will default to empty/generic. -->
+    <div id="navbar-container"></div>
+    <!-- END HEADER -->
+
+    <main class="flex-grow mx-auto max-w-6xl px-4 py-8">
+        <div class="text-center py-10 bg-gray-900/50 p-8 rounded-2xl border border-gray-800">
+            <h1 class="text-5xl font-bold mb-3">
+                Welcome to your <span class="gradient-text">Dashboard</span>!
+            </h1>
+            <p class="text-xl text-gray-400 mb-8">
+                This page is a test environment for the new multi-tab navigation system.
+            </p>
+            
+            <div class="space-y-4 max-w-lg mx-auto p-6 bg-gray-900 rounded-xl border border-gray-700 text-left">
+                <h2 class="text-2xl font-semibold mb-3">Navigation Test Notes</h2>
+                <p class="text-gray-300">
+                    <i class="fas fa-check-circle text-green-400 mr-2"></i> The horizontal scrolling menu should be visible above this content.
+                </p>
+                <p class="text-gray-300">
+                    <i class="fas fa-check-circle text-green-400 mr-2"></i> All menu items should be clickable.
+                </p>
+                <p class="text-gray-300">
+                    <i class="fas fa-check-circle text-green-400 mr-2"></i> When logged in, click your profile icon to see your account menu.
+                </p>
+                <p class="text-gray-300">
+                    <i class="fas fa-check-circle text-green-400 mr-2"></i> Hover over the three grey buttons next to your profile picture to pin/unpin pages.
+                </p>
+                <div class="border-t border-gray-800 pt-3 mt-4">
+                    <p class="text-sm text-gray-500">
+                        Since "dashboard.html" is not defined in `page-identification.json`, the pin buttons should not automatically highlight an active tab. You can, however, modify `navigation.js` to add this page ID if desired.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="border-t border-gray-900 py-6 mt-auto">
+        <div class="mx-auto max-w-7xl px-4 text-center text-gray-500 text-sm">
+            &copy; 2024 4simpleproblems (4SP). Built for students.
+        </div>
+    </footer>
+    
+    <!-- FIREBASE DEPENDENCIES (Needed by navigation.js for Auth state) -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+    <!-- Placeholder for your actual config file path -->
+    <script src="../firebase-config.js"></script> 
+
+    <!-- NAVIGATION SCRIPT (Loads the full-featured navbar) -->
+    <!-- NOTE: We link to navigation.js (the new file) -->
+    <script src="../navigation.js"></script>
+    
+</body>
+</html>
