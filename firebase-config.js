@@ -17,19 +17,8 @@ const firebaseConfig = {
   measurementId: "G-1D4F692C1Q"
 };
 
-// --- Firebase Initialization ---
-// We'll check if Firebase has already been initialized to prevent errors.
-let app;
-if (!firebase.apps.length) {
-  app = firebase.initializeApp(firebaseConfig);
-} else {
-  app = firebase.app(); // Get the already initialized app
-}
-
-// --- Initialize and export services ---
-// These variables will be globally available to other scripts loaded after this one.
-const auth = firebase.auth();
-const db = firebase.firestore();
-
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 // Optional: Log to the console for debugging to confirm successful initialization.
 console.log("Firebase initialized successfully.");
