@@ -1,26 +1,49 @@
-import { firebaseConfig } from '../firebase-config.js'; 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
-import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+import { getAuth, onAuthStateChanged, signOut, signInWithCustomToken, signInAnonymously } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
 import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
 /**
  * navigation-mini.js
  * Renders the full header dynamically based on the real Firebase authentication state.
- * This script is now self-executing and handles all its Firebase dependencies internally
- * by importing the necessary libraries and the external firebase-config.js.
- * * NOTE: For this script to work, the HTML file loading it MUST use <script type="module" src=".../navigation-mini.js">.
+ * This script is now self-executing and handles all its Firebase dependencies internally.
+ * It uses environment-provided global variables for configuration and authentication,
+ * which is necessary for proper loading within the Canvas environment.
  */
 
 // --- 1. CONFIGURATION & INITIALIZATION ---
-// These are initialized once when the module loads
-let app, auth, db;
+// Get config and token from global environment variables (Canvas requirement)
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-try {
-    app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    db = getFirestore(app);
-} catch (error) {
-    console.error("Firebase initialization failed. Ensure firebaseConfig is correct and dependencies are loaded.", error);
+let app, auth, db;
+let isFirebaseReady = false;
+
+async function initializeFirebase() {
+    if (Object.keys(firebaseConfig).length === 0) {
+        console.error("Firebase configuration is missing. Cannot initialize Firebase.");
+        return;
+    }
+
+    try {
+        app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+
+        // Sign in using the provided token or anonymously
+        if (initialAuthToken) {
+            await signInWithCustomToken(auth, initialAuthToken);
+        } else {
+            await signInAnonymously(auth);
+        }
+        
+        isFirebaseReady = true;
+        console.log("Firebase initialized and user signed in.");
+        
+        // After successful initialization and sign-in, run the navbar injection logic
+        injectAuthNavbar();
+    } catch (error) {
+        console.error("Firebase initialization or sign-in failed:", error);
+    }
 }
 
 // --- 2. INJECT TOPBAR-SPECIFIC STYLES INTO THE HEAD ---
@@ -204,9 +227,10 @@ function renderLoggedInNavbar(user) {
 }
 
 // --- 5. MAIN INJECTION FUNCTION (Handles Auth State) ---
+// This function is now called only AFTER Firebase initialization is complete
 async function injectAuthNavbar() {
-    if (!auth || !db) {
-        console.error("Firebase services were not initialized. Cannot run navigation logic.");
+    if (!isFirebaseReady) {
+        console.warn("Attempted to run injectAuthNavbar before Firebase was ready.");
         return;
     }
     
@@ -270,7 +294,7 @@ async function injectAuthNavbar() {
                 logoutButton.addEventListener('click', async () => {
                     try {
                         await signOut(auth); // Use the imported signOut function
-                        // Redirect to the login page
+                        // Redirect to the login page (relative path from the page using this script)
                         window.location.href = 'login.html'; 
                     } catch (error) {
                         console.error("Logout failed:", error);
@@ -284,5 +308,5 @@ async function injectAuthNavbar() {
 // --- 6. SELF-EXECUTION ENTRY POINT ---
 // 1. Inject CSS immediately
 injectTopbarCSS(); 
-// 2. Start the main logic once the DOM is ready
-document.addEventListener('DOMContentLoaded', injectAuthNavbar);
+// 2. Start the Firebase initialization process once the DOM is ready
+document.addEventListener('DOMContentLoaded', initializeFirebase);
