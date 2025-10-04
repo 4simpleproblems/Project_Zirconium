@@ -38,63 +38,13 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-
-        /* Auth Button and Menu Styling */
-        .auth-menu-container {
-            /* This is where the magic happens for the morph effect visualization */
-            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
-            transform-origin: top right;
-        }
         
-        .auth-menu-container.open {
-            opacity: 1;
-            /* Simple scale/translate to give it a smooth drop-down feel */
-            transform: translateY(0) scale(1);
-        }
-
-        .auth-menu-container.closed {
-            opacity: 0;
-            pointer-events: none;
-            transform: translateY(-10px) scale(0.95);
-        }
+        /* NOTE: .auth-menu-container styles removed from here. They are now injected by navigation-mini.js. */
     </style>
 </head>
 <body class="bg-black text-white min-h-screen">
 
-    <header class="sticky top-0 z-50 backdrop-blur-md bg-black/80 border-b border-gray-900">
-        <nav class="h-16 flex items-center justify-between px-4">
-            <a href="/" class="flex items-center space-x-2">
-                <picture>
-                    <source srcset="../images/logo.png" media="(prefers-color-scheme: dark)">
-                    <img src="../images/logo.png" alt="4simpleproblems Logo" class="h-8 w-auto">
-                </picture>
-            </a>
-            
-            <div class="relative">
-                <button 
-                    id="auth-toggle"
-                    aria-expanded="false"
-                    aria-controls="auth-menu-container"
-                    class="w-8 h-8 rounded-full border border-white flex items-center justify-center bg-black/50 hover:bg-gray-900/50 transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-white"
-                >
-                    <i class="fas fa-user text-white text-base"></i>
-                </button>
-                
-                <div 
-                    id="auth-menu-container" 
-                    class="auth-menu-container closed absolute right-0 top-10 w-40 p-2 rounded-xl bg-black/70 backdrop-blur-lg border border-gray-800 shadow-xl"
-                >
-                    <a href="login.html" class="block px-3 py-2 text-sm font-normal text-white hover:bg-gray-800 rounded-lg transition-colors">
-                        Login
-                    </a>
-                    <a href="signup.html" class="block px-3 py-2 text-sm font-normal text-white hover:bg-gray-800 rounded-lg transition-colors mt-1">
-                        Sign Up
-                    </a>
-                </div>
-            </div>
-        </nav>
-    </header>
-
+    <div id="navbar-container"></div>
     <main>
         <section class="text-center py-12 sm:py-20 border-b border-gray-900">
             <div class="mx-auto max-w-4xl px-4">
@@ -212,41 +162,11 @@
         </div>
     </footer>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const toggleButton = document.getElementById('auth-toggle');
-            const menuContainer = document.getElementById('auth-menu-container');
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+    <script src="../firebase-config.js"></script>
 
-            toggleButton.addEventListener('click', () => {
-                const isExpanded = toggleButton.getAttribute('aria-expanded') === 'true';
-                
-                toggleButton.setAttribute('aria-expanded', String(!isExpanded));
-                
-                if (isExpanded) {
-                    menuContainer.classList.remove('open');
-                    menuContainer.classList.add('closed');
-                } else {
-                    menuContainer.classList.remove('closed');
-                    menuContainer.classList.add('open');
-                }
-            });
-
-            document.addEventListener('click', (event) => {
-                if (!menuContainer.contains(event.target) && !toggleButton.contains(event.target)) {
-                    if (toggleButton.getAttribute('aria-expanded') === 'true') {
-                        toggleButton.setAttribute('aria-expanded', 'false');
-                        menuContainer.classList.remove('open');
-                        menuContainer.classList.add('closed');
-                    }
-                }
-            });
-        });
-
-        function initializeFirebase() {
-             console.log("Firebase initialization placeholder...");
-        }
-
-        initializeFirebase();
-    </script>
+    <script src="../navigation-mini.js"></script>
 </body>
 </html>
