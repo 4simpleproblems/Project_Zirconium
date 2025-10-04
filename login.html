@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - Login</title>
+    <title>4SP - LOGIN</title>
     <meta name="description" content="Log in to 4simpleproblems (4SP), the essential student toolkit.">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -259,7 +259,7 @@
                             creationDate: firebase.firestore.FieldValue.serverTimestamp(),
                         });
                     }
-                    window.location.href = '../logged-in/soundboard.html';
+                    window.location.href = '../logged-in/dashboard.html';
                 } catch (error) {
                     console.error("Error with user data initialization:", error);
                     showStatus("An error occurred with user data. Please try again.");
@@ -360,7 +360,7 @@
             // --- Redirect if already logged in ---
             auth.onAuthStateChanged(user => {
                 if (user && window.location.pathname.endsWith('login.html')) {
-                    window.location.href = '../logged-in/soundboard.html';
+                    window.location.href = '../logged-in/dashboard.html';
                 }
             });
         });
