@@ -104,15 +104,18 @@
                     <h2 class="text-xl font-medium mb-4 text-center lg:text-left text-gray-300">Quick Access</h2>
                     <div class="space-y-3 mb-4">
                         <button id="google-login" class="w-full flex items-center justify-center p-3 border border-gray-700 rounded-xl text-white hover:bg-gray-800 transition duration-200">
-                            <img src="../images/google-icon.png" alt="Google Logo" class="w-5 h-5 mr-3">
+                            <!-- Placeholder image URL, replace with your actual Google icon path -->
+                            <img src="https://placehold.co/20x20/ffffff/000000?text=G" alt="Google Logo" class="w-5 h-5 mr-3 rounded-full">
                             Log in with Google
                         </button>
                         <button id="github-login" class="w-full flex items-center justify-center p-3 border border-gray-700 rounded-xl text-white hover:bg-gray-800 transition duration-200">
-                            <img src="../images/github-mark-white.png" alt="GitHub Logo" class="w-5 h-5 mr-3">
+                             <!-- Placeholder image URL, replace with your actual GitHub icon path -->
+                            <img src="https://placehold.co/20x20/000000/ffffff?text=GH" alt="GitHub Logo" class="w-5 h-5 mr-3">
                             Log in with GitHub
                         </button>
                         <button id="microsoft-login" class="w-full flex items-center justify-center p-3 border border-gray-700 rounded-xl text-white hover:bg-gray-800 transition duration-200">
-                            <img src="../images/microsoft.png" alt="Microsoft Logo" class="w-5 h-5 mr-3">
+                            <!-- Placeholder image URL, replace with your actual Microsoft icon path -->
+                            <img src="https://placehold.co/20x20/0078D4/ffffff?text=MS" alt="Microsoft Logo" class="w-5 h-5 mr-3">
                             Log in with Microsoft
                         </button>
                     </div>
@@ -193,177 +196,238 @@
         </div>
     </footer>
     
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
-    <script src="../firebase-config.js"></script>
+    <script src="navigation-mini.js"></script>
 
-    <script src="../navigation-mini.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, 
+            signInWithEmailAndPassword, sendPasswordResetEmail, signInWithPopup, 
+            GoogleAuthProvider, GithubAuthProvider, OAuthProvider 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, doc, getDoc, setDoc, serverTimestamp, setLogLevel 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            
-            // Wait for Firebase to be ready
-            if (typeof firebase === 'undefined' || !firebase.auth) {
-                console.error("Firebase Auth is not ready. Check your firebase-config.js.");
-                return;
-            }
+        // --- GLOBAL SETUP (Canvas Mandated) ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
 
-            const auth = firebase.auth();
-            const db = firebase.firestore();
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        setLogLevel('debug');
 
-            // UI elements
-            const emailLoginForm = document.getElementById('email-login-form');
-            const emailInput = document.getElementById('email');
-            const passwordInput = document.getElementById('password');
-            const statusMessage = document.getElementById('status-message');
-            const googleLoginBtn = document.getElementById('google-login');
-            const githubLoginBtn = document.getElementById('github-login');
-            const microsoftLoginBtn = document.getElementById('microsoft-login');
-            const forgotPasswordToggle = document.getElementById('forgot-password-toggle');
-            const forgotPasswordArea = document.getElementById('forgot-password-area');
-            const forgotPasswordForm = document.getElementById('forgot-password-form');
-            const resetEmailInput = document.getElementById('reset-email');
-            const loginButton = document.getElementById('login-button');
+        let userId = null;
+        let isAuthReady = false;
 
-            // Utility functions
-            function showStatus(message, type = 'error') {
-                statusMessage.textContent = message;
-                statusMessage.classList.remove('hidden', 'bg-red-900/50', 'text-red-300', 'bg-green-900/50', 'text-green-300');
-                if (type === 'success') {
-                    statusMessage.classList.add('bg-green-900/50', 'text-green-300');
-                } else {
-                    statusMessage.classList.add('bg-red-900/50', 'text-red-300');
-                }
-            }
-            function hideStatus() {
-                 statusMessage.classList.add('hidden');
-            }
-            function toggleLoginButton(isDisabled) {
-                loginButton.disabled = isDisabled;
-                loginButton.textContent = isDisabled ? 'Logging In...' : 'Log In';
-            }
-
-            /**
-             * Checks if a user's Firestore document exists and creates it if not.
-             */
-            async function checkAndCreateUserDataset(user, provider) {
-                const userRef = db.collection('users').doc(user.uid);
-                try {
-                    const doc = await userRef.get();
-                    if (!doc.exists) {
-                        await userRef.set({
-                            username: user.displayName || user.email.split('@')[0],
-                            email: user.email,
-                            authenticationMethod: provider,
-                            creationDate: firebase.firestore.FieldValue.serverTimestamp(),
-                        });
+        // Initial Authentication and Listener
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                // If a user is already signed in (from a previous session or token), redirect them.
+                if (window.location.pathname.endsWith('login.html')) {
+                    // Check if email is verified (only relevant for email/password users)
+                    if (user.emailVerified || user.providerData.some(p => p.providerId !== 'password')) {
+                         window.location.href = '../logged-in/dashboard.html';
+                    } else if (user.email && user.providerData.some(p => p.providerId === 'password')) {
+                         // Email/password user not verified
+                         window.location.href = 'verify.html';
                     }
-                    window.location.href = '../logged-in/dashboard.html';
-                } catch (error) {
-                    console.error("Error with user data initialization:", error);
-                    showStatus("An error occurred with user data. Please try again.");
-                    await auth.signOut();
                 }
-            }
-            
-            // --- Email/Password Login ---
-            if (emailLoginForm) {
-                emailLoginForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    hideStatus();
-                    toggleLoginButton(true);
-                    
-                    const email = emailInput.value.trim();
-                    const password = passwordInput.value;
-
-                    if (!email || !password) {
-                        showStatus("Please enter both email and password.");
-                        toggleLoginButton(false);
-                        return;
-                    }
-
+            } else {
+                // Use the custom token if provided, otherwise sign in anonymously
+                if (typeof __initial_auth_token !== 'undefined') {
                     try {
-                        const userCredential = await auth.signInWithEmailAndPassword(email, password);
-                        await checkAndCreateUserDataset(userCredential.user, 'Email/Password');
-                        
-                    } catch (error) {
-                        let errorMessage = "Login failed. Please check your credentials.";
-                        if (error.code === 'auth/user-not-found') {
-                            errorMessage = "No account found with this email.";
-                        } else if (error.code === 'auth/wrong-password') {
-                            errorMessage = "Incorrect password.";
-                        }
-                        showStatus(errorMessage);
-                        toggleLoginButton(false);
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } catch(e) {
+                        console.error("Custom token sign in failed. Signing in anonymously.", e);
+                        await signInAnonymously(auth);
                     }
-                });
+                } else {
+                    await signInAnonymously(auth);
+                }
             }
+            userId = auth.currentUser?.uid || crypto.randomUUID();
+            isAuthReady = true;
+        });
 
 
-            // --- Social Logins ---
-            async function handleSocialLogin(providerInstance, providerName) {
+        /**
+         * Checks if a user's Firestore document exists and creates it if not.
+         * This function is crucial for creating the user dataset upon login/signup.
+         */
+        async function checkAndCreateUserDataset(user, provider, username = null) {
+            if (!isAuthReady) {
+                // Simple wait mechanism to ensure auth context is available
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            const uid = user.uid;
+            // Canvas Private Data Path: /artifacts/{appId}/users/{userId}/user_data/profile_details
+            const userRef = doc(db, `artifacts/${appId}/users/${uid}/user_data/profile_details`);
+            
+            try {
+                const docSnap = await getDoc(userRef);
+                
+                if (!docSnap.exists()) {
+                    // Determine username: explicit input > provider display name > email prefix > fallback
+                    const finalUsername = username 
+                        || user.displayName 
+                        || (user.email ? user.email.split('@')[0] : 'user_' + uid.substring(0, 8));
+                        
+                    await setDoc(userRef, {
+                        username: finalUsername,
+                        email: user.email || 'N/A',
+                        authenticationMethod: provider,
+                        // Auth users (Google/GitHub/MS) are implicitly verified, email/password users have user.emailVerified status
+                        isVerified: user.emailVerified || (provider !== 'Email/Password'), 
+                        creationDate: serverTimestamp(),
+                    }, { merge: true });
+
+                    console.log(`User data created/checked for ${uid} via ${provider}.`);
+                }
+
+                // Redirect logic
+                if (user.emailVerified || (provider !== 'Email/Password')) {
+                     window.location.href = '../logged-in/dashboard.html';
+                } else {
+                     // If email/password login and not verified, redirect to verification page
+                     window.location.href = 'verify.html';
+                }
+                
+                return true;
+
+            } catch (error) {
+                console.error("Error with user data initialization:", error);
+                throw new Error("An error occurred during user data creation/check.");
+            }
+        }
+        window.checkAndCreateUserDataset = checkAndCreateUserDataset; // Expose for signup.html if needed
+
+        // --- UI ELEMENTS ---
+        const emailLoginForm = document.getElementById('email-login-form');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const statusMessage = document.getElementById('status-message');
+        const googleLoginBtn = document.getElementById('google-login');
+        const githubLoginBtn = document.getElementById('github-login');
+        const microsoftLoginBtn = document.getElementById('microsoft-login');
+        const forgotPasswordToggle = document.getElementById('forgot-password-toggle');
+        const forgotPasswordArea = document.getElementById('forgot-password-area');
+        const forgotPasswordForm = document.getElementById('forgot-password-form');
+        const resetEmailInput = document.getElementById('reset-email');
+        const loginButton = document.getElementById('login-button');
+
+        // --- UTILITY FUNCTIONS ---
+        function showStatus(message, type = 'error') {
+            statusMessage.textContent = message;
+            statusMessage.classList.remove('hidden', 'bg-red-900/50', 'text-red-300', 'bg-green-900/50', 'text-green-300');
+            if (type === 'success') {
+                statusMessage.classList.add('bg-green-900/50', 'text-green-300');
+            } else {
+                statusMessage.classList.add('bg-red-900/50', 'text-red-300');
+            }
+        }
+        function hideStatus() {
+             statusMessage.classList.add('hidden');
+        }
+        function toggleLoginButton(isDisabled) {
+            loginButton.disabled = isDisabled;
+            loginButton.textContent = isDisabled ? 'Logging In...' : 'Log In';
+        }
+
+        // --- EMAIL/PASSWORD LOGIN ---
+        if (emailLoginForm) {
+            emailLoginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
                 hideStatus();
+                toggleLoginButton(true);
+                
+                const email = emailInput.value.trim();
+                const password = passwordInput.value;
+
+                if (!email || !password) {
+                    showStatus("Please enter both email and password.");
+                    toggleLoginButton(false);
+                    return;
+                }
+
                 try {
-                    const result = await auth.signInWithPopup(providerInstance);
-                    await checkAndCreateUserDataset(result.user, providerName);
+                    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                    await checkAndCreateUserDataset(userCredential.user, 'Email/Password');
+                    
                 } catch (error) {
-                    let errorMessage = `Login with ${providerName} failed: ${error.message}`;
-                    if (error.code === 'auth/account-exists-with-different-credential') {
-                         errorMessage = `You already have an account with this email. Please log in using the original method.`;
+                    let errorMessage = "Login failed. Please check your credentials.";
+                    if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+                        errorMessage = "Invalid email or password.";
+                    } else if (error.code === 'auth/too-many-requests') {
+                        errorMessage = "Account temporarily locked due to too many failed login attempts. Try again later.";
+                    }
+                    showStatus(errorMessage);
+                    toggleLoginButton(false);
+                }
+            });
+        }
+
+
+        // --- SOCIAL LOGINS ---
+        async function handleSocialLogin(providerInstance, providerName) {
+            hideStatus();
+            try {
+                // Use sign-in-with-popup for providers
+                const result = await signInWithPopup(auth, providerInstance);
+                await checkAndCreateUserDataset(result.user, providerName);
+            } catch (error) {
+                let errorMessage = `Login with ${providerName} failed.`;
+                if (error.code === 'auth/account-exists-with-different-credential') {
+                     errorMessage = `You already have an account with this email, but used a different login method. Please log in using the original method.`;
+                } else if (error.code === 'auth/popup-closed-by-user') {
+                     errorMessage = `Login window closed. Please try again.`;
+                }
+                showStatus(errorMessage);
+            }
+        }
+
+        if(googleLoginBtn) googleLoginBtn.addEventListener('click', () => handleSocialLogin(new GoogleAuthProvider(), 'Google'));
+        // Note: The OAuthProvider for Microsoft is defined here using the full provider ID.
+        if(microsoftLoginBtn) microsoftLoginBtn.addEventListener('click', () => handleSocialLogin(new OAuthProvider('microsoft.com'), 'Microsoft'));
+        if(githubLoginBtn) githubLoginBtn.addEventListener('click', () => handleSocialLogin(new GithubAuthProvider(), 'GitHub'));
+
+
+        // --- FORGOT PASSWORD ---
+        if(forgotPasswordToggle) {
+            forgotPasswordToggle.addEventListener('click', () => {
+                forgotPasswordArea.classList.toggle('hidden');
+                if (!forgotPasswordArea.classList.contains('hidden')) {
+                     resetEmailInput.focus();
+                }
+            });
+        }
+
+        if(forgotPasswordForm) {
+            forgotPasswordForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                hideStatus();
+                const email = resetEmailInput.value.trim();
+
+                if (!email) {
+                    showStatus("Please enter your email to reset your password.");
+                    return;
+                }
+
+                try {
+                    await sendPasswordResetEmail(auth, email);
+                    showStatus(`A password reset link has been sent to ${email}. Check your spam folder!`, 'success');
+                    forgotPasswordArea.classList.add('hidden');
+                } catch (error) {
+                    let errorMessage = "Failed to send reset email.";
+                    if (error.code === 'auth/user-not-found') {
+                        errorMessage = "No user found with that email.";
                     }
                     showStatus(errorMessage);
                 }
-            }
-
-            if(googleLoginBtn) googleLoginBtn.addEventListener('click', () => handleSocialLogin(new firebase.auth.GoogleAuthProvider(), 'Google'));
-            if(githubLoginBtn) githubLoginBtn.addEventListener('click', () => handleSocialLogin(new firebase.auth.GithubAuthProvider(), 'GitHub'));
-            if(microsoftLoginBtn) microsoftLoginBtn.addEventListener('click', () => handleSocialLogin(new firebase.auth.OAuthProvider('microsoft.com'), 'Microsoft'));
-
-            // --- Forgot Password Toggle ---
-            if(forgotPasswordToggle) {
-                forgotPasswordToggle.addEventListener('click', () => {
-                    forgotPasswordArea.classList.toggle('hidden');
-                    if (!forgotPasswordArea.classList.contains('hidden')) {
-                         resetEmailInput.focus();
-                    }
-                });
-            }
-
-
-            // --- Forgot Password Form ---
-            if(forgotPasswordForm) {
-                forgotPasswordForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    hideStatus();
-                    const email = resetEmailInput.value.trim();
-
-                    if (!email) {
-                        showStatus("Please enter your email to reset your password.");
-                        return;
-                    }
-
-                    try {
-                        await auth.sendPasswordResetEmail(email);
-                        showStatus(`A password reset link has been sent to ${email}. Check your spam folder!`, 'success');
-                        forgotPasswordArea.classList.add('hidden');
-                    } catch (error) {
-                        let errorMessage = "Failed to send reset email.";
-                        if (error.code === 'auth/user-not-found') {
-                            errorMessage = "No user found with that email.";
-                        }
-                        showStatus(errorMessage);
-                    }
-                });
-            }
-
-            // --- Redirect if already logged in ---
-            auth.onAuthStateChanged(user => {
-                if (user && window.location.pathname.endsWith('login.html')) {
-                    window.location.href = '../logged-in/dashboard.html';
-                }
             });
-        });
+        }
     </script>
 </body>
 </html>
