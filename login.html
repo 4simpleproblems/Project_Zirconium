@@ -19,8 +19,8 @@
                 extend: {
                     colors: {
                         // NEW DARKER PALETTE
-                        'custom-darkest-gray': '#0a0a0a', // Almost pure black for background
-                        'custom-dark-gray': '#181818',   // Very dark background for left panel
+                        'custom-darkest-gray': '#070707', // Very Dark Background (Body/Right Half) - Darker
+                        'custom-dark-gray': '#1c1c1c',    // Dark Background (Left Half) - Darker
                         'custom-medium-gray': '#252525', // Darker border, input background, and button base
                         'custom-light-gray': '#505050',  // Darker Text, labels, and borders
                         'custom-lighter-gray': '#808080', // Darker Hover states, subtle text, and messages
@@ -38,7 +38,7 @@
         /* Updated RGB values for the darker custom colors */
         :root {
             --geist-foreground: 192, 192, 192; /* custom-white-gray */
-            --geist-background: 10, 10, 10;   /* custom-darkest-gray */
+            --geist-background: 7, 7, 7;    /* custom-darkest-gray: #0f0f0f */
         }
 
         body {
@@ -60,21 +60,20 @@
         .success-message { color: var(--custom-light-gray); }
         .warning-message { color: var(--custom-light-gray); }
 
-        /* Footer specific styling for blur, fixed position, and size */
+        /* FOOTER CHANGE: Make background black and remove blur/transparency */
         .fixed-footer {
             position: fixed;
             bottom: 0;
             left: 0;
             width: 100%;
             height: 40px; 
-            background-color: rgba(24, 24, 24, 0.7); /* custom-dark-gray with transparency */
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+            background-color: black; /* Changed to Black */
+            /* Removed backdrop-filter and -webkit-backdrop-filter for pure black */
             z-index: 100;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-top: 1px solid rgba(37, 37, 37, 0.7); /* Slim border top */
+            border-top: 1px solid black; /* Changed to Black border for seamless look */
         }
         
         main {
@@ -158,7 +157,7 @@
                     </button>
                     
                     <p class="oauth-agreement-text text-xs italic text-custom-light-gray text-center max-w-md mt-4 leading-relaxed">
-                         By logging in with third-party providers or via email, you agree to our <a href="legal.html" target="_blank" class="text-custom-light-gray hover:text-custom-lighter-gray">Terms of Service</a>, and our <a href="legal.html" target="_blank" class="text-custom-light-gray hover:text-custom-lighter-gray">Privacy Policy</a>.
+                            By logging in with third-party providers or via email, you agree to our <a href="legal.html" target="_blank" class="text-custom-light-gray hover:text-custom-lighter-gray">Terms of Service</a>, and our <a href="legal.html" target="_blank" class="text-custom-light-gray hover:text-custom-lighter-gray">Privacy Policy</a>.
                     </p>
                 </div>
             </div>
@@ -174,6 +173,7 @@
     <script src="../navigation-mini.js"></script>
 
     <script type="module">
+        // [JAVASCRIPT REMAINS UNCHANGED]
         // Import your local configuration
         import { firebaseConfig } from '../firebase-config.js';
 
