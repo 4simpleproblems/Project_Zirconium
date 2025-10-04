@@ -4,138 +4,128 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>4SP - LOGIN</title>
-    <meta name="description" content="Log in or automatically create an account to access 4simpleproblems.">
-    
+    <meta name="description" content="Log into your 4SP account to access the student toolkit.">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
-    
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    
+
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
+    <script src="panic-key.js"></script>
+    <script src="url-changer.js"></script>
+
     <style>
-        /* Custom CSS to mimic a modern, dark theme and use the Geist font */
+        /* Custom CSS to match the Geist font and dark theme variables */
         :root {
-            --geist-foreground: 255, 255, 255;
-            --geist-background: 0, 0, 0;
-            --geist-accent-7: 156, 163, 175; /* gray-400 */
-        }
-        
-        .dark {
-            color-scheme: dark;
+            --geist-foreground: 255, 255, 255; /* White */
+            --geist-background: 0, 0, 0; /* Black */
         }
 
         body {
-            /* Applying Geist font */
+            /* Applying Geist font, setting up full height layout */
             font-family: 'Geist', sans-serif;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            background-color: rgb(var(--geist-background));
-            color: rgb(var(--geist-foreground));
         }
 
-        /* Utility class for primary button focus/hover effects */
-        .btn-primary {
-            transition: transform 0.1s, box-shadow 0.1s, background-color 0.1s;
+        /* Styling for the login buttons to match the new dark theme */
+        .btn-google {
+            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
-        .btn-primary:hover {
-            box-shadow: 0 4px 15px rgba(100, 116, 139, 0.4); /* slate-500 shadow */
+        .btn-google:hover {
+            /* Original: hover:bg-gray-700/50 */
+            background-color: rgb(55 65 81 / 0.5); 
         }
-        .btn-primary:active {
-            transform: scale(0.98);
-        }
-
-        /* Main content styling */
-        .auth-container {
-            max-width: 448px;
-            width: 90%;
-            padding: 2.5rem;
-            background-color: #0d0d0d;
-            border: 1px solid #1a1a1a;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-            margin-top: -6rem; /* Pull up to overlay the header slightly */
-        }
-
-        .input-field {
-            background-color: #1a1a1a;
-            border: 1px solid #333;
-            color: white;
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-
-        .input-field:focus {
-            border-color: #64748b; /* slate-500 */
-            outline: none;
-            box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.5);
-        }
+        
+        /* Error/Success/Warning colors converted to black/white/gray for B&W theme */
+        /* These should be clearly differentiated using only gray scale, e.g., a lighter gray for success, and a darker/bolder gray for error. */
+        .error-message { color: rgb(156 163 175); font-weight: bold; } /* text-gray-400, but bold for emphasis */
+        .success-message { color: rgb(107 114 128); } /* text-gray-500 */
+        .warning-message { color: rgb(156 163 175); } /* text-gray-400 */
     </style>
 </head>
-<body class="flex flex-col min-h-screen">
-    
-    <!-- The Mini Navigation Bar will be injected here by navigation-mini.js -->
-    <div id="auth-navbar-container"></div>
-    
-    <main class="flex-grow flex items-center justify-center py-16 px-4">
-        
-        <div class="auth-container rounded-xl">
-            <h1 class="text-3xl font-bold text-center mb-6">Welcome Back</h1>
-            <p class="text-center text-gray-400 mb-8">Login with credentials or a provider below.</p>
+<body class="bg-black text-white min-h-screen flex flex-col">
 
-            <form id="login-form" class="space-y-6">
-                <div>
-                    <label for="username" class="block text-sm font-medium text-gray-300 mb-2">Username</label>
-                    <input type="text" id="username" required 
-                           class="input-field w-full p-3 rounded-lg"
-                           placeholder="Enter your username"
-                           minlength="4" maxlength="24">
+    <div id="navbar-container"></div>
+
+    <main class="flex-grow flex items-stretch justify-center p-0">
+        <div class="
+            auth-split-container
+            bg-gray-950 rounded-none shadow-none
+            flex flex-wrap w-full max-w-7xl
+            border-0 overflow-hidden
+            p-0
+        ">
+            <div class="
+                auth-col left-col
+                flex-1 p-8 flex flex-col justify-center items-center
+                bg-gray-900 border-r border-gray-800 min-w-[300px]
+                sm:rounded-none sm:border-r 
+            ">
+
+                <div id="loginContainer" class="w-full flex flex-col items-center">
+                    <h2 class="text-3xl font-bold text-white mb-6 text-center w-full tracking-tighter">Login to Your Account</h2>
+                    <form id="loginForm" novalidate class="w-full max-w-md">
+                        <div class="mb-5">
+                            <label for="loginEmail" class="block mb-2 text-gray-400 text-sm font-medium text-left">Email</label>
+                            <input type="email" id="loginEmail" placeholder="Enter your email" required class="w-full p-3 border border-gray-700 bg-gray-800 rounded-lg text-white transition focus:border-gray-500 focus:ring focus:ring-gray-500/50 focus:outline-none">
+                        </div>
+                        <div class="mb-5">
+                            <label for="loginPassword" class="block mb-2 text-gray-400 text-sm font-medium text-left">Password</label>
+                            <input type="password" id="loginPassword" placeholder="Enter your password" required class="w-full p-3 border border-gray-700 bg-gray-800 rounded-lg text-white transition focus:border-gray-500 focus:ring focus:ring-gray-500/50 focus:outline-none">
+                        </div>
+                        <button type="submit" class="w-full p-3 bg-gray-700 text-white rounded-lg font-semibold text-lg cursor-pointer transition hover:bg-gray-600 hover:shadow-lg hover:shadow-gray-500/30">LOGIN</button>
+                    </form>
+                    <div id="loginMessage" class="message-area w-full max-w-md mt-4 min-h-[20px] text-center text-sm"></div>
+                    <div class="w-full max-w-md mt-4 text-center"> <a id="forgotPasswordLink" class="text-gray-400 hover:text-gray-300 font-medium text-sm cursor-pointer">Forgot Password?</a> </div>
+                    <p class="text-sm text-gray-500 mt-6 text-center w-full max-w-md">Don't have an account? <a href="signup.html" class="text-gray-400 font-semibold hover:text-gray-300 transition">Sign up here</a></p>
                 </div>
-                <div>
-                    <label for="password" class="block text-sm font-medium text-gray-300 mb-2">Password</label>
-                    <input type="password" id="password" required 
-                           class="input-field w-full p-3 rounded-lg"
-                           placeholder="Enter your password"
-                           minlength="8" maxlength="48">
+
+                <div id="resetPasswordContainer" class="w-full flex flex-col items-center" style="display: none;">
+                    <h2 class="text-3xl font-bold text-white mb-6 text-center w-full tracking-tighter">Reset Your Password</h2>
+                    <p class="text-gray-400 text-base mb-6 text-center max-w-md">Enter your email address and we'll send you a link to reset your password.</p>
+                    <form id="resetPasswordForm" novalidate class="w-full max-w-md">
+                        <div class="mb-5">
+                            <label for="resetEmail" class="block mb-2 text-gray-400 text-sm font-medium text-left">Email</label>
+                            <input type="email" id="resetEmail" placeholder="Enter your registered email" required class="w-full p-3 border border-gray-700 bg-gray-800 rounded-lg text-white transition focus:border-gray-500 focus:ring focus:ring-gray-500/50 focus:outline-none">
+                        </div>
+                        <button type="submit" class="w-full p-3 bg-gray-700 text-white rounded-lg font-semibold text-lg cursor-pointer transition hover:bg-gray-600 hover:shadow-lg hover:shadow-gray-500/30">SEND RESET LINK</button>
+                    </form>
+                    <div id="resetMessage" class="message-area w-full max-w-md mt-4 min-h-[20px] text-center text-sm"></div>
+                    <div class="w-full max-w-md mt-6 text-center"> <a id="backToLoginLink" class="text-gray-400 hover:text-gray-300 font-medium text-sm cursor-pointer">&larr; Back to Login</a> </div>
                 </div>
 
-                <div id="error-message" class="text-red-400 text-sm hidden bg-red-900/30 p-3 rounded-lg border border-red-800"></div>
-
-                <button type="submit" id="login-button" 
-                        class="btn-primary w-full bg-slate-600 hover:bg-slate-500 text-white font-semibold py-3 rounded-lg text-lg flex items-center justify-center disabled:opacity-50">
-                    <span id="button-text">Log In / Sign Up</span>
-                    <i id="loading-spinner" class="fas fa-spinner fa-spin ml-3 hidden"></i>
-                </button>
-            </form>
-            
-            <!-- NEW: Social Login Separator and Buttons -->
-            <div class="relative flex items-center py-5">
-                <div class="flex-grow border-t border-gray-800"></div>
-                <span class="flex-shrink mx-4 text-gray-500 text-sm font-medium">OR USE A SOCIAL ACCOUNT</span>
-                <div class="flex-grow border-t border-gray-800"></div>
             </div>
 
-            <div class="space-y-4">
-                <button id="google-login-button" 
-                        class="w-full flex items-center justify-center p-3 rounded-lg border border-gray-700 bg-white/5 text-white hover:bg-white/10 transition duration-150 btn-primary"
-                        data-initial-text="Sign in with Google">
-                    <i class="fab fa-google text-red-500 text-xl mr-3"></i>
-                    Sign in with Google
-                </button>
-                <button id="github-login-button" 
-                        class="w-full flex items-center justify-center p-3 rounded-lg border border-gray-700 bg-white/5 text-white hover:bg-white/10 transition duration-150 btn-primary"
-                        data-initial-text="Sign in with GitHub">
-                    <i class="fab fa-github text-white text-xl mr-3"></i>
-                    Sign in with GitHub
-                </button>
+            <div class="
+                auth-col right-col
+                flex-1 p-8 flex flex-col justify-center items-center
+                bg-gray-950
+                sm:rounded-none
+            ">
+                <div class="right-panel-content w-full flex flex-col items-center justify-center">
+                    <h2 class="text-3xl font-bold text-white mb-6 text-center w-full tracking-tighter">Sign in instantly</h2>
+                    <p class="text-lg text-gray-400 mb-8 text-center max-w-md">
+                        Use a trusted provider like Google or GitHub to sign in instantly. It's the fastest way to access your account without needing to remember another password.
+                    </p>
+                    
+                    <button id="googleLoginBtn" class="btn-google flex items-center justify-center w-full max-w-md p-3 bg-gray-800 text-white border border-gray-700 rounded-lg font-medium cursor-pointer transition hover:bg-gray-700/50 mb-3">
+                        <img src="images/google-icon.png" alt="Google Icon" class="w-5 h-5 mr-3 filter grayscale"> Login with Google
+                    </button>
+                    <button id="githubLoginBtn" class="btn-google flex items-center justify-center w-full max-w-md p-3 bg-gray-800 text-white border border-gray-700 rounded-lg font-medium cursor-pointer transition hover:bg-gray-700/50 mb-3">
+                        <img src="images/github-mark.png" alt="GitHub Icon" class="w-5 h-5 mr-3 filter invert"> Login with GitHub
+                    </button>
+                    <button id="microsoftLoginBtn" class="btn-google flex items-center justify-center w-full max-w-md p-3 bg-gray-800 text-white border border-gray-700 rounded-lg font-medium cursor-pointer transition hover:bg-gray-700/50 mb-3">
+                        <img src="images/microsoft.png" alt="Microsoft Icon" class="w-5 h-5 mr-3 filter grayscale"> Login with Microsoft
+                    </button>
+                    
+                    <p class="oauth-agreement-text text-xs italic text-gray-500 text-center max-w-md mt-4 leading-relaxed">
+                         By logging in with third-party providers or via email, you agree to our <a href="legal.html" target="_blank" class="text-gray-400 hover:text-gray-300">Terms of Service</a>, and our <a href="legal.html" target="_blank" class="text-gray-400 hover:text-gray-300">Privacy Policy</a>.
+                    </p>
+                </div>
             </div>
-            <!-- END NEW -->
-
-            <p class="text-center text-gray-500 text-sm mt-6">
-                New to 4SP? <a href="signup.html" class="text-slate-400 hover:text-slate-300 font-medium transition duration-150">Sign Up</a>
-            </p>
         </div>
-        
     </main>
 
     <footer class="border-t border-gray-900 py-6">
@@ -145,290 +135,276 @@
     </footer>
 
     <script src="../navigation-mini.js"></script>
-    
+
     <script type="module">
-        // Global variables for Canvas environment
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        // Import your local configuration
+        import { firebaseConfig } from '../firebase-config.js';
 
-        if (!firebaseConfig) {
-            console.error("Firebase configuration not found.");
-            document.getElementById('error-message').textContent = "Application setup error: Missing Firebase config.";
-            document.getElementById('error-message').classList.remove('hidden');
-        }
-
-        // Import the new Firebase Modular SDK
+        // Import the new Firebase Modular SDK functions
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { 
-            getAuth, 
-            signInWithEmailAndPassword, 
-            createUserWithEmailAndPassword,
-            signInWithCustomToken,
-            signInAnonymously,
+        import {
+            getAuth,
+            signInWithEmailAndPassword,
+            sendPasswordResetEmail,
+            fetchSignInMethodsForEmail,
+            signOut,
             onAuthStateChanged,
             GoogleAuthProvider,
             GithubAuthProvider,
+            OAuthProvider,
             signInWithPopup
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        
         import { 
             getFirestore, 
             doc, 
-            setDoc
+            getDoc, 
+            setDoc, 
+            collection,
+            query,
+            where,
+            getDocs,
+            serverTimestamp
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-        setLogLevel('debug'); // Enable Firestore logs
 
         // Initialize Firebase
-        let app, auth, db;
-        if (firebaseConfig) {
-            app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
-        }
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
 
-        // Access the global navigation function
+        // Access the global navigation function you created
         const initMiniNavigation = window.initMiniNavigation;
         if (initMiniNavigation) {
             initMiniNavigation(auth);
         }
 
-        // --- Authentication & Firestore Logic ---
-        
-        const form = document.getElementById('login-form');
-        const usernameInput = document.getElementById('username');
-        const passwordInput = document.getElementById('password');
-        const errorDiv = document.getElementById('error-message');
-        const loginButton = document.getElementById('login-button');
-        const buttonText = document.getElementById('button-text');
-        const loadingSpinner = document.getElementById('loading-spinner');
-        
-        // Social Login Buttons
-        const googleLoginButton = document.getElementById('google-login-button');
-        const githubLoginButton = document.getElementById('github-login-button');
+        // --- Login Page-Specific Logic (Updated to Modular) ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginContainer = document.getElementById('loginContainer');
+            const resetPasswordContainer = document.getElementById('resetPasswordContainer');
+            const loginMessageDiv = document.getElementById('loginMessage');
+            const resetMessageDiv = document.getElementById('resetMessage');
+            const googleLoginBtn = document.getElementById('googleLoginBtn');
+            const githubLoginBtn = document.getElementById('githubLoginBtn');
+            const microsoftLoginBtn = document.getElementById('microsoftLoginBtn');
 
+            document.getElementById('forgotPasswordLink').addEventListener('click', () => {
+                loginContainer.style.display = 'none';
+                resetPasswordContainer.style.display = 'flex';
+                resetPasswordContainer.style.flexDirection = 'column';
+                loginMessageDiv.innerHTML = '';
+            });
 
-        // Helper to show/hide loading state for the main form
-        const toggleLoading = (isLoading) => {
-            loginButton.disabled = isLoading;
-            loadingSpinner.classList.toggle('hidden', !isLoading);
-            buttonText.textContent = isLoading ? 'Processing...' : 'Log In / Sign Up';
-            errorDiv.classList.add('hidden');
-            // Disable social buttons while form login is active
-            googleLoginButton.disabled = isLoading;
-            githubLoginButton.disabled = isLoading;
-        };
-        
-        // Helper to show error
-        const showError = (message) => {
-            errorDiv.textContent = message;
-            errorDiv.classList.remove('hidden');
-            // Ensure all states are reset when an error occurs
-            toggleLoading(false); 
-            toggleSocialButtonLoading(googleLoginButton, false);
-            toggleSocialButtonLoading(githubLoginButton, false);
-        };
-        
-        // Helper to manage loading state for social buttons
-        const toggleSocialButtonLoading = (button, isLoading) => {
-            if (!button) return;
-            const initialText = button.dataset.initialText || 'Sign in';
-            button.disabled = isLoading;
-            button.classList.toggle('opacity-50', isLoading);
-            if (isLoading) {
-                // Store initial text if not already stored
-                if (!button.dataset.initialText) button.dataset.initialText = button.textContent.trim();
-                // Find and keep the icon, but change the text
-                const icon = button.querySelector('i')?.outerHTML || '';
-                button.innerHTML = `<i class="fas fa-spinner fa-spin mr-3"></i> Connecting...`;
-            } else {
-                // Restore original text and icon
-                button.innerHTML = button.dataset.initialText === 'Sign in with Google' 
-                    ? '<i class="fab fa-google text-red-500 text-xl mr-3"></i> Sign in with Google'
-                    : '<i class="fab fa-github text-white text-xl mr-3"></i> Sign in with GitHub';
-            }
-        };
-        
-        // Helper to create a user profile in Firestore
-        const createFirestoreProfile = async (user, username = null) => {
-            if (!db || !user) {
-                console.error("Cannot create profile: Missing DB or user data.");
-                return;
-            }
-            
-            // Derive username for social/auto-signup if not explicitly passed
-            let finalUsername = username;
-            if (!finalUsername) {
-                // Use display name, or the part of email before @, or a default user ID
-                finalUsername = user.displayName || user.email?.split('@')[0] || ('user' + user.uid.substring(0, 8));
-                // Sanitize derived username to be alphanumeric for safety
-                finalUsername = finalUsername.replace(/[^a-zA-Z0-9]/g, ''); 
-                if (finalUsername.length < 4) finalUsername = 'user' + user.uid.substring(0, 4);
-            }
-            
-            try {
-                // Private data path: /artifacts/{appId}/users/{userId}/users/profile
-                const userProfileRef = doc(db, `artifacts/${appId}/users/${user.uid}/users`, 'profile');
-                await setDoc(userProfileRef, {
-                    username: finalUsername,
-                    email: user.email || 'N/A',
-                    provider: user.providerData[0]?.providerId || 'password',
-                    createdAt: Date.now()
-                });
-                console.log("Firestore profile created successfully for user:", finalUsername);
-            } catch (e) {
-                console.error("Error adding document to Firestore:", e);
-            }
-        };
+            document.getElementById('backToLoginLink').addEventListener('click', () => {
+                resetPasswordContainer.style.display = 'none';
+                loginContainer.style.display = 'flex';
+                loginContainer.style.flexDirection = 'column';
+                resetMessageDiv.innerHTML = '';
+            });
 
-        // Check auth status and redirect if already logged in
-        onAuthStateChanged(auth, async (user) => {
-            if (user && !user.isAnonymous) {
-                window.location.href = 'index.html'; 
-            } else if (user && user.isAnonymous) {
-                await auth.signOut();
-            } else if (!user && initialAuthToken) {
+            const showMessage = (element, text, type = 'error') => {
+                element.innerHTML = text;
+                // Using the updated B&W classes from the <style> block
+                element.className = `message-area w-full max-w-md mt-4 min-h-[20px] text-center text-sm ${type}-message`;
+            };
+
+            // Simplified profanity check for this context
+            const checkProfanity = async (text) => {
+                if (!text || !text.trim()) return false;
                 try {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } catch (error) {
-                    console.error("Custom token sign-in failed, proceeding with form:", error);
-                }
-            } else if (!user) {
+                    const response = await fetch(`https://www.purgomalum.com/service/containsprofanity?text=${encodeURIComponent(text)}`);
+                    if (!response.ok) throw new Error('API request failed');
+                    const result = await response.text();
+                    return result.toLowerCase() === 'true';
+                } catch (error) { console.error('Error calling profanity API:', error); return false; }
+            };
+            
+            const isUsernameTaken = async (username) => {
                 try {
-                     await signInAnonymously(auth);
-                } catch (error) {
-                    console.error("Anonymous sign-in failed:", error);
-                }
-            }
-        });
+                    const q = query(collection(db, 'users'), where('username', '==', username));
+                    const querySnapshot = await getDocs(q);
+                    return !querySnapshot.empty;
+                } catch (error) { console.error("Error checking username uniqueness:", error); return true; }
+            };
 
-        
-        // --- NEW: Social Login Handler ---
+            const createUserDocument = async (user, authMethod, username, explicitEmail = null) => {
+                const emailToStore = explicitEmail || (user && user.email) || null;
+                const isVerified = (authMethod === 'google' || authMethod === 'github' || authMethod === 'microsoft') ? true : !!(user && user.emailVerified);
+                try {
+                    await setDoc(doc(db, 'users', user.uid), {
+                        email: emailToStore, 
+                        authMethod: authMethod, 
+                        createdAt: serverTimestamp(),
+                        username: username, 
+                        emailVerified: isVerified
+                    });
+                    return true;
+                } catch (error) { console.error("Error creating user document:", error); return false; }
+            };
+            
+            const handleSuccessfulLogin = async (user, isNewOrRepaired = false, newUsername = '') => {
+                await user.reload(); // Reload to ensure user properties are current
 
-        const handleSocialLogin = async (provider, button) => {
-            if (!auth) return showError("Firebase not initialized.");
-
-            toggleSocialButtonLoading(button, true);
-
-            try {
-                const result = await signInWithPopup(auth, provider);
-                const user = result.user;
-                const additionalUserInfo = result.additionalUserInfo;
-
-                if (additionalUserInfo && additionalUserInfo.isNewUser) {
-                    // Only create the profile document if it's a brand new user
-                    await createFirestoreProfile(user); 
-                }
-                
-                console.log("Social login successful!");
-                window.location.href = 'index.html';
-
-            } catch (error) {
-                let errorMessage = "Social login failed.";
-                if (error.code === 'auth/popup-closed-by-user') {
-                    errorMessage = "Login cancelled: The pop-up window was closed.";
-                } else if (error.code === 'auth/account-exists-with-different-credential') {
-                    errorMessage = "An account already exists with this email address using a different login method. Please use that method to sign in.";
-                } else {
-                    errorMessage = `Login failed: ${error.message}`;
-                }
-                showError(errorMessage);
-            } finally {
-                toggleSocialButtonLoading(button, false);
-            }
-        };
-
-        // --- Event Listeners ---
-
-        // Google Login
-        googleLoginButton.addEventListener('click', (e) => {
-            e.preventDefault();
-            const provider = new GoogleAuthProvider();
-            handleSocialLogin(provider, googleLoginButton);
-        });
-
-        // GitHub Login
-        githubLoginButton.addEventListener('click', (e) => {
-            e.preventDefault();
-            const provider = new GithubAuthProvider();
-            handleSocialLogin(provider, githubLoginButton);
-        });
-        
-        // Form submission handler (existing logic)
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            toggleLoading(true);
-
-            const username = usernameInput.value.trim();
-            const password = passwordInput.value;
-            // Firebase Auth requires an email format, so we append a fixed domain
-            const email = `${username}@4sp.com`;
-
-            if (username.length < 4 || username.length > 24) {
-                 showError("Username must be between 4 and 24 characters.");
-                 return;
-            }
-
-            try {
-                // 1. Attempt to log in with the provided credentials
-                await signInWithEmailAndPassword(auth, email, password);
-                console.log("Login successful!");
-                window.location.href = 'index.html';
-
-            } catch (loginError) {
-                // 2. If login fails, check if the error indicates "user-not-found"
-                if (loginError.code === 'auth/user-not-found') {
-                    console.log("User not found. Attempting automatic sign-up...");
+                if (isNewOrRepaired) {
+                    let countdown = 5;
+                    const message = () => {
+                        showMessage(loginMessageDiv, 
+                            `Your account was incomplete, so we finished setting it up for you!<br>Your new username is <strong>${newUsername}</strong>.<br>Redirecting in ${countdown}...`, 
+                            'warning'
+                        );
+                        countdown--;
+                    };
                     
-                    try {
-                        // 3. Attempt to create the new account (auto sign-up)
-                        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                        
-                        // 4. Create the Firestore profile
-                        await createFirestoreProfile(userCredential.user, username);
-                        
-                        console.log("Auto Sign-Up successful!");
-                        window.location.href = 'index.html';
-
-                    } catch (signupError) {
-                        // 5. Handle sign-up specific errors (e.g., weak password, invalid email format)
-                        let errorMessage = "Sign up failed.";
-                        if (signupError.code === 'auth/weak-password') {
-                            errorMessage = "Password is too weak. Must be at least 6 characters.";
-                        } else if (signupError.code === 'auth/email-already-in-use') {
-                             errorMessage = "Account already exists (internal error: try logging in again).";
+                    message(); 
+                    const interval = setInterval(() => {
+                        if (countdown < 0) {
+                            clearInterval(interval);
+                            window.location.href = 'logged-in/dashboard.html';
                         } else {
-                            errorMessage = `Sign up failed: ${signupError.message}`;
+                            message();
                         }
-                        showError(errorMessage);
-                    }
-
-                } else if (loginError.code === 'auth/wrong-password') {
-                    showError("Invalid username or password.");
-                } else if (loginError.code === 'auth/invalid-email') {
-                    showError("Invalid username format (should be text).");
-                } else {
-                    showError(`Login failed: ${loginError.message}`);
+                    }, 1000);
+                    return;
                 }
-            } finally {
-                toggleLoading(false);
-            }
+
+                // Check for provider login (which implies verification)
+                const isProviderLogin = user.providerData.some((provider) => 
+                    provider.providerId === 'google.com' || 
+                    provider.providerId === 'github.com' || 
+                    provider.providerId === 'microsoft.com'
+                );
+
+                if (user.emailVerified || isProviderLogin) {
+                    window.location.href = 'logged-in/dashboard.html';
+                } else {
+                    // Accent color for resend link changed from indigo/blue to gray
+                    loginMessageDiv.innerHTML = 'Your email is not verified. Please check your inbox. <a href="#" id="resend-link" class="text-gray-400 hover:text-gray-300 underline cursor-pointer">Resend verification email</a>';
+                    loginMessageDiv.className = 'message-area w-full max-w-md mt-4 min-h-[20px] text-center text-sm error-message';
+                    
+                    document.getElementById('resend-link').addEventListener('click', async (event) => {
+                        event.preventDefault();
+                        try {
+                            await user.sendEmailVerification();
+                            // Note: 'success' message color is now a shade of gray
+                            showMessage(loginMessageDiv, 'A new verification link has been sent!', 'success');
+                        } catch (err) { showMessage(loginMessageDiv, `Error sending email: ${err.message}`); }
+                    });
+                    await signOut(auth);
+                }
+            };
+            
+            const repairOrCreateUserDocument = async (user, providerName) => {
+                let userEmail = user.email;
+                let proposedUsername = user.displayName || userEmail.split('@')[0] || 'User';
+                proposedUsername = proposedUsername.replace(/[^a-zA-Z0-9]/g, '').slice(0, 16); // Cleaned special chars for username
+
+                if (proposedUsername.length < 4) { proposedUsername = `User${user.uid.substring(0, 8)}`; } 
+                if (await checkProfanity(proposedUsername)) { proposedUsername = `User${user.uid.substring(0, 8)}`; }
+
+                let finalUsername = proposedUsername;
+                let counter = 1;
+                while (await isUsernameTaken(finalUsername)) {
+                    const suffix = `_${counter}`;
+                    const maxBaseLength = 16 - suffix.length;
+                    const baseUsername = proposedUsername.substring(0, maxBaseLength);
+                    finalUsername = `${baseUsername}${suffix}`;
+                    counter++;
+                }
+
+                const documentCreated = await createUserDocument(user, providerName, finalUsername, userEmail);
+                if (documentCreated) {
+                    await handleSuccessfulLogin(user, true, finalUsername);
+                } else {
+                    throw new Error('Failed to create user document during login.');
+                }
+            };
+
+            // Reset Password Form Submission
+            document.getElementById('resetPasswordForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                resetMessageDiv.innerHTML = '';
+                const email = document.getElementById('resetEmail').value;
+                try {
+                    const methods = await fetchSignInMethodsForEmail(auth, email);
+                    if (methods.length === 0) { showMessage(resetMessageDiv, 'No account found with this email.'); } 
+                    else if (methods.includes('google.com') || methods.includes('github.com') || methods.includes('microsoft.com')) { 
+                        showMessage(resetMessageDiv, 'This account uses a third-party provider and does not have a password to reset.'); 
+                    } 
+                    else { 
+                        await sendPasswordResetEmail(auth, email); 
+                        // Note: 'success' message color is now a shade of gray
+                        showMessage(resetMessageDiv, 'Password reset link sent! Please check your inbox.', 'success'); 
+                    }
+                } catch (error) { showMessage(resetMessageDiv, 'An error occurred. Please try again.'); }
+            });
+
+            // Email/Password Login Form Submission
+            document.getElementById('loginForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                loginMessageDiv.innerHTML = '';
+                const email = document.getElementById('loginEmail').value;
+                const password = document.getElementById('loginPassword').value;
+                try {
+                    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                    const user = userCredential.user;
+                    
+                    const userDocSnap = await getDoc(doc(db, 'users', user.uid));
+                    if (userDocSnap.exists()) {
+                        await handleSuccessfulLogin(user);
+                    } else {
+                        await signOut(auth);
+                        showMessage(loginMessageDiv, 'Your account record is incomplete. Please sign up again or contact support.');
+                    }
+                } catch (error) {
+                    console.error("Login Error:", error);
+                    let message = 'An unknown login error occurred. Please try again.';
+                    switch (error.code) {
+                        case 'auth/user-not-found': 
+                        case 'auth/wrong-password': 
+                        case 'auth/invalid-credential': 
+                            message = 'Invalid email or password.'; break;
+                        case 'auth/too-many-requests': 
+                            message = 'Access temporarily disabled due to too many failed login attempts.'; break;
+                    }
+                    showMessage(loginMessageDiv, message);
+                }
+            });
+
+            // OAuth Provider Login Handler
+            const handleProviderLogin = async (provider) => {
+                loginMessageDiv.innerHTML = '';
+                try {
+                    const result = await signInWithPopup(auth, provider);
+                    const user = result.user;
+                    
+                    const userDocSnap = await getDoc(doc(db, 'users', user.uid));
+
+                    if (userDocSnap.exists()) {
+                        await handleSuccessfulLogin(user);
+                    } else {
+                        const providerName = provider.providerId.split('.')[0];
+                        await repairOrCreateUserDocument(user, providerName);
+                    }
+                } catch (error) {
+                    console.error('Provider Sign-In error:', error);
+                    let message = `A problem occurred. Please try again.`;
+                    if (error.code === 'auth/account-exists-with-different-credential') {
+                        message = 'An account with this email already exists using a different sign-in method.';
+                    } else if (error.code === 'auth/popup-closed-by-user') { return; }
+                    showMessage(loginMessageDiv, message);
+                }
+            };
+
+            // OAuth Button Event Listeners
+            googleLoginBtn.addEventListener('click', () => handleProviderLogin(new GoogleAuthProvider()));
+            githubLoginBtn.addEventListener('click', () => handleProviderLogin(new GithubAuthProvider()));
+            microsoftLoginBtn.addEventListener('click', () => handleProviderLogin(new OAuthProvider('microsoft.com')));
+
+            // Initial view setup
+            loginContainer.style.display = 'flex';
+            loginContainer.style.flexDirection = 'column';
+            resetPasswordContainer.style.display = 'none';
         });
-
-        // Attach event listeners for input validation feedback
-        const validateInput = (input) => {
-            if (input.validity.tooShort) {
-                input.setCustomValidity(`Must be at least ${input.minLength} characters.`);
-            } else if (input.validity.tooLong) {
-                input.setCustomValidity(`Must be at most ${input.maxLength} characters.`);
-            } else {
-                input.setCustomValidity('');
-            }
-        };
-
-        usernameInput.addEventListener('input', () => validateInput(usernameInput));
-        passwordInput.addEventListener('input', () => validateInput(passwordInput));
-
     </script>
 </body>
 </html>
