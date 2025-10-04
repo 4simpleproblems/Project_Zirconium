@@ -159,7 +159,7 @@ function injectAuthNavbar() {
         navbarContainer.innerHTML = `
             <header class="sticky top-0 z-50 backdrop-blur-md bg-black/80 border-b border-gray-900">
                 <nav class="h-16 flex items-center justify-between px-4">
-                    <a href="index.html" class="flex items-center space-x-2">
+                    <a href="../index.html" class="flex items-center space-x-2">
                         <picture>
                             <source srcset="../images/logo.png" media="(prefers-color-scheme: dark)">
                             <img src="../images/logo.png" alt="4simpleproblems Logo" class="h-8 w-auto">
