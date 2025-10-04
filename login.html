@@ -76,18 +76,15 @@
             transform: translateY(-2px);
         }
         
-        /* The split container for the auth form */
+        /* UPDATED STYLES FOR FULL-HEIGHT SPLIT CONTAINER */
         .auth-split-container {
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-            border: 1px solid #1f2937; /* gray-800 */
             display: flex;
             flex-wrap: wrap;
-            max-width: 900px;
-            margin: 50px auto;
+            /* Fills the remaining space */
+            flex: 1; 
             overflow: hidden;
-            min-height: 650px;
             background-color: #111827; /* gray-900 */
+            /* Removed fixed width/margin/border/shadow to make it full-page */
         }
 
         .auth-col {
@@ -97,11 +94,12 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            min-height: 500px; /* Ensure content area is not too small */
         }
 
         .auth-col.left-col {
             background-color: #1f2937; /* gray-800 */
-            border-right: 1px solid #374151; /* gray-700 */
+            /* Removed border-right */
             min-width: 300px;
         }
 
@@ -109,14 +107,37 @@
             background-color: #111827; /* gray-900 */
         }
         
+        @media (min-width: 769px) {
+            .auth-col.left-col { 
+                 border-right: 1px solid #374151; /* Re-add border for large screens */
+            }
+        }
+        
         @media (max-width: 768px) {
-            .auth-split-container { flex-direction: column; margin: 20px; }
+            .auth-split-container { flex-direction: column; margin: 0; }
             .auth-col.left-col { border-right: none; border-bottom: 1px solid #374151; }
+        }
+        
+        /* Copied Auth Menu Styling from index.html */
+        .auth-menu-container {
+            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+            transform-origin: top right;
+        }
+        
+        .auth-menu-container.open {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        .auth-menu-container.closed {
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-10px) scale(0.95);
         }
 
     </style>
 </head>
-<body class="bg-black text-white min-h-screen">
+<body class="bg-black text-white min-h-screen flex flex-col">
 
     <header class="sticky top-0 z-50 backdrop-blur-md bg-black/80 border-b border-gray-900">
         <nav class="h-16 flex items-center justify-between px-4">
@@ -127,27 +148,39 @@
                 </picture>
             </a>
             
-            <div class="flex space-x-4">
-                <a href="login.html" class="px-3 py-2 text-sm font-normal text-white bg-white/10 ring-1 ring-white/20 rounded-lg hover:bg-white/20 transition">
-                    Login
-                </a>
-                <a href="signup.html" class="px-3 py-2 text-sm font-normal text-white bg-white/10 ring-1 ring-white/20 rounded-lg hover:bg-white/20 transition">
-                    Sign Up
-                </a>
+            <div class="relative">
+                <button 
+                    id="auth-toggle"
+                    aria-expanded="false"
+                    aria-controls="auth-menu-container"
+                    class="w-8 h-8 rounded-full border border-white flex items-center justify-center bg-black/50 hover:bg-gray-900/50 transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-white"
+                >
+                    <i class="fas fa-user text-white text-base"></i>
+                </button>
+                
+                <div 
+                    id="auth-menu-container" 
+                    class="auth-menu-container closed absolute right-0 top-10 w-40 p-2 rounded-xl bg-black/70 backdrop-blur-lg border border-gray-800 shadow-xl"
+                >
+                    <a href="index.html" class="block px-3 py-2 text-sm font-normal text-white hover:bg-gray-800 rounded-lg transition-colors">
+                        Home
+                    </a>
+                    <a href="signup.html" class="block px-3 py-2 text-sm font-normal text-white hover:bg-gray-800 rounded-lg transition-colors mt-1">
+                        Sign Up
+                    </a>
+                </div>
             </div>
         </nav>
     </header>
 
-    <main class="flex flex-col items-center justify-center py-10">
-        <h1 class="text-3xl sm:text-4xl font-semibold tracking-tighter text-white mb-8">LOG INTO 4SP</h1>
-
-        <div class="auth-split-container">
+    <main class="flex flex-col flex-1"> <div class="auth-split-container">
             <div class="auth-col left-col">
                 
-                <div id="loginContainer" class="w-full flex flex-col items-center">
-                    <h2 class="font-medium text-3xl text-white mb-6 text-center w-full">Login to Your Account</h2>
+                <div id="loginContainer" class="w-full flex flex-col items-center max-w-sm">
+                    <h1 class="text-3xl sm:text-4xl font-semibold tracking-tighter text-white mb-6">LOG INTO 4SP</h1>
+                    <h2 class="font-medium text-2xl text-white mb-6 text-center w-full">Login to Your Account</h2>
                     
-                    <form id="loginForm" novalidate class="w-full max-w-sm">
+                    <form id="loginForm" novalidate class="w-full">
                         <div class="mb-5"> 
                             <label for="loginEmail" class="block mb-2 text-sm font-medium text-gray-300">Email</label> 
                             <input type="email" id="loginEmail" placeholder="Enter your email" required 
@@ -161,7 +194,7 @@
                         <button type="submit" class="btn-primary-custom">LOGIN</button>
                     </form>
                     
-                    <div id="loginMessage" class="message-area max-w-sm"></div>
+                    <div id="loginMessage" class="message-area"></div>
                     
                     <div class="forgot-password-link max-w-sm mt-5 text-sm"> 
                         <a id="forgotPasswordLink" class="text-violet-400 hover:text-violet-300 transition cursor-pointer font-bold">Forgot Password?</a> 
@@ -172,11 +205,12 @@
                     </p>
                 </div>
 
-                <div id="resetPasswordContainer" style="display: none;" class="w-full flex flex-col items-center">
-                    <h2 class="font-medium text-3xl text-white mb-6 text-center w-full">Reset Your Password</h2>
-                    <p class="text-center max-w-sm text-gray-400 mb-6">Enter your email address and we'll send you a link to reset your password.</p>
+                <div id="resetPasswordContainer" style="display: none;" class="w-full flex flex-col items-center max-w-sm">
+                    <h1 class="text-3xl sm:text-4xl font-semibold tracking-tighter text-white mb-6">RESET PASSWORD</h1>
+                    <h2 class="font-medium text-2xl text-white mb-6 text-center w-full">Reset Your Password</h2>
+                    <p class="text-center w-full text-gray-400 mb-6">Enter your email address and we'll send you a link to reset your password.</p>
                     
-                    <form id="resetPasswordForm" novalidate class="w-full max-w-sm">
+                    <form id="resetPasswordForm" novalidate class="w-full">
                         <div class="mb-5"> 
                             <label for="resetEmail" class="block mb-2 text-sm font-medium text-gray-300">Email</label> 
                             <input type="email" id="resetEmail" placeholder="Enter your registered email" required
@@ -185,7 +219,7 @@
                         <button type="submit" class="btn-primary-custom">SEND RESET LINK</button>
                     </form>
                     
-                    <div id="resetMessage" class="message-area max-w-sm"></div>
+                    <div id="resetMessage" class="message-area"></div>
                     
                     <div class="back-to-login-link max-w-sm mt-5 text-sm"> 
                         <a id="backToLoginLink" class="text-violet-400 hover:text-violet-300 transition cursor-pointer font-bold">&larr; Back to Login</a> 
@@ -195,9 +229,9 @@
             </div>
 
             <div class="auth-col right-col">
-                <div class="right-panel-content w-full flex flex-col items-center">
+                <div class="right-panel-content w-full flex flex-col items-center max-w-sm">
                     <h2 class="font-medium text-3xl text-white mb-6 text-center w-full">Other ways to login</h2>
-                    <p class="text-center mb-8 max-w-sm text-gray-400">Use a trusted provider like Google or GitHub to sign in instantly. It's the fastest way to access your account without needing to remember another password.</p>
+                    <p class="text-center mb-8 w-full text-gray-400">Use a trusted provider like Google or GitHub to sign in instantly. It's the fastest way to access your account without needing to remember another password.</p>
                     
                     <button id="googleLoginBtn" class="btn-google flex items-center justify-center w-full max-w-sm px-4 py-3 border border-gray-700 rounded-lg bg-gray-900 text-white font-medium hover:bg-gray-800 transition mb-4"> 
                         <img src="images/google-icon.png" alt="Google Icon" class="w-5 h-5 mr-3"> Login with Google 
@@ -211,7 +245,7 @@
                         <img src="../images/microsoft.png" alt="Microsoft Icon" class="w-5 h-5 mr-3"> Login with Microsoft 
                     </button>
                     
-                    <p class="oauth-agreement-text max-w-sm mt-6 text-xs italic text-gray-500"> 
+                    <p class="oauth-agreement-text w-full mt-6 text-xs italic text-gray-500"> 
                         By logging in with third-party providers or via email, you agree to our 
                         <a href="legal.html" target="_blank" class="text-violet-400 hover:underline">Terms of Service</a>, and our 
                         <a href="legal.html" target="_blank" class="text-violet-400 hover:underline">Privacy Policy</a>. 
@@ -221,8 +255,7 @@
         </div>
         </main>
 
-    <footer class="border-t border-gray-900 py-6">
-        <div class="mx-auto max-w-7xl px-4 text-center text-gray-500 text-sm">
+    <footer class="border-t border-gray-900 py-6 mt-auto"> <div class="mx-auto max-w-7xl px-4 text-center text-gray-500 text-sm">
             &copy; 2024 4simpleproblems (4SP). Built for students.
         </div>
     </footer>
@@ -237,9 +270,36 @@
             const resetMessageDiv = document.getElementById('resetMessage');
             const googleLoginBtn = document.getElementById('googleLoginBtn');
             const githubLoginBtn = document.getElementById('githubLoginBtn');
-            // START OF ADDED CODE 2/3
             const microsoftLoginBtn = document.getElementById('microsoftLoginBtn');
-            // END OF ADDED CODE 2/3
+            
+            // COPIED LOGIC FROM index.html FOR AUTH TOGGLE
+            const toggleButton = document.getElementById('auth-toggle');
+            const menuContainer = document.getElementById('auth-menu-container');
+
+            toggleButton.addEventListener('click', () => {
+                const isExpanded = toggleButton.getAttribute('aria-expanded') === 'true';
+                
+                toggleButton.setAttribute('aria-expanded', String(!isExpanded));
+                
+                if (isExpanded) {
+                    menuContainer.classList.remove('open');
+                    menuContainer.classList.add('closed');
+                } else {
+                    menuContainer.classList.remove('closed');
+                    menuContainer.classList.add('open');
+                }
+            });
+
+            document.addEventListener('click', (event) => {
+                if (!menuContainer.contains(event.target) && !toggleButton.contains(event.target)) {
+                    if (toggleButton.getAttribute('aria-expanded') === 'true') {
+                        toggleButton.setAttribute('aria-expanded', 'false');
+                        menuContainer.classList.remove('open');
+                        menuContainer.classList.add('closed');
+                    }
+                }
+            });
+            // END COPIED LOGIC
 
             document.getElementById('forgotPasswordLink').addEventListener('click', () => {
                 loginContainer.style.display = 'none';
@@ -282,7 +342,7 @@
 
             const createUserDocument = async (user, authMethod, username, explicitEmail = null) => {
                 const emailToStore = explicitEmail || (user && user.email) || null;
-                const isVerified = (authMethod === 'google' || authMethod === 'github' || authMethod === 'microsoft') ? true : !!(user && user.emailVerified); // Added 'microsoft'
+                const isVerified = (authMethod === 'google' || authMethod === 'github' || authMethod === 'microsoft') ? true : !!(user && user.emailVerified); 
                 try {
                     await db.collection('users').doc(user.uid).set({
                         email: emailToStore, authMethod: authMethod, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -319,13 +379,11 @@
                 }
 
                 // Standard login flow for existing, complete accounts
-                // START OF UPDATED CODE 4/4
                 const isProviderLogin = user.providerData.some((provider) => 
                     provider.providerId === 'google.com' || 
                     provider.providerId === 'github.com' || 
                     provider.providerId === 'microsoft.com'
                 );
-                // END OF UPDATED CODE 4/4
                 if (user.emailVerified || isProviderLogin) {
                         window.location.href = 'logged-in/dashboard.html';
                 } else {
@@ -377,9 +435,7 @@
                 try {
                     const methods = await auth.fetchSignInMethodsForEmail(email);
                     if (methods.length === 0) { showMessage(resetMessageDiv, 'No account found with this email.'); } 
-                    // START OF UPDATED CODE 3/4
                     else if (methods.includes('google.com') || methods.includes('github.com') || methods.includes('microsoft.com')) { showMessage(resetMessageDiv, 'This account uses a third-party provider and does not have a password to reset.'); } 
-                    // END OF UPDATED CODE 3/4
                     else { await auth.sendPasswordResetEmail(email); showMessage(resetMessageDiv, 'Password reset link sent! Please check your inbox.', 'success'); }
                 } catch (error) { showMessage(resetMessageDiv, 'An error occurred. Please try again.'); }
             });
@@ -440,9 +496,7 @@
 
             googleLoginBtn.addEventListener('click', () => handleProviderLogin(new firebase.auth.GoogleAuthProvider()));
             githubLoginBtn.addEventListener('click', () => handleProviderLogin(new firebase.auth.GithubAuthProvider()));
-            // START OF ADDED CODE 3/3
             microsoftLoginBtn.addEventListener('click', () => handleProviderLogin(new firebase.auth.OAuthProvider('microsoft.com')));
-            // END OF ADDED CODE 3/3
 
             // Ensure the correct container is shown initially
             loginContainer.style.display = 'flex';
