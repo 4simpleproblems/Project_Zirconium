@@ -3,6 +3,8 @@
  * Renders the full header dynamically based on authentication state.
  * Contains ONLY the CSS required for the dynamic topbar functionality.
  * Assumes core Tailwind, Fonts, and Form CSS are loaded in the host HTML file.
+ * NOTE: This script is now initialized via the global function `initMiniNavigation(auth)` 
+ * called from the main <script type="module"> block.
  */
 
 // 1. INJECT ONLY TOPBAR-SPECIFIC STYLES INTO THE HEAD
@@ -147,12 +149,12 @@ function renderLoggedInNavbar(user) {
 }
 
 // 4. MAIN INJECTION FUNCTION
-function injectAuthNavbar() {
+function injectAuthNavbar(auth) {
     const navbarContainer = document.getElementById('navbar-container');
     if (!navbarContainer) return;
 
     // Wait for Firebase Auth to be ready
-    firebase.auth().onAuthStateChanged((user) => {
+    auth.onAuthStateChanged((user) => { // Uses the passed auth object
         let authContent;
         if (user) {
             authContent = renderLoggedInNavbar(user);
@@ -183,7 +185,7 @@ function injectAuthNavbar() {
             if (logoutButton) {
                 logoutButton.addEventListener('click', async () => {
                     try {
-                        await firebase.auth().signOut();
+                        await auth.signOut(); // Uses the signOut method on the passed auth object
                         // Redirect to the login page after logout
                         window.location.href = 'login.html'; 
                     } catch (error) {
@@ -196,5 +198,7 @@ function injectAuthNavbar() {
 }
 
 // Execute the injection functions when the script is loaded
-injectTopbarCSS();
-document.addEventListener('DOMContentLoaded', injectAuthNavbar);
+window.initMiniNavigation = (auth) => {
+    injectTopbarCSS();
+    document.addEventListener('DOMContentLoaded', () => injectAuthNavbar(auth));
+};
