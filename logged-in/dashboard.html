@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - Dashboard</title>
-    <meta name="description" content="A central hub for all 4simpleproblems tools and features.">
-    
-    <!-- CORE PAGE CSS & FONTS -->
+    <title>4SP - DASHBOARD</title>
+    <meta name="description" content="Your central hub for the 4simpleproblems student toolkit. Access all tools and features.">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     
+    <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
     <style>
@@ -30,80 +30,155 @@
         body {
             /* Applying Geist font */
             font-family: 'Geist', sans-serif;
+            background-color: #070707; /* custom-darkest-gray */
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
-        
-        /* Ensure the main content pushes past the fixed/sticky header */
+
+        /* Ensure main content is below the sticky header */
         main {
-            padding-top: 2rem; /* Initial padding, header may cover more */
+            padding-top: 10rem; /* Space for the 16px high header + menu */
+            flex-grow: 1;
         }
-        
-        /* Gradient Text */
-        .gradient-text {
-            background-image: linear-gradient(90deg, #0070f3, #f81ce5);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+
+        .card {
+            background-color: #1c1c1c; /* custom-dark-gray */
+            border: 1px solid #252525; /* custom-medium-gray */
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+            border-color: #4f46e5; /* indigo-600 */
+        }
+
+        .cta-button {
+            background-color: #4f46e5; /* indigo-600 */
+            transition: background-color 0.2s;
+        }
+        .cta-button:hover {
+            background-color: #4338ca; /* indigo-700 */
         }
     </style>
 </head>
-<body class="bg-black text-white min-h-screen flex flex-col">
+<body>
+    <!-- Navigation Container (The target for navigation.js) -->
+    <div id="navbar-container">
+        <!-- Content will be dynamically injected here by navigation.js -->
+    </div>
 
-    <!-- HEADER: Dynamic Navbar Placeholder. HTML is injected by navigation.js -->
-    <!-- NOTE: This page needs an ID for the pinning feature to recognize it, 
-         even though it's not in the JSON. The current URL "dashboard.html" 
-         will not match any page in the navigation menu, so the pin buttons 
-         will default to empty/generic. -->
-    <div id="navbar-container"></div>
-    <!-- END HEADER -->
-
-    <main class="flex-grow mx-auto max-w-6xl px-4 py-8">
-        <div class="text-center py-10 bg-gray-900/50 p-8 rounded-2xl border border-gray-800">
-            <h1 class="text-5xl font-bold mb-3">
-                Welcome to your <span class="gradient-text">Dashboard</span>!
+    <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-16">
+        <header class="text-center py-10">
+            <h1 class="text-5xl font-extrabold tracking-tight text-white sm:text-6xl">
+                4SP Dashboard
             </h1>
-            <p class="text-xl text-gray-400 mb-8">
-                This page is a test environment for the new multi-tab navigation system.
+            <p id="welcome-message" class="mt-4 text-xl text-gray-400">
+                Welcome back! Your toolkit awaits.
             </p>
-            
-            <div class="space-y-4 max-w-lg mx-auto p-6 bg-gray-900 rounded-xl border border-gray-700 text-left">
-                <h2 class="text-2xl font-semibold mb-3">Navigation Test Notes</h2>
-                <p class="text-gray-300">
-                    <i class="fas fa-check-circle text-green-400 mr-2"></i> The horizontal scrolling menu should be visible above this content.
-                </p>
-                <p class="text-gray-300">
-                    <i class="fas fa-check-circle text-green-400 mr-2"></i> All menu items should be clickable.
-                </p>
-                <p class="text-gray-300">
-                    <i class="fas fa-check-circle text-green-400 mr-2"></i> When logged in, click your profile icon to see your account menu.
-                </p>
-                <p class="text-gray-300">
-                    <i class="fas fa-check-circle text-green-400 mr-2"></i> Hover over the three grey buttons next to your profile picture to pin/unpin pages.
-                </p>
-                <div class="border-t border-gray-800 pt-3 mt-4">
-                    <p class="text-sm text-gray-500">
-                        Since "dashboard.html" is not defined in `page-identification.json`, the pin buttons should not automatically highlight an active tab. You can, however, modify `navigation.js` to add this page ID if desired.
-                    </p>
+        </header>
+
+        <!-- Tool Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+
+            <!-- Card 1: Core Tool - Essay Writer/Brainstormer -->
+            <div class="card rounded-xl p-6 flex flex-col justify-between">
+                <div>
+                    <i class="fas fa-pencil-ruler text-3xl text-indigo-400"></i>
+                    <h2 class="mt-4 text-xl font-semibold text-white">Academic Writer</h2>
+                    <p class="mt-2 text-gray-400 text-sm">Draft, critique, and perfect your essays. Get help with brainstorming topics and outline creation.</p>
                 </div>
+                <a href="../logged-in/writer.html" class="cta-button mt-4 w-full text-center py-2 rounded-lg text-sm font-medium text-white shadow-lg">
+                    Start Writing
+                </a>
             </div>
+
+            <!-- Card 2: Utility Tool - Quick Calculator -->
+            <div class="card rounded-xl p-6 flex flex-col justify-between">
+                <div>
+                    <i class="fas fa-calculator text-3xl text-green-400"></i>
+                    <h2 class="mt-4 text-xl font-semibold text-white">Math Utilities</h2>
+                    <p class="mt-2 text-gray-400 text-sm">Quickly solve problems, convert units, and handle complex scientific notation.</p>
+                </div>
+                <a href="../logged-in/calculator.html" class="cta-button mt-4 w-full text-center py-2 rounded-lg text-sm font-medium text-white shadow-lg">
+                    Launch Calculator
+                </a>
+            </div>
+
+            <!-- Card 3: Fun Tool - Games Hub -->
+            <div class="card rounded-xl p-6 flex flex-col justify-between">
+                <div>
+                    <i class="fas fa-gamepad text-3xl text-red-400"></i>
+                    <h2 class="mt-4 text-xl font-semibold text-white">Games Center</h2>
+                    <p class="mt-2 text-gray-400 text-sm">Take a well-deserved break! Access the full catalog of distraction-free games.</p>
+                </div>
+                <!-- Note: The navigation.js ensures this link is correct -->
+                <a href="../GAMES/index.html" class="cta-button mt-4 w-full text-center py-2 rounded-lg text-sm font-medium text-white shadow-lg">
+                    Play Games
+                </a>
+            </div>
+
+            <!-- Card 4: QOL Feature - Tab Disguise -->
+            <div class="card rounded-xl p-6 flex flex-col justify-between">
+                <div>
+                    <i class="fas fa-mask text-3xl text-yellow-400"></i>
+                    <h2 class="mt-4 text-xl font-semibold text-white">Tab Disguise</h2>
+                    <p class="mt-2 text-gray-400 text-sm">Instantly change the tab title and icon to a professional document or lecture name.</p>
+                </div>
+                <a href="../logged-in/settings.html" class="cta-button mt-4 w-full text-center py-2 rounded-lg text-sm font-medium text-white shadow-lg">
+                    Configure
+                </a>
+            </div>
+
         </div>
     </main>
 
-    <footer class="border-t border-gray-900 py-6 mt-auto">
+    <footer class="border-t border-gray-900 py-6">
         <div class="mx-auto max-w-7xl px-4 text-center text-gray-500 text-sm">
             &copy; 2024 4simpleproblems (4SP). Built for students.
         </div>
     </footer>
-    
-    <!-- FIREBASE DEPENDENCIES (Needed by navigation.js for Auth state) -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
-    <!-- Placeholder for your actual config file path -->
-    <script src="../firebase-config.js"></script> 
 
-    <!-- NAVIGATION SCRIPT (Loads the full-featured navbar) -->
-    <!-- NOTE: We link to navigation.js (the new file) -->
-    <script src="../navigation.js"></script>
+    <!-- Load the Full Navigation Script -->
+    <!-- The path is relative to ../logged-in/dashboard.html -->
+    <script src="../navigation.js"></script> 
     
+    <script type="module">
+        // Access the global navigation function you created
+        const initFullNavigation = window.initFullNavigation;
+        
+        // Import necessary Firebase modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        
+        // Import the configuration file (assuming it's at the root level)
+        import { firebaseConfig } from '../firebase-config.js';
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        
+        // --- Navigation Bar Initialization ---
+        if (initFullNavigation) {
+            initFullNavigation(auth);
+        }
+
+        // --- Dashboard Specific Logic: Auth Check and Welcome Message Update ---
+        onAuthStateChanged(auth, (user) => {
+            const welcomeMessageElement = document.getElementById('welcome-message');
+
+            if (user) {
+                // User is signed in. Update the welcome message.
+                const username = user.displayName || user.email?.split('@')[0] || 'User';
+                if (welcomeMessageElement) {
+                    welcomeMessageElement.textContent = \`Welcome back, \${username}! Your toolkit awaits.\`;
+                }
+            } else {
+                // User is signed out. Redirect to login.
+                window.location.href = '../login.html';
+            }
+        });
+    </script>
 </body>
 </html>
