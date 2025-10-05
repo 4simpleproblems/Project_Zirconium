@@ -1,21 +1,30 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut, signInWithCustomToken, signInAnonymously } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
 import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
-import { firebaseConfig, initialAuthToken } from './firebase-config.js'; // <-- NEW IMPORT
 
 /**
  * navigation-mini.js
  * Renders the full header dynamically based on the real Firebase authentication state.
- * This script is now FULLY SELF-INITIALIZING. It handles all Firebase dependencies 
- * internally and imports configuration from './firebase-config.js'.
- * * FIXES APPLIED:
- * 1. Configuration is now imported from firebase-config.js.
- * 2. Uses the imported firebaseConfig and initialAuthToken.
- * 3. Sets the header to fixed position and adds necessary padding to the <body>.
+ * This file is now configured to accept the Firebase details directly within the 
+ * FIREBASE_CONFIG object below, resolving dependency errors.
+ * * * FIXES APPLIED:
+ * 1. Added a constant FIREBASE_CONFIG object for direct configuration entry.
+ * 2. initializeFirebase() now prioritizes the FIREBASE_CONFIG object, falling back 
+ * to the global __firebase_config only if the local object is empty.
  */
 
 // --- 1. CONFIGURATION & INITIALIZATION ---
-// The configuration and auth token are now imported from './firebase-config.js'
+// PASTE YOUR FIREBASE CONFIGURATION HERE. 
+// If this object is empty, the script will attempt to use the global __firebase_config.
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro",
+  authDomain: "project-zirconium.firebaseapp.com",
+  projectId: "project-zirconium",
+  storageBucket: "project-zirconium.firebasestorage.app",
+  messagingSenderId: "1096564243475",
+  appId: "1:1096564243475:web:6d0956a70125eeea1ad3e6",
+  measurementId: "G-1D4F692C1Q"
+};
 
 let app, auth, db;
 let isFirebaseReady = false;
@@ -38,15 +47,26 @@ async function retryFetch(fn, maxRetries = MAX_RETRIES) {
 
 
 async function initializeFirebase() {
+    // Prioritize the local FIREBASE_CONFIG object. If empty, fall back to the global environment variable.
+    let configToUse = FIREBASE_CONFIG;
+    if (Object.keys(FIREBASE_CONFIG).length === 0 && typeof __firebase_config !== 'undefined') {
+        try {
+            configToUse = JSON.parse(__firebase_config);
+        } catch (e) {
+            console.error("Error parsing __firebase_config:", e);
+        }
+    }
+    
+    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+    
     // Check for the critical configuration before proceeding
-    if (Object.keys(firebaseConfig).length === 0 || !firebaseConfig.apiKey) {
-        // Log error but don't stop execution, allowing the rest of the script to potentially load
-        console.error("Firebase configuration is missing or incomplete. Cannot initialize Firebase. Please check firebase-config.js.");
+    if (Object.keys(configToUse).length === 0 || !configToUse.apiKey) {
+        console.error("Firebase configuration is missing or incomplete. Please paste your config into the FIREBASE_CONFIG object.");
         return;
     }
 
     try {
-        app = initializeApp(firebaseConfig);
+        app = initializeApp(configToUse);
         auth = getAuth(app);
         db = getFirestore(app);
 
@@ -293,7 +313,8 @@ async function injectAuthNavbar() {
             if (db && user.uid) { 
                 try {
                     const fetchUserData = async () => {
-                        const userDocRef = doc(db, 'users', user.uid);
+                        // Correct path for private user data
+                        const userDocRef = doc(db, 'users', user.uid); 
                         return await getDoc(userDocRef);
                     };
                     
