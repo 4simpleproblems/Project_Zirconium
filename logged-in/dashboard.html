@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - DASHBOARD</title>
+    <title>4SP - Time Dashboard</title>
     
     <!-- Geist Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -58,36 +58,58 @@
                 
                 const app = initializeApp(effectiveFirebaseConfig);
                 auth = getAuth(app);
-
-                // Attempt authentication using the token or anonymously.
-                try {
-                    if (initialAuthToken) {
-                        await signInWithCustomToken(auth, initialAuthToken);
-                        console.log("Attempted sign-in with custom token.");
-                    } else if (!auth.currentUser) {
-                        await signInAnonymously(auth);
-                        console.log("Attempted anonymous sign-in.");
-                    }
-                } catch (sign_in_error) {
-                    console.warn("Sign-in attempt failed, relying on onAuthStateChanged to resolve.", sign_in_error.code);
-                }
-
+                
+                // Flag to ensure we only attempt fallback sign-in once
+                let initialAuthResolved = false;
 
                 // Listen for authentication changes to determine final state and start the application/redirect.
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
+                        // STATE: Logged In (Token worked or Anonymous worked)
                         userId = user.uid;
                         console.log("User authenticated:", userId);
-                        // Ensure the User ID is displayed as requested
                         document.getElementById('user-id-display').textContent = userId; 
-                        // Start the clock only after successful auth check
                         startClock(); 
+                        initialAuthResolved = true; // State is confirmed
                     } else {
-                        console.log("Authentication failed or user logged out. Redirecting...");
-                        // Redirect instantly if authentication state is definitively null
-                        redirectToIndex();
+                        console.log("User state is null.");
+                        
+                        // If we had a custom token, and it failed (resulting in null user), 
+                        // the system requires re-authentication. We must redirect.
+                        if (initialAuthToken && initialAuthToken.length > 0) {
+                            console.log("Custom token provided but failed. Redirecting to re-authenticate...");
+                            redirectToIndex();
+                            initialAuthResolved = true;
+                            return;
+                        }
+
+                        // If no custom token was provided, and the initial check is not resolved,
+                        // attempt anonymous sign-in to ensure a user ID exists.
+                        if (!initialAuthResolved) {
+                            initialAuthResolved = true; // Mark attempt as made
+                            
+                            // The environment is supposed to handle token sign-in implicitly, 
+                            // but we fall back to anonymous if the user is null and no token was present.
+                            signInAnonymously(auth)
+                                .then(() => console.log("Attempted anonymous sign-in."))
+                                .catch(error => {
+                                    console.error("Anonymous sign-in failed.", error);
+                                    // If anonymous sign-in fails, we must redirect.
+                                    redirectToIndex();
+                                });
+                            return;
+                        }
+                        
+                        // If the state is null and the initial check has resolved (meaning all sign-in attempts failed or user actively signed out).
+                        if (initialAuthResolved) {
+                             console.log("No user found after all attempts. Redirecting...");
+                             redirectToIndex();
+                        }
                     }
                 });
+
+                // Crucially, we do NOT perform explicit signInWithCustomToken/signInAnonymously 
+                // outside of the listener, allowing the listener to be the single source of truth.
 
             } catch (error) {
                 console.error("Firebase Initialization Error:", error);
