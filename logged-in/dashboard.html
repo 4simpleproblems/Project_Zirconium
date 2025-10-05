@@ -3,203 +3,172 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - Time Dashboard</title>
-    
-    <!-- Geist Font -->
+    <title>4SP - DASHBOARD</title>
+    <meta name="description" content="Your central hub for the 4simpleproblems student toolkit. Access all tools and features.">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     
-    <!-- TailwindCSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- External Files (Loaded Globally as requested) -->
-    <!-- These files are expected to define global variables like firebaseConfig and Navigation -->
-    <script src="../firebase-config.js"></script>
-    <script src="../navigation.js"></script>
-
-    <!-- Firebase Utilities and Main Logic (type="module" required for Firebase SDK imports) -->
-    <script type="module">
-        // NOTE: We now rely on 'firebaseConfig' and 'Navigation' being defined globally
-        // by the non-module script tags above.
-
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; 
-        
-        // Set log level to Debug to help track auth issues
-        setLogLevel('Debug');
-
-        // Configuration and Initialization
-        
-        // 1. Try to use firebaseConfig defined globally by '../firebase-config.js'
-        const firebaseConfigFromExternalFile = typeof firebaseConfig !== 'undefined' ? firebaseConfig : {};
-
-        // 2. Fallback to the secure config provided by the Canvas environment
-        const effectiveFirebaseConfig = (Object.keys(firebaseConfigFromExternalFile).length > 0) 
-            ? firebaseConfigFromExternalFile
-            : JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        
-        let auth;
-        let userId = 'Loading...';
-
-        /**
-         * Initializes Firebase and checks authentication status.
-         */
-        async function checkAuth() {
-            try {
-                if (Object.keys(effectiveFirebaseConfig).length === 0) {
-                    console.error("Firebase configuration is missing or invalid.");
-                    redirectToIndex(); 
-                    return;
-                }
-                
-                const app = initializeApp(effectiveFirebaseConfig);
-                auth = getAuth(app);
-                
-                // Flag to ensure we only attempt fallback sign-in once
-                let initialAuthResolved = false;
-
-                // Listen for authentication changes to determine final state and start the application/redirect.
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        // STATE: Logged In (Token worked or Anonymous worked)
-                        userId = user.uid;
-                        console.log("User authenticated:", userId);
-                        document.getElementById('user-id-display').textContent = userId; 
-                        startClock(); 
-                        initialAuthResolved = true; // State is confirmed
-                    } else {
-                        console.log("User state is null.");
-                        
-                        // If we had a custom token, and it failed (resulting in null user), 
-                        // the system requires re-authentication. We must redirect.
-                        if (initialAuthToken && initialAuthToken.length > 0) {
-                            console.log("Custom token provided but failed. Redirecting to re-authenticate...");
-                            redirectToIndex();
-                            initialAuthResolved = true;
-                            return;
-                        }
-
-                        // If no custom token was provided, and the initial check is not resolved,
-                        // attempt anonymous sign-in to ensure a user ID exists.
-                        if (!initialAuthResolved) {
-                            initialAuthResolved = true; // Mark attempt as made
-                            
-                            // The environment is supposed to handle token sign-in implicitly, 
-                            // but we fall back to anonymous if the user is null and no token was present.
-                            signInAnonymously(auth)
-                                .then(() => console.log("Attempted anonymous sign-in."))
-                                .catch(error => {
-                                    console.error("Anonymous sign-in failed.", error);
-                                    // If anonymous sign-in fails, we must redirect.
-                                    redirectToIndex();
-                                });
-                            return;
-                        }
-                        
-                        // If the state is null and the initial check has resolved (meaning all sign-in attempts failed or user actively signed out).
-                        if (initialAuthResolved) {
-                             console.log("No user found after all attempts. Redirecting...");
-                             redirectToIndex();
-                        }
-                    }
-                });
-
-                // Crucially, we do NOT perform explicit signInWithCustomToken/signInAnonymously 
-                // outside of the listener, allowing the listener to be the single source of truth.
-
-            } catch (error) {
-                console.error("Firebase Initialization Error:", error);
-                redirectToIndex();
-            }
-        }
-        
-        /**
-         * Redirects the user to the home page immediately.
-         */
-        function redirectToIndex() {
-            // Check if Navigation utility is available globally before redirecting
-            if (typeof Navigation !== 'undefined' && Navigation.goToIndex) {
-                 Navigation.goToIndex();
-            } else {
-            }
-        }
-
-        /**
-         * Core function to update the time and date display.
-         */
-        function updateClock() {
-            const now = new Date();
-            
-            // Time: HH:MM:SS AM/PM
-            const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
-            const timeString = now.toLocaleTimeString('en-US', timeOptions);
-            document.getElementById('time-display').textContent = timeString;
-
-            // Date: Full day name, Month name, Day, Year
-            const dateOptions = { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' };
-            const dateString = now.toLocaleDateString('en-US', dateOptions);
-            document.getElementById('date-display').textContent = dateString;
-        }
-
-        let clockInterval;
-        function startClock() {
-            // Initial call and then set interval
-            updateClock();
-            if (clockInterval) clearInterval(clockInterval); // Clear any existing interval
-            clockInterval = setInterval(updateClock, 1000);
-        }
-
-
-        // Start the authentication process on page load
-        window.addEventListener('load', checkAuth);
-
-    </script>
     
     <style>
+        /* Custom CSS to mimic a modern, dark theme and use the Geist font */
         :root {
             --geist-foreground: 255, 255, 255;
             --geist-background: 0, 0, 0;
+            --geist-accent-7: 156, 163, 175; /* gray-400 */
         }
-        .dark { color-scheme: dark; }
-        body { 
-            font-family: 'Geist', sans-serif; 
+        
+        .dark {
+            color-scheme: dark;
+        }
+
+        body {
+            /* Applying Geist font */
+            font-family: 'Geist', sans-serif;
+            background-color: #070707; /* custom-darkest-gray */
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Ensure main content is below the sticky header */
+        main {
+            padding-top: 10rem; /* Space for the 16px high header + menu */
+            flex-grow: 1;
+        }
+
+        .card {
+            background-color: #1c1c1c; /* custom-dark-gray */
+            border: 1px solid #252525; /* custom-medium-gray */
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+            border-color: #4f46e5; /* indigo-600 */
+        }
+
+        .cta-button {
+            background-color: #4f46e5; /* indigo-600 */
+            transition: background-color 0.2s;
+        }
+        .cta-button:hover {
+            background-color: #4338ca; /* indigo-700 */
         }
     </style>
 </head>
-<body class="bg-black text-white min-h-screen flex flex-col">
+<body>
+    <div id="navbar-container">
+        </div>
 
-    <main class="flex-grow pt-4 pb-12 px-4 sm:px-8 max-w-7xl mx-auto w-full">
-        
-        <header class="mb-8">
-            <h1 class="text-4xl sm:text-5xl font-light tracking-tight text-white mb-2">
-                Dashboard
+    <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-16">
+        <header class="text-center py-10">
+            <h1 class="text-5xl font-extrabold tracking-tight text-white sm:text-6xl">
+                4SP Dashboard
             </h1>
-            <p class="text-sm font-normal text-gray-500">
-                Welcome back, User ID: <span id="user-id-display" class="font-mono text-xs text-gray-400">Loading...</span>
+            <p id="welcome-message" class="mt-4 text-xl text-gray-400">
+                Welcome back! Your toolkit awaits.
             </p>
         </header>
 
-        <!-- Main Time Container -->
-        <section class="flex justify-center items-center h-[calc(100vh-15rem)] min-h-[300px] bg-[#111111] rounded-2xl border border-gray-800 shadow-2xl">
-            
-            <div id="time-date-container" class="text-center p-8">                
-                <!-- Time: HH:MM:SS AM/PM -->
-                <div id="time-display" class="text-6xl md:text-[10rem] lg:text-[12rem] font-light text-white tracking-tight leading-none">
-                    --:--:--
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+
+            <div class="card rounded-xl p-6 flex flex-col justify-between">
+                <div>
+                    <i class="fas fa-pencil-ruler text-3xl text-indigo-400"></i>
+                    <h2 class="mt-4 text-xl font-semibold text-white">Academic Writer</h2>
+                    <p class="mt-2 text-gray-400 text-sm">Draft, critique, and perfect your essays. Get help with brainstorming topics and outline creation.</p>
                 </div>
-                
-                <!-- Date -->
-                <div id="date-display" class="text-2xl md:text-3xl font-normal text-gray-500 mt-6">
-                    ---
-                </div>
+                <a href="../logged-in/writer.html" class="cta-button mt-4 w-full text-center py-2 rounded-lg text-sm font-medium text-white shadow-lg">
+                    Start Writing
+                </a>
             </div>
 
-        </section>
+            <div class="card rounded-xl p-6 flex flex-col justify-between">
+                <div>
+                    <i class="fas fa-calculator text-3xl text-green-400"></i>
+                    <h2 class="mt-4 text-xl font-semibold text-white">Math Utilities</h2>
+                    <p class="mt-2 text-gray-400 text-sm">Quickly solve problems, convert units, and handle complex scientific notation.</p>
+                </div>
+                <a href="../logged-in/calculator.html" class="cta-button mt-4 w-full text-center py-2 rounded-lg text-sm font-medium text-white shadow-lg">
+                    Launch Calculator
+                </a>
+            </div>
+
+            <div class="card rounded-xl p-6 flex flex-col justify-between">
+                <div>
+                    <i class="fas fa-gamepad text-3xl text-red-400"></i>
+                    <h2 class="mt-4 text-xl font-semibold text-white">Games Center</h2>
+                    <p class="mt-2 text-gray-400 text-sm">Take a well-deserved break! Access the full catalog of distraction-free games.</p>
+                </div>
+                <a href="../GAMES/index.html" class="cta-button mt-4 w-full text-center py-2 rounded-lg text-sm font-medium text-white shadow-lg">
+                    Play Games
+                </a>
+            </div>
+
+            <div class="card rounded-xl p-6 flex flex-col justify-between">
+                <div>
+                    <i class="fas fa-mask text-3xl text-yellow-400"></i>
+                    <h2 class="mt-4 text-xl font-semibold text-white">Tab Disguise</h2>
+                    <p class="mt-2 text-gray-400 text-sm">Instantly change the tab title and icon to a professional document or lecture name.</p>
+                </div>
+                <a href="../logged-in/settings.html" class="cta-button mt-4 w-full text-center py-2 rounded-lg text-sm font-medium text-white shadow-lg">
+                    Configure
+                </a>
+            </div>
+
+        </div>
     </main>
 
+    <footer class="border-t border-gray-900 py-6">
+        <div class="mx-auto max-w-7xl px-4 text-center text-gray-500 text-sm">
+            &copy; 2024 4simpleproblems (4SP). Built for students.
+        </div>
+    </footer>
+
+    <script src="../navigation.js"></script> 
+    
+    <script type="module">
+        // Access the global navigation function you created
+        const initFullNavigation = window.initFullNavigation;
+        
+        // Import necessary Firebase modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        
+        // 🔥 Re-import the configuration file (assuming it's at the root level)
+        // NOTE: This file (../firebase-config.js) must exist and export the firebaseConfig object.
+        import { firebaseConfig } from '../firebase-config.js';
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        
+        // --- Navigation Bar Initialization ---
+        if (initFullNavigation) {
+            initFullNavigation(auth);
+        }
+
+        // --- Dashboard Specific Logic: Auth Check and Welcome Message Update ---
+        onAuthStateChanged(auth, (user) => {
+            const welcomeMessageElement = document.getElementById('welcome-message');
+
+            if (user) {
+                // User is signed in. Update the welcome message.
+                const username = user.displayName || user.email?.split('@')[0] || 'User';
+                if (welcomeMessageElement) {
+                    welcomeMessageElement.textContent = `Welcome back, ${username}! Your toolkit awaits.`;
+                }
+            } else {
+                // User is signed out. Redirect to login.
+                window.location.href = '../login.html';
+            }
+        });
+    </script>
 </body>
 </html>
