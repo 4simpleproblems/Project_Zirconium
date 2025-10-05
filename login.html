@@ -219,24 +219,15 @@
             serverTimestamp
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-        // --- Configuration Check (MUST be defined in firebase-config.js) ---
-        // The original code used global variables from a 'Canvas' environment.
-        // We now rely on the 'firebaseConfig' variable provided by the imported firebase-config.js.
-        // If the external file uses 'export const firebaseConfig = {...}', it'll be available.
-        // The original logic is replaced with a check for the existence of the expected object.
+        // --- Configuration Check (Assumes firebaseConfig is exported from firebase-config.js) ---
         if (typeof firebaseConfig === 'undefined' || Object.keys(firebaseConfig).length === 0) {
             console.error("FATAL ERROR: Firebase configuration not found. Ensure 'firebase-config.js' is loaded and exports 'firebaseConfig'.");
-            alert("Application Error: Firebase not configured.");
-            // Optionally, disable login buttons here
-            return;
+            // Note: Cannot call alert in module scope before DOM is ready, but this check is essential.
         }
 
-        // --- Canvas Environment Globals (RETAINED FOR ORIGINAL LOGIC COMPATIBILITY/FALLBACK) ---
-        // Note: 'appId' and 'initialAuthToken' are often environment-specific and may still be needed.
-        // For demonstration, we set a default 'appId' if not provided by the environment.
+        // --- Canvas Environment Globals (MANDATORY) ---
         const appId = typeof __app_id !== 'undefined' ? __app_id : '4sp-default-app';
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
 
         // --- Initialize Firebase with External Config ---
         const app = initializeApp(firebaseConfig);
@@ -255,17 +246,36 @@
             element.className = `message-area w-full max-w-md mt-4 min-h-[20px] text-center text-sm ${type}-message`;
         };
         
-        // Placeholder for real profanity check (keeping the original logic structure)
+        /**
+         * Checks text for profanity using the Purgomalum API.
+         * @param {string} text The string to check.
+         * @returns {Promise<boolean>} True if profanity is detected, false otherwise.
+         */
         const checkProfanity = async (text) => {
             if (!text || !text.trim()) return false;
-            // NOTE: Using a mock check here as the original API may fail
-            return text.toLowerCase().includes('fuck') || text.toLowerCase().includes('shit');
+            
+            try {
+                // Use the Purgomalum API to check for profanity
+                const encodedText = encodeURIComponent(text);
+                const response = await fetch(`https://purgomalum.com/service/containsprofanity?text=${encodedText}`);
+
+                if (!response.ok) {
+                    console.warn("Purgomalum API failed, assuming no profanity for safety.", response.status);
+                    return false; // Fail safe (assume no profanity if service is down)
+                }
+
+                const containsProfanity = await response.json();
+                return containsProfanity; // API returns true/false
+                
+            } catch (error) {
+                console.error("Error checking profanity:", error);
+                return false; // Fail safe
+            }
         };
         
         // The original logic used a top-level 'users' collection for checking usernames.
         // For simplicity and to avoid complex queries across all users' private paths, 
         // we'll assume a shared public collection for *unique usernames* if necessary.
-        // For now, we'll keep the logic but simplify the path for this environment.
         const isUsernameTaken = async (username) => {
             // NOTE: A real shared app would need a public 'usernames' collection.
             return false;
@@ -345,12 +355,14 @@
         const repairOrCreateUserDocument = async (user, providerName, loginMessageDiv) => {
             let userEmail = user.email;
             let proposedUsername = user.displayName || userEmail.split('@')[0] || 'User';
+            // Clean up the proposed username
             proposedUsername = proposedUsername.replace(/[^a-zA-Z0-9]/g, '').slice(0, 16); 
 
+            // Check if the proposed username is too short or contains profanity via Purgomalum
             if (proposedUsername.length < 4 || await checkProfanity(proposedUsername)) { 
                 proposedUsername = `User${user.uid.substring(0, 8)}`; 
             }
-            // Simplified username logic for demonstration
+            
             const finalUsername = proposedUsername; 
 
             const documentCreated = await createUserDocument(user, providerName, finalUsername, userEmail);
@@ -363,7 +375,7 @@
 
         // --- Login Page-Specific Logic ---
         document.addEventListener('DOMContentLoaded', async () => {
-            // First, establish authentication state using Canvas globals
+            // NOTE: Anonymous sign-in must be ENABLED in the Firebase console to avoid the 400 error.
             if (initialAuthToken) {
                 try {
                     await signInWithCustomToken(auth, initialAuthToken);
@@ -448,6 +460,9 @@
                             message = 'Access temporarily disabled due to too many failed login attempts.'; break;
                         case 'auth/user-disabled':
                             message = 'Your account has been disabled.'; break;
+                        default:
+                            message = `Login failed: ${error.message.split('(')[0].trim()}`;
+                            break;
                     }
                     showMessage(loginMessageDiv, message);
                 }
