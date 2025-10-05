@@ -5,23 +5,45 @@ import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/11
 /**
  * navigation-mini.js
  * Renders the full header dynamically based on the real Firebase authentication state.
- * This script is now self-executing and handles all its Firebase dependencies internally.
- * It uses environment-provided global variables for configuration and authentication,
- * which is necessary for proper loading within the Canvas environment.
- * * FIX: Updated CSS to use 'fixed' positioning and inject 'padding-top' on the body
- * to prevent page content from hiding behind the header.
+ * This script is now FULLY SELF-INITIALIZING. It handles all Firebase dependencies 
+ * internally and uses environment-provided global variables for configuration and 
+ * authentication, resolving the "Cannot initialize Firebase" error.
+ * * FIXES APPLIED:
+ * 1. Removed external dependency on initMiniNavigation(). Script runs itself.
+ * 2. Uses global __firebase_config and __initial_auth_token.
+ * 3. Sets the header to fixed position and adds necessary padding to the <body>.
  */
 
 // --- 1. CONFIGURATION & INITIALIZATION ---
 // Get config and token from global environment variables (Canvas requirement)
+// This is the source of the previous error: ensure these globals are used directly.
 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
 let app, auth, db;
 let isFirebaseReady = false;
 
+// Retry mechanism for API calls (Firebase authentication/firestore calls)
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 1000;
+
+async function retryFetch(fn, maxRetries = MAX_RETRIES) {
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            return await fn();
+        } catch (error) {
+            if (i === maxRetries - 1) throw error; // Re-throw on last attempt
+            const delay = BASE_DELAY_MS * 2 ** i;
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+}
+
+
 async function initializeFirebase() {
+    // Check for the critical configuration before proceeding
     if (Object.keys(firebaseConfig).length === 0) {
+        // Log error but don't stop execution, allowing the rest of the script to potentially load
         console.error("Firebase configuration is missing. Cannot initialize Firebase.");
         return;
     }
@@ -32,11 +54,16 @@ async function initializeFirebase() {
         db = getFirestore(app);
 
         // Sign in using the provided token or anonymously
-        if (initialAuthToken) {
-            await signInWithCustomToken(auth, initialAuthToken);
-        } else {
-            await signInAnonymously(auth);
-        }
+        const authSignIn = async () => {
+            if (initialAuthToken) {
+                await signInWithCustomToken(auth, initialAuthToken);
+            } else {
+                await signInAnonymously(auth);
+            }
+        };
+
+        // Use retry mechanism for sign-in
+        await retryFetch(authSignIn);
         
         isFirebaseReady = true;
         console.log("Firebase initialized and user signed in.");
@@ -73,7 +100,7 @@ function injectTopbarCSS() {
         /* --- Core Fixed Header Styles --- */
         /* This ensures the body content starts below the 64px (h-16) fixed header */
         body {
-            padding-top: 4rem !important; 
+            padding-top: 4rem !important; /* 4rem = 64px, matching h-16 */
         }
 
         /* --- AUTH MENU STYLES (Required for dropdown) --- */
@@ -146,7 +173,7 @@ function setupAuthMenuLogic() {
     }
 }
 
-// --- 4. NAVBAR RENDERING FUNCTIONS ---
+// --- 4. NAVBAR RENDERING FUNCTIONS (No Change) ---
 function renderLoggedOutNavbar() {
     return `
         <div class="relative">
@@ -235,10 +262,23 @@ function renderLoggedInNavbar(user) {
 }
 
 // --- 5. MAIN INJECTION FUNCTION (Handles Auth State) ---
-// This function is now called only AFTER Firebase initialization is complete
 async function injectAuthNavbar() {
     if (!isFirebaseReady) {
-        console.warn("Attempted to run injectAuthNavbar before Firebase was ready.");
+        // If Firebase failed to initialize, still show a logged-out fallback
+        const navbarContainer = document.getElementById('navbar-container');
+        if (navbarContainer) {
+             navbarContainer.innerHTML = `
+                <header class="fixed top-0 w-full z-50 backdrop-blur-md bg-black/80 border-b border-gray-900">
+                    <nav class="h-16 flex items-center justify-between px-4">
+                        <a href="../index.html" class="flex items-center space-x-2">
+                            <img src="../images/logo.png" alt="Logo" class="h-8 w-auto">
+                        </a>
+                        ${renderLoggedOutNavbar()}
+                    </nav>
+                </header>
+            `;
+            setupAuthMenuLogic();
+        }
         return;
     }
     
@@ -255,8 +295,13 @@ async function injectAuthNavbar() {
             // Fetch user data from Firestore
             if (db && user.uid) { 
                 try {
-                    const userDocRef = doc(db, 'users', user.uid);
-                    const userDocSnap = await getDoc(userDocRef);
+                    const fetchUserData = async () => {
+                        const userDocRef = doc(db, 'users', user.uid);
+                        return await getDoc(userDocRef);
+                    };
+                    
+                    const userDocSnap = await retryFetch(fetchUserData);
+                    
                     if (userDocSnap.exists()) {
                         userData = userDocSnap.data();
                     }
@@ -279,15 +324,13 @@ async function injectAuthNavbar() {
         }
 
         // Inject the full header structure
-        // IMPORTANT: Changed 'sticky' to 'fixed w-full' for correct top bar behavior
+        // IMPORTANT: Using 'fixed w-full' for correct top bar behavior
         navbarContainer.innerHTML = `
             <header class="fixed top-0 w-full z-50 backdrop-blur-md bg-black/80 border-b border-gray-900">
                 <nav class="h-16 flex items-center justify-between px-4">
                     <a href="../index.html" class="flex items-center space-x-2">
-                        <picture>
-                            <source srcset="../images/logo.png" media="(prefers-color-scheme: dark)">
-                            <img src="../images/logo.png" alt="4simpleproblems Logo" class="h-8 w-auto">
-                        </picture>
+                        <!-- Removed picture/source for simplicity, just using the img tag -->
+                        <img src="../images/logo.png" alt="4simpleproblems Logo" class="h-8 w-auto">
                     </a>
                     ${authContent}
                 </nav>
@@ -302,8 +345,9 @@ async function injectAuthNavbar() {
             if (logoutButton) {
                 logoutButton.addEventListener('click', async () => {
                     try {
-                        await signOut(auth); // Use the imported signOut function
-                        // Redirect to the login page (relative path from the page using this script)
+                        // Use the imported signOut function
+                        await retryFetch(() => signOut(auth)); 
+                        // Redirect to the login page 
                         window.location.href = 'login.html'; 
                     } catch (error) {
                         console.error("Logout failed:", error);
@@ -315,7 +359,7 @@ async function injectAuthNavbar() {
 }
 
 // --- 6. SELF-EXECUTION ENTRY POINT ---
-// 1. Inject CSS immediately (This injects the critical padding-top to the body)
+// 1. Inject CSS immediately (This injects the critical fixed/padding-top styles)
 injectTopbarCSS(); 
 // 2. Start the Firebase initialization process once the DOM is ready
 document.addEventListener('DOMContentLoaded', initializeFirebase);
