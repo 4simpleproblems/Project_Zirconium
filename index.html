@@ -10,28 +10,22 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     
+    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     
+    <!-- TailwindCSS for styling the page content -->
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- The ONE script tag to rule them all. Defer ensures it runs after the page is parsed. -->
+    <script src="navigation-mini.js" defer></script>
     
     <style>
-        /* Custom CSS to mimic a modern, dark theme and use the Geist font */
         :root {
             --geist-foreground: 255, 255, 255;
             --geist-background: 0, 0, 0;
-            --geist-accent-7: 156, 163, 175; /* gray-400 */
         }
-        
-        .dark {
-            color-scheme: dark;
-        }
-
-        body {
-            /* Applying Geist font */
-            font-family: 'Geist', sans-serif;
-        }
-        
-        /* Gradient Text */
+        .dark { color-scheme: dark; }
+        body { font-family: 'Geist', sans-serif; }
         .gradient-text {
             background-image: linear-gradient(90deg, #0070f3, #f81ce5);
             -webkit-background-clip: text;
@@ -41,20 +35,17 @@
     </style>
 </head>
 <body class="bg-black text-white min-h-screen">
+    <!-- The navigation.js script will automatically create and inject the navbar here -->
 
-    <div id="navbar-container"></div>
     <main>
         <section class="text-center py-12 sm:py-20 border-b border-gray-900">
             <div class="mx-auto max-w-4xl px-4">
-                
                 <h1 class="text-3xl sm:text-4xl font-normal text-gray-300 tracking-tighter mb-4 leading-tight">
                     Over 160 users, and counting.
                 </h1>
-                
                 <h2 class="text-5xl sm:text-6xl font-semibold tracking-tighter mb-4 leading-tight">
                     <span class="gradient-text font-bold">The Essential Student Toolkit.</span>
                 </h2>
-
                 <p class="text-xl text-gray-400 max-w-2xl mx-auto mb-6">
                     4simpleproblems (4SP) is a multi-tool platform offering soundboards, study apps, and essential Quality-of-Life (QOL) features like Tab Disguising and Panic Keys—all designed to make student life easier and more fun.
                 </p>
@@ -64,8 +55,9 @@
             </div>
         </section>
 
+        <!-- The rest of your page content remains the same -->
         <section id="features" class="py-16 mx-auto max-w-7xl px-4 space-y-16">
-            <h2 class="text-4xl font-medium text-center mb-8">Core Features of 4SP</h2> 
+             <h2 class="text-4xl font-medium text-center mb-8">Core Features of 4SP</h2> 
 
             <div class="lg:grid lg:grid-cols-2 lg:gap-12 items-center">
                 
@@ -75,13 +67,12 @@
                     <p class="text-xl text-gray-400 mb-5">
                         Access and create custom playlists of sounds. Use our dynamic, low-latency soundboards to focus, meme, or just relax. Save and share your favorite sound sequences with friends.
                     </p>
-                    <a href="../logged-in/soundboard.html" class="inline-flex items-center text-green-400 font-normal hover:text-green-300 transition">
+                    <a href="/logged-in/soundboard.html" class="inline-flex items-center text-green-400 font-normal hover:text-green-300 transition">
                         Explore Soundboard &rarr;
                     </a>
                 </div>
 
                 <div class="relative p-8 rounded-3xl border border-green-800/50 overflow-hidden shadow-2xl bg-gray-900 h-40 flex items-center justify-center order-1 lg:order-2 mb-6 lg:mb-0">
-                    <i class="fas fa-list-alt text-6xl text-green-400 opacity-20 absolute top-4 right-4"></i>
                     <i class="fas fa-volume-up text-7xl text-green-400 z-10"></i>
                     <p class="absolute bottom-4 left-4 text-xs text-green-500/50 z-10">Custom Playlists and Low-Latency Audio</p>
                 </div>
@@ -90,8 +81,7 @@
             <div class="lg:grid lg:grid-cols-2 lg:gap-12 items-center">
 
                 <div class="relative p-8 rounded-3xl border border-blue-800/50 overflow-hidden shadow-2xl bg-gray-900 h-40 flex items-center justify-center order-1 lg:order-1 mb-6 lg:mb-0">
-                    <i class="fas fa-tasks text-6xl text-blue-400 opacity-20 absolute top-4 left-4"></i>
-                    <i class="fas fa-clock text-7xl text-blue-400 z-10"></i>
+                   <i class="fas fa-tasks text-7xl text-blue-400 z-10"></i>
                     <p class="absolute bottom-4 right-4 text-xs text-blue-500/50 z-10">Notes, Countdowns, and Task Lists</p>
                 </div>
 
@@ -102,9 +92,9 @@
                         A suite of utilities built for academic success, keeping your notes, deadlines, and schedule organized in one place.
                     </p>
                     <ul class="space-y-2 text-lg text-gray-300"> 
-                        <li class="flex items-center"><i class="fas fa-sticky-note w-5 mr-3 text-blue-500"></i><span class="font-normal mr-2">Notes:</span>Simple, persistent storage for quick thoughts.</li>
-                        <li class="flex items-center"><i class="fas fa-clock w-5 mr-3 text-blue-500"></i><span class="font-normal mr-2">Countdowns:</span>Track due dates and exam times seamlessly.</li>
-                        <li class="flex items-center"><i class="fas fa-list-alt w-5 mr-3 text-blue-500"></i><span class="font-normal mr-2">Soundboard Playlists:</span>Organize your favorite sound sequences.</li>
+                        <li class="flex items-center"><i class="fas fa-sticky-note fa-fw w-5 mr-3 text-blue-500"></i><span class="font-normal mr-2">Notes:</span>Simple, persistent storage for quick thoughts.</li>
+                        <li class="flex items-center"><i class="fas fa-hourglass-half fa-fw w-5 mr-3 text-blue-500"></i><span class="font-normal mr-2">Countdowns:</span>Track due dates and exam times seamlessly.</li>
+                        <li class="flex items-center"><i class="fas fa-book fa-fw w-5 mr-3 text-blue-500"></i><span class="font-normal mr-2">Dictionary:</span>Quickly look up definitions.</li>
                     </ul>
                 </div>
             </div>
@@ -117,29 +107,17 @@
                         Quality-of-Life tools designed to help you manage distractions instantly and discreetly, without drawing unwanted attention.
                     </p>
                     <ul class="space-y-2 text-lg text-gray-300"> 
-                        <li class="flex items-center"><i class="fas fa-eye-slash w-5 mr-3 text-purple-500"></i><span class="font-normal mr-2">Tab Disguising:</span>Instantly change the tab title/favicon to blend in.</li>
-                        <li class="flex items-center"><i class="fas fa-hand-paper w-5 mr-3 text-purple-500"></i><span class="font-normal mr-2">Panic Keys:</span>A quick key combination to redirect.</li>
-                        <li class="flex items-center"><i class="fas fa-palette w-5 mr-3 text-purple-500"></i><span class="font-normal mr-2">Customizable UI:</span>Adjust themes for maximum discretion.</li>
+                        <li class="flex items-center"><i class="fas fa-eye-slash fa-fw w-5 mr-3 text-purple-500"></i><span class="font-normal mr-2">Tab Disguising:</span>Instantly change the tab title/favicon to blend in.</li>
+                        <li class="flex items-center"><i class="fas fa-bolt fa-fw w-5 mr-3 text-purple-500"></i><span class="font-normal mr-2">Panic Keys:</span>A quick key combination to redirect.</li>
+                        <li class="flex items-center"><i class="fas fa-palette fa-fw w-5 mr-3 text-purple-500"></i><span class="font-normal mr-2">Customizable UI:</span>Adjust themes for maximum discretion.</li>
                     </ul>
                 </div>
                 
                 <div class="relative p-8 rounded-3xl border border-purple-800/50 overflow-hidden shadow-2xl bg-gray-900 h-40 flex items-center justify-center order-1 lg:order-2 mb-6 lg:mb-0">
-                    <i class="fas fa-mask text-6xl text-purple-400 opacity-20 absolute top-4 right-4"></i>
-                    <i class="fas fa-eye-slash text-7xl text-purple-400 z-10"></i>
+                    <i class="fas fa-user-secret text-7xl text-purple-400 z-10"></i>
                     <p class="absolute bottom-4 left-4 text-xs text-purple-500/50 z-10">Discretion and Quick Hiding</p>
                 </div>
             </div>
-            
-            <div class="p-10 rounded-3xl border border-yellow-800/50 bg-gray-900/50 text-center transition hover:scale-[1.01] duration-300 mt-16">
-                <h3 class="text-3xl font-medium mb-3 text-yellow-400">Games (Distraction Included)</h3>
-                <p class="text-gray-300 max-w-2xl mx-auto text-lg mb-4">
-                    Need a break? Recharge with simple, fun, in-browser games designed for quick sessions. We know sometimes you just need to let off steam.
-                </p>
-                <a href="../GAMES/index.html" class="mt-4 inline-flex items-center justify-center px-6 py-2 border border-yellow-700/50 text-base font-normal rounded-xl shadow-sm text-yellow-400 bg-yellow-900/30 hover:bg-yellow-800/50 transition">
-                    Start Playing Now &rarr;
-                </a>
-            </div>
-
         </section>
 
         <section class="py-12 mx-auto max-w-7xl px-4 text-center border-t border-gray-900">
@@ -160,6 +138,6 @@
         </div>
     </footer>
 
-    <script type="module" src="navigation-mini.js"></script>
 </body>
 </html>
+
