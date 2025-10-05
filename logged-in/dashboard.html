@@ -3,24 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - DASHBOARD</title>
+    <title>4SP - Official Dashboard</title>
     <meta name="description" content="Your central hub for the 4simpleproblems student toolkit. Access all tools and features.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Geist Font -->
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     
+    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../navigation.js"></script>
     
     <style>
-        /* Custom CSS to mimic a modern, dark theme and use the Geist font */
+        /* Custom CSS for a clean, official, Geist-themed dark dashboard */
         :root {
             --geist-foreground: 255, 255, 255;
-            --geist-background: 0, 0, 0;
-            --geist-accent-7: 156, 163, 175; /* gray-400 */
+            --geist-background: 7, 7, 7;
+            --geist-accent: 79, 70, 229; /* indigo-600 */
         }
         
         .dark {
@@ -30,155 +33,633 @@
         body {
             /* Applying Geist font */
             font-family: 'Geist', sans-serif;
-            background-color: #070707; /* custom-darkest-gray */
+            background-color: var(--geist-background);
             color: white;
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
         }
 
-        /* Ensure main content is below the sticky header */
-        main {
-            padding-top: 10rem; /* Space for the 16px high header + menu */
-            flex-grow: 1;
+        /* Container for the three sections, with full height */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            min-height: 75vh;
+            border: 1px solid #1f2937; /* border-gray-800 */
+            border-radius: 1rem;
+            overflow: hidden;
+            background-color: #0c0c0c;
         }
 
-        .card {
-            background-color: #1c1c1c; /* custom-dark-gray */
-            border: 1px solid #252525; /* custom-medium-gray */
-            transition: transform 0.2s, box-shadow 0.2s;
+        @media (min-width: 1024px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr 1px 1fr 1px 1fr;
+            }
+            .separator {
+                background-color: #1f2937; /* gray-800 line */
+                width: 1px;
+                height: 100%;
+            }
         }
-        .card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
-            border-color: #4f46e5; /* indigo-600 */
+        
+        /* On mobile (below lg breakpoint), use horizontal separators */
+        @media (max-width: 1023px) {
+            .dashboard-grid {
+                display: flex;
+                flex-direction: column;
+                border: none;
+                background-color: transparent;
+                min-height: auto;
+            }
+            .section-wrapper {
+                border: 1px solid #1f2937;
+                border-radius: 0.75rem;
+                margin-bottom: 1rem;
+            }
         }
 
-        .cta-button {
-            background-color: #4f46e5; /* indigo-600 */
-            transition: background-color 0.2s;
+        .shortcut-button {
+            transition: all 0.15s ease-in-out;
+            transform-origin: center;
         }
-        .cta-button:hover {
-            background-color: #4338ca; /* indigo-700 */
+        .shortcut-button:hover {
+            background-color: #1f2937;
+            transform: scale(1.02);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
         }
     </style>
 </head>
-<body>
-    <!-- Navigation Container (The target for navigation.js) -->
-    <div id="navbar-container">
-        <!-- Content will be dynamically injected here by navigation.js -->
-    </div>
-
-    <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-16">
+<body class="flex flex-col">
+    <!-- Main Content -->
+    <main class="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-16 flex-grow">
         <header class="text-center py-10">
-            <h1 class="text-5xl font-extrabold tracking-tight text-white sm:text-6xl">
-                4SP Dashboard
+            <h1 class="text-6xl font-extrabold tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 sm:text-7xl">
+                Official User Dashboard
             </h1>
-            <p id="welcome-message" class="mt-4 text-xl text-gray-400">
-                Welcome back! Your toolkit awaits.
+            <p id="welcome-message" class="mt-4 text-xl text-gray-400 font-light">
+                Secure access to your system utilities.
             </p>
         </header>
 
-        <!-- Tool Cards Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-
-            <!-- Card 1: Core Tool - Essay Writer/Brainstormer -->
-            <div class="card rounded-xl p-6 flex flex-col justify-between">
+        <!-- Dashboard Grid: Weather | Time | Shortcuts -->
+        <div class="dashboard-grid w-full">
+            
+            <!-- Section 1: Weather -->
+            <div id="weather-section-container" class="section-wrapper p-6 flex flex-col justify-between">
                 <div>
-                    <i class="fas fa-pencil-ruler text-3xl text-indigo-400"></i>
-                    <h2 class="mt-4 text-xl font-semibold text-white">Academic Writer</h2>
-                    <p class="mt-2 text-gray-400 text-sm">Draft, critique, and perfect your essays. Get help with brainstorming topics and outline creation.</p>
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-semibold text-white tracking-tight">Current Weather</h2>
+                        <button id="settings-button" class="text-gray-400 hover:text-indigo-400 p-2 rounded-full transition-colors" title="Change Location">
+                            <i class="fas fa-cog text-xl"></i>
+                        </button>
+                    </div>
+                    <div id="weather-content" class="text-center mt-8">
+                        <i class="fas fa-spinner fa-spin text-indigo-400 text-3xl"></i>
+                        <p class="mt-4 text-gray-400">Loading weather data...</p>
+                    </div>
                 </div>
-                <a href="../logged-in/writer.html" class="cta-button mt-4 w-full text-center py-2 rounded-lg text-sm font-medium text-white shadow-lg">
-                    Start Writing
-                </a>
+                <div id="location-display" class="text-sm text-gray-500 text-center pt-4">
+                    Location: N/A
+                </div>
             </div>
 
-            <!-- Card 2: Utility Tool - Quick Calculator -->
-            <div class="card rounded-xl p-6 flex flex-col justify-between">
-                <div>
-                    <i class="fas fa-calculator text-3xl text-green-400"></i>
-                    <h2 class="mt-4 text-xl font-semibold text-white">Math Utilities</h2>
-                    <p class="mt-2 text-gray-400 text-sm">Quickly solve problems, convert units, and handle complex scientific notation.</p>
+            <!-- Vertical Separator (Desktop Only) -->
+            <div class="separator hidden lg:block"></div>
+
+            <!-- Section 2: Time & Date -->
+            <div id="time-date-section" class="section-wrapper p-6 flex flex-col items-center justify-center">
+                <h2 class="text-2xl font-semibold text-white tracking-tight mb-4">Local Time & Date</h2>
+                <div id="time-display" class="text-8xl font-black text-indigo-400 tabular-nums tracking-tighter">
+                    --:--:--
                 </div>
-                <a href="../logged-in/calculator.html" class="cta-button mt-4 w-full text-center py-2 rounded-lg text-sm font-medium text-white shadow-lg">
-                    Launch Calculator
-                </a>
+                <div id="date-display" class="mt-4 text-3xl font-light text-gray-400 tracking-wide">
+                    ---
+                </div>
             </div>
 
-            <!-- Card 3: Fun Tool - Games Hub -->
-            <div class="card rounded-xl p-6 flex flex-col justify-between">
-                <div>
-                    <i class="fas fa-gamepad text-3xl text-red-400"></i>
-                    <h2 class="mt-4 text-xl font-semibold text-white">Games Center</h2>
-                    <p class="mt-2 text-gray-400 text-sm">Take a well-deserved break! Access the full catalog of distraction-free games.</p>
-                </div>
-                <!-- Note: The navigation.js ensures this link is correct -->
-                <a href="../GAMES/index.html" class="cta-button mt-4 w-full text-center py-2 rounded-lg text-sm font-medium text-white shadow-lg">
-                    Play Games
-                </a>
-            </div>
+            <!-- Vertical Separator (Desktop Only) -->
+            <div class="separator hidden lg:block"></div>
 
-            <!-- Card 4: QOL Feature - Tab Disguise -->
-            <div class="card rounded-xl p-6 flex flex-col justify-between">
-                <div>
-                    <i class="fas fa-mask text-3xl text-yellow-400"></i>
-                    <h2 class="mt-4 text-xl font-semibold text-white">Tab Disguise</h2>
-                    <p class="mt-2 text-gray-400 text-sm">Instantly change the tab title and icon to a professional document or lecture name.</p>
+            <!-- Section 3: Shortcuts -->
+            <div id="shortcuts-section-container" class="section-wrapper p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-semibold text-white tracking-tight">Quick Links</h2>
+                    <button id="add-shortcut-button" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-1 px-3 rounded-lg transition-colors shadow-md">
+                        <i class="fas fa-plus mr-1"></i> Add
+                    </button>
                 </div>
-                <a href="../logged-in/settings.html" class="cta-button mt-4 w-full text-center py-2 rounded-lg text-sm font-medium text-white shadow-lg">
-                    Configure
-                </a>
+                <div id="shortcuts-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <p class="text-gray-500 col-span-full text-center">Loading shortcuts...</p>
+                </div>
             </div>
-
         </div>
     </main>
 
-    <footer class="border-t border-gray-900 py-6">
+    <!-- Modal for Weather Settings (Location Search) -->
+    <div id="weather-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4">
+        <div class="bg-[#1c1c1c] p-6 rounded-xl w-full max-w-md border border-gray-800 shadow-2xl">
+            <h3 class="text-xl font-semibold mb-4 text-white">Change Weather Location</h3>
+            <div class="relative">
+                <input type="text" id="location-search-input" placeholder="Type city or town name..." 
+                       class="w-full bg-[#0c0c0c] border border-gray-700 rounded-lg p-3 focus:ring-indigo-500 focus:border-indigo-500 text-white">
+                <div id="location-suggestions" class="absolute w-full mt-2 bg-[#1c1c1c] border border-gray-700 rounded-lg shadow-xl max-h-48 overflow-y-auto hidden">
+                    <!-- Suggestions appear here -->
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3 mt-4">
+                <button id="close-weather-modal" class="py-2 px-4 rounded-lg text-gray-400 hover:bg-gray-800 transition-colors">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Shortcut Management -->
+    <div id="shortcut-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4">
+        <div class="bg-[#1c1c1c] p-6 rounded-xl w-full max-w-md border border-gray-800 shadow-2xl">
+            <h3 class="text-xl font-semibold mb-4 text-white">Add New Shortcut</h3>
+            
+            <div class="space-y-4">
+                <input type="text" id="shortcut-name" placeholder="Shortcut Name (e.g., School Portal)" 
+                       class="w-full bg-[#0c0c0c] border border-gray-700 rounded-lg p-3 focus:ring-indigo-500 focus:border-indigo-500 text-white">
+                
+                <!-- Link Type Selection -->
+                <div class="flex space-x-4">
+                    <label class="flex items-center text-white">
+                        <input type="radio" name="link-type" value="page" id="link-type-page" checked 
+                               class="form-radio text-indigo-500 focus:ring-indigo-500">
+                        <span class="ml-2">Internal Page</span>
+                    </label>
+                    <label class="flex items-center text-white">
+                        <input type="radio" name="link-type" value="url" id="link-type-url"
+                               class="form-radio text-indigo-500 focus:ring-indigo-500">
+                        <span class="ml-2">External URL</span>
+                    </label>
+                </div>
+
+                <!-- Page Dropdown (Initially Visible) -->
+                <select id="shortcut-page-select" class="w-full bg-[#0c0c0c] border border-gray-700 rounded-lg p-3 focus:ring-indigo-500 focus:border-indigo-500 text-white">
+                    <!-- Options populated by JS -->
+                </select>
+
+                <!-- URL & Emoji Input (Initially Hidden) -->
+                <input type="url" id="shortcut-url" placeholder="https://example.com" 
+                       class="w-full bg-[#0c0c0c] border border-gray-700 rounded-lg p-3 focus:ring-indigo-500 focus:border-indigo-500 text-white hidden">
+                <input type="text" id="shortcut-emoji" placeholder="Emoji (e.g., 📚)" maxlength="4" 
+                       class="w-full bg-[#0c0c0c] border border-gray-700 rounded-lg p-3 focus:ring-indigo-500 focus:border-indigo-500 text-white hidden">
+            </div>
+
+            <div class="flex justify-end space-x-3 mt-6">
+                <button id="close-shortcut-modal" class="py-2 px-4 rounded-lg text-gray-400 hover:bg-gray-800 transition-colors">Cancel</button>
+                <button id="save-shortcut" class="py-2 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition-colors">Save Shortcut</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- FOOTER -->
+    <footer class="border-t border-gray-900 py-6 mt-10">
         <div class="mx-auto max-w-7xl px-4 text-center text-gray-500 text-sm">
             &copy; 2024 4simpleproblems (4SP). Built for students.
         </div>
     </footer>
 
-    <!-- Load the Full Navigation Script -->
-    <!-- The path is relative to ../logged-in/dashboard.html -->
-    <script src="../navigation.js"></script> 
-    
+    <!-- JAVASCRIPT LOGIC -->
     <script type="module">
-        // Access the global navigation function you created
-        const initFullNavigation = window.initFullNavigation;
-        
-        // Import necessary Firebase modules
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        
-        // Import the configuration file (assuming it's at the root level)
-        import { firebaseConfig } from '../firebase-config.js';
+        // Hardcoded representation of the uploaded page-identification.json for internal use
+        const PAGE_IDENTIFICATION = {
+            "dashboard": { "name": "Dashboard", "icon": "fa-house-user", "url": "../logged-in/dashboard.html" },
+            "soundboard": { "name": "Soundboard", "icon": "fa-volume-up", "url": "../logged-in/soundboard.html" },
+            "notes": { "name": "Notes", "icon": "fa-sticky-note", "url": "../logged-in/notes.html" },
+            "countdowns": { "name": "Countdowns", "icon": "fa-clock", "url": "../logged-in/countdowns.html" },
+            "soundboard-playlists": { "name": "Playlists", "icon": "fa-list-ul", "url": "../logged-in/soundboard-playlists.html" },
+            "weather": { "name": "Weather", "icon": "fa-cloud-sun", "url": "../logged-in/weather.html" },
+            "dictionary": { "name": "Dictionary", "icon": "fa-book", "url": "../logged-in/dictionary.html" },
+            "messenger-v2": { "name": "Messenger", "icon": "fa-comments", "url": "../logged-in/messenger-v2.html" },
+            "games": { "name": "Games", "icon": "fa-gamepad", "url": "../GAMES/index.html" }
+        };
 
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
+        // --- Firebase Initialization and Authentication Setup ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, query, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
-        // --- Navigation Bar Initialization ---
-        if (initFullNavigation) {
-            initFullNavigation(auth);
+        // setLogLevel('Debug'); // Enable Firestore logging
+
+        let db, auth;
+        let userId = null;
+        let appId = null;
+        
+        try {
+            // Global variables provided by the Canvas environment
+            const firebaseConfig = JSON.parse(__firebase_config);
+            appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+            
+            const app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+
+            // Authentication Listener
+            onAuthStateChanged(auth, async (user) => {
+                const welcomeMessageElement = document.getElementById('welcome-message');
+
+                if (user) {
+                    userId = user.uid;
+                    const username = user.displayName || user.email?.split('@')[0] || 'User';
+                    if (welcomeMessageElement) {
+                        welcomeMessageElement.textContent = `Welcome back, ${username}! Secure access to your system utilities.`;
+                    }
+                    
+                    // Once authenticated, initialize data-dependent sections
+                    initializeDashboard(userId);
+                } else {
+                    // User is signed out. Redirect to index.html (as requested)
+                    window.location.href = '../index.html';
+                }
+            });
+
+            // Sign in using the custom token or anonymously if not available
+            if (initialAuthToken) {
+                await signInWithCustomToken(auth, initialAuthToken);
+            } else {
+                await signInAnonymously(auth);
+            }
+
+        } catch (error) {
+            console.error("Firebase setup failed:", error);
+            // Fallback for environment issues
+            document.getElementById('welcome-message').textContent = "Authentication Error. Check console.";
         }
 
-        // --- Dashboard Specific Logic: Auth Check and Welcome Message Update ---
-        onAuthStateChanged(auth, (user) => {
-            const welcomeMessageElement = document.getElementById('welcome-message');
 
-            if (user) {
-                // User is signed in. Update the welcome message.
-                const username = user.displayName || user.email?.split('@')[0] || 'User';
-                if (welcomeMessageElement) {
-                    welcomeMessageElement.textContent = \`Welcome back, \${username}! Your toolkit awaits.\`;
+        // --- TIME & DATE SECTION LOGIC ---
+        const timeDisplay = document.getElementById('time-display');
+        const dateDisplay = document.getElementById('date-display');
+
+        function updateTime() {
+            const now = new Date();
+            
+            // Time: HH:MM:SS AM/PM
+            const timeOptions = { 
+                hour: '2-digit', minute: '2-digit', second: '2-digit', 
+                hour12: true,
+                timeZoneName: 'short'
+            };
+            const timeString = now.toLocaleTimeString([], timeOptions).split(' ')[0];
+            const ampm = now.toLocaleTimeString([], { hour: '2-digit', hour12: true }).slice(-2);
+            
+            timeDisplay.textContent = `${timeString} ${ampm}`;
+
+            // Date: Month Day, Year
+            const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            dateDisplay.textContent = now.toLocaleDateString([], dateOptions);
+        }
+
+        // Run once immediately, then every second
+        updateTime();
+        setInterval(updateTime, 1000);
+
+
+        // --- DASHBOARD DATA INITIALIZATION ---
+
+        function getPrivateDocRef(collectionName, docId) {
+            if (!userId || !appId) return null;
+            return doc(db, 'artifacts', appId, 'users', userId, collectionName, docId);
+        }
+
+        function getPrivateCollectionRef(collectionName) {
+            if (!userId || !appId) return null;
+            return collection(db, 'artifacts', appId, 'users', userId, collectionName);
+        }
+
+        function initializeDashboard(currentUserId) {
+            // Initialize Weather and Shortcuts sections only after successful auth
+            initWeather(currentUserId);
+            initShortcuts(currentUserId);
+        }
+
+
+        // --- WEATHER SECTION LOGIC ---
+        const weatherModal = document.getElementById('weather-modal');
+        const settingsButton = document.getElementById('settings-button');
+        const closeWeatherModal = document.getElementById('close-weather-modal');
+        const locationSearchInput = document.getElementById('location-search-input');
+        const locationSuggestions = document.getElementById('location-suggestions');
+        const weatherContent = document.getElementById('weather-content');
+        const locationDisplay = document.getElementById('location-display');
+        
+        const WEATHER_SETTINGS_DOC = 'weather_location';
+        let userLocation = null; // { latitude, longitude, name }
+
+        settingsButton.onclick = () => weatherModal.classList.remove('hidden');
+        closeWeatherModal.onclick = () => {
+            weatherModal.classList.add('hidden');
+            locationSearchInput.value = '';
+            locationSuggestions.classList.add('hidden');
+            locationSuggestions.innerHTML = '';
+        };
+
+        // Fetch weather data from Open-Meteo
+        async function fetchWeather(lat, lon, name) {
+            weatherContent.innerHTML = `<i class="fas fa-spinner fa-spin text-indigo-400 text-3xl"></i><p class="mt-4 text-gray-400">Fetching weather for ${name}...</p>`;
+            locationDisplay.textContent = `Location: ${name}`;
+
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&temperature_unit=fahrenheit&forecast_days=1`;
+            
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.current_weather) {
+                    const temp = Math.round(data.current_weather.temperature);
+                    const wind = data.current_weather.windspeed;
+                    const weatherCode = data.current_weather.weathercode;
+                    const isDay = data.current_weather.is_day === 1;
+
+                    // Simple mapping for weather code to icon
+                    let iconClass = 'fas fa-question';
+                    let description = 'Unknown';
+                    
+                    if (weatherCode === 0) { iconClass = isDay ? 'fas fa-sun' : 'fas fa-moon'; description = 'Clear Sky'; }
+                    else if (weatherCode > 0 && weatherCode <= 3) { iconClass = isDay ? 'fas fa-cloud-sun' : 'fas fa-cloud-moon'; description = 'Partly Cloudy'; }
+                    else if (weatherCode >= 45 && weatherCode <= 48) { iconClass = 'fas fa-smog'; description = 'Foggy'; }
+                    else if (weatherCode >= 51 && weatherCode <= 67) { iconClass = 'fas fa-cloud-showers-heavy'; description = 'Rain'; }
+                    else if (weatherCode >= 71 && weatherCode <= 75) { iconClass = 'fas fa-snowflake'; description = 'Snow'; }
+                    else if (weatherCode >= 95) { iconClass = 'fas fa-bolt'; description = 'Thunderstorm'; }
+
+                    weatherContent.innerHTML = `
+                        <i class="${iconClass} text-5xl text-indigo-400"></i>
+                        <p class="text-6xl font-black mt-3 text-white">${temp}°F</p>
+                        <p class="text-xl text-gray-300 mt-2">${description}</p>
+                        <p class="text-sm text-gray-500 mt-4">Wind: ${wind} mph</p>
+                    `;
+                } else {
+                    weatherContent.innerHTML = '<p class="text-red-400">Weather data unavailable.</p>';
                 }
-            } else {
-                // User is signed out. Redirect to login.
-                window.location.href = '../login.html';
+            } catch (error) {
+                console.error("Error fetching weather:", error);
+                weatherContent.innerHTML = '<p class="text-red-400">Failed to load weather data.</p>';
             }
-        });
+        }
+
+        // Search for location using Open-Meteo GeoCoding API
+        locationSearchInput.oninput = debounce(async (e) => {
+            const query = e.target.value.trim();
+            if (query.length < 3) {
+                locationSuggestions.classList.add('hidden');
+                return;
+            }
+
+            const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=en`;
+            
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+
+                locationSuggestions.innerHTML = '';
+                if (data.results && data.results.length > 0) {
+                    locationSuggestions.classList.remove('hidden');
+                    data.results.forEach(result => {
+                        const suggestion = document.createElement('div');
+                        const fullName = `${result.name}, ${result.country}`;
+                        suggestion.className = 'p-3 cursor-pointer hover:bg-gray-700 transition-colors text-white text-sm rounded-lg';
+                        suggestion.textContent = fullName;
+                        suggestion.onclick = () => selectLocation(result.latitude, result.longitude, fullName);
+                        locationSuggestions.appendChild(suggestion);
+                    });
+                } else {
+                    locationSuggestions.classList.add('hidden');
+                }
+            } catch (error) {
+                console.error("Error fetching location suggestions:", error);
+                locationSuggestions.classList.add('hidden');
+            }
+        }, 300);
+
+        // Select a location and save it to Firestore
+        async function selectLocation(latitude, longitude, name) {
+            weatherModal.classList.add('hidden');
+            locationSearchInput.value = '';
+            locationSuggestions.classList.add('hidden');
+            
+            userLocation = { latitude, longitude, name };
+            
+            try {
+                const docRef = getPrivateDocRef('dashboard_settings', WEATHER_SETTINGS_DOC);
+                if (docRef) {
+                    await setDoc(docRef, userLocation);
+                    fetchWeather(latitude, longitude, name);
+                }
+            } catch (error) {
+                console.error("Error saving location to Firestore:", error);
+            }
+        }
+
+        // Debounce function to limit API calls during typing
+        function debounce(func, delay) {
+            let timeout;
+            return function(...args) {
+                const context = this;
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(context, args), delay);
+            };
+        }
+
+        // Initialize weather section (load settings)
+        async function initWeather() {
+            try {
+                const docRef = getPrivateDocRef('dashboard_settings', WEATHER_SETTINGS_DOC);
+                if (docRef) {
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists()) {
+                        userLocation = docSnap.data();
+                        fetchWeather(userLocation.latitude, userLocation.longitude, userLocation.name);
+                    } else {
+                        // Default location if none is saved (e.g., London, UK)
+                        const defaultLat = 51.5074;
+                        const defaultLon = 0.1278;
+                        const defaultName = 'London, UK (Default)';
+                        fetchWeather(defaultLat, defaultLon, defaultName);
+                    }
+                }
+            } catch (error) {
+                console.error("Error loading weather settings:", error);
+                weatherContent.innerHTML = '<p class="text-red-400">Failed to load weather settings.</p>';
+            }
+        }
+
+
+        // --- SHORTCUTS SECTION LOGIC ---
+        const shortcutModal = document.getElementById('shortcut-modal');
+        const addShortcutButton = document.getElementById('add-shortcut-button');
+        const closeShortcutModal = document.getElementById('close-shortcut-modal');
+        const saveShortcutButton = document.getElementById('save-shortcut');
+        const shortcutsGrid = document.getElementById('shortcuts-grid');
+
+        const shortcutNameInput = document.getElementById('shortcut-name');
+        const linkTypePage = document.getElementById('link-type-page');
+        const linkTypeUrl = document.getElementById('link-type-url');
+        const pageSelect = document.getElementById('shortcut-page-select');
+        const urlInput = document.getElementById('shortcut-url');
+        const emojiInput = document.getElementById('shortcut-emoji');
+
+        const SHORTCUTS_COLLECTION = 'shortcuts';
+        let shortcuts = [];
+
+        // Toggle visibility of inputs based on link type
+        function toggleLinkTypeInputs() {
+            const isPage = linkTypePage.checked;
+            pageSelect.classList.toggle('hidden', !isPage);
+            urlInput.classList.toggle('hidden', isPage);
+            emojiInput.classList.toggle('hidden', isPage);
+        }
+
+        linkTypePage.onchange = toggleLinkTypeInputs;
+        linkTypeUrl.onchange = toggleLinkTypeInputs;
+
+        // Populate Page Select Dropdown
+        function populatePageSelect() {
+            pageSelect.innerHTML = '';
+            // Sort pages by name for better UX
+            const sortedPages = Object.entries(PAGE_IDENTIFICATION)
+                .sort(([, a], [, b]) => a.name.localeCompare(b.name));
+
+            sortedPages.forEach(([key, page]) => {
+                const option = document.createElement('option');
+                option.value = key; // The key (e.g., 'notes')
+                option.textContent = page.name;
+                pageSelect.appendChild(option);
+            });
+        }
+        populatePageSelect();
+
+        addShortcutButton.onclick = () => {
+            // Reset form
+            shortcutNameInput.value = '';
+            linkTypePage.checked = true;
+            urlInput.value = '';
+            emojiInput.value = '';
+            toggleLinkTypeInputs();
+            shortcutModal.classList.remove('hidden');
+        };
+        closeShortcutModal.onclick = () => shortcutModal.classList.add('hidden');
+
+
+        // Render Shortcuts to the Grid
+        function renderShortcuts() {
+            shortcutsGrid.innerHTML = '';
+            if (shortcuts.length === 0) {
+                shortcutsGrid.innerHTML = '<p class="text-gray-500 col-span-full text-center py-4">No shortcuts yet. Add one!</p>';
+                return;
+            }
+
+            shortcuts.forEach(shortcut => {
+                const shortcutElement = document.createElement('div');
+                shortcutElement.className = 'shortcut-button card flex flex-col items-center justify-center p-4 rounded-xl cursor-pointer bg-[#1c1c1c] border border-gray-800 hover:border-indigo-600';
+                shortcutElement.onclick = () => window.location.href = shortcut.targetUrl;
+
+                let iconHtml = '';
+                if (shortcut.type === 'page') {
+                    // Internal page uses Font Awesome icon
+                    iconHtml = `<i class="fa-2xl text-indigo-400 ${shortcut.iconOrEmoji}"></i>`;
+                } else {
+                    // External URL uses Emoji
+                    iconHtml = `<span class="text-4xl">${shortcut.iconOrEmoji}</span>`;
+                }
+
+                shortcutElement.innerHTML = `
+                    <div class="mb-2">${iconHtml}</div>
+                    <p class="text-sm font-medium text-white text-center">${shortcut.name}</p>
+                    <button class="delete-shortcut-btn absolute top-1 right-1 text-gray-500 hover:text-red-400 p-1 rounded-full text-xs" data-id="${shortcut.id}" title="Delete Shortcut">
+                         <i class="fas fa-times"></i>
+                    </button>
+                `;
+
+                shortcutsGrid.appendChild(shortcutElement);
+            });
+            
+            // Attach delete listeners
+            document.querySelectorAll('.delete-shortcut-btn').forEach(button => {
+                button.onclick = (e) => {
+                    e.stopPropagation(); // Prevent triggering the shortcut link
+                    deleteShortcut(button.dataset.id);
+                };
+            });
+        }
+
+        // Save new shortcut to Firestore
+        saveShortcutButton.onclick = async () => {
+            const name = shortcutNameInput.value.trim();
+            const type = linkTypePage.checked ? 'page' : 'url';
+            
+            if (!name) {
+                alert('Please enter a name for the shortcut.');
+                return;
+            }
+
+            let newShortcut = { name, type };
+
+            if (type === 'page') {
+                const pageKey = pageSelect.value;
+                const pageInfo = PAGE_IDENTIFICATION[pageKey];
+                newShortcut.targetUrl = pageInfo.url;
+                newShortcut.iconOrEmoji = pageInfo.icon;
+            } else {
+                const url = urlInput.value.trim();
+                const emoji = emojiInput.value.trim();
+                if (!url || !emoji) {
+                    alert('Please enter both a valid URL and an emoji for the external shortcut.');
+                    return;
+                }
+                newShortcut.targetUrl = url;
+                newShortcut.iconOrEmoji = emoji;
+            }
+
+            shortcutModal.classList.add('hidden');
+            
+            try {
+                // Add new document to the user's shortcuts collection
+                const colRef = getPrivateCollectionRef(SHORTCUTS_COLLECTION);
+                if (colRef) {
+                    // The onSnapshot listener will automatically update the UI
+                    await setDoc(doc(colRef, new Date().getTime().toString()), newShortcut);
+                }
+            } catch (error) {
+                console.error("Error saving shortcut:", error);
+                // In a real app, show a friendly error message
+            }
+        };
+
+        // Delete shortcut from Firestore
+        async function deleteShortcut(id) {
+            if (!confirm("Are you sure you want to delete this shortcut?")) return;
+            try {
+                const docRef = getPrivateDocRef(SHORTCUTS_COLLECTION, id);
+                if (docRef) {
+                    await deleteDoc(docRef);
+                }
+            } catch (error) {
+                console.error("Error deleting shortcut:", error);
+            }
+        }
+
+        // Initialize shortcuts section (load from Firestore)
+        function initShortcuts() {
+            const colRef = getPrivateCollectionRef(SHORTCUTS_COLLECTION);
+            if (colRef) {
+                // Real-time listener for shortcuts
+                onSnapshot(colRef, (snapshot) => {
+                    shortcuts = [];
+                    snapshot.forEach(doc => {
+                        shortcuts.push({ id: doc.id, ...doc.data() });
+                    });
+                    // Sort alphabetically by name
+                    shortcuts.sort((a, b) => a.name.localeCompare(b.name));
+                    renderShortcuts();
+                }, (error) => {
+                    console.error("Error fetching real-time shortcuts:", error);
+                    shortcutsGrid.innerHTML = '<p class="text-red-400 col-span-full text-center">Failed to load shortcuts.</p>';
+                });
+            }
+        }
+
     </script>
 </body>
 </html>
