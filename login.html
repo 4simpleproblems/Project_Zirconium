@@ -31,8 +31,6 @@
         }
     </script>
     
-    <!-- Removed references to non-existent local scripts (panic-key.js, url-changer.js, navigation-mini.js) -->
-
     <style>
         /* Updated RGB values for the darker custom colors */
         :root {
@@ -105,9 +103,7 @@
 </head>
 <body class="bg-custom-darkest-gray text-custom-white-gray min-h-screen flex flex-col">
 
-    <div id="navbar-container"></div> <!-- Placeholder for future navigation -->
-
-    <main class="flex-grow flex items-stretch justify-center p-0">
+    <div id="navbar-container"></div> <main class="flex-grow flex items-stretch justify-center p-0">
         <div class="
             auth-split-container
             bg-custom-darkest-gray rounded-none shadow-none
@@ -115,7 +111,6 @@
             border-0 overflow-hidden
             p-0
         ">
-            <!-- LEFT HALF: Email/Password Login (Darker background: #111111) -->
             <div class="
                 auth-col left-col
                 flex-1 p-8 flex flex-col justify-center items-center
@@ -157,7 +152,6 @@
 
             </div>
 
-            <!-- RIGHT HALF: OAuth Login (Very Dark background: #070707) -->
             <div class="
                 auth-col right-col
                 flex-1 p-8 flex flex-col justify-center items-center
@@ -171,17 +165,14 @@
                     </p>
                     
                     <button id="googleLoginBtn" class="btn-google flex items-center justify-center w-full max-w-md p-3 bg-custom-dark-gray text-custom-white-gray border border-custom-medium-gray rounded-lg font-medium cursor-pointer transition hover:bg-custom-medium-gray/50 mb-3">
-                        <!-- Google Logo Image Path -->
                         <img src="images/google-icon.png" alt="Google Logo" class="w-5 h-5 mr-3">
                         Login with Google
                     </button>
                     <button id="githubLoginBtn" class="btn-google flex items-center justify-center w-full max-w-md p-3 bg-custom-dark-gray text-custom-white-gray border border-custom-medium-gray rounded-lg font-medium cursor-pointer transition hover:bg-custom-medium-gray/50 mb-3">
-                        <!-- GitHub Logo Image Path -->
                         <img src="images/github-mark-white.png" alt="GitHub Logo" class="w-5 h-5 mr-3">
                         Login with GitHub
                     </button>
                     <button id="microsoftLoginBtn" class="btn-google flex items-center justify-center w-full max-w-md p-3 bg-custom-dark-gray text-custom-white-gray border border-custom-medium-gray rounded-lg font-medium cursor-pointer transition hover:bg-custom-medium-gray/50 mb-3">
-                        <!-- Microsoft Logo Image Path -->
                         <img src="images/microsoft.png" alt="Microsoft Logo" class="w-5 h-5 mr-3">
                         Login with Microsoft
                     </button>
@@ -199,6 +190,8 @@
             &copy; 2024 4simpleproblems (4SP). Built for students.
         </div>
     </footer>
+
+    <script type="module" src="firebase-config.js"></script>
 
     <script type="module">
         // --- Firebase Imports ---
@@ -223,19 +216,29 @@
             doc, 
             getDoc, 
             setDoc, 
-            collection,
-            query,
-            where,
-            getDocs,
             serverTimestamp
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-        // --- Canvas Environment Globals (MANDATORY) ---
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        // --- Configuration Check (MUST be defined in firebase-config.js) ---
+        // The original code used global variables from a 'Canvas' environment.
+        // We now rely on the 'firebaseConfig' variable provided by the imported firebase-config.js.
+        // If the external file uses 'export const firebaseConfig = {...}', it'll be available.
+        // The original logic is replaced with a check for the existence of the expected object.
+        if (typeof firebaseConfig === 'undefined' || Object.keys(firebaseConfig).length === 0) {
+            console.error("FATAL ERROR: Firebase configuration not found. Ensure 'firebase-config.js' is loaded and exports 'firebaseConfig'.");
+            alert("Application Error: Firebase not configured.");
+            // Optionally, disable login buttons here
+            return;
+        }
+
+        // --- Canvas Environment Globals (RETAINED FOR ORIGINAL LOGIC COMPATIBILITY/FALLBACK) ---
+        // Note: 'appId' and 'initialAuthToken' are often environment-specific and may still be needed.
+        // For demonstration, we set a default 'appId' if not provided by the environment.
+        const appId = typeof __app_id !== 'undefined' ? __app_id : '4sp-default-app';
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-        // --- Initialize Firebase ---
+
+        // --- Initialize Firebase with External Config ---
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
