@@ -1,397 +1,344 @@
 /**
- * navigation.js
- * Renders the full-featured top navigation bar, including the scrolling page menu
- * and the user account menu with pinning functionality.
- * NOTE: This script is now initialized via the global function `window.initFullNavigation(auth)` 
- * called from the main <script type="module"> block.
+ * navigation-mini.js
+ * * This script creates a dynamic, authentication-aware navigation bar with a horizontal,
+ * scrollable tab menu for seamless page navigation.
+ * * --- Key Updates ---
+ * - Loads page data from '../page-identification.json'.
+ * - Creates a horizontal, scrollable tab menu (Scrolls on overflow, doesn't wrap).
+ * - Highlights the current page based on the URL.
+ * - Retains Firebase authentication logic for displaying user info.
  */
 
-// --- CONFIGURATION ---
-const PIN_STORAGE_KEY = '4sp-pinned-pages';
-const MAX_PINS = 3;
-let ALL_PAGES = {}; // Will store page data from JSON
-let isNavbarStructureInjected = false; // New flag to track initial injection
+(function () {
+    'use strict';
 
-// 1. INJECT TOPBAR-SPECIFIC STYLES
-function injectTopbarCSS() {
-    // ... (CSS injection code remains the same)
-    const head = document.head;
-    const style = document.createElement('style');
-    style.textContent = `
-        /* --- AUTH MENU & PINNING STYLES --- */
-        /* Dropdown Menu Transition */
-        .auth-menu-container {
-            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
-            transform-origin: top right;
-        }
-        .auth-menu-container.open {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-        }
-        .auth-menu-container.closed {
-            opacity: 0;
-            pointer-events: none;
-            transform: translateY(-10px) scale(0.95);
-        }
-        /* Horizontal Scroll Menu Styling */
-        .page-menu-scroller::-webkit-scrollbar {
-            display: none; /* Hide scrollbar for Chrome, Safari and Opera */
-        }
-        .page-menu-scroller {
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
-        }
-        /* Pin Button Hover Effect */
-        .pin-button-slot {
-            transition: background-color 0.2s, border-color 0.2s;
-        }
-        .pin-button-slot:hover {
-            border-color: #ffffff; /* White border on hover to signify pin/unpin action */
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-    `;
-    head.appendChild(style);
-}
+    // =========================================================================
+    // >> ACTION REQUIRED: PASTE YOUR FIREBASE CONFIGURATION OBJECT HERE <<
+    // NOTE: This configuration must be valid for the Firebase Authentication 
+    // and Firestore logic to work. This script is self-contained.
+    // =========================================================================
+    const FIREBASE_CONFIG = {
+        apiKey: "AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro",
+  authDomain: "project-zirconium.firebaseapp.com",
+  projectId: "project-zirconium",
+  storageBucket: "project-zirconium.firebasestorage.app",
+  messagingSenderId: "1096564243475",
+  appId: "1:1096564243475:web:6d0956a70125eeea1ad3e6",
+  measurementId: "G-1D4F692C1Q"
+    };
 
-// 2. DATA LOADING (remains the same)
-async function loadPageData() {
+    // --- Firebase Imports ---
+    let firebase, auth, db, getAuth, getFirestore, getDoc, onAuthStateChanged, signInAnonymously, signOut;
+
     try {
-        const response = await fetch('../page-identification.json');
-        if (!response.ok) throw new Error('Failed to load page-identification.json');
-        ALL_PAGES = await response.json();
-    } catch (error) {
-        console.error("Error loading page data:", error);
-        ALL_PAGES = { "default": { "name": "Error", "icon": "fa-exclamation-triangle", "url": "#" } };
+        // Dynamic imports for Firebase V9/V10+ modular SDK
+        import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js')
+            .then(module => { firebase = module; return import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js'); })
+            .then(module => { 
+                getAuth = module.getAuth; 
+                onAuthStateChanged = module.onAuthStateChanged; 
+                signInAnonymously = module.signInAnonymously; 
+                signOut = module.signOut;
+                auth = getAuth(firebase.initializeApp(FIREBASE_CONFIG));
+                return import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'); 
+            })
+            .then(module => { 
+                getFirestore = module.getFirestore; 
+                getDoc = module.getDoc; 
+                db = getFirestore(firebase.getApp());
+                // After imports and auth init, start the main logic
+                onAuthStateReady();
+            })
+            .catch(error => {
+                console.error("Failed to load Firebase SDKs. Navigation bar features requiring authentication will not work.", error);
+                // Still run the navigation logic even if Firebase fails
+                onAuthStateReady(); 
+            });
+    } catch (e) {
+        console.error("Firebase SDK structure failed initialization.", e);
+        onAuthStateReady();
     }
-}
 
-// 3. PINNING LOGIC (CRUD - remains the same)
-function getPinnedPages() {
-    try {
-        const pinned = JSON.parse(localStorage.getItem(PIN_STORAGE_KEY) || '[]');
-        return pinned.slice(0, MAX_PINS);
-    } catch {
-        return [];
-    }
-}
+    const getUserProfileDocRef = (userId) => {
+        // Path: artifacts/{appId}/users/{userId}/metadata/user_profile
+        const appId = FIREBASE_CONFIG.appId || 'default-app';
+        // Note: getUserProfileDocRef only returns a reference, getDoc call happens later
+        return db ? doc(db, 'artifacts', appId, 'users', userId, 'metadata', 'user_profile') : null;
+    };
 
-function savePinnedPages(pins) {
-    localStorage.setItem(PIN_STORAGE_KEY, JSON.stringify(pins.slice(0, MAX_PINS)));
-}
-
-function togglePin(pageId) {
-    const pins = getPinnedPages();
-    const pageData = ALL_PAGES[pageId];
-    if (!pageData) return pins;
-
-    const existingIndex = pins.findIndex(p => p.id === pageId);
-
-    if (existingIndex > -1) {
-        pins.splice(existingIndex, 1);
-    } else if (pins.length < MAX_PINS) {
-        pins.push({
-            id: pageId,
-            name: pageData.name,
-            icon: pageData.icon,
-            url: pageData.url
-        });
-    }
-    
-    savePinnedPages(pins);
-    return pins;
-}
-
-
-// 4. RENDERING FUNCTIONS (remains the same)
-function getCurrentPageId() {
-    const path = window.location.pathname;
-    if (path.endsWith('index.html')) return 'index'; 
-    
-    for (const id in ALL_PAGES) {
-        if (path.endsWith(ALL_PAGES[id].url.split('/').pop())) {
-            return id;
-        }
-    }
-    return null; 
-}
-
-function renderPageMenu(currentPageId) {
-    const menuItems = Object.keys(ALL_PAGES).map(id => {
-        const page = ALL_PAGES[id];
-        const isActive = id === currentPageId;
-        
-        if (id === 'games' && window.location.pathname.includes('/logged-in/')) {
-            page.url = '../GAMES/index.html'; 
-        }
-
-        const activeClass = isActive 
-            ? 'bg-gray-800 text-white border-blue-500' 
-            : 'text-gray-400 hover:bg-gray-900 border-gray-900';
-
-        return `
-            <a href="${page.url}" 
-               class="flex-shrink-0 px-4 py-2 mr-2 rounded-lg text-sm font-medium border-b-2 transition-colors ${activeClass}">
-                <i class="fas ${page.icon} mr-1"></i> ${page.name}
-            </a>
-        `;
-    }).join('');
-
-    return `
-        <div class="page-menu-scroller flex overflow-x-auto whitespace-nowrap py-3 px-4 border-t border-gray-900">
-            ${menuItems}
-        </div>
-    `;
-}
-
-function renderPinButtons(currentPageId) {
-    const pins = getPinnedPages();
-    const pinButtons = [];
-    const currentIsPinned = pins.some(p => p.id === currentPageId);
-
-    for (let i = 0; i < MAX_PINS; i++) {
-        const pin = pins[i];
-        let buttonContent, buttonClasses, buttonAction, buttonTitle;
-
-        if (pin) {
-            buttonContent = `<i class="fas ${pin.icon} text-white"></i>`;
-            buttonClasses = 'bg-gray-700/50 border-gray-600';
-            buttonAction = `data-pin-action="unpin" data-page-id="${pin.id}"`;
-            buttonTitle = `Click to UNPIN '${pin.name}'`;
-        } else {
-            if (currentPageId && !currentIsPinned) {
-                const currentPage = ALL_PAGES[currentPageId];
-                buttonContent = `<i class="fas ${currentPage.icon} text-blue-400"></i>`;
-                buttonClasses = 'bg-gray-900/50 border-gray-700 cursor-pointer';
-                buttonAction = `data-pin-action="pin" data-page-id="${currentPageId}"`;
-                buttonTitle = `Click to PIN this page (${currentPage.name})`;
-            } else {
-                buttonContent = `<i class="fas fa-thumbtack text-gray-600"></i>`;
-                buttonClasses = 'bg-gray-900/50 border-gray-800 cursor-default';
-                buttonAction = '';
-                buttonTitle = `Pinned: ${pins.length}/${MAX_PINS}`;
+    /**
+     * Injects custom CSS for the horizontal scroll menu and the active tab highlighting.
+     */
+    const injectStyles = () => {
+        const style = document.createElement('style');
+        // NOTE: This CSS uses Tailwind color variables defined in login.html (e.g., #070707, #111111)
+        style.textContent = `
+            /* Container for the scrollable tab menu */
+            .nav-tab-menu {
+                white-space: nowrap;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch; /* iOS smooth scrolling */
+                padding-bottom: 8px; /* Space for the scroll bar */
             }
-        }
-
-        pinButtons.push(`
-            <button 
-                class="pin-button-slot w-8 h-8 rounded-full border flex items-center justify-center ${buttonClasses}"
-                ${buttonAction}
-                title="${buttonTitle}"
-            >
-                ${buttonContent}
-            </button>
-        `);
-    }
-
-    return pinButtons.join('');
-}
-
-
-function renderLoggedInNavbar(user) {
-    const username = user.displayName || user.email.split('@')[0];
-    const email = user.email;
-    const currentPageId = getCurrentPageId();
-
-    let profileContent;
-    if (user.photoURL) {
-        profileContent = `<img src="${user.photoURL}" alt="${username} Profile" class="w-full h-full object-cover rounded-full" />`;
-    } else {
-        profileContent = `<i class="fas fa-circle-user text-white text-base"></i>`;
-    }
-
-    const pinButtonsHtml = renderPinButtons(currentPageId);
-
-    return `
-        <div class="flex items-center space-x-3">
-            ${pinButtonsHtml}
+            .nav-tab-menu::-webkit-scrollbar {
+                height: 4px;
+            }
+            .nav-tab-menu::-webkit-scrollbar-thumb {
+                background-color: #383838; 
+                border-radius: 2px;
+            }
+            .nav-tab-menu::-webkit-scrollbar-track {
+                background: #111111; 
+            }
             
-            <div class="relative">
-                <button 
-                    id="auth-toggle"
-                    aria-expanded="false"
-                    aria-controls="auth-menu-container"
-                    class="w-8 h-8 rounded-full border border-white flex items-center justify-center bg-black/50 hover:bg-gray-900/50 transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-white overflow-hidden"
-                >
-                    ${profileContent}
-                </button>
+            /* Individual tab link styling */
+            .nav-tab-link {
+                display: inline-flex;
+                align-items: center;
+                padding: 8px 16px;
+                border-radius: 8px;
+                color: #808080; /* custom-lighter-gray */
+                transition: all 0.2s ease;
+                margin-right: 8px;
+                font-size: 14px;
+                font-weight: 500;
+                border: 1px solid transparent;
+            }
+            .nav-tab-link:hover {
+                background-color: #111111; /* custom-dark-gray */
+                color: #c0c0c0; /* custom-white-gray */
+            }
+            
+            /* Active tab highlighting */
+            .nav-tab-link.active {
+                background-color: #252525; /* custom-medium-gray */
+                color: #ffffff; /* pure white for strong highlight */
+                border-color: #505050; /* custom-light-gray */
+            }
+            .nav-tab-link.active .fas {
+                color: #4ade80; /* A nice highlight color */
+            }
+
+            /* General navbar container styling */
+            .main-navbar {
+                background-color: #070707; /* custom-darkest-gray */
+                border-bottom: 1px solid #252525; /* custom-medium-gray */
+                padding-top: 1rem; 
+                padding-bottom: 0; 
+            }
+            .user-dropdown-btn {
+                background-color: #111111;
+            }
+            .user-dropdown-btn:hover {
+                background-color: #252525;
+            }
+            .dropdown-item:hover {
+                background-color: #252525;
+            }
+        `;
+        document.head.appendChild(style);
+    };
+
+    /**
+     * Renders the main navigation bar HTML structure.
+     * @param {Object} user - Firebase User object or null.
+     * @param {Object} userData - User profile data from Firestore or null.
+     * @param {Object} pages - The loaded page identification data.
+     */
+    const renderNavbar = (user, userData, pages) => {
+        const container = document.getElementById('navbar-container');
+        if (!container) return;
+
+        const isAuthenticated = !!user && !user.isAnonymous;
+        const username = userData?.username || (isAuthenticated ? 'Student' : 'Guest');
+        // Get the current path, ensuring it matches the format of the JSON URLs
+        const currentPath = window.location.pathname.replace(/\/$/, '').toLowerCase(); 
+
+        // --- 1. Generate Tab Menu HTML ---
+        let tabsHtml = '';
+        if (isAuthenticated && pages) {
+            const pageKeys = Object.keys(pages);
+            
+            // Generate link for each tab
+            tabsHtml = pageKeys.map(key => {
+                const page = pages[key];
+                // Normalize page URL to match current path logic (remove leading '../')
+                const pageUrl = page.url.replace(/^\.\.\//, '/').toLowerCase(); 
                 
-                <div 
-                    id="auth-menu-container" 
-                    class="auth-menu-container closed absolute right-0 top-10 w-64 p-3 rounded-xl bg-black/70 backdrop-blur-lg border border-gray-800 shadow-xl"
-                >
-                    <div class="px-3 py-1 mb-2 border-b border-gray-700">
-                        <p class="text-sm font-semibold text-white truncate">${username}</p>
-                        <p class="text-xs text-gray-400 truncate">${email}</p>
-                    </div>
+                // Determine active status: true if the path ends with the pageUrl
+                const isActive = currentPath.endsWith(pageUrl);
 
-                    <a href="../logged-in/settings.html" class="block px-3 py-2 text-sm font-normal text-white hover:bg-gray-800 rounded-lg transition-colors">
-                        <i class="fas fa-cog mr-2"></i> Settings
+                return `
+                    <a href="${page.url}" class="nav-tab-link ${isActive ? 'active' : ''}">
+                        <i class="fas ${page.icon} mr-2"></i> ${page.name}
                     </a>
-                    
-                    <button id="logout-button" class="w-full text-left px-3 py-2 text-sm font-normal text-red-400 hover:bg-red-900/30 rounded-lg transition-colors mt-1">
-                        <i class="fas fa-sign-out-alt mr-2"></i> Log Out
-                    </button>
+                `;
+            }).join('');
+            
+            // Wrap the tabs in the scrollable container
+            tabsHtml = `
+                <div class="nav-tab-menu flex pb-2 px-8 max-w-full">
+                    ${tabsHtml}
                 </div>
-            </div>
-        </div>
-    `;
-}
-
-function renderLoggedOutNavbar() {
-    return `
-        <div class="relative">
-            <button 
-                id="auth-toggle"
-                aria-expanded="false"
-                aria-controls="auth-menu-container"
-                class="w-8 h-8 rounded-full border border-white flex items-center justify-center bg-black/50 hover:bg-gray-900/50 transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-white"
-            >
-                <i class="fas fa-user text-white text-base"></i>
-            </button>
-            
-            <div 
-                id="auth-menu-container" 
-                class="auth-menu-container closed absolute right-0 top-10 w-40 p-2 rounded-xl bg-black/70 backdrop-blur-lg border border-gray-800 shadow-xl"
-            >
-                <a href="login.html" class="block px-3 py-2 text-sm font-normal text-white hover:bg-gray-800 rounded-lg transition-colors">
-                    Login
-                </a>
-                <a href="signup.html" class="block px-3 py-2 text-sm font-normal text-white hover:bg-gray-800 rounded-lg transition-colors mt-1">
-                    Sign Up
-                </a>
-            </div>
-        </div>
-    `;
-}
-
-// 5. MAIN INJECTION & EVENT SETUP
-function setupPinningEvents(auth) { // Now accepts auth
-    const navbarContainer = document.getElementById('navbar-container');
-    if (!navbarContainer) return;
-
-    navbarContainer.addEventListener('click', (e) => {
-        const button = e.target.closest('[data-pin-action]');
-        if (button) {
-            const action = button.dataset.pinAction;
-            const pageId = button.dataset.pageId;
-
-            if (action === 'pin' || action === 'unpin') {
-                togglePin(pageId);
-                // Re-render the navbar to update the pin buttons immediately
-                injectAuthNavbar(auth, true); // Pass auth to re-render
-            }
-        }
-    });
-}
-
-function setupAuthMenuLogic() {
-    const toggleButton = document.getElementById('auth-toggle');
-    const menuContainer = document.getElementById('auth-menu-container');
-
-    if (toggleButton && menuContainer) {
-        const toggleMenu = () => {
-            const isExpanded = toggleButton.getAttribute('aria-expanded') === 'true';
-            toggleButton.setAttribute('aria-expanded', String(!isExpanded));
-            
-            if (isExpanded) {
-                menuContainer.classList.remove('open');
-                menuContainer.classList.add('closed');
-            } else {
-                menuContainer.classList.remove('closed');
-                menuContainer.classList.add('open');
-            }
-        };
-
-        toggleButton.addEventListener('click', toggleMenu);
-
-        document.addEventListener('click', (event) => {
-            if (!menuContainer.contains(event.target) && !toggleButton.contains(event.target)) {
-                if (toggleButton.getAttribute('aria-expanded') === 'true') {
-                    toggleMenu();
-                }
-            }
-        });
-    }
-}
-
-/**
- * Injects or updates the authentication and page menu content.
- * @param {object} auth - The Firebase auth object.
- * @param {boolean} isUpdate - True if only content needs updating, false for initial injection.
- */
-function injectAuthNavbar(auth, isUpdate = false) {
-    const navbarContainer = document.getElementById('navbar-container');
-    if (!navbarContainer) return;
-
-    // The first time, inject the entire structural HTML
-    if (!isUpdate && !isNavbarStructureInjected) {
-        navbarContainer.innerHTML = `
-            <header id="full-header" class="sticky top-0 z-50 backdrop-blur-md bg-black/80 border-b border-gray-900">
-                <nav class="h-16 flex items-center justify-between px-4">
-                    <a href="../index.html" class="flex items-center space-x-2">
-                        <picture>
-                            <source srcset="../images/logo.png" media="(prefers-color-scheme: dark)">
-                            <img src="../images/logo.png" alt="4simpleproblems Logo" class="h-8 w-auto">
-                        </picture>
-                    </a>
-                    <div id="auth-controls-container"></div>
-                </nav>
-                <div id="page-menu-container"></div>
-            </header>
-        `;
-        isNavbarStructureInjected = true; // Mark structure as injected
-    }
-    
-    // Get containers for content update (They are guaranteed to exist now if we proceeded)
-    const authControlsContainer = document.getElementById('auth-controls-container');
-    const pageMenuContainer = document.getElementById('page-menu-container');
-    if (!authControlsContainer || !pageMenuContainer) return; // Should not happen after initial injection
-    
-    const currentPageId = getCurrentPageId();
-
-
-    // MODIFIED: Use the passed auth object
-    auth.onAuthStateChanged((user) => {
-        
-        // 1. Render Auth/Account Controls
-        if (user) {
-            authControlsContainer.innerHTML = renderLoggedInNavbar(user);
+            `;
         } else {
-            authControlsContainer.innerHTML = renderLoggedOutNavbar();
+            // For signed out/guest state, show the login link or a simple message
+            tabsHtml = `
+                <div class="px-8 pt-2 pb-4 text-sm text-custom-lighter-gray">
+                    Sign in to access the full navigation menu.
+                </div>
+            `;
         }
 
-        // 2. Render Page Menu (always visible)
-        pageMenuContainer.innerHTML = renderPageMenu(currentPageId);
-        
-        // 3. Setup interactivity (must be done after innerHTML updates)
-        setupAuthMenuLogic();
 
-        // 4. Setup Logout Listener
-        if (user) {
-            const logoutButton = document.getElementById('logout-button');
-            if (logoutButton) {
-                logoutButton.addEventListener('click', async () => {
+        // --- 2. Generate Full Navbar HTML (Header + Tabs) ---
+        const navbarHtml = `
+            <nav class="main-navbar fixed top-0 left-0 w-full z-50">
+                <div class="flex justify-between items-center px-8 py-3 max-w-7xl mx-auto">
+                    <!-- Logo / Home Link -->
+                    <a href="index.html" class="text-xl font-extrabold text-custom-white-gray tracking-tighter hover:text-white transition">4SP <span class="text-green-400">Toolkit</span></a>
+
+                    <!-- User / Action Buttons -->
+                    <div class="relative flex items-center space-x-3">
+                        ${isAuthenticated ? `
+                            <!-- User Dropdown Button -->
+                            <button id="userDropdownBtn" class="user-dropdown-btn flex items-center p-2 rounded-full text-sm font-medium text-custom-white-gray transition hover:bg-custom-medium-gray focus:outline-none">
+                                <i class="fas fa-user-circle mr-2 text-lg"></i>
+                                <span>${username}</span>
+                                <i class="fas fa-chevron-down ml-2 text-xs"></i>
+                            </button>
+
+                            <!-- Dropdown Menu -->
+                            <div id="userDropdownMenu" class="absolute right-0 mt-2 top-full w-48 bg-custom-darkest-gray rounded-lg shadow-xl border border-custom-medium-gray hidden" style="z-index: 1000;">
+                                <a href="logged-in/settings.html" class="dropdown-item block px-4 py-2 text-sm text-custom-white-gray hover:bg-custom-medium-gray rounded-t-lg">Settings</a>
+                                <a href="logged-in/profile.html" class="dropdown-item block px-4 py-2 text-sm text-custom-white-gray hover:bg-custom-medium-gray">Profile</a>
+                                <div class="border-t border-custom-medium-gray my-1"></div>
+                                <button id="logoutBtn" class="dropdown-item w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-custom-medium-gray rounded-b-lg">Logout</button>
+                            </div>
+                        ` : `
+                            <!-- Login Button for Guest/Signed Out -->
+                            <a href="login.html" class="p-2 px-4 rounded-lg text-sm font-semibold bg-custom-medium-gray text-custom-white-gray hover:bg-custom-light-gray transition">Login</a>
+                        `}
+                    </div>
+                </div>
+                
+                <!-- Horizontal Tab Menu Section -->
+                ${tabsHtml}
+            </nav>
+            <div style="height: 100px;"></div> <!-- Spacer to prevent content from being hidden by fixed nav -->
+        `;
+
+        container.innerHTML = navbarHtml;
+
+        // --- 3. Attach Event Listeners ---
+        const dropdownBtn = document.getElementById('userDropdownBtn');
+        const dropdownMenu = document.getElementById('userDropdownMenu');
+        const logoutBtn = document.getElementById('logoutBtn');
+
+        if (dropdownBtn && dropdownMenu) {
+            dropdownBtn.addEventListener('click', () => {
+                dropdownMenu.classList.toggle('hidden');
+            });
+            document.addEventListener('click', (event) => {
+                if (!dropdownBtn.contains(event.target) && !dropdownMenu.contains(event.target)) {
+                    dropdownMenu.classList.add('hidden');
+                }
+            });
+        }
+
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async () => {
+                if (auth && signOut) {
                     try {
-                        // MODIFIED: Use the passed auth object's signOut method
-                        await auth.signOut();
-                        window.location.href = 'login.html'; 
+                        await signOut(auth);
+                        window.location.href = 'index.html'; // Redirect after sign out
                     } catch (error) {
                         console.error("Logout failed:", error);
                     }
-                });
-            }
+                } else {
+                    // Fallback if Firebase is not loaded
+                    window.location.href = 'index.html'; 
+                }
+            });
         }
-    });
-}
+    };
 
-// 6. INITIALIZATION: Expose a global function for the module script to call
-window.initFullNavigation = async (auth) => {
-    // Only proceed after the DOM is fully loaded to ensure 'navbar-container' exists.
-    document.addEventListener('DOMContentLoaded', async () => {
-        injectTopbarCSS();
-        await loadPageData();
-        // The first call to injectAuthNavbar will inject the structure and attach the auth listener.
-        injectAuthNavbar(auth); 
-        setupPinningEvents(auth); 
+    /**
+     * Fetches the page identification JSON and then starts the auth listener.
+     */
+    const fetchPagesAndStartAuthListener = async () => {
+        let pages = null;
+        try {
+            // Fetch the JSON file containing all page links
+            const response = await fetch('../page-identification.json');
+            if (response.ok) {
+                pages = await response.json();
+            } else {
+                console.warn(`Could not load page identification from ../page-identification.json. Status: ${response.status}`);
+            }
+        } catch (error) {
+            console.error("Error fetching page-identification.json:", error);
+        }
+
+        // Render initial view with pages data
+        renderNavbar(null, null, pages);
+
+        if (auth && onAuthStateChanged) {
+            // Start the Firebase authentication listener
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    // User is signed in. Fetch profile data.
+                    const userDocRef = getUserProfileDocRef(user.uid);
+                    try {
+                        const docSnap = userDocRef ? await getDoc(userDocRef) : null;
+                        const userData = docSnap?.exists() ? docSnap.data() : null;
+                        renderNavbar(user, userData, pages);
+                    } catch (error) {
+                        console.error("Error fetching user data:", error);
+                        renderNavbar(user, null, pages); // Render even if Firestore fails
+                    }
+                } else {
+                    // User is signed out.
+                    renderNavbar(null, null, pages);
+                    
+                    // Attempt to sign in anonymously for a seamless guest experience.
+                    if (signInAnonymously) {
+                        signInAnonymously(auth).catch((error) => {
+                            if (error.code === 'auth/operation-not-allowed' || error.code === 'auth/admin-restricted-operation') {
+                                console.warn(
+                                    "Anonymous sign-in is disabled. Enable it in the Firebase Console (Authentication > Sign-in method) for guest features."
+                                );
+                            } else {
+                                console.error("Anonymous sign-in error:", error);
+                            }
+                        });
+                    }
+                }
+            });
+        } else {
+            // Fallback render if Firebase failed to initialize
+            renderNavbar(null, null, pages);
+        }
+    };
+
+    /**
+     * Entry point after Firebase imports are attempted.
+     */
+    const onAuthStateReady = () => {
+        injectStyles();
+        // Ensure the container exists
+        if (!document.getElementById('navbar-container')) {
+            const navbarDiv = document.createElement('div');
+            navbarDiv.id = 'navbar-container';
+            document.body.prepend(navbarDiv);
+        }
+        
+        fetchPagesAndStartAuthListener();
+    };
+
+    // --- START THE PROCESS ---
+    document.addEventListener('DOMContentLoaded', () => {
+        // The main logic is initiated asynchronously via the Firebase import chain
     });
-};
+    
+})();
