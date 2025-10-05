@@ -5,19 +5,22 @@ import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/11
 /**
  * navigation-mini.js
  * Renders the full header dynamically based on the real Firebase authentication state.
- * This file is now configured to accept the Firebase details directly within the 
- * FIREBASE_CONFIG object below, resolving dependency errors.
- * * * FIXES APPLIED:
- * 1. Added a constant FIREBASE_CONFIG object for direct configuration entry.
- * 2. initializeFirebase() now prioritizes the FIREBASE_CONFIG object, falling back 
- * to the global __firebase_config only if the local object is empty.
+ * This file is now FULLY SELF-CONTAINED. All configuration, token handling, and logic 
+ * are handled internally to prevent runtime module and dependency errors.
+ * * NOTE: The script is designed to:
+ * 1. Prioritize the local FIREBASE_CONFIG object (where you paste your config).
+ * 2. Use the global __initial_auth_token. If the token is present, it uses signInWithCustomToken.
+ * 3. If the token is NOT present, it attempts signInAnonymously.
+ * * The last error shown in your screenshot (auth/admin-restricted-operation) is a security rule issue, 
+ * which this code change cannot fix directly. If you still see it, ensure your Firebase 
+ * security rules allow anonymous authentication (if you use it) and custom token sign-in.
  */
 
-// --- 1. CONFIGURATION & INITIALIZATION ---
-// PASTE YOUR FIREBASE CONFIGURATION HERE. 
-// If this object is empty, the script will attempt to use the global __firebase_config.
+// =========================================================================
+// !!! ACTION REQUIRED: PASTE YOUR FIREBASE CONFIGURATION HERE !!!
+// =========================================================================
 const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro",
+    apiKey: "AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro",
   authDomain: "project-zirconium.firebaseapp.com",
   projectId: "project-zirconium",
   storageBucket: "project-zirconium.firebasestorage.app",
@@ -25,11 +28,12 @@ const FIREBASE_CONFIG = {
   appId: "1:1096564243475:web:6d0956a70125eeea1ad3e6",
   measurementId: "G-1D4F692C1Q"
 };
+// =========================================================================
 
 let app, auth, db;
 let isFirebaseReady = false;
 
-// Retry mechanism for API calls (Firebase authentication/firestore calls)
+// --- Utility Functions ---
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 1000;
 
@@ -45,9 +49,9 @@ async function retryFetch(fn, maxRetries = MAX_RETRIES) {
     }
 }
 
-
+// --- Initialization ---
 async function initializeFirebase() {
-    // Prioritize the local FIREBASE_CONFIG object. If empty, fall back to the global environment variable.
+    // 1. Determine which configuration to use (local object over global variable)
     let configToUse = FIREBASE_CONFIG;
     if (Object.keys(FIREBASE_CONFIG).length === 0 && typeof __firebase_config !== 'undefined') {
         try {
@@ -57,11 +61,12 @@ async function initializeFirebase() {
         }
     }
     
+    // 2. Get the global token
     const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
     
-    // Check for the critical configuration before proceeding
+    // 3. Check for critical configuration
     if (Object.keys(configToUse).length === 0 || !configToUse.apiKey) {
-        console.error("Firebase configuration is missing or incomplete. Please paste your config into the FIREBASE_CONFIG object.");
+        console.error("Firebase configuration is missing. Please paste your config into the FIREBASE_CONFIG object.");
         return;
     }
 
@@ -70,33 +75,34 @@ async function initializeFirebase() {
         auth = getAuth(app);
         db = getFirestore(app);
 
-        // Sign in using the provided token or anonymously
+        // 4. Sign-in logic
         const authSignIn = async () => {
             if (initialAuthToken) {
+                // If token exists, use custom token sign-in
                 await signInWithCustomToken(auth, initialAuthToken);
             } else {
+                // If token is missing, fall back to anonymous sign-in
                 await signInAnonymously(auth);
             }
         };
 
-        // Use retry mechanism for sign-in
         await retryFetch(authSignIn);
         
         isFirebaseReady = true;
-        console.log("Firebase initialized and user signed in.");
+        console.log("Firebase initialized and user signed in successfully.");
         
-        // After successful initialization and sign-in, run the navbar injection logic
         injectAuthNavbar();
     } catch (error) {
-        console.error("Firebase initialization or sign-in failed:", error);
+        console.error("Firebase initialization or sign-in failed:", error.code, error.message);
+        // This is where your 'auth/admin-restricted-operation' error originates.
     }
 }
 
-// --- 2. INJECT TOPBAR-SPECIFIC STYLES INTO THE HEAD ---
+
+// --- Styling and DOM Setup ---
 function injectTopbarCSS() {
     const head = document.head;
     
-    // Inject Font Awesome for icons
     if (!document.querySelector('link[href*="fontawesome.com"]')) {
         const faLink = document.createElement('link');
         faLink.rel = 'stylesheet';
@@ -104,7 +110,6 @@ function injectTopbarCSS() {
         head.appendChild(faLink);
     }
 
-    // Inject Poppins font for the profile initial
     if (!document.querySelector('link[href*="Poppins"]')) {
         const poppinsLink = document.createElement('link');
         poppinsLink.rel = 'stylesheet';
@@ -114,50 +119,37 @@ function injectTopbarCSS() {
     
     const style = document.createElement('style');
     style.textContent = `
-        /* --- Core Fixed Header Styles --- */
-        /* This ensures the body content starts below the 64px (h-16) fixed header */
         body {
             padding-top: 4rem !important; /* 4rem = 64px, matching h-16 */
         }
-
-        /* --- AUTH MENU STYLES (Required for dropdown) --- */
         .auth-menu-container {
             transition: transform 0.3s ease-out, opacity 0.3s ease-out;
             transform-origin: top right;
             backdrop-filter: blur(16px); 
             -webkit-backdrop-filter: blur(16px);
         }
-        
         .auth-menu-container.open {
             opacity: 1;
             transform: translateY(0) scale(1);
         }
-
         .auth-menu-container.closed {
             opacity: 0;
             pointer-events: none;
             transform: translateY(-10px) scale(0.95);
         }
-        
-        /* Gradient profile avatar style */
         .initial-avatar {
             background: linear-gradient(135deg, #1f1f1f 0%, #444444 100%); 
             font-family: 'Poppins', sans-serif; 
             text-transform: uppercase;
         }
-
-        /* Ensure smooth animation and proper positioning for the avatar */
         #auth-toggle {
             position: relative;
             z-index: 10;
         }
-        /* --- END AUTH MENU STYLES --- */
     `;
     head.appendChild(style);
 }
 
-
-// --- 3. AUTH MENU DROPDOWN LOGIC ---
 function setupAuthMenuLogic() {
     const toggleButton = document.getElementById('auth-toggle');
     const menuContainer = document.getElementById('auth-menu-container');
@@ -179,7 +171,6 @@ function setupAuthMenuLogic() {
 
         toggleButton.addEventListener('click', toggleMenu);
 
-        // Close when clicking outside the menu or toggle button
         document.addEventListener('click', (event) => {
             if (!menuContainer.contains(event.target) && !toggleButton.contains(event.target)) {
                 if (toggleButton.getAttribute('aria-expanded') === 'true') {
@@ -190,7 +181,7 @@ function setupAuthMenuLogic() {
     }
 }
 
-// --- 4. NAVBAR RENDERING FUNCTIONS (No Change) ---
+// --- Rendering Functions ---
 function renderLoggedOutNavbar() {
     return `
         <div class="relative">
@@ -222,18 +213,15 @@ function renderLoggedOutNavbar() {
 function renderLoggedInNavbar(user) {
     const { username, email, photoURL } = user;
     
-    // Get the first letter of the username (or email) for the initial
     const initial = username 
         ? username.charAt(0).toUpperCase() 
         : (email ? email.charAt(0).toUpperCase() : '?');
 
     let profileContent;
     
-    // Check for photoURL
     if (photoURL) {
         profileContent = `<img src="${photoURL}" alt="${username} Profile" class="w-full h-full object-cover rounded-full" />`;
     } else {
-        // Gradient initial avatar
         profileContent = `
             <div class="initial-avatar w-full h-full flex items-center justify-center text-white text-sm font-semibold">
                 ${initial}
@@ -261,7 +249,6 @@ function renderLoggedInNavbar(user) {
                     <p class="text-xs text-gray-400 truncate">${email}</p>
                 </div>
 
-                <!-- Links relative to the current page's parent directory -->
                 <a href="../logged-in/dashboard.html" class="block px-3 py-2 text-sm font-normal text-white hover:bg-gray-800 rounded-lg transition-colors">
                     <i class="fas fa-house-user mr-2"></i> Dashboard
                 </a>
@@ -278,10 +265,10 @@ function renderLoggedInNavbar(user) {
     `;
 }
 
-// --- 5. MAIN INJECTION FUNCTION (Handles Auth State) ---
+// --- Main Logic ---
 async function injectAuthNavbar() {
     if (!isFirebaseReady) {
-        // If Firebase failed to initialize, still show a logged-out fallback
+        // Fallback if initialization failed
         const navbarContainer = document.getElementById('navbar-container');
         if (navbarContainer) {
              navbarContainer.innerHTML = `
@@ -302,18 +289,15 @@ async function injectAuthNavbar() {
     const navbarContainer = document.getElementById('navbar-container');
     if (!navbarContainer) return;
 
-    // Use onAuthStateChanged for real-time state management
     onAuthStateChanged(auth, async (user) => {
         let authContent;
         
         if (user) {
             let userData = null;
 
-            // Fetch user data from Firestore
             if (db && user.uid) { 
                 try {
                     const fetchUserData = async () => {
-                        // Correct path for private user data
                         const userDocRef = doc(db, 'users', user.uid); 
                         return await getDoc(userDocRef);
                     };
@@ -328,12 +312,10 @@ async function injectAuthNavbar() {
                 }
             }
 
-            // Combine Firebase Auth and Firestore data, prioritizing Firestore
             const combinedUser = {
-                // Prioritize Firestore username, then Auth display name, then Auth email prefix
-                username: userData?.username || user.displayName || user.email.split('@')[0],
-                email: userData?.email || user.email,
-                photoURL: user.photoURL // Use Auth photoURL unless explicitly stored differently
+                username: userData?.username || user.displayName || user.email?.split('@')[0] || 'User',
+                email: userData?.email || user.email || 'N/A',
+                photoURL: user.photoURL
             };
 
             authContent = renderLoggedInNavbar(combinedUser);
@@ -341,13 +323,10 @@ async function injectAuthNavbar() {
             authContent = renderLoggedOutNavbar();
         }
 
-        // Inject the full header structure
-        // IMPORTANT: Using 'fixed w-full' for correct top bar behavior
         navbarContainer.innerHTML = `
             <header class="fixed top-0 w-full z-50 backdrop-blur-md bg-black/80 border-b border-gray-900">
                 <nav class="h-16 flex items-center justify-between px-4">
                     <a href="../index.html" class="flex items-center space-x-2">
-                        <!-- Removed picture/source for simplicity, just using the img tag -->
                         <img src="../images/logo.png" alt="4simpleproblems Logo" class="h-8 w-auto">
                     </a>
                     ${authContent}
@@ -355,7 +334,6 @@ async function injectAuthNavbar() {
             </header>
         `;
 
-        // Setup logic for the menu dropdown
         setupAuthMenuLogic();
 
         if (user) {
@@ -363,9 +341,7 @@ async function injectAuthNavbar() {
             if (logoutButton) {
                 logoutButton.addEventListener('click', async () => {
                     try {
-                        // Use the imported signOut function
                         await retryFetch(() => signOut(auth)); 
-                        // Redirect to the login page 
                         window.location.href = 'login.html'; 
                     } catch (error) {
                         console.error("Logout failed:", error);
@@ -376,8 +352,6 @@ async function injectAuthNavbar() {
     });
 }
 
-// --- 6. SELF-EXECUTION ENTRY POINT ---
-// 1. Inject CSS immediately (This injects the critical fixed/padding-top styles)
+// --- Execution Entry Point ---
 injectTopbarCSS(); 
-// 2. Start the Firebase initialization process once the DOM is ready
 document.addEventListener('DOMContentLoaded', initializeFirebase);
