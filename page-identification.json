@@ -14,6 +14,11 @@
         "icon": "fa-sticky-note",
         "url": "../logged-in/notes.html"
     },
+     "notes-again": {
+        "name": "Notes Again",
+        "icon": "fa-sticky-note",
+        "url": "../logged-in/notes-again.html"
+    },
     "countdowns": {
         "name": "Countdowns",
         "icon": "fa-clock",
