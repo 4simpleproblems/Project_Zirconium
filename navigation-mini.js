@@ -1,24 +1,21 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut, signInWithCustomToken, signInAnonymously } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
 import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+import { firebaseConfig, initialAuthToken } from './firebase-config.js'; // <-- NEW IMPORT
 
 /**
  * navigation-mini.js
  * Renders the full header dynamically based on the real Firebase authentication state.
  * This script is now FULLY SELF-INITIALIZING. It handles all Firebase dependencies 
- * internally and uses environment-provided global variables for configuration and 
- * authentication, resolving the "Cannot initialize Firebase" error.
+ * internally and imports configuration from './firebase-config.js'.
  * * FIXES APPLIED:
- * 1. Removed external dependency on initMiniNavigation(). Script runs itself.
- * 2. Uses global __firebase_config and __initial_auth_token.
+ * 1. Configuration is now imported from firebase-config.js.
+ * 2. Uses the imported firebaseConfig and initialAuthToken.
  * 3. Sets the header to fixed position and adds necessary padding to the <body>.
  */
 
 // --- 1. CONFIGURATION & INITIALIZATION ---
-// Get config and token from global environment variables (Canvas requirement)
-// This is the source of the previous error: ensure these globals are used directly.
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+// The configuration and auth token are now imported from './firebase-config.js'
 
 let app, auth, db;
 let isFirebaseReady = false;
@@ -42,9 +39,9 @@ async function retryFetch(fn, maxRetries = MAX_RETRIES) {
 
 async function initializeFirebase() {
     // Check for the critical configuration before proceeding
-    if (Object.keys(firebaseConfig).length === 0) {
+    if (Object.keys(firebaseConfig).length === 0 || !firebaseConfig.apiKey) {
         // Log error but don't stop execution, allowing the rest of the script to potentially load
-        console.error("Firebase configuration is missing. Cannot initialize Firebase.");
+        console.error("Firebase configuration is missing or incomplete. Cannot initialize Firebase. Please check firebase-config.js.");
         return;
     }
 
