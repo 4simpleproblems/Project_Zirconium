@@ -99,15 +99,33 @@ const PAGE_CONFIG_URL = '../page-identification.json';
                 /* Base Styles */
                 body { padding-top: 4rem; /* 64px, equal to navbar height */ }
                 .auth-navbar { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: rgba(0,0,0,0.8); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid rgb(31 41 55); height: 4rem; }
-                .auth-navbar nav { max-width: 80rem; margin: auto; padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+                /* Nav now needs relative positioning for glide buttons */
+                .auth-navbar nav { max-width: 80rem; margin: auto; padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
                 .initial-avatar { background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: 'Geist', sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; }
                 
-                /* Auth Dropdown Menu Styles */
-                .auth-menu-container { position: absolute; right: 0; top: 50px; width: 16rem; background: rgba(17, 24, 39, 0.9); border: 1px solid rgb(55 65 81); border-radius: 0.75rem; padding: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); transition: transform 0.2s ease-out, opacity 0.2s ease-out; transform-origin: top right; }
+                /* Auth Dropdown Menu Styles (UPDATED: Black background and blur) */
+                .auth-menu-container { 
+                    position: absolute; right: 0; top: 50px; width: 16rem; 
+                    background: rgba(0, 0, 0, 0.9); /* Closer to black */
+                    backdrop-filter: blur(8px); 
+                    -webkit-backdrop-filter: blur(8px);
+                    border: 1px solid rgb(55 65 81); border-radius: 0.75rem; padding: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
+                    transition: transform 0.2s ease-out, opacity 0.2s ease-out; transform-origin: top right; 
+                }
                 .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
                 .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
                 .auth-menu-link, .auth-menu-button { display: block; width: 100%; text-align: left; padding: 0.5rem 0.75rem; font-size: 0.875rem; color: #d1d5db; border-radius: 0.375rem; transition: background-color 0.2s, color 0.2s; }
                 .auth-menu-link:hover, .auth-menu-button:hover { background-color: rgb(55 65 81); color: white; }
+
+                /* Scrollable Tab Wrapper (NEW) */
+                .tab-wrapper {
+                    flex-grow: 1;
+                    display: flex;
+                    align-items: center;
+                    position: relative; /* Context for absolute buttons */
+                    min-width: 0; /* Needed for flex item to shrink properly */
+                    margin: 0 1rem; /* Added margin for visual spacing */
+                }
 
                 /* Horizontal Scrollable Tabs Styles */
                 .tab-scroll-container {
@@ -120,9 +138,56 @@ const PAGE_CONFIG_URL = '../page-identification.json';
                     -ms-overflow-style: none; /* Hide scrollbar for IE and Edge */
                     padding-bottom: 5px; /* Add padding for scroll visibility */
                     margin-bottom: -5px; /* Counteract padding-bottom for visual alignment */
+                    scroll-behavior: smooth; /* ADDED for smooth scrolling */
                 }
                 /* Hide scrollbar for Chrome, Safari, and Opera */
                 .tab-scroll-container::-webkit-scrollbar { display: none; }
+
+                /* Scroll Glide Buttons (NEW) */
+                .scroll-glide-button {
+                    position: absolute;
+                    top: 0;
+                    height: 100%;
+                    width: 2rem; /* Half button width */
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: rgba(0, 0, 0, 0.7); /* Black, semi-transparent */
+                    color: white;
+                    font-size: 1.2rem;
+                    cursor: pointer;
+                    opacity: 0; /* Hidden by default, managed by JS */
+                    transition: opacity 0.3s, background 0.3s;
+                    z-index: 10;
+                    pointer-events: none; /* Disable interaction when hidden */
+                }
+                .scroll-glide-button:hover {
+                    background: rgba(0, 0, 0, 0.9);
+                }
+                
+                /* Position and gradient for left button */
+                #glide-left {
+                    left: 0;
+                    border-top-right-radius: 0.5rem;
+                    border-bottom-right-radius: 0.5rem;
+                    /* Fade effect to blend into the tabs */
+                    background: linear-gradient(to right, rgba(0, 0, 0, 0.7), transparent);
+                }
+
+                /* Position and gradient for right button */
+                #glide-right {
+                    right: 0;
+                    border-top-left-radius: 0.5rem;
+                    border-bottom-left-radius: 0.5rem;
+                    /* Fade effect to blend into the tabs */
+                    background: linear-gradient(to left, rgba(0, 0, 0, 0.7), transparent);
+                }
+
+                /* Visibility class controlled by JS */
+                .scroll-glide-button.visible {
+                    opacity: 1;
+                    pointer-events: auto;
+                }
 
                 .nav-tab {
                     flex-shrink: 0; /* Prevents tabs from shrinking */
@@ -177,6 +242,34 @@ const PAGE_CONFIG_URL = '../page-identification.json';
             } catch (e) {
                 console.error("Error normalizing URL:", url, e);
                 return '';
+            }
+        };
+        
+        // --- NEW: Function to control visibility of scroll glide buttons ---
+        const updateScrollGilders = () => {
+            const container = document.querySelector('.tab-scroll-container');
+            const leftButton = document.getElementById('glide-left');
+            const rightButton = document.getElementById('glide-right');
+
+            if (!container || !leftButton || !rightButton) return;
+            
+            // Determine scroll state
+            // scrollLeft < 1 means it's scrolled all the way to the start (left)
+            const isScrolledToLeft = container.scrollLeft < 1; 
+            // Check if scrollLeft + offsetWidth is very close to scrollWidth (scrolled all the way to the end/right)
+            const isScrolledToRight = container.scrollLeft + container.offsetWidth >= container.scrollWidth - 1; 
+            const hasHorizontalOverflow = container.scrollWidth > container.offsetWidth;
+
+            // Visibility logic
+            if (hasHorizontalOverflow) {
+                // Show left button if not at the start
+                leftButton.classList.toggle('visible', !isScrolledToLeft);
+                // Show right button if not at the end
+                rightButton.classList.toggle('visible', !isScrolledToRight);
+            } else {
+                // Hide both buttons if there is no content overflow
+                leftButton.classList.remove('visible');
+                rightButton.classList.remove('visible');
             }
         };
 
@@ -255,8 +348,14 @@ const PAGE_CONFIG_URL = '../page-identification.json';
                         </a>
 
                         <!-- 2. Scrollable Tabs (Center, takes up all remaining space) -->
-                        <div class="tab-scroll-container">
-                            ${tabsHtml}
+                        <div class="tab-wrapper">
+                            <button id="glide-left" class="scroll-glide-button"><i class="fas fa-chevron-left"></i></button>
+
+                            <div class="tab-scroll-container">
+                                ${tabsHtml}
+                            </div>
+                            
+                            <button id="glide-right" class="scroll-glide-button"><i class="fas fa-chevron-right"></i></button>
                         </div>
 
                         <!-- 3. Auth Menu (Right) -->
@@ -265,7 +364,7 @@ const PAGE_CONFIG_URL = '../page-identification.json';
                 </header>
             `;
 
-            // --- 5. SETUP EVENT LISTENERS (Including auto-scroll to active tab) ---
+            // --- 5. SETUP EVENT LISTENERS (Including auto-scroll and glide buttons) ---
             setupEventListeners(user);
 
             // Auto-scroll to the active tab if one is found
@@ -275,11 +374,38 @@ const PAGE_CONFIG_URL = '../page-identification.json';
                 // Scroll the container so the active tab is centered
                 tabContainer.scrollLeft = activeTab.offsetLeft - (tabContainer.offsetWidth / 2) + (activeTab.offsetWidth / 2);
             }
+            
+            // INITIAL CHECK: After rendering and auto-scrolling, update glide button visibility
+            // This is crucial to ensure the buttons are visible/hidden correctly on page load.
+            updateScrollGilders();
         };
 
         const setupEventListeners = (user) => {
             const toggleButton = document.getElementById('auth-toggle');
             const menu = document.getElementById('auth-menu-container');
+
+            // Scroll Glide Button setup
+            const tabContainer = document.querySelector('.tab-scroll-container');
+            const leftButton = document.getElementById('glide-left');
+            const rightButton = document.getElementById('glide-right');
+
+            if (tabContainer) {
+                // Update visibility on scroll
+                tabContainer.addEventListener('scroll', updateScrollGilders);
+                
+                // Add click behavior for glide buttons
+                const scrollAmount = 150; // Scroll by 150px
+                if (leftButton) {
+                    leftButton.addEventListener('click', () => {
+                        tabContainer.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+                    });
+                }
+                if (rightButton) {
+                    rightButton.addEventListener('click', () => {
+                        tabContainer.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+                    });
+                }
+            }
 
             if (toggleButton && menu) {
                 toggleButton.addEventListener('click', (e) => {
