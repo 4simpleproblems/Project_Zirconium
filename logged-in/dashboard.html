@@ -3,225 +3,250 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - DASHBOARD</title>
-    <meta name="description" content="Your central hub for the 4simpleproblems student toolkit. Access all tools and features.">
-
+    <title>4SP - Dashboard</title>
+    
+    <!-- Geist Font (Variable, for thin weights) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- Geist Font -->
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     
-    <!-- Load Tailwind CSS -->
+    <!-- TailwindCSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="../navigation.js"></script>
+
+    <!-- Firebase Imports -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, getDocs, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // Setting Debug for logging
+        setLogLevel('Debug');
+
+        // Global Firebase and App variables
+        let app;
+        let db;
+        let auth;
+        let userId;
+        let isAuthReady = false;
+
+        // Configuration and Initialization
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        let firebaseConfig = {};
+        try {
+            firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        } catch (e) {
+            console.error("Failed to parse firebase config:", e);
+        }
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        /**
+         * Initializes Firebase and authenticates the user.
+         */
+        async function initializeFirebase() {
+            try {
+                if (Object.keys(firebaseConfig).length > 0) {
+                    app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+                } else {
+                    console.error("Firebase configuration is missing or invalid.");
+                    return;
+                }
+
+                // Authentication
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        isAuthReady = true;
+                        window.userId = userId; // Expose to global scope for main script
+                        window.db = db; // Expose to global scope for main script
+                        console.log("User authenticated:", userId);
+                        // Start listeners and data fetching after auth is ready
+                        window.loadDashboardData();
+                    } else {
+                        // Use a random ID if anonymous sign-in fails or user logs out
+                        userId = crypto.randomUUID();
+                        isAuthReady = true;
+                        window.userId = userId;
+                        window.db = db;
+                        console.warn("User not authenticated, using random ID:", userId);
+                        window.loadDashboardData();
+                    }
+                });
+
+            } catch (error) {
+                console.error("Firebase Initialization or Authentication Error:", error);
+            }
+        }
+
+        // Expose function for the main script to call
+        window.initializeFirebase = initializeFirebase;
+    </script>
+    
     <style>
-        /* Custom CSS for a clean, official, Geist-themed dark dashboard */
         :root {
             --geist-foreground: 255, 255, 255;
-            --geist-background: 7, 7, 7;
-            --geist-accent: 79, 70, 229; /* indigo-600 */
+            --geist-background: 0, 0, 0;
         }
-        
-        .dark {
-            color-scheme: dark;
+        .dark { color-scheme: dark; }
+        body { 
+            font-family: 'Geist', sans-serif; 
+            /* Ensure smooth transitions for modal */
+            transition: all 0.3s ease-in-out;
         }
-
-        body {
-            /* Applying Geist font */
-            font-family: 'Geist', sans-serif;
-            background-color: var(--geist-background);
-            color: white;
-            min-height: 100vh;
+        /* Custom scrollbar for a clean look */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
         }
-
-        /* Container for the three sections, with full height */
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            min-height: 75vh;
-            border: 1px solid #1f2937; /* border-gray-800 */
-            border-radius: 1rem;
-            overflow: hidden;
-            background-color: #0c0c0c;
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
         }
-
-        @media (min-width: 1024px) {
-            .dashboard-grid {
-                grid-template-columns: 1fr 1px 1fr 1px 1fr;
-            }
-            .separator {
-                background-color: #1f2937; /* gray-800 line */
-                width: 1px;
-                height: 100%;
-            }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
         }
-        
-        /* On mobile (below lg breakpoint), use horizontal separators */
-        @media (max-width: 1023px) {
-            .dashboard-grid {
-                display: flex;
-                flex-direction: column;
-                border: none;
-                background-color: transparent;
-                min-height: auto;
-            }
-            .section-wrapper {
-                border: 1px solid #1f2937;
-                border-radius: 0.75rem;
-                margin-bottom: 1rem;
-            }
-        }
-
-        .shortcut-button {
-            transition: all 0.15s ease-in-out;
-            transform-origin: center;
-        }
-        .shortcut-button:hover {
-            background-color: #1f2937;
-            transform: scale(1.02);
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
         }
     </style>
 </head>
-<body class="flex flex-col">
-    <!-- Main Content -->
-    <main class="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-16 flex-grow">
-        <header class="text-center py-10">
-            <h1 class="text-6xl font-extrabold tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 sm:text-7xl">
-                Official User Dashboard
+<body class="bg-black text-white min-h-screen custom-scrollbar">
+
+    <main class="pt-4 pb-12 px-4 sm:px-8 max-w-7xl mx-auto">
+        
+        <header class="mb-8">
+            <h1 class="text-4xl sm:text-5xl font-light tracking-tight text-white mb-2">
+                Dashboard
             </h1>
-            <p id="welcome-message" class="mt-4 text-xl text-gray-400 font-light">
-                Secure access to your system utilities.
+            <p class="text-sm font-normal text-gray-500">
+                Welcome back, User ID: <span id="user-id-display" class="font-mono text-xs text-gray-400">Loading...</span>
             </p>
         </header>
 
-        <!-- Dashboard Grid: Weather | Time | Shortcuts -->
-        <div class="dashboard-grid w-full">
-            
-            <!-- Section 1: Weather -->
-            <div id="weather-section-container" class="section-wrapper p-6 flex flex-col justify-between">
-                <div>
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-2xl font-semibold text-white tracking-tight">Current Weather</h2>
-                        <button id="settings-button" class="text-gray-400 hover:text-indigo-400 p-2 rounded-full transition-colors" title="Change Location">
-                            <i class="fas fa-cog text-xl"></i>
+        <!-- Main Dashboard Layout: Three Sections with vertical dividers -->
+        <section class="bg-[#111111] p-0 rounded-2xl border border-gray-800 shadow-2xl overflow-hidden">
+            <div class="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-gray-800 h-full lg:h-[480px]">
+
+                <!-- 1. Weather Section -->
+                <div id="weather-section" class="flex-1 p-6 sm:p-8 flex flex-col justify-between">
+                    <div class="flex justify-between items-start mb-4">
+                        <h2 class="text-2xl font-normal text-gray-300">Weather</h2>
+                        <button id="open-weather-settings" class="text-gray-500 hover:text-white transition p-2 rounded-full hover:bg-gray-800">
+                            <i class="fas fa-cog fa-lg"></i>
                         </button>
                     </div>
-                    <div id="weather-content" class="text-center mt-8">
-                        <i class="fas fa-spinner fa-spin text-indigo-400 text-3xl"></i>
-                        <p class="mt-4 text-gray-400">Loading weather data...</p>
+                    <div id="weather-display" class="flex flex-col items-center justify-center flex-grow py-4 text-center">
+                        <i id="weather-icon" class="fas fa-spinner fa-spin text-4xl text-gray-400 mb-4"></i>
+                        <p id="weather-location-name" class="text-xl font-normal text-gray-400 mb-2">Loading Location...</p>
+                        <p id="weather-temperature" class="text-7xl font-light text-white mb-1">--°C</p>
+                        <p id="weather-description" class="text-lg font-light text-gray-500">Fetching data...</p>
+                    </div>
+                    <p class="text-xs text-center text-gray-600">Powered by Open-Meteo</p>
+                </div>
+
+                <!-- 2. Current Time Section -->
+                <div id="time-section" class="flex-1 p-6 sm:p-8 flex flex-col justify-center items-center">
+                    <h2 class="text-2xl font-normal text-gray-300 mb-6">Current Time</h2>
+                    <div class="text-center">
+                        <!-- Time: HH:MM:SS AM/PM -->
+                        <div id="time-display" class="text-8xl lg:text-9xl font-light text-white tracking-tight">
+                            00:00:00 AM
+                        </div>
+                        <!-- Date -->
+                        <div id="date-display" class="text-2xl font-normal text-gray-500 mt-4">
+                            Saturday, Jan 1, 1970
+                        </div>
                     </div>
                 </div>
-                <div id="location-display" class="text-sm text-gray-500 text-center pt-4">
-                    Location: N/A
+
+                <!-- 3. Shortcuts Section -->
+                <div id="shortcuts-section" class="flex-1 p-6 sm:p-8 flex flex-col">
+                    <div class="flex justify-between items-start mb-6">
+                        <h2 class="text-2xl font-normal text-gray-300">Shortcuts</h2>
+                        <button id="add-shortcut-button" class="text-gray-500 hover:text-white transition p-2 rounded-full hover:bg-gray-800">
+                            <i class="fas fa-plus fa-lg"></i>
+                        </button>
+                    </div>
+                    <div id="shortcuts-container" class="grid grid-cols-2 sm:grid-cols-3 gap-4 custom-scrollbar overflow-y-auto flex-grow p-1">
+                        <!-- Shortcut buttons will be injected here -->
+                        <p id="shortcut-placeholder" class="text-gray-500 text-sm col-span-2 sm:col-span-3">Add your first shortcut.</p>
+                    </div>
                 </div>
+
             </div>
-
-            <!-- Vertical Separator (Desktop Only) -->
-            <div class="separator hidden lg:block"></div>
-
-            <!-- Section 2: Time & Date -->
-            <div id="time-date-section" class="section-wrapper p-6 flex flex-col items-center justify-center">
-                <h2 class="text-2xl font-semibold text-white tracking-tight mb-4">Local Time & Date</h2>
-                <div id="time-display" class="text-8xl font-black text-indigo-400 tabular-nums tracking-tighter">
-                    --:--:--
-                </div>
-                <div id="date-display" class="mt-4 text-3xl font-light text-gray-400 tracking-wide">
-                    ---
-                </div>
-            </div>
-
-            <!-- Vertical Separator (Desktop Only) -->
-            <div class="separator hidden lg:block"></div>
-
-            <!-- Section 3: Shortcuts -->
-            <div id="shortcuts-section-container" class="section-wrapper p-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-semibold text-white tracking-tight">Quick Links</h2>
-                    <button id="add-shortcut-button" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-1 px-3 rounded-lg transition-colors shadow-md">
-                        <i class="fas fa-plus mr-1"></i> Add
-                    </button>
-                </div>
-                <div id="shortcuts-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    <p class="text-gray-500 col-span-full text-center">Loading shortcuts...</p>
-                </div>
-            </div>
-        </div>
+        </section>
     </main>
 
-    <!-- Modal for Weather Settings (Location Search) -->
-    <div id="weather-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4">
-        <div class="bg-[#1c1c1c] p-6 rounded-xl w-full max-w-md border border-gray-800 shadow-2xl">
-            <h3 class="text-xl font-semibold mb-4 text-white">Change Weather Location</h3>
-            <div class="relative">
-                <input type="text" id="location-search-input" placeholder="Type city or town name..." 
-                       class="w-full bg-[#0c0c0c] border border-gray-700 rounded-lg p-3 focus:ring-indigo-500 focus:border-indigo-500 text-white">
-                <div id="location-suggestions" class="absolute w-full mt-2 bg-[#1c1c1c] border border-gray-700 rounded-lg shadow-xl max-h-48 overflow-y-auto hidden">
-                    <!-- Suggestions appear here -->
+    <!-- Weather Settings Modal -->
+    <div id="weather-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-[#1a1a1a] w-full max-w-lg p-6 rounded-xl shadow-2xl transform scale-95 transition-transform duration-300">
+            <h3 class="text-2xl font-normal text-white mb-4">Weather Location Settings</h3>
+            
+            <!-- New Current Location Button -->
+            <button id="use-current-location-btn" class="w-full px-4 py-3 mb-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center justify-center space-x-2 disabled:bg-gray-600 disabled:cursor-not-allowed">
+                <i class="fas fa-location-crosshairs"></i>
+                <span id="current-location-text-btn">Use Current Location</span>
+            </button>
+
+            <div class="relative mb-4">
+                <input type="text" id="location-search-input" placeholder="Search for a city..." class="w-full p-3 pl-4 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500" autocomplete="off">
+                <div id="location-suggestions" class="absolute w-full mt-1 bg-gray-800 rounded-lg shadow-xl max-h-48 overflow-y-auto custom-scrollbar border border-gray-700 z-10 hidden">
+                    <!-- Suggestions will be populated here -->
                 </div>
             </div>
-            <div class="flex justify-end space-x-3 mt-4">
-                <button id="close-weather-modal" class="py-2 px-4 rounded-lg text-gray-400 hover:bg-gray-800 transition-colors">Cancel</button>
+            <p id="current-location-text" class="text-sm text-gray-500 mb-4">Current: <span class="text-white">Not set</span></p>
+            <div class="flex justify-end space-x-3">
+                <button id="close-weather-modal" class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition">Close</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal for Shortcut Management -->
-    <div id="shortcut-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4">
-        <div class="bg-[#1c1c1c] p-6 rounded-xl w-full max-w-md border border-gray-800 shadow-2xl">
-            <h3 class="text-xl font-semibold mb-4 text-white">Add New Shortcut</h3>
+    <!-- Shortcut Creation Modal -->
+    <div id="shortcut-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-[#1a1a1a] w-full max-w-lg p-6 rounded-xl shadow-2xl transform scale-95 transition-transform duration-300">
+            <h3 class="text-2xl font-normal text-white mb-4">Create New Shortcut</h3>
             
-            <div class="space-y-4">
-                <input type="text" id="shortcut-name" placeholder="Shortcut Name (e.g., School Portal)" 
-                       class="w-full bg-[#0c0c0c] border border-gray-700 rounded-lg p-3 focus:ring-indigo-500 focus:border-indigo-500 text-white">
-                
-                <!-- Link Type Selection -->
-                <div class="flex space-x-4">
-                    <label class="flex items-center text-white">
-                        <input type="radio" name="link-type" value="page" id="link-type-page" checked 
-                               class="form-radio text-indigo-500 focus:ring-indigo-500">
-                        <span class="ml-2">Internal Page</span>
-                    </label>
-                    <label class="flex items-center text-white">
-                        <input type="radio" name="link-type" value="url" id="link-type-url"
-                               class="form-radio text-indigo-500 focus:ring-indigo-500">
-                        <span class="ml-2">External URL</span>
-                    </label>
-                </div>
-
-                <!-- Page Dropdown (Initially Visible) -->
-                <select id="shortcut-page-select" class="w-full bg-[#0c0c0c] border border-gray-700 rounded-lg p-3 focus:ring-indigo-500 focus:border-indigo-500 text-white">
-                    <!-- Options populated by JS -->
+            <input type="text" id="shortcut-name" placeholder="Shortcut Name (e.g., Google)" class="w-full p-3 mb-4 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500">
+            
+            <div class="flex space-x-4 mb-4">
+                <button id="mode-page-btn" class="flex-1 p-3 rounded-lg text-sm bg-blue-600 hover:bg-blue-700 transition">Use Internal Page</button>
+                <button id="mode-url-btn" class="flex-1 p-3 rounded-lg text-sm bg-gray-700 hover:bg-gray-600 transition">Use External URL</button>
+            </div>
+            
+            <div id="page-mode-inputs">
+                <select id="shortcut-page-key" class="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg text-white focus:ring-blue-500 focus:border-blue-500">
+                    <!-- Page options will be populated here -->
                 </select>
+            </div>
 
-                <!-- URL & Emoji Input (Initially Hidden) -->
-                <input type="url" id="shortcut-url" placeholder="https://example.com" 
-                       class="w-full bg-[#0c0c0c] border border-gray-700 rounded-lg p-3 focus:ring-indigo-500 focus:border-indigo-500 text-white hidden">
-                <input type="text" id="shortcut-emoji" placeholder="Emoji (e.g., 📚)" maxlength="4" 
-                       class="w-full bg-[#0c0c0c] border border-gray-700 rounded-lg p-3 focus:ring-indigo-500 focus:border-indigo-500 text-white hidden">
+            <div id="url-mode-inputs" class="hidden">
+                <input type="url" id="shortcut-url" placeholder="https://example.com" class="w-full p-3 mb-4 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500">
+                <input type="text" id="shortcut-emoji" placeholder="Emoji (e.g., 🚀)" maxlength="2" class="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500">
             </div>
 
             <div class="flex justify-end space-x-3 mt-6">
-                <button id="close-shortcut-modal" class="py-2 px-4 rounded-lg text-gray-400 hover:bg-gray-800 transition-colors">Cancel</button>
-                <button id="save-shortcut" class="py-2 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition-colors">Save Shortcut</button>
+                <button id="cancel-shortcut-btn" class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition">Cancel</button>
+                <button id="save-shortcut-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">Save Shortcut</button>
             </div>
         </div>
     </div>
     
-    <!-- FOOTER -->
-    <footer class="border-t border-gray-900 py-6 mt-10">
-        <div class="mx-auto max-w-7xl px-4 text-center text-gray-500 text-sm">
-            &copy; 2024 4simpleproblems (4SP). Built for students.
-        </div>
-    </footer>
-
-    <!-- JAVASCRIPT LOGIC -->
-    <script type="module">
-        // Hardcoded representation of the uploaded page-identification.json for internal use
-        const PAGE_IDENTIFICATION = {
+    <!-- Core Application Script -->
+    <script>
+        // --- CONSTANTS ---
+        const PAGE_IDENTIFICATION_DATA = JSON.parse(`
+        {
             "dashboard": { "name": "Dashboard", "icon": "fa-house-user", "url": "../logged-in/dashboard.html" },
             "soundboard": { "name": "Soundboard", "icon": "fa-volume-up", "url": "../logged-in/soundboard.html" },
             "notes": { "name": "Notes", "icon": "fa-sticky-note", "url": "../logged-in/notes.html" },
@@ -231,433 +256,642 @@
             "dictionary": { "name": "Dictionary", "icon": "fa-book", "url": "../logged-in/dictionary.html" },
             "messenger-v2": { "name": "Messenger", "icon": "fa-comments", "url": "../logged-in/messenger-v2.html" },
             "games": { "name": "Games", "icon": "fa-gamepad", "url": "../GAMES/index.html" }
-        };
-
-        // --- Firebase Initialization and Authentication Setup ---
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, query, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-        
-        // setLogLevel('Debug'); // Enable Firestore logging
-
-        let db, auth;
-        let userId = null;
-        let appId = null;
-        
-        try {
-            // Global variables provided by the Canvas environment
-            const firebaseConfig = JSON.parse(__firebase_config);
-            appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-            
-            const app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
-
-            // Authentication Listener
-            onAuthStateChanged(auth, async (user) => {
-                const welcomeMessageElement = document.getElementById('welcome-message');
-
-                if (user) {
-                    userId = user.uid;
-                    const username = user.displayName || user.email?.split('@')[0] || 'User';
-                    if (welcomeMessageElement) {
-                        welcomeMessageElement.textContent = `Welcome back, ${username}! Secure access to your system utilities.`;
-                    }
-                    
-                    // Once authenticated, initialize data-dependent sections
-                    initializeDashboard(userId);
-                } else {
-                    // User is signed out. Redirect to index.html (as requested)
-                    window.location.href = '../index.html';
-                }
-            });
-
-            // Sign in using the custom token or anonymously if not available
-            if (initialAuthToken) {
-                await signInWithCustomToken(auth, initialAuthToken);
-            } else {
-                await signInAnonymously(auth);
-            }
-
-        } catch (error) {
-            console.error("Firebase setup failed:", error);
-            // Fallback for environment issues
-            document.getElementById('welcome-message').textContent = "Authentication Error. Check console.";
         }
+        `);
+        const BASE_GEO_API = 'https://geocoding-api.open-meteo.com/v1/search?name=';
+        const BASE_REVERSE_GEO_API = 'https://geocoding-api.open-meteo.com/v1/reverse?';
+        const BASE_WEATHER_API = 'https://api.open-meteo.com/v1/forecast?';
+        const WEATHER_DOCUMENT_PATH = 'dashboard_data/user_settings';
+        const SHORTCUTS_COLLECTION_PATH = 'dashboard_data/user_settings/shortcuts';
 
+        // --- STATE VARIABLES ---
+        let weatherLocation = null; // { latitude, longitude, name, countryCode }
+        let shortcuts = [];
+        let shortcutMode = 'page'; // 'page' or 'url'
+        let timeoutId = null;
 
-        // --- TIME & DATE SECTION LOGIC ---
+        // --- DOM ELEMENTS ---
         const timeDisplay = document.getElementById('time-display');
         const dateDisplay = document.getElementById('date-display');
+        const userIdDisplay = document.getElementById('user-id-display');
+        
+        // Weather Elements
+        const weatherModal = document.getElementById('weather-modal');
+        const locationSearchInput = document.getElementById('location-search-input');
+        const locationSuggestions = document.getElementById('location-suggestions');
+        const openWeatherSettingsBtn = document.getElementById('open-weather-settings');
+        const closeWeatherModalBtn = document.getElementById('close-weather-modal');
+        const currentLocationText = document.getElementById('current-location-text');
+        const weatherIcon = document.getElementById('weather-icon');
+        const weatherTemp = document.getElementById('weather-temperature');
+        const weatherDesc = document.getElementById('weather-description');
+        const weatherLocationName = document.getElementById('weather-location-name');
+        const useCurrentLocationBtn = document.getElementById('use-current-location-btn');
+        const useCurrentLocationBtnText = document.getElementById('current-location-text-btn');
 
-        function updateTime() {
+
+        // Shortcut Elements
+        const shortcutModal = document.getElementById('shortcut-modal');
+        const addShortcutBtn = document.getElementById('add-shortcut-button');
+        const cancelShortcutBtn = document.getElementById('cancel-shortcut-btn');
+        const saveShortcutBtn = document.getElementById('save-shortcut-btn');
+        const shortcutsContainer = document.getElementById('shortcuts-container');
+        const shortcutNameInput = document.getElementById('shortcut-name');
+        const shortcutPageKeySelect = document.getElementById('shortcut-page-key');
+        const shortcutUrlInput = document.getElementById('shortcut-url');
+        const shortcutEmojiInput = document.getElementById('shortcut-emoji');
+        const modePageBtn = document.getElementById('mode-page-btn');
+        const modeUrlBtn = document.getElementById('mode-url-btn');
+        const pageModeInputs = document.getElementById('page-mode-inputs');
+        const urlModeInputs = document.getElementById('url-mode-inputs');
+
+
+        // --- UTILITY FUNCTIONS ---
+
+        /**
+         * Simple exponential backoff for API calls.
+         * @param {Function} fn - The function to retry.
+         * @param {number} maxRetries - Maximum number of retries.
+         * @returns {Promise<any>}
+         */
+        async function fetchWithRetry(fn, maxRetries = 3) {
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    return await fn();
+                } catch (error) {
+                    if (i === maxRetries - 1) throw error;
+                    const delay = Math.pow(2, i) * 1000;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+        }
+
+        // --- TIME/DATE LOGIC ---
+
+        /**
+         * Updates the local time and date display.
+         */
+        function updateClock() {
             const now = new Date();
             
             // Time: HH:MM:SS AM/PM
-            const timeOptions = { 
-                hour: '2-digit', minute: '2-digit', second: '2-digit', 
-                hour12: true,
-                timeZoneName: 'short'
-            };
-            const timeString = now.toLocaleTimeString([], timeOptions).split(' ')[0];
-            const ampm = now.toLocaleTimeString([], { hour: '2-digit', hour12: true }).slice(-2);
+            const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+            const timeString = now.toLocaleTimeString('en-US', timeOptions);
+            timeDisplay.textContent = timeString;
+
+            // Date: Full day name, Month name, Day, Year
+            const dateOptions = { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' };
+            const dateString = now.toLocaleDateString('en-US', dateOptions);
+            dateDisplay.textContent = dateString;
+        }
+
+        // Initialize and start the clock
+        updateClock();
+        setInterval(updateClock, 1000);
+
+
+        // --- FIREBASE / PERSISTENCE LOGIC ---
+
+        /**
+         * Loads all persistent dashboard data (weather location and shortcuts)
+         * and sets up real-time listeners.
+         */
+        window.loadDashboardData = function() {
+            if (!window.db || !window.userId) {
+                console.error("Firebase not initialized or userId not available.");
+                return;
+            }
             
-            timeDisplay.textContent = `${timeString} ${ampm}`;
+            userIdDisplay.textContent = window.userId;
 
-            // Date: Month Day, Year
-            const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            dateDisplay.textContent = now.toLocaleDateString([], dateOptions);
-        }
+            // 1. Weather Location Listener
+            // Data path is: /artifacts/{appId}/users/{userId}/dashboard_data/user_settings
+            const weatherDocRef = doc(window.db, 'artifacts', appId, 'users', window.userId, WEATHER_DOCUMENT_PATH);
+            onSnapshot(weatherDocRef, (docSnap) => {
+                if (docSnap.exists() && docSnap.data().weatherLocation) {
+                    // weatherLocation now includes 'countryCode'
+                    weatherLocation = docSnap.data().weatherLocation;
+                    console.log("Weather location loaded:", weatherLocation);
+                    fetchAndDisplayWeather(weatherLocation);
+                    currentLocationText.querySelector('span').textContent = weatherLocation.name;
+                } else {
+                    console.log("No weather location set for user.");
+                    weatherLocation = null;
+                    displayNoWeather();
+                    currentLocationText.querySelector('span').textContent = 'Not set';
+                }
+            }, (error) => {
+                console.error("Error listening to weather data:", error);
+            });
 
-        // Run once immediately, then every second
-        updateTime();
-        setInterval(updateTime, 1000);
-
-
-        // --- DASHBOARD DATA INITIALIZATION ---
-
-        function getPrivateDocRef(collectionName, docId) {
-            if (!userId || !appId) return null;
-            return doc(db, 'artifacts', appId, 'users', userId, collectionName, docId);
-        }
-
-        function getPrivateCollectionRef(collectionName) {
-            if (!userId || !appId) return null;
-            return collection(db, 'artifacts', appId, 'users', userId, collectionName);
-        }
-
-        function initializeDashboard(currentUserId) {
-            // Initialize Weather and Shortcuts sections only after successful auth
-            initWeather(currentUserId);
-            initShortcuts(currentUserId);
-        }
-
-
-        // --- WEATHER SECTION LOGIC ---
-        const weatherModal = document.getElementById('weather-modal');
-        const settingsButton = document.getElementById('settings-button');
-        const closeWeatherModal = document.getElementById('close-weather-modal');
-        const locationSearchInput = document.getElementById('location-search-input');
-        const locationSuggestions = document.getElementById('location-suggestions');
-        const weatherContent = document.getElementById('weather-content');
-        const locationDisplay = document.getElementById('location-display');
-        
-        const WEATHER_SETTINGS_DOC = 'weather_location';
-        let userLocation = null; // { latitude, longitude, name }
-
-        settingsButton.onclick = () => weatherModal.classList.remove('hidden');
-        closeWeatherModal.onclick = () => {
-            weatherModal.classList.add('hidden');
-            locationSearchInput.value = '';
-            locationSuggestions.classList.add('hidden');
-            locationSuggestions.innerHTML = '';
+            // 2. Shortcuts Listener
+            // Data path is: /artifacts/{appId}/users/{userId}/dashboard_data/user_settings/shortcuts/{docId}
+            const shortcutsColRef = collection(window.db, 'artifacts', appId, 'users', window.userId, SHORTCUTS_COLLECTION_PATH);
+            onSnapshot(shortcutsColRef, (snapshot) => {
+                shortcuts = [];
+                snapshot.forEach(doc => {
+                    shortcuts.push({ ...doc.data(), id: doc.id });
+                });
+                console.log("Shortcuts loaded:", shortcuts);
+                renderShortcuts();
+            }, (error) => {
+                console.error("Error listening to shortcuts data:", error);
+            });
         };
 
-        // Fetch weather data from Open-Meteo
-        async function fetchWeather(lat, lon, name) {
-            weatherContent.innerHTML = `<i class="fas fa-spinner fa-spin text-indigo-400 text-3xl"></i><p class="mt-4 text-gray-400">Fetching weather for ${name}...</p>`;
-            locationDisplay.textContent = `Location: ${name}`;
-
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&temperature_unit=fahrenheit&forecast_days=1`;
-            
+        /**
+         * Saves the selected weather location to Firestore.
+         * @param {Object} location - The location object { latitude, longitude, name, countryCode }
+         */
+        async function saveWeatherLocation(location) {
             try {
-                const response = await fetch(url);
-                const data = await response.json();
-
-                if (data.current_weather) {
-                    const temp = Math.round(data.current_weather.temperature);
-                    const wind = data.current_weather.windspeed;
-                    const weatherCode = data.current_weather.weathercode;
-                    const isDay = data.current_weather.is_day === 1;
-
-                    // Simple mapping for weather code to icon
-                    let iconClass = 'fas fa-question';
-                    let description = 'Unknown';
-                    
-                    if (weatherCode === 0) { iconClass = isDay ? 'fas fa-sun' : 'fas fa-moon'; description = 'Clear Sky'; }
-                    else if (weatherCode > 0 && weatherCode <= 3) { iconClass = isDay ? 'fas fa-cloud-sun' : 'fas fa-cloud-moon'; description = 'Partly Cloudy'; }
-                    else if (weatherCode >= 45 && weatherCode <= 48) { iconClass = 'fas fa-smog'; description = 'Foggy'; }
-                    else if (weatherCode >= 51 && weatherCode <= 67) { iconClass = 'fas fa-cloud-showers-heavy'; description = 'Rain'; }
-                    else if (weatherCode >= 71 && weatherCode <= 75) { iconClass = 'fas fa-snowflake'; description = 'Snow'; }
-                    else if (weatherCode >= 95) { iconClass = 'fas fa-bolt'; description = 'Thunderstorm'; }
-
-                    weatherContent.innerHTML = `
-                        <i class="${iconClass} text-5xl text-indigo-400"></i>
-                        <p class="text-6xl font-black mt-3 text-white">${temp}°F</p>
-                        <p class="text-xl text-gray-300 mt-2">${description}</p>
-                        <p class="text-sm text-gray-500 mt-4">Wind: ${wind} mph</p>
-                    `;
-                } else {
-                    weatherContent.innerHTML = '<p class="text-red-400">Weather data unavailable.</p>';
-                }
-            } catch (error) {
-                console.error("Error fetching weather:", error);
-                weatherContent.innerHTML = '<p class="text-red-400">Failed to load weather data.</p>';
+                const weatherDocRef = doc(window.db, 'artifacts', appId, 'users', window.userId, WEATHER_DOCUMENT_PATH);
+                await setDoc(weatherDocRef, { weatherLocation: location }, { merge: true });
+                console.log("Weather location saved successfully.");
+                hideModal('weather');
+            } catch (e) {
+                console.error("Error saving weather location:", e);
             }
         }
 
-        // Search for location using Open-Meteo GeoCoding API
-        locationSearchInput.oninput = debounce(async (e) => {
-            const query = e.target.value.trim();
+        /**
+         * Saves a new shortcut to the Firestore collection.
+         */
+        async function saveNewShortcut(shortcutData) {
+            try {
+                const shortcutsColRef = collection(window.db, 'artifacts', appId, 'users', window.userId, SHORTCUTS_COLLECTION_PATH);
+                await addDoc(shortcutsColRef, shortcutData);
+                console.log("Shortcut saved successfully.");
+                hideModal('shortcut');
+                resetShortcutForm();
+            } catch (e) {
+                console.error("Error saving shortcut:", e);
+            }
+        }
+
+        /**
+         * Deletes a shortcut from the Firestore collection.
+         */
+        async function deleteShortcut(shortcutId) {
+             // Replaced alert/confirm with a custom modal UI requirement (using a fallback)
+             if (!window.confirm("Are you sure you want to delete this shortcut?")) return;
+
+             try {
+                const shortcutDocRef = doc(window.db, 'artifacts', appId, 'users', window.userId, SHORTCUTS_COLLECTION_PATH, shortcutId);
+                await deleteDoc(shortcutDocRef);
+                console.log("Shortcut deleted successfully.");
+            } catch (e) {
+                console.error("Error deleting shortcut:", e);
+            }
+        }
+
+        // --- WEATHER LOGIC ---
+
+        /**
+         * Fetches and displays weather data for the given location.
+         * @param {Object} location - The location object { latitude, longitude, name, countryCode }
+         */
+        async function fetchAndDisplayWeather(location) {
+            if (!location) {
+                displayNoWeather();
+                return;
+            }
+
+            weatherIcon.className = 'fas fa-spinner fa-spin text-4xl text-gray-400 mb-4';
+            weatherTemp.textContent = '--°C';
+            weatherDesc.textContent = 'Updating...';
+            weatherLocationName.textContent = location.name;
+
+            // Determine unit preference: Fahrenheit for USA (US), Celsius otherwise
+            const isUS = location.countryCode === 'US';
+            const unitParam = isUS ? '&temperature_unit=fahrenheit' : '&temperature_unit=celsius';
+            const unitSymbol = isUS ? '°F' : '°C';
+            
+            const url = `${BASE_WEATHER_API}latitude=${location.latitude}&longitude=${location.longitude}&current=temperature_2m,weather_code&timezone=auto${unitParam}`;
+
+            try {
+                const response = await fetchWithRetry(() => fetch(url).then(res => {
+                    if (!res.ok) throw new Error('Weather API failed to respond.');
+                    return res.json();
+                }));
+                
+                const current = response.current;
+                const tempValue = Math.round(current.temperature_2m);
+                const code = current.weather_code;
+                
+                weatherTemp.textContent = `${tempValue}${unitSymbol}`;
+                weatherDesc.textContent = getWeatherDescription(code);
+                weatherIcon.className = `${getWeatherIcon(code)} text-4xl text-white mb-4`;
+
+            } catch (error) {
+                console.error("Error fetching weather:", error);
+                weatherTemp.textContent = 'N/A';
+                weatherDesc.textContent = 'Failed to load weather.';
+                weatherIcon.className = 'fas fa-exclamation-triangle text-4xl text-red-500 mb-4';
+            }
+        }
+
+        function displayNoWeather() {
+            weatherIcon.className = 'fas fa-map-marker-alt text-4xl text-gray-500 mb-4';
+            weatherTemp.textContent = '--°C';
+            weatherDesc.textContent = 'Set your location in settings.';
+            weatherLocationName.textContent = 'Location Not Set';
+        }
+
+        /**
+         * Converts Open-Meteo WMO code to a description.
+         */
+        function getWeatherDescription(code) {
+            const descriptions = {
+                0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
+                45: "Fog", 48: "Depositing rime fog", 
+                51: "Drizzle: Light", 53: "Drizzle: Moderate", 55: "Drizzle: Dense",
+                56: "Freezing Drizzle: Light", 57: "Freezing Drizzle: Dense",
+                61: "Rain: Slight", 63: "Rain: Moderate", 65: "Rain: Heavy",
+                66: "Freezing Rain: Light", 67: "Freezing Rain: Heavy",
+                71: "Snow fall: Slight", 73: "Snow fall: Moderate", 75: "Snow fall: Heavy",
+                77: "Snow grains",
+                80: "Rain showers: Slight", 81: "Rain showers: Moderate", 82: "Rain showers: Violent",
+                85: "Snow showers: Slight", 86: "Snow showers: Heavy",
+                95: "Thunderstorm: Slight or moderate", 
+                96: "Thunderstorm with slight hail", 99: "Thunderstorm with heavy hail"
+            };
+            return descriptions[code] || "Unknown Weather";
+        }
+
+        /**
+         * Converts Open-Meteo WMO code to a Font Awesome icon class.
+         */
+        function getWeatherIcon(code) {
+            // Note: This is a simplification. A real app would check 'is_day' for sun/moon.
+            if ([0, 1].includes(code)) return "fas fa-sun"; // Clear/Mainly Clear
+            if ([2, 3].includes(code)) return "fas fa-cloud"; // Partly cloudy/Overcast
+            if ([45, 48].includes(code)) return "fas fa-smog"; // Fog
+            if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) return "fas fa-cloud-showers-heavy"; // Rain/Drizzle
+            if ([56, 57, 66, 67].includes(code)) return "fas fa-cloud-sleet"; // Freezing Rain
+            if ([71, 73, 75, 77, 85, 86].includes(code)) return "fas fa-snowflakes"; // Snow
+            if ([95, 96, 99].includes(code)) return "fas fa-bolt"; // Thunderstorm
+            return "fas fa-question-circle";
+        }
+        
+        // --- GEOLOCATION LOGIC ---
+
+        /**
+         * Fetches location name and country code using reverse geocoding.
+         * @param {number} lat - Latitude.
+         * @param {number} lon - Longitude.
+         * @returns {Promise<{name: string, countryCode: string}|null>}
+         */
+        async function getCityNameAndCountry(lat, lon) {
+            const url = `${BASE_REVERSE_GEO_API}latitude=${lat}&longitude=${lon}&count=1`;
+            try {
+                const response = await fetchWithRetry(() => fetch(url).then(res => {
+                    if (!res.ok) throw new Error('Reverse Geocoding API failed.');
+                    return res.json();
+                }));
+                
+                const result = response.results?.[0];
+                if (result) {
+                    const name = `${result.name}, ${result.country}`;
+                    return { name, countryCode: result.country_code };
+                }
+                return null;
+
+            } catch (error) {
+                console.error("Error during reverse geocoding:", error);
+                return null;
+            }
+        }
+        
+        /**
+         * Uses browser's geolocation to find and save the current location.
+         */
+        async function getCurrentLocationAndSave() {
+            useCurrentLocationBtn.disabled = true;
+            useCurrentLocationBtnText.textContent = 'Locating...';
+            
+            if (!navigator.geolocation) {
+                useCurrentLocationBtnText.textContent = 'Geolocation not supported.';
+                setTimeout(() => {
+                    useCurrentLocationBtn.disabled = false;
+                    useCurrentLocationBtnText.textContent = 'Use Current Location';
+                }, 3000);
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(async (position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+
+                const geoData = await getCityNameAndCountry(lat, lon);
+                
+                if (geoData) {
+                    const newLocation = {
+                        latitude: lat,
+                        longitude: lon,
+                        name: geoData.name,
+                        countryCode: geoData.countryCode 
+                    };
+                    await saveWeatherLocation(newLocation);
+                    useCurrentLocationBtnText.textContent = 'Location Saved!';
+                } else {
+                    useCurrentLocationBtnText.textContent = 'Failed to identify location.';
+                }
+                
+                setTimeout(() => {
+                    useCurrentLocationBtn.disabled = false;
+                    useCurrentLocationBtnText.textContent = 'Use Current Location';
+                }, 2000);
+
+            }, (error) => {
+                console.error("Geolocation Error:", error.message);
+                useCurrentLocationBtnText.textContent = 'Access Denied or Failed.';
+                setTimeout(() => {
+                    useCurrentLocationBtn.disabled = false;
+                    useCurrentLocationBtnText.textContent = 'Use Current Location';
+                }, 3000);
+            });
+        }
+
+
+        /**
+         * Searches for locations using Open-Meteo Geocoding API.
+         * This search is used for manual location entry, which only returns lat/lon/name/countryCode.
+         * @param {string} query - The search string.
+         */
+        async function searchLocation(query) {
             if (query.length < 3) {
+                locationSuggestions.innerHTML = '';
                 locationSuggestions.classList.add('hidden');
                 return;
             }
 
-            const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=en`;
-            
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
+            // Clear previous timeout
+            if (timeoutId) clearTimeout(timeoutId);
 
-                locationSuggestions.innerHTML = '';
-                if (data.results && data.results.length > 0) {
-                    locationSuggestions.classList.remove('hidden');
-                    data.results.forEach(result => {
-                        const suggestion = document.createElement('div');
-                        const fullName = `${result.name}, ${result.country}`;
-                        suggestion.className = 'p-3 cursor-pointer hover:bg-gray-700 transition-colors text-white text-sm rounded-lg';
-                        suggestion.textContent = fullName;
-                        suggestion.onclick = () => selectLocation(result.latitude, result.longitude, fullName);
-                        locationSuggestions.appendChild(suggestion);
-                    });
-                } else {
+            timeoutId = setTimeout(async () => {
+                locationSuggestions.innerHTML = '<div class="p-3 text-sm font-light text-gray-400">Searching...</div>';
+                locationSuggestions.classList.remove('hidden');
+
+                try {
+                    const response = await fetchWithRetry(() => fetch(BASE_GEO_API + encodeURIComponent(query)).then(res => {
+                        if (!res.ok) throw new Error('Geocoding API failed to respond.');
+                        return res.json();
+                    }));
+                    
+                    renderSuggestions(response.results);
+
+                } catch (error) {
+                    console.error("Error fetching location suggestions:", error);
+                    locationSuggestions.innerHTML = '<div class="p-3 text-sm font-light text-red-400">Failed to fetch results.</div>';
+                }
+            }, 300); // Debounce search
+        }
+
+        /**
+         * Renders the location search suggestions in the modal.
+         * @param {Array} results - Array of location objects.
+         */
+        function renderSuggestions(results) {
+            locationSuggestions.innerHTML = '';
+            if (!results || results.length === 0) {
+                locationSuggestions.innerHTML = '<div class="p-3 text-sm font-light text-gray-400">No results found.</div>';
+                return;
+            }
+
+            results.slice(0, 10).forEach(location => {
+                const name = `${location.name}, ${location.admin1 ? location.admin1 + ', ' : ''}${location.country}`;
+                const suggestionDiv = document.createElement('div');
+                suggestionDiv.className = 'p-3 text-sm font-light text-white hover:bg-blue-600 cursor-pointer transition';
+                suggestionDiv.textContent = name;
+                
+                suggestionDiv.addEventListener('click', () => {
+                    const newLocation = {
+                        latitude: location.latitude,
+                        longitude: location.longitude,
+                        name: name,
+                        countryCode: location.country_code // Save country code for unit logic
+                    };
+                    saveWeatherLocation(newLocation);
                     locationSuggestions.classList.add('hidden');
-                }
-            } catch (error) {
-                console.error("Error fetching location suggestions:", error);
-                locationSuggestions.classList.add('hidden');
-            }
-        }, 300);
-
-        // Select a location and save it to Firestore
-        async function selectLocation(latitude, longitude, name) {
-            weatherModal.classList.add('hidden');
-            locationSearchInput.value = '';
-            locationSuggestions.classList.add('hidden');
-            
-            userLocation = { latitude, longitude, name };
-            
-            try {
-                const docRef = getPrivateDocRef('dashboard_settings', WEATHER_SETTINGS_DOC);
-                if (docRef) {
-                    await setDoc(docRef, userLocation);
-                    fetchWeather(latitude, longitude, name);
-                }
-            } catch (error) {
-                console.error("Error saving location to Firestore:", error);
-            }
-        }
-
-        // Debounce function to limit API calls during typing
-        function debounce(func, delay) {
-            let timeout;
-            return function(...args) {
-                const context = this;
-                clearTimeout(timeout);
-                timeout = setTimeout(() => func.apply(context, args), delay);
-            };
-        }
-
-        // Initialize weather section (load settings)
-        async function initWeather() {
-            try {
-                const docRef = getPrivateDocRef('dashboard_settings', WEATHER_SETTINGS_DOC);
-                if (docRef) {
-                    const docSnap = await getDoc(docRef);
-                    if (docSnap.exists()) {
-                        userLocation = docSnap.data();
-                        fetchWeather(userLocation.latitude, userLocation.longitude, userLocation.name);
-                    } else {
-                        // Default location if none is saved (e.g., London, UK)
-                        const defaultLat = 51.5074;
-                        const defaultLon = 0.1278;
-                        const defaultName = 'London, UK (Default)';
-                        fetchWeather(defaultLat, defaultLon, defaultName);
-                    }
-                }
-            } catch (error) {
-                console.error("Error loading weather settings:", error);
-                weatherContent.innerHTML = '<p class="text-red-400">Failed to load weather settings.</p>';
-            }
-        }
-
-
-        // --- SHORTCUTS SECTION LOGIC ---
-        const shortcutModal = document.getElementById('shortcut-modal');
-        const addShortcutButton = document.getElementById('add-shortcut-button');
-        const closeShortcutModal = document.getElementById('close-shortcut-modal');
-        const saveShortcutButton = document.getElementById('save-shortcut');
-        const shortcutsGrid = document.getElementById('shortcuts-grid');
-
-        const shortcutNameInput = document.getElementById('shortcut-name');
-        const linkTypePage = document.getElementById('link-type-page');
-        const linkTypeUrl = document.getElementById('link-type-url');
-        const pageSelect = document.getElementById('shortcut-page-select');
-        const urlInput = document.getElementById('shortcut-url');
-        const emojiInput = document.getElementById('shortcut-emoji');
-
-        const SHORTCUTS_COLLECTION = 'shortcuts';
-        let shortcuts = [];
-
-        // Toggle visibility of inputs based on link type
-        function toggleLinkTypeInputs() {
-            const isPage = linkTypePage.checked;
-            pageSelect.classList.toggle('hidden', !isPage);
-            urlInput.classList.toggle('hidden', isPage);
-            emojiInput.classList.toggle('hidden', isPage);
-        }
-
-        linkTypePage.onchange = toggleLinkTypeInputs;
-        linkTypeUrl.onchange = toggleLinkTypeInputs;
-
-        // Populate Page Select Dropdown
-        function populatePageSelect() {
-            pageSelect.innerHTML = '';
-            // Sort pages by name for better UX
-            const sortedPages = Object.entries(PAGE_IDENTIFICATION)
-                .sort(([, a], [, b]) => a.name.localeCompare(b.name));
-
-            sortedPages.forEach(([key, page]) => {
-                const option = document.createElement('option');
-                option.value = key; // The key (e.g., 'notes')
-                option.textContent = page.name;
-                pageSelect.appendChild(option);
+                    locationSearchInput.value = '';
+                });
+                locationSuggestions.appendChild(suggestionDiv);
             });
+            locationSuggestions.classList.remove('hidden');
         }
-        populatePageSelect();
-
-        addShortcutButton.onclick = () => {
-            // Reset form
-            shortcutNameInput.value = '';
-            linkTypePage.checked = true;
-            urlInput.value = '';
-            emojiInput.value = '';
-            toggleLinkTypeInputs();
-            shortcutModal.classList.remove('hidden');
-        };
-        closeShortcutModal.onclick = () => shortcutModal.classList.add('hidden');
 
 
-        // Render Shortcuts to the Grid
+        // --- SHORTCUTS LOGIC ---
+
+        /**
+         * Renders the shortcut buttons based on the current state.
+         */
         function renderShortcuts() {
-            shortcutsGrid.innerHTML = '';
+            shortcutsContainer.innerHTML = '';
+            
             if (shortcuts.length === 0) {
-                shortcutsGrid.innerHTML = '<p class="text-gray-500 col-span-full text-center py-4">No shortcuts yet. Add one!</p>';
+                shortcutsContainer.innerHTML = '<p id="shortcut-placeholder" class="text-gray-500 text-sm col-span-2 sm:col-span-3">Add your first shortcut.</p>';
                 return;
             }
 
             shortcuts.forEach(shortcut => {
-                const shortcutElement = document.createElement('div');
-                shortcutElement.className = 'shortcut-button card flex flex-col items-center justify-center p-4 rounded-xl cursor-pointer bg-[#1c1c1c] border border-gray-800 hover:border-indigo-600';
-                shortcutElement.onclick = () => window.location.href = shortcut.targetUrl;
+                const btn = document.createElement('button');
+                btn.className = 'group relative flex flex-col items-center justify-center p-4 bg-gray-800 hover:bg-blue-600 transition duration-150 rounded-xl shadow-lg aspect-square overflow-hidden';
+                
+                const iconContainer = document.createElement('div');
+                iconContainer.className = 'text-3xl sm:text-4xl mb-2 group-hover:text-white transition';
 
-                let iconHtml = '';
                 if (shortcut.type === 'page') {
-                    // Internal page uses Font Awesome icon
-                    iconHtml = `<i class="fa-2xl text-indigo-400 ${shortcut.iconOrEmoji}"></i>`;
-                } else {
-                    // External URL uses Emoji
-                    iconHtml = `<span class="text-4xl">${shortcut.iconOrEmoji}</span>`;
+                    // Page shortcut: Font Awesome icon
+                    const pageData = PAGE_IDENTIFICATION_DATA[shortcut.target];
+                    if(pageData) {
+                        iconContainer.innerHTML = `<i class="fa-fw ${pageData.icon} text-blue-400 group-hover:text-white"></i>`;
+                    } else {
+                        // Fallback for missing page ID
+                        iconContainer.innerHTML = `<i class="fa-fw fa-question-circle text-red-400 group-hover:text-white"></i>`;
+                    }
+                } else if (shortcut.type === 'url') {
+                    // URL shortcut: Emoji
+                    iconContainer.textContent = shortcut.icon;
+                    iconContainer.className = 'text-3xl sm:text-4xl mb-2'; // Emojis don't need FA classes
                 }
 
-                shortcutElement.innerHTML = `
-                    <div class="mb-2">${iconHtml}</div>
-                    <p class="text-sm font-medium text-white text-center">${shortcut.name}</p>
-                    <button class="delete-shortcut-btn absolute top-1 right-1 text-gray-500 hover:text-red-400 p-1 rounded-full text-xs" data-id="${shortcut.id}" title="Delete Shortcut">
-                         <i class="fas fa-times"></i>
-                    </button>
-                `;
+                const nameP = document.createElement('p');
+                nameP.className = 'text-sm font-normal text-gray-300 group-hover:text-white truncate w-full';
+                nameP.textContent = shortcut.name;
 
-                shortcutsGrid.appendChild(shortcutElement);
-            });
-            
-            // Attach delete listeners
-            document.querySelectorAll('.delete-shortcut-btn').forEach(button => {
-                button.onclick = (e) => {
-                    e.stopPropagation(); // Prevent triggering the shortcut link
-                    deleteShortcut(button.dataset.id);
-                };
-            });
-        }
+                btn.appendChild(iconContainer);
+                btn.appendChild(nameP);
 
-        // Save new shortcut to Firestore
-        saveShortcutButton.onclick = async () => {
-            const name = shortcutNameInput.value.trim();
-            const type = linkTypePage.checked ? 'page' : 'url';
-            
-            if (!name) {
-                alert('Please enter a name for the shortcut.');
-                return;
-            }
-
-            let newShortcut = { name, type };
-
-            if (type === 'page') {
-                const pageKey = pageSelect.value;
-                const pageInfo = PAGE_IDENTIFICATION[pageKey];
-                newShortcut.targetUrl = pageInfo.url;
-                newShortcut.iconOrEmoji = pageInfo.icon;
-            } else {
-                const url = urlInput.value.trim();
-                const emoji = emojiInput.value.trim();
-                if (!url || !emoji) {
-                    alert('Please enter both a valid URL and an emoji for the external shortcut.');
-                    return;
-                }
-                newShortcut.targetUrl = url;
-                newShortcut.iconOrEmoji = emoji;
-            }
-
-            shortcutModal.classList.add('hidden');
-            
-            try {
-                // Add new document to the user's shortcuts collection
-                const colRef = getPrivateCollectionRef(SHORTCUTS_COLLECTION);
-                if (colRef) {
-                    // The onSnapshot listener will automatically update the UI
-                    await setDoc(doc(colRef, new Date().getTime().toString()), newShortcut);
-                }
-            } catch (error) {
-                console.error("Error saving shortcut:", error);
-                // In a real app, show a friendly error message
-            }
-        };
-
-        // Delete shortcut from Firestore
-        async function deleteShortcut(id) {
-            if (!confirm("Are you sure you want to delete this shortcut?")) return;
-            try {
-                const docRef = getPrivateDocRef(SHORTCUTS_COLLECTION, id);
-                if (docRef) {
-                    await deleteDoc(docRef);
-                }
-            } catch (error) {
-                console.error("Error deleting shortcut:", error);
-            }
-        }
-
-        // Initialize shortcuts section (load from Firestore)
-        function initShortcuts() {
-            const colRef = getPrivateCollectionRef(SHORTCUTS_COLLECTION);
-            if (colRef) {
-                // Real-time listener for shortcuts
-                onSnapshot(colRef, (snapshot) => {
-                    shortcuts = [];
-                    snapshot.forEach(doc => {
-                        shortcuts.push({ id: doc.id, ...doc.data() });
-                    });
-                    // Sort alphabetically by name
-                    shortcuts.sort((a, b) => a.name.localeCompare(b.name));
-                    renderShortcuts();
-                }, (error) => {
-                    console.error("Error fetching real-time shortcuts:", error);
-                    shortcutsGrid.innerHTML = '<p class="text-red-400 col-span-full text-center">Failed to load shortcuts.</p>';
+                // Delete Button (Hidden until hover)
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'absolute top-1 right-1 p-1 rounded-full bg-red-600 text-white opacity-0 group-hover:opacity-100 transition duration-150 z-10';
+                deleteBtn.innerHTML = '<i class="fas fa-times fa-xs"></i>';
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent the main button click
+                    deleteShortcut(shortcut.id);
                 });
+                btn.appendChild(deleteBtn);
+
+
+                btn.addEventListener('click', () => {
+                    if (shortcut.type === 'page') {
+                        const targetUrl = PAGE_IDENTIFICATION_DATA[shortcut.target]?.url;
+                        if(targetUrl) {
+                             window.location.href = targetUrl;
+                        } else {
+                             console.error("Target page not found in identification data:", shortcut.target);
+                        }
+                    } else if (shortcut.type === 'url') {
+                        // Open external URLs in a new tab for safety/navigation consistency
+                        window.open(shortcut.target, '_blank').focus();
+                    }
+                });
+
+                shortcutsContainer.appendChild(btn);
+            });
+        }
+
+        /**
+         * Populates the internal page options in the shortcut modal.
+         */
+        function populatePageOptions() {
+            shortcutPageKeySelect.innerHTML = '';
+            for (const key in PAGE_IDENTIFICATION_DATA) {
+                const page = PAGE_IDENTIFICATION_DATA[key];
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = `${page.name} (${page.url.replace('../', '')})`;
+                shortcutPageKeySelect.appendChild(option);
             }
         }
+
+        /**
+         * Resets the shortcut creation form.
+         */
+        function resetShortcutForm() {
+            shortcutNameInput.value = '';
+            shortcutUrlInput.value = '';
+            shortcutEmojiInput.value = '';
+            shortcutPageKeySelect.value = Object.keys(PAGE_IDENTIFICATION_DATA)[0];
+            setShortcutMode('page'); // Default back to page mode
+        }
+
+        /**
+         * Toggles the shortcut creation modal between 'page' and 'url' modes.
+         */
+        function setShortcutMode(mode) {
+            shortcutMode = mode;
+            if (mode === 'page') {
+                pageModeInputs.classList.remove('hidden');
+                urlModeInputs.classList.add('hidden');
+                modePageBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                modePageBtn.classList.remove('bg-gray-700', 'hover:bg-gray-600');
+                modeUrlBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                modeUrlBtn.classList.add('bg-gray-700', 'hover:bg-gray-600');
+            } else {
+                pageModeInputs.classList.add('hidden');
+                urlModeInputs.classList.remove('hidden');
+                modePageBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                modePageBtn.classList.add('bg-gray-700', 'hover:bg-gray-600');
+                modeUrlBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                modeUrlBtn.classList.remove('bg-gray-700', 'hover:bg-gray-600');
+            }
+        }
+
+
+        // --- MODAL & EVENT HANDLERS ---
+        
+        /**
+         * Toggles modal visibility with transition classes.
+         * @param {string} type - 'weather' or 'shortcut'
+         */
+        function showModal(type) {
+            const modal = type === 'weather' ? weatherModal : shortcutModal;
+            modal.classList.remove('pointer-events-none', 'opacity-0');
+            modal.querySelector('div').classList.remove('scale-95');
+            modal.querySelector('div').classList.add('scale-100');
+        }
+
+        function hideModal(type) {
+            const modal = type === 'weather' ? weatherModal : shortcutModal;
+            modal.querySelector('div').classList.remove('scale-100');
+            modal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('pointer-events-none', 'opacity-0');
+            }, 300);
+        }
+
+        // Weather Modal Handlers
+        openWeatherSettingsBtn.addEventListener('click', () => showModal('weather'));
+        closeWeatherModalBtn.addEventListener('click', () => {
+            hideModal('weather');
+            locationSuggestions.classList.add('hidden');
+            locationSearchInput.value = '';
+        });
+        locationSearchInput.addEventListener('input', (e) => searchLocation(e.target.value));
+        useCurrentLocationBtn.addEventListener('click', getCurrentLocationAndSave);
+        // Hide suggestions when clicking outside or selecting one
+        locationSuggestions.addEventListener('click', () => {
+             // Selection is handled within renderSuggestions, this ensures it closes
+             locationSuggestions.classList.add('hidden');
+             locationSearchInput.value = '';
+        });
+
+
+        // Shortcut Modal Handlers
+        addShortcutBtn.addEventListener('click', () => {
+            populatePageOptions();
+            showModal('shortcut');
+        });
+        cancelShortcutBtn.addEventListener('click', () => hideModal('shortcut'));
+        
+        modePageBtn.addEventListener('click', () => setShortcutMode('page'));
+        modeUrlBtn.addEventListener('click', () => setShortcutMode('url'));
+
+        saveShortcutBtn.addEventListener('click', () => {
+            const name = shortcutNameInput.value.trim();
+            // Using a simple custom message for required fields
+            if (!name) return console.error("Shortcut name is required.");
+
+            let shortcutData = { name, type: shortcutMode };
+
+            if (shortcutMode === 'page') {
+                const pageKey = shortcutPageKeySelect.value;
+                if (!pageKey) return console.error("Please select a page.");
+                shortcutData.target = pageKey;
+                shortcutData.icon = PAGE_IDENTIFICATION_DATA[pageKey]?.icon || 'fa-question-circle'; 
+            } else { // 'url' mode
+                const url = shortcutUrlInput.value.trim();
+                const emoji = shortcutEmojiInput.value.trim();
+                if (!url || !emoji) return console.error("Please enter both a URL and an emoji.");
+                
+                try {
+                    new URL(url); // Basic URL validation
+                } catch (_) {
+                    return console.error("Please enter a valid URL.");
+                }
+
+                shortcutData.target = url;
+                shortcutData.icon = emoji;
+            }
+
+            saveNewShortcut(shortcutData);
+        });
+
+        // --- INITIALIZATION ---
+        window.addEventListener('load', () => {
+            // Check for Firebase variables and start the initialization process
+            if (typeof window.initializeFirebase === 'function') {
+                window.initializeFirebase();
+            } else {
+                console.error("Firebase initialization function is not defined. Check module imports.");
+            }
+        });
+        
+        // Initial setup for the shortcut modal (default to 'page' mode)
+        setShortcutMode('page'); 
 
     </script>
 </body>
