@@ -3,172 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - DASHBOARD</title>
-    <meta name="description" content="Your central hub for the 4simpleproblems student toolkit. Access all tools and features.">
-
+    <title>Current Time Display - Secure</title>
+    
+    <!-- Load Geist Font and TailwindCSS -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
-    
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <style>
-        /* Custom CSS to mimic a modern, dark theme and use the Geist font */
-        :root {
-            --geist-foreground: 255, 255, 255;
-            --geist-background: 0, 0, 0;
-            --geist-accent-7: 156, 163, 175; /* gray-400 */
-        }
-        
-        .dark {
-            color-scheme: dark;
-        }
+    <script src="../navigation.js"></script>
 
-        body {
-            /* Applying Geist font */
-            font-family: 'Geist', sans-serif;
-            background-color: #070707; /* custom-darkest-gray */
-            color: white;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Ensure main content is below the sticky header */
-        main {
-            padding-top: 10rem; /* Space for the 16px high header + menu */
-            flex-grow: 1;
-        }
-
-        .card {
-            background-color: #1c1c1c; /* custom-dark-gray */
-            border: 1px solid #252525; /* custom-medium-gray */
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
-            border-color: #4f46e5; /* indigo-600 */
-        }
-
-        .cta-button {
-            background-color: #4f46e5; /* indigo-600 */
-            transition: background-color 0.2s;
-        }
-        .cta-button:hover {
-            background-color: #4338ca; /* indigo-700 */
-        }
-    </style>
-</head>
-<body>
-    <div id="navbar-container">
-        </div>
-
-    <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-16">
-        <header class="text-center py-10">
-            <h1 class="text-5xl font-extrabold tracking-tight text-white sm:text-6xl">
-                4SP Dashboard
-            </h1>
-            <p id="welcome-message" class="mt-4 text-xl text-gray-400">
-                Welcome back! Your toolkit awaits.
-            </p>
-        </header>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-
-            <div class="card rounded-xl p-6 flex flex-col justify-between">
-                <div>
-                    <i class="fas fa-pencil-ruler text-3xl text-indigo-400"></i>
-                    <h2 class="mt-4 text-xl font-semibold text-white">Academic Writer</h2>
-                    <p class="mt-2 text-gray-400 text-sm">Draft, critique, and perfect your essays. Get help with brainstorming topics and outline creation.</p>
-                </div>
-                <a href="../logged-in/writer.html" class="cta-button mt-4 w-full text-center py-2 rounded-lg text-sm font-medium text-white shadow-lg">
-                    Start Writing
-                </a>
-            </div>
-
-            <div class="card rounded-xl p-6 flex flex-col justify-between">
-                <div>
-                    <i class="fas fa-calculator text-3xl text-green-400"></i>
-                    <h2 class="mt-4 text-xl font-semibold text-white">Math Utilities</h2>
-                    <p class="mt-2 text-gray-400 text-sm">Quickly solve problems, convert units, and handle complex scientific notation.</p>
-                </div>
-                <a href="../logged-in/calculator.html" class="cta-button mt-4 w-full text-center py-2 rounded-lg text-sm font-medium text-white shadow-lg">
-                    Launch Calculator
-                </a>
-            </div>
-
-            <div class="card rounded-xl p-6 flex flex-col justify-between">
-                <div>
-                    <i class="fas fa-gamepad text-3xl text-red-400"></i>
-                    <h2 class="mt-4 text-xl font-semibold text-white">Games Center</h2>
-                    <p class="mt-2 text-gray-400 text-sm">Take a well-deserved break! Access the full catalog of distraction-free games.</p>
-                </div>
-                <a href="../GAMES/index.html" class="cta-button mt-4 w-full text-center py-2 rounded-lg text-sm font-medium text-white shadow-lg">
-                    Play Games
-                </a>
-            </div>
-
-            <div class="card rounded-xl p-6 flex flex-col justify-between">
-                <div>
-                    <i class="fas fa-mask text-3xl text-yellow-400"></i>
-                    <h2 class="mt-4 text-xl font-semibold text-white">Tab Disguise</h2>
-                    <p class="mt-2 text-gray-400 text-sm">Instantly change the tab title and icon to a professional document or lecture name.</p>
-                </div>
-                <a href="../logged-in/settings.html" class="cta-button mt-4 w-full text-center py-2 rounded-lg text-sm font-medium text-white shadow-lg">
-                    Configure
-                </a>
-            </div>
-
-        </div>
-    </main>
-
-    <footer class="border-t border-gray-900 py-6">
-        <div class="mx-auto max-w-7xl px-4 text-center text-gray-500 text-sm">
-            &copy; 2024 4simpleproblems (4SP). Built for students.
-        </div>
-    </footer>
-
-    <script src="../navigation.js"></script> 
-    
+    <!-- Firebase SDKs -->
     <script type="module">
-        // Access the global navigation function you created
-        const initFullNavigation = window.initFullNavigation;
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         
-        // Import necessary Firebase modules
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        
-        // 🔥 Re-import the configuration file (assuming it's at the root level)
-        // NOTE: This file (../firebase-config.js) must exist and export the firebaseConfig object.
-        import { firebaseConfig } from '../firebase-config.js';
+        // Import firebaseConfig from the sibling file.
+        import { firebaseConfig } from './firebase-config.js';
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        
-        // --- Navigation Bar Initialization ---
-        if (initFullNavigation) {
-            initFullNavigation(auth);
+
+        const dateTimeElement = document.getElementById('date-time-display');
+        const redirectPath = '../index.html'; // Path to redirect if logged out
+
+        /**
+         * Updates the date and time display every second.
+         */
+        function updateDateTime() {
+            const now = new Date();
+            
+            // Format time (e.g., 04:20 PM:23)
+            const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+            const timeString = now.toLocaleTimeString('en-US', timeOptions);
+            
+            // Format date (e.g., Saturday, October 4, 2025)
+            const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const dateString = now.toLocaleDateString('en-US', dateOptions);
+
+            if (dateTimeElement) {
+                dateTimeElement.innerHTML = `
+                    <div class="text-7xl font-light">${timeString}</div>
+                    <div class="text-3xl font-thin mt-2">${dateString}</div>
+                `;
+            }
         }
 
-        // --- Dashboard Specific Logic: Auth Check and Welcome Message Update ---
+        /**
+         * Handles user authentication state and redirects if logged out.
+         */
         onAuthStateChanged(auth, (user) => {
-            const welcomeMessageElement = document.getElementById('welcome-message');
-
-            if (user) {
-                // User is signed in. Update the welcome message.
-                const username = user.displayName || user.email?.split('@')[0] || 'User';
-                if (welcomeMessageElement) {
-                    welcomeMessageElement.textContent = `Welcome back, ${username}! Your toolkit awaits.`;
-                }
+            if (!user) {
+                // User is signed out. Redirect immediately.
+                console.log("User logged out. Redirecting to:", redirectPath);
+                window.location.replace(redirectPath);
             } else {
-                // User is signed out. Redirect to login.
-                window.location.href = '../login.html';
+                // User is signed in. Start the clock update.
+                console.log("User signed in. UID:", user.uid);
+                
+                // Set the initial time and then update it every second
+                updateDateTime();
+                setInterval(updateDateTime, 1000);
             }
         });
+
+        // Add CSS for minimal black screen look
+        document.head.insertAdjacentHTML('beforeend', `
+            <style>
+                /* Apply Geist font universally */
+                body { 
+                    font-family: 'Geist', sans-serif; 
+                    background-color: #000000;
+                    color: #FFFFFF;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    height: 100vh;
+                    margin: 0;
+                    text-align: center;
+                }
+                /* Ensure HTML and body take full viewport height */
+                html { height: 100%; }
+            </style>
+        `);
+
     </script>
+</head>
+<body>
+    <div id="date-time-display" class="tracking-tighter p-8 rounded-xl bg-white/5 backdrop-blur-sm shadow-2xl">
+        <!-- Content will be injected by JavaScript -->
+        <p class="text-xl">Loading time and authentication check...</p>
+    </div>
 </body>
 </html>
