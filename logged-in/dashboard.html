@@ -12,21 +12,34 @@
     
     <!-- TailwindCSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="../navigation.js"></script>
+
+    <!-- External Files (Loaded Globally as requested) -->
+    <!-- These files are expected to define global variables like firebaseConfig and Navigation -->
     <script src="../firebase-config.js"></script>
+    <script src="../navigation.js"></script>
 
-
-    <!-- Firebase Imports -->
+    <!-- Firebase Utilities and Main Logic (type="module" required for Firebase SDK imports) -->
     <script type="module">
+        // NOTE: We now rely on 'firebaseConfig' and 'Navigation' being defined globally
+        // by the non-module script tags above.
+
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; // Included for auth listener stability
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; 
         
         // Set log level to Debug to help track auth issues
         setLogLevel('Debug');
 
         // Configuration and Initialization
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        
+        // 1. Try to use firebaseConfig defined globally by '../firebase-config.js'
+        const firebaseConfigFromExternalFile = typeof firebaseConfig !== 'undefined' ? firebaseConfig : {};
+
+        // 2. Fallback to the secure config provided by the Canvas environment
+        const effectiveFirebaseConfig = (Object.keys(firebaseConfigFromExternalFile).length > 0) 
+            ? firebaseConfigFromExternalFile
+            : JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
         
         let auth;
@@ -37,51 +50,61 @@
          */
         async function checkAuth() {
             try {
-                if (Object.keys(firebaseConfig).length === 0) {
+                if (Object.keys(effectiveFirebaseConfig).length === 0) {
                     console.error("Firebase configuration is missing or invalid.");
-                    // In a real app, this would also redirect or show an error
                     redirectToIndex(); 
                     return;
                 }
                 
-                const app = initializeApp(firebaseConfig);
+                const app = initializeApp(effectiveFirebaseConfig);
                 auth = getAuth(app);
 
-                // Attempt authentication
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
+                // Attempt authentication using the token or anonymously.
+                try {
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                        console.log("Attempted sign-in with custom token.");
+                    } else if (!auth.currentUser) {
+                        await signInAnonymously(auth);
+                        console.log("Attempted anonymous sign-in.");
+                    }
+                } catch (sign_in_error) {
+                    console.warn("Sign-in attempt failed, relying on onAuthStateChanged to resolve.", sign_in_error.code);
                 }
 
-                // Listen for authentication changes
+
+                // Listen for authentication changes to determine final state and start the application/redirect.
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
                         userId = user.uid;
                         console.log("User authenticated:", userId);
-                        document.getElementById('user-id-display').textContent = userId;
+                        // Ensure the User ID is displayed as requested
+                        document.getElementById('user-id-display').textContent = userId; 
                         // Start the clock only after successful auth check
                         startClock(); 
                     } else {
-                        console.log("User is logged out. Redirecting...");
+                        console.log("Authentication failed or user logged out. Redirecting...");
+                        // Redirect instantly if authentication state is definitively null
                         redirectToIndex();
                     }
                 });
 
             } catch (error) {
-                console.error("Firebase Auth Error:", error);
+                console.error("Firebase Initialization Error:", error);
                 redirectToIndex();
             }
         }
         
         /**
-         * Redirects the user to the home page.
+         * Redirects the user to the home page immediately.
          */
         function redirectToIndex() {
-            // Give the user a moment to see the dashboard before redirecting
-            setTimeout(() => {
+            // Check if Navigation utility is available globally before redirecting
+            if (typeof Navigation !== 'undefined' && Navigation.goToIndex) {
+                 Navigation.goToIndex();
+            } else {
                 window.location.href = '../index.html';
-            }, 50);
+            }
         }
 
         /**
