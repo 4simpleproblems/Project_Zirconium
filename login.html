@@ -202,8 +202,6 @@
             sendPasswordResetEmail,
             fetchSignInMethodsForEmail,
             signOut,
-            signInWithCustomToken,
-            signInAnonymously,
             GoogleAuthProvider,
             GithubAuthProvider,
             OAuthProvider,
@@ -218,74 +216,52 @@
             setDoc, 
             serverTimestamp
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        
+        // IMPORTING CONFIGURATION FROM EXTERNAL FILE (as requested)
+        import { firebaseConfig } from "./firebase-config.js"; 
 
-        // --- Configuration Check (Assumes firebaseConfig is exported from firebase-config.js) ---
-        if (typeof firebaseConfig === 'undefined' || Object.keys(firebaseConfig).length === 0) {
-            console.error("FATAL ERROR: Firebase configuration not found. Ensure 'firebase-config.js' is loaded and exports 'firebaseConfig'.");
-            // Note: Cannot call alert in module scope before DOM is ready, but this check is essential.
+        // --- Configuration Check ---
+        if (typeof firebaseConfig === 'undefined' || Object.keys(firebaseConfig).length === 0 || !firebaseConfig.apiKey) {
+            console.error("FATAL ERROR: Firebase configuration not found or is incomplete. Ensure 'firebase-config.js' is loaded and exports 'firebaseConfig'.");
+            // We'll proceed, but Firebase initialization will likely fail without a valid config
         }
 
-        // --- Canvas Environment Globals (MANDATORY) ---
-        const appId = typeof __app_id !== 'undefined' ? __app_id : '4sp-default-app';
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-        // --- Initialize Firebase with External Config ---
+        // --- Initialize Firebase ---
+        const appId = '4sp-default-app'; // Kept for document path consistency
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
         // --- Firestore Paths (Canvas Private Data Rule Compliant) ---
         const getUserProfileDocRef = (userId) => {
-             // Stores user metadata in a private, dedicated collection
+            // Path: artifacts/{appId}/users/{userId}/metadata/user_profile
             return doc(db, 'artifacts', appId, 'users', userId, 'metadata', 'user_profile');
         };
         
-        // --- Global Helper Functions ---
+        // --- DOM Elements ---
+        const loginContainer = document.getElementById('loginContainer');
+        const resetPasswordContainer = document.getElementById('resetPasswordContainer');
+        const loginMessageDiv = document.getElementById('loginMessage');
+        const resetMessageDiv = document.getElementById('resetMessage');
+        const loginForm = document.getElementById('loginForm');
+        const resetPasswordForm = document.getElementById('resetPasswordForm');
+        const googleLoginBtn = document.getElementById('googleLoginBtn');
+        const githubLoginBtn = document.getElementById('githubLoginBtn');
+        const microsoftLoginBtn = document.getElementById('microsoftLoginBtn');
+
+        // --- Helper Functions ---
         const showMessage = (element, text, type = 'error') => {
             element.innerHTML = text;
             element.className = `message-area w-full max-w-md mt-4 min-h-[20px] text-center text-sm ${type}-message`;
         };
-        
-        /**
-         * Checks text for profanity using the Purgomalum API.
-         * @param {string} text The string to check.
-         * @returns {Promise<boolean>} True if profanity is detected, false otherwise.
-         */
-        const checkProfanity = async (text) => {
-            if (!text || !text.trim()) return false;
-            
-            try {
-                // Use the Purgomalum API to check for profanity
-                const encodedText = encodeURIComponent(text);
-                const response = await fetch(`https://purgomalum.com/service/containsprofanity?text=${encodedText}`);
 
-                if (!response.ok) {
-                    console.warn("Purgomalum API failed, assuming no profanity for safety.", response.status);
-                    return false; // Fail safe (assume no profanity if service is down)
-                }
-
-                const containsProfanity = await response.json();
-                return containsProfanity; // API returns true/false
-                
-            } catch (error) {
-                console.error("Error checking profanity:", error);
-                return false; // Fail safe
-            }
-        };
-        
-        // The original logic used a top-level 'users' collection for checking usernames.
-        // For simplicity and to avoid complex queries across all users' private paths, 
-        // we'll assume a shared public collection for *unique usernames* if necessary.
-        const isUsernameTaken = async (username) => {
-            // NOTE: A real shared app would need a public 'usernames' collection.
-            return false;
+        const navigateToDashboard = () => {
+            window.location.href = 'logged-in/dashboard.html';
         };
 
-        const createUserDocument = async (user, authMethod, username, explicitEmail = null) => {
-            const emailToStore = explicitEmail || (user && user.email) || null;
+        const createUserDocument = async (user, authMethod, username, emailToStore) => {
             const isVerified = (authMethod === 'google' || authMethod === 'github' || authMethod === 'microsoft') ? true : !!(user && user.emailVerified);
             try {
-                // Use the compliant path to store user data
                 await setDoc(getUserProfileDocRef(user.uid), {
                     email: emailToStore, 
                     authMethod: authMethod, 
@@ -299,15 +275,13 @@
                 return false; 
             }
         };
-        
-        const handleSuccessfulLogin = async (user, loginMessageDiv, isNewOrRepaired = false, newUsername = '') => {
-            // For Canvas, immediately redirect to the protected dashboard page after successful auth/document check
-            // We use browserLocalPersistence to keep the user logged in across page loads
+
+        const handleSuccessfulLogin = async (user, isNewOrRepaired = false, newUsername = '') => {
             await setPersistence(auth, browserLocalPersistence);
 
             if (isNewOrRepaired) {
                 let countdown = 3;
-                const message = () => {
+                const updateMessage = () => {
                     showMessage(loginMessageDiv, 
                         `Account setup complete! New username: <strong>${newUsername}</strong>. Redirecting in ${countdown}...`, 
                         'warning'
@@ -315,29 +289,27 @@
                     countdown--;
                 };
                 
-                message(); 
+                updateMessage(); 
                 const interval = setInterval(() => {
                     if (countdown < 0) {
                         clearInterval(interval);
-                        // IMPORTANT: Redirect to the protected area
-                        window.location.href = 'logged-in/dashboard.html';
+                        navigateToDashboard();
                     } else {
-                        message();
+                        updateMessage();
                     }
                 }, 1000);
                 return;
             }
 
-            // Check if email is verified for non-provider logins
+            // Check verification for non-provider logins
             const isProviderLogin = user.providerData.some((provider) => 
-                provider.providerId === 'google.com' || 
-                provider.providerId === 'github.com' || 
-                provider.providerId === 'microsoft.com'
+                ['google.com', 'github.com', 'microsoft.com'].includes(provider.providerId)
             );
 
             if (user.emailVerified || isProviderLogin) {
-                window.location.href = 'logged-in/dashboard.html';
+                navigateToDashboard();
             } else {
+                // Handle unverified email
                 loginMessageDiv.innerHTML = 'Your email is not verified. Please check your inbox. <a href="#" id="resend-link" class="text-custom-light-gray hover:text-custom-lighter-gray underline cursor-pointer">Resend verification email</a>';
                 loginMessageDiv.className = 'message-area w-full max-w-md mt-4 min-h-[20px] text-center text-sm error-message';
                 
@@ -352,50 +324,32 @@
             }
         };
         
-        const repairOrCreateUserDocument = async (user, providerName, loginMessageDiv) => {
-            let userEmail = user.email;
+        const repairOrCreateUserDocument = async (user, providerName) => {
+            const userEmail = user.email || `temp-${user.uid}@nodomain.com`;
             let proposedUsername = user.displayName || userEmail.split('@')[0] || 'User';
-            // Clean up the proposed username
+            
+            // Basic cleanup and length check
             proposedUsername = proposedUsername.replace(/[^a-zA-Z0-9]/g, '').slice(0, 16); 
-
-            // Check if the proposed username is too short or contains profanity via Purgomalum
-            if (proposedUsername.length < 4 || await checkProfanity(proposedUsername)) { 
+            if (proposedUsername.length < 4) { 
                 proposedUsername = `User${user.uid.substring(0, 8)}`; 
             }
             
-            const finalUsername = proposedUsername; 
-
-            const documentCreated = await createUserDocument(user, providerName, finalUsername, userEmail);
+            const documentCreated = await createUserDocument(user, providerName, proposedUsername, userEmail);
             if (documentCreated) {
-                await handleSuccessfulLogin(user, loginMessageDiv, true, finalUsername);
+                await handleSuccessfulLogin(user, true, proposedUsername);
             } else {
-                throw new Error('Failed to create user document during login.');
+                throw new Error('Failed to create user document during social login/repair.');
             }
         };
 
-        // --- Login Page-Specific Logic ---
-        document.addEventListener('DOMContentLoaded', async () => {
-            // NOTE: Anonymous sign-in must be ENABLED in the Firebase console to avoid the 400 error.
-            if (initialAuthToken) {
-                try {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } catch (e) {
-                    console.error("Custom token sign-in failed, falling back to anonymous.", e);
-                    await signInAnonymously(auth);
-                }
-            } else {
-                await signInAnonymously(auth);
-            }
-            
-            // Wait for initial sign-in to complete before attaching handlers
-            const loginContainer = document.getElementById('loginContainer');
-            const resetPasswordContainer = document.getElementById('resetPasswordContainer');
-            const loginMessageDiv = document.getElementById('loginMessage');
-            const resetMessageDiv = document.getElementById('resetMessage');
-            const googleLoginBtn = document.getElementById('googleLoginBtn');
-            const githubLoginBtn = document.getElementById('githubLoginBtn');
-            const microsoftLoginBtn = document.getElementById('microsoftLoginBtn');
+        // --- Event Handlers ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initial view setup
+            loginContainer.style.display = 'flex';
+            loginContainer.style.flexDirection = 'column';
+            resetPasswordContainer.style.display = 'none';
 
+            // 1. View Toggles (Forgot Password/Back to Login)
             document.getElementById('forgotPasswordLink').addEventListener('click', () => {
                 loginContainer.style.display = 'none';
                 resetPasswordContainer.style.display = 'flex';
@@ -409,16 +363,21 @@
                 loginContainer.style.flexDirection = 'column';
                 resetMessageDiv.innerHTML = '';
             });
-            
-            document.getElementById('resetPasswordForm').addEventListener('submit', async (e) => {
+
+            // 2. Password Reset Submission
+            resetPasswordForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 resetMessageDiv.innerHTML = '';
-                const email = document.getElementById('resetEmail').value;
+                const email = document.getElementById('resetEmail').value.trim();
+                if (!email) { showMessage(resetMessageDiv, 'Please enter your email.'); return; }
+
                 try {
                     const methods = await fetchSignInMethodsForEmail(auth, email);
-                    if (methods.length === 0) { showMessage(resetMessageDiv, 'No account found with this email.'); } 
-                    else if (methods.includes('google.com') || methods.includes('github.com') || methods.includes('microsoft.com')) { 
-                        showMessage(resetMessageDiv, 'This account uses a third-party provider and does not have a password to reset.'); 
+                    if (methods.length === 0) { 
+                        showMessage(resetMessageDiv, 'No account found with this email.'); 
+                    } 
+                    else if (methods.some(method => ['google.com', 'github.com', 'microsoft.com'].includes(method))) { 
+                        showMessage(resetMessageDiv, 'This account uses a social provider and does not have a password to reset.'); 
                     } 
                     else { 
                         await sendPasswordResetEmail(auth, email); 
@@ -426,24 +385,28 @@
                     }
                 } catch (error) { 
                     console.error('Password Reset Error:', error);
-                    showMessage(resetMessageDiv, 'An error occurred. Please try again.'); 
+                    showMessage(resetMessageDiv, 'An error occurred during password reset. Please check the email and try again.'); 
                 }
             });
 
-            document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            // 3. Email/Password Login Submission
+            loginForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 loginMessageDiv.innerHTML = '';
-                const email = document.getElementById('loginEmail').value;
+                const email = document.getElementById('loginEmail').value.trim();
                 const password = document.getElementById('loginPassword').value;
+
+                if (!email || !password) { showMessage(loginMessageDiv, 'Please enter both email and password.'); return; }
+
                 try {
                     const userCredential = await signInWithEmailAndPassword(auth, email, password);
                     const user = userCredential.user;
                     
-                    // Check if the user document exists in the Canvas-compliant path
+                    // Check if the required user document exists
                     const userDocSnap = await getDoc(getUserProfileDocRef(user.uid));
                     
                     if (userDocSnap.exists()) {
-                        await handleSuccessfulLogin(user, loginMessageDiv);
+                        await handleSuccessfulLogin(user);
                     } else {
                         await signOut(auth);
                         showMessage(loginMessageDiv, 'Your account record is incomplete. Please sign up again or contact support.');
@@ -468,38 +431,39 @@
                 }
             });
 
+            // 4. Social Provider Login Handler
             const handleProviderLogin = async (provider) => {
                 loginMessageDiv.innerHTML = '';
                 try {
                     const result = await signInWithPopup(auth, provider);
                     const user = result.user;
                     
-                    // Check if the user document exists in the Canvas-compliant path
+                    // Check if the user document exists
                     const userDocSnap = await getDoc(getUserProfileDocRef(user.uid));
 
                     if (userDocSnap.exists()) {
-                        await handleSuccessfulLogin(user, loginMessageDiv);
+                        await handleSuccessfulLogin(user);
                     } else {
+                        // Document is missing, create/repair it
                         const providerName = provider.providerId.split('.')[0];
-                        await repairOrCreateUserDocument(user, providerName, loginMessageDiv);
+                        await repairOrCreateUserDocument(user, providerName);
                     }
                 } catch (error) {
                     console.error('Provider Sign-In error:', error);
-                    let message = `A problem occurred. Please try again.`;
+                    let message = `A problem occurred during social sign-in. Please try again.`;
                     if (error.code === 'auth/account-exists-with-different-credential') {
                         message = 'An account with this email already exists using a different sign-in method.';
-                    } else if (error.code === 'auth/popup-closed-by-user') { return; }
+                    } else if (error.code === 'auth/popup-closed-by-user') { 
+                        return; 
+                    }
                     showMessage(loginMessageDiv, message);
                 }
             };
 
+            // 5. Attach Social Login Buttons
             googleLoginBtn.addEventListener('click', () => handleProviderLogin(new GoogleAuthProvider()));
             githubLoginBtn.addEventListener('click', () => handleProviderLogin(new GithubAuthProvider()));
             microsoftLoginBtn.addEventListener('click', () => handleProviderLogin(new OAuthProvider('microsoft.com')));
-
-            loginContainer.style.display = 'flex';
-            loginContainer.style.flexDirection = 'column';
-            resetPasswordContainer.style.display = 'none';
         });
     </script>
 </body>
