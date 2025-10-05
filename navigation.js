@@ -390,18 +390,23 @@ const PAGE_CONFIG_URL = '../page-identification.json';
             const rightButton = document.getElementById('glide-right');
 
             if (tabContainer) {
+                // Calculate dynamic scroll amount based on container width (e.g., 80% of visible width)
+                // This replaces the fixed '150' to ensure a larger, more satisfying jump.
+                const scrollAmount = tabContainer.offsetWidth * 0.8; 
+
                 // Update visibility on scroll
                 tabContainer.addEventListener('scroll', updateScrollGilders);
                 
                 // Add click behavior for glide buttons
-                const scrollAmount = 150; // Scroll by 150px
                 if (leftButton) {
                     leftButton.addEventListener('click', () => {
+                        // Scroll back by 80% of the container width
                         tabContainer.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
                     });
                 }
                 if (rightButton) {
                     rightButton.addEventListener('click', () => {
+                        // Scroll forward by 80% of the container width
                         tabContainer.scrollBy({ left: scrollAmount, behavior: 'smooth' });
                     });
                 }
