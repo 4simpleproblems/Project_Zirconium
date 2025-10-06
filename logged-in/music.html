@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4SP Music - Secured Platform</title>
+    
+    <!-- Load Geist Font, Font Awesome, and TailwindCSS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        /* Apply Geist font universally and set a deep dark theme */
+        body { 
+            font-family: 'Geist', sans-serif; 
+            background-color: #0d0d0d;
+            color: #f1f5f9; /* Slate 100 */
+            min-height: 100vh;
+            padding-bottom: 80px; /* Space for the persistent player bar */
+        }
+        .full-screen-video {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1000;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .full-screen-video.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #player-iframe-fullscreen {
+            width: 90%;
+            height: 90%;
+        }
+        /* Custom scrollbar for dark theme */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    </style>
+
+    <!-- Firebase SDKs and Main Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            getDoc, 
+            collection, 
+            query, 
+            onSnapshot, 
+            addDoc, 
+            deleteDoc
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // Import firebaseConfig from the sibling file.
+        import { firebaseConfig } from '../firebase-config.js';
+
+        // --- GLOBAL SETUP ---
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        let youtubeApiKey = null;
+        let userId = null;
+        let isAuthReady = false;
+        
+        // --- MUSIC PLATFORM STATE ---
+        let currentTab = 'home'; // 'home', 'library', 'playlists'
+        let userLibrary = [];
+        let userPlaylists = []; // [{ id: 'docId', name: 'Playlist Name', tracks: [{...}] }]
+        
+        let currentTrack = null;
+        let player = null; // YouTube Player Instance
+        let playHistory = [];
+        let historyIndex = -1;
+
+        // Dummy data for initial display (will be replaced by API calls)
+        const dummyVideos = [
+            { id: '5E8oYd4w2dI', title: 'lofi hip hop radio - beats to relax/study to', channelTitle: 'Chillhop Music', thumbnailUrl: 'https://placehold.co/120x90/334155/f8fafc?text=LOFI' },
+            { id: 'X5lU-29g3Fk', title: 'Blinding Lights', channelTitle: 'The Weeknd', thumbnailUrl: 'https://placehold.co/120x90/581c87/e9d5ff?text=BLIND' },
+            { id: 'aQkPcPqTq4U', title: 'Feel Good (NCS Release)', channelTitle: 'NoCopyrightSounds', thumbnailUrl: 'https://placehold.co/120x90/0f766e/ccfbf1?text=NCS' },
+        ];
+
+        // --- DOM ELEMENTS ---
+        const mainContentEl = document.getElementById('main-content');
+        const playerBarEl = document.getElementById('player-bar');
+        const playbackControlsEl = document.getElementById('playback-controls');
+        const fullscreenVideoEl = document.getElementById('fullscreen-video');
+        const currentlyPlayingEl = document.getElementById('currently-playing-info');
+        const skipBackBtn = document.getElementById('skip-back-btn');
+        const skipNextBtn = document.getElementById('skip-next-btn');
+        const tabButtons = {
+            home: document.getElementById('tab-home'),
+            library: document.getElementById('tab-library'),
+            playlists: document.getElementById('tab-playlists')
+        };
+        const playlistModal = document.getElementById('playlist-modal');
+        const createPlaylistModal = document.getElementById('create-playlist-modal');
+        const alertMessageEl = document.getElementById('alert-message');
+
+        // --- UTILITY FUNCTIONS ---
+
+        /** Shows a temporary alert message */
+        function alertMessage(message, colorClass = 'bg-blue-600') {
+            alertMessageEl.textContent = message;
+            alertMessageEl.className = `fixed bottom-24 right-4 p-3 rounded-lg shadow-xl text-white z-50 transition-opacity duration-300 ${colorClass}`;
+            alertMessageEl.style.opacity = '1';
+            setTimeout(() => {
+                alertMessageEl.style.opacity = '0';
+            }, 3000);
+        }
+
+        /** Simple helper for YouTube thumbnail URL */
+        function getThumbnailUrl(videoId) {
+            return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+        }
+        
+        // --- FIRESTORE HELPERS ---
+        
+        /** Fetches the YouTube API key from the secured Firestore document. */
+        async function fetchApiKey() {
+            const docRef = doc(db, "secrets", "apis"); // Collection "secrets", Document "apis"
+            try {
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    youtubeApiKey = data.youtubeAPI; // Field name is "youtubeAPI"
+                    console.log("YouTube API key fetched securely.");
+                    return true;
+                } else {
+                    console.error("YouTube API key document not found in Firestore at /secrets/apis.");
+                    alertMessage("API Key not found in Firestore. Check console.", 'bg-red-700');
+                    return false;
+                }
+            } catch (error) {
+                console.error("Error fetching API key:", error);
+                alertMessage("Error fetching API Key. Check Firestore rules.", 'bg-red-700');
+                return false;
+            }
+        }
+
+        /** Gets the path for the user's private library collection */
+        function getUserLibraryCollectionRef() {
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            return collection(db, `artifacts/${appId}/users/${userId}/music_library`);
+        }
+
+        /** Gets the path for the user's playlists collection */
+        function getUserPlaylistsCollectionRef() {
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            return collection(db, `artifacts/${appId}/users/${userId}/music_playlists`);
+        }
+        
+        /** Sets up real-time listener for the user's library and playlists. */
+        function setupFirestoreListeners() {
+            if (!userId || !isAuthReady) return;
+
+            // 1. Library Listener
+            onSnapshot(getUserLibraryCollectionRef(), (snapshot) => {
+                userLibrary = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                console.log("Library updated:", userLibrary);
+                if (currentTab === 'library') renderContent();
+            }, (error) => {
+                console.error("Error listening to library:", error);
+            });
+
+            // 2. Playlists Listener
+            onSnapshot(getUserPlaylistsCollectionRef(), (snapshot) => {
+                userPlaylists = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                    tracks: doc.data().tracks || [] // Ensure tracks array exists
+                }));
+                console.log("Playlists updated:", userPlaylists);
+                if (currentTab === 'playlists') renderContent();
+            }, (error) => {
+                console.error("Error listening to playlists:", error);
+            });
+        }
+        
+        // --- YOUTUBE API CALLS ---
+        
+        /** Searches YouTube using the Data API (Secured by Firestore Key) */
+        async function searchYouTube(query, maxResults = 5, type = 'video') {
+            if (!youtubeApiKey) {
+                alertMessage("API Key is not loaded. Cannot search.", 'bg-red-700');
+                return [];
+            }
+            const apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=${type}&maxResults=${maxResults}&key=${youtubeApiKey}`;
+            
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                
+                return data.items.map(item => ({
+                    id: item.id.videoId || item.id.channelId,
+                    title: item.snippet.title,
+                    channelTitle: item.snippet.channelTitle,
+                    description: item.snippet.description,
+                    thumbnailUrl: getThumbnailUrl(item.id.videoId || item.id.channelId),
+                    isChannel: item.id.kind === 'youtube#channel'
+                }));
+            } catch (error) {
+                console.error("YouTube search error:", error);
+                alertMessage("Failed to search YouTube. API key or quota issue.", 'bg-red-700');
+                return [];
+            }
+        }
+
+        // --- YOUTUBE PLAYER LOGIC ---
+
+        /** Loads the YouTube Iframe API script */
+        function loadYouTubeIframeAPI() {
+            if (document.getElementById('youtube-api-script')) return;
+            const tag = document.createElement('script');
+            tag.id = 'youtube-api-script';
+            tag.src = "https://www.youtube.com/iframe_api";
+            const firstScriptTag = document.getElementsByTagName('script')[0];
+            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        }
+
+        /** Global function called by the API when ready */
+        window.onYouTubeIframeAPIReady = function() {
+            console.log("YouTube Iframe API Ready.");
+        }
+
+        /** Initializes or updates the player to play a specific video ID */
+        function playTrack(track, skipHistory = false) {
+            if (!track || !track.id) return;
+            
+            // 1. Update history
+            if (!skipHistory) {
+                if (historyIndex < playHistory.length - 1) {
+                    playHistory = playHistory.slice(0, historyIndex + 1);
+                }
+                playHistory.push(track);
+                historyIndex = playHistory.length - 1;
+            }
+            
+            currentTrack = track;
+            
+            // 2. Control player
+            if (!player) {
+                player = new YT.Player('player-iframe-background', {
+                    height: '1',
+                    width: '1',
+                    videoId: track.id,
+                    playerVars: {
+                        'playsinline': 1,
+                        'autoplay': 1,
+                        'controls': 0,
+                        'disablekb': 1,
+                        'modestbranding': 1
+                    },
+                    events: {
+                        'onReady': (event) => { event.target.playVideo(); },
+                        'onStateChange': (event) => {
+                            // Check for video ended (state 0) to auto-advance
+                            if (event.data === YT.PlayerState.ENDED) {
+                                skipNext();
+                            }
+                        }
+                    }
+                });
+            } else {
+                player.loadVideoById(track.id);
+            }
+            
+            // 3. Update UI
+            renderPlayerBar();
+        }
+
+        /** Handles skipping to the next track in history/queue */
+        function skipNext() {
+            if (historyIndex < playHistory.length - 1) {
+                historyIndex++;
+                playTrack(playHistory[historyIndex], true);
+            } else {
+                alertMessage("No next track in history.", 'bg-gray-700');
+            }
+        }
+
+        /** Handles skipping back to the previous track in history */
+        function skipBack() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                playTrack(playHistory[historyIndex], true);
+            } else {
+                alertMessage("No previous track in history.", 'bg-gray-700');
+            }
+        }
+        
+        // --- UI RENDERING FUNCTIONS ---
+        
+        /** Renders the persistent player bar at the bottom */
+        function renderPlayerBar() {
+            if (!currentTrack) {
+                playerBarEl.classList.add('hidden');
+                return;
+            }
+            
+            playerBarEl.classList.remove('hidden');
+            
+            // Fullscreen iframe update (always ensure the fullscreen one is set up)
+            if (fullscreenVideoEl.querySelector('#player-iframe-fullscreen').src === 'about:blank') {
+                fullscreenVideoEl.querySelector('#player-iframe-fullscreen').src = `https://www.youtube.com/embed/${currentTrack.id}?enablejsapi=1&autoplay=1&controls=1&playsinline=1&modestbranding=1`;
+            } else {
+                // Update the fullscreen iframe source if the video changes
+                fullscreenVideoEl.querySelector('#player-iframe-fullscreen').src = 
+                    fullscreenVideoEl.querySelector('#player-iframe-fullscreen').src.replace(/embed\/[^?]+/, `embed/${currentTrack.id}`);
+            }
+
+            // Update currently playing info
+            currentlyPlayingEl.innerHTML = `
+                <div class="flex items-center space-x-3 truncate">
+                    <img src="${getThumbnailUrl(currentTrack.id)}" alt="Thumbnail" class="w-12 h-12 object-cover rounded-md flex-shrink-0">
+                    <div class="flex flex-col truncate">
+                        <span class="text-sm font-medium truncate">${currentTrack.title}</span>
+                        <span class="text-xs text-gray-400 truncate">${currentTrack.channelTitle}</span>
+                    </div>
+                </div>
+            `;
+            
+            // Update button states
+            skipBackBtn.disabled = historyIndex <= 0;
+            skipNextBtn.disabled = historyIndex >= playHistory.length - 1;
+        }
+
+        /** Renders the main content based on the active tab */
+        function renderContent() {
+            // Update tab button styles
+            Object.keys(tabButtons).forEach(key => {
+                tabButtons[key].classList.remove('text-green-400', 'border-green-400');
+                tabButtons[key].classList.add('text-gray-400', 'border-transparent', 'hover:text-green-300');
+            });
+            tabButtons[currentTab].classList.add('text-green-400', 'border-green-400');
+            tabButtons[currentTab].classList.remove('text-gray-400', 'hover:text-green-300');
+
+            mainContentEl.innerHTML = '';
+            
+            switch (currentTab) {
+                case 'home':
+                    renderHomeTab();
+                    break;
+                case 'library':
+                    renderLibraryTab();
+                    break;
+                case 'playlists':
+                    renderPlaylistsTab();
+                    break;
+            }
+        }
+        
+        // --- TAB RENDERS ---
+
+        /** Renders the Home tab (Search and Featured) */
+        function renderHomeTab() {
+            mainContentEl.innerHTML = `
+                <div class="max-w-4xl mx-auto p-4 md:p-8">
+                    <h1 class="text-3xl font-bold mb-6 text-white tracking-tight">Discover</h1>
+                    
+                    <!-- Search Bar -->
+                    <div class="mb-10">
+                        <div class="relative">
+                            <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <input type="text" id="search-input" placeholder="Search for songs, artists, or videos..." 
+                                class="w-full pl-12 pr-4 py-3 bg-gray-900 border border-gray-700 rounded-xl focus:ring-green-500 focus:border-green-500 transition"
+                                onkeydown="if(event.key === 'Enter') handleSearch()">
+                        </div>
+                        <div id="search-results" class="mt-4 space-y-3"></div>
+                    </div>
+
+                    <!-- Featured Section (Dummy Data as API calls are limited/expensive) -->
+                    <h2 class="text-xl font-semibold mb-4 text-white">Featured Videos</h2>
+                    <div id="featured-videos" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        ${dummyVideos.map(video => renderVideoCard(video, true)).join('')}
+                    </div>
+
+                    <h2 class="text-xl font-semibold mb-4 mt-8 text-white">Top Artists</h2>
+                    <div id="top-artists" class="flex flex-wrap gap-4">
+                        ${[
+                            { channelTitle: 'Lofi Girl', id: 'UCH8fK42I-d5YVqJ9pG4QkYA' },
+                            { channelTitle: 'Monstercat', id: 'UCJ6td3C9mpQQ_P9rJ4S2A9Q' },
+                            { channelTitle: 'Billie Eilish', id: 'UCiGm_E4ZwYV1LT-P0f_d2jA' }
+                        ].map(artist => renderArtistCard(artist)).join('')}
+                    </div>
+                </div>
+            `;
+            // Attach event listener for search on load
+            window.handleSearch = async () => {
+                const query = document.getElementById('search-input').value;
+                if (!query) return;
+
+                const resultsEl = document.getElementById('search-results');
+                resultsEl.innerHTML = '<p class="text-center text-gray-500">Searching...</p>';
+                
+                const results = await searchYouTube(query, 6, 'video,channel');
+                
+                if (results.length === 0) {
+                    resultsEl.innerHTML = '<p class="text-center text-gray-500">No results found.</p>';
+                } else {
+                    resultsEl.innerHTML = `
+                        <h3 class="text-lg font-medium text-white mb-3">Search Results (${results.length})</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            ${results.map(item => item.isChannel ? renderArtistCard(item) : renderVideoCard(item)).join('')}
+                        </div>
+                    `;
+                }
+            };
+        }
+        
+        /** Renders a card for a single video */
+        function renderVideoCard(video, isDummy = false) {
+            const track = {
+                id: video.id,
+                title: video.title,
+                channelTitle: video.channelTitle
+            };
+            
+            const isSaved = userLibrary.some(item => item.youtubeId === video.id);
+
+            return `
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg transform transition duration-200 hover:scale-[1.02]">
+                    <div class="relative cursor-pointer" onclick='playTrack(${JSON.stringify(track)})'>
+                        <img src="${video.thumbnailUrl}" alt="${video.title}" class="w-full h-32 object-cover">
+                        <i class="fas fa-play-circle absolute inset-0 m-auto text-white/90 text-4xl opacity-0 hover:opacity-100 transition duration-300"></i>
+                    </div>
+                    <div class="p-3">
+                        <p class="text-sm font-semibold truncate">${video.title}</p>
+                        <p class="text-xs text-gray-400 truncate">${video.channelTitle}</p>
+                        <div class="mt-2 flex space-x-2">
+                            <button onclick='toggleLibrary(${JSON.stringify(track)}, ${isSaved})'
+                                class="px-2 py-1 text-xs rounded-full transition ${isSaved ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}">
+                                <i class="fas ${isSaved ? 'fa-minus' : 'fa-plus'} mr-1"></i> ${isSaved ? 'Saved' : 'Library'}
+                            </button>
+                            <button onclick='openPlaylistModal(${JSON.stringify(track)})'
+                                class="px-2 py-1 text-xs rounded-full bg-gray-800 text-gray-300 hover:bg-gray-700 transition">
+                                <i class="fas fa-list-ul mr-1"></i> Playlist
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        /** Renders a card for a single artist/channel */
+        function renderArtistCard(artist) {
+            return `
+                <div class="bg-gray-900 p-4 rounded-xl shadow-lg flex items-center space-x-4 w-full transition duration-200 hover:bg-gray-800 cursor-pointer">
+                    <div class="w-12 h-12 bg-gray-800 rounded-full flex items-center justify-center text-lg text-green-400">
+                        <i class="fas fa-user-circle"></i>
+                    </div>
+                    <div class="flex flex-col truncate">
+                        <span class="text-sm font-semibold truncate">${artist.channelTitle}</span>
+                        <span class="text-xs text-gray-400">Channel</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        /** Renders the Library tab content */
+        function renderLibraryTab() {
+            mainContentEl.innerHTML = `
+                <div class="max-w-4xl mx-auto p-4 md:p-8">
+                    <h1 class="text-3xl font-bold mb-6 text-white tracking-tight">Your Library (${userLibrary.length})</h1>
+                    <div class="space-y-4">
+                        ${userLibrary.length > 0 ? userLibrary.map(item => `
+                            <div class="flex items-center justify-between bg-gray-900 p-3 rounded-xl hover:bg-gray-800 transition">
+                                <div class="flex items-center space-x-4 cursor-pointer" onclick='playTrack({id: "${item.youtubeId}", title: "${item.title}", channelTitle: "${item.artist}"})'>
+                                    <img src="${getThumbnailUrl(item.youtubeId)}" alt="Thumb" class="w-12 h-12 object-cover rounded-md">
+                                    <div class="flex flex-col truncate">
+                                        <span class="text-sm font-medium truncate">${item.title}</span>
+                                        <span class="text-xs text-gray-400 truncate">${item.artist}</span>
+                                    </div>
+                                </div>
+                                <div class="flex space-x-2 flex-shrink-0">
+                                    <button onclick='openPlaylistModal({id: "${item.youtubeId}", title: "${item.title}", channelTitle: "${item.artist}"})'
+                                        class="p-2 rounded-full text-gray-400 hover:text-green-400 hover:bg-gray-700 transition" title="Add to Playlist">
+                                        <i class="fas fa-list-ul"></i>
+                                    </button>
+                                    <button onclick='removeFromLibrary("${item.id}", "${item.title}")'
+                                        class="p-2 rounded-full text-gray-400 hover:text-red-400 hover:bg-gray-700 transition" title="Remove">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('') : '<p class="text-center text-gray-500">Your library is empty. Add songs from the Discover tab!</p>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        /** Renders the Playlists tab content */
+        function renderPlaylistsTab() {
+            mainContentEl.innerHTML = `
+                <div class="max-w-4xl mx-auto p-4 md:p-8">
+                    <div class="flex justify-between items-center mb-6">
+                        <h1 class="text-3xl font-bold text-white tracking-tight">Your Playlists (${userPlaylists.length})</h1>
+                        <button onclick='showCreatePlaylistModal()' class="px-4 py-2 bg-green-600 text-white rounded-full text-sm font-medium hover:bg-green-700 transition">
+                            <i class="fas fa-plus mr-1"></i> New Playlist
+                        </button>
+                    </div>
+                    <div class="space-y-4">
+                        ${userPlaylists.length > 0 ? userPlaylists.map(playlist => `
+                            <div class="bg-gray-900 p-4 rounded-xl shadow-lg">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h2 class="text-lg font-semibold text-green-400">${playlist.name}</h2>
+                                    <div class="flex space-x-2">
+                                        <button onclick='deletePlaylist("${playlist.id}", "${playlist.name}")' 
+                                            class="p-1 rounded-full text-gray-400 hover:text-red-400 transition" title="Delete Playlist">
+                                            <i class="fas fa-trash text-sm"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <p class="text-sm text-gray-400 mb-3">${playlist.tracks.length} tracks</p>
+                                <div class="space-y-2 max-h-48 overflow-y-auto pr-2">
+                                    ${playlist.tracks.map(track => `
+                                        <div class="flex items-center justify-between p-2 bg-gray-800/70 rounded-lg hover:bg-gray-700/70 transition cursor-pointer"
+                                            onclick='playTrack({id: "${track.youtubeId}", title: "${track.title}", channelTitle: "${track.artist}"})'>
+                                            <div class="flex items-center space-x-3 truncate">
+                                                <i class="fas fa-music text-green-500"></i>
+                                                <span class="text-sm truncate">${track.title}</span>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `).join('') : '<p class="text-center text-gray-500">No playlists found. Create one now!</p>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- DATA MODIFICATION HANDLERS (Library & Playlist) ---
+
+        /** Toggles a track's saved status in the library. */
+        window.toggleLibrary = async (track, isSaved) => {
+            if (isSaved) {
+                const item = userLibrary.find(item => item.youtubeId === track.id);
+                if (item) {
+                    removeFromLibrary(item.id, item.title);
+                }
+            } else {
+                addToLibrary(track);
+            }
+        };
+
+        /** Adds a track to the user's library. */
+        async function addToLibrary(track) {
+            if (!userId) return;
+            try {
+                const exists = userLibrary.some(item => item.youtubeId === track.id);
+                if (exists) {
+                    alertMessage("Track is already in your library.", 'bg-yellow-500');
+                    return;
+                }
+
+                const trackToSave = {
+                    title: track.title,
+                    artist: track.channelTitle,
+                    youtubeId: track.id,
+                    addedAt: new Date().toISOString()
+                };
+
+                await addDoc(getUserLibraryCollectionRef(), trackToSave);
+                alertMessage(`Added "${track.title}" to library.`, 'bg-green-500');
+            } catch (error) {
+                console.error("Error adding document: ", error);
+                alertMessage("Error adding track to library.", 'bg-red-500');
+            }
+        }
+        
+        /** Removes a track from the user's library. */
+        async function removeFromLibrary(docId, title) {
+            if (!userId) return;
+            try {
+                await deleteDoc(doc(db, getUserLibraryCollectionRef().path, docId));
+                alertMessage(`Removed "${title}" from library.`, 'bg-red-500');
+            } catch (error) {
+                console.error("Error removing document: ", error);
+                alertMessage("Error removing track from library.", 'bg-red-500');
+            }
+        }
+        
+        /** Creates a new playlist. */
+        window.createPlaylist = async () => {
+            const nameInput = document.getElementById('new-playlist-name');
+            const playlistName = nameInput.value.trim();
+            nameInput.value = '';
+            
+            if (!playlistName) {
+                alertMessage("Playlist name cannot be empty.", 'bg-yellow-600');
+                return;
+            }
+            
+            try {
+                await addDoc(getUserPlaylistsCollectionRef(), {
+                    name: playlistName,
+                    tracks: [],
+                    createdAt: new Date().toISOString()
+                });
+                hideCreatePlaylistModal();
+                alertMessage(`Playlist "${playlistName}" created!`, 'bg-green-500');
+            } catch (error) {
+                console.error("Error creating playlist:", error);
+                alertMessage("Error creating playlist.", 'bg-red-500');
+            }
+        }
+
+        /** Adds a track to a specific playlist. */
+        window.addTrackToPlaylist = async (playlistId, track) => {
+            const playlist = userPlaylists.find(p => p.id === playlistId);
+            if (!playlist) return;
+
+            const newTrack = {
+                title: track.title,
+                artist: track.channelTitle,
+                youtubeId: track.id
+            };
+            
+            // Check for duplicates
+            if (playlist.tracks.some(t => t.youtubeId === track.id)) {
+                alertMessage("Track is already in this playlist.", 'bg-yellow-600');
+                return;
+            }
+
+            const updatedTracks = [...playlist.tracks, newTrack];
+            
+            try {
+                await setDoc(doc(db, getUserPlaylistsCollectionRef().path, playlistId), { tracks: updatedTracks }, { merge: true });
+                alertMessage(`Added to playlist "${playlist.name}".`, 'bg-green-500');
+                hidePlaylistModal();
+            } catch (error) {
+                console.error("Error adding track to playlist:", error);
+                alertMessage("Error adding track to playlist.", 'bg-red-500');
+            }
+        }
+        
+        /** Deletes a playlist. */
+        window.deletePlaylist = async (docId, name) => {
+            if (window.confirm(`Are you sure you want to delete the playlist "${name}"?`)) {
+                try {
+                    await deleteDoc(doc(db, getUserPlaylistsCollectionRef().path, docId));
+                    alertMessage(`Playlist "${name}" deleted.`, 'bg-red-500');
+                } catch (error) {
+                    console.error("Error deleting playlist:", error);
+                    alertMessage("Error deleting playlist.", 'bg-red-500');
+                }
+            }
+        }
+
+        // --- MODAL FUNCTIONS ---
+        
+        let trackToAdd = null; // Temporary state for track being added
+
+        window.openPlaylistModal = (track) => {
+            if (userPlaylists.length === 0) {
+                alertMessage("No playlists found. Create one first!", 'bg-yellow-600');
+                showCreatePlaylistModal();
+                return;
+            }
+            trackToAdd = track;
+            
+            const listEl = document.getElementById('playlist-list');
+            if (listEl) {
+                listEl.innerHTML = userPlaylists.map(playlist => `
+                    <div onclick="addTrackToPlaylist('${playlist.id}', trackToAdd)"
+                         class="p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-700 transition flex justify-between items-center">
+                        <span>${playlist.name} (${playlist.tracks.length} tracks)</span>
+                        <i class="fas fa-plus text-green-400"></i>
+                    </div>
+                `).join('');
+            }
+            
+            document.getElementById('modal-track-info').textContent = `Add "${track.title}" to:`;
+            playlistModal.classList.remove('hidden');
+        }
+
+        window.hidePlaylistModal = () => {
+            playlistModal.classList.add('hidden');
+            trackToAdd = null;
+        }
+
+        window.showCreatePlaylistModal = () => {
+            hidePlaylistModal(); // Hide playlist selection if open
+            createPlaylistModal.classList.remove('hidden');
+        }
+
+        window.hideCreatePlaylistModal = () => {
+            createPlaylistModal.classList.add('hidden');
+        }
+        
+        // --- INITIALIZATION AND AUTH ---
+
+        /** Main initialization function after successful authentication */
+        async function initializeApp() {
+            // Load the YouTube API script
+            loadYouTubeIframeAPI();
+            
+            // Fetch API key securely from Firestore
+            const keyLoaded = await fetchApiKey();
+            
+            if (keyLoaded) {
+                // Set up the play/skip controls
+                skipBackBtn.onclick = skipBack;
+                skipNextBtn.onclick = skipNext;
+                playbackControlsEl.classList.remove('hidden');
+
+                // Set up tab switching
+                tabButtons.home.onclick = () => { currentTab = 'home'; renderContent(); };
+                tabButtons.library.onclick = () => { currentTab = 'library'; renderContent(); };
+                tabButtons.playlists.onclick = () => { currentTab = 'playlists'; renderContent(); };
+
+                // Set up fullscreen toggle
+                playerBarEl.onclick = (e) => {
+                    // Only toggle if clicking the info or an area that isn't a button
+                    if (!e.target.closest('button')) {
+                        fullscreenVideoEl.classList.add('active');
+                    }
+                };
+                document.getElementById('close-fullscreen-btn').onclick = () => {
+                    fullscreenVideoEl.classList.remove('active');
+                };
+
+                // Setup Firestore Listeners
+                setupFirestoreListeners();
+                
+                // Initial content render
+                renderContent(); 
+            } else {
+                // If key fetch failed, show an error state
+                mainContentEl.innerHTML = '<p class="text-center text-red-500 mt-20">CRITICAL ERROR: Failed to load YouTube API key from Firestore. Check your database setup.</p>';
+            }
+        }
+
+
+        // --- FIREBASE AUTH LISTENER (Redirect if logged out) ---
+        onAuthStateChanged(auth, (user) => {
+            const loadingEl = document.getElementById('app-loading-state');
+            loadingEl.classList.add('hidden');
+            
+            if (!user) {
+                const redirectPath = '../index.html'; // Path to redirect if logged out
+                console.log("User logged out. Redirecting to:", redirectPath);
+                window.location.replace(redirectPath);
+            } else {
+                userId = user.uid;
+                isAuthReady = true;
+                console.log("User signed in. UID:", userId);
+                initializeApp();
+            }
+        });
+
+    </script>
+</head>
+<body class="pb-[80px]">
+    
+    <!-- Video Player for Fullscreen View (Initially hidden) -->
+    <div id="fullscreen-video" class="full-screen-video hidden">
+        <iframe id="player-iframe-fullscreen" type="text/html" src="about:blank" frameborder="0" allow="autoplay; fullscreen" class="rounded-xl shadow-2xl"></iframe>
+        <button id="close-fullscreen-btn" class="absolute top-4 right-4 p-3 rounded-full bg-gray-900/70 text-white hover:bg-gray-800/90 transition" title="Close Fullscreen">
+            <i class="fas fa-times text-xl"></i>
+        </button>
+    </div>
+
+    <!-- Main Navigation Bar -->
+    <header class="sticky top-0 bg-[#0d0d0d] z-30 border-b border-gray-900/50 backdrop-blur-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
+            <div class="text-2xl font-bold tracking-tighter text-white">
+                <span class="text-green-400">4SP</span> Music
+            </div>
+            <nav class="flex space-x-4">
+                <button id="tab-home" class="tab-btn px-4 py-2 border-b-2 text-green-400 border-green-400 transition">
+                    <i class="fas fa-compass mr-1"></i> Discover
+                </button>
+                <button id="tab-library" class="tab-btn px-4 py-2 border-b-2 text-gray-400 border-transparent hover:text-green-300 transition">
+                    <i class="fas fa-heart mr-1"></i> Library
+                </button>
+                <button id="tab-playlists" class="tab-btn px-4 py-2 border-b-2 text-gray-400 border-transparent hover:text-green-300 transition">
+                    <i class="fas fa-list-music mr-1"></i> Playlists
+                </button>
+            </nav>
+            <div class="text-gray-500 text-sm">
+                <!-- User/Auth Status -->
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main id="main-content" class="min-h-[70vh]">
+        <!-- Content will be injected by JavaScript -->
+        <div id="app-loading-state" class="text-center mt-20 text-xl text-gray-400">
+            <i class="fas fa-spinner fa-spin mr-2"></i> Checking authentication and loading API key...
+        </div>
+    </main>
+    
+    <!-- Audio Player for Background Playback (Hidden) -->
+    <div id="player-iframe-background" style="position: absolute; width: 1px; height: 1px; left: -9999px;"></div>
+
+
+    <!-- Persistent Player Bar (Bottom) -->
+    <div id="player-bar" class="fixed bottom-0 left-0 w-full h-20 bg-gray-950/90 backdrop-blur-lg border-t border-gray-800 z-40 p-3 flex justify-between items-center transition-all duration-300 hidden cursor-pointer">
+        
+        <!-- Currently Playing Info (Clickable for Fullscreen) -->
+        <div id="currently-playing-info" class="flex-1 min-w-0" title="Click to view fullscreen">
+            <!-- Content injected by JS -->
+        </div>
+
+        <!-- Playback Controls -->
+        <div id="playback-controls" class="flex space-x-4 items-center flex-shrink-0 mr-4">
+            <button id="skip-back-btn" class="text-gray-400 hover:text-white transition disabled:opacity-30 disabled:pointer-events-none" title="Previous Track">
+                <i class="fas fa-backward text-xl"></i>
+            </button>
+            <button onclick="player.getPlayerState() === 1 ? player.pauseVideo() : player.playVideo()" class="p-3 rounded-full bg-green-600 text-white hover:bg-green-700 transition" title="Play/Pause">
+                <i class="fas fa-play text-lg"></i> <!-- Placeholder icon, will be toggled by JS if necessary -->
+            </button>
+            <button id="skip-next-btn" class="text-gray-400 hover:text-white transition disabled:opacity-30 disabled:pointer-events-none" title="Next Track">
+                <i class="fas fa-forward text-xl"></i>
+            </button>
+        </div>
+
+    </div>
+    
+    <!-- Floating Alert Message -->
+    <div id="alert-message" class="fixed bottom-24 right-4 p-3 rounded-lg shadow-xl text-white z-50 transition-opacity duration-300 opacity-0 pointer-events-none"></div>
+
+    <!-- Playlist Selection Modal -->
+    <div id="playlist-modal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center hidden" onclick="if(event.target.id === 'playlist-modal') hidePlaylistModal()">
+        <div class="bg-gray-900 p-6 rounded-xl shadow-2xl w-full max-w-sm">
+            <h3 id="modal-track-info" class="text-lg font-semibold mb-4 text-white">Add track to:</h3>
+            <div id="playlist-list" class="space-y-3 max-h-60 overflow-y-auto">
+                <!-- Playlists injected here -->
+            </div>
+            <button onclick="hidePlaylistModal()" class="w-full mt-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition">Close</button>
+        </div>
+    </div>
+    
+    <!-- Create Playlist Modal -->
+    <div id="create-playlist-modal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center hidden" onclick="if(event.target.id === 'create-playlist-modal') hideCreatePlaylistModal()">
+        <div class="bg-gray-900 p-6 rounded-xl shadow-2xl w-full max-w-sm">
+            <h3 class="text-lg font-semibold mb-4 text-white">Create New Playlist</h3>
+            <input type="text" id="new-playlist-name" placeholder="Playlist Name" class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg focus:ring-green-500 focus:border-green-500 mb-4">
+            <button onclick="createPlaylist()" class="w-full py-2 bg-green-600 rounded-lg hover:bg-green-700 transition font-medium">Create</button>
+            <button onclick="hideCreatePlaylistModal()" class="w-full mt-2 py-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition">Cancel</button>
+        </div>
+    </div>
+
+</body>
+</html>
