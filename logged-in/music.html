@@ -45,6 +45,68 @@
             width: 1px !important;
             height: 1px !important;
         }
+
+        /* Custom CSS for Hover Effect */
+        .card-thumbnail-container {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+            height: 0;
+            overflow: hidden;
+            border-radius: 0.75rem 0.75rem 0 0; /* Match rounded-xl of parent */
+        }
+        .card-thumbnail-container img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: filter 0.3s ease;
+        }
+        .card-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 1rem;
+            z-index: 10;
+        }
+        .card-thumbnail-container:hover .card-overlay {
+            opacity: 1;
+        }
+        .card-thumbnail-container:hover img {
+            filter: blur(5px);
+        }
+        /* Modal Backdrop */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 100;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #1f2937; /* gray-800 */
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            max-width: 90%;
+            width: 400px;
+        }
     </style>
 </head>
 <body>
@@ -68,6 +130,11 @@
             <button data-view="home" class="nav-tab py-2 px-4 text-lg font-medium border-b-2 border-red-600 text-red-500">Search Results</button>
             <button data-view="library" class="nav-tab py-2 px-4 text-lg font-medium border-b-2 border-transparent hover:border-gray-600 text-gray-400 ml-4">My Library</button>
         </div>
+        
+        <!-- Channel View Banner -->
+        <div id="channel-banner" class="bg-blue-900/50 p-3 rounded-lg mb-6 hidden">
+            <p id="channel-banner-text" class="text-blue-200 font-medium"></p>
+        </div>
 
         <!-- Dynamic Content View -->
         <section id="music-view" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
@@ -82,11 +149,10 @@
     <!-- Bottom Player Bar (Currently Playing) -->
     <footer id="bottom-player" class="bg-gray-900 border-t border-gray-800 flex items-center justify-between px-4 py-2">
         <!-- Currently Playing Info (Maximized Width) -->
-        <!-- Added min-w-0 to allow the flex container to shrink correctly on smaller screens when needed -->
         <div id="player-info" class="flex items-center space-x-4 flex-grow min-w-0"> 
             <!-- Thumbnail Placeholder -->
             <img id="current-thumbnail" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236B7280'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z'/%3E%3C/svg%3E" alt="Album Art" class="w-12 h-12 rounded-lg object-cover bg-gray-700">
-            <!-- Increased flexibility and removed fixed w-48 classes for title/artist -->
+            <!-- Title and Artist Containers -->
             <div class="flex-grow min-w-0 pr-4"> 
                 <div id="current-title" class="text-sm font-medium truncate">No song playing</div>
                 <div id="current-artist" class="text-xs text-gray-400 truncate"></div>
@@ -107,11 +173,30 @@
             </button>
         </div>
 
-        <!-- Add to Library/Playlist Button (Updated to Font Awesome Icon) -->
-        <button id="add-to-library-btn" class="p-2 ml-4 text-red-500 hover:text-red-400 transition duration-150 hidden">
-            <i class="fa-solid fa-bookmark fa-xl"></i>
+        <!-- Add to Library/Playlist Button (fa-book icon) -->
+        <button id="add-to-library-btn" class="p-2 ml-4 text-gray-400 hover:text-red-400 transition duration-150 hidden" title="Add to Library">
+            <i id="add-to-library-icon" class="fa-solid fa-book fa-xl"></i>
         </button>
     </footer>
+    
+    <!-- Custom Modal for Editing Song Names -->
+    <div id="edit-modal" class="modal-backdrop">
+        <div class="modal-content">
+            <h2 class="text-xl font-semibold mb-4 text-white">Edit Song Details</h2>
+            <div class="mb-4">
+                <label for="edit-title" class="block text-sm font-medium text-gray-400 mb-1">Title</label>
+                <input type="text" id="edit-title" class="w-full p-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:ring-red-500 focus:border-red-500">
+            </div>
+            <div class="mb-6">
+                <label for="edit-artist" class="block text-sm font-medium text-gray-400 mb-1">Artist</label>
+                <input type="text" id="edit-artist" class="w-full p-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:ring-red-500 focus:border-red-500">
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button id="modal-cancel-btn" class="py-2 px-4 bg-gray-600 hover:bg-gray-500 rounded-lg font-medium">Cancel</button>
+                <button id="modal-save-btn" class="py-2 px-4 bg-red-600 hover:bg-red-700 rounded-lg font-medium">Save Changes</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Firebase SDKs and Core Logic -->
     <script type="module">
@@ -135,7 +220,8 @@
         let currentPlaylist = [];
         let currentPlaylistIndex = -1;
         let isPlayingFromLibrary = false;
-        
+        let currentChannelTitle = null; // Tracks the channel if search was triggered by "View Channel"
+
         // Local Library Storage
         const LOCAL_STORAGE_KEY = 'musicflow_library';
         let userLibrary = loadLibrary();
@@ -153,13 +239,54 @@
             searchInput: document.getElementById('search-input'),
             searchButton: document.getElementById('search-button'),
             addToLibraryBtn: document.getElementById('add-to-library-btn'),
+            addToLibraryIcon: document.getElementById('add-to-library-icon'), // New: Targeting the icon
             navTabs: document.querySelectorAll('.nav-tab'),
+            channelBanner: document.getElementById('channel-banner'),
+            channelBannerText: document.getElementById('channel-banner-text'),
+            
+            // Edit Modal elements
+            editModal: document.getElementById('edit-modal'),
+            editTitleInput: document.getElementById('edit-title'),
+            editArtistInput: document.getElementById('edit-artist'),
+            modalSaveBtn: document.getElementById('modal-save-btn'),
+            modalCancelBtn: document.getElementById('modal-cancel-btn'),
         };
 
         // --- UTILITY FUNCTIONS ---
+        
+        /**
+         * Asynchronously filters text for explicit content using the Purgomalum API.
+         * @param {string} text - The text to filter.
+         * @returns {Promise<string>} The filtered text with explicit words replaced by asterisks.
+         */
+        async function filterExplicitText(text) {
+            if (!text) return '';
+            try {
+                // Implementing exponential backoff for Purgomalum API
+                for (let attempt = 0; attempt < 3; attempt++) {
+                    const url = `https://www.purgomalum.com/service/plain?text=${encodeURIComponent(text)}`;
+                    const response = await fetch(url);
+
+                    if (response.ok) {
+                        return await response.text();
+                    }
+                    if (response.status === 429 && attempt < 2) {
+                        // Too many requests, wait and retry
+                        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+                        continue;
+                    }
+                    console.warn(`Purgomalum filter failed (Status ${response.status}). Returning original text.`);
+                    return text;
+                }
+                return text;
+            } catch (e) {
+                // console.error("Error during Purgomalum API call:", e); // Suppress log for retries
+                return text;
+            }
+        }
+
         /**
          * Decodes HTML entities (like &amp; or &quot;) into their character equivalents.
-         * This ensures titles are displayed correctly (e.g., 'Connor Price & Nic D').
          * @param {string} text - The text containing HTML entities.
          * @returns {string} The decoded text.
          */
@@ -173,21 +300,18 @@
 
         async function fetchApiKey() {
             try {
-                // Fetching from 'secrets' collection, 'apis' document
                 const apiDocRef = doc(db, 'secrets', 'apis');
                 const docSnap = await getDoc(apiDocRef);
 
                 if (docSnap.exists() && docSnap.data().youtubeAPI) {
                     youtubeApiKey = docSnap.data().youtubeAPI;
-                    // Add more explicit console logging
-                    console.log("YouTube API Key successfully fetched from Firestore.", { apiKeyPrefix: youtubeApiKey.substring(0, 10) + '...' });
                     return true;
                 } else {
-                    console.error("Firebase Error: No 'youtubeAPI' field found in 'secrets/apis' document. Cannot initialize YouTube search.");
+                    console.error("Firebase Error: No 'youtubeAPI' field found in 'secrets/apis' document.");
                     return false;
                 }
             } catch (error) {
-                console.error("Firestore Error: Error fetching API key. Check Firestore rules/connection.", error);
+                console.error("Firestore Error: Error fetching API key.", error);
                 return false;
             }
         }
@@ -220,13 +344,12 @@
         }
 
         window.onYouTubeIframeAPIReady = function() {
-            // Player initialization is always hidden (Audio-only mode)
             ytPlayer = new YT.Player('youtube-player', {
                 height: '100%',
                 width: '100%',
                 videoId: '', 
                 playerVars: {
-                    'controls': 0, // No controls visible
+                    'controls': 0, 
                     'disablekb': 1,
                     'modestbranding': 1,
                     'rel': 0,
@@ -247,17 +370,15 @@
             ui.playPauseBtn.disabled = false;
             ui.skipBackBtn.disabled = false;
             ui.skipNextBtn.disabled = false;
-            console.log("YouTube Player is ready. Controls enabled.");
         }
 
         function onPlayerStateChange(event) {
             const state = event.data;
             
-            // Update UI based on state (Font Awesome Icons)
             if (state === YT.PlayerState.PLAYING) {
-                ui.playIcon.className = 'fa-solid fa-circle-pause fa-2xl'; // Pause icon
+                ui.playIcon.className = 'fa-solid fa-circle-pause fa-2xl'; 
             } else {
-                ui.playIcon.className = 'fa-solid fa-circle-play fa-2xl'; // Play icon
+                ui.playIcon.className = 'fa-solid fa-circle-play fa-2xl'; 
             }
             
             if (state === YT.PlayerState.ENDED) {
@@ -266,53 +387,43 @@
         }
 
         /**
-         * Search for YouTube videos/channels. Fixes 400 error by removing category filter when searching for channels.
+         * Search for YouTube videos/channels.
          */
         async function performSearch(query) {
             if (!youtubeApiKey || !query.trim()) {
-                console.error("Search Aborted: API key is missing or query is empty.");
                 ui.musicView.innerHTML = '<p class="col-span-full text-xl text-gray-400">Please enter a valid search query.</p>';
+                currentChannelTitle = null;
+                ui.channelBanner.classList.add('hidden');
                 return;
             }
 
             ui.musicView.innerHTML = '<p class="col-span-full text-xl text-gray-400">Searching YouTube for music...</p>';
             
-            // Constructing the URL
             const searchUrl = new URL('https://www.googleapis.com/youtube/v3/search');
             searchUrl.searchParams.set('part', 'snippet');
             searchUrl.searchParams.set('q', query);
             
-            // We search for both videos and channels
-            const searchType = 'video,channel'; 
-            searchUrl.searchParams.set('type', searchType);
+            // Search for both videos and channels
+            searchUrl.searchParams.set('type', 'video,channel'); 
             searchUrl.searchParams.set('maxResults', '20');
             searchUrl.searchParams.set('key', youtubeApiKey);
             
-            // Only add the Music category filter (ID 10) if we are NOT searching for channels, 
-            // as the API rejects category filters when 'channel' is included in 'type'.
-            if (!searchType.includes('channel')) {
-                searchUrl.searchParams.set('videoCategoryId', '10'); 
-                console.log("Search parameters: Filtering by Music Category (ID 10).");
+            // Update channel banner based on the context of the search
+            if (currentChannelTitle && query === currentChannelTitle) {
+                ui.channelBannerText.textContent = `Viewing videos for channel: ${currentChannelTitle}`;
+                ui.channelBanner.classList.remove('hidden');
             } else {
-                console.warn("Search parameters: Category filter skipped because 'channel' type is included. API requirement.");
+                currentChannelTitle = null;
+                ui.channelBanner.classList.add('hidden');
             }
 
             try {
-                console.log("Sending API request to:", searchUrl.toString());
                 const response = await fetch(searchUrl.toString());
                 
                 if (!response.ok) {
                     const errorData = await response.json();
-                    
-                    // Add more explicit console logging of the raw error
-                    console.error("YouTube API Bad Request Error Details:", errorData); 
-                    
                     let errorMessage = `Status ${response.status}. Message: ${errorData.error.message || 'Unknown error.'}`;
-                    if (response.status === 403) {
-                        errorMessage += " (Likely API Key is invalid or restricted incorrectly).";
-                    }
-                    
-                    ui.musicView.innerHTML = `<p class="col-span-full text-xl text-red-500">Search Failed (${errorMessage})</p>`;
+                    ui.musicView.innerHTML = `<p class-span-full text-xl text-red-500">Search Failed (${errorMessage})</p>`;
                     return;
                 }
                 
@@ -327,7 +438,7 @@
                     }));
                     renderSearchResults(data.items);
                 } else {
-                    ui.musicView.innerHTML = '<p class="col-span-full text-xl text-gray-400">No music videos or artists found for your query.</p>';
+                    ui.musicView.innerHTML = `<p class="col-span-full text-xl text-gray-400">No music videos or artists found for "${query}".</p>`;
                 }
             } catch (error) {
                 console.error("Network or Fetch Error during search:", error);
@@ -335,29 +446,41 @@
             }
         }
 
-        function renderSearchResults(items) {
+        async function renderSearchResults(items) {
             ui.musicView.innerHTML = ''; 
-            items.forEach((item) => {
+            
+            for (const item of items) {
                 const isVideo = item.id.kind === 'youtube#video';
                 const id = isVideo ? item.id.videoId : item.id.channelId;
                 
-                // Decode entities for display in search results
-                const title = decodeHtmlEntities(item.snippet.title);
-                const channelTitle = decodeHtmlEntities(item.snippet.channelTitle);
+                let title = decodeHtmlEntities(item.snippet.title);
+                let channelTitle = decodeHtmlEntities(item.snippet.channelTitle);
                 
+                // Content Filtering
+                title = await filterExplicitText(title);
+                channelTitle = await filterExplicitText(channelTitle);
+
                 const thumbnail = item.snippet.thumbnails.medium.url;
                 const videoIndex = currentPlaylist.findIndex(song => song.videoId === id);
 
                 const card = document.createElement('div');
-                card.className = 'bg-gray-900 rounded-xl overflow-hidden shadow-lg hover:shadow-red-500/50 transition duration-300 cursor-pointer flex flex-col';
+                card.className = 'bg-gray-900 rounded-xl shadow-lg hover:shadow-red-500/50 transition duration-300 flex flex-col';
                 card.dataset.id = id;
                 card.dataset.type = isVideo ? 'video' : 'artist';
                 
                 card.innerHTML = `
-                    <div class="relative">
-                        <img src="${thumbnail}" alt="${title}" class="w-full h-48 object-cover">
-                        ${isVideo ? `<span class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full">Audio Track</span>` : `<span class="absolute bottom-2 right-2 bg-red-600 text-white text-xs px-2 py-0.5 rounded-full">Artist</span>`}
+                    <div class="card-thumbnail-container cursor-pointer">
+                        <img src="${thumbnail}" alt="${title}">
+                        
+                        <!-- Hover Overlay -->
+                        <div class="card-overlay">
+                            <i class="fa-solid fa-play text-red-500 text-4xl mb-4"></i>
+                            <h3 class="font-bold text-lg mb-1 line-clamp-2">${title}</h3>
+                            <p class="text-sm text-gray-300 line-clamp-1">${channelTitle}</p>
+                            <span class="text-xs text-gray-400 mt-2">Type: ${isVideo ? 'Video' : 'Artist Channel'}</span>
+                        </div>
                     </div>
+                    
                     <div class="p-4 flex-grow">
                         <h3 class="font-medium text-lg mb-1 line-clamp-2">${title}</h3>
                         <p class="text-sm text-gray-400 line-clamp-1">${channelTitle}</p>
@@ -371,29 +494,64 @@
                 `;
                 
                 if (isVideo) {
+                    // Play event listener for both overlay and button
+                    card.querySelector('.card-thumbnail-container').addEventListener('click', () => {
+                        startPlaylist(currentPlaylist, videoIndex, false);
+                    });
                     card.querySelector('.play-video-btn').addEventListener('click', (e) => {
                         e.stopPropagation(); 
-                        const index = parseInt(e.currentTarget.dataset.index);
-                        startPlaylist(currentPlaylist, index, false);
-                    });
-                }
-                
-                card.addEventListener('click', () => {
-                    if (isVideo) {
                         startPlaylist(currentPlaylist, videoIndex, false);
-                    } else {
+                    });
+                } else {
+                    // Artist click listener
+                    card.querySelector('.view-artist-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        currentChannelTitle = channelTitle; // Set current channel for banner
                         ui.searchInput.value = channelTitle;
                         performSearch(channelTitle);
-                    }
-                });
+                    });
+                    // Clicking on the channel card itself performs the search
+                     card.querySelector('.card-thumbnail-container').addEventListener('click', () => {
+                        currentChannelTitle = channelTitle;
+                        ui.searchInput.value = channelTitle;
+                        performSearch(channelTitle);
+                    });
+                }
 
                 ui.musicView.appendChild(card);
-            });
+            }
         }
 
         // --- PLAYER CONTROLS & LOGIC ---
 
-        function startPlaylist(playlist, index, fromLibrary = false) {
+        function isSongInLibrary(videoId) {
+            return userLibrary.some(song => song.videoId === videoId);
+        }
+
+        function updateLibraryIcon(videoId) {
+            const btn = ui.addToLibraryBtn;
+            const icon = ui.addToLibraryIcon;
+
+            if (!videoId) {
+                btn.classList.add('hidden');
+                return;
+            }
+            btn.classList.remove('hidden');
+
+            if (isSongInLibrary(videoId)) {
+                icon.classList.remove('text-gray-400');
+                icon.classList.add('text-red-500');
+                btn.title = "Song is in your library (Click to edit)";
+                btn.dataset.inLibrary = 'true';
+            } else {
+                icon.classList.remove('text-red-500');
+                icon.classList.add('text-gray-400');
+                btn.title = "Add to Library";
+                btn.dataset.inLibrary = 'false';
+            }
+        }
+
+        async function startPlaylist(playlist, index, fromLibrary = false) {
             if (!isPlayerReady || playlist.length === 0 || index < 0 || index >= playlist.length) return;
             
             currentPlaylist = playlist;
@@ -404,18 +562,26 @@
             
             ytPlayer.loadVideoById(currentSong.videoId);
             
-            // Ensures player is visible on the bottom bar
-            // Apply decoding when setting the current song info
-            ui.currentTitle.textContent = decodeHtmlEntities(currentSong.title);
-            ui.currentArtist.textContent = decodeHtmlEntities(currentSong.artist);
+            // Filter and Decode titles before display
+            const decodedTitle = decodeHtmlEntities(currentSong.title);
+            const decodedArtist = decodeHtmlEntities(currentSong.artist);
+            
+            const filteredTitle = await filterExplicitText(decodedTitle);
+            const filteredArtist = await filterExplicitText(decodedArtist);
+
+            // Update UI
+            ui.currentTitle.textContent = filteredTitle;
+            ui.currentArtist.textContent = filteredArtist;
             ui.currentThumbnail.src = currentSong.thumbnail;
             ui.bottomPlayer.classList.add('player-visible');
             
+            // Set data attributes for library management
             ui.addToLibraryBtn.dataset.videoId = currentSong.videoId;
-            ui.addToLibraryBtn.dataset.title = currentSong.title;
-            ui.addToLibraryBtn.dataset.artist = currentSong.artist;
+            ui.addToLibraryBtn.dataset.title = currentSong.title; // Use unfiltered original for saving
+            ui.addToLibraryBtn.dataset.artist = currentSong.artist; // Use unfiltered original for saving
             ui.addToLibraryBtn.dataset.thumbnail = currentSong.thumbnail;
-            ui.addToLibraryBtn.classList.remove('hidden');
+            
+            updateLibraryIcon(currentSong.videoId);
         }
 
         function togglePlayPause() {
@@ -437,6 +603,7 @@
                 ytPlayer.stopVideo();
                 ui.currentTitle.textContent = "Playlist finished";
                 ui.currentArtist.textContent = "";
+                updateLibraryIcon(null);
             }
         }
 
@@ -468,16 +635,16 @@
         
         function addToLibrary(songData) {
             const videoId = songData.videoId;
-            if (userLibrary.find(s => s.videoId === videoId)) {
-                // Using custom UI message instead of alert
+            if (isSongInLibrary(videoId)) {
+                // Not using alert: console log serves as a non-breaking notification
                 console.log(`"${songData.title}" is already in your library!`);
-                // In a real app, display a modal or toast notification here
                 return;
             }
 
             const newSong = {
                 videoId: videoId,
-                title: songData.title,
+                // Save original, unfiltered titles for editing/saving
+                title: songData.title, 
                 artist: songData.artist,
                 thumbnail: songData.thumbnail,
                 added: new Date().toISOString()
@@ -487,78 +654,145 @@
             saveLibrary();
             console.log(`"${newSong.title}" added to your library!`);
             
+            // Update UI for current song and library view
+            updateLibraryIcon(videoId);
             if (document.querySelector('.nav-tab[data-view="library"]').classList.contains('border-red-600')) {
                 renderLibrary();
             }
         }
 
-        function renderLibrary() {
+        function showEditModal(index) {
+            const song = userLibrary[index];
+            if (!song) return;
+
+            // Populate modal with current values (using original stored values)
+            ui.editTitleInput.value = song.title;
+            ui.editArtistInput.value = song.artist;
+            ui.editModal.dataset.editIndex = index;
+
+            ui.editModal.style.display = 'flex';
+        }
+
+        function saveNameEdit() {
+            const index = parseInt(ui.editModal.dataset.editIndex);
+            if (isNaN(index) || index < 0 || index >= userLibrary.length) return;
+
+            const newTitle = ui.editTitleInput.value.trim();
+            const newArtist = ui.editArtistInput.value.trim();
+
+            if (newTitle && newArtist) {
+                userLibrary[index].title = newTitle;
+                userLibrary[index].artist = newArtist;
+                saveLibrary();
+                hideEditModal();
+                renderLibrary();
+
+                // If currently playing, update player display
+                if (isPlayingFromLibrary && currentPlaylistIndex === index) {
+                    startPlaylist(userLibrary, index, true);
+                }
+            } else {
+                console.error("Title and Artist cannot be empty.");
+            }
+        }
+
+        function hideEditModal() {
+            ui.editModal.style.display = 'none';
+            ui.editModal.removeAttribute('data-edit-index');
+        }
+
+        async function renderLibrary() {
             ui.musicView.innerHTML = '';
+            ui.channelBanner.classList.add('hidden'); // Hide banner in library view
             
             if (userLibrary.length === 0) {
                 ui.musicView.innerHTML = '<p class="col-span-full text-xl text-gray-500">Your library is empty. Add songs from search results!</p>';
                 return;
             }
 
-            userLibrary.forEach((song, index) => {
+            for (let index = 0; index < userLibrary.length; index++) {
+                const song = userLibrary[index];
                 const card = document.createElement('div');
-                card.className = 'bg-gray-800 rounded-xl overflow-hidden shadow-lg hover:shadow-red-500/50 transition duration-300 flex flex-col';
+                card.className = 'bg-gray-800 rounded-xl shadow-lg hover:shadow-red-500/50 transition duration-300 flex flex-col';
                 
-                const decodedTitle = decodeHtmlEntities(song.title);
-                const decodedArtist = decodeHtmlEntities(song.artist);
+                // Content Filtering for display
+                const displayTitle = await filterExplicitText(decodeHtmlEntities(song.title));
+                const displayArtist = await filterExplicitText(decodeHtmlEntities(song.artist));
 
                 card.innerHTML = `
-                    <div class="relative cursor-pointer" onclick="window.startPlaylist(window.userLibrary, ${index}, true)">
-                        <img src="${song.thumbnail}" alt="${decodedTitle}" class="w-full h-48 object-cover">
-                        <span class="absolute bottom-2 left-2 bg-red-600/90 text-white text-xs px-2 py-0.5 rounded-full">Library Track</span>
+                    <div class="card-thumbnail-container cursor-pointer">
+                        <img src="${song.thumbnail}" alt="${displayTitle}">
+                        
+                        <!-- Hover Overlay -->
+                        <div class="card-overlay">
+                            <i class="fa-solid fa-play text-red-500 text-4xl mb-4"></i>
+                            <h3 class="font-bold text-lg mb-1 line-clamp-2">${displayTitle}</h3>
+                            <p class="text-sm text-gray-300 line-clamp-1">${displayArtist}</p>
+                            <span class="text-xs text-gray-400 mt-2">Source: Library</span>
+                        </div>
                     </div>
+
                     <div class="p-4 flex-grow">
-                        <h3 class="font-medium text-lg mb-1 line-clamp-2">${decodedTitle}</h3>
-                        <p class="text-sm text-gray-400 line-clamp-1">${decodedArtist}</p>
+                        <h3 class="font-medium text-lg mb-1 line-clamp-2">${displayTitle}</h3>
+                        <p class="text-sm text-gray-400 line-clamp-1">${displayArtist}</p>
                     </div>
                     <div class="p-4 pt-0 flex space-x-2">
-                        <button class="play-library-btn w-full p-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold" 
-                            onclick="window.startPlaylist(window.userLibrary, ${index}, true)">Play</button>
-                        <button class="remove-library-btn p-2 bg-gray-600 hover:bg-gray-500 rounded-lg text-sm font-semibold"
-                            data-index="${index}" title="Remove from Library">
-                            <i class="fa-solid fa-trash-can fa-lg"></i>
+                        <button class="play-library-btn flex-grow p-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold">Play</button>
+                        <button class="edit-library-btn p-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold" title="Edit Names">
+                            <i class="fa-solid fa-pencil"></i>
+                        </button>
+                        <button class="remove-library-btn p-2 bg-gray-600 hover:bg-gray-500 rounded-lg text-sm font-semibold" title="Remove from Library">
+                            <i class="fa-solid fa-trash-can"></i>
                         </button>
                     </div>
                 `;
                 
+                // Play
+                card.querySelector('.card-thumbnail-container').addEventListener('click', () => {
+                    startPlaylist(userLibrary, index, true);
+                });
+                card.querySelector('.play-library-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    startPlaylist(userLibrary, index, true);
+                });
+                
+                // Edit
+                card.querySelector('.edit-library-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showEditModal(index);
+                });
+
+                // Remove (using custom confirm)
                 card.querySelector('.remove-library-btn').addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const songIndex = parseInt(e.currentTarget.dataset.index);
                     // Using custom UI logic instead of confirm()
-                    if (window.confirm(`Are you sure you want to remove "${userLibrary[songIndex].title}" from your library?`)) {
-                        userLibrary.splice(songIndex, 1);
+                    if (window.confirm(`Are you sure you want to remove "${song.title}" from your library?`)) {
+                        userLibrary.splice(index, 1);
                         saveLibrary();
                         renderLibrary(); 
                     }
                 });
 
                 ui.musicView.appendChild(card);
-            });
+            };
         }
         
         function promptAddUrl() {
-            // Using a simple prompt for now, recommend replacing with a proper modal in a real application
-            const url = window.prompt("Enter a YouTube Video URL (e.g., for a specific song or playlist):");
+            const url = window.prompt("Enter a YouTube Video URL:");
             if (url) {
                 const videoIdMatch = url.match(/(?:\?v=|\/embed\/|\/v\/|youtu\.be\/|\/shorts\/)([a-zA-Z0-9_-]{11})[^#&]*/);
                 if (videoIdMatch && videoIdMatch[1]) {
                     const videoId = videoIdMatch[1];
+                    // Using placeholder data, you could implement a fetch here to get real metadata
                     const songData = {
                         videoId: videoId,
-                        title: `Custom URL: ${videoId}`, 
+                        title: `Manual Track: ${videoId}`, 
                         artist: 'Manual Entry',
                         thumbnail: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` 
                     };
                     addToLibrary(songData);
                 } else {
-                    // Using custom UI message instead of alert
                     console.error("Invalid YouTube URL. Please ensure it contains a valid video ID.");
-                    // In a real app, display a modal or toast notification here
                 }
             }
         }
@@ -588,6 +822,15 @@
             ui.addToLibraryBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const btn = e.currentTarget;
+                if (btn.dataset.inLibrary === 'true') {
+                    // Open edit modal if song is already in library (Library is the source of truth)
+                    const index = userLibrary.findIndex(song => song.videoId === btn.dataset.videoId);
+                    if (index !== -1) {
+                         showEditModal(index);
+                    }
+                    return;
+                }
+                
                 const songData = {
                     videoId: btn.dataset.videoId,
                     title: btn.dataset.title,
@@ -604,6 +847,16 @@
                     switchView(e.currentTarget.dataset.view);
                 });
             });
+            
+            // Modal Listeners
+            ui.modalSaveBtn.addEventListener('click', saveNameEdit);
+            ui.modalCancelBtn.addEventListener('click', hideEditModal);
+            ui.editModal.addEventListener('click', (e) => {
+                // Close if clicking outside the content
+                if (e.target === ui.editModal) {
+                    hideEditModal();
+                }
+            });
         }
         
         function switchView(view) {
@@ -617,25 +870,23 @@
 
             if (view === 'library') {
                 renderLibrary();
-                isPlayingFromLibrary = true;
             } else {
+                ui.channelBanner.classList.add('hidden'); // Reset banner
                 if (currentPlaylist.length === 0) {
                      ui.musicView.innerHTML = '<p class="col-span-full text-gray-500">Enter a query above and click "Search" to find music videos/artists.</p>';
                 } else {
-                    // Re-render search results using cached playlist data
+                    // Re-render search results
                     renderSearchResults(currentPlaylist.map(song => ({
                         id: { kind: 'youtube#video', videoId: song.videoId },
                         snippet: { title: song.title, channelTitle: song.artist, thumbnails: { medium: { url: song.thumbnail } } }
                     })));
                 }
-                isPlayingFromLibrary = false;
             }
         }
 
         // Expose necessary functions/data globally
         window.startPlaylist = startPlaylist;
         window.userLibrary = userLibrary;
-        // Expose prompt function for the HTML button
         window.promptAddUrl = promptAddUrl; 
 
         // Helper function for custom confirmation modal (replaces window.confirm)
