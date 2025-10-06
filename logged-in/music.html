@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - YT-MUSIC</title>
+    <title>MusicFlow - Audio Player Platform</title>
 
     <!-- Load Geist Font, Font Awesome 6.5.2, and TailwindCSS -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -81,13 +81,15 @@
 
     <!-- Bottom Player Bar (Currently Playing) -->
     <footer id="bottom-player" class="bg-gray-900 border-t border-gray-800 flex items-center justify-between px-4 py-2">
-        <!-- Currently Playing Info (Removed fullscreen click handler) -->
-        <div id="player-info" class="flex items-center space-x-4 flex-grow">
+        <!-- Currently Playing Info (Maximized Width) -->
+        <!-- Added min-w-0 to allow the flex container to shrink correctly on smaller screens when needed -->
+        <div id="player-info" class="flex items-center space-x-4 flex-grow min-w-0"> 
             <!-- Thumbnail Placeholder -->
             <img id="current-thumbnail" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236B7280'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z'/%3E%3C/svg%3E" alt="Album Art" class="w-12 h-12 rounded-lg object-cover bg-gray-700">
-            <div>
-                <div id="current-title" class="text-sm font-medium truncate w-48">No song playing</div>
-                <div id="current-artist" class="text-xs text-gray-400 truncate w-48"></div>
+            <!-- Increased flexibility and removed fixed w-48 classes for title/artist -->
+            <div class="flex-grow min-w-0 pr-4"> 
+                <div id="current-title" class="text-sm font-medium truncate">No song playing</div>
+                <div id="current-artist" class="text-xs text-gray-400 truncate"></div>
             </div>
         </div>
 
@@ -153,6 +155,19 @@
             addToLibraryBtn: document.getElementById('add-to-library-btn'),
             navTabs: document.querySelectorAll('.nav-tab'),
         };
+
+        // --- UTILITY FUNCTIONS ---
+        /**
+         * Decodes HTML entities (like &amp; or &quot;) into their character equivalents.
+         * This ensures titles are displayed correctly (e.g., 'Connor Price & Nic D').
+         * @param {string} text - The text containing HTML entities.
+         * @returns {string} The decoded text.
+         */
+        function decodeHtmlEntities(text) {
+            const temp = document.createElement('textarea');
+            temp.innerHTML = text;
+            return temp.value;
+        }
 
         // --- FIREBASE AND AUTHENTICATION ---
 
@@ -325,8 +340,11 @@
             items.forEach((item) => {
                 const isVideo = item.id.kind === 'youtube#video';
                 const id = isVideo ? item.id.videoId : item.id.channelId;
-                const title = item.snippet.title;
-                const channelTitle = item.snippet.channelTitle;
+                
+                // Decode entities for display in search results
+                const title = decodeHtmlEntities(item.snippet.title);
+                const channelTitle = decodeHtmlEntities(item.snippet.channelTitle);
+                
                 const thumbnail = item.snippet.thumbnails.medium.url;
                 const videoIndex = currentPlaylist.findIndex(song => song.videoId === id);
 
@@ -387,8 +405,9 @@
             ytPlayer.loadVideoById(currentSong.videoId);
             
             // Ensures player is visible on the bottom bar
-            ui.currentTitle.textContent = currentSong.title;
-            ui.currentArtist.textContent = currentSong.artist;
+            // Apply decoding when setting the current song info
+            ui.currentTitle.textContent = decodeHtmlEntities(currentSong.title);
+            ui.currentArtist.textContent = decodeHtmlEntities(currentSong.artist);
             ui.currentThumbnail.src = currentSong.thumbnail;
             ui.bottomPlayer.classList.add('player-visible');
             
@@ -485,14 +504,17 @@
                 const card = document.createElement('div');
                 card.className = 'bg-gray-800 rounded-xl overflow-hidden shadow-lg hover:shadow-red-500/50 transition duration-300 flex flex-col';
                 
+                const decodedTitle = decodeHtmlEntities(song.title);
+                const decodedArtist = decodeHtmlEntities(song.artist);
+
                 card.innerHTML = `
                     <div class="relative cursor-pointer" onclick="window.startPlaylist(window.userLibrary, ${index}, true)">
-                        <img src="${song.thumbnail}" alt="${song.title}" class="w-full h-48 object-cover">
+                        <img src="${song.thumbnail}" alt="${decodedTitle}" class="w-full h-48 object-cover">
                         <span class="absolute bottom-2 left-2 bg-red-600/90 text-white text-xs px-2 py-0.5 rounded-full">Library Track</span>
                     </div>
                     <div class="p-4 flex-grow">
-                        <h3 class="font-medium text-lg mb-1 line-clamp-2">${song.title}</h3>
-                        <p class="text-sm text-gray-400 line-clamp-1">${song.artist}</p>
+                        <h3 class="font-medium text-lg mb-1 line-clamp-2">${decodedTitle}</h3>
+                        <p class="text-sm text-gray-400 line-clamp-1">${decodedArtist}</p>
                     </div>
                     <div class="p-4 pt-0 flex space-x-2">
                         <button class="play-library-btn w-full p-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold" 
