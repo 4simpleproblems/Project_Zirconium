@@ -72,8 +72,8 @@
         /* --- Styles for Game-Inspired Music Cards --- */
         #music-view {
             display: grid;
-            /* FIX: Reduced minimum size to 180px to make cards smaller */
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); 
+            /* FIX: Reduced minimum size to 140px to fit 6 cards in a row on large screens */
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); 
             gap: 25px;
             padding-bottom: 20px;
         }
@@ -178,6 +178,56 @@
         .music-item .favorite-btn i {
             font-size: 1.1em;
         }
+        
+        /* New Styles for Channel Cards (Circular Profile Pictures) */
+        .music-item.channel-item {
+            aspect-ratio: 1 / 1; /* Make channels square for the circular image to work well */
+            background-color: transparent; /* Remove dark background for a cleaner circle look */
+            box-shadow: none; /* Remove box shadow */
+        }
+        .music-item.channel-item img.game-cover {
+            border-radius: 50% !important; /* Make the image circular */
+            transition: opacity 0.4s ease-in-out;
+            box-shadow: 0 0 10px rgba(220, 38, 38, 0.5); /* Add a subtle glow for channels */
+        }
+        /* Override hover effect for channel images */
+        .music-item.channel-item:hover {
+            transform: scale(1.05);
+            box-shadow: none; /* No card shadow on hover */
+        }
+        .music-item.channel-item:hover .game-cover {
+            transform: none; /* No zoom on the circle image */
+            opacity: 0.9;
+        }
+        /* Override overlay for channels to be more subtle and centered */
+        .music-item.channel-item .card-overlay {
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 5px; 
+            text-align: center;
+            opacity: 0;
+            transform: none; /* No initial transform */
+            transition: opacity 0.3s ease;
+            border-radius: 50%; /* Make the overlay circular */
+        }
+        .music-item.channel-item:hover .card-overlay {
+            opacity: 1;
+        }
+        .music-item.channel-item .game-title {
+            font-size: 0.9em;
+            margin: 0;
+            line-height: 1.2;
+        }
+        .music-item.channel-item .text-sm {
+            display: none; /* Hide the channel title redundantly in the overlay */
+        }
+        .music-item.channel-item .card-buttons {
+            margin-top: 5px;
+        }
+
 
         /* Ensure play/pause button is perfectly circular */
         #play-pause {
@@ -568,13 +618,14 @@
                 const videoIndex = videoPlaylistForIndexing.findIndex(song => song.videoId === id); 
 
                 const card = document.createElement('div');
-                card.className = 'music-item'; // New class
+                card.className = 'music-item'; // Base class
                 card.dataset.id = id;
                 card.dataset.type = isVideo ? 'video' : 'artist';
                 
                 let buttonsHtml = '';
                 let titleClickHandler = null;
                 let playButtonHandler = null;
+                let cardInnerHtml = '';
 
                 if (isVideo) {
                     const isInLibrary = isSongInLibrary(id);
@@ -591,16 +642,31 @@
                     `;
                     titleClickHandler = () => startPlaylist(videoPlaylistForIndexing, videoIndex, false);
                     playButtonHandler = (e) => { e.stopPropagation(); startPlaylist(videoPlaylistForIndexing, videoIndex, false); };
+                    
+                    // Video Card Structure
+                    cardInnerHtml = `
+                        <img src="${thumbnail}" alt="${title}" class="game-cover">
+                        
+                        <div class="card-overlay">
+                            <h3 class="game-title line-clamp-2">${title}</h3>
+                            <p class="text-sm text-gray-400 line-clamp-1">${channelTitle}</p>
+                            ${buttonsHtml}
+                        </div>
+                    `;
+
 
                 } else {
-                    // Only view channel button
+                    // Channel Logic: Add channel-item class and set up handlers
+                    card.classList.add('channel-item');
+                    
                     buttonsHtml = `
-                        <div class="card-buttons">
-                            <button class="card-play-btn text-sm font-semibold" style="background-color: rgba(107, 114, 128, 0.9);">
-                                <i class="fa-solid fa-eye mr-1"></i> VIEW CHANNEL
+                        <div class="card-buttons" style="justify-content: center;">
+                            <button class="card-play-btn text-xs font-semibold" style="background-color: rgba(107, 114, 128, 0.9); width: auto; padding: 0 10px;">
+                                <i class="fa-solid fa-eye mr-1"></i> VIEW VIDEOS
                             </button>
                         </div>
                     `;
+                    
                     const artistClickHandler = () => {
                         currentChannelTitle = channelTitle;
                         ui.searchInput.value = channelTitle;
@@ -608,18 +674,20 @@
                     };
                     titleClickHandler = artistClickHandler;
                     playButtonHandler = (e) => { e.stopPropagation(); artistClickHandler(); };
+                    
+                    // Channel Card Structure (Circular Icon)
+                    cardInnerHtml = `
+                        <img src="${thumbnail}" alt="${channelTitle} Channel Icon" class="game-cover">
+                        
+                        <div class="card-overlay">
+                            <h3 class="game-title line-clamp-2">${channelTitle}</h3>
+                            ${buttonsHtml}
+                        </div>
+                    `;
                 }
                 
-                // Card structure now includes the overlay
-                card.innerHTML = `
-                    <img src="${thumbnail}" alt="${title}" class="game-cover">
-                    
-                    <div class="card-overlay">
-                        <h3 class="game-title line-clamp-2">${title}</h3>
-                        <p class="text-sm text-gray-400 line-clamp-1">${channelTitle}</p>
-                        ${buttonsHtml}
-                    </div>
-                `;
+                // Assign the generated HTML
+                card.innerHTML = cardInnerHtml;
                 
                 // Attach click listener for the main card area
                 card.addEventListener('click', (e) => {
