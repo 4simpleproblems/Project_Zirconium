@@ -5,15 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MusicFlow - Audio Player Platform</title>
 
-    <!-- Load Geist Font, Font Awesome 6.5.2, and TailwindCSS -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLMD/CDh/f7T/y0ZgR70nQF/uJALzK3A5L3eN7/M7h6g2Gz1TqP+oV+6FvVz/yT/" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="../navigation.js"></script>
 
     <style>
+        /* Adjust Geist font-weight for thin/light look */
         body {
             font-family: 'Geist', sans-serif;
             background-color: #000000;
@@ -23,7 +23,15 @@
             display: flex;
             flex-direction: column;
             padding-bottom: 72px; 
+            font-weight: 300; /* Defaulting to light weight */
         }
+        h1, h2, h3 {
+            font-weight: 400; /* Slightly heavier for headings */
+        }
+        .font-semibold {
+            font-weight: 500;
+        }
+
         #bottom-player {
             position: fixed;
             bottom: 0;
@@ -70,68 +78,148 @@
             max-width: 90%;
             width: 400px;
         }
+
+        /* Custom Card Styles for Image Background Overlay */
+        .music-card {
+            position: relative;
+            background-color: #111827; /* Near-black (gray-900) for general card tone */
+            border-radius: 0.75rem;
+            overflow: hidden;
+            aspect-ratio: 16 / 9; /* Ensure a consistent, video-like aspect ratio */
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            cursor: pointer;
+            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+        }
+
+        .music-card:hover {
+            transform: scale(1.03);
+            box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.5), 0 4px 6px -2px rgba(239, 68, 68, 0.2); /* Red hover shadow */
+        }
+        
+        .card-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            transition: transform 0.3s ease-in-out;
+            z-index: 1;
+        }
+
+        .card-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.5) 40%, rgba(0, 0, 0, 0.2) 60%, rgba(0, 0, 0, 0.1) 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 1rem;
+            z-index: 2;
+        }
+
+        .card-details {
+            display: flex;
+            flex-direction: column;
+            align-self: flex-start; /* Title and artist at the top */
+        }
+
+        .card-actions {
+            opacity: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: opacity 0.3s ease-in-out;
+            align-self: flex-end; /* Buttons at the bottom, revealed on hover */
+        }
+
+        .music-card:hover .card-actions {
+            opacity: 1;
+        }
+        
+        /* Library View Card Adjustments (Slightly taller to fit buttons) */
+        .library-card {
+            aspect-ratio: unset;
+            height: 300px; /* Fixed height for better button placement */
+        }
+
+        .library-card .card-actions {
+            opacity: 1; /* Always show buttons in library view */
+            margin-top: auto;
+            align-self: stretch;
+        }
+
+        .library-card .card-overlay {
+            justify-content: flex-start; /* Details at the top */
+        }
+
+        /* Adjustments for the player's play/pause button to be a proper circle */
+        #play-pause {
+            background-color: #2b2b2b; /* Darker tone for the circle button */
+            border: 2px solid #505050; 
+            transition: background-color 0.15s, border-color 0.15s;
+        }
+        #play-pause:hover {
+            background-color: #3f3f3f;
+            border-color: #707070;
+        }
+        
     </style>
 </head>
 <body>
 
-    <!-- Main Content Area -->
     <main id="main-content" class="flex-grow p-4 md:p-8 pt-12">
         <h1 class="text-4xl font-semibold mb-6 tracking-tighter">Discover Music</h1>
 
-        <!-- Search Bar -->
         <div class="mb-8">
             <input type="text" id="search-input" placeholder="Search artists or songs..."
-                   class="w-full p-3 rounded-lg bg-gray-900 border border-gray-700 focus:ring-red-500 focus:border-red-500 text-lg">
+                   class="w-full p-3 rounded-lg bg-gray-900 border border-gray-700 focus:ring-red-500 focus:border-red-500 text-lg font-light">
             <div class="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 mt-2">
                 <button id="search-button" class="flex-grow p-3 bg-red-600 hover:bg-red-700 rounded-lg font-medium">Search YouTube Videos/Artists</button>
                 <button id="add-url-button" class="flex-grow md:flex-grow-0 p-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium" onclick="promptAddUrl()">Add URL to Library</button>
             </div>
         </div>
 
-        <!-- Navigation Tabs (Home, Library) -->
         <div class="flex border-b border-gray-800 mb-6">
-            <button data-view="home" class="nav-tab py-2 px-4 text-lg font-medium border-b-2 border-red-600 text-red-500">Search Results</button>
-            <button data-view="library" class="nav-tab py-2 px-4 text-lg font-medium border-b-2 border-transparent hover:border-gray-600 text-gray-400 ml-4">My Library</button>
+            <button data-view="home" class="nav-tab py-2 px-4 text-lg font-light border-b-2 border-red-600 text-red-500">Search Results</button>
+            <button data-view="library" class="nav-tab py-2 px-4 text-lg font-light border-b-2 border-transparent hover:border-gray-600 text-gray-400 ml-4">My Library</button>
         </div>
         
-        <!-- Channel View Banner with Go Back Button -->
         <div id="channel-banner" class="bg-gray-800/70 p-3 rounded-lg mb-6 hidden items-center justify-between">
-            <p id="channel-banner-text" class="text-gray-200 font-medium"></p>
-            <button id="go-back-btn" class="py-1 px-3 text-xs bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300 font-medium">
+            <p id="channel-banner-text" class="text-gray-200 font-light"></p>
+            <button id="go-back-btn" class="py-1 px-3 text-xs bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300 font-light">
                 <i class="fa-solid fa-arrow-left mr-1"></i> Go Back
             </button>
         </div>
 
-        <!-- Dynamic Content View -->
         <section id="music-view" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-            <p id="initial-message" class="col-span-full text-gray-500">Securely fetching API key and checking authentication...</p>
+            <p id="initial-message" class="col-span-full text-gray-500 font-light">Securely fetching API key and checking authentication...</p>
         </section>
         
     </main>
 
-    <!-- Hidden Player Container (Audio-Only) -->
     <div id="youtube-player"></div>
 
-    <!-- Bottom Player Bar (Currently Playing) -->
-    <footer id="bottom-player" class="border-t border-gray-800 flex items-center justify-between px-4 py-2">
-        <!-- Currently Playing Info (Maximized Width) -->
+    <footer id="bottom-player" class="border-t border-gray-900 flex items-center justify-between px-4 py-2 bg-black/70 backdrop-blur-md">
         <div id="player-info" class="flex items-center space-x-4 flex-grow min-w-0"> 
-            <!-- Thumbnail Placeholder: Adaptive width/height -->
             <img id="current-thumbnail" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236B7280'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z'/%3E%3C/svg%3E" alt="Album Art" class="w-12 h-12 rounded-lg object-cover bg-gray-700 flex-shrink-0">
-            <!-- Title and Artist Containers -->
             <div class="flex-grow min-w-0 pr-4"> 
                 <div id="current-title" class="text-sm font-medium truncate">No song playing</div>
-                <div id="current-artist" class="text-xs text-gray-400 truncate"></div>
+                <div id="current-artist" class="text-xs text-gray-400 font-light truncate"></div>
             </div>
         </div>
 
-        <!-- Controls (Updated to Font Awesome Icons) -->
         <div class="flex items-center space-x-6">
             <button id="skip-back" class="text-gray-400 hover:text-white transition duration-150 disabled:opacity-50" disabled>
                 <i class="fa-solid fa-backward-step fa-xl"></i>
             </button>
-            <button id="play-pause" class="text-white hover:text-red-500 transition duration-150 p-2 rounded-full bg-gray-800 disabled:opacity-50" disabled>
-                <!-- Play/Pause icon is dynamically updated in JS -->
+            <button id="play-pause" class="text-white hover:text-red-500 transition duration-150 w-12 h-12 flex items-center justify-center rounded-full disabled:opacity-50" disabled>
                 <i id="play-icon" class="fa-solid fa-circle-play fa-2xl"></i> 
             </button>
             <button id="skip-next" class="text-gray-400 hover:text-white transition duration-150 disabled:opacity-50" disabled>
@@ -139,23 +227,21 @@
             </button>
         </div>
 
-        <!-- Add/Remove from Library Button (fa-book icon) -->
         <button id="add-to-library-btn" class="p-2 ml-4 text-gray-400 hover:text-red-400 transition duration-150 hidden" title="Add to Library">
-            <i id="add-to-library-icon" class="fa-solid fa-book fa-xl"></i>
+            <i id="add-to-library-icon" class="fa-solid fa-book-bookmark fa-xl"></i>
         </button>
     </footer>
     
-    <!-- Custom Modal for Editing Song Names -->
     <div id="edit-modal" class="modal-backdrop">
         <div class="modal-content">
             <h2 class="text-xl font-semibold mb-4 text-white">Edit Song Details</h2>
             <div class="mb-4">
-                <label for="edit-title" class="block text-sm font-medium text-gray-400 mb-1">Title</label>
-                <input type="text" id="edit-title" class="w-full p-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:ring-red-500 focus:border-red-500">
+                <label for="edit-title" class="block text-sm font-light text-gray-400 mb-1">Title</label>
+                <input type="text" id="edit-title" class="w-full p-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:ring-red-500 focus:border-red-500 font-light">
             </div>
             <div class="mb-6">
-                <label for="edit-artist" class="block text-sm font-medium text-gray-400 mb-1">Artist</label>
-                <input type="text" id="edit-artist" class="w-full p-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:ring-red-500 focus:border-red-500">
+                <label for="edit-artist" class="block text-sm font-light text-gray-400 mb-1">Artist</label>
+                <input type="text" id="edit-artist" class="w-full p-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:ring-red-500 focus:border-red-500 font-light">
             </div>
             <div class="flex justify-end space-x-3">
                 <button id="modal-cancel-btn" class="py-2 px-4 bg-gray-600 hover:bg-gray-500 rounded-lg font-medium">Cancel</button>
@@ -164,7 +250,6 @@
         </div>
     </div>
 
-    <!-- Firebase SDKs and Core Logic -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -258,7 +343,6 @@
         }
 
         // --- FIREBASE AND AUTHENTICATION ---
-        // ... (fetchApiKey and onAuthStateChanged remain the same) ...
         async function fetchApiKey() {
             try {
                 const apiDocRef = doc(db, 'secrets', 'apis');
@@ -284,19 +368,18 @@
                 const keyFetched = await fetchApiKey();
 
                 if (keyFetched) {
-                    ui.musicView.innerHTML = '<p class="col-span-full text-gray-500">Enter a query above and click "Search" to find music videos/artists.</p>';
+                    ui.musicView.innerHTML = '<p class="col-span-full text-gray-500 font-light">Enter a query above and click "Search" to find music videos/artists.</p>';
                     loadYouTubeIframeAPI();
                     attachEventListeners();
                     renderLibrary(); 
                 } else {
-                    ui.musicView.innerHTML = '<p class="col-span-full text-xl text-red-500">Initialization Error: Could not load YouTube API Key securely. See console for details.</p>';
+                    ui.musicView.innerHTML = '<p class="col-span-full text-xl text-red-500 font-light">Initialization Error: Could not load YouTube API Key securely. See console for details.</p>';
                 }
             }
         });
 
 
         // --- YOUTUBE API INTEGRATION (Audio-Only Focus) ---
-        // ... (loadYouTubeIframeAPI, onYouTubeIframeAPIReady, onPlayerReady, onPlayerStateChange remain the same) ...
         function loadYouTubeIframeAPI() {
             const tag = document.createElement('script');
             tag.src = "https://www.youtube.com/iframe_api";
@@ -352,13 +435,13 @@
          */
         async function performSearch(query, isBack = false) {
             if (!youtubeApiKey || !query.trim()) {
-                ui.musicView.innerHTML = '<p class="col-span-full text-xl text-gray-400">Please enter a valid search query.</p>';
+                ui.musicView.innerHTML = '<p class="col-span-full text-xl text-gray-400 font-light">Please enter a valid search query.</p>';
                 currentChannelTitle = null;
                 ui.channelBanner.classList.add('hidden');
                 return;
             }
 
-            ui.musicView.innerHTML = '<p class="col-span-full text-xl text-gray-400">Searching YouTube for music...</p>';
+            ui.musicView.innerHTML = '<p class="col-span-full text-xl text-gray-400 font-light">Searching YouTube for music...</p>';
             
             // History Management
             if (!isBack && query.trim() !== searchHistory[searchHistory.length - 1]) {
@@ -391,7 +474,7 @@
                 if (!response.ok) {
                     const errorData = await response.json();
                     let errorMessage = `Status ${response.status}. Message: ${errorData.error.message || 'Unknown error.'}`;
-                    ui.musicView.innerHTML = `<p class-span-full text-xl text-red-500">Search Failed (${errorMessage})</p>`;
+                    ui.musicView.innerHTML = `<p class-span-full text-xl text-red-500 font-light">Search Failed (${errorMessage})</p>`;
                     return;
                 }
                 
@@ -406,11 +489,11 @@
                     }));
                     renderSearchResults(data.items);
                 } else {
-                    ui.musicView.innerHTML = `<p class="col-span-full text-xl text-gray-400">No music videos or artists found for "${query}".</p>`;
+                    ui.musicView.innerHTML = `<p class="col-span-full text-xl text-gray-400 font-light">No music videos or artists found for "${query}".</p>`;
                 }
             } catch (error) {
                 console.error("Network or Fetch Error during search:", error);
-                ui.musicView.innerHTML = '<p class="col-span-full text-xl text-red-500">Search failed due to a network or general error.</p>';
+                ui.musicView.innerHTML = '<p class="col-span-full text-xl text-red-500 font-light">Search failed due to a network or general error.</p>';
             }
         }
         
@@ -432,7 +515,7 @@
                  searchHistory = [];
                  currentChannelTitle = null;
                  ui.channelBanner.classList.add('hidden');
-                 ui.musicView.innerHTML = '<p class="col-span-full text-gray-500">Enter a query above and click "Search" to find music videos/artists.</p>';
+                 ui.musicView.innerHTML = '<p class="col-span-full text-gray-500 font-light">Enter a query above and click "Search" to find music videos/artists.</p>';
             }
         }
 
@@ -454,36 +537,72 @@
                 const videoIndex = currentPlaylist.findIndex(song => song.videoId === id);
 
                 const card = document.createElement('div');
-                card.className = 'bg-gray-900 rounded-xl shadow-lg hover:shadow-red-500/50 transition duration-300 flex flex-col';
+                card.className = 'music-card'; 
                 card.dataset.id = id;
                 card.dataset.type = isVideo ? 'video' : 'artist';
                 
-                // Card structure updated: removed the hover overlay completely
+                // --- NEW CARD STRUCTURE ---
                 card.innerHTML = `
-                    <div class="aspect-video overflow-hidden rounded-t-xl cursor-pointer">
-                        <img src="${thumbnail}" alt="${title}" class="w-full h-full object-cover">
-                    </div>
+                    <div class="card-background" style="background-image: url('${thumbnail}');"></div>
                     
-                    <div class="p-4 flex-grow">
-                        <h3 class="font-medium text-lg mb-1 line-clamp-2">${title}</h3>
-                        <p class="text-sm text-gray-400 line-clamp-1">${channelTitle}</p>
-                    </div>
-                    <div class="p-4 pt-0">
-                        ${isVideo 
-                            ? `<button data-index="${videoIndex}" class="play-video-btn w-full p-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold">Play Audio</button>` 
-                            : `<button class="view-artist-btn w-full p-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-semibold">View Channel</button>`
-                        }
+                    <div class="card-overlay">
+                        <div class="card-details">
+                            <h3 class="text-xl font-medium mb-1 line-clamp-2">${title}</h3>
+                            <p class="text-sm text-gray-300 font-light line-clamp-1">${channelTitle}</p>
+                        </div>
+                        
+                        <div class="card-actions">
+                            ${isVideo 
+                                ? `<button data-index="${videoIndex}" class="play-video-btn p-3 bg-red-600 hover:bg-red-700 rounded-full text-white text-lg font-semibold shadow-xl">
+                                    <i class="fa-solid fa-play"></i>
+                                   </button>
+                                   <button class="add-to-library-card-btn p-3 bg-gray-700 hover:bg-red-500 rounded-full text-white text-lg font-semibold shadow-xl" 
+                                           data-video-id="${item.id.videoId}"
+                                           data-title="${item.snippet.title}"
+                                           data-artist="${item.snippet.channelTitle}"
+                                           data-thumbnail="${thumbnail}">
+                                       <i class="fa-solid fa-book-bookmark"></i>
+                                   </button>` 
+                                : `<button class="view-artist-btn w-full p-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-semibold">
+                                     <i class="fa-solid fa-users mr-2"></i> View Channel
+                                   </button>`
+                            }
+                        </div>
                     </div>
                 `;
+                // --- END NEW CARD STRUCTURE ---
                 
                 if (isVideo) {
-                    card.querySelector('.aspect-video').addEventListener('click', () => {
+                    // Play Audio via clicking the card
+                    card.addEventListener('click', () => {
                         startPlaylist(currentPlaylist, videoIndex, false);
                     });
+                    // Play Audio via the button
                     card.querySelector('.play-video-btn').addEventListener('click', (e) => {
                         e.stopPropagation(); 
                         startPlaylist(currentPlaylist, videoIndex, false);
                     });
+                    // Add to Library Button
+                    card.querySelector('.add-to-library-card-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const btn = e.currentTarget;
+                        const songData = {
+                            videoId: btn.dataset.videoId,
+                            title: btn.dataset.title,
+                            artist: btn.dataset.artist,
+                            thumbnail: btn.dataset.thumbnail
+                        };
+                        addToLibrary(songData);
+                        // Optional: Provide visual feedback like changing the icon color temporarily
+                        btn.classList.remove('bg-gray-700', 'hover:bg-red-500');
+                        btn.classList.add('bg-red-600');
+                        setTimeout(() => {
+                           btn.classList.remove('bg-red-600');
+                           btn.classList.add('bg-gray-700', 'hover:bg-red-500');
+                        }, 1000);
+                    });
+
+
                 } else {
                     const artistClickHandler = (e) => {
                         e.stopPropagation();
@@ -492,7 +611,7 @@
                         performSearch(channelTitle);
                     };
                     card.querySelector('.view-artist-btn').addEventListener('click', artistClickHandler);
-                    card.querySelector('.aspect-video').addEventListener('click', artistClickHandler);
+                    card.addEventListener('click', artistClickHandler);
                 }
 
                 ui.musicView.appendChild(card);
@@ -624,7 +743,7 @@
                 added: new Date().toISOString()
             };
             
-            userLibrary.push(newSong);
+            userLibrary.unshift(newSong); // Add to the start for better visibility
             saveLibrary();
             console.log(`"${newSong.title}" added to your library!`);
             
@@ -635,7 +754,8 @@
         }
 
         function removeFromLibrary(videoId) {
-            if (window.confirm("Are you sure you want to remove this song from your library? (Type 'yes' to confirm)")) {
+            // Use the custom window.confirm function at the bottom of the script
+            if (window.confirm("Are you sure you want to remove this song from your library?")) {
                 userLibrary = userLibrary.filter(song => song.videoId !== videoId);
                 saveLibrary();
                 console.log("Song removed from library.");
@@ -694,45 +814,51 @@
             ui.channelBanner.classList.add('hidden');
             
             if (userLibrary.length === 0) {
-                ui.musicView.innerHTML = '<p class="col-span-full text-xl text-gray-500">Your library is empty. Add songs from search results!</p>';
+                ui.musicView.innerHTML = '<p class="col-span-full text-xl text-gray-500 font-light">Your library is empty. Add songs from search results!</p>';
                 return;
             }
 
             for (let index = 0; index < userLibrary.length; index++) {
                 const song = userLibrary[index];
                 const card = document.createElement('div');
-                card.className = 'bg-gray-800 rounded-xl shadow-lg hover:shadow-red-500/50 transition duration-300 flex flex-col';
+                card.className = 'music-card library-card'; 
                 
                 const displayTitle = await filterExplicitText(decodeHtmlEntities(song.title));
                 const displayArtist = await filterExplicitText(decodeHtmlEntities(song.artist));
 
-                // Card structure updated: removed hover overlay
+                // --- LIBRARY CARD STRUCTURE (Adapted from search card) ---
                 card.innerHTML = `
-                    <div class="aspect-video overflow-hidden rounded-t-xl cursor-pointer">
-                        <img src="${song.thumbnail}" alt="${displayTitle}" class="w-full h-full object-cover">
-                    </div>
+                    <div class="card-background" style="background-image: url('${song.thumbnail}');"></div>
 
-                    <div class="p-4 flex-grow">
-                        <h3 class="font-medium text-lg mb-1 line-clamp-2">${displayTitle}</h3>
-                        <p class="text-sm text-gray-400 line-clamp-1">${displayArtist}</p>
-                    </div>
-                    <div class="p-4 pt-0 flex space-x-2">
-                        <button class="play-library-btn flex-grow p-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold">Play</button>
-                        <button class="edit-library-btn p-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-semibold" title="Edit Names">
-                            <i class="fa-solid fa-pencil"></i>
-                        </button>
-                        <button class="remove-library-btn p-2 bg-gray-600 hover:bg-gray-500 rounded-lg text-sm font-semibold" title="Remove from Library">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
+                    <div class="card-overlay">
+                        <div class="card-details">
+                            <h3 class="text-xl font-medium mb-1 line-clamp-2">${displayTitle}</h3>
+                            <p class="text-sm text-gray-300 font-light line-clamp-1">${displayArtist}</p>
+                        </div>
+                        
+                        <div class="card-actions flex-col space-y-2 !opacity-100">
+                            <button class="play-library-btn w-full p-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold">
+                                <i class="fa-solid fa-play mr-2"></i> Play
+                            </button>
+                            <div class="flex space-x-2 w-full">
+                                <button class="edit-library-btn flex-grow p-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-semibold" title="Edit Names">
+                                    <i class="fa-solid fa-pencil mr-1"></i> Edit
+                                </button>
+                                <button class="remove-library-btn p-2 bg-gray-600 hover:bg-red-500 rounded-lg text-sm font-semibold" title="Remove from Library">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 `;
+                // --- END LIBRARY CARD STRUCTURE ---
                 
                 // Play
                 const playHandler = (e) => {
                     e.stopPropagation();
                     startPlaylist(userLibrary, index, true);
                 };
-                card.querySelector('.aspect-video').addEventListener('click', playHandler);
+                card.addEventListener('click', playHandler);
                 card.querySelector('.play-library-btn').addEventListener('click', playHandler);
                 
                 // Edit
@@ -741,7 +867,7 @@
                     showEditModal(index);
                 });
 
-                // Remove 
+                // Remove (Note: Now uses trash-can icon and correctly triggers removeFromLibrary)
                 card.querySelector('.remove-library-btn').addEventListener('click', (e) => {
                     e.stopPropagation();
                     removeFromLibrary(song.videoId);
@@ -804,7 +930,7 @@
                 if (!videoId) return;
 
                 if (btn.dataset.inLibrary === 'true') {
-                    // Action: REMOVE from library
+                    // Action: REMOVE from library (uses custom confirm)
                     removeFromLibrary(videoId);
                     return;
                 }
@@ -918,7 +1044,7 @@
                 }
                 
                 if (currentPlaylist.length === 0) {
-                     ui.musicView.innerHTML = '<p class="col-span-full text-gray-500">Enter a query above and click "Search" to find music videos/artists.</p>';
+                     ui.musicView.innerHTML = '<p class="col-span-full text-gray-500 font-light">Enter a query above and click "Search" to find music videos/artists.</p>';
                 } else {
                     // Render search results from currentPlaylist
                     renderSearchResults(currentPlaylist.map(song => ({
