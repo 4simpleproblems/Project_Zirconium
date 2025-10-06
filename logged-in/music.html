@@ -12,7 +12,6 @@
     <script src="../navigation.js"></script>
 
     <style>
-        /* Apply Geist font universally and dark theme */
         body {
             font-family: 'Geist', sans-serif;
             background-color: #000000;
@@ -21,7 +20,7 @@
             margin: 0;
             display: flex;
             flex-direction: column;
-            padding-bottom: 72px; /* Space for the fixed bottom player */
+            padding-bottom: 72px; 
         }
         /* Style for the fixed bottom player bar */
         #bottom-player {
@@ -32,35 +31,40 @@
             height: 72px;
             z-index: 50;
             transition: transform 0.3s ease-in-out;
-            transform: translateY(100%); /* Initially hidden */
+            transform: translateY(100%); 
         }
         .player-visible {
             transform: translateY(0%) !important;
         }
-        /* Style for the full-screen video overlay */
+        /* Full-screen Video Overlay - Initially Hidden */
         #fullscreen-video-overlay {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: #000;
+            background: rgba(0, 0, 0, 0.95);
             z-index: 60;
-            display: none; /* Initially hidden */
+            display: none; 
             align-items: center;
             justify-content: center;
-            /* Allows closing by clicking outside the video container */
-            cursor: pointer;
         }
+        /* YouTube Player Container always in the hidden overlay */
         #fullscreen-player-container {
-            /* Stop click events from bubbling to the overlay's close handler */
-            cursor: default;
+            width: 90%; 
+            height: 90%; 
+            max-width: 1280px;
+            max-height: 720px;
+            aspect-ratio: 16 / 9;
         }
-        /* Custom scrollbar for a sleek look */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #1f2937; /* Gray-800 */ }
-        ::-webkit-scrollbar-thumb { background: #4b5563; /* Gray-600 */ border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #6b7280; /* Gray-500 */ }
+        /* Hide the video element when playing in background mode */
+        .yt-player-audio-mode {
+            position: absolute !important;
+            top: -9999px !important;
+            left: -9999px !important;
+            width: 1px !important;
+            height: 1px !important;
+        }
     </style>
 </head>
 <body>
@@ -86,15 +90,12 @@
             <p id="initial-message" class="col-span-full text-gray-500">Securely fetching API key and checking authentication...</p>
         </section>
         
-        <div id="youtube-player-placeholder" style="width: 1px; height: 1px; overflow: hidden; position: absolute;">
-            <div id="youtube-player"></div>
-        </div>
-
     </main>
 
     <div id="fullscreen-video-overlay" onclick="window.hideFullscreenPlayer()">
-        <div id="fullscreen-player-container" class="w-full h-full max-w-6xl max-h-[80vh] aspect-video m-auto" onclick="event.stopPropagation()">
-            </div>
+        <div id="fullscreen-player-container" class="relative" onclick="event.stopPropagation()">
+            <div id="youtube-player" class="yt-player-audio-mode"></div>
+        </div>
         <button class="absolute top-4 right-4 p-2 bg-gray-800/80 rounded-full text-white text-xl hover:bg-gray-700 transition duration-150" onclick="event.stopPropagation(); window.hideFullscreenPlayer();">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
@@ -133,7 +134,7 @@
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
-        // You must create and provide this file:
+        // This file MUST exist and contain your project's configuration:
         // { const firebaseConfig = { apiKey: "...", authDomain: "...", projectId: "..." }; export { firebaseConfig }; }
         import { firebaseConfig } from '../firebase-config.js';
 
@@ -144,6 +145,7 @@
         const redirectPath = '../index.html';
         let youtubeApiKey = null;
         let ytPlayer = null; 
+        let isPlayerReady = false;
         
         // Player state
         let currentPlaylist = [];
@@ -165,7 +167,7 @@
             skipBackBtn: document.getElementById('skip-back'),
             skipNextBtn: document.getElementById('skip-next'),
             fullscreenOverlay: document.getElementById('fullscreen-video-overlay'),
-            fullscreenContainer: document.getElementById('fullscreen-player-container'),
+            youtubePlayerDiv: document.getElementById('youtube-player'),
             searchInput: document.getElementById('search-input'),
             searchButton: document.getElementById('search-button'),
             addToLibraryBtn: document.getElementById('add-to-library-btn'),
@@ -174,12 +176,8 @@
 
         // --- FIREBASE AND AUTHENTICATION ---
 
-        /**
-         * Fetches the YouTube API Key securely from Firestore (secrets/apis).
-         */
         async function fetchApiKey() {
             try {
-                // Document path based on the screenshot: 'secrets' collection, 'apis' document
                 const apiDocRef = doc(db, 'secrets', 'apis');
                 const docSnap = await getDoc(apiDocRef);
 
@@ -197,34 +195,26 @@
             }
         }
 
-        /**
-         * Handles user authentication state and initialization.
-         */
         onAuthStateChanged(auth, async (user) => {
             if (!user) {
-                console.log("User logged out. Redirecting.");
                 window.location.replace(redirectPath);
             } else {
-                console.log("User signed in.");
                 const keyFetched = await fetchApiKey();
 
                 if (keyFetched) {
                     ui.musicView.innerHTML = '<p class="col-span-full text-gray-500">Enter a query above and click "Search" to find music videos/artists.</p>';
                     loadYouTubeIframeAPI();
                     attachEventListeners(user.uid);
-                    renderLibrary(); // Initial library render
+                    renderLibrary(); 
                 } else {
-                    ui.musicView.innerHTML = '<p class="col-span-full text-xl text-red-500">Error: Could not load YouTube API Key securely.</p>';
+                    ui.musicView.innerHTML = '<p class="col-span-full text-xl text-red-500">Error: Could not load YouTube API Key securely. Check console.</p>';
                 }
             }
         });
 
 
-        // --- YOUTUBE API INTEGRATION ---
+        // --- YOUTUBE API INTEGRATION (The Fix) ---
 
-        /**
-         * Loads the YouTube Iframe Player API script.
-         */
         function loadYouTubeIframeAPI() {
             const tag = document.createElement('script');
             tag.src = "https://www.youtube.com/iframe_api";
@@ -234,63 +224,55 @@
 
         // Global function required by the YouTube Iframe API
         window.onYouTubeIframeAPIReady = function() {
+            // Initialize the player once, inside the fullscreen container.
+            // We use JS to hide/show the video element itself later.
             ytPlayer = new YT.Player('youtube-player', {
-                height: '1', // Minimal size
-                width: '1',
+                height: '100%',
+                width: '100%',
                 videoId: '', 
                 playerVars: {
-                    'controls': 0,
+                    'controls': 0, // No controls initially (audio mode)
                     'disablekb': 1,
                     'modestbranding': 1,
                     'rel': 0,
                     'showinfo': 0,
                     'fs': 0,
                     'playsinline': 1,
-                    'autoplay': 0,
-                    'audio_only': 1 // Optimization for audio background play
+                    'autoplay': 0
                 },
                 events: {
                     'onReady': onPlayerReady,
                     'onStateChange': onPlayerStateChange
                 }
             });
-            console.log("YouTube Player API Ready.");
         }
 
         function onPlayerReady(event) {
-            console.log("Background YouTube Player is ready. Controls enabled.");
+            isPlayerReady = true;
             ui.playPauseBtn.disabled = false;
             ui.skipBackBtn.disabled = false;
             ui.skipNextBtn.disabled = false;
+            console.log("YouTube Player is ready. Controls enabled.");
         }
 
         function onPlayerStateChange(event) {
             const state = event.data;
-            // Update play/pause icon
             if (state === YT.PlayerState.PLAYING) {
-                // Pause icon
-                ui.playIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />`;
+                ui.playIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />`; // Pause icon
             } else {
-                // Play icon
-                ui.playIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197 2.132A1 1 0 0110 13.205V10.795a1 1 0 011.555-.832l3.197 2.132a1 1 0 010 1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />`;
+                ui.playIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197 2.132A1 1 0 0110 13.205V10.795a1 1 0 011.555-.832l3.197 2.132a1 1 0 010 1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />`; // Play icon
             }
             
-            // Auto-advance to next song if current one ends
             if (state === YT.PlayerState.ENDED) {
-                console.log("Song ended. Skipping to next.");
                 skipNext();
             }
         }
 
-        /**
-         * Search for YouTube videos/channels using the secured API key.
-         */
         async function performSearch(query) {
             if (!youtubeApiKey || !query.trim()) return;
 
             ui.musicView.innerHTML = '<p class="col-span-full text-xl text-gray-400">Searching YouTube for music...</p>';
             
-            // Focus on music videos and artist channels
             const apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video,channel&videoCategoryId=10&maxResults=20&key=${youtubeApiKey}`;
 
             try {
@@ -303,7 +285,6 @@
                         title: item.snippet.title,
                         artist: item.snippet.channelTitle,
                         thumbnail: item.snippet.thumbnails.medium.url,
-                        url: `https://www.youtube.com/watch?v=${item.id.videoId}`
                     }));
                     renderSearchResults(data.items);
                 } else {
@@ -315,9 +296,6 @@
             }
         }
 
-        /**
-         * Renders search results (videos and artists) into the main view.
-         */
         function renderSearchResults(items) {
             ui.musicView.innerHTML = ''; 
             items.forEach((item, index) => {
@@ -349,7 +327,6 @@
                     </div>
                 `;
                 
-                // Play button click for videos
                 if (isVideo) {
                     card.querySelector('.play-video-btn').addEventListener('click', (e) => {
                         e.stopPropagation(); 
@@ -358,13 +335,11 @@
                     });
                 }
                 
-                // Card click listener for playing video or searching artist's channel
                 card.addEventListener('click', () => {
                     if (isVideo) {
-                        const videoIndex = items.filter(i => i.id.kind === 'youtube#video').findIndex(i => i.id.videoId === id);
+                        const videoIndex = currentPlaylist.findIndex(song => song.videoId === id);
                         startPlaylist(currentPlaylist, videoIndex, false);
                     } else {
-                        // Search for the artist's videos
                         ui.searchInput.value = channelTitle;
                         performSearch(channelTitle);
                     }
@@ -374,13 +349,10 @@
             });
         }
 
-        // --- PLAYER CONTROLS & LOGIC ---
+        // --- PLAYER CONTROLS & LOGIC (Updated) ---
 
-        /**
-         * Starts playback of a new playlist from a specified index.
-         */
         function startPlaylist(playlist, index, fromLibrary = false) {
-            if (!playlist || playlist.length === 0 || index < 0 || index >= playlist.length) return;
+            if (!isPlayerReady || playlist.length === 0 || index < 0 || index >= playlist.length) return;
             
             currentPlaylist = playlist;
             currentPlaylistIndex = index;
@@ -388,10 +360,13 @@
             
             const currentSong = currentPlaylist[currentPlaylistIndex];
             
-            // 1. Load the video in the background player
-            ytPlayer.loadVideoById(currentSong.videoId, 0, 'large'); // loadVideoById is generally safer than cueVideoById
+            // 1. Load the video in the single, persistent player instance
+            ytPlayer.loadVideoById(currentSong.videoId);
             
-            // 2. Update the bottom player UI
+            // 2. Ensure player is in audio-only mode and bottom bar is visible
+            window.hideFullscreenPlayer(true); 
+
+            // 3. Update the bottom player UI
             ui.currentTitle.textContent = currentSong.title;
             ui.currentArtist.textContent = currentSong.artist;
             ui.currentThumbnail.src = currentSong.thumbnail;
@@ -406,23 +381,17 @@
             console.log(`Now Playing [${currentPlaylistIndex + 1}/${currentPlaylist.length}]: ${currentSong.title}`);
         }
 
-        /**
-         * Toggles play/pause for the current video.
-         */
         function togglePlayPause() {
             if (!ytPlayer || currentPlaylistIndex === -1) return;
 
             const state = ytPlayer.getPlayerState();
             if (state === YT.PlayerState.PLAYING) {
                 ytPlayer.pauseVideo();
-            } else if (state === YT.PlayerState.PAUSED || state === YT.PlayerState.BUFFERING || state === YT.PlayerState.CUED) {
+            } else {
                 ytPlayer.playVideo();
             }
         }
 
-        /**
-         * Skips to the next video in the current playlist.
-         */
         function skipNext() {
             if (currentPlaylistIndex === -1) return;
 
@@ -430,17 +399,12 @@
             if (nextIndex < currentPlaylist.length) {
                 startPlaylist(currentPlaylist, nextIndex, isPlayingFromLibrary);
             } else {
-                console.log("End of playlist reached.");
-                // Optionally stop or loop
                 ytPlayer.stopVideo();
                 ui.currentTitle.textContent = "Playlist finished";
                 ui.currentArtist.textContent = "";
             }
         }
 
-        /**
-         * Skips to the previous video in the current playlist.
-         */
         function skipBack() {
             if (currentPlaylistIndex <= 0) return;
 
@@ -453,127 +417,67 @@
          */
         window.showFullscreenPlayer = function() {
             if (currentPlaylistIndex === -1) return;
-            
-            const currentSong = currentPlaylist[currentPlaylistIndex];
-            
-            // Ensure the player is playing before moving it
-            if (ytPlayer.getPlayerState() !== YT.PlayerState.PLAYING) {
-                ytPlayer.playVideo();
-            }
 
-            // Create a temporary div to house the new, larger player instance
-            const fullPlayerDiv = document.createElement('div');
-            fullPlayerDiv.id = 'temp-fullscreen-player';
-            fullPlayerDiv.className = 'w-full h-full'; 
-            ui.fullscreenContainer.innerHTML = '';
-            ui.fullscreenContainer.appendChild(fullPlayerDiv);
+            // 1. Change player properties for video viewing
+            ytPlayer.setPlaybackQuality('large'); 
+            ytPlayer.setLoop(false);
+            ytPlayer.setVolume(100);
             
-            // Get current time to resume playback
-            const currentTime = ytPlayer.getCurrentTime();
+            // 2. Show player controls
+            ytPlayer.getIframe().setAttribute('src', ytPlayer.getIframe().src.replace('controls=0', 'controls=1'));
             
-            // Destroy the old, small player instance
-            ytPlayer.destroy();
-            
-            // Create a new, large player instance in the fullscreen container
-            ytPlayer = new YT.Player('temp-fullscreen-player', {
-                videoId: currentSong.videoId,
-                height: '100%',
-                width: '100%',
-                playerVars: {
-                    'controls': 1, // Show controls in fullscreen
-                    'autoplay': 1,
-                    'start': Math.floor(currentTime) // Resume from where it was
-                },
-                events: {
-                    'onReady': (e) => { e.target.playVideo(); },
-                    'onStateChange': onPlayerStateChange
-                }
-            });
-
+            // 3. Show the container and remove the hidden class
+            ui.youtubePlayerDiv.classList.remove('yt-player-audio-mode');
             ui.fullscreenOverlay.style.display = 'flex';
-            ui.bottomPlayer.style.display = 'none'; // Hide bottom bar when fullscreen
+            ui.bottomPlayer.style.display = 'none'; 
         }
 
         /**
          * Global function to hide the full-screen overlay and move the player back.
+         * @param {boolean} forceAudioMode - If true, ensures controls are hidden for background play.
          */
-        window.hideFullscreenPlayer = function() {
-            if (currentPlaylistIndex === -1) return;
+        window.hideFullscreenPlayer = function(forceAudioMode = false) {
+            if (currentPlaylistIndex === -1 && !forceAudioMode) return;
+            
+            // 1. Ensure player is set back to audio-only controls
+            if (ytPlayer.getPlayerState() === YT.PlayerState.PLAYING || forceAudioMode) {
+                // Remove controls for background play (this might be necessary for some environments)
+                ytPlayer.getIframe().setAttribute('src', ytPlayer.getIframe().src.replace('controls=1', 'controls=0'));
+            }
 
-            const currentSong = currentPlaylist[currentPlaylistIndex];
-            const currentTime = ytPlayer.getCurrentTime();
-            
-            // Destroy the large player instance
-            ytPlayer.destroy();
-            
-            // Hide the overlay and show the bottom bar
+            // 2. Hide the overlay and re-apply the hidden class
             ui.fullscreenOverlay.style.display = 'none';
+            ui.youtubePlayerDiv.classList.add('yt-player-audio-mode');
             ui.bottomPlayer.style.display = 'flex';
-            
-            // Create the small, background player instance again
-            const playerPlaceholder = document.getElementById('youtube-player-placeholder');
-            playerPlaceholder.innerHTML = '<div id="youtube-player"></div>';
-            
-            ytPlayer = new YT.Player('youtube-player', {
-                height: '1',
-                width: '1',
-                videoId: currentSong.videoId,
-                playerVars: {
-                    'controls': 0,
-                    'disablekb': 1,
-                    'modestbranding': 1,
-                    'rel': 0,
-                    'showinfo': 0,
-                    'fs': 0,
-                    'playsinline': 1,
-                    'start': Math.floor(currentTime), // Resume playback
-                    'autoplay': 1,
-                    'audio_only': 1
-                },
-                events: {
-                    'onReady': (e) => { e.target.playVideo(); },
-                    'onStateChange': onPlayerStateChange
-                }
-            });
         }
 
 
         // --- LOCAL LIBRARY & PLAYLIST MANAGEMENT ---
 
-        /**
-         * Loads the user's library from local storage.
-         */
         function loadLibrary() {
             try {
                 const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
                 return stored ? JSON.parse(stored) : [];
             } catch (e) {
-                console.error("Error loading library from local storage:", e);
+                console.error("Error loading library:", e);
                 return [];
             }
         }
 
-        /**
-         * Saves the user's library to local storage.
-         */
         function saveLibrary() {
             try {
                 localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(userLibrary));
-                console.log("Library saved successfully.");
             } catch (e) {
-                console.error("Error saving library to local storage:", e);
+                console.error("Error saving library:", e);
             }
         }
         
-        /**
-         * Adds the currently playing video or a specified video to the library.
-         */
         function addToLibrary(songData) {
             const videoId = songData.videoId;
             const existing = userLibrary.find(s => s.videoId === videoId);
 
             if (existing) {
-                alert("This song is already in your library!");
+                alert(`"${songData.title}" is already in your library!`);
                 return;
             }
 
@@ -582,7 +486,6 @@
                 title: songData.title,
                 artist: songData.artist,
                 thumbnail: songData.thumbnail,
-                url: `https://www.youtube.com/watch?v=${videoId}`,
                 added: new Date().toISOString()
             };
             
@@ -590,15 +493,11 @@
             saveLibrary();
             alert(`"${newSong.title}" added to your library!`);
             
-            // If viewing the library, refresh it
-            if (ui.navTabs[1].classList.contains('border-red-600')) {
+            if (document.querySelector('.nav-tab[data-view="library"]').classList.contains('border-red-600')) {
                 renderLibrary();
             }
         }
 
-        /**
-         * Renders the local library contents.
-         */
         function renderLibrary() {
             ui.musicView.innerHTML = '';
             
@@ -636,7 +535,7 @@
                     if (confirm(`Are you sure you want to remove "${userLibrary[songIndex].title}" from your library?`)) {
                         userLibrary.splice(songIndex, 1);
                         saveLibrary();
-                        renderLibrary(); // Re-render to update the list
+                        renderLibrary(); 
                     }
                 });
 
@@ -644,39 +543,34 @@
             });
         }
         
-        /**
-         * Prompts the user to enter a YouTube video URL and tries to add it.
-         * Note: This is simplified and does not use the API's 'videos' endpoint
-         * to fetch full metadata, relying only on the URL/videoId.
-         */
         function promptAddUrl() {
-            const url = prompt("Enter a YouTube Video URL (e.g., https://www.youtube.com/watch?v=dQw4w9WgXcQ):");
+            const url = prompt("Enter a YouTube Video URL:");
             if (url) {
+                // Regex to find the video ID from various YouTube URL formats
                 const videoIdMatch = url.match(/(?:\?v=|\/embed\/|\/v\/|youtu\.be\/|\/shorts\/)([a-zA-Z0-9_-]{11})[^#&]*/);
                 if (videoIdMatch && videoIdMatch[1]) {
                     const videoId = videoIdMatch[1];
                     const songData = {
                         videoId: videoId,
                         title: `Custom URL: ${videoId}`, 
-                        artist: 'Unknown Artist',
-                        thumbnail: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` // Generic thumbnail
+                        artist: 'Manual Entry',
+                        thumbnail: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` 
                     };
                     addToLibrary(songData);
                 } else {
-                    alert("Invalid YouTube URL format. Please ensure it contains a valid video ID.");
+                    alert("Invalid YouTube URL. Please ensure it contains a valid video ID.");
                 }
             }
         }
 
 
-        // --- EVENT LISTENERS ---
+        // --- EVENT LISTENERS & NAVIGATION ---
 
         function attachEventListeners() {
             ui.searchButton.addEventListener('click', () => {
                 const query = ui.searchInput.value.trim();
                 if (query) {
                     performSearch(query);
-                    // Switch to search results view
                     switchView('home');
                 }
             });
@@ -705,18 +599,13 @@
                 }
             });
 
-            // Navigation Tab Listeners
             ui.navTabs.forEach(tab => {
                 tab.addEventListener('click', (e) => {
-                    const view = e.currentTarget.dataset.view;
-                    switchView(view);
+                    switchView(e.currentTarget.dataset.view);
                 });
             });
         }
         
-        /**
-         * Switches the main content view between 'home' (search) and 'library'.
-         */
         function switchView(view) {
             ui.navTabs.forEach(tab => {
                 const isActive = tab.dataset.view === view;
@@ -730,10 +619,11 @@
                 renderLibrary();
                 isPlayingFromLibrary = true;
             } else {
-                // Return to search results view, or initial message if nothing searched
+                // If switching back to home, try to show previous search results
                 if (currentPlaylist.length === 0) {
                      ui.musicView.innerHTML = '<p class="col-span-full text-gray-500">Enter a query above and click "Search" to find music videos/artists.</p>';
                 } else {
+                    // Re-render search results from the current playlist data
                     renderSearchResults(currentPlaylist.map(song => ({
                         id: { kind: 'youtube#video', videoId: song.videoId },
                         snippet: { title: song.title, channelTitle: song.artist, thumbnails: { medium: { url: song.thumbnail } } }
@@ -746,6 +636,8 @@
         // Expose necessary functions/data globally for HTML onclicks
         window.startPlaylist = startPlaylist;
         window.userLibrary = userLibrary;
+        window.showFullscreenPlayer = window.showFullscreenPlayer;
+        window.hideFullscreenPlayer = window.hideFullscreenPlayer;
 
     </script>
 </body>
