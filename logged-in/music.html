@@ -15,14 +15,12 @@
     <style>
         body {
             font-family: 'Geist', sans-serif;
-            /* Near-black/Darkest Gray Background */
-            background-color: #000000; 
+            background-color: #000000;
             color: #FFFFFF;
             min-height: 100vh;
             margin: 0;
             display: flex;
             flex-direction: column;
-            /* Adjust based on player height */
             padding-bottom: 72px; 
         }
         #bottom-player {
@@ -34,7 +32,7 @@
             z-index: 50;
             transition: transform 0.3s ease-in-out;
             transform: translateY(100%); 
-            /* Black tone with translucency and blur effect */
+            /* MODIFICATION: Black tone with translucency and blur effect */
             background-color: rgba(0, 0, 0, 0.7); 
             backdrop-filter: blur(8px); 
             -webkit-backdrop-filter: blur(8px); /* For compatibility */
@@ -58,7 +56,6 @@
             left: 0;
             width: 100%;
             height: 100%;
-            /* Consistent dark background for backdrop */
             background-color: rgba(0, 0, 0, 0.7);
             z-index: 100;
             display: none;
@@ -66,12 +63,138 @@
             align-items: center;
         }
         .modal-content {
-            /* Dark Gray Modal Content */
             background-color: #1f2937; /* gray-800 */
             border-radius: 0.75rem;
             padding: 1.5rem;
             max-width: 90%;
             width: 400px;
+        }
+
+        /* --- MODIFICATION: Styles for Game-Inspired Music Cards --- */
+        #music-view {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 25px;
+            padding-bottom: 20px;
+        }
+        
+        /* Renamed from .zone-item to .music-item */
+        .music-item { 
+            background-color: #0f172a; /* Dark background */
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(255, 0, 0, 0.05); /* Subtle red shadow */
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            aspect-ratio: 4 / 3; 
+        }
+        
+        .music-item img.game-cover {
+            width: 100%; height: 100%; object-fit: cover;
+            border-radius: 12px;
+            transition: transform 0.4s ease-in-out;
+        }
+        
+        .music-item .card-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            /* Black gradient overlay with transparency */
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.5) 50%, transparent 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 15px;
+            opacity: 0;
+            transform: translateY(15px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            box-sizing: border-box;
+            color: #fff;
+        }
+
+        .music-item:hover {
+            transform: translateY(-5px) scale(1.03);
+            box-shadow: 0 8px 25px rgba(220, 38, 38, 0.2); /* Red glow on hover */
+        }
+        .music-item:hover .game-cover {
+            transform: scale(1.1);
+        }
+        .music-item:hover .card-overlay {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .music-item .game-title {
+            font-family: 'Geist', sans-serif;
+            font-size: 1.1em;
+            font-weight: bold;
+            margin: 0 0 5px 0;
+            line-height: 1.3;
+            text-shadow: 1px 1px 5px rgba(0,0,0,0.7);
+        }
+        
+        .music-item .card-buttons {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 10px;
+        }
+        
+        .music-item .card-play-btn, .music-item .favorite-btn {
+            border: none;
+            border-radius: 8px;
+            height: 38px;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Geist', sans-serif;
+            font-weight: 600;
+        }
+
+        .music-item .card-play-btn {
+            flex-grow: 1;
+            background-color: rgba(220, 38, 38, 0.9); /* Red */
+            color: #fff;
+        }
+        .music-item .card-play-btn:hover {
+            background-color: #ef4444; /* Slightly brighter red */
+            transform: scale(1.05);
+        }
+
+        .music-item .favorite-btn {
+            width: 38px;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+        .music-item .favorite-btn:hover {
+            background-color: rgba(255, 255, 255, 0.35);
+        }
+        .music-item .favorite-btn.favorited {
+            color: #ef4444; /* Red for favorited icon */
+            filter: drop-shadow(0 0 3px #ef4444);
+        }
+        .music-item .favorite-btn i {
+            font-size: 1.1em;
+        }
+
+        /* --- MODIFICATION: Ensure play/pause button is perfectly circular --- */
+        #play-pause {
+            width: 50px; 
+            height: 50px; 
+            padding: 0; /* Let the icon size determine the hit area */
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #main-content > section#music-view {
+            /* Override tailwind default on the main content area */
+            display: block; 
+            grid-template-columns: none; 
+            gap: 0;
         }
     </style>
 </head>
@@ -101,7 +224,7 @@
             </button>
         </div>
 
-        <section id="music-view" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+        <section id="music-view">
             <p id="initial-message" class="col-span-full text-gray-500">Securely fetching API key and checking authentication...</p>
         </section>
         
@@ -246,7 +369,6 @@
         }
 
         // --- FIREBASE AND AUTHENTICATION ---
-        // ... (fetchApiKey and onAuthStateChanged remain the same) ...
         async function fetchApiKey() {
             try {
                 const apiDocRef = doc(db, 'secrets', 'apis');
@@ -284,7 +406,6 @@
 
 
         // --- YOUTUBE API INTEGRATION (Audio-Only Focus) ---
-        // ... (loadYouTubeIframeAPI, onYouTubeIframeAPIReady, onPlayerReady, onPlayerStateChange remain the same) ...
         function loadYouTubeIframeAPI() {
             const tag = document.createElement('script');
             tag.src = "https://www.youtube.com/iframe_api";
@@ -346,7 +467,7 @@
                 return;
             }
 
-            ui.musicView.innerHTML = '<p class="col-span-full text-xl text-gray-400">Searching YouTube for music...</p>';
+            ui.musicView.innerHTML = '<p class-span-full text-xl text-gray-400">Searching YouTube for music...</p>';
             
             // History Management
             if (!isBack && query.trim() !== searchHistory[searchHistory.length - 1]) {
@@ -386,13 +507,14 @@
                 const data = await response.json();
                 
                 if (data.items && data.items.length > 0) {
+                    // Set the global playlist to only contain videos
                     currentPlaylist = data.items.filter(item => item.id.kind === 'youtube#video').map(item => ({
                         videoId: item.id.videoId,
                         title: item.snippet.title,
                         artist: item.snippet.channelTitle,
                         thumbnail: item.snippet.thumbnails.medium.url,
                     }));
-                    renderSearchResults(data.items);
+                    renderSearchResults(data.items); // Render all items (videos and channels)
                 } else {
                     ui.musicView.innerHTML = `<p class="col-span-full text-xl text-gray-400">No music videos or artists found for "${query}".</p>`;
                 }
@@ -424,8 +546,10 @@
             }
         }
 
+        /* MODIFICATION: Updated to use game card style */
         async function renderSearchResults(items) {
             ui.musicView.innerHTML = ''; 
+            const videoPlaylistForIndexing = currentPlaylist; // This is the video-only list from performSearch
             
             for (const item of items) {
                 const isVideo = item.id.kind === 'youtube#video';
@@ -439,56 +563,106 @@
                 channelTitle = await filterExplicitText(channelTitle);
 
                 const thumbnail = item.snippet.thumbnails.medium.url;
-                const videoIndex = currentPlaylist.findIndex(song => song.videoId === id);
+                
+                // Find index in the video-only playlist
+                const videoIndex = videoPlaylistForIndexing.findIndex(song => song.videoId === id); 
 
                 const card = document.createElement('div');
-                card.className = 'bg-gray-900 rounded-xl shadow-lg hover:shadow-red-500/50 transition duration-300 flex flex-col';
+                card.className = 'music-item'; // New class
                 card.dataset.id = id;
                 card.dataset.type = isVideo ? 'video' : 'artist';
                 
-                // Card structure updated: removed the hover overlay completely
-                card.innerHTML = `
-                    <div class="aspect-video overflow-hidden rounded-t-xl cursor-pointer">
-                        <img src="${thumbnail}" alt="${title}" class="w-full h-full object-cover">
-                    </div>
-                    
-                    <div class="p-4 flex-grow">
-                        <h3 class="font-medium text-lg mb-1 line-clamp-2">${title}</h3>
-                        <p class="text-sm text-gray-400 line-clamp-1">${channelTitle}</p>
-                    </div>
-                    <div class="p-4 pt-0">
-                        ${isVideo 
-                            ? `<button data-index="${videoIndex}" class="play-video-btn w-full p-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold">Play Audio</button>` 
-                            : `<button class="view-artist-btn w-full p-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-semibold">View Channel</button>`
-                        }
-                    </div>
-                `;
-                
+                let buttonsHtml = '';
+                let titleClickHandler = null;
+                let playButtonHandler = null;
+
                 if (isVideo) {
-                    card.querySelector('.aspect-video').addEventListener('click', () => {
-                        startPlaylist(currentPlaylist, videoIndex, false);
-                    });
-                    card.querySelector('.play-video-btn').addEventListener('click', (e) => {
-                        e.stopPropagation(); 
-                        startPlaylist(currentPlaylist, videoIndex, false);
-                    });
+                    const isInLibrary = isSongInLibrary(id);
+                    // Add both play and library button
+                    buttonsHtml = `
+                        <div class="card-buttons">
+                            <button data-index="${videoIndex}" class="card-play-btn text-sm font-semibold">
+                                <i class="fa-solid fa-play mr-1"></i> PLAY AUDIO
+                            </button>
+                            <button class="favorite-btn add-to-library-card-btn ${isInLibrary ? 'favorited' : ''}" title="${isInLibrary ? 'Remove from Library' : 'Add to Library'}">
+                                <i class="fa-solid fa-book fa-lg"></i>
+                            </button>
+                        </div>
+                    `;
+                    titleClickHandler = () => startPlaylist(videoPlaylistForIndexing, videoIndex, false);
+                    playButtonHandler = (e) => { e.stopPropagation(); startPlaylist(videoPlaylistForIndexing, videoIndex, false); };
+
                 } else {
-                    const artistClickHandler = (e) => {
-                        e.stopPropagation();
+                    // Only view channel button
+                    buttonsHtml = `
+                        <div class="card-buttons">
+                            <button class="card-play-btn text-sm font-semibold" style="background-color: rgba(107, 114, 128, 0.9);">
+                                <i class="fa-solid fa-eye mr-1"></i> VIEW CHANNEL
+                            </button>
+                        </div>
+                    `;
+                    const artistClickHandler = () => {
                         currentChannelTitle = channelTitle;
                         ui.searchInput.value = channelTitle;
                         performSearch(channelTitle);
                     };
-                    card.querySelector('.view-artist-btn').addEventListener('click', artistClickHandler);
-                    card.querySelector('.aspect-video').addEventListener('click', artistClickHandler);
+                    titleClickHandler = artistClickHandler;
+                    playButtonHandler = (e) => { e.stopPropagation(); artistClickHandler(); };
+                }
+                
+                // Card structure now includes the overlay
+                card.innerHTML = `
+                    <img src="${thumbnail}" alt="${title}" class="game-cover">
+                    
+                    <div class="card-overlay">
+                        <h3 class="game-title line-clamp-2">${title}</h3>
+                        <p class="text-sm text-gray-400 line-clamp-1">${channelTitle}</p>
+                        ${buttonsHtml}
+                    </div>
+                `;
+                
+                // Attach click listener for the main card area
+                card.addEventListener('click', (e) => {
+                    // Only trigger if not clicking a button
+                    if (!e.target.closest('.card-buttons') && titleClickHandler) {
+                        titleClickHandler();
+                    }
+                });
+
+                // Attach click listener for the main play/view button
+                const mainButton = card.querySelector('.card-play-btn');
+                if (mainButton) {
+                    mainButton.addEventListener('click', playButtonHandler);
+                }
+
+                // Attach listener for the Add to Library button (if it exists)
+                const libraryButton = card.querySelector('.add-to-library-card-btn');
+                if (libraryButton) {
+                    libraryButton.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (isSongInLibrary(id)) {
+                            removeFromLibrary(id);
+                            libraryButton.classList.remove('favorited');
+                            libraryButton.title = 'Add to Library';
+                        } else {
+                            const songData = {
+                                videoId: id,
+                                title: item.snippet.title,
+                                artist: item.snippet.channelTitle,
+                                thumbnail: thumbnail
+                            };
+                            addToLibrary(songData);
+                            libraryButton.classList.add('favorited');
+                            libraryButton.title = 'Remove from Library';
+                        }
+                    });
                 }
 
                 ui.musicView.appendChild(card);
             }
         }
 
-        // --- PLAYER CONTROLS & LOGIC ---
-
+        // --- PLAYER CONTROLS & LOGIC (No changes, logic is correct) ---
         function isSongInLibrary(videoId) {
             return userLibrary.some(song => song.videoId === videoId);
         }
@@ -630,7 +804,7 @@
                 
                 // If the removed song was the currently playing one, update the icon status
                 if (ui.addToLibraryBtn.dataset.videoId === videoId) {
-                    updateLibraryIcon(videoId); 
+                    updateLibraryIcon(null); 
                 }
 
                 if (document.querySelector('.nav-tab[data-view="library"]').classList.contains('border-red-600')) {
@@ -677,51 +851,63 @@
             ui.editModal.removeAttribute('data-edit-index');
         }
 
+        /* MODIFICATION: Updated to use game card style */
         async function renderLibrary() {
             ui.musicView.innerHTML = '';
             ui.channelBanner.classList.add('hidden');
             
             if (userLibrary.length === 0) {
                 ui.musicView.innerHTML = '<p class="col-span-full text-xl text-gray-500">Your library is empty. Add songs from search results!</p>';
+                currentPlaylist = [];
+                currentPlaylistIndex = -1;
                 return;
             }
+            
+            // When viewing the library, the library *is* the playlist
+            currentPlaylist = userLibrary;
 
             for (let index = 0; index < userLibrary.length; index++) {
                 const song = userLibrary[index];
                 const card = document.createElement('div');
-                card.className = 'bg-gray-800 rounded-xl shadow-lg hover:shadow-red-500/50 transition duration-300 flex flex-col';
+                card.className = 'music-item';
                 
                 const displayTitle = await filterExplicitText(decodeHtmlEntities(song.title));
                 const displayArtist = await filterExplicitText(decodeHtmlEntities(song.artist));
 
-                // Card structure updated: removed hover overlay
-                card.innerHTML = `
-                    <div class="aspect-video overflow-hidden rounded-t-xl cursor-pointer">
-                        <img src="${song.thumbnail}" alt="${displayTitle}" class="w-full h-full object-cover">
-                    </div>
-
-                    <div class="p-4 flex-grow">
-                        <h3 class="font-medium text-lg mb-1 line-clamp-2">${displayTitle}</h3>
-                        <p class="text-sm text-gray-400 line-clamp-1">${displayArtist}</p>
-                    </div>
-                    <div class="p-4 pt-0 flex space-x-2">
-                        <button class="play-library-btn flex-grow p-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold">Play</button>
-                        <button class="edit-library-btn p-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-semibold" title="Edit Names">
-                            <i class="fa-solid fa-pencil"></i>
-                        </button>
-                        <button class="remove-library-btn p-2 bg-gray-600 hover:bg-gray-500 rounded-lg text-sm font-semibold" title="Remove from Library">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
-                    </div>
-                `;
-                
-                // Play
                 const playHandler = (e) => {
                     e.stopPropagation();
                     startPlaylist(userLibrary, index, true);
                 };
-                card.querySelector('.aspect-video').addEventListener('click', playHandler);
-                card.querySelector('.play-library-btn').addEventListener('click', playHandler);
+                
+                // Card structure uses the game card style
+                card.innerHTML = `
+                    <img src="${song.thumbnail}" alt="${displayTitle}" class="game-cover">
+
+                    <div class="card-overlay">
+                        <h3 class="game-title line-clamp-2">${displayTitle}</h3>
+                        <p class="text-sm text-gray-400 line-clamp-1">${displayArtist}</p>
+                        
+                        <div class="card-buttons">
+                            <button class="card-play-btn text-sm font-semibold" style="flex-grow: 1.5;">
+                                <i class="fa-solid fa-play mr-1"></i> PLAY
+                            </button>
+                            <button class="favorite-btn edit-library-btn" title="Edit Names">
+                                <i class="fa-solid fa-pencil fa-lg"></i>
+                            </button>
+                            <button class="favorite-btn remove-library-btn" title="Remove from Library" style="background-color: rgba(220, 38, 38, 0.5);">
+                                <i class="fa-solid fa-trash-can fa-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                // Play
+                card.addEventListener('click', (e) => {
+                    if (!e.target.closest('.card-buttons')) {
+                        playHandler(e);
+                    }
+                });
+                card.querySelector('.card-play-btn').addEventListener('click', playHandler);
                 
                 // Edit
                 card.querySelector('.edit-library-btn').addEventListener('click', (e) => {
@@ -908,11 +1094,22 @@
                 if (currentPlaylist.length === 0) {
                      ui.musicView.innerHTML = '<p class="col-span-full text-gray-500">Enter a query above and click "Search" to find music videos/artists.</p>';
                 } else {
-                    // Render search results from currentPlaylist
-                    renderSearchResults(currentPlaylist.map(song => ({
+                    // Render search results from currentPlaylist. Need to rebuild the items array for renderSearchResults.
+                    const searchItemsToRender = currentPlaylist.map(song => ({
                         id: { kind: 'youtube#video', videoId: song.videoId },
                         snippet: { title: song.title, channelTitle: song.artist, thumbnails: { medium: { url: song.thumbnail } } }
-                    })));
+                    }));
+                    
+                    // If there is search history, we assume the last search was executed
+                    if (searchHistory.length > 0) {
+                        // Re-run the search on the last query to get channels back, ensuring the full context is maintained
+                        performSearch(searchHistory[searchHistory.length - 1], true);
+                    } else if (searchItemsToRender.length > 0) {
+                        // If no history but a playlist exists (e.g., loaded from library then switched), just render the playlist items as search results
+                        renderSearchResults(searchItemsToRender);
+                    } else {
+                        ui.musicView.innerHTML = '<p class="col-span-full text-gray-500">Enter a query above and click "Search" to find music videos/artists.</p>';
+                    }
                 }
             }
         }
