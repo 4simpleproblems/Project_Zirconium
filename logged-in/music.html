@@ -32,7 +32,6 @@
             z-index: 50;
             transition: transform 0.3s ease-in-out;
             transform: translateY(100%); 
-            /* MODIFICATION: Black tone with translucency and blur effect */
             background-color: rgba(0, 0, 0, 0.7); 
             backdrop-filter: blur(8px); 
             -webkit-backdrop-filter: blur(8px); /* For compatibility */
@@ -70,10 +69,11 @@
             width: 400px;
         }
 
-        /* --- MODIFICATION: Styles for Game-Inspired Music Cards --- */
+        /* --- Styles for Game-Inspired Music Cards --- */
         #music-view {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            /* FIX: Reduced minimum size to 180px to make cards smaller */
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); 
             gap: 25px;
             padding-bottom: 20px;
         }
@@ -179,11 +179,11 @@
             font-size: 1.1em;
         }
 
-        /* --- MODIFICATION: Ensure play/pause button is perfectly circular --- */
+        /* Ensure play/pause button is perfectly circular */
         #play-pause {
             width: 50px; 
             height: 50px; 
-            padding: 0; /* Let the icon size determine the hit area */
+            padding: 0;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -546,7 +546,7 @@
             }
         }
 
-        /* MODIFICATION: Updated to use game card style */
+        /* Updated to use game card style */
         async function renderSearchResults(items) {
             ui.musicView.innerHTML = ''; 
             const videoPlaylistForIndexing = currentPlaylist; // This is the video-only list from performSearch
@@ -851,7 +851,7 @@
             ui.editModal.removeAttribute('data-edit-index');
         }
 
-        /* MODIFICATION: Updated to use game card style */
+        /* Updated to use game card style */
         async function renderLibrary() {
             ui.musicView.innerHTML = '';
             ui.channelBanner.classList.add('hidden');
