@@ -31,6 +31,15 @@
         .font-semibold {
             font-weight: 500;
         }
+        
+        /* Squircle Border Radius Utility (for buttons) */
+        .squircle {
+            border-radius: 30%; /* Approximates a squircle shape */
+        }
+        .squircle-large {
+            border-radius: 35%; 
+        }
+
 
         /* 1. GLASSMORPHISM BUTTON STYLES (Applies to all elements with this class) */
         .glass-button {
@@ -154,6 +163,8 @@
             display: flex;
             flex-direction: column;
             align-self: flex-start;
+            /* Container for title/artist that needs the marquee effect */
+            max-width: 100%; 
         }
 
         .card-actions {
@@ -181,7 +192,7 @@
             justify-content: center; /* Center the buttons in library view */
         }
 
-        /* 3. MARQUEE TEXT STYLES (CORRECTED) */
+        /* MARQUEE TEXT STYLES */
         .marquee-container {
             overflow: hidden;
             white-space: nowrap;
@@ -206,17 +217,16 @@
 
         .marquee-text {
             display: inline-block;
-            /* Ensure the text is off-screen initially to allow proper calculation and animation */
             transform: translateX(0); 
             animation-play-state: paused;
             animation-timing-function: linear;
             animation-iteration-count: infinite;
         }
         
-        /* Keyframes for the scrolling animation (CORRECTED) */
+        /* Keyframes for the scrolling animation */
         @keyframes marquee {
             0% { transform: translateX(0); }
-            /* Calculate 100% position based on content width */
+            /* Scroll distance is set via JS custom property */
             100% { transform: translateX(var(--marquee-scroll-distance)); } 
         }
 
@@ -285,18 +295,18 @@
         </div>
 
         <div class="flex items-center space-x-6">
-            <button id="skip-back" class="text-gray-400 hover:text-white transition duration-150 disabled:opacity-50 glass-button p-3 rounded-xl">
+            <button id="skip-back" class="text-gray-400 hover:text-white transition duration-150 disabled:opacity-50 glass-button p-3 squircle">
                 <i class="fa-solid fa-backward-step fa-lg"></i>
             </button>
-            <button id="play-pause" class="text-white hover:text-red-500 transition duration-150 w-14 h-14 flex items-center justify-center rounded-xl disabled:opacity-50 glass-button glass-button-red" disabled>
+            <button id="play-pause" class="text-white hover:text-red-500 transition duration-150 w-14 h-14 flex items-center justify-center squircle-large disabled:opacity-50 glass-button glass-button-red" disabled>
                 <i id="play-icon" class="fa-solid fa-play fa-xl"></i> 
             </button>
-            <button id="skip-next" class="text-gray-400 hover:text-white transition duration-150 disabled:opacity-50 glass-button p-3 rounded-xl">
+            <button id="skip-next" class="text-gray-400 hover:text-white transition duration-150 disabled:opacity-50 glass-button p-3 squircle">
                 <i class="fa-solid fa-forward-step fa-lg"></i>
             </button>
         </div>
 
-        <button id="add-to-library-btn" class="p-2 ml-4 text-gray-400 hover:text-red-400 transition duration-150 hidden glass-button rounded-xl" title="Add to Library">
+        <button id="add-to-library-btn" class="p-2 ml-4 text-gray-400 hover:text-red-400 transition duration-150 hidden glass-button squircle" title="Add to Library">
             <i id="add-to-library-icon" class="fa-solid fa-book-bookmark fa-xl"></i>
         </button>
     </footer>
@@ -379,42 +389,41 @@
         
         /**
          * Checks if the text inside the element overflows its container and toggles the marquee class.
-         * CORRECTED: Fixes text duplication and implements custom scroll distance for smooth marquee.
+         * The text content is repeated and animated using CSS keyframes for a smooth loop.
          */
         function updateMarquee(textElement, containerElement) {
-            const originalText = textElement.textContent; // Store original text content
+            // Use an existing original text data attribute, or save the current text as original
+            const originalText = textElement.dataset.originalText || textElement.textContent;
+            textElement.dataset.originalText = originalText;
             
-            // 1. Reset text content to original (to fix duplication issue)
-            if (textElement.dataset.originalText) {
-                textElement.textContent = textElement.dataset.originalText;
-            } else {
-                 textElement.dataset.originalText = originalText;
-            }
+            // 1. Reset to original text for accurate measurement
+            textElement.textContent = originalText;
             
-            // 2. Temporarily set width to auto to measure actual content width
+            // 2. Temporarily set display to inline-block and measure the true content width
             textElement.style.display = 'inline-block';
+            // Use scrollWidth for the marquee-text element to get the true width of the single line
             const textWidth = textElement.scrollWidth; 
             textElement.style.display = ''; // Reset display style
-            
+
+            // Get the container's visible width
             const containerWidth = containerElement.offsetWidth;
             const isOverflowing = textWidth > containerWidth;
 
             if (isOverflowing) {
                 containerElement.classList.add('active');
                 
-                // 3. Calculate scroll distance (full width of the text + a gap, e.g., 20px)
-                const scrollDistance = textWidth + 20; 
+                // 3. Calculate scroll distance (full width of the original text + a gap)
+                const gap = 30; // Gap between repetitions
+                const scrollDistance = textWidth + gap; 
                 
                 // 4. Set the CSS variable for the marquee animation
                 containerElement.style.setProperty('--marquee-scroll-distance', `-${scrollDistance}px`);
                 
-                // 5. Append a spacer and the text again for a seamless loop *within the marquee-text element*
-                // This is where the scroll-over-and-reset animation magic happens.
-                // We add space + text, and the animation scrolls the first instance off-screen.
-                textElement.innerHTML = originalText + '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' + originalText;
+                // 5. Repeat the content for the seamless loop animation
+                textElement.innerHTML = originalText + '&nbsp;'.repeat(gap / 6) + originalText;
                 
                 // 6. Adjust animation duration based on content length for consistent speed
-                const speed = 50; // pixels per second
+                const speed = 40; // pixels per second (slightly slower for readability)
                 const duration = scrollDistance / speed; // seconds
                 textElement.style.animationDuration = `${duration}s`;
                 
@@ -541,13 +550,20 @@
             const state = event.data;
             
             if (state === YT.PlayerState.PLAYING) {
-                ui.playIcon.className = 'fa-solid fa-pause fa-xl'; // Use regular pause icon for the squircle button
+                ui.playIcon.className = 'fa-solid fa-pause fa-xl'; 
             } else {
-                ui.playIcon.className = 'fa-solid fa-play fa-xl'; // Use regular play icon for the squircle button
+                ui.playIcon.className = 'fa-solid fa-play fa-xl'; 
             }
             
             if (state === YT.PlayerState.ENDED) {
-                skipNext();
+                // Modified: Implement playlist looping
+                const nextIndex = currentPlaylistIndex + 1;
+                if (nextIndex < currentPlaylist.length) {
+                    skipNext();
+                } else {
+                    // If it's the last song, restart the playlist from the beginning (index 0)
+                    startPlaylist(currentPlaylist, 0, isPlayingFromLibrary);
+                }
             }
         }
 
@@ -580,7 +596,7 @@
             // Update channel banner based on the context of the search
             if (currentChannelTitle && query === currentChannelTitle) {
                 ui.channelBanner.classList.remove('hidden');
-                ui.channelBanner.style.display = 'flex'; // Ensure flex layout for button
+                ui.channelBanner.style.display = 'flex'; 
                 ui.channelBannerText.textContent = `Viewing videos for channel: ${currentChannelTitle}`;
                 // Only show back button if there is history to go back to (more than one item)
                 ui.goBackButton.classList.toggle('hidden', searchHistory.length <= 1); 
@@ -666,13 +682,17 @@
                     
                     <div class="card-overlay">
                         <div class="card-details">
-                            <h3 class="text-xl font-medium mb-1 line-clamp-2">${title}</h3>
-                            <p class="text-sm text-gray-300 font-light line-clamp-1">${channelTitle}</p>
+                            <div class="text-xl font-medium mb-1 marquee-container card-title-container">
+                                <div class="marquee-text card-title" data-original-text="${item.snippet.title}">${title}</div>
+                            </div>
+                            <div class="text-sm text-gray-300 font-light marquee-container card-artist-container">
+                                <div class="marquee-text card-artist" data-original-text="${item.snippet.channelTitle}">${channelTitle}</div>
+                            </div>
                         </div>
                         
                         <div class="card-actions">
                             ${isVideo 
-                                ? `<button data-index="${videoIndex}" class="play-video-btn p-3 rounded-full text-white text-lg font-semibold shadow-xl glass-button glass-button-red">
+                                ? `<button data-index="${videoIndex}" class="play-video-btn p-3 text-white text-lg font-semibold shadow-xl glass-button glass-button-red squircle-large">
                                     <i class="fa-solid fa-play"></i>
                                    </button>` 
                                 : `<button class="view-artist-btn w-full p-2 rounded-lg text-sm font-semibold glass-button">
@@ -707,6 +727,18 @@
                 }
 
                 ui.musicView.appendChild(card);
+                
+                // Check and apply marquee animation to card text
+                const titleEl = card.querySelector('.card-title');
+                const titleContainer = card.querySelector('.card-title-container');
+                const artistEl = card.querySelector('.card-artist');
+                const artistContainer = card.querySelector('.card-artist-container');
+                
+                // Delay slightly to ensure layout rendering is complete
+                setTimeout(() => {
+                    updateMarquee(titleEl, titleContainer);
+                    updateMarquee(artistEl, artistContainer);
+                }, 100); 
             }
         }
 
@@ -765,7 +797,6 @@
             ui.bottomPlayer.classList.add('player-visible');
             
             // Marquee Update
-            // Wait for text content update, then check for overflow
             setTimeout(() => {
                 updateMarquee(ui.currentTitle, ui.currentTitleContainer);
                 updateMarquee(ui.currentArtist, ui.currentArtistContainer);
@@ -793,23 +824,32 @@
         function skipNext() {
             if (currentPlaylistIndex === -1) return;
             const nextIndex = currentPlaylistIndex + 1;
+            
             if (nextIndex < currentPlaylist.length) {
                 startPlaylist(currentPlaylist, nextIndex, isPlayingFromLibrary);
             } else {
-                ytPlayer.stopVideo();
-                // Ensure text is reset and marquee is disabled
-                ui.currentTitle.textContent = "Playlist finished";
-                ui.currentArtist.textContent = "";
-                ui.currentTitleContainer.classList.remove('active');
-                ui.currentArtistContainer.classList.remove('active');
-                updateLibraryIcon(null);
+                // If it's the last song, restart the playlist from the beginning (index 0)
+                startPlaylist(currentPlaylist, 0, isPlayingFromLibrary);
             }
         }
 
         function skipBack() {
-            if (currentPlaylistIndex <= 0) return;
+            if (currentPlaylistIndex === -1) return;
+            
+            // If the song is already a few seconds in, restart the song, otherwise go to previous
+            if (ytPlayer.getCurrentTime() > 3) { 
+                ytPlayer.seekTo(0, true);
+                return;
+            }
+
             const prevIndex = currentPlaylistIndex - 1;
-            startPlaylist(currentPlaylist, prevIndex, isPlayingFromLibrary);
+            
+            if (prevIndex >= 0) {
+                startPlaylist(currentPlaylist, prevIndex, isPlayingFromLibrary);
+            } else {
+                // If it's the first song and skip back is pressed, go to the last song
+                startPlaylist(currentPlaylist, currentPlaylist.length - 1, isPlayingFromLibrary);
+            }
         }
 
         // --- LOCAL LIBRARY & PLAYLIST MANAGEMENT ---
@@ -901,7 +941,6 @@
 
                 if (isPlayingFromLibrary && currentPlaylistIndex === index) {
                     // Force update player info with new names, but keep playing the current track
-                    // Use the newly saved names for player UI update
                     const updatedSong = userLibrary[index];
                     ui.currentTitle.dataset.originalText = updatedSong.title; 
                     ui.currentArtist.dataset.originalText = updatedSong.artist;
@@ -951,14 +990,14 @@
                         </div>
                         
                         <div class="card-actions flex-col space-y-2 !opacity-100">
-                            <button class="play-library-btn w-3/4 p-2 rounded-lg text-sm font-semibold glass-button glass-button-red">
+                            <button class="play-library-btn w-3/4 p-2 rounded-lg text-sm font-semibold glass-button glass-button-red squircle">
                                 <i class="fa-solid fa-play mr-2"></i> Play
                             </button>
                             <div class="flex space-x-2 w-3/4">
-                                <button class="edit-library-btn flex-grow p-2 rounded-lg text-sm font-semibold glass-button" title="Edit Names">
+                                <button class="edit-library-btn flex-grow p-2 rounded-lg text-sm font-semibold glass-button squircle" title="Edit Names">
                                     <i class="fa-solid fa-pencil mr-1"></i> Edit
                                 </button>
-                                <button class="remove-library-btn p-2 rounded-lg text-sm font-semibold glass-button hover:bg-red-900/50" title="Remove from Library">
+                                <button class="remove-library-btn p-2 rounded-lg text-sm font-semibold glass-button hover:bg-red-900/50 squircle" title="Remove from Library">
                                     <i class="fa-solid fa-trash-can"></i>
                                 </button>
                             </div>
@@ -1082,6 +1121,16 @@
                     updateMarquee(ui.currentTitle, ui.currentTitleContainer);
                     updateMarquee(ui.currentArtist, ui.currentArtistContainer);
                  }
+                 
+                 // Re-check card marqees on resize
+                 document.querySelectorAll('.music-card').forEach(card => {
+                    const titleEl = card.querySelector('.card-title');
+                    const titleContainer = card.querySelector('.card-title-container');
+                    const artistEl = card.querySelector('.card-artist');
+                    const artistContainer = card.querySelector('.card-artist-container');
+                    if (titleEl && titleContainer) updateMarquee(titleEl, titleContainer);
+                    if (artistEl && artistContainer) updateMarquee(artistEl, artistContainer);
+                 });
             });
         }
         
