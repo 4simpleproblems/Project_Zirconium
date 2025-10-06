@@ -22,7 +22,6 @@
             flex-direction: column;
             padding-bottom: 72px; 
         }
-        /* Style for the fixed bottom player bar */
         #bottom-player {
             position: fixed;
             bottom: 0;
@@ -36,7 +35,6 @@
         .player-visible {
             transform: translateY(0%) !important;
         }
-        /* Full-screen Video Overlay - Initially Hidden */
         #fullscreen-video-overlay {
             position: fixed;
             top: 0;
@@ -49,7 +47,6 @@
             align-items: center;
             justify-content: center;
         }
-        /* YouTube Player Container always in the hidden overlay */
         #fullscreen-player-container {
             width: 90%; 
             height: 90%; 
@@ -57,7 +54,8 @@
             max-height: 720px;
             aspect-ratio: 16 / 9;
         }
-        /* Hide the video element when playing in background mode */
+        /* Fix for the CORS/PostMessage error: The player is ALWAYS in the fullscreen div. 
+           We hide the iframe itself when it's in audio mode. */
         .yt-player-audio-mode {
             position: absolute !important;
             top: -9999px !important;
@@ -134,8 +132,7 @@
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
-        // This file MUST exist and contain your project's configuration:
-        // { const firebaseConfig = { apiKey: "...", authDomain: "...", projectId: "..." }; export { firebaseConfig }; }
+        // IMPORTANT: Ensure this file exists and contains your Firebase configuration.
         import { firebaseConfig } from '../firebase-config.js';
 
         // --- GLOBAL STATE & INITIALIZATION ---
@@ -152,7 +149,7 @@
         let currentPlaylistIndex = -1;
         let isPlayingFromLibrary = false;
         
-        // Local Library Storage (Simplified: only one playlist)
+        // Local Library Storage
         const LOCAL_STORAGE_KEY = 'musicflow_library';
         let userLibrary = loadLibrary();
 
@@ -178,6 +175,7 @@
 
         async function fetchApiKey() {
             try {
+                // Fetching from 'secrets' collection, 'apis' document
                 const apiDocRef = doc(db, 'secrets', 'apis');
                 const docSnap = await getDoc(apiDocRef);
 
@@ -186,11 +184,11 @@
                     console.log("YouTube API Key successfully fetched.");
                     return true;
                 } else {
-                    console.error("No 'youtubeAPI' field found in 'secrets/apis' document.");
+                    console.error("Firebase Error: No 'youtubeAPI' field found in 'secrets/apis' document.");
                     return false;
                 }
             } catch (error) {
-                console.error("Error fetching API key from Firestore:", error);
+                console.error("Firestore Error: Error fetching API key:", error);
                 return false;
             }
         }
@@ -204,16 +202,16 @@
                 if (keyFetched) {
                     ui.musicView.innerHTML = '<p class="col-span-full text-gray-500">Enter a query above and click "Search" to find music videos/artists.</p>';
                     loadYouTubeIframeAPI();
-                    attachEventListeners(user.uid);
+                    attachEventListeners();
                     renderLibrary(); 
                 } else {
-                    ui.musicView.innerHTML = '<p class="col-span-full text-xl text-red-500">Error: Could not load YouTube API Key securely. Check console.</p>';
+                    ui.musicView.innerHTML = '<p class="col-span-full text-xl text-red-500">Initialization Error: Could not load YouTube API Key securely.</p>';
                 }
             }
         });
 
 
-        // --- YOUTUBE API INTEGRATION (The Fix) ---
+        // --- YOUTUBE API INTEGRATION (The Fixes) ---
 
         function loadYouTubeIframeAPI() {
             const tag = document.createElement('script');
@@ -222,16 +220,14 @@
             firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
         }
 
-        // Global function required by the YouTube Iframe API
         window.onYouTubeIframeAPIReady = function() {
-            // Initialize the player once, inside the fullscreen container.
-            // We use JS to hide/show the video element itself later.
+            // Player initialization is always full size, but CSS hidden for audio mode
             ytPlayer = new YT.Player('youtube-player', {
                 height: '100%',
                 width: '100%',
                 videoId: '', 
                 playerVars: {
-                    'controls': 0, // No controls initially (audio mode)
+                    'controls': 0, // Hidden controls for audio mode
                     'disablekb': 1,
                     'modestbranding': 1,
                     'rel': 0,
@@ -257,10 +253,12 @@
 
         function onPlayerStateChange(event) {
             const state = event.data;
+            
+            // Update UI based on state
             if (state === YT.PlayerState.PLAYING) {
-                ui.playIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />`; // Pause icon
+                ui.playIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />`;
             } else {
-                ui.playIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197 2.132A1 1 0 0110 13.205V10.795a1 1 0 011.555-.832l3.197 2.132a1 1 0 010 1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />`; // Play icon
+                ui.playIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197 2.132A1 1 0 0110 13.205V10.795a1 1 0 011.555-.832l3.197 2.132a1 1 0 010 1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />`;
             }
             
             if (state === YT.PlayerState.ENDED) {
@@ -268,15 +266,37 @@
             }
         }
 
+        /**
+         * Search for YouTube videos/channels. Fixes 400 error by ensuring valid parameters.
+         */
         async function performSearch(query) {
-            if (!youtubeApiKey || !query.trim()) return;
+            if (!youtubeApiKey || !query.trim()) {
+                ui.musicView.innerHTML = '<p class="col-span-full text-xl text-gray-400">Please enter a valid search query.</p>';
+                return;
+            }
 
             ui.musicView.innerHTML = '<p class="col-span-full text-xl text-gray-400">Searching YouTube for music...</p>';
             
-            const apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video,channel&videoCategoryId=10&maxResults=20&key=${youtubeApiKey}`;
+            // Constructing the URL with required parameters and secured API key
+            const searchUrl = new URL('https://www.googleapis.com/youtube/v3/search');
+            searchUrl.searchParams.set('part', 'snippet');
+            searchUrl.searchParams.set('q', query);
+            searchUrl.searchParams.set('type', 'video,channel'); // Search for videos AND artists (channels)
+            searchUrl.searchParams.set('videoCategoryId', '10'); // Filter for Music category (optional, but helpful)
+            searchUrl.searchParams.set('maxResults', '20');
+            searchUrl.searchParams.set('key', youtubeApiKey);
 
             try {
-                const response = await fetch(apiUrl);
+                const response = await fetch(searchUrl.toString());
+                
+                // IMPORTANT: Check for non-200 status codes (like 400, 403, 500)
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error("YouTube API Bad Request Error:", errorData);
+                    ui.musicView.innerHTML = `<p class="col-span-full text-xl text-red-500">Search Failed (Status ${response.status}). Check API Key/Restrictions. Message: ${errorData.error.message}</p>`;
+                    return;
+                }
+                
                 const data = await response.json();
                 
                 if (data.items && data.items.length > 0) {
@@ -291,19 +311,20 @@
                     ui.musicView.innerHTML = '<p class="col-span-full text-xl text-gray-400">No music videos or artists found for your query.</p>';
                 }
             } catch (error) {
-                console.error("YouTube API Search Error:", error);
-                ui.musicView.innerHTML = '<p class="col-span-full text-xl text-red-500">Search failed. API issue or network error.</p>';
+                console.error("Network or Fetch Error:", error);
+                ui.musicView.innerHTML = '<p class="col-span-full text-xl text-red-500">Search failed due to a network or general error.</p>';
             }
         }
 
         function renderSearchResults(items) {
             ui.musicView.innerHTML = ''; 
-            items.forEach((item, index) => {
+            items.forEach((item) => {
                 const isVideo = item.id.kind === 'youtube#video';
                 const id = isVideo ? item.id.videoId : item.id.channelId;
                 const title = item.snippet.title;
                 const channelTitle = item.snippet.channelTitle;
                 const thumbnail = item.snippet.thumbnails.medium.url;
+                const videoIndex = currentPlaylist.findIndex(song => song.videoId === id);
 
                 const card = document.createElement('div');
                 card.className = 'bg-gray-900 rounded-xl overflow-hidden shadow-lg hover:shadow-red-500/50 transition duration-300 cursor-pointer flex flex-col';
@@ -321,7 +342,7 @@
                     </div>
                     <div class="p-4 pt-0">
                         ${isVideo 
-                            ? `<button data-index="${index}" class="play-video-btn w-full p-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold">Play Now</button>` 
+                            ? `<button data-index="${videoIndex}" class="play-video-btn w-full p-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold">Play Now</button>` 
                             : `<button class="view-artist-btn w-full p-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-semibold">View Channel</button>`
                         }
                     </div>
@@ -330,14 +351,13 @@
                 if (isVideo) {
                     card.querySelector('.play-video-btn').addEventListener('click', (e) => {
                         e.stopPropagation(); 
-                        const videoIndex = parseInt(e.currentTarget.dataset.index);
-                        startPlaylist(currentPlaylist, videoIndex, false);
+                        const index = parseInt(e.currentTarget.dataset.index);
+                        startPlaylist(currentPlaylist, index, false);
                     });
                 }
                 
                 card.addEventListener('click', () => {
                     if (isVideo) {
-                        const videoIndex = currentPlaylist.findIndex(song => song.videoId === id);
                         startPlaylist(currentPlaylist, videoIndex, false);
                     } else {
                         ui.searchInput.value = channelTitle;
@@ -349,7 +369,7 @@
             });
         }
 
-        // --- PLAYER CONTROLS & LOGIC (Updated) ---
+        // --- PLAYER CONTROLS & LOGIC ---
 
         function startPlaylist(playlist, index, fromLibrary = false) {
             if (!isPlayerReady || playlist.length === 0 || index < 0 || index >= playlist.length) return;
@@ -360,13 +380,13 @@
             
             const currentSong = currentPlaylist[currentPlaylistIndex];
             
-            // 1. Load the video in the single, persistent player instance
+            // Load video and play
             ytPlayer.loadVideoById(currentSong.videoId);
             
-            // 2. Ensure player is in audio-only mode and bottom bar is visible
+            // Ensure player is in audio-only mode and bottom bar is visible
             window.hideFullscreenPlayer(true); 
 
-            // 3. Update the bottom player UI
+            // Update the bottom player UI
             ui.currentTitle.textContent = currentSong.title;
             ui.currentArtist.textContent = currentSong.artist;
             ui.currentThumbnail.src = currentSong.thumbnail;
@@ -377,13 +397,10 @@
             ui.addToLibraryBtn.dataset.artist = currentSong.artist;
             ui.addToLibraryBtn.dataset.thumbnail = currentSong.thumbnail;
             ui.addToLibraryBtn.classList.remove('hidden');
-
-            console.log(`Now Playing [${currentPlaylistIndex + 1}/${currentPlaylist.length}]: ${currentSong.title}`);
         }
 
         function togglePlayPause() {
             if (!ytPlayer || currentPlaylistIndex === -1) return;
-
             const state = ytPlayer.getPlayerState();
             if (state === YT.PlayerState.PLAYING) {
                 ytPlayer.pauseVideo();
@@ -394,7 +411,6 @@
 
         function skipNext() {
             if (currentPlaylistIndex === -1) return;
-
             const nextIndex = currentPlaylistIndex + 1;
             if (nextIndex < currentPlaylist.length) {
                 startPlaylist(currentPlaylist, nextIndex, isPlayingFromLibrary);
@@ -407,10 +423,11 @@
 
         function skipBack() {
             if (currentPlaylistIndex <= 0) return;
-
             const prevIndex = currentPlaylistIndex - 1;
             startPlaylist(currentPlaylist, prevIndex, isPlayingFromLibrary);
         }
+
+        // --- Fullscreen Logic (NO iframe move/destroy, fixes PostMessage errors) ---
 
         /**
          * Global function to display the video in a full-screen overlay.
@@ -418,14 +435,19 @@
         window.showFullscreenPlayer = function() {
             if (currentPlaylistIndex === -1) return;
 
-            // 1. Change player properties for video viewing
-            ytPlayer.setPlaybackQuality('large'); 
-            ytPlayer.setLoop(false);
-            ytPlayer.setVolume(100);
+            // 1. Ensure video is playing
+            if (ytPlayer.getPlayerState() !== YT.PlayerState.PLAYING) {
+                ytPlayer.playVideo();
+            }
             
-            // 2. Show player controls
-            ytPlayer.getIframe().setAttribute('src', ytPlayer.getIframe().src.replace('controls=0', 'controls=1'));
-            
+            // 2. Change player CSS/Controls
+            // The iframe URL contains parameters. Setting the src will reload the iframe with new parameters.
+            let iframeSrc = ytPlayer.getIframe().src;
+            if (!iframeSrc.includes('controls=1')) {
+                // Ensure controls are visible in fullscreen
+                ytPlayer.getIframe().src = iframeSrc.replace('controls=0', 'controls=1');
+            }
+
             // 3. Show the container and remove the hidden class
             ui.youtubePlayerDiv.classList.remove('yt-player-audio-mode');
             ui.fullscreenOverlay.style.display = 'flex';
@@ -433,19 +455,19 @@
         }
 
         /**
-         * Global function to hide the full-screen overlay and move the player back.
-         * @param {boolean} forceAudioMode - If true, ensures controls are hidden for background play.
+         * Global function to hide the full-screen overlay and move the player back to audio mode.
          */
         window.hideFullscreenPlayer = function(forceAudioMode = false) {
             if (currentPlaylistIndex === -1 && !forceAudioMode) return;
             
             // 1. Ensure player is set back to audio-only controls
-            if (ytPlayer.getPlayerState() === YT.PlayerState.PLAYING || forceAudioMode) {
-                // Remove controls for background play (this might be necessary for some environments)
-                ytPlayer.getIframe().setAttribute('src', ytPlayer.getIframe().src.replace('controls=1', 'controls=0'));
+            let iframeSrc = ytPlayer.getIframe().src;
+            if (!iframeSrc.includes('controls=0')) {
+                // Remove controls for background play
+                ytPlayer.getIframe().src = iframeSrc.replace('controls=1', 'controls=0');
             }
 
-            // 2. Hide the overlay and re-apply the hidden class
+            // 2. Hide the overlay and apply the hidden class
             ui.fullscreenOverlay.style.display = 'none';
             ui.youtubePlayerDiv.classList.add('yt-player-audio-mode');
             ui.bottomPlayer.style.display = 'flex';
@@ -474,9 +496,7 @@
         
         function addToLibrary(songData) {
             const videoId = songData.videoId;
-            const existing = userLibrary.find(s => s.videoId === videoId);
-
-            if (existing) {
+            if (userLibrary.find(s => s.videoId === videoId)) {
                 alert(`"${songData.title}" is already in your library!`);
                 return;
             }
@@ -546,7 +566,6 @@
         function promptAddUrl() {
             const url = prompt("Enter a YouTube Video URL:");
             if (url) {
-                // Regex to find the video ID from various YouTube URL formats
                 const videoIdMatch = url.match(/(?:\?v=|\/embed\/|\/v\/|youtu\.be\/|\/shorts\/)([a-zA-Z0-9_-]{11})[^#&]*/);
                 if (videoIdMatch && videoIdMatch[1]) {
                     const videoId = videoIdMatch[1];
@@ -619,11 +638,9 @@
                 renderLibrary();
                 isPlayingFromLibrary = true;
             } else {
-                // If switching back to home, try to show previous search results
                 if (currentPlaylist.length === 0) {
                      ui.musicView.innerHTML = '<p class="col-span-full text-gray-500">Enter a query above and click "Search" to find music videos/artists.</p>';
                 } else {
-                    // Re-render search results from the current playlist data
                     renderSearchResults(currentPlaylist.map(song => ({
                         id: { kind: 'youtube#video', videoId: song.videoId },
                         snippet: { title: song.title, channelTitle: song.artist, thumbnails: { medium: { url: song.thumbnail } } }
@@ -633,11 +650,9 @@
             }
         }
 
-        // Expose necessary functions/data globally for HTML onclicks
+        // Expose necessary functions/data globally
         window.startPlaylist = startPlaylist;
         window.userLibrary = userLibrary;
-        window.showFullscreenPlayer = window.showFullscreenPlayer;
-        window.hideFullscreenPlayer = window.hideFullscreenPlayer;
 
     </script>
 </body>
