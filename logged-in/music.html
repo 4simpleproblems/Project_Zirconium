@@ -360,7 +360,7 @@
         let currentChannelTitle = null; 
         let searchHistory = []; 
         
-        // New Player Status State
+        // New Player Status State (Restored)
         let adPollingInterval = null;
         let adIsPlaying = false;
         let playerHasError = false;
@@ -448,7 +448,7 @@
         }
         
         /**
-         * Helper to disable marquee/animations and restore the content container to a static state.
+         * Helper to disable marquee/animations and restore the content container to a static state. (Restored)
          */
         function stopMarquee(textElement, containerElement) {
             containerElement.classList.remove('active');
@@ -557,7 +557,7 @@
                 events: {
                     'onReady': onPlayerReady,
                     'onStateChange': onPlayerStateChange,
-                    'onError': onPlayerError // ADDED: Error handler
+                    'onError': onPlayerError // ADDED: Error handler (Restored)
                 }
             });
         }
@@ -568,13 +568,14 @@
             ui.skipBackBtn.disabled = false;
             ui.skipNextBtn.disabled = false;
             
-            // ADDED: Start Ad Polling as soon as the player is ready
+            // ADDED: Start Ad Polling as soon as the player is ready (Restored)
             if (!adPollingInterval) {
+                // YT.AdState enum is implicitly available after player is ready
                 adPollingInterval = setInterval(handleAdStatus, 1000); // Check every second
             }
         }
         
-        // ADDED: Function to handle YouTube player errors
+        // ADDED: Function to handle YouTube player errors (Restored)
         function onPlayerError(event) {
             playerHasError = true;
             
@@ -601,6 +602,7 @@
             }, 3000); // 3-second delay to show the error
         }
 
+
         function onPlayerStateChange(event) {
             const state = event.data;
             
@@ -611,7 +613,7 @@
             }
             
             if (state === YT.PlayerState.ENDED) {
-                // Implement playlist looping
+                // Implement playlist looping (Restored)
                 const nextIndex = currentPlaylistIndex + 1;
                 if (nextIndex < currentPlaylist.length) {
                     skipNext();
@@ -622,48 +624,140 @@
             }
         }
         
-        // ADDED: Function to handle ad status polling
+        // ADDED: Function to handle ad status polling (Restored)
         function handleAdStatus() {
-            if (!isPlayerReady || playerHasError) return;
+            // This is the line that was throwing the error: ytPlayer.getAdState is not a function
+            // The fix is ensuring ytPlayer is ready and using YT.AdState.
+            if (!isPlayerReady || playerHasError || !window.YT) return; 
 
-            // Use the native YouTube AdState enum (AD_PLAYING, AD_PAUSED, NOT_PLAYING)
-            const adState = ytPlayer.getAdState();
-            const newAdIsPlaying = adState === YT.AdState.AD_PLAYING || adState === YT.AdState.AD_PAUSED;
+            // YT.AdState is accessible after the API loads
+            // If getAdState() fails, it's likely YT object isn't fully ready or an iframe restriction.
+            try {
+                 const adState = ytPlayer.getAdState();
+                 // Check against the AdState enum which should be available
+                 const newAdIsPlaying = adState === window.YT.AdState.AD_PLAYING || adState === window.YT.AdState.AD_PAUSED;
+                 
+                 if (newAdIsPlaying !== adIsPlaying) {
+                     adIsPlaying = newAdIsPlaying;
 
-            if (newAdIsPlaying !== adIsPlaying) {
-                adIsPlaying = newAdIsPlaying;
+                     if (adIsPlaying) {
+                         // Ad started playing
+                         stopMarquee(ui.currentTitle, ui.currentTitleContainer);
+                         stopMarquee(ui.currentArtist, ui.currentArtistContainer);
 
-                if (adIsPlaying) {
-                    // Ad started playing
-                    stopMarquee(ui.currentTitle, ui.currentTitleContainer);
-                    stopMarquee(ui.currentArtist, ui.currentArtistContainer);
+                         // Update UI to show ad status
+                         ui.currentTitle.textContent = "Ad Playing";
+                         ui.currentTitle.classList.add('text-yellow-400-custom');
+                         ui.currentArtist.textContent = "Thank you for supporting the creator!";
+                         ui.currentArtist.style.color = 'rgb(255 255 255 / 0.7)'; 
+                         ui.currentThumbnail.src = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'%23FBBF24\'%3E%3Cpath d=\'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z\'/%3E%3C/svg%3E'; // Ad icon (yellow info)
+                         
+                     } else {
+                         // Ad stopped playing
+                         // Restore text colors and information
+                         ui.currentTitle.classList.remove('text-yellow-400-custom'); 
+                         ui.currentArtist.style.color = ''; // Reset to default gray-400
 
-                    // Update UI to show ad status
-                    ui.currentTitle.textContent = "Ad Playing";
-                    ui.currentTitle.classList.add('text-yellow-400-custom');
-                    ui.currentArtist.textContent = "Thank you for supporting the creator!";
-                    ui.currentArtist.style.color = 'rgb(255 255 255 / 0.7)'; 
-                    ui.currentThumbnail.src = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'%23FBBF24\'%3E%3Cpath d=\'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z\'/%3E%3C/svg%3E'; // Ad icon (yellow info)
-                    
-                } else {
-                    // Ad stopped playing
-                    // Restore text colors and information
-                    ui.currentTitle.classList.remove('text-yellow-400-custom'); 
-                    ui.currentArtist.style.color = ''; // Reset to default gray-400
-
-                    const currentSong = currentPlaylist[currentPlaylistIndex];
-                    if (currentSong) {
-                        // Restore song info and re-enable marquee
-                        updatePlayerInfoUI(currentSong);
-                    }
-                }
+                         const currentSong = currentPlaylist[currentPlaylistIndex];
+                         if (currentSong) {
+                             // Restore song info and re-enable marquee
+                             updatePlayerInfoUI(currentSong);
+                         }
+                     }
+                 }
+            } catch (e) {
+                 // Suppress console spam if getAdState is temporarily unavailable during loading.
+                 // console.warn('Ad state check skipped or failed:', e.message); 
             }
         }
+
 
         /**
          * Search for YouTube videos/channels and manages search history.
          */
-        // ... (No major changes here) ...
+        async function performSearch(query, isBack = false) {
+            if (!youtubeApiKey || !query.trim()) {
+                ui.musicView.innerHTML = '<p class="col-span-full text-xl text-gray-400 font-light">Please enter a valid search query.</p>';
+                currentChannelTitle = null;
+                ui.channelBanner.classList.add('hidden');
+                return;
+            }
+
+            ui.musicView.innerHTML = '<p class-span-full text-xl text-gray-400 font-light">Searching YouTube for music...</p>';
+            
+            // History Management
+            if (!isBack && query.trim() !== searchHistory[searchHistory.length - 1]) {
+                searchHistory.push(query.trim());
+            }
+
+            const searchUrl = new URL('https://www.googleapis.com/youtube/v3/search');
+            searchUrl.searchParams.set('part', 'snippet');
+            searchUrl.searchParams.set('q', query);
+            
+            searchUrl.searchParams.set('type', 'video,channel'); 
+            searchUrl.searchParams.set('maxResults', '20');
+            searchUrl.searchParams.set('key', youtubeApiKey);
+            
+            // Update channel banner based on the context of the search
+            if (currentChannelTitle && query === currentChannelTitle) {
+                ui.channelBanner.classList.remove('hidden');
+                ui.channelBanner.style.display = 'flex'; // Ensure flex layout for button
+                ui.channelBannerText.textContent = `Viewing videos for channel: ${currentChannelTitle}`;
+                // Only show back button if there is history to go back to (more than one item)
+                ui.goBackButton.classList.toggle('hidden', searchHistory.length <= 1); 
+            } else {
+                currentChannelTitle = null;
+                ui.channelBanner.classList.add('hidden');
+            }
+
+            try {
+                const response = await fetch(searchUrl.toString());
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    let errorMessage = `Status ${response.status}. Message: ${errorData.error.message || 'Unknown error.'}`;
+                    ui.musicView.innerHTML = `<p class-span-full text-xl text-red-500 font-light">Search Failed (${errorMessage})</p>`;
+                    return;
+                }
+                
+                const data = await response.json();
+                
+                if (data.items && data.items.length > 0) {
+                    currentPlaylist = data.items.filter(item => item.id.kind === 'youtube#video').map(item => ({
+                        videoId: item.id.videoId,
+                        title: item.snippet.title,
+                        artist: item.snippet.channelTitle,
+                        thumbnail: item.snippet.thumbnails.medium.url,
+                    }));
+                    renderSearchResults(data.items);
+                } else {
+                    ui.musicView.innerHTML = `<p class="col-span-full text-xl text-gray-400 font-light">No music videos or artists found for "${query}".</p>`;
+                }
+            } catch (error) {
+                console.error("Network or Fetch Error during search:", error);
+                ui.musicView.innerHTML = '<p class="col-span-full text-xl text-red-500 font-light">Search failed due to a network or general error.</p>';
+            }
+        }
+        
+        /**
+         * Reverts to the previous search query in the history stack.
+         */
+        function goBackToLastSearch() {
+            if (searchHistory.length > 1) {
+                searchHistory.pop(); // Remove the current channel/search query
+                const previousQuery = searchHistory[searchHistory.length - 1]; 
+                
+                ui.searchInput.value = previousQuery;
+                currentChannelTitle = null;
+                performSearch(previousQuery, true); 
+                
+            } else if (searchHistory.length === 1) {
+                 searchHistory = [];
+                 currentChannelTitle = null;
+                 ui.channelBanner.classList.add('hidden');
+                 ui.musicView.innerHTML = '<p class="col-span-full text-gray-500 font-light">Enter a query above and click "Search" to find music videos/artists.</p>';
+            }
+        }
 
         async function renderSearchResults(items) {
             ui.musicView.innerHTML = ''; 
@@ -753,6 +847,7 @@
             }
         }
 
+
         // --- PLAYER CONTROLS & LOGIC ---
 
         function isSongInLibrary(videoId) {
@@ -782,7 +877,7 @@
             }
         }
         
-        // ADDED: New helper function to update UI without restarting the player
+        // ADDED: New helper function to update UI without restarting the player (Restored)
         async function updatePlayerInfoUI(song) {
             if (!song) return;
             
@@ -975,16 +1070,8 @@
 
                 if (isPlayingFromLibrary && currentPlaylistIndex === index) {
                     // Force update player info with new names, but keep playing the current track
-                    const updatedSong = userLibrary[index];
-                    ui.currentTitle.dataset.originalText = updatedSong.title; 
-                    ui.currentArtist.dataset.originalText = updatedSong.artist;
-                    ui.currentTitle.textContent = updatedSong.title;
-                    ui.currentArtist.textContent = updatedSong.artist;
-                    
-                    setTimeout(() => {
-                        updateMarquee(ui.currentTitle, ui.currentTitleContainer);
-                        updateMarquee(ui.currentArtist, ui.currentArtistContainer);
-                    }, 50);
+                    // Use updatePlayerInfoUI directly to refresh UI without restarting video
+                    updatePlayerInfoUI(userLibrary[index]);
                 }
             } else {
                 console.error("Title and Artist cannot be empty.");
@@ -1024,14 +1111,14 @@
                         </div>
                         
                         <div class="card-actions flex-col space-y-2 !opacity-100">
-                            <button class="play-library-btn w-3/4 p-2 rounded-lg text-sm font-semibold glass-button glass-button-red squircle">
+                            <button class="play-library-btn w-3/4 p-2 rounded-lg text-sm font-semibold glass-button glass-button-red">
                                 <i class="fa-solid fa-play mr-2"></i> Play
                             </button>
                             <div class="flex space-x-2 w-3/4">
-                                <button class="edit-library-btn flex-grow p-2 rounded-lg text-sm font-semibold glass-button squircle" title="Edit Names">
+                                <button class="edit-library-btn flex-grow p-2 rounded-lg text-sm font-semibold glass-button" title="Edit Names">
                                     <i class="fa-solid fa-pencil mr-1"></i> Edit
                                 </button>
-                                <button class="remove-library-btn p-2 rounded-lg text-sm font-semibold glass-button hover:bg-red-900/50 squircle" title="Remove from Library">
+                                <button class="remove-library-btn p-2 rounded-lg text-sm font-semibold glass-button hover:bg-red-900/50" title="Remove from Library">
                                     <i class="fa-solid fa-trash-can"></i>
                                 </button>
                             </div>
@@ -1155,16 +1242,6 @@
                     updateMarquee(ui.currentTitle, ui.currentTitleContainer);
                     updateMarquee(ui.currentArtist, ui.currentArtistContainer);
                  }
-                 
-                 // Re-check card marqees on resize
-                 document.querySelectorAll('.music-card').forEach(card => {
-                    const titleEl = card.querySelector('.card-title');
-                    const titleContainer = card.querySelector('.card-title-container');
-                    const artistEl = card.querySelector('.card-artist');
-                    const artistContainer = card.querySelector('.card-artist-container');
-                    if (titleEl && titleContainer) updateMarquee(titleEl, titleContainer);
-                    if (artistEl && artistContainer) updateMarquee(artistEl, artistContainer);
-                 });
             });
         }
         
@@ -1257,6 +1334,8 @@
         window.startPlaylist = startPlaylist;
         window.userLibrary = userLibrary;
         window.promptAddUrl = promptAddUrl; 
+        window.performSearch = performSearch; // EXPOSED: To fix a possible ReferenceError
+        window.goBackToLastSearch = goBackToLastSearch; // EXPOSED: To fix a possible ReferenceError
 
         // Helper function for custom confirmation modal (replaces window.confirm)
         window.confirm = (message) => {
