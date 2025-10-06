@@ -73,18 +73,31 @@
         .player-visible {
             transform: translateY(0%) !important;
         }
-        /* New: Temporary Error State for Loading Delay */
-        #bottom-player.temp-error {
-            border-top: 2px solid #FBBF24; /* Yellow border-400 */
+        
+        /* HIDDEN PLAYER STYLES */
+        #youtube-player {
+            position: fixed !important; 
+            top: -9999px !important; 
+            left: -9999px !important; 
+            width: 1px !important; 
+            height: 1px !important; 
+            z-index: 0 !important;
         }
 
-        #youtube-player {
-            position: absolute !important;
-            top: -9999px !important;
-            left: -9999px !important;
-            width: 1px !important;
-            height: 1px !important;
+        /* DEBUG MODE STYLES: SHIFT+C will toggle this class on the element */
+        #youtube-player.player-visible-debug {
+            position: fixed !important;
+            top: 50px !important;
+            right: 20px !important;
+            left: auto !important; /* Ensure it stays on the right */
+            width: 320px !important; 
+            height: 180px !important; /* 16:9 aspect ratio */
+            border: 3px solid #EF4444 !important; /* Red border for visibility */
+            z-index: 1000 !important; 
+            background: black !important;
+            transition: all 0.2s ease-in-out !important;
         }
+
 
         /* Modal Backdrop */
         .modal-backdrop {
@@ -267,18 +280,18 @@
         </div>
 
         <div class="flex items-center space-x-6">
-            <button id="skip-back" class="text-gray-400 hover:text-white transition duration-150 disabled:opacity-50 glass-button w-14 h-14 flex items-center justify-center rounded-xl">
+            <button id="skip-back" class="text-gray-400 hover:text-white transition duration-150 disabled:opacity-50 glass-button p-3 rounded-xl">
                 <i class="fa-solid fa-backward-step fa-lg"></i>
             </button>
             <button id="play-pause" class="text-white hover:text-red-500 transition duration-150 w-14 h-14 flex items-center justify-center rounded-xl disabled:opacity-50 glass-button glass-button-red" disabled>
                 <i id="play-icon" class="fa-solid fa-play fa-xl"></i> 
             </button>
-            <button id="skip-next" class="text-gray-400 hover:text-white transition duration-150 disabled:opacity-50 glass-button w-14 h-14 flex items-center justify-center rounded-xl">
+            <button id="skip-next" class="text-gray-400 hover:text-white transition duration-150 disabled:opacity-50 glass-button p-3 rounded-xl">
                 <i class="fa-solid fa-forward-step fa-lg"></i>
             </button>
         </div>
 
-        <button id="add-to-library-btn" class="w-14 h-14 flex items-center justify-center ml-4 text-gray-400 hover:text-red-400 transition duration-150 hidden glass-button rounded-xl" title="Add to Library">
+        <button id="add-to-library-btn" class="p-2 ml-4 text-gray-400 hover:text-red-400 transition duration-150 hidden glass-button rounded-xl" title="Add to Library">
             <i id="add-to-library-icon" class="fa-solid fa-book-bookmark fa-xl"></i>
         </button>
     </footer>
@@ -323,11 +336,6 @@
         let isPlayingFromLibrary = false;
         let currentChannelTitle = null; 
         let searchHistory = []; // History stack for search queries
-        
-        // Error handling variables
-        let errorTimeout = null;
-        const ERROR_DELAY_MS = 10000; // 10 seconds (Requested delay for error/slow loading)
-
 
         // Local Library Storage
         const LOCAL_STORAGE_KEY = 'musicflow_library';
@@ -487,8 +495,7 @@
                 },
                 events: {
                     'onReady': onPlayerReady,
-                    'onStateChange': onPlayerStateChange,
-                    'onError': onPlayerError // Add the error handler
+                    'onStateChange': onPlayerStateChange
                 }
             });
         }
@@ -498,77 +505,21 @@
             ui.playPauseBtn.disabled = false;
             ui.skipBackBtn.disabled = false;
             ui.skipNextBtn.disabled = false;
-            // Clear any pending error indication/timeout from previous sessions
-            clearTimeout(errorTimeout); 
-            errorTimeout = null;
-            ui.bottomPlayer.classList.remove('temp-error');
         }
 
         function onPlayerStateChange(event) {
             const state = event.data;
-            // -1 (unstarted/crashed) is often seen on restricted networks when attempting to load
-            const isErrorState = state === -1 || state === YT.PlayerState.PAUSED || state === YT.PlayerState.BUFFERING; 
-            
-            if (isErrorState) {
-                // If not playing and not already waiting for an error to clear, start the countdown
-                if (state !== YT.PlayerState.PLAYING && errorTimeout === null) {
-                    ui.bottomPlayer.classList.add('temp-error'); 
-                    console.warn(`Player encountered a non-playing state (${state}). Delaying automatic skip for ${ERROR_DELAY_MS / 1000} seconds.`);
-
-                    errorTimeout = setTimeout(() => {
-                        console.error("Video failed to load or recover within 10 seconds. Skipping to next track.");
-                        ui.bottomPlayer.classList.remove('temp-error');
-                        errorTimeout = null;
-                        skipNext();
-                    }, ERROR_DELAY_MS);
-                }
-            }
             
             if (state === YT.PlayerState.PLAYING) {
-                // Video is playing, clear any pending errors/timeouts
-                clearTimeout(errorTimeout);
-                errorTimeout = null;
-                ui.bottomPlayer.classList.remove('temp-error');
-                ui.playIcon.className = 'fa-solid fa-pause fa-xl';
+                ui.playIcon.className = 'fa-solid fa-pause fa-xl'; // Use regular pause icon for the squircle button
             } else {
-                 // Update icon for non-playing states (paused/buffering/etc.)
-                ui.playIcon.className = 'fa-solid fa-play fa-xl'; 
+                ui.playIcon.className = 'fa-solid fa-play fa-xl'; // Use regular play icon for the squircle button
             }
             
             if (state === YT.PlayerState.ENDED) {
-                // Clear any lingering error timeouts when playback officially ends
-                clearTimeout(errorTimeout);
-                errorTimeout = null;
-                ui.bottomPlayer.classList.remove('temp-error');
                 skipNext();
             }
         }
-        
-        /**
-         * Handles explicit YouTube API errors (e.g., 100, 101, 150).
-         */
-        function onPlayerError(event) {
-            const errorCode = event.data;
-            
-            // Critical error codes to log immediately but still apply delay:
-            // 2: Invalid parameter/Video not found
-            // 5: HTML5 player error
-            // 100: Video requested not found
-            // 101/150: Video restricted/unavailable (e.g., ad or restricted content)
-            
-            if (errorTimeout === null) {
-                ui.bottomPlayer.classList.add('temp-error');
-                console.error(`Youtubeer Error received: ${errorCode}. Delaying automatic skip for ${ERROR_DELAY_MS / 1000} seconds.`);
-
-                errorTimeout = setTimeout(() => {
-                    console.error(`Video with error code ${errorCode} failed to load or recover within 10 seconds. Skipping to next track.`);
-                    ui.bottomPlayer.classList.remove('temp-error');
-                    errorTimeout = null;
-                    skipNext();
-                }, ERROR_DELAY_MS);
-            }
-        }
-
 
         /**
          * Search for YouTube videos/channels and manages search history.
@@ -691,9 +642,8 @@
                         
                         <div class="card-actions">
                             ${isVideo 
-                                // Standardized Card Play Button (w-14 h-14)
-                                ? `<button data-index="${videoIndex}" class="play-video-btn w-14 h-14 flex items-center justify-center rounded-xl text-xl font-semibold shadow-xl glass-button glass-button-red">
-                                    <i class="fa-solid fa-play fa-xl"></i>
+                                ? `<button data-index="${videoIndex}" class="play-video-btn p-3 rounded-full text-white text-lg font-semibold shadow-xl glass-button glass-button-red">
+                                    <i class="fa-solid fa-play"></i>
                                    </button>` 
                                 : `<button class="view-artist-btn w-full p-2 rounded-lg text-sm font-semibold glass-button">
                                      <i class="fa-solid fa-users mr-2"></i> View Channel
@@ -762,12 +712,6 @@
         async function startPlaylist(playlist, index, fromLibrary = false) {
             if (!isPlayerReady || playlist.length === 0 || index < 0 || index >= playlist.length) return;
             
-            // Clear any pending error timeouts from a previous attempt
-            clearTimeout(errorTimeout);
-            errorTimeout = null;
-            ui.bottomPlayer.classList.remove('temp-error');
-
-
             currentPlaylist = playlist;
             currentPlaylistIndex = index;
             isPlayingFromLibrary = fromLibrary;
@@ -816,12 +760,6 @@
 
         function skipNext() {
             if (currentPlaylistIndex === -1) return;
-            
-            // Clear any pending error timeouts before skipping
-            clearTimeout(errorTimeout);
-            errorTimeout = null;
-            ui.bottomPlayer.classList.remove('temp-error');
-            
             const nextIndex = currentPlaylistIndex + 1;
             if (nextIndex < currentPlaylist.length) {
                 startPlaylist(currentPlaylist, nextIndex, isPlayingFromLibrary);
@@ -835,11 +773,6 @@
 
         function skipBack() {
             if (currentPlaylistIndex <= 0) return;
-             // Clear any pending error timeouts before skipping
-            clearTimeout(errorTimeout);
-            errorTimeout = null;
-            ui.bottomPlayer.classList.remove('temp-error');
-            
             const prevIndex = currentPlaylistIndex - 1;
             startPlaylist(currentPlaylist, prevIndex, isPlayingFromLibrary);
         }
@@ -972,15 +905,15 @@
                             <p class="text-sm text-gray-300 font-light line-clamp-1">${displayArtist}</p>
                         </div>
                         
-                        <div class="card-actions flex-col space-y-3 !opacity-100 items-center"> 
-                            <button class="play-library-btn w-14 h-14 flex items-center justify-center rounded-xl text-xl font-semibold shadow-xl glass-button glass-button-red" title="Play Song">
-                                <i class="fa-solid fa-play fa-xl"></i> 
+                        <div class="card-actions flex-col space-y-2 !opacity-100">
+                            <button class="play-library-btn w-3/4 p-2 rounded-lg text-sm font-semibold glass-button glass-button-red">
+                                <i class="fa-solid fa-play mr-2"></i> Play
                             </button>
                             <div class="flex space-x-2 w-3/4">
                                 <button class="edit-library-btn flex-grow p-2 rounded-lg text-sm font-semibold glass-button" title="Edit Names">
                                     <i class="fa-solid fa-pencil mr-1"></i> Edit
                                 </button>
-                                <button class="remove-library-btn w-10 p-2 rounded-lg text-sm font-semibold glass-button hover:bg-red-900/50" title="Remove from Library">
+                                <button class="remove-library-btn p-2 rounded-lg text-sm font-semibold glass-button hover:bg-red-900/50" title="Remove from Library">
                                     <i class="fa-solid fa-trash-can"></i>
                                 </button>
                             </div>
@@ -1117,6 +1050,15 @@
 
             if (e.key === ' ' || e.code === 'Space') {
                 e.preventDefault();
+            }
+            
+            // New: Shift + C to toggle player visibility for debugging
+            if (e.shiftKey && (e.key === 'c' || e.key === 'C')) {
+                const playerElement = document.getElementById('youtube-player');
+                playerElement.classList.toggle('player-visible-debug');
+                e.preventDefault(); 
+                console.log("YouTube Player Debug Mode Toggled: " + playerElement.classList.contains('player-visible-debug'));
+                return;
             }
 
             if (!ytPlayer || currentPlaylistIndex === -1 || !isPlayerReady) return;
