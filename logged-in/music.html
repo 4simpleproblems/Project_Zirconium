@@ -31,15 +31,6 @@
         .font-semibold {
             font-weight: 500;
         }
-        
-        /* Squircle Border Radius Utility (for buttons) */
-        .squircle {
-            border-radius: 30%; /* Approximates a squircle shape */
-        }
-        .squircle-large {
-            border-radius: 35%; 
-        }
-
 
         /* 1. GLASSMORPHISM BUTTON STYLES (Applies to all elements with this class) */
         .glass-button {
@@ -82,6 +73,11 @@
         .player-visible {
             transform: translateY(0%) !important;
         }
+        /* New: Temporary Error State for Loading Delay */
+        #bottom-player.temp-error {
+            border-top: 2px solid #FBBF24; /* Yellow border-400 */
+        }
+
         #youtube-player {
             position: absolute !important;
             top: -9999px !important;
@@ -119,7 +115,7 @@
             background-color: #111827;
             border-radius: 0.75rem;
             overflow: hidden;
-            aspect-ratio: 16 / 9; /* Ensures 16:9 ratio for cards */
+            aspect-ratio: 16 / 9; 
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
@@ -163,8 +159,6 @@
             display: flex;
             flex-direction: column;
             align-self: flex-start;
-            /* Container for title/artist that needs the marquee effect */
-            max-width: 100%; 
         }
 
         .card-actions {
@@ -192,50 +186,28 @@
             justify-content: center; /* Center the buttons in library view */
         }
 
-        /* MARQUEE TEXT STYLES */
+        /* 3. MARQUEE TEXT STYLES */
         .marquee-container {
             overflow: hidden;
             white-space: nowrap;
             width: 100%; 
-            position: relative; /* For the mask */
-        }
-
-        /* Fading mask effect on the marquee container */
-        .marquee-container.active {
-            /* Create a mask: transparent on the edges, solid white in the middle */
-            -webkit-mask-image: linear-gradient(to right, 
-                                rgba(0, 0, 0, 0) 0%, 
-                                rgba(0, 0, 0, 1) 5%, 
-                                rgba(0, 0, 0, 1) 95%, 
-                                rgba(0, 0, 0, 0) 100%);
-            mask-image: linear-gradient(to right, 
-                                rgba(0, 0, 0, 0) 0%, 
-                                rgba(0, 0, 0, 1) 5%, 
-                                rgba(0, 0, 0, 1) 95%, 
-                                rgba(0, 0, 0, 0) 100%);
         }
 
         .marquee-text {
             display: inline-block;
-            transform: translateX(0); 
-            animation-play-state: paused;
-            animation-timing-function: linear;
-            animation-iteration-count: infinite;
+            padding-left: 100%; /* Start off-screen */
+            animation: marquee 10s linear infinite;
         }
-        
-        /* Keyframes for the scrolling animation */
+
         @keyframes marquee {
-            0% { transform: translateX(0); }
-            /* Scroll distance is set via JS custom property */
-            100% { transform: translateX(var(--marquee-scroll-distance)); } 
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(-100%, 0); }
         }
 
         /* Apply marquee only when text overflows (JS will handle toggle) */
         .marquee-container.active .marquee-text {
-            animation-name: marquee;
-            animation-play-state: running;
+            animation-duration: 10s; /* Adjust speed as needed */
         }
-        
         .line-clamp-1, .line-clamp-2 {
             display: -webkit-box;
             -webkit-box-orient: vertical;
@@ -243,14 +215,6 @@
         }
         .line-clamp-1 { -webkit-line-clamp: 1; }
         .line-clamp-2 { -webkit-line-clamp: 2; }
-
-        /* Custom Colors for Status */
-        .text-yellow-400-custom {
-            color: rgb(252 214 0); /* yellow-400 */
-        }
-        .text-red-600-custom {
-            color: rgb(220 38 38); /* red-600 */
-        }
         
     </style>
 </head>
@@ -303,18 +267,18 @@
         </div>
 
         <div class="flex items-center space-x-6">
-            <button id="skip-back" class="text-gray-400 hover:text-white transition duration-150 disabled:opacity-50 glass-button p-3 squircle">
+            <button id="skip-back" class="text-gray-400 hover:text-white transition duration-150 disabled:opacity-50 glass-button w-14 h-14 flex items-center justify-center rounded-xl">
                 <i class="fa-solid fa-backward-step fa-lg"></i>
             </button>
-            <button id="play-pause" class="text-white hover:text-red-500 transition duration-150 w-14 h-14 flex items-center justify-center squircle-large disabled:opacity-50 glass-button glass-button-red" disabled>
+            <button id="play-pause" class="text-white hover:text-red-500 transition duration-150 w-14 h-14 flex items-center justify-center rounded-xl disabled:opacity-50 glass-button glass-button-red" disabled>
                 <i id="play-icon" class="fa-solid fa-play fa-xl"></i> 
             </button>
-            <button id="skip-next" class="text-gray-400 hover:text-white transition duration-150 disabled:opacity-50 glass-button p-3 squircle">
+            <button id="skip-next" class="text-gray-400 hover:text-white transition duration-150 disabled:opacity-50 glass-button w-14 h-14 flex items-center justify-center rounded-xl">
                 <i class="fa-solid fa-forward-step fa-lg"></i>
             </button>
         </div>
 
-        <button id="add-to-library-btn" class="p-2 ml-4 text-gray-400 hover:text-red-400 transition duration-150 hidden glass-button squircle" title="Add to Library">
+        <button id="add-to-library-btn" class="w-14 h-14 flex items-center justify-center ml-4 text-gray-400 hover:text-red-400 transition duration-150 hidden glass-button rounded-xl" title="Add to Library">
             <i id="add-to-library-icon" class="fa-solid fa-book-bookmark fa-xl"></i>
         </button>
     </footer>
@@ -358,12 +322,11 @@
         let currentPlaylistIndex = -1;
         let isPlayingFromLibrary = false;
         let currentChannelTitle = null; 
-        let searchHistory = []; 
+        let searchHistory = []; // History stack for search queries
         
-        // New Player Status State (Restored)
-        let adPollingInterval = null;
-        let adIsPlaying = false;
-        let playerHasError = false;
+        // Error handling variables
+        let errorTimeout = null;
+        const ERROR_DELAY_MS = 10000; // 10 seconds (Requested delay for error/slow loading)
 
 
         // Local Library Storage
@@ -405,59 +368,27 @@
          * Checks if the text inside the element overflows its container and toggles the marquee class.
          */
         function updateMarquee(textElement, containerElement) {
-            // Use an existing original text data attribute, or save the current text as original
-            const originalText = textElement.dataset.originalText || textElement.textContent;
-            textElement.dataset.originalText = originalText;
-            
-            // 1. Reset to original text for accurate measurement
-            textElement.textContent = originalText;
-            
-            // 2. Temporarily set display to inline-block and measure the true content width
-            textElement.style.display = 'inline-block';
-            const textWidth = textElement.scrollWidth; 
-            textElement.style.display = ''; // Reset display style
-
-            const containerWidth = containerElement.offsetWidth;
-            const isOverflowing = textWidth > containerWidth;
+            const textContent = textElement.textContent;
+            // Temporarily set width to 'auto' to check natural width
+            textElement.style.width = 'auto'; 
+            const isOverflowing = textElement.scrollWidth > containerElement.offsetWidth;
+            textElement.style.width = '100%'; // Reset to 100% or original setting
 
             if (isOverflowing) {
                 containerElement.classList.add('active');
-                
-                // 3. Calculate scroll distance (full width of the original text + a gap)
-                const gap = 30; // Gap between repetitions
-                const scrollDistance = textWidth + gap; 
-                
-                // 4. Set the CSS variable for the marquee animation
-                containerElement.style.setProperty('--marquee-scroll-distance', `-${scrollDistance}px`);
-                
-                // 5. Repeat the content for the seamless loop animation
-                textElement.innerHTML = originalText + '&nbsp;'.repeat(gap / 6) + originalText;
-                
-                // 6. Adjust animation duration based on content length for consistent speed
-                const speed = 40; // pixels per second (slightly slower for readability)
-                const duration = scrollDistance / speed; // seconds
-                textElement.style.animationDuration = `${duration}s`;
-                
+                // Need to wrap the text in a span/div to apply the marquee animation correctly
+                if (textElement.tagName === 'DIV' && textElement.classList.contains('marquee-text')) {
+                     // The structure is already correct, just ensure text is repeated if necessary for seamless loop
+                     const minRepeat = 2; // Repeat twice to ensure gap/loop
+                     textElement.innerHTML = textContent + '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' + textContent;
+                }
             } else {
                 containerElement.classList.remove('active');
-                // Ensure text element only has original text and no animation class/style
-                textElement.textContent = originalText;
-                textElement.style.animationDuration = '0s'; // Stop the animation
-                textElement.style.transform = 'translateX(0)';
+                // Restore original text content
+                textElement.innerHTML = textContent;
             }
         }
         
-        /**
-         * Helper to disable marquee/animations and restore the content container to a static state. (Restored)
-         */
-        function stopMarquee(textElement, containerElement) {
-            containerElement.classList.remove('active');
-            // Ensure the displayed text is just the original text (or the manually set error/ad message)
-            textElement.textContent = textElement.textContent; 
-            textElement.style.animationDuration = '0s'; 
-            textElement.style.transform = 'translateX(0)';
-        }
-
         /**
          * Asynchronously filters text for explicit content using the Purgomalum API.
          */
@@ -557,7 +488,7 @@
                 events: {
                     'onReady': onPlayerReady,
                     'onStateChange': onPlayerStateChange,
-                    'onError': onPlayerError // ADDED: Error handler (Restored)
+                    'onError': onPlayerError // Add the error handler
                 }
             });
         }
@@ -567,107 +498,74 @@
             ui.playPauseBtn.disabled = false;
             ui.skipBackBtn.disabled = false;
             ui.skipNextBtn.disabled = false;
-            
-            // ADDED: Start Ad Polling as soon as the player is ready (Restored)
-            if (!adPollingInterval) {
-                // YT.AdState enum is implicitly available after player is ready
-                adPollingInterval = setInterval(handleAdStatus, 1000); // Check every second
-            }
+            // Clear any pending error indication/timeout from previous sessions
+            clearTimeout(errorTimeout); 
+            errorTimeout = null;
+            ui.bottomPlayer.classList.remove('temp-error');
         }
-        
-        // ADDED: Function to handle YouTube player errors (Restored)
-        function onPlayerError(event) {
-            playerHasError = true;
-            
-            const errorCode = event.data;
-            console.error(`Youtubeer Error: ${errorCode}. Attempting to skip.`);
-
-            // 1. Stop Marquee/Animation
-            stopMarquee(ui.currentTitle, ui.currentTitleContainer);
-            stopMarquee(ui.currentArtist, ui.currentArtistContainer);
-            
-            // 2. Update UI as requested
-            ui.currentThumbnail.src = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'%23DC2626\'%3E%3Cpath d=\'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z\'/%3E%3C/svg%3E'; // Error Icon (red)
-            ui.currentTitle.textContent = "Error: Cannot Play Video"; // Replaces song title
-            ui.currentTitle.classList.add('text-red-600-custom'); // Custom red color
-            ui.currentArtist.textContent = `Error Code: ${errorCode}. Skipping...`; // Replaces artist name
-            ui.currentArtist.style.color = 'rgb(255 255 255 / 0.7)'; // Keep white/light gray color
-
-            // 3. Immediately skip to the next track
-            setTimeout(() => {
-                skipNext();
-                playerHasError = false; // Reset state after skipping
-                // Colors will be reset in handleAdStatus/updatePlayerInfoUI
-                ui.currentTitle.classList.remove('text-red-600-custom'); 
-            }, 3000); // 3-second delay to show the error
-        }
-
 
         function onPlayerStateChange(event) {
             const state = event.data;
+            // -1 (unstarted/crashed) is often seen on restricted networks when attempting to load
+            const isErrorState = state === -1 || state === YT.PlayerState.PAUSED || state === YT.PlayerState.BUFFERING; 
+            
+            if (isErrorState) {
+                // If not playing and not already waiting for an error to clear, start the countdown
+                if (state !== YT.PlayerState.PLAYING && errorTimeout === null) {
+                    ui.bottomPlayer.classList.add('temp-error'); 
+                    console.warn(`Player encountered a non-playing state (${state}). Delaying automatic skip for ${ERROR_DELAY_MS / 1000} seconds.`);
+
+                    errorTimeout = setTimeout(() => {
+                        console.error("Video failed to load or recover within 10 seconds. Skipping to next track.");
+                        ui.bottomPlayer.classList.remove('temp-error');
+                        errorTimeout = null;
+                        skipNext();
+                    }, ERROR_DELAY_MS);
+                }
+            }
             
             if (state === YT.PlayerState.PLAYING) {
-                ui.playIcon.className = 'fa-solid fa-pause fa-xl'; 
+                // Video is playing, clear any pending errors/timeouts
+                clearTimeout(errorTimeout);
+                errorTimeout = null;
+                ui.bottomPlayer.classList.remove('temp-error');
+                ui.playIcon.className = 'fa-solid fa-pause fa-xl';
             } else {
+                 // Update icon for non-playing states (paused/buffering/etc.)
                 ui.playIcon.className = 'fa-solid fa-play fa-xl'; 
             }
             
             if (state === YT.PlayerState.ENDED) {
-                // Implement playlist looping (Restored)
-                const nextIndex = currentPlaylistIndex + 1;
-                if (nextIndex < currentPlaylist.length) {
-                    skipNext();
-                } else {
-                    // Restart the playlist from the beginning (index 0)
-                    startPlaylist(currentPlaylist, 0, isPlayingFromLibrary);
-                }
+                // Clear any lingering error timeouts when playback officially ends
+                clearTimeout(errorTimeout);
+                errorTimeout = null;
+                ui.bottomPlayer.classList.remove('temp-error');
+                skipNext();
             }
         }
         
-        // ADDED: Function to handle ad status polling (Restored)
-        function handleAdStatus() {
-            // This is the line that was throwing the error: ytPlayer.getAdState is not a function
-            // The fix is ensuring ytPlayer is ready and using YT.AdState.
-            if (!isPlayerReady || playerHasError || !window.YT) return; 
+        /**
+         * Handles explicit YouTube API errors (e.g., 100, 101, 150).
+         */
+        function onPlayerError(event) {
+            const errorCode = event.data;
+            
+            // Critical error codes to log immediately but still apply delay:
+            // 2: Invalid parameter/Video not found
+            // 5: HTML5 player error
+            // 100: Video requested not found
+            // 101/150: Video restricted/unavailable (e.g., ad or restricted content)
+            
+            if (errorTimeout === null) {
+                ui.bottomPlayer.classList.add('temp-error');
+                console.error(`Youtubeer Error received: ${errorCode}. Delaying automatic skip for ${ERROR_DELAY_MS / 1000} seconds.`);
 
-            // YT.AdState is accessible after the API loads
-            // If getAdState() fails, it's likely YT object isn't fully ready or an iframe restriction.
-            try {
-                 const adState = ytPlayer.getAdState();
-                 // Check against the AdState enum which should be available
-                 const newAdIsPlaying = adState === window.YT.AdState.AD_PLAYING || adState === window.YT.AdState.AD_PAUSED;
-                 
-                 if (newAdIsPlaying !== adIsPlaying) {
-                     adIsPlaying = newAdIsPlaying;
-
-                     if (adIsPlaying) {
-                         // Ad started playing
-                         stopMarquee(ui.currentTitle, ui.currentTitleContainer);
-                         stopMarquee(ui.currentArtist, ui.currentArtistContainer);
-
-                         // Update UI to show ad status
-                         ui.currentTitle.textContent = "Ad Playing";
-                         ui.currentTitle.classList.add('text-yellow-400-custom');
-                         ui.currentArtist.textContent = "Thank you for supporting the creator!";
-                         ui.currentArtist.style.color = 'rgb(255 255 255 / 0.7)'; 
-                         ui.currentThumbnail.src = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'%23FBBF24\'%3E%3Cpath d=\'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z\'/%3E%3C/svg%3E'; // Ad icon (yellow info)
-                         
-                     } else {
-                         // Ad stopped playing
-                         // Restore text colors and information
-                         ui.currentTitle.classList.remove('text-yellow-400-custom'); 
-                         ui.currentArtist.style.color = ''; // Reset to default gray-400
-
-                         const currentSong = currentPlaylist[currentPlaylistIndex];
-                         if (currentSong) {
-                             // Restore song info and re-enable marquee
-                             updatePlayerInfoUI(currentSong);
-                         }
-                     }
-                 }
-            } catch (e) {
-                 // Suppress console spam if getAdState is temporarily unavailable during loading.
-                 // console.warn('Ad state check skipped or failed:', e.message); 
+                errorTimeout = setTimeout(() => {
+                    console.error(`Video with error code ${errorCode} failed to load or recover within 10 seconds. Skipping to next track.`);
+                    ui.bottomPlayer.classList.remove('temp-error');
+                    errorTimeout = null;
+                    skipNext();
+                }, ERROR_DELAY_MS);
             }
         }
 
@@ -787,18 +685,15 @@
                     
                     <div class="card-overlay">
                         <div class="card-details">
-                            <div class="text-xl font-medium mb-1 marquee-container card-title-container">
-                                <div class="marquee-text card-title" data-original-text="${item.snippet.title}">${title}</div>
-                            </div>
-                            <div class="text-sm text-gray-300 font-light marquee-container card-artist-container">
-                                <div class="marquee-text card-artist" data-original-text="${item.snippet.channelTitle}">${channelTitle}</div>
-                            </div>
+                            <h3 class="text-xl font-medium mb-1 line-clamp-2">${title}</h3>
+                            <p class="text-sm text-gray-300 font-light line-clamp-1">${channelTitle}</p>
                         </div>
                         
                         <div class="card-actions">
                             ${isVideo 
-                                ? `<button data-index="${videoIndex}" class="play-video-btn p-3 text-white text-lg font-semibold shadow-xl glass-button glass-button-red squircle-large">
-                                    <i class="fa-solid fa-play"></i>
+                                // Standardized Card Play Button (w-14 h-14)
+                                ? `<button data-index="${videoIndex}" class="play-video-btn w-14 h-14 flex items-center justify-center rounded-xl text-xl font-semibold shadow-xl glass-button glass-button-red">
+                                    <i class="fa-solid fa-play fa-xl"></i>
                                    </button>` 
                                 : `<button class="view-artist-btn w-full p-2 rounded-lg text-sm font-semibold glass-button">
                                      <i class="fa-solid fa-users mr-2"></i> View Channel
@@ -832,21 +727,8 @@
                 }
 
                 ui.musicView.appendChild(card);
-                
-                // Check and apply marquee animation to card text
-                const titleEl = card.querySelector('.card-title');
-                const titleContainer = card.querySelector('.card-title-container');
-                const artistEl = card.querySelector('.card-artist');
-                const artistContainer = card.querySelector('.card-artist-container');
-                
-                // Delay slightly to ensure layout rendering is complete
-                setTimeout(() => {
-                    updateMarquee(titleEl, titleContainer);
-                    updateMarquee(artistEl, artistContainer);
-                }, 100); 
             }
         }
-
 
         // --- PLAYER CONTROLS & LOGIC ---
 
@@ -876,44 +758,16 @@
                 btn.dataset.inLibrary = 'false';
             }
         }
-        
-        // ADDED: New helper function to update UI without restarting the player (Restored)
-        async function updatePlayerInfoUI(song) {
-            if (!song) return;
-            
-            // Clear any lingering error/ad styling
-            ui.currentTitle.classList.remove('text-red-600-custom');
-            ui.currentTitle.classList.remove('text-yellow-400-custom');
-            ui.currentArtist.style.color = ''; // Reset to default gray-400
-
-            const decodedTitle = decodeHtmlEntities(song.title);
-            const decodedArtist = decodeHtmlEntities(song.artist);
-            
-            const filteredTitle = await filterExplicitText(decodedTitle);
-            const filteredArtist = await filterExplicitText(decodedArtist);
-
-            // Update UI with the clean, original text
-            ui.currentTitle.dataset.originalText = decodedTitle;
-            ui.currentArtist.dataset.originalText = decodedArtist;
-            ui.currentTitle.textContent = filteredTitle;
-            ui.currentArtist.textContent = filteredArtist;
-            ui.currentThumbnail.src = song.thumbnail;
-            
-            // Marquee Update
-            setTimeout(() => {
-                updateMarquee(ui.currentTitle, ui.currentTitleContainer);
-                updateMarquee(ui.currentArtist, ui.currentArtistContainer);
-            }, 50);
-            
-            updateLibraryIcon(song.videoId);
-        }
-
 
         async function startPlaylist(playlist, index, fromLibrary = false) {
             if (!isPlayerReady || playlist.length === 0 || index < 0 || index >= playlist.length) return;
             
-            playerHasError = false; // Reset error state on new song start
-            
+            // Clear any pending error timeouts from a previous attempt
+            clearTimeout(errorTimeout);
+            errorTimeout = null;
+            ui.bottomPlayer.classList.remove('temp-error');
+
+
             currentPlaylist = playlist;
             currentPlaylistIndex = index;
             isPlayingFromLibrary = fromLibrary;
@@ -922,10 +776,25 @@
             
             ytPlayer.loadVideoById(currentSong.videoId);
             
-            await updatePlayerInfoUI(currentSong); // Use the new helper function to update UI
+            const decodedTitle = decodeHtmlEntities(currentSong.title);
+            const decodedArtist = decodeHtmlEntities(currentSong.artist);
+            
+            const filteredTitle = await filterExplicitText(decodedTitle);
+            const filteredArtist = await filterExplicitText(decodedArtist);
 
+            // Update UI
+            ui.currentTitle.textContent = filteredTitle;
+            ui.currentArtist.textContent = filteredArtist;
+            ui.currentThumbnail.src = currentSong.thumbnail;
             ui.bottomPlayer.classList.add('player-visible');
-
+            
+            // Marquee Update
+            // Wait for text content update, then check for overflow
+            setTimeout(() => {
+                updateMarquee(ui.currentTitle, ui.currentTitleContainer);
+                updateMarquee(ui.currentArtist, ui.currentArtistContainer);
+            }, 50);
+            
             // Set data attributes for library management
             ui.addToLibraryBtn.dataset.videoId = currentSong.videoId;
             ui.addToLibraryBtn.dataset.title = currentSong.title; 
@@ -933,11 +802,6 @@
             ui.addToLibraryBtn.dataset.thumbnail = currentSong.thumbnail;
             
             updateLibraryIcon(currentSong.videoId);
-            
-            // Start ad polling if not running (already started in onPlayerReady, but safe to check)
-            if (!adPollingInterval) {
-                 adPollingInterval = setInterval(handleAdStatus, 1000); 
-            }
         }
 
         function togglePlayPause() {
@@ -952,33 +816,32 @@
 
         function skipNext() {
             if (currentPlaylistIndex === -1) return;
-            const nextIndex = currentPlaylistIndex + 1;
             
+            // Clear any pending error timeouts before skipping
+            clearTimeout(errorTimeout);
+            errorTimeout = null;
+            ui.bottomPlayer.classList.remove('temp-error');
+            
+            const nextIndex = currentPlaylistIndex + 1;
             if (nextIndex < currentPlaylist.length) {
                 startPlaylist(currentPlaylist, nextIndex, isPlayingFromLibrary);
             } else {
-                // If it's the last song, restart the playlist from the beginning (index 0)
-                startPlaylist(currentPlaylist, 0, isPlayingFromLibrary);
+                ytPlayer.stopVideo();
+                ui.currentTitle.textContent = "Playlist finished";
+                ui.currentArtist.textContent = "";
+                updateLibraryIcon(null);
             }
         }
 
         function skipBack() {
-            if (currentPlaylistIndex === -1) return;
+            if (currentPlaylistIndex <= 0) return;
+             // Clear any pending error timeouts before skipping
+            clearTimeout(errorTimeout);
+            errorTimeout = null;
+            ui.bottomPlayer.classList.remove('temp-error');
             
-            // If the song is already a few seconds in, restart the song, otherwise go to previous
-            if (ytPlayer.getCurrentTime() > 3) { 
-                ytPlayer.seekTo(0, true);
-                return;
-            }
-
             const prevIndex = currentPlaylistIndex - 1;
-            
-            if (prevIndex >= 0) {
-                startPlaylist(currentPlaylist, prevIndex, isPlayingFromLibrary);
-            } else {
-                // If it's the first song and skip back is pressed, go to the last song
-                startPlaylist(currentPlaylist, currentPlaylist.length - 1, isPlayingFromLibrary);
-            }
+            startPlaylist(currentPlaylist, prevIndex, isPlayingFromLibrary);
         }
 
         // --- LOCAL LIBRARY & PLAYLIST MANAGEMENT ---
@@ -1070,8 +933,7 @@
 
                 if (isPlayingFromLibrary && currentPlaylistIndex === index) {
                     // Force update player info with new names, but keep playing the current track
-                    // Use updatePlayerInfoUI directly to refresh UI without restarting video
-                    updatePlayerInfoUI(userLibrary[index]);
+                    startPlaylist(userLibrary, index, true); 
                 }
             } else {
                 console.error("Title and Artist cannot be empty.");
@@ -1110,15 +972,15 @@
                             <p class="text-sm text-gray-300 font-light line-clamp-1">${displayArtist}</p>
                         </div>
                         
-                        <div class="card-actions flex-col space-y-2 !opacity-100">
-                            <button class="play-library-btn w-3/4 p-2 rounded-lg text-sm font-semibold glass-button glass-button-red">
-                                <i class="fa-solid fa-play mr-2"></i> Play
+                        <div class="card-actions flex-col space-y-3 !opacity-100 items-center"> 
+                            <button class="play-library-btn w-14 h-14 flex items-center justify-center rounded-xl text-xl font-semibold shadow-xl glass-button glass-button-red" title="Play Song">
+                                <i class="fa-solid fa-play fa-xl"></i> 
                             </button>
                             <div class="flex space-x-2 w-3/4">
                                 <button class="edit-library-btn flex-grow p-2 rounded-lg text-sm font-semibold glass-button" title="Edit Names">
                                     <i class="fa-solid fa-pencil mr-1"></i> Edit
                                 </button>
-                                <button class="remove-library-btn p-2 rounded-lg text-sm font-semibold glass-button hover:bg-red-900/50" title="Remove from Library">
+                                <button class="remove-library-btn w-10 p-2 rounded-lg text-sm font-semibold glass-button hover:bg-red-900/50" title="Remove from Library">
                                     <i class="fa-solid fa-trash-can"></i>
                                 </button>
                             </div>
@@ -1334,8 +1196,6 @@
         window.startPlaylist = startPlaylist;
         window.userLibrary = userLibrary;
         window.promptAddUrl = promptAddUrl; 
-        window.performSearch = performSearch; // EXPOSED: To fix a possible ReferenceError
-        window.goBackToLastSearch = goBackToLastSearch; // EXPOSED: To fix a possible ReferenceError
 
         // Helper function for custom confirmation modal (replaces window.confirm)
         window.confirm = (message) => {
