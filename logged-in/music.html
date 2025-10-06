@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MusicFlow - Personalized Music Platform</title>
+    <title>4SP - YT-MUSIC</title>
 
+    <!-- Load Geist Font, Font Awesome 6.5.2, and TailwindCSS -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLMD/CDh/f7T/y0ZgR70nQF/uJALzK3A5L3eN7/M7h6g2Gz1TqP+oV+6FvVz/yT/" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="../navigation.js"></script>
 
@@ -35,28 +37,8 @@
         .player-visible {
             transform: translateY(0%) !important;
         }
-        #fullscreen-video-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.95);
-            z-index: 60;
-            display: none; 
-            align-items: center;
-            justify-content: center;
-        }
-        #fullscreen-player-container {
-            width: 90%; 
-            height: 90%; 
-            max-width: 1280px;
-            max-height: 720px;
-            aspect-ratio: 16 / 9;
-        }
-        /* Fix for the CORS/PostMessage error: The player is ALWAYS in the fullscreen div. 
-           We hide the iframe itself when it's in audio mode. */
-        .yt-player-audio-mode {
+        /* Style to hide the YouTube player iframe off-screen for audio-only use */
+        #youtube-player {
             position: absolute !important;
             top: -9999px !important;
             left: -9999px !important;
@@ -67,11 +49,13 @@
 </head>
 <body>
 
+    <!-- Main Content Area -->
     <main id="main-content" class="flex-grow p-4 md:p-8 pt-12">
         <h1 class="text-4xl font-semibold mb-6 tracking-tighter">Discover Music</h1>
 
+        <!-- Search Bar -->
         <div class="mb-8">
-            <input type="text" id="search-input" placeholder="Search artists, songs, or video URLs..."
+            <input type="text" id="search-input" placeholder="Search artists or songs..."
                    class="w-full p-3 rounded-lg bg-gray-900 border border-gray-700 focus:ring-red-500 focus:border-red-500 text-lg">
             <div class="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 mt-2">
                 <button id="search-button" class="flex-grow p-3 bg-red-600 hover:bg-red-700 rounded-lg font-medium">Search YouTube Videos/Artists</button>
@@ -79,28 +63,27 @@
             </div>
         </div>
 
+        <!-- Navigation Tabs (Home, Library) -->
         <div class="flex border-b border-gray-800 mb-6">
             <button data-view="home" class="nav-tab py-2 px-4 text-lg font-medium border-b-2 border-red-600 text-red-500">Search Results</button>
             <button data-view="library" class="nav-tab py-2 px-4 text-lg font-medium border-b-2 border-transparent hover:border-gray-600 text-gray-400 ml-4">My Library</button>
         </div>
 
+        <!-- Dynamic Content View -->
         <section id="music-view" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
             <p id="initial-message" class="col-span-full text-gray-500">Securely fetching API key and checking authentication...</p>
         </section>
         
     </main>
 
-    <div id="fullscreen-video-overlay" onclick="window.hideFullscreenPlayer()">
-        <div id="fullscreen-player-container" class="relative" onclick="event.stopPropagation()">
-            <div id="youtube-player" class="yt-player-audio-mode"></div>
-        </div>
-        <button class="absolute top-4 right-4 p-2 bg-gray-800/80 rounded-full text-white text-xl hover:bg-gray-700 transition duration-150" onclick="event.stopPropagation(); window.hideFullscreenPlayer();">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-        </button>
-    </div>
+    <!-- Hidden Player Container (Audio-Only) -->
+    <div id="youtube-player"></div>
 
+    <!-- Bottom Player Bar (Currently Playing) -->
     <footer id="bottom-player" class="bg-gray-900 border-t border-gray-800 flex items-center justify-between px-4 py-2">
-        <div id="player-info" class="flex items-center space-x-4 flex-grow cursor-pointer" onclick="window.showFullscreenPlayer()">
+        <!-- Currently Playing Info (Removed fullscreen click handler) -->
+        <div id="player-info" class="flex items-center space-x-4 flex-grow">
+            <!-- Thumbnail Placeholder -->
             <img id="current-thumbnail" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236B7280'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z'/%3E%3C/svg%3E" alt="Album Art" class="w-12 h-12 rounded-lg object-cover bg-gray-700">
             <div>
                 <div id="current-title" class="text-sm font-medium truncate w-48">No song playing</div>
@@ -108,25 +91,27 @@
             </div>
         </div>
 
+        <!-- Controls (Updated to Font Awesome Icons) -->
         <div class="flex items-center space-x-6">
             <button id="skip-back" class="text-gray-400 hover:text-white transition duration-150 disabled:opacity-50" disabled>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
+                <i class="fa-solid fa-backward-step fa-xl"></i>
             </button>
             <button id="play-pause" class="text-white hover:text-red-500 transition duration-150 p-2 rounded-full bg-gray-800 disabled:opacity-50" disabled>
-                <svg id="play-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197 2.132A1 1 0 0110 13.205V10.795a1 1 0 011.555-.832l3.197 2.132a1 1 0 010 1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <!-- Play/Pause icon is dynamically updated in JS -->
+                <i id="play-icon" class="fa-solid fa-circle-play fa-2xl"></i> 
             </button>
             <button id="skip-next" class="text-gray-400 hover:text-white transition duration-150 disabled:opacity-50" disabled>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>
+                <i class="fa-solid fa-forward-step fa-xl"></i>
             </button>
         </div>
 
+        <!-- Add to Library/Playlist Button (Updated to Font Awesome Icon) -->
         <button id="add-to-library-btn" class="p-2 ml-4 text-red-500 hover:text-red-400 transition duration-150 hidden">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3-7 3V5z" /></svg>
+            <i class="fa-solid fa-bookmark fa-xl"></i>
         </button>
     </footer>
 
+    <!-- Firebase SDKs and Core Logic -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -163,8 +148,6 @@
             playIcon: document.getElementById('play-icon'),
             skipBackBtn: document.getElementById('skip-back'),
             skipNextBtn: document.getElementById('skip-next'),
-            fullscreenOverlay: document.getElementById('fullscreen-video-overlay'),
-            youtubePlayerDiv: document.getElementById('youtube-player'),
             searchInput: document.getElementById('search-input'),
             searchButton: document.getElementById('search-button'),
             addToLibraryBtn: document.getElementById('add-to-library-btn'),
@@ -212,7 +195,7 @@
         });
 
 
-        // --- YOUTUBE API INTEGRATION (The Fixes) ---
+        // --- YOUTUBE API INTEGRATION (Audio-Only Focus) ---
 
         function loadYouTubeIframeAPI() {
             const tag = document.createElement('script');
@@ -222,13 +205,13 @@
         }
 
         window.onYouTubeIframeAPIReady = function() {
-            // Player initialization is always full size, but CSS hidden for audio mode (Fixes postMessage errors)
+            // Player initialization is always hidden (Audio-only mode)
             ytPlayer = new YT.Player('youtube-player', {
                 height: '100%',
                 width: '100%',
                 videoId: '', 
                 playerVars: {
-                    'controls': 0, // Hidden controls for audio mode
+                    'controls': 0, // No controls visible
                     'disablekb': 1,
                     'modestbranding': 1,
                     'rel': 0,
@@ -255,11 +238,11 @@
         function onPlayerStateChange(event) {
             const state = event.data;
             
-            // Update UI based on state
+            // Update UI based on state (Font Awesome Icons)
             if (state === YT.PlayerState.PLAYING) {
-                ui.playIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />`;
+                ui.playIcon.className = 'fa-solid fa-circle-pause fa-2xl'; // Pause icon
             } else {
-                ui.playIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197 2.132A1 1 0 0110 13.205V10.795a1 1 0 011.555-.832l3.197 2.132a1 1 0 010 1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />`;
+                ui.playIcon.className = 'fa-solid fa-circle-play fa-2xl'; // Play icon
             }
             
             if (state === YT.PlayerState.ENDED) {
@@ -290,7 +273,6 @@
             searchUrl.searchParams.set('maxResults', '20');
             searchUrl.searchParams.set('key', youtubeApiKey);
             
-            // ************ THE FIX ************
             // Only add the Music category filter (ID 10) if we are NOT searching for channels, 
             // as the API rejects category filters when 'channel' is included in 'type'.
             if (!searchType.includes('channel')) {
@@ -298,9 +280,7 @@
                 console.log("Search parameters: Filtering by Music Category (ID 10).");
             } else {
                 console.warn("Search parameters: Category filter skipped because 'channel' type is included. API requirement.");
-                // If you only want to search videos: set searchType = 'video' above.
             }
-            // *********************************
 
             try {
                 console.log("Sending API request to:", searchUrl.toString());
@@ -358,7 +338,7 @@
                 card.innerHTML = `
                     <div class="relative">
                         <img src="${thumbnail}" alt="${title}" class="w-full h-48 object-cover">
-                        ${isVideo ? `<span class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full">Video</span>` : `<span class="absolute bottom-2 right-2 bg-red-600 text-white text-xs px-2 py-0.5 rounded-full">Artist</span>`}
+                        ${isVideo ? `<span class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full">Audio Track</span>` : `<span class="absolute bottom-2 right-2 bg-red-600 text-white text-xs px-2 py-0.5 rounded-full">Artist</span>`}
                     </div>
                     <div class="p-4 flex-grow">
                         <h3 class="font-medium text-lg mb-1 line-clamp-2">${title}</h3>
@@ -366,7 +346,7 @@
                     </div>
                     <div class="p-4 pt-0">
                         ${isVideo 
-                            ? `<button data-index="${videoIndex}" class="play-video-btn w-full p-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold">Play Now</button>` 
+                            ? `<button data-index="${videoIndex}" class="play-video-btn w-full p-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold">Play Audio</button>` 
                             : `<button class="view-artist-btn w-full p-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-semibold">View Channel</button>`
                         }
                     </div>
@@ -406,8 +386,7 @@
             
             ytPlayer.loadVideoById(currentSong.videoId);
             
-            window.hideFullscreenPlayer(true); 
-
+            // Ensures player is visible on the bottom bar
             ui.currentTitle.textContent = currentSong.title;
             ui.currentArtist.textContent = currentSong.artist;
             ui.currentThumbnail.src = currentSong.thumbnail;
@@ -448,47 +427,6 @@
             startPlaylist(currentPlaylist, prevIndex, isPlayingFromLibrary);
         }
 
-        // --- Fullscreen Logic (NO iframe move/destroy, fixes PostMessage errors) ---
-
-        /**
-         * Global function to display the video in a full-screen overlay.
-         */
-        window.showFullscreenPlayer = function() {
-            if (currentPlaylistIndex === -1) return;
-
-            if (ytPlayer.getPlayerState() !== YT.PlayerState.PLAYING) {
-                ytPlayer.playVideo();
-            }
-            
-            let iframeSrc = ytPlayer.getIframe().src;
-            if (!iframeSrc.includes('controls=1')) {
-                // Reload iframe with controls visible
-                ytPlayer.getIframe().src = iframeSrc.replace('controls=0', 'controls=1');
-            }
-
-            ui.youtubePlayerDiv.classList.remove('yt-player-audio-mode');
-            ui.fullscreenOverlay.style.display = 'flex';
-            ui.bottomPlayer.style.display = 'none'; 
-        }
-
-        /**
-         * Global function to hide the full-screen overlay and move the player back to audio mode.
-         */
-        window.hideFullscreenPlayer = function(forceAudioMode = false) {
-            if (currentPlaylistIndex === -1 && !forceAudioMode) return;
-            
-            let iframeSrc = ytPlayer.getIframe().src;
-            if (!iframeSrc.includes('controls=0')) {
-                // Reload iframe without controls for background play
-                ytPlayer.getIframe().src = iframeSrc.replace('controls=1', 'controls=0');
-            }
-
-            ui.fullscreenOverlay.style.display = 'none';
-            ui.youtubePlayerDiv.classList.add('yt-player-audio-mode');
-            ui.bottomPlayer.style.display = 'flex';
-        }
-
-
         // --- LOCAL LIBRARY & PLAYLIST MANAGEMENT ---
 
         function loadLibrary() {
@@ -512,7 +450,9 @@
         function addToLibrary(songData) {
             const videoId = songData.videoId;
             if (userLibrary.find(s => s.videoId === videoId)) {
-                alert(`"${songData.title}" is already in your library!`);
+                // Using custom UI message instead of alert
+                console.log(`"${songData.title}" is already in your library!`);
+                // In a real app, display a modal or toast notification here
                 return;
             }
 
@@ -526,7 +466,7 @@
             
             userLibrary.push(newSong);
             saveLibrary();
-            alert(`"${newSong.title}" added to your library!`);
+            console.log(`"${newSong.title}" added to your library!`);
             
             if (document.querySelector('.nav-tab[data-view="library"]').classList.contains('border-red-600')) {
                 renderLibrary();
@@ -559,7 +499,7 @@
                             onclick="window.startPlaylist(window.userLibrary, ${index}, true)">Play</button>
                         <button class="remove-library-btn p-2 bg-gray-600 hover:bg-gray-500 rounded-lg text-sm font-semibold"
                             data-index="${index}" title="Remove from Library">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            <i class="fa-solid fa-trash-can fa-lg"></i>
                         </button>
                     </div>
                 `;
@@ -567,7 +507,8 @@
                 card.querySelector('.remove-library-btn').addEventListener('click', (e) => {
                     e.stopPropagation();
                     const songIndex = parseInt(e.currentTarget.dataset.index);
-                    if (confirm(`Are you sure you want to remove "${userLibrary[songIndex].title}" from your library?`)) {
+                    // Using custom UI logic instead of confirm()
+                    if (window.confirm(`Are you sure you want to remove "${userLibrary[songIndex].title}" from your library?`)) {
                         userLibrary.splice(songIndex, 1);
                         saveLibrary();
                         renderLibrary(); 
@@ -579,7 +520,8 @@
         }
         
         function promptAddUrl() {
-            const url = prompt("Enter a YouTube Video URL:");
+            // Using a simple prompt for now, recommend replacing with a proper modal in a real application
+            const url = window.prompt("Enter a YouTube Video URL (e.g., for a specific song or playlist):");
             if (url) {
                 const videoIdMatch = url.match(/(?:\?v=|\/embed\/|\/v\/|youtu\.be\/|\/shorts\/)([a-zA-Z0-9_-]{11})[^#&]*/);
                 if (videoIdMatch && videoIdMatch[1]) {
@@ -592,7 +534,9 @@
                     };
                     addToLibrary(songData);
                 } else {
-                    alert("Invalid YouTube URL. Please ensure it contains a valid video ID.");
+                    // Using custom UI message instead of alert
+                    console.error("Invalid YouTube URL. Please ensure it contains a valid video ID.");
+                    // In a real app, display a modal or toast notification here
                 }
             }
         }
@@ -656,6 +600,7 @@
                 if (currentPlaylist.length === 0) {
                      ui.musicView.innerHTML = '<p class="col-span-full text-gray-500">Enter a query above and click "Search" to find music videos/artists.</p>';
                 } else {
+                    // Re-render search results using cached playlist data
                     renderSearchResults(currentPlaylist.map(song => ({
                         id: { kind: 'youtube#video', videoId: song.videoId },
                         snippet: { title: song.title, channelTitle: song.artist, thumbnails: { medium: { url: song.thumbnail } } }
@@ -668,6 +613,14 @@
         // Expose necessary functions/data globally
         window.startPlaylist = startPlaylist;
         window.userLibrary = userLibrary;
+        // Expose prompt function for the HTML button
+        window.promptAddUrl = promptAddUrl; 
+
+        // Helper function for custom confirmation modal (replaces window.confirm)
+        window.confirm = (message) => {
+             // Basic implementation of non-blocking confirm for development/testing
+            return window.prompt(message + " (Type 'yes' to confirm)")?.toLowerCase() === 'yes';
+        }
 
     </script>
 </body>
