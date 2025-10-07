@@ -346,15 +346,21 @@
         async function generateUniqueFriendCode() {
             let code, isUnique = false;
             const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            while (!isUnique) {
-                code = '';
-                for (let i = 0; i < 8; i++) {
-                    code += characters.charAt(Math.floor(Math.random() * characters.length));
+            // Added try-catch for robustness during code generation
+            try {
+                while (!isUnique) {
+                    code = '';
+                    for (let i = 0; i < 8; i++) {
+                        code += characters.charAt(Math.floor(Math.random() * characters.length));
+                    }
+                    const codeDoc = await getDoc(getFriendCodeDocRef(code));
+                    if (!codeDoc.exists()) isUnique = true;
                 }
-                const codeDoc = await getDoc(getFriendCodeDocRef(code));
-                if (!codeDoc.exists()) isUnique = true;
+                return code;
+            } catch (error) {
+                console.error("Error generating friend code:", error);
+                throw new Error("Failed to generate unique friend code.");
             }
-            return code;
         }
         
         /**
@@ -399,6 +405,7 @@
 
         /**
          * Handles user authentication using the provided custom token or signs in anonymously.
+         * Added error reporting to the modal to inform the user if sign-in fails.
          */
         async function initializeAuth() {
             try {
@@ -409,66 +416,79 @@
                 }
             } catch (error) {
                 console.error("Firebase authentication failed:", error);
-                loadingScreen.innerHTML = `<p class="text-xl text-red-500">Authentication Failed. Please check console for details.</p>`;
+                loadingScreen.style.display = 'none'; // Hide loading screen if it fails
+                showCustomModal("Authentication Error", `Failed to sign in to Firebase. Error: ${error.code || error.message}.`);
+                // Re-throw so the onAuthStateChanged handler knows to stop
+                throw error; 
             }
         }
 
         /**
-         * Logic to handle friend code assignment/display.
+         * Logic to handle friend code assignment/display and profile creation.
          */
         async function handleFriendCodeLogic(user) {
-            const userProfileRef = getUserProfileDocRef(user.uid);
-            const userProfileSnap = await getDoc(userProfileRef);
+            try {
+                const userProfileRef = getUserProfileDocRef(user.uid);
+                const userProfileSnap = await getDoc(userProfileRef);
 
-            if (userProfileSnap.exists() && userProfileSnap.data().friendCode) {
-                friendCodeDisplay.textContent = userProfileSnap.data().friendCode;
-            } else {
-                friendCodeDisplay.textContent = 'Generating...';
-                const newCode = await generateUniqueFriendCode();
-                
-                await setDoc(getFriendCodeDocRef(newCode), { userId: user.uid });
-                
-                await setDoc(userProfileRef, { 
-                    friendCode: newCode,
-                    friends: [],
-                    username: `User-${user.uid.substring(0, 4)}` // Set a default username
-                }, { merge: true });
-                
-                friendCodeDisplay.textContent = newCode;
+                if (userProfileSnap.exists() && userProfileSnap.data().friendCode) {
+                    friendCodeDisplay.textContent = userProfileSnap.data().friendCode;
+                } else {
+                    friendCodeDisplay.textContent = 'Generating...';
+                    // The generateUniqueFriendCode function now has internal error handling
+                    const newCode = await generateUniqueFriendCode();
+                    
+                    await setDoc(getFriendCodeDocRef(newCode), { userId: user.uid });
+                    
+                    await setDoc(userProfileRef, { 
+                        friendCode: newCode,
+                        friends: [],
+                        username: `User-${user.uid.substring(0, 4)}` 
+                    }, { merge: true });
+                    
+                    friendCodeDisplay.textContent = newCode;
+                }
+            } catch (error) {
+                console.error("Profile/Friend Code Setup Failed:", error);
+                throw new Error("Failed to set up user profile and friend code.");
             }
         }
 
         /**
-         * Logic to delete old posts. Runs once on load.
+         * Logic to delete old posts. Runs once on load. Wrapped in try/catch.
          */
         async function cleanupOldPosts() {
-            const now = new Date();
-            // Get the start of the current day (yesterday's posts end here)
-            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+            try {
+                const now = new Date();
+                // Get the start of the current day (yesterday's posts end here)
+                const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
 
-            console.log("Running cleanup for posts older than:", startOfToday.toLocaleString());
+                console.log("Running cleanup for posts older than:", startOfToday.toLocaleString());
 
-            // Query for posts created before the start of today
-            const oldPostsQuery = query(
-                DAILY_PHOTO_COLLECTION,
-                where('createdAt', '<', startOfToday),
-                limit(50) // Limit batch size for safety
-            );
+                // Query for posts created before the start of today
+                const oldPostsQuery = query(
+                    DAILY_PHOTO_COLLECTION,
+                    where('createdAt', '<', startOfToday),
+                    limit(50) // Limit batch size for safety
+                );
 
-            // Using getDocs ensures this only runs once on load
-            const snapshot = await getDocs(oldPostsQuery);
-            if (snapshot.empty) {
-                console.log("No old posts to clean up.");
-                return;
+                const snapshot = await getDocs(oldPostsQuery);
+                if (snapshot.empty) {
+                    console.log("No old posts to clean up.");
+                    return;
+                }
+
+                const batch = writeBatch(db);
+                snapshot.docs.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+
+                await batch.commit();
+                console.log(`Cleaned up ${snapshot.size} expired daily posts.`);
+            } catch (error) {
+                // Log the error but allow the application to proceed
+                console.warn("Post cleanup failed, proceeding with app load:", error);
             }
-
-            const batch = writeBatch(db);
-            snapshot.docs.forEach(doc => {
-                batch.delete(doc.ref);
-            });
-
-            await batch.commit();
-            console.log(`Cleaned up ${snapshot.size} expired daily posts.`);
         }
 
 
@@ -638,7 +658,7 @@
                 titleInput.value = ''; // Clear title input
             } catch (error) {
                 console.error("Upload error:", error);
-                showMessage(uploadMessage, `Upload failed: ${error}`);
+                showMessage(uploadMessage, `Upload failed: ${error.message || error}`);
             } finally {
                 uploadBtnLabel.innerHTML = `<i class="fas fa-camera mr-2"></i> Select Image for Post`;
                 uploadBtnLabel.classList.remove('pointer-events-none', 'bg-gray-800');
@@ -743,7 +763,7 @@
                         commentInput.value = '';
                         LAST_COMMENT_TIMESTAMP = now; // Update timestamp only on successful post
                     } catch(error) {
-                         showMessage(addFriendMessage, `Comment failed: ${error}`, 'error');
+                         showMessage(addFriendMessage, `Comment failed: ${error.message || error}`, 'error');
                          console.error("Commenting error:", error);
                     } finally {
                         submitBtn.disabled = false;
@@ -850,40 +870,57 @@
             }
             
             // For simplicity, we skip requests and add immediately
-            const batch = writeBatch(db);
-            batch.update(getUserProfileDocRef(currentUser.uid), { friends: arrayUnion(friendUid) });
-            batch.update(getUserProfileDocRef(friendUid), { friends: arrayUnion(currentUser.uid) });
-            await batch.commit();
+            try {
+                const batch = writeBatch(db);
+                batch.update(getUserProfileDocRef(currentUser.uid), { friends: arrayUnion(friendUid) });
+                batch.update(getUserProfileDocRef(friendUid), { friends: arrayUnion(currentUser.uid) });
+                await batch.commit();
 
-            showMessage(addFriendMessage, 'Friend added successfully!', 'success');
-            friendCodeInput.value = '';
+                showMessage(addFriendMessage, 'Friend added successfully!', 'success');
+                friendCodeInput.value = '';
+            } catch (error) {
+                 showMessage(addFriendMessage, 'Failed to add friend. Check console.', 'error');
+                 console.error("Add friend failed:", error);
+            }
         });
 
         // --- Authentication State Change Handler ---
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                console.log("User signed in. UID:", user.uid);
-                loadingScreen.style.display = 'none';
-                messengerUi.style.display = 'grid';
+                // --- SUCCESSFUL AUTHENTICATION ---
+                try {
+                    console.log("User signed in. UID:", user.uid);
+                    
+                    // 1. Initial setup logic (profile, friend code)
+                    await handleFriendCodeLogic(user); 
+                    
+                    // 2. Run post deletion logic once on load (non-critical, catches error internally)
+                    await cleanupOldPosts(); 
 
-                // Initial setup logic
-                await handleFriendCodeLogic(user); 
-                await cleanupOldPosts(); // Run post deletion logic once on load
+                    // 3. Setup all real-time listeners for updates
+                    setupFriendListListener(user); // Triggers setupFriendsFeedListener internally
+                    setupDailyPostsListener(user);
+                    
+                    // 4. SHOW UI only after all necessary setup is complete
+                    loadingScreen.style.display = 'none';
+                    messengerUi.style.display = 'grid';
 
-                // Setup all real-time listeners for updates
-                setupFriendListListener(user); // Triggers setupFriendsFeedListener internally
-                setupDailyPostsListener(user);
+                } catch (e) {
+                    // CATCH ANY ERROR IN THE INITIALIZATION SEQUENCE (e.g., failed profile doc lookup)
+                    console.error("Application Initialization Failed:", e);
+                    loadingScreen.style.display = 'none';
+                    showCustomModal("Startup Error", `The messenger failed to initialize all features after sign-in. Error: ${e.message}.`);
+                }
+
             } else {
+                // --- USER IS NOT SIGNED IN ---
                 console.log("No user found. Attempting sign-in...");
-                // If onAuthStateChanged runs and user is null, attempt to sign in
-                await initializeAuth();
+                // initializeAuth now has robust error reporting using showCustomModal
+                await initializeAuth(); 
             }
         });
-
-        // Ensure initial auth attempt runs if the user isn't immediately detected (common in client-side auth flows)
-        if (!auth.currentUser) {
-            initializeAuth();
-        }
+        
+        // Removed the extra initializeAuth() call outside the listener to prevent race conditions.
     </script>
 </body>
 </html>
