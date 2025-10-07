@@ -171,7 +171,6 @@
     </style>
 </head>
 <body class="pt-16">
-    <!-- Message Box (Instead of alert/confirm) -->
     <div id="message-modal" class="modal-backdrop hidden opacity-0">
         <div class="modal-content w-full max-w-sm p-6 text-center">
             <h3 id="message-modal-title" class="text-xl font-bold mb-4 text-white"></h3>
@@ -184,7 +183,6 @@
     <main id="messenger-ui" class="messenger-container" style="display: none;">
         
         <aside class="left-panel">
-            <!-- Friend Code -->
             <div class="mb-6 border-b border-gray-800 pb-4">
                 <h2 class="text-xl font-bold mb-2">Your Friend Code</h2>
                 <p class="text-sm text-gray-400 mb-3">Share this code with friends to add them.</p>
@@ -193,7 +191,6 @@
                 </div>
             </div>
 
-            <!-- Add Friend -->
             <div class="mb-6 border-b border-gray-800 pb-4">
                 <h2 class="text-xl font-bold mb-2">Add a Friend</h2>
                 <form id="add-friend-form" class="flex gap-2">
@@ -205,24 +202,20 @@
                 <div id="add-friend-message" class="text-sm mt-2 min-h-[20px]"></div>
             </div>
 
-            <!-- Friends List Container -->
             <div id="friends-list-container" class="mb-6 border-b border-gray-800 pb-4">
                 <h2 class="text-xl font-bold mb-3">Your Friends</h2>
                 <p class="text-sm text-gray-500">Loading friends list...</p>
             </div>
 
-            <!-- Daily Posts/Upload Section -->
             <div class="mb-6">
                 <h2 class="text-xl font-bold mb-2">Post Your Photos</h2>
                 <p class="text-sm text-gray-400 mb-3">You can post up to 3 photos per day. They will disappear tomorrow.</p>
                 <div id="daily-posts-container">
-                    <!-- Daily post slots/forms will be rendered here by JS -->
-                </div>
+                    </div>
                 <div id="upload-message" class="text-sm mt-2 min-h-[20px]"></div>
             </div>
         </aside>
 
-        <!-- Main Feed Section -->
         <section class="feed-panel">
             <h1 class="text-2xl font-bold mb-4">Today's Feed</h1>
             <div id="photo-feed" class="photo-grid">
@@ -232,15 +225,13 @@
 
     </main>
 
-    <!-- Loading Screen / Modals -->
     <div id="loading-screen" class="flex justify-center items-center h-screen">
         <p class="text-xl">Authenticating and loading messenger...</p>
     </div>
 
     <div id="photo-modal" class="modal-backdrop hidden">
         <div id="modal-content-container" class="modal-content flex flex-col md:flex-row gap-6">
-            <!-- Modal content will be dynamically loaded here -->
-        </div>
+            </div>
     </div>
 
     <script type="module">
@@ -251,15 +242,23 @@
             getFirestore, doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, serverTimestamp, orderBy, deleteDoc, onSnapshot, writeBatch, limit
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
+        // --- NEW CONFIGURATION IMPORT ---
+        // This imports the firebaseConfig object from the local file path.
+        import { firebaseConfig } from "../firebase-config.js"; 
+
+
         // =========================================================================
-        // IMPORTANT: MANDATORY GLOBAL CONFIG VARIABLES
-        // We use these secure variables injected by the environment instead of
-        // hardcoding or importing an external firebase-config.js.
-        // This fixes the "auth/invalid-api-key" error.
+        // IMPORTANT: CONFIGURATION VARIABLES
+        // The firebaseConfig object is now imported from "../firebase-config.js".
+        // The auth/invalid-api-key error is typically fixed by providing the correct
+        // apiKey in that file.
         // =========================================================================
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        // These custom variables were previously provided by an environment, now defaulted
+        // as they are not standard Firebase config fields.
+        const appId = 'default-app-id'; 
+        const initialAuthToken = null; // Removed dependency on environment token
+
 
         // --- Initialize Firebase ---
         const app = initializeApp(firebaseConfig);
