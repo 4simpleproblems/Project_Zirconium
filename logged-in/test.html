@@ -80,30 +80,45 @@
         .overlay-content { display: flex; align-items: center; justify-content: space-between; width: 100%; }
 
         /* --- Daily Posts UI/UX (Angle and Hover) --- */
-        .user-post-slot {
-            position: relative;
-            background-color: #1a1a1a;
-            border-radius: 0.75rem;
-            padding: 0.75rem;
-            margin-bottom: 1rem;
-            /* Fun lil angle */
-            transform: rotateZ(1.5deg); 
-            transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.4s ease-in-out;
-            border: 1px solid #252525;
-            overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        /* Task 4: New horizontal, small slot layout */
+        #daily-posts-container {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: space-between;
         }
+        
+        .user-post-slot, .user-post-empty, .user-post-locked {
+            /* Make slots small and equal width */
+            flex: 1 1 0;
+            padding: 0.5rem !important; /* Smaller padding */
+            /* Removed rotation/angle styles */
+            transform: none; 
+            transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.4s ease-in-out;
+            margin-bottom: 0 !important; /* Remove bottom margin */
+            border-radius: 0.5rem; 
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            background-color: #1a1a1a;
+            border: 1px solid #252525;
+            position: relative;
+            cursor: pointer;
+        }
+
+        /* New smaller hover effect */
         .user-post-slot:hover {
-            transform: rotateZ(0deg) scale(1.05);
+            transform: translateY(-5px) scale(1.05) !important;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
         }
-        /* Ensure non-post slots are not rotated */
-        .user-post-empty, .user-post-locked {
-            transform: none !important;
-            box-shadow: none !important;
+
+        .user-post-slot img {
+            /* Ensure images are small */
+            height: 100px; 
+            object-fit: cover;
+            width: 100%;
+            border-radius: 0.25rem;
         }
-
-
+        
+        /* Reduce font size inside overlays/info for small space */
         .post-info-overlay {
             position: absolute;
             inset: 0;
@@ -120,6 +135,43 @@
         }
         .user-post-slot:hover .post-info-overlay {
             opacity: 1;
+            pointer-events: auto;
+        }
+        
+        /* Styling for the empty slot to look clickable/interactive */
+        .user-post-empty {
+            background-color: #0d0d0d;
+            border: 2px dashed #4f46e5;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        .user-post-empty label {
+             /* Make label fill the box and use flex for centering text */
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 0.5rem;
+        }
+
+        /* Styling for a slot that was used but the post was deleted (no cheating) */
+        .user-post-deleted {
+            background-color: #1c0000; /* Dark red background */
+            border: 1px solid #7f1d1d;
+            cursor: default;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #fca5a5;
+        }
+        .user-post-deleted:hover {
+            transform: none !important;
         }
 
         /* --- Modal Styles --- */
@@ -184,6 +236,17 @@
         
         <aside class="left-panel">
             <div class="mb-6 border-b border-gray-800 pb-4">
+                <h2 class="text-xl font-bold mb-2">Set Display Name</h2>
+                <form id="set-username-form" class="flex gap-2">
+                    <input type="text" id="username-input" placeholder="Your desired name" class="flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                    <button type="submit" class="px-3 py-2 bg-indigo-600 rounded-md hover:bg-indigo-700 transition font-semibold" title="Update Username">
+                        <i class="fas fa-save"></i>
+                    </button>
+                </form>
+                <div id="username-message" class="text-sm mt-2 min-h-[20px]"></div>
+            </div>
+
+            <div class="mb-6 border-b border-gray-800 pb-4">
                 <h2 class="text-xl font-bold mb-2">Your Friend Code</h2>
                 <p class="text-sm text-gray-400 mb-3">Share this code with friends to add them.</p>
                 <div id="friend-code-display" class="p-3 text-center bg-gray-900 rounded-md font-mono text-lg tracking-widest text-indigo-400">
@@ -208,8 +271,8 @@
             </div>
 
             <div class="mb-6">
-                <h2 class="text-xl font-bold mb-2">Post Your Photos</h2>
-                <p class="text-sm text-gray-400 mb-3">You can post up to 3 photos per day. They will disappear tomorrow.</p>
+                <h2 class="text-xl font-bold mb-2">Your Daily Posts</h2>
+                <p class="text-sm text-gray-400 mb-3">You have 3 slots per day (no cheating!). Click a slot to post or edit.</p>
                 <div id="daily-posts-container">
                     </div>
                 <div id="upload-message" class="text-sm mt-2 min-h-[20px]"></div>
@@ -233,6 +296,18 @@
         <div id="modal-content-container" class="modal-content flex flex-col md:flex-row gap-6">
             </div>
     </div>
+    
+    <div id="title-modal" class="modal-backdrop hidden opacity-0">
+        <div class="modal-content w-full max-w-sm p-6 text-center">
+            <h3 class="text-xl font-bold mb-4 text-white">Add/Edit Title</h3>
+            <form id="edit-title-form" data-post-id="" class="flex flex-col gap-4">
+                <input type="text" id="title-edit-input" placeholder="Enter your photo title (max 50 chars)" class="p-3 bg-gray-900 border border-gray-700 rounded-md focus:ring-indigo-500" maxlength="50" required>
+                <button type="submit" class="px-4 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold w-full">Save Title</button>
+            </form>
+            <button id="title-modal-close-btn" class="mt-3 text-sm text-gray-400 hover:text-white">Cancel</button>
+        </div>
+    </div>
+
 
     <script type="module">
         // --- Firebase Core Imports ---
@@ -242,23 +317,12 @@
             getFirestore, doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, serverTimestamp, orderBy, deleteDoc, onSnapshot, writeBatch, limit
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
-        // --- NEW CONFIGURATION IMPORT ---
-        // This imports the firebaseConfig object from the local file path.
-        import { firebaseConfig } from "../firebase-config.js"; 
-
-
         // =========================================================================
-        // IMPORTANT: CONFIGURATION VARIABLES
-        // The firebaseConfig object is now imported from "../firebase-config.js".
-        // The auth/invalid-api-key error is typically fixed by providing the correct
-        // apiKey in that file.
+        // IMPORTANT: MANDATORY GLOBAL CONFIG VARIABLES
         // =========================================================================
-        
-        // These custom variables were previously provided by an environment, now defaulted
-        // as they are not standard Firebase config fields.
-        const appId = 'default-app-id'; 
-        const initialAuthToken = null; // Removed dependency on environment token
-
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         // --- Initialize Firebase ---
         const app = initializeApp(firebaseConfig);
@@ -267,8 +331,9 @@
         
         // --- Global State & Constants ---
         let CURRENT_FRIENDS = [];
+        let CURRENT_USERNAME = 'DailyUser'; // Task 3: Global state for username
         let UNSUBSCRIBE_POSTS_LISTENER = () => {};
-        let LAST_COMMENT_TIMESTAMP = 0; // For 5-second comment delay
+        let LAST_COMMENT_TIMESTAMP = 0; 
         const COMMENT_DELAY_MS = 5000;
         const POST_SLOTS_MAX = 3;
 
@@ -287,6 +352,12 @@
         const messageModalTitle = document.getElementById('message-modal-title');
         const messageModalBody = document.getElementById('message-modal-body');
         const messageModalCloseBtn = document.getElementById('message-modal-close-btn');
+        // New DOM elements for two-step flow and username
+        const titleModal = document.getElementById('title-modal');
+        const editTitleForm = document.getElementById('edit-title-form');
+        const usernameInput = document.getElementById('username-input');
+        const usernameMessage = document.getElementById('username-message');
+
 
         // --- Firestore Document References & Collections ---
         const getUserProfileDocRef = (userId) => doc(db, 'artifacts', appId, 'users', userId, 'metadata', 'user_profile');
@@ -298,19 +369,12 @@
         // Helper Functions 
         // =========================================================================
 
-        /**
-         * Utility for displaying temporary messages in the primary notification area.
-         */
         function showMessage(element, text, type = 'error') {
             element.textContent = text;
             element.className = `text-sm mt-2 min-h-[20px] ${type === 'success' ? 'text-green-400' : 'text-red-400'}`;
             setTimeout(() => element.textContent = '', 4000);
         }
 
-        /**
-         * Utility for displaying mandatory messages or confirmations (replaces alert/confirm).
-         * This uses the custom #message-modal.
-         */
         function showCustomModal(title, body) {
             return new Promise(resolve => {
                 messageModalTitle.textContent = title;
@@ -323,17 +387,29 @@
                     messageModal.classList.add('opacity-0');
                     setTimeout(() => messageModal.classList.add('hidden'), 300);
                     messageModalCloseBtn.removeEventListener('click', handler);
-                    resolve(true); // Always resolves true for simple dismissal
+                    resolve(true); 
                 };
 
                 messageModalCloseBtn.addEventListener('click', handler);
             });
         }
+        
+        /** Task 2: Open dedicated modal for editing title after photo upload **/
+        function openTitleModal(postId, currentTitle = '') {
+            const input = document.getElementById('title-edit-input');
+            input.value = currentTitle;
+            editTitleForm.dataset.postId = postId;
+            
+            titleModal.classList.remove('hidden');
+            setTimeout(() => titleModal.classList.add('opacity-100'), 10);
+        }
 
+        function closeTitleModal() {
+            titleModal.classList.remove('opacity-100');
+            titleModal.classList.add('opacity-0');
+            setTimeout(() => titleModal.classList.add('hidden'), 300);
+        }
 
-        /**
-         * Utility to format large numbers (e.g., 1000 -> 1K, 1200 -> 1.2K, 1000000 -> 1M)
-         */
         function formatCount(num) {
             if (num >= 1000000) {
                 return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
@@ -344,13 +420,9 @@
             return num;
         }
 
-        /**
-         * Utility to generate a unique 8-digit alphanumeric friend code.
-         */
         async function generateUniqueFriendCode() {
             let code, isUnique = false;
             const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            // Added try-catch for robustness during code generation
             try {
                 while (!isUnique) {
                     code = '';
@@ -367,9 +439,6 @@
             }
         }
         
-        /**
-         * Utility to compress an image file using a canvas before uploading.
-         */
         function compressImage(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -382,7 +451,6 @@
                         const MAX_WIDTH = 800; 
                         const scaleSize = MAX_WIDTH / img.width;
 
-                        // Calculate dimensions to maintain aspect ratio
                         const width = MAX_WIDTH;
                         const height = img.height * scaleSize;
 
@@ -392,7 +460,6 @@
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
                         
-                        // Resolve with base64 data URL
                         const compressedDataUrl = ctx.canvas.toDataURL('image/jpeg', 0.8);
                         resolve(compressedDataUrl);
                     };
@@ -407,10 +474,6 @@
         // Core Logic - Authentication, Initialization & Cleanup
         // =========================================================================
 
-        /**
-         * Handles user authentication using the provided custom token or signs in anonymously.
-         * Added error reporting to the modal to inform the user if sign-in fails.
-         */
         async function initializeAuth() {
             try {
                 if (initialAuthToken) {
@@ -420,20 +483,19 @@
                 }
             } catch (error) {
                 console.error("Firebase authentication failed:", error);
-                loadingScreen.style.display = 'none'; // Hide loading screen if it fails
-                // Check for the specific API key error to give a more helpful message
+                loadingScreen.style.display = 'none'; 
                 const errorMessage = error.code === 'auth/invalid-api-key' 
                     ? `Authentication failed due to an **Invalid API Key**. Please ensure the environment configuration is correct.` 
                     : `Failed to sign in to Firebase. Error: ${error.code || error.message}.`;
                     
                 showCustomModal("Authentication Error", errorMessage);
-                // Re-throw so the onAuthStateChanged handler knows to stop
                 throw error; 
             }
         }
 
         /**
          * Logic to handle friend code assignment/display and profile creation.
+         * Task 2/3: Added logic for 'dailySlotsUsed', 'lastPostReset', and better default username.
          */
         async function handleFriendCodeLogic(user) {
             try {
@@ -441,21 +503,31 @@
                 const userProfileSnap = await getDoc(userProfileRef);
 
                 if (userProfileSnap.exists() && userProfileSnap.data().friendCode) {
-                    friendCodeDisplay.textContent = userProfileSnap.data().friendCode;
+                    const data = userProfileSnap.data();
+                    friendCodeDisplay.textContent = data.friendCode;
+                    CURRENT_USERNAME = data.username;
+                    usernameInput.value = data.username;
+
                 } else {
                     friendCodeDisplay.textContent = 'Generating...';
-                    // The generateUniqueFriendCode function now has internal error handling
                     const newCode = await generateUniqueFriendCode();
                     
                     await setDoc(getFriendCodeDocRef(newCode), { userId: user.uid });
                     
+                    // Task 3: Better default username, Task 2: Add post limit fields
+                    const defaultUsername = `DailyUser-${Math.floor(Math.random() * 8999) + 1000}`;
+
                     await setDoc(userProfileRef, { 
                         friendCode: newCode,
                         friends: [],
-                        username: `User-${user.uid.substring(0, 4)}` 
+                        username: defaultUsername,
+                        dailySlotsUsed: [], 
+                        lastPostReset: serverTimestamp() // Set initial reset time
                     }, { merge: true });
                     
                     friendCodeDisplay.textContent = newCode;
+                    CURRENT_USERNAME = defaultUsername;
+                    usernameInput.value = CURRENT_USERNAME;
                 }
             } catch (error) {
                 console.error("Profile/Friend Code Setup Failed:", error);
@@ -464,26 +536,35 @@
         }
 
         /**
-         * Logic to delete old posts. Runs once on load. Wrapped in try/catch.
+         * Task 2: Logic to delete old posts and reset daily post counter.
          */
-        async function cleanupOldPosts() {
+        async function cleanupOldPosts(user) {
             try {
                 const now = new Date();
-                // Get the start of the current day (yesterday's posts end here)
                 const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+                const userProfileRef = getUserProfileDocRef(user.uid);
+                const userProfileSnap = await getDoc(userProfileRef);
+                const profileData = userProfileSnap.data() || {};
 
-                console.log("Running cleanup for posts older than:", startOfToday.toLocaleString());
+                // 1. Daily Reset Check (Task 2: No Cheating Post Limit Reset)
+                const lastReset = profileData.lastPostReset?.toDate() || new Date(0);
+                if (lastReset < startOfToday) {
+                     await updateDoc(userProfileRef, { 
+                        dailySlotsUsed: [], // Reset the slots used for the day
+                        lastPostReset: serverTimestamp()
+                    });
+                    console.log("Daily post slots reset for new day.");
+                }
 
-                // Query for posts created before the start of today
+                // 2. Post Deletion (Posts older than today)
                 const oldPostsQuery = query(
                     DAILY_PHOTO_COLLECTION,
                     where('createdAt', '<', startOfToday),
-                    limit(50) // Limit batch size for safety
+                    limit(50) 
                 );
 
                 const snapshot = await getDocs(oldPostsQuery);
                 if (snapshot.empty) {
-                    console.log("No old posts to clean up.");
                     return;
                 }
 
@@ -495,7 +576,6 @@
                 await batch.commit();
                 console.log(`Cleaned up ${snapshot.size} expired daily posts.`);
             } catch (error) {
-                // Log the error but allow the application to proceed
                 console.warn("Post cleanup failed, proceeding with app load:", error);
             }
         }
@@ -505,30 +585,22 @@
         // Real-Time Listener Implementations
         // =========================================================================
         
-        /**
-         * Real-time handler for rendering the main feed.
-         */
         function setupFriendsFeedListener(user) {
-            UNSUBSCRIBE_POSTS_LISTENER(); // Unsubscribe previous listener
+            UNSUBSCRIBE_POSTS_LISTENER(); 
             
             const startOfDay = new Date();
             startOfDay.setHours(0, 0, 0, 0);
             
-            const uidsToQuery = [user.uid, ...CURRENT_FRIENDS];
+            const uidsToQuery = [user.uid, ...CURRENT_FRIENDS].slice(0, 10);
 
             if (uidsToQuery.length === 0) {
                  photoFeed.innerHTML = '<p id="feed-placeholder">Add some friends to see their daily photos!</p>';
                  return;
             }
             
-            // Slice to 10 for the 'in' query limit
-            // Note: This needs to be handled iteratively or with a collection group query 
-            // if you have more than 10 friends. For this simple demo, we limit to 10.
-            const uidsToSearch = uidsToQuery.slice(0, 10);
-
             const photosQuery = query(
                 DAILY_PHOTO_COLLECTION,
-                where('creatorUid', 'in', uidsToSearch),
+                where('creatorUid', 'in', uidsToQuery),
                 where('createdAt', '>=', startOfDay),
                 orderBy('createdAt', 'desc')
             );
@@ -548,15 +620,15 @@
             });
         }
 
-        /**
-         * Renders a single photo thumbnail in the feed.
-         */
         function renderPhotoThumbnail(photoId, photoData) {
+            // Check if title exists, if not, skip rendering in main feed
+            if (!photoData.title) return;
+
+            // Existing rendering logic
             const thumb = document.createElement('div');
             thumb.className = 'photo-thumbnail';
             thumb.dataset.photoId = photoId;
             
-            // Image element for correct aspect ratio display
             const img = document.createElement('img');
             img.src = photoData.imageBase64;
             img.alt = photoData.title || photoData.creatorUsername;
@@ -579,110 +651,173 @@
         }
 
         /**
-         * Real-time handler for rendering the user's daily post slots.
+         * Task 2/4: Real-time handler for rendering the user's daily post slots.
+         * Uses dailySlotsUsed array for "no cheating" limit (Task 5).
+         * Implements two-step flow (Task 2).
          */
         function setupDailyPostsListener(user) {
-            const startOfDay = new Date();
-            startOfDay.setHours(0, 0, 0, 0);
+             const userProfileRef = getUserProfileDocRef(user.uid);
 
-            const postsQuery = query(
-                DAILY_PHOTO_COLLECTION,
-                where('creatorUid', '==', user.uid),
-                where('createdAt', '>=', startOfDay),
-                orderBy('createdAt', 'asc') 
-            );
-            
-            onSnapshot(postsQuery, (snapshot) => {
-                const postsToday = snapshot.docs;
+            const unsubscribePosts = onSnapshot(DAILY_PHOTO_COLLECTION, { includeMetadataChanges: true }, () => {
+                // Dummy listener to force re-evaluation of user posts and slots
+            });
+
+            const unsubscribeProfile = onSnapshot(userProfileRef, async (profileSnap) => {
+                const profileData = profileSnap.data() || {};
+                const dailySlotsUsed = profileData.dailySlotsUsed || []; // Task 5: The "No Cheating" array
                 dailyPostsContainer.innerHTML = ''; 
+                
+                // Fetch the actual posts that are live for today
+                const startOfDay = new Date();
+                startOfDay.setHours(0, 0, 0, 0);
+
+                const postsQuery = query(
+                    DAILY_PHOTO_COLLECTION,
+                    where('creatorUid', '==', user.uid),
+                    where('createdAt', '>=', startOfDay),
+                    orderBy('createdAt', 'asc') 
+                );
+                const postsSnapshot = await getDocs(postsQuery);
+                const postsToday = postsSnapshot.docs.reduce((acc, doc) => {
+                    acc[doc.id] = doc.data();
+                    return acc;
+                }, {});
 
                 for (let i = 0; i < POST_SLOTS_MAX; i++) {
                     const slot = document.createElement('div');
                     
-                    if (i < postsToday.length) {
-                        // Slot is FILLED (Angled and Hoverable)
-                        const postData = postsToday[i].data();
-                        slot.className = 'user-post-slot';
+                    if (dailySlotsUsed[i]) {
+                        // Slot is MARKED AS USED
+                        const postId = dailySlotsUsed[i];
+                        const postData = postsToday[postId];
                         
+                        if (postData) {
+                            // Slot is FILLED with a post
+                            const title = postData.title || 'Tap to Add Title';
+                            
+                            slot.className = 'user-post-slot group';
+                            
+                            slot.innerHTML = `
+                                <img src="${postData.imageBase64}" class="w-full h-[100px] rounded-sm object-cover">
+                                <div class="post-info-overlay text-white text-center">
+                                    <p class="text-sm font-bold">${postData.title ? postData.title : 'TITLE MISSING'}</p>
+                                    <span class="text-xl font-mono my-2"><i class="fas fa-heart text-red-400 mr-1"></i> ${formatCount(postData.hearts?.length || 0)}</span>
+                                    ${postData.title ? '' : '<button class="bg-indigo-600 text-white text-sm px-3 py-1 rounded-md mt-2">Add/Edit Title</button>'}
+                                </div>
+                            `;
+
+                            slot.addEventListener('click', () => {
+                                // If title is null, open title editor first
+                                if (!postData.title) {
+                                     openTitleModal(postId, postData.title);
+                                } else {
+                                     openPhotoModal(postId);
+                                }
+                            });
+
+                        } else {
+                            // Slot is USED but the post was DELETED (Task 5: No Cheating Rule)
+                            slot.className = 'user-post-deleted';
+                            slot.title = "This slot was used today and cannot be reused (No Cheating!).";
+                            slot.innerHTML = `
+                                <i class="fas fa-trash-alt text-lg mb-2"></i>
+                                <p class="text-center text-xs">Slot #${i + 1} Used & Deleted.</p>
+                            `;
+                        }
+
+                    } else if (i === dailySlotsUsed.length) {
+                        // Slot is EMPTY and is the NEXT AVAILABLE slot (Task 2: Photo upload first)
+                        slot.className = 'user-post-empty';
                         slot.innerHTML = `
-                            <img src="${postData.imageBase64}" class="w-full h-auto rounded-md object-cover">
-                            <div class="post-info-overlay text-white">
-                                <p class="text-xl font-bold text-center mb-3">${postData.title || 'Untitled'}</p>
-                                <span class="text-3xl font-mono"><i class="fas fa-heart text-red-400 mr-2"></i> ${formatCount(postData.hearts?.length || 0)}</span>
-                            </div>
-                        `;
-                        // Attach event listener for filled slot to open modal
-                        slot.addEventListener('click', () => openPhotoModal(postsToday[i].id));
-                    } else if (i === postsToday.length) {
-                        // Slot is EMPTY, show one upload form (Not angled)
-                        slot.className = 'user-post-empty p-3 bg-gray-900 rounded-md border border-dashed border-indigo-600';
-                        slot.innerHTML = `
-                            <h4 class="font-bold mb-3 text-indigo-400">Upload Photo #${i + 1}</h4>
-                            <input type="text" id="photo-title-input" placeholder="Title (optional)" class="w-full p-2 mb-3 bg-gray-800 border border-gray-700 rounded-md focus:ring-indigo-500" maxlength="50">
-                            <label for="photo-upload" class="block w-full text-center p-3 border-2 border-dashed border-gray-600 rounded-md cursor-pointer hover:border-indigo-500 hover:bg-gray-800 transition">
-                                <i class="fas fa-camera mr-2"></i> Select Image for Post
+                            <h4 class="font-bold text-indigo-400 mb-2">Post #${i + 1}</h4>
+                            <label for="photo-upload-${i}" class="block w-full text-center text-sm text-gray-300 transition hover:bg-gray-900 rounded-md">
+                                <i class="fas fa-camera mr-1"></i> Upload Photo
                             </label>
-                            <input type="file" id="photo-upload" class="hidden" accept="image/*">
+                            <input type="file" id="photo-upload-${i}" class="hidden" accept="image/*" data-slot-index="${i}">
                         `;
 
                         // Attach listener dynamically
                         setTimeout(() => {
-                            document.getElementById('photo-upload').addEventListener('change', (e) => handlePhotoUploadLogic(e, user));
+                            document.getElementById(`photo-upload-${i}`).addEventListener('change', (e) => handlePhotoUploadLogic(e, user));
+                            // Also attach listener to the slot container
+                            slot.addEventListener('click', () => document.getElementById(`photo-upload-${i}`).click());
                         }, 0);
+
                     } else {
-                        // Slot is LOCKED (Not angled)
+                        // All subsequent slots are LOCKED
                         slot.className = 'user-post-locked p-3 bg-gray-900 rounded-md border border-gray-700';
-                        slot.innerHTML = `<p class="text-gray-500">Slot #${i + 1} Locked - Post #${i} first.</p>`;
+                        slot.innerHTML = `<p class="text-gray-500 text-center text-xs">Slot #${i + 1} Locked</p>`;
+                        slot.style.cursor = 'default';
                     }
                     dailyPostsContainer.appendChild(slot);
                 }
             });
+            // Cleanup previous listeners if they exist (though the main one is handled outside this function)
+            // Note: Returning these allows for cleanup on sign-out
+            return [unsubscribePosts, unsubscribeProfile]; 
         }
 
         /**
-         * Logic to handle file selection, compression, and posting.
+         * Task 2/5: Logic to handle file selection, compression, and posting.
+         * Only uploads photo and sets title: null. Updates dailySlotsUsed.
          */
         async function handlePhotoUploadLogic(e, user) {
             const file = e.target.files[0];
             if (!file) return;
 
-            const titleInput = document.getElementById('photo-title-input');
-            const title = titleInput.value.trim();
-
+            const uploadInput = e.target;
             const uploadBtnLabel = e.target.previousElementSibling;
+            
             uploadBtnLabel.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Processing...`;
             uploadBtnLabel.classList.add('pointer-events-none', 'bg-gray-800');
+
+            const userProfileRef = getUserProfileDocRef(user.uid);
+            const userProfileSnap = await getDoc(userProfileRef);
+            const dailySlotsUsed = userProfileSnap.data().dailySlotsUsed || [];
+            
+            // Task 5: Check the 'no cheating' limit
+            if (dailySlotsUsed.length >= POST_SLOTS_MAX) {
+                showMessage(uploadMessage, 'You have reached your daily limit of 3 posts.', 'error');
+                uploadBtnLabel.innerHTML = `<i class="fas fa-camera mr-1"></i> Upload Photo`;
+                uploadBtnLabel.classList.remove('pointer-events-none', 'bg-gray-800');
+                return;
+            }
 
             try {
                 const imageBase64 = await compressImage(file);
                 
-                const userProfileSnap = await getDoc(getUserProfileDocRef(user.uid));
-                const username = userProfileSnap.data().username;
-
-                await setDoc(doc(DAILY_PHOTO_COLLECTION), {
+                // 1. Create the post document
+                const newPostRef = doc(DAILY_PHOTO_COLLECTION);
+                await setDoc(newPostRef, {
                     creatorUid: user.uid,
-                    creatorUsername: username,
+                    creatorUsername: CURRENT_USERNAME, // Use global/current username
                     createdAt: serverTimestamp(),
                     imageBase64: imageBase64,
-                    title: title, 
+                    title: null, // Task 2: Title is initially null
                     hearts: [],
                     comments: [],
                 });
+                
+                // 2. Mark the slot as USED (No Cheating Rule)
+                await updateDoc(userProfileRef, {
+                    dailySlotsUsed: arrayUnion(newPostRef.id)
+                });
 
-                showMessage(uploadMessage, 'Upload successful!', 'success');
-                titleInput.value = ''; // Clear title input
+                showMessage(uploadMessage, 'Photo uploaded! Click the slot to add a title.', 'success');
             } catch (error) {
                 console.error("Upload error:", error);
                 showMessage(uploadMessage, `Upload failed: ${error.message || error}`);
             } finally {
-                uploadBtnLabel.innerHTML = `<i class="fas fa-camera mr-2"></i> Select Image for Post`;
+                uploadBtnLabel.innerHTML = `<i class="fas fa-camera mr-1"></i> Upload Photo`;
                 uploadBtnLabel.classList.remove('pointer-events-none', 'bg-gray-800');
+                uploadInput.value = ''; // Clear file input
             }
         }
 
 
         /**
          * Logic for rendering modal and handling interactions.
+         * Task 1: Includes fix for serverTimestamp in arrayUnion.
          */
         function openPhotoModal(photoId) {
             const photoRef = doc(DAILY_PHOTO_COLLECTION, photoId);
@@ -700,6 +835,13 @@
                 const photoData = updatedSnap.data();
                 const hearts = photoData.hearts || [];
                 const hasHearted = hearts.includes(currentUser.uid);
+
+                // If post exists but title is still null, don't show the full modal, prompt title edit instead
+                if (!photoData.title) {
+                    photoModal.classList.add('hidden');
+                    openTitleModal(photoId);
+                    return;
+                }
                 
                 modalContentContainer.innerHTML = `
                     <div class="md:w-2/3 flex justify-center items-center">
@@ -710,13 +852,14 @@
                             <p class="font-bold text-xl">${photoData.title || 'Untitled Daily Post'}</p>
                             <p class="font-semibold text-lg text-indigo-400">${photoData.creatorUsername}</p>
                             <p class="text-sm text-gray-400">${photoData.createdAt.toDate().toLocaleString()}</p>
+                            ${photoData.creatorUid === currentUser.uid ? `<button id="delete-post-btn" class="text-red-400 text-sm mt-2 hover:text-red-500"><i class="fas fa-trash-alt mr-1"></i> Delete Post</button>` : ''}
                         </div>
                         <div class="flex-grow overflow-y-auto mb-4 pr-1" id="comments-section">
                             ${(() => {
                                 let html = '';
                                 const comments = photoData.comments || [];
                                 if (comments.length === 0) return '<p class="text-sm text-gray-500">No comments yet. Be the first!</p>';
-                                // Sort comments by timestamp
+                                // The comment timestamp field will be a Firestore Timestamp object when retrieved
                                 comments.sort((a, b) => (a.timestamp?.toDate() || new Date(0)) - (b.timestamp?.toDate() || new Date(0))).forEach(comment => {
                                     html += `<div class="mb-2"><p><strong class="font-semibold">${comment.username}</strong>: ${comment.text}</p></div>`;
                                 });
@@ -745,6 +888,19 @@
                     await updateDoc(photoRef, { hearts: action });
                 });
 
+                // Task 5 (Deletion): If a user deletes a post, the slot is still consumed for the day.
+                if (document.getElementById('delete-post-btn')) {
+                    document.getElementById('delete-post-btn').addEventListener('click', async () => {
+                        const confirmed = await showCustomModal("Confirm Deletion", "Are you sure you want to delete this post? **Your daily post slot WILL NOT be freed up.**");
+                        if (confirmed) {
+                            await deleteDoc(photoRef);
+                            photoModal.classList.add('hidden');
+                            showMessage(uploadMessage, 'Post deleted, but the daily slot is still used.', 'success');
+                        }
+                    });
+                }
+
+
                 document.getElementById('comment-form').addEventListener('submit', async (e) => {
                     e.preventDefault();
                     const commentInput = document.getElementById('comment-input');
@@ -765,18 +921,16 @@
                     submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
                     
                     try {
-                        const userProfileSnap = await getDoc(getUserProfileDocRef(currentUser.uid));
-                        const username = userProfileSnap.data().username;
-
+                        // Task 1: Fix - use new Date() instead of serverTimestamp() inside arrayUnion
                         const newComment = {
                             uid: currentUser.uid,
-                            username: username,
+                            username: CURRENT_USERNAME,
                             text: text,
-                            timestamp: serverTimestamp()
+                            timestamp: new Date() // CRITICAL FIX
                         };
                         await updateDoc(photoRef, { comments: arrayUnion(newComment) });
                         commentInput.value = '';
-                        LAST_COMMENT_TIMESTAMP = now; // Update timestamp only on successful post
+                        LAST_COMMENT_TIMESTAMP = now; 
                     } catch(error) {
                          showMessage(addFriendMessage, `Comment failed: ${error.message || error}`, 'error');
                          console.error("Commenting error:", error);
@@ -796,61 +950,32 @@
             }
         });
 
-        /**
-         * Real-time handler for updating the friends list display.
-         */
-        function setupFriendListListener(user) {
-             // This listener only tracks the current user's friends list
-            onSnapshot(getUserProfileDocRef(user.uid), async (docSnap) => {
-                const friends = docSnap.data()?.friends || [];
-                // Check if the friends array has changed to prevent unnecessary re-runs
-                if (friends.length === CURRENT_FRIENDS.length && friends.every((val, index) => val === CURRENT_FRIENDS[index])) {
-                    return;
-                }
+        // --- Title Modal Listener (Task 2: Two-Step Flow) ---
+        titleModal.addEventListener('click', (e) => {
+             if (e.target === titleModal || e.target === document.getElementById('title-modal-close-btn')) { 
+                closeTitleModal();
+            }
+        });
 
-                CURRENT_FRIENDS = friends; 
-                
-                // Re-run feed listener since the friend list has changed
-                setupFriendsFeedListener(user); 
+        editTitleForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const postId = e.currentTarget.dataset.postId;
+            const title = document.getElementById('title-edit-input').value.trim();
+            
+            if (!title) {
+                showMessage(usernameMessage, 'Title cannot be empty.', 'error'); // Using closest message element
+                return;
+            }
 
-                const container = friendsListContainer; 
-                container.innerHTML = '<h2 class="text-xl font-bold mb-3">Your Friends</h2>';
+            try {
+                await updateDoc(doc(DAILY_PHOTO_COLLECTION, postId), { title: title });
+                showMessage(uploadMessage, 'Title saved successfully! Post is now live.', 'success');
+                closeTitleModal();
+            } catch (error) {
+                showMessage(usernameMessage, `Failed to save title: ${error.message}`, 'error');
+            }
+        });
 
-                if (friends.length === 0) {
-                    container.innerHTML += '<p class="text-sm text-gray-500 mt-2">No friends yet. Add one above!</p>';
-                    return;
-                }
-                
-                // Fetch profiles for displaying names (batch in real app, simple for this demo)
-                const friendProfiles = await Promise.all(friends.map(uid => getDoc(getUserProfileDocRef(uid))));
-
-                friendProfiles.forEach((friendProfileSnap, index) => {
-                    const friendUid = friends[index];
-                    const username = friendProfileSnap.exists() ? friendProfileSnap.data().username : 'Unknown User';
-
-                    const div = document.createElement('div');
-                    div.className = 'flex justify-between items-center p-2 bg-gray-900 rounded-md mb-2';
-                    div.innerHTML = `
-                        <span class="font-semibold">${username} <span class="text-xs text-gray-500">(${friendUid.substring(0, 4)}...)</span></span>
-                        <button data-uid="${friendUid}" class="remove-friend-btn text-red-400 hover:text-red-500 transition px-2 py-1" title="Remove Friend">
-                            <i class="fas fa-user-minus"></i>
-                        </button>
-                    `;
-                    container.appendChild(div);
-                });
-
-                // Attach event listener for friend removal
-                container.querySelectorAll('.remove-friend-btn').forEach(button => {
-                    button.addEventListener('click', async (e) => {
-                        e.preventDefault();
-                        const friendUidToRemove = e.target.closest('button').dataset.uid;
-                        await updateDoc(getUserProfileDocRef(user.uid), { friends: arrayRemove(friendUidToRemove) });
-                        await updateDoc(getUserProfileDocRef(friendUidToRemove), { friends: arrayRemove(user.uid) });
-                        showMessage(addFriendMessage, 'Friend removed successfully!', 'success');
-                    });
-                });
-            });
-        }
 
         // =========================================================================
         // Main Event Listeners
@@ -884,7 +1009,6 @@
                 return;
             }
             
-            // For simplicity, we skip requests and add immediately
             try {
                 const batch = writeBatch(db);
                 batch.update(getUserProfileDocRef(currentUser.uid), { friends: arrayUnion(friendUid) });
@@ -899,6 +1023,24 @@
             }
         });
 
+        // Task 3: Handle username update
+        document.getElementById('set-username-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newUsername = usernameInput.value.trim();
+            if (!newUsername) return;
+
+            try {
+                const userProfileRef = getUserProfileDocRef(auth.currentUser.uid);
+                await updateDoc(userProfileRef, { username: newUsername });
+                CURRENT_USERNAME = newUsername; // Update global state
+                showMessage(usernameMessage, 'Username updated successfully!', 'success');
+            } catch (error) {
+                showMessage(usernameMessage, `Failed to update username: ${error.message}`, 'error');
+                console.error("Username update failed:", error);
+            }
+        });
+
+
         // --- Authentication State Change Handler ---
         onAuthStateChanged(auth, async (user) => {
             if (user) {
@@ -906,16 +1048,16 @@
                 try {
                     console.log("User signed in. UID:", user.uid);
                     
-                    // 1. Initial setup logic (profile, friend code)
+                    // 1. Initial setup logic (profile, friend code, and setting CURRENT_USERNAME)
                     await handleFriendCodeLogic(user); 
                     
-                    // 2. Run post deletion logic once on load (non-critical, catches error internally)
-                    await cleanupOldPosts(); 
+                    // 2. Run post deletion and daily slot reset logic
+                    await cleanupOldPosts(user); 
 
                     // 3. Setup all real-time listeners for updates
                     setupFriendListListener(user); // Triggers setupFriendsFeedListener internally
-                    setupDailyPostsListener(user);
-                    
+                    setupDailyPostsListener(user); // Triggers the core posting UI
+
                     // 4. SHOW UI only after all necessary setup is complete
                     loadingScreen.style.display = 'none';
                     messengerUi.style.display = 'grid';
@@ -930,10 +1072,65 @@
             } else {
                 // --- USER IS NOT SIGNED IN: ATTEMPT SIGN-IN ---
                 console.log("No user found. Attempting sign-in...");
-                // initializeAuth now uses the custom token and has robust error reporting
                 await initializeAuth(); 
             }
         });
+
+        /**
+         * Real-time handler for updating the friends list display.
+         */
+        function setupFriendListListener(user) {
+             // This listener only tracks the current user's friends list
+            onSnapshot(getUserProfileDocRef(user.uid), async (docSnap) => {
+                const friends = docSnap.data()?.friends || [];
+                // Check if the friends array has changed to prevent unnecessary re-runs
+                if (friends.length === CURRENT_FRIENDS.length && friends.every((val, index) => val === CURRENT_FRIENDS[index])) {
+                    return;
+                }
+
+                CURRENT_FRIENDS = friends; 
+                
+                // Re-run feed listener since the friend list has changed
+                setupFriendsFeedListener(user); 
+
+                const container = friendsListContainer; 
+                container.innerHTML = '<h2 class="text-xl font-bold mb-3">Your Friends</h2>';
+
+                if (friends.length === 0) {
+                    container.innerHTML += '<p class="text-sm text-gray-500 mt-2">No friends yet. Add one above!</p>';
+                    return;
+                }
+                
+                // Fetch profiles for displaying names (batch in real app, simple for this demo)
+                const friendProfiles = await Promise.all(friends.map(uid => getDoc(getUserProfileDocRef(uid))));
+
+                friendProfiles.forEach((friendProfileSnap, index) => {
+                    const friendUid = friends[index];
+                    const username = friendProfileSnap.exists() ? friendProfileSnap.data().username : 'Unknown User'; // Use username field
+
+                    const div = document.createElement('div');
+                    div.className = 'flex justify-between items-center p-2 bg-gray-900 rounded-md mb-2';
+                    div.innerHTML = `
+                        <span class="font-semibold">${username} <span class="text-xs text-gray-500">(${friendUid.substring(0, 4)}...)</span></span>
+                        <button data-uid="${friendUid}" class="remove-friend-btn text-red-400 hover:text-red-500 transition px-2 py-1" title="Remove Friend">
+                            <i class="fas fa-user-minus"></i>
+                        </button>
+                    `;
+                    container.appendChild(div);
+                });
+
+                // Attach event listener for friend removal
+                container.querySelectorAll('.remove-friend-btn').forEach(button => {
+                    button.addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        const friendUidToRemove = e.target.closest('button').dataset.uid;
+                        await updateDoc(getUserProfileDocRef(user.uid), { friends: arrayRemove(friendUidToRemove) });
+                        await updateDoc(getUserProfileDocRef(friendUidToRemove), { friends: arrayRemove(user.uid) });
+                        showMessage(addFriendMessage, 'Friend removed successfully!', 'success');
+                    });
+                });
+            });
+        }
         
     </script>
 </body>
