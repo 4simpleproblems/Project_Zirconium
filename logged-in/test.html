@@ -251,7 +251,12 @@
             getFirestore, doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, serverTimestamp, orderBy, deleteDoc, onSnapshot, writeBatch, limit
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
-        // --- Global Config Variables (MANDATORY USE) ---
+        // =========================================================================
+        // IMPORTANT: MANDATORY GLOBAL CONFIG VARIABLES
+        // We use these secure variables injected by the environment instead of
+        // hardcoding or importing an external firebase-config.js.
+        // This fixes the "auth/invalid-api-key" error.
+        // =========================================================================
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
@@ -417,7 +422,12 @@
             } catch (error) {
                 console.error("Firebase authentication failed:", error);
                 loadingScreen.style.display = 'none'; // Hide loading screen if it fails
-                showCustomModal("Authentication Error", `Failed to sign in to Firebase. Error: ${error.code || error.message}.`);
+                // Check for the specific API key error to give a more helpful message
+                const errorMessage = error.code === 'auth/invalid-api-key' 
+                    ? `Authentication failed due to an **Invalid API Key**. Please ensure the environment configuration is correct.` 
+                    : `Failed to sign in to Firebase. Error: ${error.code || error.message}.`;
+                    
+                showCustomModal("Authentication Error", errorMessage);
                 // Re-throw so the onAuthStateChanged handler knows to stop
                 throw error; 
             }
@@ -513,9 +523,13 @@
             }
             
             // Slice to 10 for the 'in' query limit
+            // Note: This needs to be handled iteratively or with a collection group query 
+            // if you have more than 10 friends. For this simple demo, we limit to 10.
+            const uidsToSearch = uidsToQuery.slice(0, 10);
+
             const photosQuery = query(
                 DAILY_PHOTO_COLLECTION,
-                where('creatorUid', 'in', uidsToQuery.slice(0, 10)),
+                where('creatorUid', 'in', uidsToSearch),
                 where('createdAt', '>=', startOfDay),
                 orderBy('createdAt', 'desc')
             );
@@ -598,6 +612,8 @@
                                 <span class="text-3xl font-mono"><i class="fas fa-heart text-red-400 mr-2"></i> ${formatCount(postData.hearts?.length || 0)}</span>
                             </div>
                         `;
+                        // Attach event listener for filled slot to open modal
+                        slot.addEventListener('click', () => openPhotoModal(postsToday[i].id));
                     } else if (i === postsToday.length) {
                         // Slot is EMPTY, show one upload form (Not angled)
                         slot.className = 'user-post-empty p-3 bg-gray-900 rounded-md border border-dashed border-indigo-600';
@@ -887,7 +903,7 @@
         // --- Authentication State Change Handler ---
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // --- SUCCESSFUL AUTHENTICATION ---
+                // --- USER IS AUTHENTICATED ---
                 try {
                     console.log("User signed in. UID:", user.uid);
                     
@@ -906,21 +922,20 @@
                     messengerUi.style.display = 'grid';
 
                 } catch (e) {
-                    // CATCH ANY ERROR IN THE INITIALIZATION SEQUENCE (e.g., failed profile doc lookup)
+                    // CATCH ANY ERROR IN THE INITIALIZATION SEQUENCE
                     console.error("Application Initialization Failed:", e);
                     loadingScreen.style.display = 'none';
                     showCustomModal("Startup Error", `The messenger failed to initialize all features after sign-in. Error: ${e.message}.`);
                 }
 
             } else {
-                // --- USER IS NOT SIGNED IN ---
+                // --- USER IS NOT SIGNED IN: ATTEMPT SIGN-IN ---
                 console.log("No user found. Attempting sign-in...");
-                // initializeAuth now has robust error reporting using showCustomModal
+                // initializeAuth now uses the custom token and has robust error reporting
                 await initializeAuth(); 
             }
         });
         
-        // Removed the extra initializeAuth() call outside the listener to prevent race conditions.
     </script>
 </body>
 </html>
