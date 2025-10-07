@@ -3,657 +3,586 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Music Streamer</title>
+    <title>4SP - DAILYPHOTO</title>
+    <meta name="description" content="Share your day with friends through three daily photos.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLMD/CDh/f7T/y0ZgR70nQF/uJALzK3A5L3eN7/M7h6g2Gz1TqP+oV+6FvVz/yT/" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="../navigation.js"></script>
 
     <style>
-        /* Base Styles */
-        body {
-            font-family: 'Geist', sans-serif;
-            background-color: #000000;
-            color: #FFFFFF;
-            min-height: 100vh;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            padding-bottom: 72px; 
-            font-weight: 300; 
-        }
-        h1, h2, h3 {
-            font-weight: 400; 
-        }
-        .font-semibold {
-            font-weight: 500;
+        /* Apply Geist font and dark theme background */
+        body { 
+            font-family: 'Geist', sans-serif; 
+            background-color: #070707; /* custom-darkest-gray from your login.html */
+            color: #c0c0c0; /* custom-white-gray */
         }
 
-        /* Glassmorphism Button Styles */
-        .glass-button {
-            background-color: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: background-color 0.15s, border-color 0.15s, transform 0.15s;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-        }
-        .glass-button:hover {
-            background-color: rgba(255, 255, 255, 0.15);
-            border-color: rgba(255, 255, 255, 0.3);
-            transform: translateY(-1px);
-        }
-        .glass-button-red {
-            background-color: rgba(239, 68, 68, 0.2);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-        }
-        .glass-button-red:hover {
-            background-color: rgba(239, 68, 68, 0.4);
-            border-color: rgba(239, 68, 68, 0.5);
+        /* Custom styles for the messenger UI */
+        .messenger-container {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 1.5rem;
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 1rem;
         }
 
-        /* Bottom Player Bar */
-        #bottom-player {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 72px;
-            z-index: 50;
-            transition: transform 0.3s ease-in-out;
-            transform: translateY(100%); 
-            background-color: rgba(0, 0, 0, 0.7); 
-            backdrop-filter: blur(8px); 
-            -webkit-backdrop-filter: blur(8px); 
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .player-visible {
-            transform: translateY(0%) !important;
-        }
-
-        /* Modal Backdrop */
-        .modal-backdrop {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.8);
-            z-index: 100;
-            display: none;
-            justify-content: center;
-            align-items: center;
-        }
-        .modal-content {
-            background-color: rgba(31, 41, 55, 0.8);
-            backdrop-filter: blur(10px);
-            border-radius: 0.75rem;
-            padding: 1.5rem;
-            max-width: 90%;
-            width: 400px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        /* Card Styles */
-        .music-card {
-            position: relative;
-            background-color: #111827;
-            border-radius: 0.75rem;
-            overflow: hidden;
-            aspect-ratio: 16 / 9; 
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-            cursor: pointer;
-            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-        }
-
-        .music-card:hover {
-            transform: scale(1.03);
-            box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.5), 0 4px 6px -2px rgba(239, 68, 68, 0.2); 
-        }
+        .left-panel { background-color: #111111; border: 1px solid #252525; border-radius: 0.75rem; padding: 1.5rem; height: fit-content; }
+        .feed-panel { background-color: #111111; border: 1px solid #252525; border-radius: 0.75rem; padding: 1.5rem; }
         
-        .card-background {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+        /* Photo Grid */
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .photo-thumbnail {
+            aspect-ratio: 1 / 1;
             background-size: cover;
             background-position: center;
-            transition: transform 0.3s ease-in-out;
-            z-index: 1;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid #252525;
         }
+        .photo-thumbnail:hover .overlay { opacity: 1; }
 
-        .card-overlay {
+        .overlay {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.6) 40%, rgba(0, 0, 0, 0.3) 60%, rgba(0, 0, 0, 0.1) 100%);
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 1rem;
-            z-index: 2;
-        }
-
-        .card-details {
-            display: flex;
-            flex-direction: column;
-            align-self: flex-start;
-        }
-
-        .card-actions {
+            inset: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 50%);
             opacity: 0;
+            transition: opacity 0.3s ease;
             display: flex;
-            justify-content: flex-end;
-            align-items: center;
-            transition: opacity 0.3s ease-in-out;
-            align-self: flex-end; 
+            align-items: flex-end;
+            padding: 0.75rem;
+            color: white;
         }
+        .overlay-content { display: flex; align-items: center; justify-content: space-between; width: 100%; }
 
-        .music-card:hover .card-actions {
-            opacity: 1;
+        /* Modal Styles */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 2000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         
-        .library-card {
-            aspect-ratio: unset;
-            height: 300px;
+        .modal-content {
+            background-color: #111111;
+            border: 1px solid #252525;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            width: 90%;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
-        .library-card .card-actions {
-            opacity: 1;
-            margin-top: auto;
-            align-self: stretch;
-            justify-content: center;
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .messenger-container { grid-template-columns: 1fr; }
         }
 
-        /* Marquee Text Styles */
-        .marquee-container {
-            overflow: hidden;
-            white-space: nowrap;
-            width: 100%; 
+        /* General form input styles from login.html */
+        .form-input {
+             width: 100%; p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-lg text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none;
         }
-        .marquee-text {
-            display: inline-block;
-            padding-left: 100%;
-            animation: marquee 10s linear infinite;
+        .btn-primary {
+             w-full p-3 bg-custom-medium-gray text-custom-white-gray rounded-lg font-semibold cursor-pointer transition hover:bg-custom-light-gray;
         }
-        @keyframes marquee {
-            0% { transform: translate(0, 0); }
-            100% { transform: translate(-100%, 0); }
-        }
-        .marquee-container:not(.active) .marquee-text {
-            animation: none;
-            padding-left: 0;
-        }
-        .line-clamp-1, .line-clamp-2 {
-            display: -webkit-box;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-        .line-clamp-1 { -webkit-line-clamp: 1; }
-        .line-clamp-2 { -webkit-line-clamp: 2; }
+
     </style>
 </head>
-<body>
-
-    <main id="main-content" class="flex-grow p-4 md:p-8 pt-12">
-        <h1 class="text-4xl font-semibold mb-6 tracking-tighter">Direct Stream</h1>
-
-        <div class="mb-8">
-            <input type="text" id="search-input" placeholder="Search for music..."
-                   class="w-full p-3 rounded-lg bg-gray-900 border border-gray-700 focus:ring-red-500 focus:border-red-500 text-lg font-light">
-            <div class="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 mt-2">
-                <button id="search-button" class="flex-grow p-3 rounded-lg font-medium glass-button glass-button-red">Search</button>
-                <button id="add-url-button" class="flex-grow md:flex-grow-0 p-3 rounded-lg font-medium glass-button" onclick="promptAddUrl()">Add URL to Library</button>
-            </div>
-        </div>
-
-        <div class="flex border-b border-gray-800 mb-6">
-            <button data-view="home" class="nav-tab py-2 px-4 text-lg font-light border-b-2 border-red-600 text-red-500">Search Results</button>
-            <button data-view="library" class="nav-tab py-2 px-4 text-lg font-light border-b-2 border-transparent hover:border-gray-600 text-gray-400 ml-4">My Library</button>
-        </div>
+<body class="pt-16"> <main id="messenger-ui" class="messenger-container" style="display: none;">
         
-        <section id="music-view" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-            <p id="initial-message" class="col-span-full text-gray-500 font-light">Enter a query above and click "Search" to find music.</p>
+        <aside class="left-panel">
+            <div class="mb-6">
+                <h2 class="text-xl font-bold mb-2">Your Friend Code</h2>
+                <p class="text-sm text-gray-400 mb-3">Share this code with friends so they can add you.</p>
+                <div id="friend-code-display" class="p-3 text-center bg-gray-900 rounded-md font-mono text-lg tracking-widest">
+                    Loading...
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h2 class="text-xl font-bold mb-2">Add a Friend</h2>
+                <form id="add-friend-form" class="flex gap-2">
+                    <input type="text" id="friend-code-input" placeholder="Enter 8-digit code" class="flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 rounded-md hover:bg-indigo-700 transition font-semibold">Add</button>
+                </form>
+                <div id="add-friend-message" class="text-sm mt-2 min-h-[20px]"></div>
+            </div>
+
+            <div>
+                <h2 class="text-xl font-bold mb-2">Post Your Photos</h2>
+                <p class="text-sm text-gray-400 mb-3">You can post up to 3 photos per day. They will disappear tomorrow.</p>
+                <div id="daily-posts-container">
+                    </div>
+                <div id="upload-message" class="text-sm mt-2 min-h-[20px]"></div>
+            </div>
+        </aside>
+
+        <section class="feed-panel">
+            <h1 class="text-2xl font-bold mb-4">Today's Feed</h1>
+            <div id="photo-feed" class="photo-grid">
+                <p id="feed-placeholder">Add some friends to see their daily photos!</p>
+            </div>
         </section>
+
     </main>
 
-    <!-- HTML5 audio element for playback, replacing the YouTube iframe -->
-    <audio id="audio-player" class="hidden"></audio>
-
-    <footer id="bottom-player" class="flex items-center justify-between px-4 py-2">
-        <div id="player-info" class="flex items-center space-x-4 flex-grow min-w-0"> 
-            <img id="current-thumbnail" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236B7280'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z'/%3E%3C/svg%3E" alt="Album Art" class="w-12 h-12 rounded-lg object-cover bg-gray-700 flex-shrink-0">
-            <div class="flex-grow min-w-0 pr-4 max-w-xs md:max-w-md"> 
-                <div id="current-title-container" class="text-sm font-medium marquee-container">
-                    <div id="current-title" class="marquee-text">No song playing</div>
-                </div>
-                <div id="current-artist-container" class="text-xs text-gray-400 font-light marquee-container mt-0.5">
-                    <div id="current-artist" class="marquee-text"></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="flex items-center space-x-6">
-            <button id="skip-back" class="text-gray-400 hover:text-white transition duration-150 disabled:opacity-50 glass-button p-3 rounded-xl">
-                <i class="fa-solid fa-backward-step fa-lg"></i>
-            </button>
-            <button id="play-pause" class="text-white hover:text-red-500 transition duration-150 w-14 h-14 flex items-center justify-center rounded-xl disabled:opacity-50 glass-button glass-button-red">
-                <i id="play-icon" class="fa-solid fa-play fa-xl"></i> 
-            </button>
-            <button id="skip-next" class="text-gray-400 hover:text-white transition duration-150 disabled:opacity-50 glass-button p-3 rounded-xl">
-                <i class="fa-solid fa-forward-step fa-lg"></i>
-            </button>
-        </div>
-
-        <button id="add-to-library-btn" class="p-2 ml-4 text-gray-400 hover:text-red-400 transition duration-150 hidden glass-button rounded-xl" title="Add to Library">
-            <i id="add-to-library-icon" class="fa-solid fa-book-bookmark fa-xl"></i>
-        </button>
-    </footer>
-    
-    <div id="edit-modal" class="modal-backdrop">
-        <div class="modal-content">
-            <h2 class="text-xl font-semibold mb-4 text-white">Edit Song Details</h2>
-            <div class="mb-4">
-                <label for="edit-title" class="block text-sm font-light text-gray-400 mb-1">Title</label>
-                <input type="text" id="edit-title" class="w-full p-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:ring-red-500 focus:border-red-500 font-light">
-            </div>
-            <div class="mb-6">
-                <label for="edit-artist" class="block text-sm font-light text-gray-400 mb-1">Artist</label>
-                <input type="text" id="edit-artist" class="w-full p-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:ring-red-500 focus:border-red-500 font-light">
-            </div>
-            <div class="flex justify-end space-x-3">
-                <button id="modal-cancel-btn" class="py-2 px-4 rounded-lg font-medium glass-button">Cancel</button>
-                <button id="modal-save-btn" class="py-2 px-4 rounded-lg font-medium glass-button glass-button-red">Save Changes</button>
-            </div>
-        </div>
+    <div id="loading-screen" class="flex justify-center items-center h-screen">
+        <p class="text-xl">Authenticating and loading messenger...</p>
     </div>
 
-    <script>
-    // --- APP INITIALIZATION ---
-    document.addEventListener('DOMContentLoaded', () => {
+    <div id="photo-modal" class="modal-backdrop hidden">
+        <div id="modal-content-container" class="modal-content flex flex-col md:flex-row gap-6">
+            </div>
+    </div>
 
-        // --- GLOBAL STATE & CONFIGURATION ---
-        // This is the proxy service that helps fetch YouTube data without calling YouTube directly.
-        // If this one becomes slow or blocked, you can find other public "Invidious" instances online and swap the URL.
-        const PROXY_INSTANCE_URL = 'https://invidious.io.lol';
-
-        let currentPlaylist = [];
-        let currentPlaylistIndex = -1;
-        let isPlayingFromLibrary = false;
+    <script type="module">
+        // --- Firebase Core Imports ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { 
+            getFirestore, doc, getDoc, setDoc, updateDoc, arrayUnion, collection, query, where, getDocs, serverTimestamp, orderBy 
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
-        const LOCAL_STORAGE_KEY = 'musicflow_library_v2';
-        let userLibrary = loadLibrary();
+        // Import your firebaseConfig from the shared file
+        import { firebaseConfig } from '../firebase-config.js';
 
-        const ui = {
-            musicView: document.getElementById('music-view'),
-            bottomPlayer: document.getElementById('bottom-player'),
-            audioPlayer: document.getElementById('audio-player'),
-            currentTitleContainer: document.getElementById('current-title-container'),
-            currentArtistContainer: document.getElementById('current-artist-container'),
-            currentTitle: document.getElementById('current-title'),
-            currentArtist: document.getElementById('current-artist'),
-            currentThumbnail: document.getElementById('current-thumbnail'),
-            playPauseBtn: document.getElementById('play-pause'),
-            playIcon: document.getElementById('play-icon'),
-            skipBackBtn: document.getElementById('skip-back'),
-            skipNextBtn: document.getElementById('skip-next'),
-            searchInput: document.getElementById('search-input'),
-            searchButton: document.getElementById('search-button'),
-            addToLibraryBtn: document.getElementById('add-to-library-btn'),
-            addToLibraryIcon: document.getElementById('add-to-library-icon'), 
-            navTabs: document.querySelectorAll('.nav-tab'),
-            editModal: document.getElementById('edit-modal'),
-            editTitleInput: document.getElementById('edit-title'),
-            editArtistInput: document.getElementById('edit-artist'),
-            modalSaveBtn: document.getElementById('modal-save-btn'),
-            modalCancelBtn: document.getElementById('modal-cancel-btn'),
+        // --- Initialize Firebase ---
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = '4sp-default-app'; // From your login.html for consistency
+
+        // --- DOM Elements ---
+        const loadingScreen = document.getElementById('loading-screen');
+        const messengerUi = document.getElementById('messenger-ui');
+        const friendCodeDisplay = document.getElementById('friend-code-display');
+        const addFriendForm = document.getElementById('add-friend-form');
+        const addFriendMessage = document.getElementById('add-friend-message');
+        const photoFeed = document.getElementById('photo-feed');
+        const feedPlaceholder = document.getElementById('feed-placeholder');
+        const dailyPostsContainer = document.getElementById('daily-posts-container');
+        const photoModal = document.getElementById('photo-modal');
+
+        // --- Firestore Document References ---
+        // Based on your login.html structure
+        const getUserProfileDocRef = (userId) => doc(db, 'artifacts', appId, 'users', userId, 'metadata', 'user_profile');
+        const getFriendCodeDocRef = (code) => doc(db, 'friend_codes', code);
+        
+        // --- Helper Functions ---
+        /**
+         * Displays a temporary message to the user.
+         * @param {HTMLElement} element - The HTML element to display the message in.
+         * @param {string} text - The message text.
+         * @param {'success'|'error'} type - The message type for styling.
+         */
+        const showMessage = (element, text, type = 'error') => {
+            element.textContent = text;
+            element.className = `text-sm mt-2 min-h-[20px] ${type === 'success' ? 'text-green-400' : 'text-red-400'}`;
+            setTimeout(() => element.textContent = '', 4000);
         };
 
-        // --- UTILITY FUNCTIONS ---
-        
-        function updateMarquee(textElement, containerElement) {
-            const isOverflowing = textElement.scrollWidth > containerElement.clientWidth;
-            containerElement.classList.toggle('active', isOverflowing);
-        }
+        /**
+         * Compresses an image file using a canvas before uploading.
+         * Crucial for saving Firestore storage space on the free plan.
+         * @param {File} file - The image file to compress.
+         * @returns {Promise<string>} A promise that resolves with the compressed base64 data URL.
+         */
+        const compressImage = (file) => {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = event => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 800; // Set a max width for images
+                        const scaleSize = MAX_WIDTH / img.width;
+                        canvas.width = MAX_WIDTH;
+                        canvas.height = img.height * scaleSize;
 
-        function decodeHtmlEntities(text) {
-            const temp = document.createElement('textarea');
-            temp.innerHTML = text;
-            return temp.value;
-        }
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        
+                        // Get compressed JPEG data URL (quality 0.7 is a good balance)
+                        const compressedDataUrl = ctx.canvas.toDataURL('image/jpeg', 0.7);
+                        resolve(compressedDataUrl);
+                    };
+                    img.onerror = reject;
+                };
+                reader.onerror = reject;
+            });
+        };
 
-        // --- DIRECT STREAMING & SEARCH API ---
-        
-        async function performSearch(query) {
-            if (!query.trim()) {
-                ui.musicView.innerHTML = '<p class="col-span-full text-xl text-gray-400 font-light">Please enter a search query.</p>';
-                return;
-            }
-            ui.musicView.innerHTML = '<p class="col-span-full text-xl text-gray-400 font-light">Searching for music...</p>';
-
-            try {
-                // Use the proxy to search, avoiding direct calls to YouTube's API.
-                const response = await fetch(`${PROXY_INSTANCE_URL}/api/v1/search?q=${encodeURIComponent(query)}&type=video`);
-                if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
-                
-                const data = await response.json();
-                
-                if (data && data.length > 0) {
-                    currentPlaylist = data.map(item => ({
-                        videoId: item.videoId,
-                        title: item.title,
-                        artist: item.author,
-                        // Find a good quality thumbnail from the available options.
-                        thumbnail: (item.videoThumbnails.find(t => t.quality === 'mqdefault') || item.videoThumbnails[0]).url,
-                    }));
-                    renderSearchResults(currentPlaylist);
-                } else {
-                    ui.musicView.innerHTML = `<p class="col-span-full text-xl text-gray-400 font-light">No music found for "${query}".</p>`;
+        /**
+         * Generates a unique 8-digit alphanumeric friend code.
+         * It checks Firestore to guarantee uniqueness before returning.
+         * @returns {Promise<string>} A unique friend code.
+         */
+        const generateUniqueFriendCode = async () => {
+            let code;
+            let isUnique = false;
+            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            while (!isUnique) {
+                code = '';
+                for (let i = 0; i < 8; i++) {
+                    code += characters.charAt(Math.floor(Math.random() * characters.length));
                 }
-            } catch (error) {
-                console.error("Search Error:", error);
-                ui.musicView.innerHTML = `<p class="col-span-full text-xl text-red-500 font-light">Search failed. The proxy might be down. Try again later or change the PROXY_INSTANCE_URL in the script.</p>`;
-            }
-        }
-        
-        function renderSearchResults(items) {
-            ui.musicView.innerHTML = ''; 
-            items.forEach((item, index) => {
-                const title = decodeHtmlEntities(item.title);
-                const artist = decodeHtmlEntities(item.artist);
-
-                const card = document.createElement('div');
-                card.className = 'music-card'; 
-                card.innerHTML = `
-                    <div class="card-background" style="background-image: url('${item.thumbnail}');"></div>
-                    <div class="card-overlay">
-                        <div class="card-details">
-                            <h3 class="text-xl font-medium mb-1 line-clamp-2">${title}</h3>
-                            <p class="text-sm text-gray-300 font-light line-clamp-1">${artist}</p>
-                        </div>
-                        <div class="card-actions">
-                            <button data-index="${index}" class="play-video-btn p-3 rounded-full text-white text-lg font-semibold shadow-xl glass-button glass-button-red">
-                                <i class="fa-solid fa-play"></i>
-                            </button>
-                        </div>
-                    </div>
-                `;
-                
-                card.addEventListener('click', () => startPlaylist(currentPlaylist, index, false));
-                card.querySelector('.play-video-btn').addEventListener('click', (e) => {
-                    e.stopPropagation(); 
-                    startPlaylist(currentPlaylist, index, false);
-                });
-                ui.musicView.appendChild(card);
-            });
-        }
-
-        // --- PLAYER CONTROLS (Using HTML5 Audio) ---
-
-        async function startPlaylist(playlist, index, fromLibrary = false) {
-            if (!playlist || playlist.length === 0 || index < 0 || index >= playlist.length) return;
-            
-            currentPlaylist = playlist;
-            currentPlaylistIndex = index;
-            isPlayingFromLibrary = fromLibrary;
-            
-            const currentSong = currentPlaylist[currentPlaylistIndex];
-            
-            // Update UI immediately to show loading
-            ui.currentTitle.textContent = "Loading audio stream...";
-            ui.currentArtist.textContent = decodeHtmlEntities(currentSong.artist);
-            ui.currentThumbnail.src = currentSong.thumbnail;
-            ui.bottomPlayer.classList.add('player-visible');
-
-            try {
-                // Fetch detailed video info to get the audio stream URL
-                const response = await fetch(`${PROXY_INSTANCE_URL}/api/v1/videos/${currentSong.videoId}`);
-                if (!response.ok) throw new Error('Could not fetch video data.');
-                const videoData = await response.json();
-
-                // Find the first available audio-only stream (m4a is preferred)
-                const audioStream = videoData.adaptiveFormats.find(f => f.type.startsWith("audio/mp4")) || videoData.adaptiveFormats.find(f => f.type.startsWith("audio/"));
-                
-                if (!audioStream) throw new Error("No audio stream found for this video.");
-
-                // Set the audio source and play
-                ui.audioPlayer.src = audioStream.url;
-                ui.audioPlayer.play();
-
-                // Update UI with final details
-                ui.currentTitle.textContent = decodeHtmlEntities(currentSong.title);
-                setTimeout(() => {
-                    updateMarquee(ui.currentTitle, ui.currentTitleContainer);
-                    updateMarquee(ui.currentArtist, ui.currentArtistContainer);
-                }, 50);
-                
-                ui.addToLibraryBtn.dataset.videoId = currentSong.videoId;
-                ui.addToLibraryBtn.dataset.title = currentSong.title; 
-                ui.addToLibraryBtn.dataset.artist = currentSong.artist;
-                ui.addToLibraryBtn.dataset.thumbnail = currentSong.thumbnail;
-                updateLibraryIcon(currentSong.videoId);
-
-            } catch(error) {
-                console.error("Playback Error:", error);
-                ui.currentTitle.textContent = "Error: Could not load audio";
-                ui.currentArtist.textContent = "Please try another song.";
-                // Optionally, skip to the next song on error
-                // setTimeout(skipNext, 2000);
-            }
-        }
-
-        function togglePlayPause() {
-            if (!ui.audioPlayer.src) return;
-            if (ui.audioPlayer.paused) {
-                ui.audioPlayer.play();
-            } else {
-                ui.audioPlayer.pause();
-            }
-        }
-
-        function skipNext() {
-            if (currentPlaylistIndex === -1) return;
-            const nextIndex = currentPlaylistIndex + 1;
-            if (nextIndex < currentPlaylist.length) {
-                startPlaylist(currentPlaylist, nextIndex, isPlayingFromLibrary);
-            } else {
-                ui.currentTitle.textContent = "Playlist finished";
-                ui.currentArtist.textContent = "";
-                updateLibraryIcon(null);
-            }
-        }
-
-        function skipBack() {
-            if (currentPlaylistIndex <= 0) return;
-            const prevIndex = currentPlaylistIndex - 1;
-            startPlaylist(currentPlaylist, prevIndex, isPlayingFromLibrary);
-        }
-
-        // --- LOCAL LIBRARY MANAGEMENT ---
-
-        function isSongInLibrary(videoId) {
-            return userLibrary.some(song => song.videoId === videoId);
-        }
-
-        function updateLibraryIcon(videoId) {
-            if (!videoId) {
-                ui.addToLibraryBtn.classList.add('hidden');
-                return;
-            }
-            ui.addToLibraryBtn.classList.remove('hidden');
-
-            const inLibrary = isSongInLibrary(videoId);
-            ui.addToLibraryIcon.classList.toggle('text-red-500', inLibrary);
-            ui.addToLibraryIcon.classList.toggle('text-gray-400', !inLibrary);
-            ui.addToLibraryBtn.title = inLibrary ? "Remove from Library" : "Add to Library";
-            ui.addToLibraryBtn.dataset.inLibrary = inLibrary;
-        }
-
-        function loadLibrary() {
-            try {
-                return JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || [];
-            } catch (e) { return []; }
-        }
-
-        function saveLibrary() {
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(userLibrary));
-        }
-        
-        function addToLibrary(songData) {
-            if (isSongInLibrary(songData.videoId)) return;
-            userLibrary.unshift({ ...songData, added: new Date().toISOString() });
-            saveLibrary();
-            updateLibraryIcon(songData.videoId);
-            if (document.querySelector('.nav-tab[data-view="library"]').classList.contains('border-red-600')) {
-                renderLibrary();
-            }
-        }
-
-        function removeFromLibrary(videoId) {
-            userLibrary = userLibrary.filter(song => song.videoId !== videoId);
-            saveLibrary();
-            if (ui.addToLibraryBtn.dataset.videoId === videoId) {
-                updateLibraryIcon(videoId); 
-            }
-            if (document.querySelector('.nav-tab[data-view="library"]').classList.contains('border-red-600')) {
-                renderLibrary();
-            }
-        }
-        
-        function renderLibrary() {
-            ui.musicView.innerHTML = '';
-            if (userLibrary.length === 0) {
-                ui.musicView.innerHTML = '<p class="col-span-full text-xl text-gray-500 font-light">Your library is empty. Add songs from search results!</p>';
-                return;
-            }
-            userLibrary.forEach((song, index) => {
-                const card = document.createElement('div');
-                card.className = 'music-card library-card'; 
-                card.innerHTML = `
-                    <div class="card-background" style="background-image: url('${song.thumbnail}');"></div>
-                    <div class="card-overlay">
-                        <div class="card-details">
-                            <h3 class="text-xl font-medium mb-1 line-clamp-2">${decodeHtmlEntities(song.title)}</h3>
-                            <p class="text-sm text-gray-300 font-light line-clamp-1">${decodeHtmlEntities(song.artist)}</p>
-                        </div>
-                        <div class="card-actions flex-col space-y-2 !opacity-100">
-                            <button class="play-library-btn w-3/4 p-2 rounded-lg text-sm font-semibold glass-button glass-button-red"><i class="fa-solid fa-play mr-2"></i> Play</button>
-                            <div class="flex space-x-2 w-3/4">
-                                <button class="edit-library-btn flex-grow p-2 rounded-lg text-sm font-semibold glass-button" title="Edit Names"><i class="fa-solid fa-pencil mr-1"></i> Edit</button>
-                                <button class="remove-library-btn p-2 rounded-lg text-sm font-semibold glass-button hover:bg-red-900/50" title="Remove from Library"><i class="fa-solid fa-trash-can"></i></button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                const playHandler = (e) => { e.stopPropagation(); startPlaylist(userLibrary, index, true); };
-                card.addEventListener('click', playHandler);
-                card.querySelector('.play-library-btn').addEventListener('click', playHandler);
-                card.querySelector('.edit-library-btn').addEventListener('click', (e) => { e.stopPropagation(); showEditModal(index); });
-                card.querySelector('.remove-library-btn').addEventListener('click', (e) => { e.stopPropagation(); if(confirm("Remove this song?")) removeFromLibrary(song.videoId); });
-                ui.musicView.appendChild(card);
-            });
-        }
-        
-        // --- MODAL & URL ADDING ---
-        window.promptAddUrl = function() {
-            const url = prompt("Enter a YouTube Video URL:");
-            if (!url) return;
-            const videoIdMatch = url.match(/(?:\?v=|\/embed\/|\/v\/|youtu\.be\/|\/shorts\/)([a-zA-Z0-9_-]{11})/);
-            if (videoIdMatch && videoIdMatch[1]) {
-                const videoId = videoIdMatch[1];
-                addToLibrary({
-                    videoId: videoId,
-                    title: `Manual Add: ${videoId}`, 
-                    artist: 'Unknown Artist',
-                    thumbnail: `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`
-                });
-            } else {
-                alert("Invalid YouTube URL provided.");
-            }
-        }
-        
-        function showEditModal(index) {
-            const song = userLibrary[index];
-            ui.editTitleInput.value = song.title;
-            ui.editArtistInput.value = song.artist;
-            ui.editModal.dataset.editIndex = index;
-            ui.editModal.style.display = 'flex';
-        }
-
-        function saveNameEdit() {
-            const index = parseInt(ui.editModal.dataset.editIndex);
-            userLibrary[index].title = ui.editTitleInput.value.trim();
-            userLibrary[index].artist = ui.editArtistInput.value.trim();
-            saveLibrary();
-            hideEditModal();
-            renderLibrary();
-        }
-
-        function hideEditModal() { ui.editModal.style.display = 'none'; }
-
-
-        // --- EVENT LISTENERS ---
-        function attachEventListeners() {
-            ui.searchButton.addEventListener('click', () => performSearch(ui.searchInput.value));
-            ui.searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') ui.searchButton.click(); });
-            ui.playPauseBtn.addEventListener('click', togglePlayPause);
-            ui.skipBackBtn.addEventListener('click', skipBack);
-            ui.skipNextBtn.addEventListener('click', skipNext);
-            
-            ui.addToLibraryBtn.addEventListener('click', (e) => {
-                const { videoId, title, artist, thumbnail, inLibrary } = e.currentTarget.dataset;
-                if (inLibrary === 'true') {
-                    if (confirm("Remove this song?")) removeFromLibrary(videoId);
-                } else {
-                    addToLibrary({ videoId, title, artist, thumbnail });
+                const codeDoc = await getDoc(getFriendCodeDocRef(code));
+                if (!codeDoc.exists()) {
+                    isUnique = true;
                 }
+            }
+            return code;
+        };
+
+        // --- Core Application Logic ---
+
+        /**
+         * Checks if the user has a friend code, generates one if not, and displays it.
+         * @param {object} user - The authenticated Firebase user object.
+         */
+        const handleFriendCode = async (user) => {
+            const userProfileRef = getUserProfileDocRef(user.uid);
+            const userProfileSnap = await getDoc(userProfileRef);
+
+            if (userProfileSnap.exists() && userProfileSnap.data().friendCode) {
+                friendCodeDisplay.textContent = userProfileSnap.data().friendCode;
+            } else {
+                friendCodeDisplay.textContent = 'Generating...';
+                const newCode = await generateUniqueFriendCode();
+                
+                // Create lookup document: friend_codes/{code} -> { userId }
+                await setDoc(getFriendCodeDocRef(newCode), { userId: user.uid });
+                
+                // Add code and friends array to user profile
+                await updateDoc(userProfileRef, { 
+                    friendCode: newCode,
+                    friends: [] // Initialize friends list
+                });
+                
+                friendCodeDisplay.textContent = newCode;
+            }
+        };
+
+        /**
+         * Fetches and displays the daily photos from the user's friends.
+         * @param {object} user - The authenticated Firebase user object.
+         */
+        const loadFriendsFeed = async (user) => {
+            const userProfileSnap = await getDoc(getUserProfileDocRef(user.uid));
+            const friends = userProfileSnap.data()?.friends || [];
+
+            photoFeed.innerHTML = ''; // Clear existing feed
+
+            if (friends.length === 0) {
+                photoFeed.appendChild(feedPlaceholder);
+                return;
+            }
+
+            // Get the start of the current day in the user's local timezone
+            const startOfDay = new Date();
+            startOfDay.setHours(0, 0, 0, 0);
+
+            // Efficiently query for photos from all friends created today
+            const photosQuery = query(
+                collection(db, 'daily_photos'),
+                where('creatorUid', 'in', friends),
+                where('createdAt', '>=', startOfDay)
+            );
+
+            const querySnapshot = await getDocs(photosQuery);
+            if (querySnapshot.empty) {
+                photoFeed.innerHTML = '<p>Your friends haven\'t posted anything today.</p>';
+            } else {
+                querySnapshot.forEach(doc => {
+                    renderPhotoThumbnail(doc.id, doc.data());
+                });
+            }
+        };
+
+        /**
+         * Renders a single photo thumbnail in the feed.
+         * @param {string} photoId - The document ID of the photo.
+         * @param {object} photoData - The data object for the photo.
+         */
+        const renderPhotoThumbnail = (photoId, photoData) => {
+            const thumb = document.createElement('div');
+            thumb.className = 'photo-thumbnail';
+            thumb.style.backgroundImage = `url(${photoData.imageBase64})`;
+            thumb.dataset.photoId = photoId;
+
+            thumb.innerHTML = `
+                <div class="overlay">
+                    <div class="overlay-content">
+                        <span class="font-semibold">${photoData.creatorUsername}</span>
+                        <span><i class="fas fa-heart mr-1"></i> ${photoData.hearts?.length || 0}</span>
+                    </div>
+                </div>
+            `;
+            
+            thumb.addEventListener('click', () => openPhotoModal(photoId));
+            photoFeed.appendChild(thumb);
+        };
+
+        /**
+         * Opens the modal to view a photo, its comments, and interact.
+         * @param {string} photoId - The document ID of the photo to display.
+         */
+        const openPhotoModal = async (photoId) => {
+            const photoRef = doc(db, 'daily_photos', photoId);
+            const photoSnap = await getDoc(photoRef);
+            if (!photoSnap.exists()) return;
+
+            const photoData = photoSnap.data();
+            const currentUser = auth.currentUser;
+            
+            const hasHearted = photoData.hearts?.includes(currentUser.uid);
+
+            const modalContentContainer = document.getElementById('modal-content-container');
+            modalContentContainer.innerHTML = `
+                <div class="md:w-2/3">
+                    <img src="${photoData.imageBase64}" class="w-full h-auto rounded-lg object-contain max-h-[80vh]">
+                </div>
+                <div class="md:w-1/3 flex flex-col">
+                    <div class="border-b border-gray-700 pb-3 mb-3">
+                        <p class="font-bold text-lg">${photoData.creatorUsername}</p>
+                        <p class="text-sm text-gray-400">${photoData.createdAt.toDate().toLocaleString()}</p>
+                    </div>
+                    <div class="flex-grow overflow-y-auto mb-4" id="comments-section">
+                        </div>
+                    <div class="flex items-center gap-4 mb-4">
+                        <button id="heart-btn" class="text-2xl ${hasHearted ? 'text-red-500' : 'text-gray-400'} hover:text-red-500 transition"><i class="fas fa-heart"></i></button>
+                        <span class="text-lg">${photoData.hearts?.length || 0}</span>
+                    </div>
+                    <form id="comment-form" class="flex gap-2">
+                        <input type="text" id="comment-input" placeholder="Add a comment..." class="flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md">
+                        <button type="submit" class="px-4 py-2 bg-indigo-600 rounded-md font-semibold">Post</button>
+                    </form>
+                     <button id="report-btn" class="text-left text-xs text-gray-500 hover:text-red-400 mt-4">Report Photo</button>
+                </div>
+            `;
+            
+            renderComments(photoData.comments || []);
+            photoModal.classList.remove('hidden');
+
+            // --- Modal Event Listeners ---
+            document.getElementById('heart-btn').addEventListener('click', async () => {
+                await updateDoc(photoRef, { hearts: arrayUnion(currentUser.uid) });
+                // Note: For un-hearting, you'd use arrayRemove. This is a simple implementation.
+                openPhotoModal(photoId); // Re-open/refresh modal to show updated state
             });
 
-            // HTML5 Audio Player events
-            ui.audioPlayer.addEventListener('play', () => ui.playIcon.className = 'fa-solid fa-pause fa-xl');
-            ui.audioPlayer.addEventListener('pause', () => ui.playIcon.className = 'fa-solid fa-play fa-xl');
-            ui.audioPlayer.addEventListener('ended', skipNext);
+            document.getElementById('comment-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const commentInput = document.getElementById('comment-input');
+                const text = commentInput.value.trim();
+                if (!text) return;
+
+                const userProfileSnap = await getDoc(getUserProfileDocRef(currentUser.uid));
+                const username = userProfileSnap.data().username;
+
+                const newComment = {
+                    uid: currentUser.uid,
+                    username: username,
+                    text: text,
+                    timestamp: new Date() // Use client time for simplicity
+                };
+                await updateDoc(photoRef, { comments: arrayUnion(newComment) });
+                commentInput.value = '';
+                openPhotoModal(photoId); // Refresh modal
+            });
             
-            // Navigation Tabs
-            ui.navTabs.forEach(tab => {
-                tab.addEventListener('click', (e) => {
-                    const view = e.currentTarget.dataset.view;
-                    ui.navTabs.forEach(t => {
-                        const isActive = t.dataset.view === view;
-                        t.classList.toggle('border-red-600', isActive);
-                        t.classList.toggle('text-red-500', isActive);
-                        t.classList.toggle('border-transparent', !isActive);
-                        t.classList.toggle('text-gray-400', !isActive);
+            document.getElementById('report-btn').addEventListener('click', () => {
+                const reason = prompt("Please state the reason for reporting this photo (e.g., 'Explicit Content', 'Hate Speech'):");
+                if (reason && reason.trim()) {
+                    updateDoc(photoRef, { 
+                        reports: arrayUnion({
+                            reporterUid: currentUser.uid,
+                            reason: reason.trim(),
+                            timestamp: new Date()
+                        })
+                    }).then(() => {
+                        alert("Photo reported. It will be hidden from your view and reviewed. Thank you.");
+                        photoModal.classList.add('hidden');
+                        // In a real app, you would also store this report in the user's private data
+                        // to ensure they don't see the reported image again.
+                        loadFriendsFeed(currentUser); // Refresh feed to hide image
                     });
-                    if (view === 'library') renderLibrary();
-                    else performSearch(ui.searchInput.value || "popular music"); // Or show last search
-                });
+                }
             });
-            
-            // Modal Listeners
-            ui.modalSaveBtn.addEventListener('click', saveNameEdit);
-            ui.modalCancelBtn.addEventListener('click', hideEditModal);
-            ui.editModal.addEventListener('click', (e) => { if (e.target === ui.editModal) hideEditModal(); });
-        }
-
-        // --- STARTUP ---
-        attachEventListeners();
-        renderLibrary(); // Show library on initial load
-        switchView('library');
+        };
         
-        function switchView(view) {
-             ui.navTabs.forEach(tab => {
-                if(tab.dataset.view === view) tab.click();
-             });
-        }
-    });
+        const renderComments = (comments) => {
+            const section = document.getElementById('comments-section');
+            section.innerHTML = '';
+            if (comments.length === 0) {
+                section.innerHTML = '<p class="text-sm text-gray-500">No comments yet.</p>';
+                return;
+            }
+            comments.sort((a, b) => a.timestamp.toDate() - b.timestamp.toDate()).forEach(comment => {
+                const div = document.createElement('div');
+                div.className = 'mb-2';
+                div.innerHTML = `<p><strong class="font-semibold">${comment.username}</strong>: ${comment.text}</p>`;
+                section.appendChild(div);
+            });
+        };
+
+        /**
+         * Manages and displays the user's 3 daily photo upload slots.
+         * @param {object} user - The authenticated Firebase user object.
+         */
+        const handleDailyPosts = async (user) => {
+            const startOfDay = new Date();
+            startOfDay.setHours(0, 0, 0, 0);
+
+            const postsQuery = query(
+                collection(db, 'daily_photos'),
+                where('creatorUid', '==', user.uid),
+                where('createdAt', '>=', startOfDay)
+            );
+            const querySnapshot = await getDocs(postsQuery);
+            const postsToday = querySnapshot.docs;
+
+            dailyPostsContainer.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'mb-2';
+                if (i < postsToday.length) {
+                    // Slot is filled
+                    const postData = postsToday[i].data();
+                    slot.innerHTML = `
+                        <div class="flex items-center gap-3 p-2 bg-gray-900 rounded-md">
+                            <img src="${postData.imageBase64}" class="w-12 h-12 rounded object-cover">
+                            <p class="text-green-400">Posted at ${postData.createdAt.toDate().toLocaleTimeString()}</p>
+                        </div>
+                    `;
+                } else {
+                    // Slot is empty, show upload button
+                    slot.innerHTML = `
+                        <label for="photo-upload-${i}" class="block w-full text-center p-3 border-2 border-dashed border-gray-600 rounded-md cursor-pointer hover:border-indigo-500 hover:bg-gray-800 transition">
+                            <i class="fas fa-camera mr-2"></i> Upload Photo #${i + 1}
+                        </label>
+                        <input type="file" id="photo-upload-${i}" class="hidden" accept="image/*">
+                    `;
+                    // Use a timeout to ensure the element is in the DOM before adding listener
+                    setTimeout(() => {
+                        document.getElementById(`photo-upload-${i}`).addEventListener('change', async (e) => {
+                            const file = e.target.files[0];
+                            if (!file) return;
+
+                            const uploadMessage = document.getElementById('upload-message');
+                            showMessage(uploadMessage, 'Compressing image...', 'success');
+
+                            try {
+                                const imageBase64 = await compressImage(file);
+                                showMessage(uploadMessage, 'Uploading...', 'success');
+
+                                const userProfileSnap = await getDoc(getUserProfileDocRef(user.uid));
+                                const username = userProfileSnap.data().username;
+
+                                // IMPORTANT: Cloud Functions are the RELIABLE way to delete old data.
+                                // A scheduled function should run daily to delete documents older than
+                                // 24 hours from the 'daily_photos' collection to manage storage costs.
+                                // Client-side deletion is not reliable.
+
+                                await setDoc(doc(collection(db, 'daily_photos')), {
+                                    creatorUid: user.uid,
+                                    creatorUsername: username,
+                                    createdAt: serverTimestamp(),
+                                    imageBase64: imageBase64,
+                                    hearts: [],
+                                    comments: [],
+                                    reports: []
+                                });
+
+                                showMessage(uploadMessage, 'Upload successful!', 'success');
+                                handleDailyPosts(user); // Refresh the upload slots
+                            } catch (error) {
+                                console.error("Upload error:", error);
+                                showMessage(uploadMessage, 'Upload failed. Please try again.');
+                            }
+                        });
+                    }, 0);
+                }
+                dailyPostsContainer.appendChild(slot);
+            }
+        };
+
+        // --- Event Listeners Setup ---
+        addFriendForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const friendCodeInput = document.getElementById('friend-code-input');
+            const code = friendCodeInput.value.trim().toUpperCase();
+            if (code.length !== 8) {
+                showMessage(addFriendMessage, 'Friend code must be 8 characters.');
+                return;
+            }
+
+            const codeDocSnap = await getDoc(getFriendCodeDocRef(code));
+            if (!codeDocSnap.exists()) {
+                showMessage(addFriendMessage, 'Friend code not found.');
+                return;
+            }
+
+            const friendUid = codeDocSnap.data().userId;
+            const currentUser = auth.currentUser;
+            if (friendUid === currentUser.uid) {
+                showMessage(addFriendMessage, "You can't add yourself.");
+                return;
+            }
+
+            const userProfileRef = getUserProfileDocRef(currentUser.uid);
+            await updateDoc(userProfileRef, {
+                friends: arrayUnion(friendUid)
+            });
+
+            showMessage(addFriendMessage, 'Friend added successfully!', 'success');
+            friendCodeInput.value = '';
+            loadFriendsFeed(currentUser); // Refresh feed to show new friend's photos
+        });
+
+        photoModal.addEventListener('click', (e) => {
+            if (e.target === photoModal) { // Close modal if clicking on the backdrop
+                photoModal.classList.add('hidden');
+            }
+        });
+
+        // --- Authentication State Change Handler ---
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is signed in. Initialize the application logic.
+                console.log("User signed in. UID:", user.uid);
+                loadingScreen.style.display = 'none';
+                messengerUi.style.display = 'grid';
+
+                // Run all initialization functions
+                handleFriendCode(user);
+                handleDailyPosts(user);
+                loadFriendsFeed(user);
+            } else {
+                // User is signed out. Redirect to login page.
+                console.log("User not signed in. Redirecting...");
+                window.location.replace('../login.html');
+            }
+        });
     </script>
 </body>
 </html>
