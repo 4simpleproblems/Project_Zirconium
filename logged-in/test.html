@@ -321,23 +321,11 @@
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
         // --- CONFIGURATION IMPORT ---
-        // 🚨 IMPORTANT: The authentication error was caused by removing the configuration import/definition.
-        // You MUST ensure your Firebase configuration object is available here.
-        // If you are using an import file (like "../firebase-config.js"), ensure it's correct.
-        // If you need to define it inline, uncomment and populate the following:
-        /*
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_AUTH_DOMAIN",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_STORAGE_BUCKET",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
-        */
-        // For demonstration purposes, we rely on the external configuration object named 'firebaseConfig'
-        // and define the application state constants:
-        const firebaseConfig = {}; // Placeholder if imported config is not available externally
+        // 🚀 FIX: Importing the configuration from the external file as requested.
+        // This file MUST export a constant named 'firebaseConfig'.
+        import { firebaseConfig } from "../firebase-config.js";
+        
+        // IMPORTANT: Assuming an external source provides these for this environment.
         const appId = 'default-app-id'; 
         const initialAuthToken = null; 
 
@@ -500,7 +488,7 @@
                 console.error("Firebase authentication failed:", error);
                 loadingScreen.style.display = 'none'; 
                 const errorMessage = error.code === 'auth/invalid-api-key' 
-                    ? `Authentication failed due to an **Invalid API Key**. Please ensure the environment configuration is correct.` 
+                    ? `Authentication failed due to an **Invalid API Key**. Please ensure the configuration in the external \`firebase-config.js\` file is correct and complete.` 
                     : `Failed to sign in to Firebase. Error: ${error.code || error.message}.`;
                     
                 showCustomModal("Authentication Error", errorMessage);
