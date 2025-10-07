@@ -15,9 +15,9 @@
         "url": "../logged-in/notes.html"
     },
      "notes-again": {
-        "name": "Notes Again",
-        "icon": "fa-sticky-note",
-        "url": "../logged-in/notes-again.html"
+        "name": "Test",
+        "icon": "fa-file",
+        "url": "../logged-in/test.html"
     },
     "countdowns": {
         "name": "Countdowns",
