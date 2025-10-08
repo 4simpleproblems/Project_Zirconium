@@ -26,18 +26,18 @@
             100% { box-shadow: 0 0 5px #4f46e5, 0 0 10px #4f46e5; }
         }
 
-        /* --- FONT & BASE STYLING (THIN GEIST FONT) --- */
+        /* --- FONT & BASE STYLING (THICKENED FONT) --- */
         body { 
             font-family: 'Geist', sans-serif; 
             background-color: #070707; 
             color: #c0c0c0; 
             transition: all 0.3s ease;
-            font-weight: 200; /* Thin Geist Font for general text */
+            font-weight: 300; /* Thicker (was 200) Geist Font for general text */
         }
         
         /* Ensure headings and strong text are slightly thicker but still thin */
         h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
-            font-weight: 300 !important; /* Slightly more visible for emphasis */
+            font-weight: 400 !important; /* Thicker (was 300) for emphasis */
         }
 
         /* Responsive Container */
@@ -61,7 +61,7 @@
         
         /* General input styling to use thin font */
         input.p-2 {
-            font-weight: 200 !important;
+            font-weight: 300 !important; /* Use the new general font weight */
         }
 
         /* --- Custom Friend Code Input Styling (8 character underlines) --- */
@@ -674,6 +674,47 @@
                  photoFeed.innerHTML = '<p class="text-red-400">Error loading feed.</p>';
             });
         }
+        
+        function renderPhotoThumbnail(photoId, photoData, position = 'append') {
+            if (!photoData.title) return;
+            if (document.querySelector(`.photo-thumbnail[data-photo-id="${photoId}"]`)) {
+                return;
+            }
+
+            const thumb = document.createElement('div');
+            thumb.className = 'photo-thumbnail';
+            thumb.dataset.photoId = photoId;
+            
+            const img = document.createElement('img');
+            img.src = photoData.imageBase64;
+            img.alt = `${photoData.title || 'Photo'} by ${photoData.creatorUsername}`; 
+            img.loading = 'lazy';
+            
+            thumb.appendChild(img);
+
+            const overlay = document.createElement('div');
+            overlay.className = 'overlay';
+            overlay.innerHTML = `
+                <div class="overlay-content">
+                    <span class="font-semibold text-shadow-lg">${photoData.creatorUsername}</span>
+                    <span class="text-xl"><i class="fas fa-heart text-red-400 mr-1"></i> ${formatCount(photoData.hearts?.length || 0)}</span>
+                </div>
+            `;
+            thumb.appendChild(overlay);
+
+            thumb.addEventListener('click', () => openPhotoModal(photoId));
+            
+            if (position === 'prepend') {
+                 photoFeed.prepend(thumb);
+            } else {
+                 photoFeed.appendChild(thumb);
+            }
+
+            if (document.getElementById('feed-placeholder')) {
+                document.getElementById('feed-placeholder').remove();
+            }
+        }
+
 
         function setupDailyPostsListener(user) {
              const userProfileRef = getUserProfileDocRef(user.uid);
@@ -757,7 +798,7 @@
             });
             return [unsubscribeProfile]; 
         }
-        
+
         // Refactored upload logic to use the new modal/flow
         async function handlePostCreationLogic(file, slotIndex) {
             const currentUser = auth.currentUser;
@@ -862,7 +903,7 @@
             MODAL_UNSUBSCRIBE_LISTENER = onSnapshot(photoRef, (updatedSnap) => {
                 const modalContentContainer = document.getElementById('modal-content-container');
                 
-                // FIX: Close modal if the post document no longer exists
+                // FIX: Close modal and unsubscribe if the post document no longer exists
                 if (!updatedSnap.exists()) {
                     closePhotoModal();
                     showCustomModal("Post Expired", "This daily photo has expired or has been deleted.");
