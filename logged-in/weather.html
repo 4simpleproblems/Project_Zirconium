@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4SP - Weather Forecast</title>
+    <meta name="description" content="Real-time and 7-day weather forecast powered by Open-Meteo.">
+
+    <!-- Fonts, Icons, and Tailwind CSS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../navigation.js"></script>
+    <script src="../injector.js"></script>
+
+    <style>
+        /* --- FONT & BASE STYLING --- */
+        body { 
+            font-family: 'Geist', sans-serif; 
+            background-color: #070707; 
+            color: #c0c0c0; 
+            transition: all 0.3s ease;
+        }
+        /* Custom scrollbar for the forecast section */
+        #forecast-container::-webkit-scrollbar {
+            height: 4px;
+        }
+        #forecast-container::-webkit-scrollbar-thumb {
+            background-color: #2a2a2a;
+            border-radius: 2px;
+        }
+        #forecast-container::-webkit-scrollbar-track {
+            background: #0d0d0d;
+        }
+        
+        .card {
+            background-color: #0d0d0d;
+            border: 1px solid #1a1a1a;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    
+    <div id="loading-screen" class="fixed inset-0 bg-[#070707] flex flex-col items-center justify-center z-50">
+        <i class="fa-solid fa-cloud-sun fa-spin text-indigo-400 text-4xl mb-4"></i>
+        <p class="text-sm text-gray-400">Fetching location and weather data...</p>
+    </div>
+
+    <!-- Main Content -->
+    <div id="page-content" class="hidden container mx-auto p-4 md:p-8 max-w-5xl">
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold text-white tracking-tight">Weather Dashboard</h1>
+            
+            <!-- Location Display -->
+            <div class="text-right">
+                <p id="city-display" class="text-lg font-medium text-indigo-400">Loading Location...</p>
+                <p id="date-time-display" class="text-xs text-gray-500"></p>
+            </div>
+        </header>
+
+        <!-- Current Weather Card -->
+        <section id="current-weather" class="card mb-8">
+            <div class="flex flex-col md:flex-row items-center justify-between">
+                
+                <!-- Main Temperature and Icon -->
+                <div class="flex items-center space-x-6 mb-6 md:mb-0">
+                    <div id="weather-icon" class="text-7xl text-indigo-400">
+                        <i class="fa-solid fa-sun"></i>
+                    </div>
+                    <div>
+                        <p id="temp-current" class="text-6xl font-extrabold text-white">--°C</p>
+                        <p id="condition-current" class="text-xl text-gray-400 mt-1">Fetching...</p>
+                    </div>
+                </div>
+
+                <!-- Detailed Stats -->
+                <div class="grid grid-cols-2 gap-4 text-sm w-full md:w-1/2">
+                    <div class="flex items-center text-gray-400">
+                        <i class="fa-solid fa-arrow-down-up-lock mr-3 text-indigo-400"></i>
+                        <span class="font-medium text-white mr-2">High/Low:</span>
+                        <span id="temp-max-min">--° / --°</span>
+                    </div>
+                    <div class="flex items-center text-gray-400">
+                        <i class="fa-solid fa-droplet mr-3 text-indigo-400"></i>
+                        <span class="font-medium text-white mr-2">Humidity:</span>
+                        <span id="humidity">--%</span>
+                    </div>
+                    <div class="flex items-center text-gray-400">
+                        <i class="fa-solid fa-wind mr-3 text-indigo-400"></i>
+                        <span class="font-medium text-white mr-2">Wind:</span>
+                        <span id="wind-speed">-- km/h</span>
+                    </div>
+                    <div class="flex items-center text-gray-400">
+                        <i class="fa-solid fa-gauge mr-3 text-indigo-400"></i>
+                        <span class="font-medium text-white mr-2">Pressure:</span>
+                        <span id="pressure">-- hPa</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 7-Day Forecast Section -->
+        <section>
+            <h2 class="text-xl font-semibold text-white mb-4">7-Day Forecast</h2>
+            <div id="forecast-container" class="flex overflow-x-auto space-x-4 pb-4">
+                <!-- Forecast items will be injected here -->
+                <p class="text-gray-500">Loading forecast...</p>
+            </div>
+        </section>
+        
+        <!-- Error Message Box -->
+        <div id="error-box" class="hidden mt-8 p-4 bg-red-900/30 border border-red-800 rounded-lg text-red-300">
+            <i class="fa-solid fa-triangle-exclamation mr-2"></i> 
+            <span id="error-message">An unknown error occurred.</span>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        // Global element references
+        const loadingScreen = document.getElementById('loading-screen');
+        const pageContent = document.getElementById('page-content');
+        const errorBox = document.getElementById('error-box');
+        const errorMessage = document.getElementById('error-message');
+        
+        // UI Elements
+        const cityDisplay = document.getElementById('city-display');
+        const dateTimeDisplay = document.getElementById('date-time-display');
+        const weatherIcon = document.getElementById('weather-icon');
+        const tempCurrent = document.getElementById('temp-current');
+        const conditionCurrent = document.getElementById('condition-current');
+        const tempMaxMin = document.getElementById('temp-max-min');
+        const humidityDisplay = document.getElementById('humidity');
+        const windSpeedDisplay = document.getElementById('wind-speed');
+        const pressureDisplay = document.getElementById('pressure');
+        const forecastContainer = document.getElementById('forecast-container');
+
+        // --- Utility Functions ---
+
+        /**
+         * Maps Open-Meteo WMO Weather Codes (WMO) to Font Awesome Icons and descriptions.
+         * @param {number} code The WMO weather code.
+         * @param {boolean} isDay True if it's daytime (used for specific icons like clear sky).
+         * @returns {{icon: string, description: string}} Icon class and description.
+         */
+        function getWeatherIcon(code, isDay) {
+            // WMO Weather Codes Reference: https://open-meteo.com/en/docs
+            const mappings = {
+                0: { day: { icon: 'fa-sun', desc: 'Clear sky' }, night: { icon: 'fa-moon', desc: 'Clear sky' } },
+                1: { icon: 'fa-cloud-sun', desc: 'Mainly clear' },
+                2: { icon: 'fa-cloud-sun', desc: 'Partly cloudy' },
+                3: { icon: 'fa-cloud', desc: 'Overcast' },
+                45: { icon: 'fa-smog', desc: 'Fog' },
+                48: { icon: 'fa-smog', desc: 'Depositing rime fog' },
+                51: { icon: 'fa-cloud-drizzle', desc: 'Light drizzle' },
+                53: { icon: 'fa-cloud-drizzle', desc: 'Moderate drizzle' },
+                55: { icon: 'fa-cloud-showers-heavy', desc: 'Dense drizzle' },
+                56: { icon: 'fa-cloud-drizzle', desc: 'Light freezing drizzle' },
+                57: { icon: 'fa-cloud-showers-heavy', desc: 'Dense freezing drizzle' },
+                61: { icon: 'fa-cloud-rain', desc: 'Slight rain' },
+                63: { icon: 'fa-cloud-showers-heavy', desc: 'Moderate rain' },
+                65: { icon: 'fa-cloud-showers-heavy', desc: 'Heavy rain' },
+                66: { icon: 'fa-cloud-rain', desc: 'Light freezing rain' },
+                67: { icon: 'fa-cloud-showers-heavy', desc: 'Heavy freezing rain' },
+                71: { icon: 'fa-snowflake', desc: 'Slight snow fall' },
+                73: { icon: 'fa-snowflake', desc: 'Moderate snow fall' },
+                75: { icon: 'fa-snowflake', desc: 'Heavy snow fall' },
+                77: { icon: 'fa-snowflake', desc: 'Snow grains' },
+                80: { icon: 'fa-cloud-showers-water', desc: 'Slight showers' },
+                81: { icon: 'fa-cloud-showers-water', desc: 'Moderate showers' },
+                82: { icon: 'fa-cloud-showers-water', desc: 'Violent showers' },
+                85: { icon: 'fa-cloud-snow', desc: 'Slight snow showers' },
+                86: { icon: 'fa-cloud-snow', desc: 'Heavy snow showers' },
+                95: { icon: 'fa-cloud-bolt', desc: 'Thunderstorm' },
+                96: { icon: 'fa-cloud-bolt', desc: 'Thunderstorm with slight hail' },
+                99: { icon: 'fa-cloud-bolt', desc: 'Thunderstorm with heavy hail' },
+            };
+
+            const mapping = mappings[code] || { icon: 'fa-circle-question', desc: 'Unknown' };
+            
+            // Handle day/night for clear sky (code 0)
+            if (code === 0) {
+                return isDay ? mapping.day : mapping.night;
+            }
+            
+            // For other codes, just use the common icon/desc
+            return mapping;
+        }
+
+        /**
+         * Display a non-blocking error message.
+         * @param {string} msg The error message to display.
+         */
+        function displayError(msg) {
+            errorMessage.textContent = msg;
+            errorBox.classList.remove('hidden');
+            loadingScreen.style.display = 'none';
+        }
+
+        /**
+         * Render the current weather data.
+         * @param {object} current The current weather data object.
+         * @param {object} daily The daily weather data object (for max/min).
+         * @param {string} timezone Timezone string from the API.
+         */
+        function renderCurrentWeather(current, daily, timezone) {
+            const tempUnit = '°' + daily.temperature_2m_max_unit; // °C or °F
+
+            // Check if it's daytime using the is_day flag (1 for day, 0 for night)
+            const isDay = current.is_day === 1;
+            const weather = getWeatherIcon(current.weather_code, isDay);
+
+            weatherIcon.innerHTML = `<i class="fa-solid ${weather.icon}"></i>`;
+            tempCurrent.textContent = `${Math.round(current.temperature_2m)}${tempUnit}`;
+            conditionCurrent.textContent = weather.desc;
+            
+            // Use the first day's max/min for the current display
+            const maxTemp = Math.round(daily.temperature_2m_max[0]);
+            const minTemp = Math.round(daily.temperature_2m_min[0]);
+            tempMaxMin.textContent = `${maxTemp}${tempUnit} / ${minTemp}${tempUnit}`;
+            
+            humidityDisplay.textContent = `${current.relative_humidity_2m}%`;
+            windSpeedDisplay.textContent = `${Math.round(current.wind_speed_10m)} km/h`;
+            pressureDisplay.textContent = `${Math.round(current.pressure_msl)} hPa`;
+
+            // Update time display
+            const now = new Date(current.time);
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                year: 'numeric', month: 'long', day: 'numeric',
+                hour: '2-digit', minute: '2-digit',
+                timeZone: timezone,
+                timeZoneName: 'short'
+            });
+            dateTimeDisplay.textContent = formatter.format(now);
+        }
+
+        /**
+         * Render the 7-day forecast data.
+         * @param {object} daily The daily weather data object.
+         */
+        function renderForecast(daily) {
+            forecastContainer.innerHTML = ''; // Clear loading message
+            const tempUnit = '°' + daily.temperature_2m_max_unit;
+
+            for (let i = 0; i < daily.time.length; i++) {
+                const dateStr = daily.time[i];
+                const maxTemp = Math.round(daily.temperature_2m_max[i]);
+                const minTemp = Math.round(daily.temperature_2m_min[i]);
+                const weatherCode = daily.weather_code[i];
+                
+                // Get day name (Monday, Tuesday, etc.)
+                const date = new Date(dateStr);
+                const dayName = i === 0 ? 'Today' : date.toLocaleDateString('en-US', { weekday: 'short' });
+
+                const weather = getWeatherIcon(weatherCode, true); // Use day icons for daily forecast
+
+                const forecastCard = document.createElement('div');
+                forecastCard.className = `flex-none w-[120px] p-4 text-center card ${i === 0 ? 'border-indigo-500' : ''}`;
+                forecastCard.innerHTML = `
+                    <p class="text-sm font-semibold text-white mb-2">${dayName}</p>
+                    <div class="text-3xl text-indigo-400 mb-2">
+                        <i class="fa-solid ${weather.icon}"></i>
+                    </div>
+                    <p class="text-base font-bold text-white">${maxTemp}${tempUnit}</p>
+                    <p class="text-xs text-gray-500">${minTemp}${tempUnit}</p>
+                    <p class="text-[10px] text-gray-400 mt-2 h-6 overflow-hidden">${weather.desc}</p>
+                `;
+                forecastContainer.appendChild(forecastCard);
+            }
+        }
+
+
+        /**
+         * Fetches weather data from Open-Meteo using user's coordinates.
+         * @param {number} latitude User's latitude.
+         * @param {number} longitude User's longitude.
+         */
+        async function fetchWeather(latitude, longitude) {
+            cityDisplay.textContent = 'Latitude: ' + latitude.toFixed(2) + ' / Longitude: ' + longitude.toFixed(2);
+            
+            const apiUrl = 'https://api.open-meteo.com/v1/forecast';
+            const params = new URLSearchParams({
+                latitude: latitude,
+                longitude: longitude,
+                // Request current data
+                current: 'temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,pressure_msl,is_day',
+                // Request daily forecast (7 days is the default)
+                daily: 'weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset',
+                temperature_unit: 'celsius',
+                wind_speed_unit: 'kmh',
+                precipitation_unit: 'mm',
+                timezone: 'auto'
+            });
+
+            const url = `${apiUrl}?${params.toString()}`;
+
+            try {
+                // Implement basic exponential backoff
+                const maxRetries = 3;
+                let response;
+
+                for (let attempt = 0; attempt < maxRetries; attempt++) {
+                    response = await fetch(url);
+                    if (response.ok) {
+                        break;
+                    }
+                    if (attempt === maxRetries - 1) {
+                        throw new Error(`Failed to fetch weather data after ${maxRetries} attempts.`);
+                    }
+                    await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+                }
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log("Weather Data:", data);
+
+                // Update the UI
+                renderCurrentWeather(data.current, data.daily, data.timezone);
+                renderForecast(data.daily);
+
+                // Simple reverse geocoding to display a friendlier location (optional, but nice)
+                // Open-Meteo's Geocoding API is usually free for this, but to adhere strictly to the rules, I'll use a placeholder for now
+                // Alternatively, let's keep it simple with coords unless the user wants to add a second API for city name.
+
+                // Hide loading screen and show content
+                loadingScreen.style.display = 'none';
+                pageContent.classList.remove('hidden');
+
+            } catch (error) {
+                console.error("Error fetching weather:", error);
+                displayError(`Could not retrieve weather data. Details: ${error.message}`);
+            }
+        }
+        
+        /**
+         * Gets the user's current location via Geolocation API.
+         */
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        fetchWeather(lat, lon);
+                    },
+                    (error) => {
+                        console.error("Geolocation error:", error);
+                        let msg = "Geolocation failed. Please allow location access or try again.";
+                        if (error.code === error.PERMISSION_DENIED) {
+                            msg = "Location permission denied. Cannot fetch local weather.";
+                        }
+                        displayError(msg);
+                        
+                        // Fallback: If geolocation fails, use a default location (e.g., London, UK)
+                        cityDisplay.textContent = 'Using Default Location (London)';
+                        fetchWeather(51.50, -0.12);
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            } else {
+                displayError("Geolocation is not supported by this browser.");
+            }
+        }
+
+
+        // --- AUTHENTICATION/TEMPLATE LOGIC (From base-template.html) ---
+
+        // Firebase-related global variables (must be checked for existence)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; 
+
+        // Firebase Imports (if needed, but keeping the original template stubs for simplicity)
+        // Since this is a simple weather display page with no user data storage, 
+        // we can simplify the auth structure to just show the content on load 
+        // after the weather data is fetched.
+        
+        async function initializeAuth() {
+             // In a real application, we would initialize Firebase here
+             // and check for auth status. For this simple app, we just move on to fetching data.
+             getLocation();
+        }
+
+        // Start the authentication and data fetching process
+        initializeAuth();
+        
+    </script>
+</body>
+</html>
