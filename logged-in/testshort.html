@@ -71,7 +71,22 @@
         }
 
         /* --- Custom Friend Code Input Styling (8 character underlines) --- */
-        /* Removed as the 8-box system is now used */
+        .friend-code-input-styled {
+            /* Create 8 repeating lines for each character space */
+            background-image: linear-gradient(to right, #252525 0%, #252525 90%);
+            background-size: 12.5% 2px; /* 100% / 8 slots = 12.5% width per segment */
+            background-repeat: repeat-x;
+            background-position: 0 90%;
+            letter-spacing: 0.5rem !important; /* Spacing between characters */
+            padding-left: 0.75rem !important;
+            padding-right: 0.75rem !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+        .friend-code-input-styled:focus {
+             /* Change color on focus */
+             background-image: linear-gradient(to right, #4f46e5 0%, #4f46e5 90%);
+        }
         
         /* --- Compact List Styling for Friends and Daily Posts --- */
         .compact-list-wrapper {
@@ -122,13 +137,6 @@
         #comments-section {
             overflow-y: auto;
             max-height: 8rem; /* Reduced height to activate scroll sooner */
-        }
-        
-        /* NEW: Ensures comment text wraps */
-        #comments-section p {
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            white-space: normal; /* Override potential nowrap */
         }
         
         /* --- NEW: FEED DISPLAY STYLES --- */
@@ -209,14 +217,8 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            /* Base Z-index for most modals */
             z-index: 50;
             transition: opacity 0.3s ease;
-        }
-
-        /* Set a higher Z-index for the message modal (used for confirmations) */
-        #message-modal {
-             z-index: 60; 
         }
 
         .modal-content {
@@ -315,19 +317,10 @@
 
             <div class="mb-6 border-b border-gray-800 pb-4">
                 <h2 class="text-xl font-bold mb-2">Add a Friend</h2>
-                <form id="add-friend-form" class="flex flex-col gap-3">
-                    <div id="friend-code-input-container" class="flex justify-between items-center gap-1">
-                        <input type="text" class="code-box w-full p-2 bg-gray-900 border border-gray-700 rounded-md text-center text-lg font-mono uppercase focus:ring-2 focus:ring-indigo-500" maxlength="1" data-index="0" inputmode="text" title="Enter character 1">
-                        <input type="text" class="code-box w-full p-2 bg-gray-900 border border-gray-700 rounded-md text-center text-lg font-mono uppercase focus:ring-2 focus:ring-indigo-500" maxlength="1" data-index="1" inputmode="text" title="Enter character 2">
-                        <input type="text" class="code-box w-full p-2 bg-gray-900 border border-gray-700 rounded-md text-center text-lg font-mono uppercase focus:ring-2 focus:ring-indigo-500" maxlength="1" data-index="2" inputmode="text" title="Enter character 3">
-                        <input type="text" class="code-box w-full p-2 bg-gray-900 border border-gray-700 rounded-md text-center text-lg font-mono uppercase focus:ring-2 focus:ring-indigo-500" maxlength="1" data-index="3" inputmode="text" title="Enter character 4">
-                        <input type="text" class="code-box w-full p-2 bg-gray-900 border border-gray-700 rounded-md text-center text-lg font-mono uppercase focus:ring-2 focus:ring-indigo-500" maxlength="1" data-index="4" inputmode="text" title="Enter character 5">
-                        <input type="text" class="code-box w-full p-2 bg-gray-900 border border-gray-700 rounded-md text-center text-lg font-mono uppercase focus:ring-2 focus:ring-indigo-500" maxlength="1" data-index="5" inputmode="text" title="Enter character 6">
-                        <input type="text" class="code-box w-full p-2 bg-gray-900 border border-gray-700 rounded-md text-center text-lg font-mono uppercase focus:ring-2 focus:ring-indigo-500" maxlength="1" data-index="6" inputmode="text" title="Enter character 7">
-                        <input type="text" class="code-box w-full p-2 bg-gray-900 border border-gray-700 rounded-md text-center text-lg font-mono uppercase focus:ring-2 focus:ring-indigo-500" maxlength="1" data-index="7" inputmode="text" title="Enter character 8">
-                    </div>
-                    <button type="submit" class="px-3 py-2 bg-indigo-600 rounded-md hover:bg-indigo-700 transition font-semibold w-full" title="Send Request">
-                        Add Friend <i class="fas fa-user-plus ml-1"></i>
+                <form id="add-friend-form" class="flex gap-2">
+                    <input type="text" id="friend-code-input" placeholder="********" maxlength="8" class="friend-code-input-styled flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase tracking-widest text-center" style="font-family: monospace;" pattern="[A-Z0-9]{8}" title="8 alphanumeric characters only">
+                    <button type="submit" class="px-3 py-2 bg-indigo-600 rounded-md hover:bg-indigo-700 transition font-semibold" title="Send Request">
+                        <i class="fas fa-user-plus"></i>
                     </button>
                 </form>
                 <div id="add-friend-message" class="text-sm mt-2 min-h-[20px]"></div>
@@ -418,8 +411,6 @@
         const uploadPostCreator = document.getElementById('upload-post-creator'); 
         const imagePreview = document.getElementById('image-preview'); 
         const createPostForm = document.getElementById('create-post-form'); 
-        // NEW: Friend code boxes element list
-        const codeBoxes = document.querySelectorAll('.code-box');
 
 
         // --- Firestore Document References & Collections ---
@@ -539,7 +530,6 @@
                     for (let i = 0; i < 8; i++) {
                         code += characters.charAt(Math.floor(Math.random() * characters.length));
                     }
-                    // Check existence in the canonical LOOKUP collection
                     const codeDoc = await getDoc(getFriendCodeDocRef(code));
                     if (!codeDoc.exists()) isUnique = true;
                 }
@@ -579,36 +569,6 @@
                 reader.onerror = reject;
             });
         }
-        
-        // ** NEW BACKEND LOGIC: Friend Code Lookup with Retry **
-        function getFriendCodeDocSnapWithRetry(code) {
-            return new Promise(async (resolve, reject) => {
-                const attemptLookup = async (attempt) => {
-                    const codeDocSnap = await getDoc(getFriendCodeDocRef(code));
-                    
-                    if (codeDocSnap.exists()) {
-                        resolve(codeDocSnap);
-                        return;
-                    }
-
-                    if (attempt < 2) { // Total of 2 attempts
-                        console.warn(`Friend code lookup failed on attempt ${attempt}. Retrying in 500ms...`);
-                        // Wait 500ms to allow for Firestore eventual consistency sync
-                        await new Promise(r => setTimeout(r, 500));
-                        await attemptLookup(attempt + 1);
-                    } else {
-                        // After all attempts, if it still doesn't exist, return null
-                        resolve(null); 
-                    }
-                };
-
-                try {
-                    await attemptLookup(1);
-                } catch (error) {
-                    reject(error);
-                }
-            });
-        }
 
 
         // =========================================================================
@@ -640,40 +600,35 @@
                 const userProfileSnap = await getDoc(userProfileRef);
 
                 let defaultUsername = `DailyUser-${Math.floor(Math.random() * 8999) + 1000}`;
+                // NEW: Clean the default username with Purgomalum
                 defaultUsername = await cleanText(defaultUsername, 'username');
-                
-                // Set initial CURRENT_USERNAME for use in listeners/posts
-                if (userProfileSnap.exists() && userProfileSnap.data().username) {
-                    CURRENT_USERNAME = userProfileSnap.data().username;
-                } else {
-                    CURRENT_USERNAME = defaultUsername;
-                }
 
-                // If the profile does not exist OR is missing a friendCode, generate and save it
-                if (!userProfileSnap.exists() || !userProfileSnap.data().friendCode) {
-                    
+                if (userProfileSnap.exists() && userProfileSnap.data().friendCode) {
+                    const data = userProfileSnap.data();
+                    friendCodeDisplay.textContent = data.friendCode;
+                    CURRENT_USERNAME = data.username || defaultUsername; 
+
+                } else {
+                    friendCodeDisplay.textContent = 'Generating...';
                     const newCode = await generateUniqueFriendCode();
                     
                     const batch = writeBatch(db);
                     
-                    // 1. Single Source of Truth for LOOKUP: Create the code-to-user-ID mapping
                     batch.set(getFriendCodeDocRef(newCode), { userId: user.uid });
 
-                    // 2. User Profile (Display reference): Set/Update the user profile
                     batch.set(userProfileRef, { 
-                        friendCode: newCode, 
-                        friends: userProfileSnap.data()?.friends || [],
+                        friendCode: newCode,
+                        friends: [],
                         username: defaultUsername, 
-                        dailySlotsUsed: userProfileSnap.data()?.dailySlotsUsed || [], 
-                        lastPostReset: userProfileSnap.data()?.lastPostReset || serverTimestamp() 
-                    }, { merge: true }); 
+                        dailySlotsUsed: [], 
+                        lastPostReset: serverTimestamp() 
+                    }, { merge: true });
 
-                    await batch.commit(); // Wait for the batch to ensure consistency
+                    await batch.commit();
                     
-                    console.log("New user profile and friend code created/updated via batch commit.");
+                    friendCodeDisplay.textContent = newCode;
+                    CURRENT_USERNAME = defaultUsername;
                 }
-                
-                // The setupUserProfileListener will read the committed friendCode and update the UI.
             } catch (error) {
                 console.error("Profile/Friend Code Setup Failed:", error);
                 throw new Error("Failed to set up user profile and friend code.");
@@ -1252,80 +1207,47 @@
         // =========================================================================
         // Main Event Listeners
         // =========================================================================
-        
-        // ** NEW FRONTEND LOGIC: Auto-Flow for Friend Code Boxes **
-        codeBoxes.forEach((box, index) => {
-            // Force uppercase and limit input
-            box.addEventListener('input', (e) => {
-                const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                e.target.value = value;
-                if (value.length === 1 && index < codeBoxes.length - 1) {
-                    codeBoxes[index + 1].focus();
-                }
-            });
-            
-            // Handle backspace to move backward
-            box.addEventListener('keydown', (e) => {
-                if (e.key === 'Backspace' && e.target.value === '' && index > 0) {
-                    codeBoxes[index - 1].focus();
-                }
-            });
-        });
-
 
         addFriendForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
-            // 1. Compile the code from the 8 boxes
-            const code = Array.from(codeBoxes).map(input => input.value.trim().toUpperCase()).join('');
+            const friendCodeInput = document.getElementById('friend-code-input');
+            const code = friendCodeInput.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+            friendCodeInput.value = code; 
             
             const currentUser = auth.currentUser;
-            const messageEl = addFriendMessage;
-            
-            messageEl.textContent = 'Checking code...';
             
             if (code.length !== 8) {
-                showMessage(messageEl, 'Friend code must be 8 alphanumeric characters.');
-                // Focus on the first empty box if any
-                const firstEmpty = Array.from(codeBoxes).find(box => box.value === '');
-                if (firstEmpty) firstEmpty.focus();
+                showMessage(addFriendMessage, 'Friend code must be 8 alphanumeric characters (A-Z, 0-9).');
                 return;
             }
 
-            try {
-                // 2. *** Backend Lookup with Retry Mechanism ***
-                const codeDocSnap = await getFriendCodeDocSnapWithRetry(code);
-                
-                if (!codeDocSnap || !codeDocSnap.exists()) {
-                    // This error indicates the code doesn't exist in the LOOKUP collection, even after retry.
-                    showMessage(messageEl, 'Friend code not found. Please verify the 8-character code.');
-                    return;
-                }
+            const codeDocSnap = await getDoc(getFriendCodeDocRef(code));
+            if (!codeDocSnap.exists()) {
+                showMessage(addFriendMessage, 'Friend code not found.');
+                return;
+            }
 
-                const friendUid = codeDocSnap.data().userId;
-                
-                if (friendUid === currentUser.uid) {
-                    showMessage(messageEl, "You can't add yourself.", 'error');
-                    return;
-                }
-                if (CURRENT_FRIENDS.includes(friendUid)) {
-                    showMessage(messageEl, 'You are already friends with this user.', 'success');
-                    return;
-                }
-                
-                // 3. Commit the mutual friendship update
+            const friendUid = codeDocSnap.data().userId;
+            
+            if (friendUid === currentUser.uid) {
+                showMessage(addFriendMessage, "You can't add yourself.", 'error');
+                return;
+            }
+            if (CURRENT_FRIENDS.includes(friendUid)) {
+                showMessage(addFriendMessage, 'You are already friends with this user.', 'success');
+                return;
+            }
+            
+            try {
                 const batch = writeBatch(db);
-                // a. Add friend to current user's list (for feed/display)
                 batch.update(getUserProfileDocRef(currentUser.uid), { friends: arrayUnion(friendUid) });
-                // b. Add current user to friend's list (mutual)
                 batch.update(getUserProfileDocRef(friendUid), { friends: arrayUnion(currentUser.uid) });
                 await batch.commit();
 
-                showMessage(messageEl, 'Friend added successfully!', 'success');
-                codeBoxes.forEach(box => box.value = ''); // Clear boxes
-                codeBoxes[0].focus();
+                showMessage(addFriendMessage, 'Friend added successfully!', 'success');
+                friendCodeInput.value = '';
             } catch (error) {
-                 showMessage(messageEl, 'Failed to add friend. Check console for details.', 'error');
+                 showMessage(addFriendMessage, 'Failed to add friend. Check console.', 'error');
                  console.error("Add friend failed:", error);
             }
         });
@@ -1337,14 +1259,11 @@
                 try {
                     console.log("User signed in. UID:", user.uid);
                     
-                    // Runs the code generation batch if needed, ensuring the write completes before proceeding
                     await handleFriendCodeLogic(user); 
                     await cleanupOldPosts(user); 
 
-                    // Set up comprehensive listeners for real-time updates
-                    setupUserProfileListener(user); 
+                    setupFriendListListener(user); 
                     setupDailyPostsListener(user); 
-                    // setupFriendsFeedListener is called inside setupUserProfileListener when friends change
 
                     loadingScreen.style.display = 'none';
                     messengerUi.style.display = 'grid';
@@ -1361,34 +1280,17 @@
             }
         });
 
-        // This listener is the single source of truth for the Friend Code Display, Friends List, and CURRENT_FRIENDS/USERNAME
-        function setupUserProfileListener(user) {
-            const userProfileRef = getUserProfileDocRef(user.uid);
-            
-            onSnapshot(userProfileRef, async (docSnap) => {
-                const profileData = docSnap.data() || {};
-                const friendCode = profileData.friendCode || '';
-                const friends = profileData.friends || [];
-                const username = profileData.username || 'DailyUser';
-
-                // 1. Update Global State & Display
-                if (friendCode) {
-                    friendCodeDisplay.textContent = friendCode;
-                } else {
-                     // Show 'Generating...' briefly if the code is missing (e.g., right after sign-in, before the batch commits)
-                    friendCodeDisplay.textContent = 'Generating...'; 
-                }
+        function setupFriendListListener(user) {
+            onSnapshot(getUserProfileDocRef(user.uid), async (docSnap) => {
+                const friends = docSnap.data()?.friends || [];
                 
-                CURRENT_USERNAME = username;
-                
-                const friendsChanged = friends.length !== CURRENT_FRIENDS.length || friends.some((val, index) => val !== CURRENT_FRIENDS[index]);
-
-                if (friendsChanged) {
-                    CURRENT_FRIENDS = friends; 
-                    setupFriendsFeedListener(user); 
+                if (friends.length === CURRENT_FRIENDS.length && friends.every((val, index) => val === CURRENT_FRIENDS[index])) {
+                    return;
                 }
 
-                // 2. Render Friends List
+                CURRENT_FRIENDS = friends; 
+                setupFriendsFeedListener(user); 
+
                 const container = friendsListItems; 
                 container.innerHTML = ''; 
 
@@ -1397,37 +1299,34 @@
                     return;
                 }
                 
-                const friendProfiles = await Promise.all(friends.map(uid => getDoc(getUserProfileDocRef(uid))));
-
-                friendProfiles.forEach((friendProfileSnap, index) => {
-                    const friendUid = friends[index];
-                    const friendUsername = friendProfileSnap.exists() ? friendProfileSnap.data().username : 'Unknown User';
+                // Fetch each friend's profile document individually (similar to initial user setup) and render immediately.
+                for (const friendUid of friends) {
+                    const friendProfileSnap = await getDoc(getUserProfileDocRef(friendUid));
+                    const username = friendProfileSnap.exists() ? friendProfileSnap.data().username : 'Unknown User';
 
                     const div = document.createElement('div');
                     div.className = 'compact-list-item flex justify-between items-center';
                     div.innerHTML = `
-                        <span class="font-semibold">${friendUsername}</span>
+                        <span class="font-semibold">${username}</span>
                         <button data-uid="${friendUid}" class="remove-friend-btn text-red-400 hover:text-red-500 transition px-2 py-1" title="Remove Friend">
                             <i class="fas fa-user-minus"></i>
                         </button>
                     `;
                     container.appendChild(div);
-                });
 
-                // Attach event listeners for the newly rendered buttons
-                container.querySelectorAll('.remove-friend-btn').forEach(button => {
-                    button.addEventListener('click', async (e) => {
+                    // Attach listener directly to the created button
+                    div.querySelector('.remove-friend-btn').addEventListener('click', async (e) => {
                         e.preventDefault();
-                        const friendUidToRemove = e.target.closest('button').dataset.uid;
+                        // friendUid is correctly closed over by the loop
                         
                         const batch = writeBatch(db);
-                        batch.update(getUserProfileDocRef(user.uid), { friends: arrayRemove(friendUidToRemove) });
-                        batch.update(getUserProfileDocRef(friendUidToRemove), { friends: arrayRemove(user.uid) });
+                        batch.update(getUserProfileDocRef(user.uid), { friends: arrayRemove(friendUid) });
+                        batch.update(getUserProfileDocRef(friendUid), { friends: arrayRemove(user.uid) });
                         await batch.commit();
 
                         showMessage(addFriendMessage, 'Friend removed successfully!', 'success');
                     });
-                });
+                }
             });
         }
         
