@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4SP - NOTES</title>
+    <meta name="description" content="A simple, password-encrypted note-taking application for the 4SP website.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../navigation.js"></script>
+    <script src="../injector.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+
+    <style>
+        /* --- FONT & BASE STYLING (MATCHING template) --- */
+        body { 
+            font-family: 'Geist', sans-serif; 
+            background-color: #070707; 
+            color: #c0c0c0; 
+            transition: all 0.3s ease;
+            font-size: 16px;
+        }
+
+        /* Full-screen Textarea Styling */
+        #note-textarea {
+            width: 100%;
+            height: calc(100vh - 100px); /* Full viewport height minus header/toolbar space */
+            padding: 20px;
+            box-sizing: border-box;
+            background-color: #0d0d0d;
+            border: 1px solid #1a1a1a;
+            color: #c0c0c0;
+            resize: none; /* Disable manual resize */
+            outline: none;
+            line-height: 1.5;
+            font-size: 1rem;
+        }
+
+        /* Floating Counter Styling (The 'moves with the screen' feature) */
+        #stat-counter {
+            position: fixed; /* Makes it scroll with the screen */
+            top: 20px; 
+            right: 20px; 
+            z-index: 1000;
+            background-color: rgba(13, 13, 13, 0.7); /* Semi-transparent background */
+            backdrop-filter: blur(5px);
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #1a1a1a;
+            font-size: 0.85rem;
+            display: flex;
+            gap: 15px;
+            user-select: none;
+        }
+        
+        .stat-label {
+            color: #707070;
+        }
+        .stat-value {
+            color: #ffffff;
+            font-weight: 500;
+        }
+
+        /* Tailwind classes for components not included in the base template's provided snippets */
+        .btn-primary {
+            padding: 8px 16px;
+            border-radius: 6px;
+            background-color: #4f46e5;
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn-primary:hover {
+            background-color: #4338ca;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div id="loading-screen" class="fixed inset-0 bg-[#070707] flex items-center justify-center z-50">
+        <i class="fa-solid fa-spinner fa-spin fa-2x"></i>
+    </div>
+
+    <div id="page-content" class="hidden container mx-auto p-4">
+        <header class="flex justify-between items-center mb-4">
+            <h1 class="text-2xl font-bold text-white">4SP Notes</h1>
+            <div class="flex space-x-2">
+                <button id="save-text-btn" class="btn-primary bg-gray-700 hover:bg-gray-600">
+                    <i class="fa-solid fa-floppy-disk"></i> Save (Standard Text)
+                </button>
+                <button id="save-encrypted-btn" class="btn-primary">
+                    <i class="fa-solid fa-lock"></i> Save Encrypted (.4spnote)
+                </button>
+            </div>
+        </header>
+
+        <textarea id="note-textarea" placeholder="Start typing your notes here..."></textarea>
+    </div>
+
+    <div id="stat-counter">
+        <div id="line-count">
+            <span class="stat-label">Lines:</span>
+            <span class="stat-value">0</span>
+        </div>
+        <div id="word-count">
+            <span class="stat-label">Words:</span>
+            <span class="stat-value">0</span>
+        </div>
+        <div id="char-count">
+            <span class="stat-label">Characters:</span>
+            <span class="stat-value">0</span>
+        </div>
+    </div>
+    
+    <script type="text/javascript">
+        // Global element references
+        const textarea = document.getElementById('note-textarea');
+        const lineDisplay = document.querySelector('#line-count .stat-value');
+        const wordDisplay = document.querySelector('#word-count .stat-value');
+        const charDisplay = document.querySelector('#char-count .stat-value');
+        const saveTextBtn = document.getElementById('save-text-btn');
+        const saveEncryptedBtn = document.getElementById('save-encrypted-btn');
+
+        // --- Core Application Logic ---
+
+        /**
+         * Real-time function to update the line, word, and character counts.
+         */
+        function updateCounts() {
+            const content = textarea.value;
+
+            // 1. Character Count
+            charDisplay.textContent = content.length;
+
+            // 2. Line Count
+            // Counts the number of newline characters plus one for the first line/empty case.
+            // This is a common client-side line count.
+            const lineCount = content.length === 0 ? 0 : content.split('\n').length;
+            lineDisplay.textContent = lineCount;
+
+            // 3. Word Count
+            // Trims whitespace and splits by one or more whitespace characters (\s+).
+            const words = content.trim().split(/\s+/).filter(word => word.length > 0);
+            wordDisplay.textContent = words.length;
+        }
+
+        /**
+         * Triggers the file download in the browser.
+         * @param {string} data - The content to be saved.
+         * @param {string} filename - The name for the file (e.g., 'note.txt').
+         * @param {string} mimeType - The MIME type of the content.
+         */
+        function downloadFile(data, filename, mimeType = 'text/plain') {
+            const blob = new Blob([data], { type: `${mimeType};charset=utf-8` });
+            const url = URL.createObjectURL(blob);
+            
+            // Create a temporary link element for the download
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url); // Clean up the object URL
+        }
+
+        /**
+         * Handles the standard text file save.
+         */
+        saveTextBtn.addEventListener('click', () => {
+            const content = textarea.value;
+            let filename = prompt("Enter filename (e.g., 'my-note.js', 'todo.txt'):", 'my-note.txt');
+
+            if (filename) {
+                downloadFile(content, filename);
+                alert(`Note saved as '${filename}'!`);
+            }
+        });
+
+        /**
+         * Handles the encrypted save as a .4spnote file.
+         */
+        saveEncryptedBtn.addEventListener('click', () => {
+            const content = textarea.value;
+            const password = prompt("Enter a password to encrypt your note:");
+
+            if (password) {
+                try {
+                    // Use CryptoJS.AES.encrypt with the content and password
+                    const encrypted = CryptoJS.AES.encrypt(content, password).toString();
+
+                    let filename = prompt("Enter a filename for your encrypted note:", 'my-secret-note.4spnote');
+                    
+                    if (!filename.endsWith('.4spnote')) {
+                         filename += '.4spnote';
+                    }
+
+                    downloadFile(encrypted, filename, 'application/octet-stream');
+                    alert(`Note encrypted and saved as '${filename}'! You will need the password to decrypt it.`);
+
+                } catch (e) {
+                    alert("Encryption failed. Check the console for details.");
+                    console.error("Encryption error:", e);
+                }
+            } else {
+                alert("Save cancelled. Encryption requires a password.");
+            }
+        });
+
+
+        // Listen for input changes to update the counter
+        textarea.addEventListener('input', updateCounts);
+
+        // Call once on load to initialize counts
+        window.addEventListener('load', updateCounts);
+
+        
+        // --- AUTHENTICATION/TEMPLATE LOGIC (Retained from base-template.html) ---
+
+        // Assume these are defined or imported by the template scripts
+        const auth = { onAuthStateChanged: (cb) => cb(true) }; // Mocking auth for a simple page
+        const initialAuthToken = null; 
+        
+        const loadingScreen = document.getElementById('loading-screen');
+        const pageContent = document.getElementById('page-content');
+        
+        // --- Core Authentication and Redirection Logic ---
+        // I have simplified the Firebase logic since this is a new page, 
+        // but kept the structure to respect the base-template flow:
+        async function initializeAuth() {
+            // No real auth needed for a local notes file, just run successful callback
+        }
+
+        // 1. Listen for the authentication state change
+        // Immediately treat the user as authenticated to show the content
+        // In a real scenario, this would check if the user is logged in
+        setTimeout(() => {
+            // Hide loading screen and show content
+            loadingScreen.style.display = 'none';
+            pageContent.classList.remove('hidden');
+        }, 100); // Small delay to simulate auth check
+
+        // 2. Start the authentication process on load
+        initializeAuth();
+        
+    </script>
+</body>
+</html>
