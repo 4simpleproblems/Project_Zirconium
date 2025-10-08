@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - NOTES</title>
+    <title>4SP - Notes App</title>
     <meta name="description" content="A simple, password-encrypted note-taking application for the 4SP website.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -29,7 +29,7 @@
         /* Full-screen Textarea Styling */
         #note-textarea {
             width: 100%;
-            height: calc(100vh - 100px); /* Full viewport height minus header/toolbar space */
+            height: calc(100vh - 80px); /* Full viewport height minus header space */
             padding: 20px;
             box-sizing: border-box;
             background-color: #0d0d0d;
@@ -39,34 +39,71 @@
             outline: none;
             line-height: 1.5;
             font-size: 1rem;
+            /* Add some padding to the bottom to prevent the counter from obscuring text */
+            padding-bottom: 50px; 
         }
 
-        /* Floating Counter Styling (The 'moves with the screen' feature) */
+        /* Floating Counter Styling (Bottom Right Corner) */
         #stat-counter {
             position: fixed; /* Makes it scroll with the screen */
-            top: 20px; 
-            right: 20px; 
+            bottom: 20px; /* New position */
+            right: 20px; /* New position */
             z-index: 1000;
-            background-color: rgba(13, 13, 13, 0.7); /* Semi-transparent background */
+            background-color: rgba(13, 13, 13, 0.9); /* More opaque for visibility */
             backdrop-filter: blur(5px);
             padding: 8px 12px;
             border-radius: 6px;
             border: 1px solid #1a1a1a;
             font-size: 0.85rem;
             display: flex;
-            gap: 15px;
+            gap: 15px; /* Compacted display */
             user-select: none;
         }
         
+        /* Compacted display: "L: 0 | W: 0 | C: 0" */
+        .stat-group {
+            display: flex;
+            align-items: center;
+        }
+
         .stat-label {
             color: #707070;
+            margin-right: 4px;
         }
         .stat-value {
             color: #ffffff;
             font-weight: 500;
         }
+        .separator {
+            color: #333;
+            margin: 0 5px;
+        }
 
-        /* Tailwind classes for components not included in the base template's provided snippets */
+        /* Dropdown Menu Styling */
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 6px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+            min-width: 200px;
+        }
+        .dropdown-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: background-color 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .dropdown-item:hover {
+            background-color: #2a2a2a;
+        }
+
+        /* Tailwind classes for buttons */
         .btn-primary {
             padding: 8px 16px;
             border-radius: 6px;
@@ -89,44 +126,66 @@
     <div id="page-content" class="hidden container mx-auto p-4">
         <header class="flex justify-between items-center mb-4">
             <h1 class="text-2xl font-bold text-white">4SP Notes</h1>
-            <div class="flex space-x-2">
-                <button id="save-text-btn" class="btn-primary bg-gray-700 hover:bg-gray-600">
-                    <i class="fa-solid fa-floppy-disk"></i> Save (Standard Text)
+            
+            <div id="file-menu-container" class="relative">
+                <button id="file-menu-btn" class="btn-primary bg-gray-700 hover:bg-gray-600">
+                    <i class="fa-solid fa-file"></i> Files
                 </button>
-                <button id="save-encrypted-btn" class="btn-primary">
-                    <i class="fa-solid fa-lock"></i> Save Encrypted (.4spnote)
-                </button>
+
+                <div id="file-dropdown" class="dropdown-menu hidden">
+                    <div class="p-2 border-b border-gray-700 text-gray-400 text-xs uppercase">Export</div>
+                    <div id="save-text-btn" class="dropdown-item">
+                        <i class="fa-solid fa-file-export"></i> Save Standard Text
+                    </div>
+                    <div id="save-encrypted-btn" class="dropdown-item">
+                        <i class="fa-solid fa-lock"></i> Save Encrypted (.4spnote)
+                    </div>
+                    
+                    <div class="p-2 border-y border-gray-700 text-gray-400 text-xs uppercase">Import</div>
+                    <div id="load-file-btn" class="dropdown-item">
+                        <i class="fa-solid fa-file-import"></i> Load File
+                    </div>
+                </div>
             </div>
         </header>
 
         <textarea id="note-textarea" placeholder="Start typing your notes here..."></textarea>
     </div>
 
+    <input type="file" id="file-input" style="display: none;" accept=".txt, .js, .html, .4spnote">
+
     <div id="stat-counter">
-        <div id="line-count">
-            <span class="stat-label">Lines:</span>
-            <span class="stat-value">0</span>
+        <div class="stat-group">
+            <span class="stat-label">L:</span>
+            <span id="line-count" class="stat-value">0</span>
         </div>
-        <div id="word-count">
-            <span class="stat-label">Words:</span>
-            <span class="stat-value">0</span>
+        <span class="separator">|</span>
+        <div class="stat-group">
+            <span class="stat-label">W:</span>
+            <span id="word-count" class="stat-value">0</span>
         </div>
-        <div id="char-count">
-            <span class="stat-label">Characters:</span>
-            <span class="stat-value">0</span>
+        <span class="separator">|</span>
+        <div class="stat-group">
+            <span class="stat-label">C:</span>
+            <span id="char-count" class="stat-value">0</span>
         </div>
     </div>
     
     <script type="text/javascript">
         // Global element references
         const textarea = document.getElementById('note-textarea');
-        const lineDisplay = document.querySelector('#line-count .stat-value');
-        const wordDisplay = document.querySelector('#word-count .stat-value');
-        const charDisplay = document.querySelector('#char-count .stat-value');
+        const lineDisplay = document.getElementById('line-count');
+        const wordDisplay = document.getElementById('word-count');
+        const charDisplay = document.getElementById('char-count');
+        const fileMenuBtn = document.getElementById('file-menu-btn');
+        const fileDropdown = document.getElementById('file-dropdown');
         const saveTextBtn = document.getElementById('save-text-btn');
         const saveEncryptedBtn = document.getElementById('save-encrypted-btn');
+        const loadFileBtn = document.getElementById('load-file-btn');
+        const fileInput = document.getElementById('file-input');
+        
 
-        // --- Core Application Logic ---
+        // --- Utility Functions ---
 
         /**
          * Real-time function to update the line, word, and character counts.
@@ -137,10 +196,8 @@
             // 1. Character Count
             charDisplay.textContent = content.length;
 
-            // 2. Line Count
-            // Counts the number of newline characters plus one for the first line/empty case.
-            // This is a common client-side line count.
-            const lineCount = content.length === 0 ? 0 : content.split('\n').length;
+            // 2. Line Count (by actual newlines)
+            const lineCount = content.split('\n').length;
             lineDisplay.textContent = lineCount;
 
             // 3. Word Count
@@ -151,9 +208,6 @@
 
         /**
          * Triggers the file download in the browser.
-         * @param {string} data - The content to be saved.
-         * @param {string} filename - The name for the file (e.g., 'note.txt').
-         * @param {string} mimeType - The MIME type of the content.
          */
         function downloadFile(data, filename, mimeType = 'text/plain') {
             const blob = new Blob([data], { type: `${mimeType};charset=utf-8` });
@@ -169,10 +223,27 @@
             URL.revokeObjectURL(url); // Clean up the object URL
         }
 
-        /**
-         * Handles the standard text file save.
-         */
+        // --- Event Listeners and Handlers ---
+
+        // Toggle the File Menu Dropdown
+        fileMenuBtn.addEventListener('click', (event) => {
+            // Stop propagation to prevent immediate closing by document click
+            event.stopPropagation(); 
+            fileDropdown.classList.toggle('hidden');
+        });
+
+        // Close the dropdown when clicking outside
+        document.addEventListener('click', (event) => {
+            if (!fileDropdown.classList.contains('hidden') && 
+                !fileMenuBtn.contains(event.target) && 
+                !fileDropdown.contains(event.target)) {
+                fileDropdown.classList.add('hidden');
+            }
+        });
+
+        // 1. Save Standard Text
         saveTextBtn.addEventListener('click', () => {
+            fileDropdown.classList.add('hidden'); // Close menu
             const content = textarea.value;
             let filename = prompt("Enter filename (e.g., 'my-note.js', 'todo.txt'):", 'my-note.txt');
 
@@ -182,10 +253,9 @@
             }
         });
 
-        /**
-         * Handles the encrypted save as a .4spnote file.
-         */
+        // 2. Save Encrypted .4spnote File
         saveEncryptedBtn.addEventListener('click', () => {
+            fileDropdown.classList.add('hidden'); // Close menu
             const content = textarea.value;
             const password = prompt("Enter a password to encrypt your note:");
 
@@ -196,12 +266,14 @@
 
                     let filename = prompt("Enter a filename for your encrypted note:", 'my-secret-note.4spnote');
                     
-                    if (!filename.endsWith('.4spnote')) {
+                    if (filename && !filename.endsWith('.4spnote')) {
                          filename += '.4spnote';
                     }
 
-                    downloadFile(encrypted, filename, 'application/octet-stream');
-                    alert(`Note encrypted and saved as '${filename}'! You will need the password to decrypt it.`);
+                    if (filename) {
+                        downloadFile(encrypted, filename, 'application/octet-stream');
+                        alert(`Note encrypted and saved as '${filename}'!`);
+                    }
 
                 } catch (e) {
                     alert("Encryption failed. Check the console for details.");
@@ -210,6 +282,60 @@
             } else {
                 alert("Save cancelled. Encryption requires a password.");
             }
+        });
+
+        // 3. Load File Handler
+        loadFileBtn.addEventListener('click', () => {
+            fileDropdown.classList.add('hidden'); // Close menu
+            fileInput.click(); // Open the system file dialog
+        });
+
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+
+            reader.onload = (e) => {
+                const fileContent = e.target.result;
+                const filename = file.name;
+                
+                if (filename.endsWith('.4spnote')) {
+                    // Handle Decryption
+                    const password = prompt(`Enter the password to decrypt '${filename}':`);
+                    if (password) {
+                        try {
+                            const decryptedBytes = CryptoJS.AES.decrypt(fileContent, password);
+                            const decryptedText = decryptedBytes.toString(CryptoJS.enc.Utf8);
+                            
+                            if (decryptedText) {
+                                textarea.value = decryptedText;
+                                alert(`'${filename}' loaded and decrypted successfully!`);
+                            } else {
+                                alert("Decryption failed. Incorrect password or corrupted file.");
+                                textarea.value = fileContent; // Show raw encrypted content if decryption fails
+                            }
+                        } catch (err) {
+                            alert("Decryption error: File content could be corrupted or an incorrect password was used.");
+                            console.error("Decryption error:", err);
+                        }
+                    } else {
+                        alert("File loading cancelled. Password required for decryption.");
+                    }
+                } else {
+                    // Handle Standard Text Load
+                    textarea.value = fileContent;
+                    alert(`'${filename}' loaded successfully!`);
+                }
+                updateCounts();
+            };
+
+            reader.onerror = () => {
+                alert('Error reading file.');
+            };
+
+            reader.readAsText(file);
+            event.target.value = null; // Reset file input
         });
 
 
@@ -222,30 +348,24 @@
         
         // --- AUTHENTICATION/TEMPLATE LOGIC (Retained from base-template.html) ---
 
-        // Assume these are defined or imported by the template scripts
-        const auth = { onAuthStateChanged: (cb) => cb(true) }; // Mocking auth for a simple page
+        // Mocking auth for a simple page based on the previous context
+        const auth = { onAuthStateChanged: (cb) => cb(true) };
         const initialAuthToken = null; 
         
         const loadingScreen = document.getElementById('loading-screen');
         const pageContent = document.getElementById('page-content');
         
         // --- Core Authentication and Redirection Logic ---
-        // I have simplified the Firebase logic since this is a new page, 
-        // but kept the structure to respect the base-template flow:
         async function initializeAuth() {
-            // No real auth needed for a local notes file, just run successful callback
+            // Simulated successful authentication for a new local page
         }
 
-        // 1. Listen for the authentication state change
-        // Immediately treat the user as authenticated to show the content
-        // In a real scenario, this would check if the user is logged in
         setTimeout(() => {
             // Hide loading screen and show content
             loadingScreen.style.display = 'none';
             pageContent.classList.remove('hidden');
-        }, 100); // Small delay to simulate auth check
+        }, 100); 
 
-        // 2. Start the authentication process on load
         initializeAuth();
         
     </script>
