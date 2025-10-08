@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="../navigation.js"></script> 
+    <script src="../navigation.js"></script>
 
     <style>
         /* BUBBLY ANIMATIONS: Keyframes for cute/bubbly effects */
@@ -22,532 +22,1205 @@
         }
         @keyframes particleGlow {
             0% { box-shadow: 0 0 5px #4f46e5, 0 0 10px #4f46e5; }
-            50% { box-shadow: 0 0 15px #4f46e5, 0 0 20px #4f46e5; }
+            50% { box-shadow: 0 0 10px #818cf8, 0 0 20px #818cf8; }
             100% { box-shadow: 0 0 5px #4f46e5, 0 0 10px #4f46e5; }
         }
-        
-        /* Custom Styles for friend code input and tabs */
-        .tab-btn.active {
-            color: #818cf8; /* indigo-300 */
-            border-bottom-color: #818cf8;
+
+        /* --- FONT & BASE STYLING (THIN GEIST FONT) --- */
+        body { 
+            font-family: 'Geist', sans-serif; 
+            background-color: #070707; 
+            color: #c0c0c0; 
+            transition: all 0.3s ease;
+            font-weight: 200; /* Thin Geist Font for general text */
         }
-        .tab-btn:not(.active) {
-            color: #9ca3af; /* custom-light-gray */
-            border-bottom-color: transparent;
+        
+        /* Ensure headings and strong text are slightly thicker but still thin */
+        h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
+            font-weight: 300 !important; /* Slightly more visible for emphasis */
+        }
+
+        /* Responsive Container */
+        .messenger-container {
+            display: grid;
+            /* FIX: Ensure consistent layout on larger screens */
+            grid-template-columns: minmax(300px, 350px) 1fr;
+            gap: 1.5rem;
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        /* FIX: Responsive adjustment for smaller screens */
+        @media (max-width: 1024px) {
+            .messenger-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+
+        /* --- CONSISTENT PANEL STYLING --- */
+        .left-panel, .feed-panel { 
+            background-color: #111111; 
+            border: 1px solid #252525; 
+            border-radius: 0.75rem; 
+            padding: 1.5rem; 
+            height: fit-content;
+        }
+        
+        /* Inner Block Styling (Used for Friends List and Daily Posts sections) */
+        .standard-inner-block {
+             background-color: #0d0d0d; 
+             border-radius: 0.5rem;
+             padding: 1rem;
+             border: 1px solid #1a1a1a;
+             margin-top: 0.75rem; /* Space from the title above it */
+        }
+        
+        /* General input styling to use thin font */
+        input.p-2 {
+            font-weight: 200 !important;
+        }
+
+        /* --- Feed Grid (Masonry-like) --- */
+        .photo-grid {
+            /* Using columns for a simple masonry effect */
+            columns: 3 300px; 
+            column-gap: 1rem;
+        }
+        
+        .photo-thumbnail {
+            break-inside: avoid-column;
+            margin-bottom: 1rem;
+            width: 100%;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid #252525;
+            transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55), box-shadow 0.3s ease; 
+            display: block;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+            animation: popIn 0.5s ease-out; 
+        }
+        .photo-thumbnail:hover { 
+            transform: translateY(-5px) scale(1.05); 
+            box-shadow: 0 15px 30px rgba(79, 70, 229, 0.4); 
+        }
+
+        .photo-thumbnail img {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 0.5rem;
+        }
+        
+        .overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 60%);
+            opacity: 1; 
+            display: flex;
+            align-items: flex-end;
+            padding: 0.75rem;
+            color: white;
+            transition: opacity 0.2s;
+        }
+        .overlay-content { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+
+        /* --- Daily Posts UI/UX (Bubbly/Cute Overhaul) --- */
+        #daily-posts-container {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: space-between;
+        }
+        
+        .user-post-slot, .user-post-empty, .user-post-locked, .user-post-deleted {
+            flex: 1 1 0;
+            padding: 0.5rem;
+            transform: none; 
+            transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55), box-shadow 0.4s ease-in-out;
+            margin-bottom: 0;
+            border-radius: 1.5rem; /* Bubbly corners */
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            background-color: #1a1a1a;
+            border: 2px solid #252525;
+            position: relative;
+            cursor: pointer;
+            aspect-ratio: 1 / 1.5; 
+            animation: popIn 0.5s ease-out;
+        }
+
+        .user-post-slot:hover, .user-post-empty:hover {
+            transform: translateY(-8px) scale(1.08) !important;
+            box-shadow: 0 15px 30px rgba(79, 70, 229, 0.6);
+        }
+
+        .user-post-empty {
+            background-color: #0d0d0d;
+            border: 3px dashed #4f46e5;
+            animation: particleGlow 2s infinite alternate; 
+            color: #818cf8;
+        }
+        
+        .user-post-slot .post-info-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.75);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            padding: 1rem;
+        }
+
+        .user-post-slot:hover .post-info-overlay {
+            opacity: 1;
+        }
+
+        /* --- Custom Scrollable Friends List --- */
+        #friends-list-items {
+            overflow-y: auto;
+            max-height: 250px; 
+            padding-right: 0.5rem; 
+        }
+
+        /* Custom scrollbar styles */
+        #friends-list-items::-webkit-scrollbar { width: 8px; }
+        #friends-list-items::-webkit-scrollbar-thumb { background-color: #4f46e5; border-radius: 4px; }
+        #friends-list-items::-webkit-scrollbar-track { background-color: #1f2937; }
+        
+        .friend-item {
+            background-color: #1f1f1f;
+            border-radius: 0.75rem; /* Consistent rounding */
+            margin-bottom: 0.75rem; /* Consistent spacing */
+            transition: background-color 0.2s, transform 0.2s;
+            padding: 1rem; /* Consistent padding */
+        }
+        .friend-item:hover {
+            background-color: #2a2a2a;
+            transform: translateX(5px);
+        }
+
+        /* Custom scrollbar for comments */
+        #comments-section {
+            overflow-y: auto;
+            max-height: 35vh; 
+        }
+        
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-content {
+            background-color: #111111;
+            border: 1px solid #252525; 
+            border-radius: 1rem;
+            padding: 2rem;
+            max-height: 90vh;
+            max-width: 90%;
+        }
+        #modal-content-container {
+            max-width: 1000px;
         }
     </style>
-
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'custom-darkest-gray': '#070707',
-                        'custom-dark-gray': '#111111',
-                        'custom-medium-gray': '#252525',
-                        'custom-light-gray': '#9ca3af', // Updated from #505050 to be lighter text
-                    },
-                }
-            },
-        }
-    </script>
 </head>
-<body class="bg-custom-darkest-gray text-white min-h-screen pt-16 font-geist">
-    <main class="container mx-auto p-4 max-w-4xl">
-        <h1 class="text-3xl font-bold mb-6 text-center text-indigo-400">4SP - Daily Photo</h1>
-        <div id="auth-status" class="text-center text-custom-light-gray mb-6"></div>
+<body class="pt-16">
+    
+    <div id="message-modal" class="modal-backdrop hidden opacity-0">
+        <div class="modal-content w-full max-w-sm p-6 text-center">
+            <h3 id="message-modal-title" class="text-xl font-bold mb-4 text-white"></h3>
+            <p id="message-modal-body" class="mb-6 text-gray-300"></p>
+            <button id="message-modal-close-btn" class="px-4 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold w-full">Close</button>
+        </div>
+    </div>
 
-        <section id="daily-posts-section" class="mb-8 p-4 bg-custom-dark-gray rounded-xl shadow-lg animate-popIn">
-            <h2 class="text-2xl font-bold mb-4 flex items-center">
-                <i class="fas fa-camera mr-3 text-indigo-400"></i>Daily Posts
-            </h2>
+    <div id="photo-modal" class="modal-backdrop hidden">
+        <div id="modal-content-container" class="modal-content flex flex-col md:flex-row gap-6">
+            </div>
+    </div>
+    
+    <div id="title-modal" class="modal-backdrop hidden opacity-0">
+        <div class="modal-content w-full max-w-sm p-6 text-center">
+            <h3 class="text-xl font-bold mb-4 text-white">Add/Edit Title</h3>
+            <form id="edit-title-form" data-post-id="" class="flex flex-col gap-4">
+                <input type="text" id="title-edit-input" placeholder="Enter your photo title (max 50 chars)" class="p-3 bg-gray-900 border border-gray-700 rounded-md focus:ring-indigo-500" maxlength="50" required>
+                <button type="submit" class="px-4 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold w-full">Save Title</button>
+            </form>
+            <button id="title-modal-close-btn" class="mt-3 text-sm text-gray-400 hover:text-white">Cancel</button>
+        </div>
+    </div>
+    
 
-            <div id="post-tabs" class="flex border-b border-custom-medium-gray mb-4">
-                <button data-post="post1" class="tab-btn text-lg py-2 px-4 transition-colors font-medium focus:outline-none">Post 1</button>
-                <button data-post="post2" class="tab-btn text-lg py-2 px-4 transition-colors font-medium focus:outline-none">Post 2</button>
-                <button data-post="post3" class="tab-btn text-lg py-2 px-4 transition-colors font-medium focus:outline-none">Post 3</button>
+    <main id="messenger-ui" class="messenger-container" style="display: none;">
+        
+        <aside class="left-panel">
+            
+            <div class="mb-6 border-b border-gray-800 pb-4">
+                <h2 class="text-xl font-bold mb-2">Set Display Name</h2>
+                <form id="set-username-form" class="flex gap-2">
+                    <input type="text" id="username-input" placeholder="Your desired name" class="flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                    <button type="submit" class="px-3 py-2 bg-indigo-600 rounded-md hover:bg-indigo-700 transition font-semibold" title="Update Username">
+                        <i class="fas fa-save"></i>
+                    </button>
+                </form>
+                <div id="username-message" class="text-sm mt-2 min-h-[20px]"></div>
             </div>
 
-            <input type="file" id="image-upload" accept="image/*" class="hidden">
-            
-            <div id="post-editor" class="p-4 border border-custom-medium-gray rounded-lg">
-                <p id="current-post-display" class="text-sm text-custom-light-gray mb-4">Select an image to start or view your current post details for <span class="font-bold text-indigo-300" id="current-tab-name">Post 1</span>.</p>
-                
-                <button id="upload-image-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded transition duration-200">
-                    <i class="fas fa-image mr-2"></i> Select Image
-                </button>
-                
-                <div id="post-preview-form" class="hidden mt-4 p-4 border border-indigo-500/50 rounded-lg bg-custom-medium-gray/30">
-                    <p class="text-sm font-semibold mb-2 text-indigo-300">Image Preview:</p>
-                    <img id="image-preview" class="w-full h-48 object-cover rounded-lg mb-4 border border-custom-medium-gray">
-                    
-                    <label for="post-title" class="block text-sm font-medium mb-1">Title:</label>
-                    <input type="text" id="post-title" placeholder="Enter title (required)" maxlength="50" class="w-full p-2 mb-4 rounded bg-custom-darkest-gray border border-custom-medium-gray focus:border-indigo-500 focus:outline-none">
-                    
-                    <label for="post-caption" class="block text-sm font-medium mb-1">Caption:</label>
-                    <textarea id="post-caption" rows="3" placeholder="Enter caption (optional)" maxlength="200" class="w-full p-2 mb-4 rounded bg-custom-darkest-gray border border-custom-medium-gray focus:border-indigo-500 focus:outline-none"></textarea>
-                    
-                    <button id="confirm-post-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-200 w-full disabled:opacity-50" disabled>
-                        <i class="fas fa-check mr-2"></i> Confirm Post
-                    </button>
+            <div class="mb-6 border-b border-gray-800 pb-4">
+                <h2 class="text-xl font-bold mb-2">Your Friend Code</h2>
+                <p class="text-sm text-gray-400 mb-3">Share this code with friends to add them.</p>
+                <div id="friend-code-display" class="p-3 text-center bg-gray-900 rounded-md font-mono text-lg tracking-widest text-indigo-400">
+                    Loading...
                 </div>
-                
-                <div id="post-message" class="mt-3 text-sm hidden"></div>
+            </div>
 
-                <div id="recent-daily-posts" class="mt-6">
-                    <h3 class="text-lg font-semibold mb-3 text-indigo-300">Your Recent Daily Posts</h3>
-                    <div id="daily-posts-list" class="space-y-4">
-                        <p class="text-custom-light-gray text-center p-4">Loading your posts...</p>
+            <div class="mb-6 border-b border-gray-800 pb-4">
+                <h2 class="text-xl font-bold mb-2">Add a Friend</h2>
+                <form id="add-friend-form" class="flex gap-2">
+                    <input type="text" id="friend-code-input" placeholder="Enter 8-digit code" class="flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <button type="submit" class="px-3 py-2 bg-indigo-600 rounded-md hover:bg-indigo-700 transition font-semibold" title="Send Request">
+                        <i class="fas fa-user-plus"></i>
+                    </button>
+                </form>
+                <div id="add-friend-message" class="text-sm mt-2 min-h-[20px]"></div>
+            </div>
+
+            <div class="mb-6 border-b border-gray-800 pb-4">
+                <h2 class="text-xl font-bold mb-3">Your Friends</h2>
+                <div id="friends-list-wrapper" class="standard-inner-block">
+                    <div id="friends-list-items">
+                        <p class="text-sm text-gray-500">Loading friends list...</p>
                     </div>
                 </div>
             </div>
-        </section>
 
-        <section id="feed-section" class="mb-8 p-4 bg-custom-dark-gray rounded-xl shadow-lg animate-popIn">
-            <h2 class="text-2xl font-bold mb-4 flex items-center">
-                <i class="fas fa-users mr-3 text-indigo-400"></i>Friend Feed
-            </h2>
-            <div id="feed-container" class="space-y-6">
-                <p id="feed-status" class="text-center text-custom-light-gray p-4">Loading feed...</p>
-            </div>
-        </section>
-
-        <section id="friends-section" class="mb-8 p-4 bg-custom-dark-gray rounded-xl shadow-lg animate-popIn">
-            <h2 class="text-2xl font-bold mb-4 flex items-center">
-                <i class="fas fa-handshake mr-3 text-indigo-400"></i>Friends
-            </h2>
-
-            <div id="add-friend-form" class="mb-6 p-4 bg-custom-medium-gray rounded-lg">
-                <h3 class="text-xl font-semibold mb-3 text-indigo-300">Add Friend by Code</h3>
-                <div class="flex flex-col sm:flex-row gap-2">
-                    <input type="text" id="friend-code-input" placeholder="8-DIGIT CODE" maxlength="8"
-                           style="font-family: 'Geist', sans-serif;"
-                           class="flex-grow p-2 rounded bg-custom-darkest-gray border border-custom-dark-gray focus:border-indigo-500 focus:outline-none text-xl tracking-[0.2em] uppercase placeholder-custom-light-gray/50"
-                           oninput="this.value = this.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();"
-                           aria-label="Friend Code">
-                    
-                    <button id="add-friend-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded transition duration-200 disabled:opacity-50">
-                        <i class="fas fa-user-plus mr-1"></i> Add
-                    </button>
+            <div class="mb-6">
+                <h2 class="text-xl font-bold mb-2">Your Daily Posts</h2>
+                <p class="text-sm text-gray-400 mb-3">You have 3 slots per day (no cheating!). Click a slot to post or edit.</p>
+                <div id="daily-posts-wrapper" class="standard-inner-block">
+                    <div id="daily-posts-container">
+                        </div>
                 </div>
-                <div id="add-friend-message" class="mt-2 text-sm"></div>
+                <div id="upload-message" class="text-sm mt-2 min-h-[20px]"></div>
             </div>
+        </aside>
 
-            <h3 class="text-xl font-semibold mb-3 text-indigo-300">Your Friends (<span id="friend-count">0</span>)</h3>
-            <div id="friend-list-container" class="space-y-2">
-                <p class="text-custom-light-gray text-center p-4">Loading friends...</p>
+        <section class="feed-panel">
+            <h1 class="text-2xl font-bold mb-4">Today's Feed</h1>
+            <div id="photo-feed" class="photo-grid">
+                <p id="feed-placeholder">Add some friends to see their daily photos!</p>
             </div>
         </section>
 
     </main>
 
-    <script type="module">
-        // Import necessary Firebase modules (assuming Firebase is initialized in navigation.js and global to window)
-        import { getAuth } from 'https://www.gstatic.com/firebase/9.6.10/firebase-auth.js';
-        import { getFirestore, doc, collection, onSnapshot, query, where, orderBy, limit, getDoc, writeBatch, arrayRemove, arrayUnion, serverTimestamp } from 'https://www.gstatic.com/firebase/9.6.10/firebase-firestore.js';
-        import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebase/9.6.10/firebase-storage.js';
+    <div id="loading-screen" class="flex justify-center items-center h-screen">
+        <p class="text-xl">Authenticating and loading messenger...</p>
+    </div>
 
-        // Check for global Firebase objects initialized by navigation.js
-        if (!window.firebaseApp) {
-            console.error("Firebase app not initialized. Ensure navigation.js runs first.");
-            // Halt script execution if Firebase is not available
-            document.getElementById('auth-status').textContent = 'Error: Firebase not initialized.';
-            throw new Error("Firebase not initialized.");
+    <script type="module">
+        // --- Firebase Core Imports (FIXED for V9 Modular Style) ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { 
+            getFirestore, doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, serverTimestamp, orderBy, deleteDoc, onSnapshot, writeBatch, limit
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        
+        // --- CONFIGURATION IMPORT (Kept the original external path as requested) ---
+        // NOTE: This file must contain your 'firebaseConfig' object.
+        import { firebaseConfig } from "../firebase-config.js";
+        
+        const appId = 'default-app-id'; 
+        const initialAuthToken = null; 
+
+        // --- Initialize Firebase ---
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        // --- Global State & Constants ---
+        let CURRENT_FRIENDS = [];
+        let CURRENT_USERNAME = 'DailyUser'; 
+        let UNSUBSCRIBE_POSTS_LISTENER = () => {};
+        let LAST_COMMENT_TIMESTAMP = 0; 
+        const COMMENT_DELAY_MS = 5000;
+        const POST_SLOTS_MAX = 3;
+        
+        // --- DOM Elements (unchanged) ---
+        const loadingScreen = document.getElementById('loading-screen');
+        const messengerUi = document.getElementById('messenger-ui');
+        const friendCodeDisplay = document.getElementById('friend-code-display');
+        const addFriendForm = document.getElementById('add-friend-form');
+        const addFriendMessage = document.getElementById('add-friend-message');
+        const photoFeed = document.getElementById('photo-feed');
+        const friendsListItems = document.getElementById('friends-list-items'); 
+        const dailyPostsContainer = document.getElementById('daily-posts-container');
+        const uploadMessage = document.getElementById('upload-message');
+        const photoModal = document.getElementById('photo-modal');
+        const messageModal = document.getElementById('message-modal');
+        const messageModalTitle = document.getElementById('message-modal-title');
+        const messageModalBody = document.getElementById('message-modal-body');
+        const messageModalCloseBtn = document.getElementById('message-modal-close-btn');
+        const titleModal = document.getElementById('title-modal');
+        const editTitleForm = document.getElementById('edit-title-form');
+        const usernameInput = document.getElementById('username-input');
+        const usernameMessage = document.getElementById('username-message');
+
+
+        // --- Firestore Document References & Collections ---
+        // FIX: user_profile doc reference is now correctly handled.
+        const getUserProfileDocRef = (userId) => doc(db, 'artifacts', appId, 'users', userId, 'metadata', 'user_profile');
+        const getFriendCodeDocRef = (code) => doc(db, 'friend_codes', code);
+        const DAILY_PHOTO_COLLECTION = collection(db, 'daily_photos');
+
+
+        // =========================================================================
+        // Helper Functions (mostly unchanged, minor cleanup)
+        // =========================================================================
+
+        function showMessage(element, text, type = 'error') {
+            element.textContent = text;
+            element.className = `text-sm mt-2 min-h-[20px] ${type === 'success' ? 'text-green-400' : 'text-red-400'}`;
+            setTimeout(() => element.textContent = '', 4000);
         }
 
-        const auth = getAuth(window.firebaseApp);
-        const db = getFirestore(window.firebaseApp);
-        const storage = getStorage(window.firebaseApp);
-
-        // --- Helper Functions ---
-        const getUserProfileDocRef = (uid) => doc(db, 'profiles', uid);
-        const showMessage = (element, message, type = 'error') => {
-            element.textContent = message;
-            element.className = type === 'success' ? 'mt-2 text-sm text-green-400' : 'mt-2 text-sm text-red-400';
-            element.style.display = 'block';
-            setTimeout(() => element.style.display = 'none', 5000);
-        };
-
-        // --- GLOBAL STATE ---
-        let currentPostKey = 'post1'; // post1, post2, or post3
-        let uploadedFile = null;
-        let currentFeedUnsubscribe = null; // To manage the dynamic feed listener
-
-        // --- DAILY POSTS LOGIC (TABS, UPLOAD, CONFIRM) ---
-        
-        const tabs = document.querySelectorAll('.tab-btn');
-        const uploadImageBtn = document.getElementById('upload-image-btn');
-        const imageUploadInput = document.getElementById('image-upload');
-        const postPreviewForm = document.getElementById('post-preview-form');
-        const imagePreview = document.getElementById('image-preview');
-        const postTitleInput = document.getElementById('post-title');
-        const postCaptionInput = document.getElementById('post-caption');
-        const confirmPostBtn = document.getElementById('confirm-post-btn');
-        const postMessageDiv = document.getElementById('post-message');
-        const currentTabName = document.getElementById('current-tab-name');
-
-        const switchTab = (newKey) => {
-            currentPostKey = newKey;
-            currentTabName.textContent = newKey.replace('post', 'Post ');
-            
-            tabs.forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.post === newKey);
-                btn.classList.toggle('text-indigo-400', btn.dataset.post === newKey);
-                btn.classList.toggle('border-indigo-400', btn.dataset.post === newKey);
-                btn.classList.toggle('text-custom-light-gray', btn.dataset.post !== newKey);
-                btn.classList.toggle('border-transparent', btn.dataset.post !== newKey);
-            });
-            // Reset form for new tab
-            uploadedFile = null;
-            postPreviewForm.classList.add('hidden');
-            postTitleInput.value = '';
-            postCaptionInput.value = '';
-            confirmPostBtn.disabled = true;
-            postMessageDiv.style.display = 'none';
-
-            // In a real app, you would load the current saved post data for this tab here.
-        };
-
-        tabs.forEach(btn => {
-            btn.addEventListener('click', () => switchTab(btn.dataset.post));
-        });
-
-        uploadImageBtn.addEventListener('click', () => imageUploadInput.click());
-
-        // Single Image Upload logic
-        imageUploadInput.addEventListener('change', (e) => {
-            uploadedFile = e.target.files[0];
-            if (uploadedFile) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    imagePreview.src = e.target.result;
-                    postPreviewForm.classList.remove('hidden'); // Show the preview menu/form
-                    confirmPostBtn.disabled = !postTitleInput.value.trim();
+        function showCustomModal(title, body) {
+            return new Promise(resolve => {
+                messageModalTitle.textContent = title;
+                messageModalBody.textContent = body;
+                messageModal.classList.remove('hidden', 'opacity-0');
+                messageModal.classList.add('opacity-100');
+                
+                const handler = () => {
+                    messageModal.classList.remove('opacity-100');
+                    messageModal.classList.add('opacity-0');
+                    setTimeout(() => messageModal.classList.add('hidden'), 300);
+                    messageModalCloseBtn.removeEventListener('click', handler);
+                    resolve(true); 
                 };
-                reader.readAsDataURL(uploadedFile);
-            } else {
-                postPreviewForm.classList.add('hidden');
-                confirmPostBtn.disabled = true;
+
+                messageModalCloseBtn.addEventListener('click', handler);
+            });
+        }
+        
+        function openTitleModal(postId, currentTitle = '') {
+            const input = document.getElementById('title-edit-input');
+            input.value = currentTitle;
+            editTitleForm.dataset.postId = postId;
+            
+            titleModal.classList.remove('hidden');
+            setTimeout(() => titleModal.classList.add('opacity-100'), 10);
+        }
+
+        function closeTitleModal() {
+            titleModal.classList.remove('opacity-100');
+            titleModal.classList.add('opacity-0');
+            setTimeout(() => titleModal.classList.add('hidden'), 300);
+        }
+
+        function formatCount(num) {
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
             }
-        });
+            if (num >= 1000) {
+                return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+            }
+            return num;
+        }
 
-        postTitleInput.addEventListener('input', () => {
-            confirmPostBtn.disabled = !postTitleInput.value.trim() || !uploadedFile;
-        });
+        async function generateUniqueFriendCode() {
+            let code, isUnique = false;
+            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            try {
+                while (!isUnique) {
+                    code = '';
+                    for (let i = 0; i < 8; i++) {
+                        code += characters.charAt(Math.floor(Math.random() * characters.length));
+                    }
+                    const codeDoc = await getDoc(getFriendCodeDocRef(code));
+                    if (!codeDoc.exists()) isUnique = true;
+                }
+                return code;
+            } catch (error) {
+                console.error("Error generating friend code:", error);
+                throw new Error("Failed to generate unique friend code.");
+            }
+        }
+        
+        function compressImage(file) {
+            // NOTE: Compression logic remains the same
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = event => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 800; 
+                        const scaleSize = MAX_WIDTH / img.width;
 
-        // Post Confirmation (Upload to Storage & Save to Firestore)
-        confirmPostBtn.addEventListener('click', async () => {
-            const user = auth.currentUser;
-            if (!user || !uploadedFile || !postTitleInput.value.trim()) {
-                showMessage(postMessageDiv, 'Missing image or title.', 'error');
+                        const width = MAX_WIDTH;
+                        const height = img.height * scaleSize;
+
+                        canvas.width = width;
+                        canvas.height = height;
+
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        // FIX: Use 0.8 quality for JPEG compression
+                        const compressedDataUrl = ctx.canvas.toDataURL('image/jpeg', 0.8);
+                        resolve(compressedDataUrl);
+                    };
+                    img.onerror = reject;
+                };
+                reader.onerror = reject;
+            });
+        }
+
+
+        // =========================================================================
+        // Core Logic - Authentication & Initialization 
+        // =========================================================================
+
+        async function initializeAuth() {
+            try {
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Firebase authentication failed:", error);
+                loadingScreen.style.display = 'none'; 
+                const errorMessage = error.code === 'auth/invalid-api-key' 
+                    ? `Authentication failed due to an **Invalid API Key**. Please ensure the configuration in the external \`firebase-config.js\` file is correct and complete.` 
+                    : `Failed to sign in to Firebase. Error: ${error.code || error.message}.`;
+                    
+                showCustomModal("Authentication Error", errorMessage);
+                throw error; 
+            }
+        }
+
+        async function handleFriendCodeLogic(user) {
+            try {
+                const userProfileRef = getUserProfileDocRef(user.uid);
+                const userProfileSnap = await getDoc(userProfileRef);
+
+                let defaultUsername = `DailyUser-${Math.floor(Math.random() * 8999) + 1000}`;
+
+                if (userProfileSnap.exists() && userProfileSnap.data().friendCode) {
+                    const data = userProfileSnap.data();
+                    friendCodeDisplay.textContent = data.friendCode;
+                    // FIX: Always retrieve and set the CURRENT_USERNAME from the database
+                    CURRENT_USERNAME = data.username || defaultUsername; 
+                    usernameInput.value = CURRENT_USERNAME;
+
+                } else {
+                    friendCodeDisplay.textContent = 'Generating...';
+                    const newCode = await generateUniqueFriendCode();
+                    
+                    const batch = writeBatch(db);
+                    
+                    // FIX: Store friend code in its own collection with its UID
+                    batch.set(getFriendCodeDocRef(newCode), { userId: user.uid });
+
+                    batch.set(userProfileRef, { 
+                        friendCode: newCode,
+                        friends: [],
+                        username: defaultUsername,
+                        dailySlotsUsed: [], 
+                        lastPostReset: serverTimestamp() 
+                    }, { merge: true });
+
+                    await batch.commit();
+                    
+                    friendCodeDisplay.textContent = newCode;
+                    CURRENT_USERNAME = defaultUsername;
+                    usernameInput.value = CURRENT_USERNAME;
+                }
+            } catch (error) {
+                console.error("Profile/Friend Code Setup Failed:", error);
+                // FIX: Propagate error to stop application load
+                throw new Error("Failed to set up user profile and friend code.");
+            }
+        }
+
+        // Cleanup logic remains the same (good to keep)
+        async function cleanupOldPosts(user) {
+            try {
+                const now = new Date();
+                const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+                const userProfileRef = getUserProfileDocRef(user.uid);
+                const userProfileSnap = await getDoc(userProfileRef);
+                const profileData = userProfileSnap.data() || {};
+
+                // 1. Daily Reset Check 
+                const lastReset = profileData.lastPostReset?.toDate() || new Date(0);
+                if (lastReset < startOfToday) {
+                     await updateDoc(userProfileRef, { 
+                        dailySlotsUsed: [], 
+                        lastPostReset: serverTimestamp()
+                    });
+                    console.log("Daily post slots reset for new day.");
+                }
+
+                // 2. Post Deletion 
+                // The cleanup posts are not tied to a specific user and rely on `createdAt` 
+                const oldPostsQuery = query(
+                    DAILY_PHOTO_COLLECTION,
+                    where('createdAt', '<', startOfToday),
+                    orderBy('createdAt', 'asc'), // Order is necessary for the filter to work
+                    limit(50) 
+                );
+
+                const snapshot = await getDocs(oldPostsQuery);
+                if (snapshot.empty) {
+                    return;
+                }
+
+                const batch = writeBatch(db);
+                snapshot.docs.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+
+                await batch.commit();
+                console.log(`Cleaned up ${snapshot.size} expired daily posts.`);
+            } catch (error) {
+                console.warn("Post cleanup failed, proceeding with app load:", error);
+            }
+        }
+
+
+        // =========================================================================
+        // Real-Time Listener Implementations
+        // =========================================================================
+        
+        function setupFriendsFeedListener(user) {
+            // FIX: Ensure the unsubscribe function is properly called to prevent listener leaks
+            UNSUBSCRIBE_POSTS_LISTENER(); 
+            
+            const startOfDay = new Date();
+            startOfDay.setHours(0, 0, 0, 0);
+            
+            // Query current user's and friends' posts. Firebase 'in' operator limit is 10.
+            const uidsToQuery = [user.uid, ...CURRENT_FRIENDS].slice(0, 10);
+
+            if (uidsToQuery.length === 0) {
+                 photoFeed.innerHTML = '<p id="feed-placeholder" class="text-gray-500">Add some friends to see their daily photos!</p>';
+                 return;
+            }
+            
+            const photosQuery = query(
+                DAILY_PHOTO_COLLECTION,
+                where('creatorUid', 'in', uidsToQuery),
+                where('createdAt', '>=', startOfDay),
+                orderBy('createdAt', 'desc')
+            );
+
+            // FIX: Store the onSnapshot returned function to unsubscribe later
+            UNSUBSCRIBE_POSTS_LISTENER = onSnapshot(photosQuery, (snapshot) => {
+                const existingIds = new Set(Array.from(photoFeed.children).map(el => el.dataset.photoId).filter(Boolean));
+                
+                snapshot.docChanges().forEach(change => {
+                    const docId = change.doc.id;
+                    const data = change.doc.data();
+                    
+                    if (data.title) { 
+                         if (change.type === 'added' && !existingIds.has(docId)) {
+                            renderPhotoThumbnail(docId, data, 'prepend');
+                        } else if (change.type === 'modified' || change.type === 'added') {
+                            const existingThumb = document.querySelector(`.photo-thumbnail[data-photo-id="${docId}"]`);
+                            if (existingThumb) {
+                                // Update username and heart count in existing thumbnail
+                                const nameEl = existingThumb.querySelector('.overlay-content span:first-child');
+                                if (nameEl) nameEl.textContent = data.creatorUsername; 
+                                
+                                const heartCountEl = existingThumb.querySelector('.overlay-content span:last-child');
+                                if (heartCountEl) {
+                                     heartCountEl.innerHTML = `<i class="fas fa-heart text-red-400 mr-1"></i> ${formatCount(data.hearts?.length || 0)}`;
+                                }
+                            } else if (change.type === 'modified') {
+                                // If modified and the thumbnail isn't present (e.g., title was just added), render it.
+                                renderPhotoThumbnail(docId, data, 'prepend');
+                            }
+                        } else if (change.type === 'removed') {
+                            document.querySelector(`.photo-thumbnail[data-photo-id="${docId}"]`)?.remove();
+                        }
+                    } else if (change.type === 'modified' && !data.title) {
+                        // FIX: Remove from feed if title is removed (draft state)
+                         document.querySelector(`.photo-thumbnail[data-photo-id="${docId}"]`)?.remove();
+                    }
+                });
+                
+                if (photoFeed.children.length === 0) {
+                    photoFeed.innerHTML = '<p id="feed-placeholder" class="text-gray-500">No posts found today from you or your friends.</p>';
+                } else if (document.getElementById('feed-placeholder')) {
+                    document.getElementById('feed-placeholder').remove();
+                }
+                
+            }, (error) => {
+                 console.error("Error fetching feed:", error);
+                 photoFeed.innerHTML = '<p class="text-red-400">Error loading feed.</p>';
+            });
+        }
+
+        function renderPhotoThumbnail(photoId, photoData, position = 'append') {
+            if (!photoData.title) return;
+            if (document.querySelector(`.photo-thumbnail[data-photo-id="${photoId}"]`)) {
                 return;
             }
 
-            confirmPostBtn.disabled = true;
-            confirmPostBtn.textContent = 'Uploading...';
+            const thumb = document.createElement('div');
+            thumb.className = 'photo-thumbnail';
+            thumb.dataset.photoId = photoId;
+            
+            const img = document.createElement('img');
+            img.src = photoData.imageBase64;
+            img.alt = `${photoData.title || 'Photo'} by ${photoData.creatorUsername}`; 
+            img.loading = 'lazy';
+            
+            thumb.appendChild(img);
+
+            const overlay = document.createElement('div');
+            overlay.className = 'overlay';
+            overlay.innerHTML = `
+                <div class="overlay-content">
+                    <span class="font-semibold text-shadow-lg">${photoData.creatorUsername}</span>
+                    <span class="text-xl"><i class="fas fa-heart text-red-400 mr-1"></i> ${formatCount(photoData.hearts?.length || 0)}</span>
+                </div>
+            `;
+            thumb.appendChild(overlay);
+
+            thumb.addEventListener('click', () => openPhotoModal(photoId));
+            
+            if (position === 'prepend') {
+                 photoFeed.prepend(thumb);
+            } else {
+                 photoFeed.appendChild(thumb);
+            }
+
+            if (document.getElementById('feed-placeholder')) {
+                document.getElementById('feed-placeholder').remove();
+            }
+        }
+
+        function setupDailyPostsListener(user) {
+             const userProfileRef = getUserProfileDocRef(user.uid);
+             let postsUnsubscribe = null; // Local unsubscribe for this specific component
+             
+             // Unsubscribe from any previous profile listener to prevent leaks
+             if (window.DAILY_POSTS_PROFILE_UNSUB) window.DAILY_POSTS_PROFILE_UNSUB();
+
+            window.DAILY_POSTS_PROFILE_UNSUB = onSnapshot(userProfileRef, async (profileSnap) => {
+                const profileData = profileSnap.data() || {};
+                const dailySlotsUsed = profileData.dailySlotsUsed || []; 
+                
+                // Unsubscribe from the old posts query before setting up a new one
+                if (postsUnsubscribe) postsUnsubscribe();
+                
+                dailyPostsContainer.innerHTML = ''; 
+                
+                const startOfDay = new Date();
+                startOfDay.setHours(0, 0, 0, 0);
+
+                const postsQuery = query(
+                    DAILY_PHOTO_COLLECTION,
+                    where('creatorUid', '==', user.uid),
+                    where('createdAt', '>=', startOfDay),
+                    orderBy('createdAt', 'asc') 
+                );
+                
+                // Use onSnapshot for posts as well, so changes to titles/hearts update instantly
+                postsUnsubscribe = onSnapshot(postsQuery, (postsSnapshot) => {
+                    const postsToday = postsSnapshot.docs.reduce((acc, doc) => {
+                        acc[doc.id] = doc.data();
+                        return acc;
+                    }, {});
+
+                    dailyPostsContainer.innerHTML = ''; // Re-render everything on post change
+
+                    for (let i = 0; i < POST_SLOTS_MAX; i++) {
+                        const slot = document.createElement('div');
+                        
+                        if (dailySlotsUsed[i]) {
+                            const postId = dailySlotsUsed[i];
+                            const postData = postsToday[postId];
+                            
+                            if (postData) {
+                                slot.className = 'user-post-slot group';
+                                
+                                slot.innerHTML = `
+                                    <img src="${postData.imageBase64}" class="w-full h-full object-cover rounded-2xl">
+                                    <div class="post-info-overlay text-white text-center rounded-2xl">
+                                        <p class="text-sm font-bold">${postData.title ? postData.title : 'TITLE MISSING'}</p>
+                                        <span class="text-lg font-mono my-1"><i class="fas fa-heart text-red-400 mr-1"></i> ${formatCount(postData.hearts?.length || 0)}</span>
+                                        ${postData.title ? '<p class="text-xs text-gray-300 mt-2">View Post</p>' : '<button class="bg-indigo-600 text-white text-xs px-2 py-1 rounded-full mt-2 hover:bg-indigo-700">Add Title</button>'}
+                                    </div>
+                                `;
+
+                                slot.addEventListener('click', () => {
+                                    if (!postData.title) {
+                                        // FIX: Pass the current (potentially null) title
+                                         openTitleModal(postId, postData.title || '');
+                                    } else {
+                                         openPhotoModal(postId);
+                                    }
+                                });
+
+                            } else {
+                                // If slot is used in metadata but the actual post doc is missing (e.g., deleted), treat it as "used."
+                                slot.className = 'user-post-deleted';
+                                slot.title = "This slot was used today and cannot be reused (No Cheating!).";
+                                slot.innerHTML = `
+                                    <div class="h-full w-full flex flex-col justify-center items-center">
+                                        <i class="fas fa-ban text-lg mb-2"></i>
+                                        <p class="text-center text-xs">Slot #${i + 1} Used & Post Deleted.</p>
+                                    </div>
+                                `;
+                                slot.style.cursor = 'not-allowed';
+                            }
+
+                        } else if (i === dailySlotsUsed.length) {
+                            slot.className = 'user-post-empty group';
+                            slot.innerHTML = `
+                                <div class="h-full w-full flex flex-col justify-center items-center p-2">
+                                    <h4 class="font-extrabold text-sm mb-2">Post #${i + 1}</h4>
+                                    <label for="photo-upload-${i}" class="block w-full text-center text-xs font-semibold p-2 transition rounded-full cursor-pointer hover:bg-gray-900 border border-indigo-400">
+                                        <i class="fas fa-camera mr-1"></i> Upload Photo
+                                    </label>
+                                </div>
+                                <input type="file" id="photo-upload-${i}" class="hidden" accept="image/*" data-slot-index="${i}">
+                            `;
+
+                            // Re-attach listeners after innerHTML update
+                            setTimeout(() => {
+                                const uploadInput = document.getElementById(`photo-upload-${i}`);
+                                if (uploadInput) {
+                                    uploadInput.addEventListener('change', (e) => handlePhotoUploadLogic(e, user));
+                                    // Listener to click the hidden input when the slot is clicked
+                                    slot.addEventListener('click', (e) => {
+                                        if (e.target.tagName !== 'INPUT') { 
+                                            uploadInput.click();
+                                        }
+                                    });
+                                }
+                            }, 0);
+
+                        } else {
+                            slot.className = 'user-post-locked';
+                            slot.innerHTML = `
+                                <div class="h-full w-full flex flex-col justify-center items-center">
+                                    <i class="fas fa-lock text-lg mb-2"></i>
+                                    <p class="text-center text-xs">Slot #${i + 1} Locked. Post to #${i} first.</p>
+                                </div>
+                            `;
+                            slot.style.cursor = 'not-allowed';
+                        }
+                        dailyPostsContainer.appendChild(slot);
+                    }
+                });
+            });
+             // Return a cleanup function that also cleans up the local posts listener
+            return () => {
+                if (window.DAILY_POSTS_PROFILE_UNSUB) window.DAILY_POSTS_PROFILE_UNSUB();
+                if (postsUnsubscribe) postsUnsubscribe();
+            };
+        }
+
+        async function handlePhotoUploadLogic(e, user) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const uploadInput = e.target;
+            const uploadSlot = uploadInput.closest('.user-post-empty');
+            const uploadBtnLabel = uploadSlot.querySelector('label');
+            
+            uploadBtnLabel.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Processing...`;
+            uploadBtnLabel.classList.add('pointer-events-none', 'bg-gray-800');
+
+            const userProfileRef = getUserProfileDocRef(user.uid);
+            const userProfileSnap = await getDoc(userProfileRef);
+            const dailySlotsUsed = userProfileSnap.data().dailySlotsUsed || [];
+            
+            if (dailySlotsUsed.length >= POST_SLOTS_MAX) {
+                showMessage(uploadMessage, 'You have reached your daily limit of 3 posts.', 'error');
+                uploadBtnLabel.innerHTML = `<i class="fas fa-camera mr-1"></i> Upload Photo`;
+                uploadBtnLabel.classList.remove('pointer-events-none', 'bg-gray-800');
+                return;
+            }
 
             try {
-                // 1. Upload image to Storage
-                const storagePath = `users/${user.uid}/posts/${currentPostKey}-${Date.now()}`;
-                const imageRef = ref(storage, storagePath);
-                await uploadBytes(imageRef, uploadedFile);
-                const imageUrl = await getDownloadURL(imageRef);
+                const imageBase64 = await compressImage(file);
+                
+                const newPostRef = doc(DAILY_PHOTO_COLLECTION);
+                await setDoc(newPostRef, {
+                    creatorUid: user.uid,
+                    creatorUsername: CURRENT_USERNAME, 
+                    createdAt: serverTimestamp(),
+                    imageBase64: imageBase64,
+                    title: null, 
+                    hearts: [],
+                    comments: [],
+                });
+                
+                await updateDoc(userProfileRef, {
+                    dailySlotsUsed: arrayUnion(newPostRef.id)
+                });
 
-                // 2. Save metadata to Firestore
-                const postData = {
-                    uid: user.uid,
-                    postKey: currentPostKey,
-                    title: postTitleInput.value.trim(),
-                    caption: postCaptionInput.value.trim(),
-                    imageUrl: imageUrl,
-                    timestamp: serverTimestamp(),
-                    // In a production app, you might use an 'id' based on postKey to ensure only one of each is saved per day.
-                };
-                // Assuming you use a document ID that ensures only one post per key
-                await doc(collection(db, 'posts'), `${user.uid}_${currentPostKey}_${new Date().toISOString().split('T')[0]}`).set(postData);
-
-                showMessage(postMessageDiv, `${currentPostKey.toUpperCase()} confirmed successfully!`, 'success');
-                // Reset form state after successful post
-                uploadedFile = null;
-                imageUploadInput.value = null; // Clear file input
-                postTitleInput.value = '';
-                postCaptionInput.value = '';
-                postPreviewForm.classList.add('hidden');
-
+                showMessage(uploadMessage, 'Photo uploaded! Click the slot to add a title.', 'success');
             } catch (error) {
-                console.error("Error confirming post:", error);
-                showMessage(postMessageDiv, `Error posting: ${error.message}`, 'error');
+                console.error("Upload error:", error);
+                showMessage(uploadMessage, `Upload failed: ${error.message || error}`);
             } finally {
-                confirmPostBtn.textContent = 'Confirm Post';
-                confirmPostBtn.disabled = false;
+                uploadInput.value = ''; 
             }
-        });
-
-        // --- ON-SNAPSHOT LISTENERS ---
-
-        /**
-         * Setup listener for the user's three most recent daily posts.
-         */
-        const setupDailyPostsListener = (user) => {
-            const postsListDiv = document.getElementById('daily-posts-list');
-            const q = query(collection(db, 'posts'), 
-                where('uid', '==', user.uid), 
-                orderBy('timestamp', 'desc'), 
-                limit(3)
-            );
-
-            return onSnapshot(q, (snapshot) => {
-                postsListDiv.innerHTML = ''; // Clear existing list
+        }
+        
+        function openPhotoModal(photoId) {
+            // FIX: Use doc(DAILY_PHOTO_COLLECTION, photoId) to get the correct document reference
+            const photoRef = doc(db, 'daily_photos', photoId); 
+            const currentUser = auth.currentUser;
+            
+            // FIX: Use onSnapshot for real-time updates inside the modal
+            const unsubscribe = onSnapshot(photoRef, (updatedSnap) => {
+                const modalContentContainer = document.getElementById('modal-content-container');
+                if (!updatedSnap.exists()) {
+                    // FIX: Hide the modal and show a cleanup message if the document is gone
+                    photoModal.classList.add('hidden');
+                    unsubscribe(); // Stop listening
+                    showCustomModal("Post Expired", "This daily photo has expired and been deleted.");
+                    return; 
+                }
                 
-                if (snapshot.empty) {
-                    postsListDiv.innerHTML = '<p class="text-custom-light-gray text-center p-4">You have not made any daily posts yet.</p>';
+                const photoData = updatedSnap.data();
+                const hearts = photoData.hearts || [];
+                const hasHearted = hearts.includes(currentUser.uid);
+
+                if (!photoData.title) {
+                    photoModal.classList.add('hidden');
+                    unsubscribe(); // Stop listening
+                    openTitleModal(photoId);
                     return;
                 }
-
-                snapshot.forEach(doc => {
-                    const post = doc.data();
-                    const postElement = document.createElement('div');
-                    postElement.className = 'p-3 bg-custom-medium-gray rounded-lg flex items-center shadow-md';
-                    const postTime = post.timestamp ? new Date(post.timestamp.toDate()).toLocaleTimeString() : '...';
-                    
-                    postElement.innerHTML = `
-                        <img src="${post.imageUrl}" alt="${post.title}" class="w-12 h-12 object-cover rounded mr-4">
-                        <div>
-                            <p class="font-semibold text-white">${post.title}</p>
-                            <p class="text-sm text-custom-light-gray">${post.caption || 'No caption'}</p>
-                            <p class="text-xs text-custom-light-gray">${postTime}</p>
-                        </div>
-                    `;
-                    postsListDiv.appendChild(postElement);
-                });
-            }, (error) => {
-                console.error("Error setting up daily posts listener:", error);
-                postsListDiv.innerHTML = '<p class="text-red-400 text-center p-4">Error loading posts.</p>';
-            });
-        };
-
-        /**
-         * Setup listener for the friend feed (user's posts + friends' posts).
-         * This listener is dynamic and must be re-run if the friend list changes.
-         */
-        const setupFeedListener = (user, friendUids) => {
-            if (currentFeedUnsubscribe) {
-                currentFeedUnsubscribe(); // Unsubscribe from the previous listener
-            }
-
-            const feedContainer = document.getElementById('feed-container');
-            const allUids = [...friendUids, user.uid];
-            
-            feedContainer.innerHTML = '<p id="feed-status" class="text-center text-custom-light-gray p-4">Loading feed...</p>';
-
-            if (allUids.length === 0) {
-                feedContainer.innerHTML = '<p class="text-custom-light-gray text-center p-4">Add friends to see their daily posts here!</p>';
-                return;
-            }
-            
-            // NOTE: Firestore 'in' query limit is 10 items.
-            const UidList = allUids.slice(0, 10);
-            
-            // Query the 'posts' collection using the list of UIDs
-            const q = query(
-                collection(db, 'posts'),
-                where('uid', 'in', UidList),
-                orderBy('timestamp', 'desc'),
-                limit(20)
-            );
-
-            currentFeedUnsubscribe = onSnapshot(q, async (snapshot) => {
-                feedContainer.innerHTML = '';
                 
-                if (snapshot.empty) {
-                    feedContainer.innerHTML = '<p class="text-custom-light-gray text-center p-4">No recent posts from you or your friends.</p>';
-                    return;
-                }
-
-                // Fetch usernames for post authors
-                const authorUids = [...new Set(snapshot.docs.map(doc => doc.data().uid))];
-                const authorPromises = authorUids.map(uid => getDoc(getUserProfileDocRef(uid)));
-                const authorDocs = await Promise.all(authorPromises);
-                const authorMap = authorDocs.reduce((map, doc) => {
-                    if (doc.exists()) {
-                        // Use username as display name
-                        map[doc.id] = doc.data().username || 'Unknown User'; 
-                    }
-                    return map;
-                }, {});
-                
-                snapshot.forEach(doc => {
-                    const post = doc.data();
-                    const username = authorMap[post.uid] || 'Unknown User';
-                    const postDate = post.timestamp ? new Date(post.timestamp.toDate()).toLocaleString() : '...';
-
-                    const postElement = document.createElement('div');
-                    postElement.className = 'post-card bg-custom-medium-gray rounded-xl shadow-xl overflow-hidden';
-                    postElement.innerHTML = `
-                        <div class="p-3 border-b border-custom-dark-gray flex items-center">
-                            <i class="fas fa-user-circle text-indigo-400 text-2xl mr-2"></i>
-                            <span class="font-semibold">${username}</span>
+                // Content generation for the modal
+                modalContentContainer.innerHTML = `
+                    <div class="md:w-2/3 flex justify-center items-center">
+                        <img src="${photoData.imageBase64}" alt="${photoData.title || 'Photo'}" class="rounded-lg">
+                    </div>
+                    <div class="md:w-1/3 flex flex-col">
+                        <div class="border-b border-gray-700 pb-3 mb-3">
+                            <p class="font-bold text-xl">${photoData.title || 'Untitled Daily Post'}</p>
+                            <p class="font-semibold text-lg text-indigo-400">${photoData.creatorUsername}</p>
+                            <p class="text-sm text-gray-400">${photoData.createdAt.toDate().toLocaleString()}</p>
+                            ${photoData.creatorUid === currentUser.uid ? `<button id="delete-post-btn" class="text-red-400 text-sm mt-2 hover:text-red-500"><i class="fas fa-trash-alt mr-1"></i> Delete Post</button>` : ''}
                         </div>
-                        <img src="${post.imageUrl}" alt="${post.title}" class="w-full h-80 object-cover">
-                        <div class="p-4">
-                            <h4 class="text-xl font-bold mb-1">${post.title}</h4>
-                            <p class="text-custom-light-gray mb-2">${post.caption || 'No caption.'}</p>
-                            <p class="text-xs text-custom-light-gray">${postDate}</p>
+                        <div class="flex-grow overflow-y-auto mb-4 pr-1" id="comments-section">
+                            ${(() => {
+                                let html = '';
+                                const comments = photoData.comments || [];
+                                comments.sort((a, b) => (a.timestamp?.toDate() || new Date(0)) - (b.timestamp?.toDate() || new Date(0))).forEach(comment => {
+                                    html += `<div class="mb-2"><p><strong class="font-semibold">${comment.username}</strong>: ${comment.text}</p></div>`;
+                                });
+                                return html || '<p class="text-sm text-gray-500">No comments yet. Be the first!</p>';
+                            })()}
                         </div>
-                    `;
-                    feedContainer.appendChild(postElement);
-                });
-            }, (error) => {
-                console.error("Error setting up feed listener:", error);
-                feedContainer.innerHTML = '<p class="text-red-400 text-center p-4">Error loading feed.</p>';
-            });
-        };
-
-        /**
-         * Setup listener for the user's friends list and trigger feed update.
-         */
-        const setupFriendsListListener = (user) => {
-            const friendListContainer = document.getElementById('friend-list-container');
-            const friendCountSpan = document.getElementById('friend-count');
-            const userProfileRef = getUserProfileDocRef(user.uid);
-
-            return onSnapshot(userProfileRef, async (docSnap) => {
-                friendListContainer.innerHTML = ''; // Clear existing list
-                
-                const friendUids = docSnap.exists() ? docSnap.data().friends || [] : [];
-                friendCountSpan.textContent = friendUids.length;
-
-                // 1. Update the Feed Listener based on the new friend list
-                setupFeedListener(user, friendUids); 
-
-                if (friendUids.length === 0) {
-                    friendListContainer.innerHTML = '<p class="text-custom-light-gray text-center p-4">Your friends list is empty. Add a friend!</p>';
-                    return;
-                }
-
-                // 2. Fetch and display friend usernames
-                const friendPromises = friendUids.map(uid => getDoc(getUserProfileDocRef(uid)));
-                const friendDocs = await Promise.all(friendPromises);
-
-                friendDocs.forEach(friendDoc => {
-                    if (friendDoc.exists()) {
-                        const friendData = friendDoc.data();
-                        const username = friendData.username || 'Unknown User'; 
-                        const friendUid = friendDoc.id;
-
-                        const div = document.createElement('div');
-                        div.className = 'friend-item flex justify-between items-center p-3 bg-custom-medium-gray hover:bg-custom-medium-gray/70 rounded-lg shadow-md transition';
-                        div.innerHTML = `
-                            <span class="font-semibold">${username}</span>
-                            <button data-uid="${friendUid}" class="remove-friend-btn text-red-400 hover:text-red-500 transition px-2 py-1" title="Remove Friend">
-                                <i class="fas fa-user-minus"></i>
+                        <div class="flex items-center gap-4 mb-4 pt-3 border-t border-gray-800">
+                            <button id="heart-btn" data-hearted="${hasHearted}" class="text-3xl ${hasHearted ? 'text-red-500' : 'text-gray-400'} hover:text-red-500 transition" title="${hasHearted ? 'Unheart' : 'Heart'} Post">
+                                <i class="fas fa-heart"></i>
                             </button>
-                        `;
-                        friendListContainer.appendChild(div);
-                    }
+                            <span class="text-xl">${formatCount(hearts.length)}</span>
+                        </div>
+                        <form id="comment-form" class="flex gap-2">
+                            <input type="text" id="comment-input" placeholder="Add a comment..." class="flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md">
+                            <button type="submit" id="comment-submit-btn" class="px-3 py-2 bg-indigo-600 rounded-md font-semibold" title="Post Comment">
+                                <i class="fas fa-comment"></i>
+                            </button>
+                        </form>
+                    </div>
+                `;
+                
+                // Event listeners for dynamic modal content
+                document.getElementById('heart-btn').addEventListener('click', async (e) => {
+                    const isNowHearted = e.currentTarget.dataset.hearted === 'true';
+                    const action = isNowHearted ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid);
+                    await updateDoc(photoRef, { hearts: action });
                 });
 
-                // 3. Re-attach listeners for remove button after list rebuild
-                friendListContainer.querySelectorAll('.remove-friend-btn').forEach(button => {
-                    button.addEventListener('click', async (e) => {
-                        e.preventDefault();
-                        const friendUidToRemove = e.target.closest('button').dataset.uid;
-                        const removeFriendMessage = document.getElementById('add-friend-message');
-                        
-                        try {
-                            const batch = writeBatch(db);
-                            batch.update(getUserProfileDocRef(user.uid), { friends: arrayRemove(friendUidToRemove) });
-                            batch.update(getUserProfileDocRef(friendUidToRemove), { friends: arrayRemove(user.uid) });
-                            await batch.commit();
-                            showMessage(removeFriendMessage, 'Friend removed successfully!', 'success');
-                        } catch (err) {
-                            console.error("Error removing friend:", err);
-                            showMessage(removeFriendMessage, 'Error removing friend.', 'error');
+                if (document.getElementById('delete-post-btn')) {
+                    document.getElementById('delete-post-btn').addEventListener('click', async () => {
+                        const confirmed = await showCustomModal("Confirm Deletion", "Are you sure you want to delete this post? **Your daily post slot WILL NOT be freed up.**");
+                        if (confirmed) {
+                            // FIX: Correct usage of deleteDoc with the document reference
+                            await deleteDoc(photoRef); 
+                            photoModal.classList.add('hidden');
+                            unsubscribe(); // Stop listening
+                            showMessage(uploadMessage, 'Post deleted, but the daily slot is still used.', 'success');
                         }
                     });
+                }
+
+
+                document.getElementById('comment-form').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const commentInput = document.getElementById('comment-input');
+                    const submitBtn = document.getElementById('comment-submit-btn');
+                    const text = commentInput.value.trim();
+                    const now = Date.now();
+                    
+                    if (!text) return;
+
+                    if (now - LAST_COMMENT_TIMESTAMP < COMMENT_DELAY_MS) {
+                        const remaining = Math.ceil((COMMENT_DELAY_MS - (now - LAST_COMMENT_TIMESTAMP)) / 1000);
+                        showMessage(addFriendMessage, `Please wait ${remaining} seconds before commenting again.`, 'error');
+                        return;
+                    }
+
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
+                    
+                    try {
+                        const newComment = {
+                            uid: currentUser.uid,
+                            username: CURRENT_USERNAME, 
+                            text: text,
+                            timestamp: new Date()
+                        };
+                        await updateDoc(photoRef, { comments: arrayUnion(newComment) });
+                        commentInput.value = '';
+                        LAST_COMMENT_TIMESTAMP = now; 
+                    } catch(error) {
+                         showMessage(addFriendMessage, `Comment failed: ${error.message || error}`, 'error');
+                         console.error("Commenting error:", error);
+                    } finally {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = `<i class="fas fa-comment"></i>`;
+                    }
                 });
-
-            }, (error) => {
-                console.error("Error setting up friends list listener:", error);
-                friendListContainer.innerHTML = '<p class="text-red-400 text-center p-4">Error loading friends list.</p>';
+                
+                // Ensure comments section is scrolled to bottom on initial open or new comment
+                const commentsSection = document.getElementById('comments-section');
+                if (commentsSection) {
+                    commentsSection.scrollTop = commentsSection.scrollHeight;
+                }
             });
-        };
+            photoModal.classList.remove('hidden');
+        }
+        
+        // Modal closing handlers
+        photoModal.addEventListener('click', (e) => {
+            if (e.target === photoModal) { 
+                photoModal.classList.add('hidden');
+            }
+        });
 
+        titleModal.addEventListener('click', (e) => {
+             if (e.target === titleModal || e.target === document.getElementById('title-modal-close-btn')) { 
+                closeTitleModal();
+            }
+        });
 
-        // --- ADD FRIEND LOGIC ---
-        const friendCodeInput = document.getElementById('friend-code-input');
-        const addFriendBtn = document.getElementById('add-friend-btn');
-        const addFriendMessage = document.getElementById('add-friend-message');
-
-        addFriendBtn.addEventListener('click', async (e) => {
+        editTitleForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const user = auth.currentUser;
-            if (!user) {
-                showMessage(addFriendMessage, 'You must be logged in.', 'error');
+            const postId = e.currentTarget.dataset.postId;
+            const title = document.getElementById('title-edit-input').value.trim();
+            
+            if (!title) {
+                showMessage(usernameMessage, 'Title cannot be empty.', 'error'); 
                 return;
             }
-
-            const code = friendCodeInput.value.trim();
-            if (code.length !== 8) {
-                showMessage(addFriendMessage, 'Friend code must be 8 characters.', 'error');
-                return;
-            }
-
-            addFriendBtn.disabled = true;
 
             try {
-                // Find user profile by friend code (assuming 'friendCode' field exists in 'profiles' collection)
-                const profilesRef = collection(db, 'profiles');
-                const q = query(profilesRef, where('friendCode', '==', code.toUpperCase()), limit(1));
-                const querySnapshot = await getDocs(q);
-                
-                if (querySnapshot.empty) {
-                    showMessage(addFriendMessage, 'No user found with that code.', 'error');
-                    return;
-                }
+                // FIX: Ensure post has the latest CURRENT_USERNAME when title is set
+                await updateDoc(doc(db, 'daily_photos', postId), { 
+                    title: title,
+                    creatorUsername: CURRENT_USERNAME 
+                });
+                showMessage(uploadMessage, 'Title saved successfully! Post is now live.', 'success');
+                closeTitleModal();
+            } catch (error) {
+                showMessage(usernameMessage, `Failed to save title: ${error.message}`, 'error');
+                console.error("Title save failed:", error);
+            }
+        });
 
-                const friendDoc = querySnapshot.docs[0];
-                const friendUid = friendDoc.id;
-                
-                if (friendUid === user.uid) {
-                    showMessage(addFriendMessage, "You can't add yourself!", 'error');
-                    return;
-                }
 
-                // Atomically update both users' friend arrays
+        // =========================================================================
+        // Main Event Listeners
+        // =========================================================================
+
+        addFriendForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const friendCodeInput = document.getElementById('friend-code-input');
+            const code = friendCodeInput.value.trim().toUpperCase();
+            const currentUser = auth.currentUser;
+            
+            if (code.length !== 8) {
+                showMessage(addFriendMessage, 'Friend code must be 8 characters.');
+                return;
+            }
+
+            // FIX: Correctly query the friend_codes collection using query and getDocs
+            const friendCodesRef = collection(db, 'friend_codes');
+            const q = query(friendCodesRef, where('__name__', '==', code));
+            const codeQuerySnapshot = await getDocs(q);
+
+            if (codeQuerySnapshot.empty) {
+                showMessage(addFriendMessage, 'Friend code not found.');
+                return;
+            }
+
+            const friendUid = codeQuerySnapshot.docs[0].data().userId;
+            
+            if (friendUid === currentUser.uid) {
+                showMessage(addFriendMessage, "You can't add yourself.", 'error');
+                return;
+            }
+            if (CURRENT_FRIENDS.includes(friendUid)) {
+                showMessage(addFriendMessage, 'You are already friends with this user.', 'success');
+                return;
+            }
+            
+            try {
                 const batch = writeBatch(db);
-                batch.update(getUserProfileDocRef(user.uid), { friends: arrayUnion(friendUid) });
-                batch.update(getUserProfileDocRef(friendUid), { friends: arrayUnion(user.uid) });
+                batch.update(getUserProfileDocRef(currentUser.uid), { friends: arrayUnion(friendUid) });
+                batch.update(getUserProfileDocRef(friendUid), { friends: arrayUnion(currentUser.uid) });
                 await batch.commit();
 
                 showMessage(addFriendMessage, 'Friend added successfully!', 'success');
-                friendCodeInput.value = ''; // Clear input on success
-
+                friendCodeInput.value = '';
             } catch (error) {
-                console.error("Error adding friend:", error);
-                showMessage(addFriendMessage, 'An error occurred while adding friend.', 'error');
-            } finally {
-                addFriendBtn.disabled = false;
+                 showMessage(addFriendMessage, 'Failed to add friend. Check console.', 'error');
+                 console.error("Add friend failed:", error);
             }
         });
 
-        // --- AUTH STATE CHANGE HANDLER ---
-        auth.onAuthStateChanged(user => {
-            const authStatusDiv = document.getElementById('auth-status');
-            if (user) {
-                authStatusDiv.innerHTML = `<span class="text-green-400 font-semibold">Logged in as ${user.email}</span>`;
-                
-                // Initialize Listeners on successful login
-                switchTab('post1'); // Initialize the daily posts tab view
-                setupDailyPostsListener(user); // Start listening for user's recent posts
-                setupFriendsListListener(user); // Start listening for friends list (which triggers feed update)
-            } else {
-                authStatusDiv.innerHTML = '<span class="text-red-400 font-semibold">Not logged in. <a href="/login.html" class="text-indigo-400 hover:underline">Log in</a> to use features.</span>';
-                
-                // Stop all listeners on logout
-                if (currentFeedUnsubscribe) currentFeedUnsubscribe();
+        document.getElementById('set-username-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newUsername = usernameInput.value.trim();
+            if (!newUsername) return;
+
+            try {
+                const userProfileRef = getUserProfileDocRef(auth.currentUser.uid);
+                await updateDoc(userProfileRef, { username: newUsername });
+                CURRENT_USERNAME = newUsername; 
+                showMessage(usernameMessage, 'Username updated successfully!', 'success');
+            } catch (error) {
+                showMessage(usernameMessage, `Failed to update username: ${error.message}`, 'error');
+                console.error("Username update failed:", error);
             }
         });
+
+
+        // --- Authentication State Change Handler ---
+        let dailyPostsCleanup = () => {};
+        
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                try {
+                    console.log("User signed in. UID:", user.uid);
+                    
+                    await handleFriendCodeLogic(user); 
+                    await cleanupOldPosts(user); 
+
+                    setupFriendListListener(user); 
+                    // FIX: Capture the cleanup function from the daily posts setup
+                    dailyPostsCleanup = setupDailyPostsListener(user); 
+
+                    loadingScreen.style.display = 'none';
+                    messengerUi.style.display = 'grid';
+
+                } catch (e) {
+                    console.error("Application Initialization Failed:", e);
+                    loadingScreen.style.display = 'none';
+                    showCustomModal("Startup Error", `The messenger failed to initialize all features after sign-in. Error: ${e.message}.`);
+                }
+
+            } else {
+                // Logout/No User state (Unsubscribe all listeners)
+                UNSUBSCRIBE_POSTS_LISTENER();
+                dailyPostsCleanup();
+                // FIX: Re-attempt anonymous sign-in if no user is found
+                console.log("No user found. Attempting sign-in...");
+                await initializeAuth();
+            }
+        });
+
+        function setupFriendListListener(user) {
+             // FIX: Store the unsubscribe function to prevent leaks
+             if (window.FRIEND_LIST_UNSUB) window.FRIEND_LIST_UNSUB();
+             
+             window.FRIEND_LIST_UNSUB = onSnapshot(getUserProfileDocRef(user.uid), async (docSnap) => {
+                const friends = docSnap.data()?.friends || [];
+                
+                // Optimization: skip update if friend list content hasn't changed
+                const friendsChanged = !(friends.length === CURRENT_FRIENDS.length && friends.every((val, index) => val === CURRENT_FRIENDS[index]));
+                
+                if (friendsChanged) {
+                    CURRENT_FRIENDS = friends; 
+                    setupFriendsFeedListener(user); // Restart feed listener with new friend list
+                } else if (friends.length === 0) {
+                     // Still update the feed setup if it was empty previously
+                     setupFriendsFeedListener(user); 
+                }
+
+                const container = friendsListItems; 
+                container.innerHTML = ''; 
+
+                if (friends.length === 0) {
+                    container.innerHTML = '<p class="text-sm text-gray-500 mt-2">No friends yet. Add one above!</p>';
+                    return;
+                }
+                
+                const friendProfiles = await Promise.all(friends.map(uid => getDoc(getUserProfileDocRef(uid))));
+
+                friendProfiles.forEach((friendProfileSnap, index) => {
+                    const friendUid = friends[index];
+                    const username = friendProfileSnap.exists() ? friendProfileSnap.data().username : 'Unknown User';
+
+                    const div = document.createElement('div');
+                    div.className = 'friend-item flex justify-between items-center';
+                    div.innerHTML = `
+                        <span class="font-semibold">${username}</span>
+                        <button data-uid="${friendUid}" class="remove-friend-btn text-red-400 hover:text-red-500 transition px-2 py-1" title="Remove Friend">
+                            <i class="fas fa-user-minus"></i>
+                        </button>
+                    `;
+                    container.appendChild(div);
+                });
+
+                container.querySelectorAll('.remove-friend-btn').forEach(button => {
+                    button.addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        // Find the closest button element to ensure the click target is correct
+                        const friendUidToRemove = e.target.closest('button').dataset.uid;
+                        
+                        const batch = writeBatch(db);
+                        batch.update(getUserProfileDocRef(user.uid), { friends: arrayRemove(friendUidToRemove) });
+                        batch.update(getUserProfileDocRef(friendUidToRemove), { friends: arrayRemove(user.uid) });
+                        await batch.commit();
+
+                        showMessage(addFriendMessage, 'Friend removed successfully!', 'success');
+                    });
+                });
+            });
+        }
         
     </script>
 </body>
