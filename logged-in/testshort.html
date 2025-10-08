@@ -614,7 +614,6 @@
                 const userProfileSnap = await getDoc(userProfileRef);
 
                 let defaultUsername = `DailyUser-${Math.floor(Math.random() * 8999) + 1000}`;
-                // NEW: Clean the default username with Purgomalum
                 defaultUsername = await cleanText(defaultUsername, 'username');
 
                 if (userProfileSnap.exists() && userProfileSnap.data().friendCode) {
@@ -626,20 +625,20 @@
                     friendCodeDisplay.textContent = 'Generating...';
                     const newCode = await generateUniqueFriendCode();
                     
-                    const batch = writeBatch(db);
+                    // NEW/REVISED LOGIC:
+                    // 1. Secure the code in the 'friend_codes' collection first.
+                    await setDoc(getFriendCodeDocRef(newCode), { userId: user.uid });
                     
-                    batch.set(getFriendCodeDocRef(newCode), { userId: user.uid });
-
-                    batch.set(userProfileRef, { 
+                    // 2. NOW, create/update the user's profile with the confirmed code.
+                    await setDoc(userProfileRef, { 
                         friendCode: newCode,
-                        friends: [],
                         username: defaultUsername, 
-                        dailySlotsUsed: [], 
-                        lastPostReset: serverTimestamp() 
+                        // Initialize friends and slots if the profile is new
+                        friends: userProfileSnap.data()?.friends || [],
+                        dailySlotsUsed: userProfileSnap.data()?.dailySlotsUsed || [],
+                        lastPostReset: userProfileSnap.data()?.lastPostReset || serverTimestamp() 
                     }, { merge: true });
 
-                    await batch.commit();
-                    
                     friendCodeDisplay.textContent = newCode;
                     CURRENT_USERNAME = defaultUsername;
                 }
@@ -1257,8 +1256,6 @@
             
             try {
                 const batch = writeBatch(db);
-                // UPDATED: Use set with merge:true for robustness. This creates the document if it doesn't exist,
-                // preventing errors if a user has a code but their profile doc is missing for some reason.
                 batch.set(getUserProfileDocRef(currentUser.uid), { friends: arrayUnion(friendUid) }, { merge: true });
                 batch.set(getUserProfileDocRef(friendUid), { friends: arrayUnion(currentUser.uid) }, { merge: true });
                 await batch.commit();
