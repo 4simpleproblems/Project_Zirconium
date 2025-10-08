@@ -59,19 +59,88 @@
             height: fit-content;
         }
         
-        /* Inner Block Styling (Used for Friends List and Daily Posts sections) */
-        .standard-inner-block {
-             background-color: #0d0d0d; 
-             border-radius: 0.5rem;
-             padding: 1rem;
-             border: 1px solid #1a1a1a;
-             margin-top: 0.75rem; /* Space from the title above it */
-        }
-        
         /* General input styling to use thin font */
         input.p-2 {
             font-weight: 200 !important;
         }
+
+        /* --- Custom Friend Code Input Styling (8 character underlines) --- */
+        .friend-code-input-styled {
+            /* Create 8 repeating lines for each character space */
+            background-image: linear-gradient(to right, #252525 0%, #252525 90%);
+            background-size: 12.5% 2px; /* 100% / 8 slots = 12.5% width per segment */
+            background-repeat: repeat-x;
+            background-position: 0 90%;
+            letter-spacing: 0.5rem !important; /* Spacing between characters */
+            padding-left: 0.75rem !important;
+            padding-right: 0.75rem !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+        .friend-code-input-styled:focus {
+             /* Change color on focus */
+             background-image: linear-gradient(to right, #4f46e5 0%, #4f46e5 90%);
+        }
+        
+        /* --- Compact List Styling for Friends and Daily Posts (Requested) --- */
+        .compact-list-wrapper {
+             background-color: #0d0d0d; 
+             border-radius: 0.5rem;
+             padding: 0.25rem 0.5rem; /* Little padding */
+             border: 1px solid #1a1a1a;
+             margin-top: 0.75rem;
+        }
+        .compact-list-items {
+            overflow-y: auto;
+            max-height: 250px; /* Scroll limit */
+            padding-right: 0.25rem; 
+        }
+        
+        /* Custom scrollbar styles */
+        .compact-list-items::-webkit-scrollbar { width: 8px; }
+        .compact-list-items::-webkit-scrollbar-thumb { background-color: #4f46e5; border-radius: 4px; }
+        .compact-list-items::-webkit-scrollbar-track { background-color: #1f2937; }
+
+        .compact-list-item {
+            background-color: transparent; 
+            border-radius: 0; /* No rounding */
+            margin-bottom: 0.1rem; /* Little spacing */
+            padding: 0.5rem 0.5rem; /* Little padding */
+            transition: background-color 0.2s;
+            border-bottom: 1px solid #1a1a1a;
+        }
+        .compact-list-item:hover {
+            background-color: #1f1f1f;
+            transform: none; /* Remove previous transform */
+        }
+        .compact-list-item:last-child {
+             border-bottom: none;
+        }
+
+        /* Apply similar compact style to Daily Posts container */
+        #daily-posts-container.compact-grid {
+            gap: 0.25rem; /* Very little spacing */
+            margin-top: 0.5rem;
+        }
+
+        /* Adjust Daily Post slots to be less "bubbly" and shorter/wider */
+        .user-post-slot, .user-post-empty, .user-post-locked, .user-post-deleted {
+            padding: 0.25rem; /* Less padding inside slot */
+            border-radius: 0.5rem; /* Less bubbly corners */
+            aspect-ratio: 1 / 1.25; /* Shorter/Wider */
+            box-shadow: none; /* Remove aggressive shadow */
+        }
+
+        .user-post-slot:hover, .user-post-empty:hover {
+            transform: translateY(-4px) scale(1.04) !important;
+            box-shadow: 0 8px 15px rgba(79, 70, 229, 0.4);
+        }
+
+        .user-post-slot .post-info-overlay {
+            border-radius: 0.5rem; /* Match slot corners */
+        }
+        /* --- END Compact List Styling --- */
+
 
         /* --- Feed Grid (Masonry-like) --- */
         .photo-grid {
@@ -118,87 +187,9 @@
         }
         .overlay-content { display: flex; align-items: center; justify-content: space-between; width: 100%; }
 
-        /* --- Daily Posts UI/UX (Bubbly/Cute Overhaul) --- */
-        #daily-posts-container {
-            display: flex;
-            gap: 0.75rem;
-            justify-content: space-between;
-        }
-        
-        .user-post-slot, .user-post-empty, .user-post-locked, .user-post-deleted {
-            flex: 1 1 0;
-            padding: 0.5rem;
-            transform: none; 
-            transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55), box-shadow 0.4s ease-in-out;
-            margin-bottom: 0;
-            border-radius: 1.5rem; /* Bubbly corners */
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            overflow: hidden;
-            background-color: #1a1a1a;
-            border: 2px solid #252525;
-            position: relative;
-            cursor: pointer;
-            aspect-ratio: 1 / 1.5; 
-            animation: popIn 0.5s ease-out;
-        }
-
-        .user-post-slot:hover, .user-post-empty:hover {
-            transform: translateY(-8px) scale(1.08) !important;
-            box-shadow: 0 15px 30px rgba(79, 70, 229, 0.6);
-        }
-
-        .user-post-empty {
-            background-color: #0d0d0d;
-            border: 3px dashed #4f46e5;
-            animation: particleGlow 2s infinite alternate; 
-            color: #818cf8;
-        }
-        
-        .user-post-slot .post-info-overlay {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background-color: rgba(0, 0, 0, 0.75);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            padding: 1rem;
-        }
-
-        .user-post-slot:hover .post-info-overlay {
-            opacity: 1;
-        }
-
-        /* --- Custom Scrollable Friends List --- */
-        #friends-list-items {
-            overflow-y: auto;
-            max-height: 250px; 
-            padding-right: 0.5rem; 
-        }
-
-        /* Custom scrollbar styles */
-        #friends-list-items::-webkit-scrollbar { width: 8px; }
-        #friends-list-items::-webkit-scrollbar-thumb { background-color: #4f46e5; border-radius: 4px; }
-        #friends-list-items::-webkit-scrollbar-track { background-color: #1f2937; }
-        
-        .friend-item {
-            background-color: #1f1f1f;
-            border-radius: 0.75rem; /* Consistent rounding */
-            margin-bottom: 0.75rem; /* Consistent spacing */
-            transition: background-color 0.2s, transform 0.2s;
-            padding: 1rem; /* Consistent padding */
-        }
-        .friend-item:hover {
-            background-color: #2a2a2a;
-            transform: translateX(5px);
-        }
-
-        /* Custom scrollbar for comments (MAX-HEIGHT MODIFIED HERE) */
+        /* Custom scrollbar for comments */
         #comments-section {
             overflow-y: auto;
-            /* New max-height to restrict to approx 4-5 messages */
             max-height: 12rem; 
         }
         
@@ -271,7 +262,7 @@
             <div class="mb-6 border-b border-gray-800 pb-4">
                 <h2 class="text-xl font-bold mb-2">Add a Friend</h2>
                 <form id="add-friend-form" class="flex gap-2">
-                    <input type="text" id="friend-code-input" placeholder="Enter 8-digit code" class="flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <input type="text" id="friend-code-input" placeholder="********" maxlength="8" class="friend-code-input-styled flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase tracking-widest text-center" style="font-family: monospace;" pattern="[A-Z0-9]{8}" title="8 alphanumeric characters only">
                     <button type="submit" class="px-3 py-2 bg-indigo-600 rounded-md hover:bg-indigo-700 transition font-semibold" title="Send Request">
                         <i class="fas fa-user-plus"></i>
                     </button>
@@ -281,8 +272,8 @@
 
             <div class="mb-6 border-b border-gray-800 pb-4">
                 <h2 class="text-xl font-bold mb-3">Your Friends</h2>
-                <div id="friends-list-wrapper" class="standard-inner-block">
-                    <div id="friends-list-items">
+                <div id="friends-list-wrapper" class="compact-list-wrapper">
+                    <div id="friends-list-items" class="compact-list-items">
                         <p class="text-sm text-gray-500">Loading friends list...</p>
                     </div>
                 </div>
@@ -291,8 +282,8 @@
             <div class="mb-6">
                 <h2 class="text-xl font-bold mb-2">Your Daily Posts</h2>
                 <p class="text-sm text-gray-400 mb-3">You have 3 slots per day (no cheating!). Click a slot to post or edit.</p>
-                <div id="daily-posts-wrapper" class="standard-inner-block">
-                    <div id="daily-posts-container">
+                 <div id="daily-posts-wrapper" class="compact-list-wrapper">
+                    <div id="daily-posts-container" class="compact-grid">
                         </div>
                 </div>
                 <div id="upload-message" class="text-sm mt-2 min-h-[20px]"></div>
@@ -323,7 +314,7 @@
         // --- CONFIGURATION IMPORT (Kept the original external path as requested) ---
         import { firebaseConfig } from "../firebase-config.js";
         
-        const appId = 'default-app-id'; 
+        // REMOVED: const appId = 'default-app-id'; 
         const initialAuthToken = null; 
 
         // --- Initialize Firebase ---
@@ -356,10 +347,12 @@
         const messageModalCloseBtn = document.getElementById('message-modal-close-btn');
         const titleModal = document.getElementById('title-modal');
         const editTitleForm = document.getElementById('edit-title-form');
-        // Removed: usernameInput and usernameMessage elements
+        const modalCommentMessage = document.getElementById('modal-comment-message');
+        // REMOVED: usernameInput and usernameMessage elements
 
-        // --- Firestore Document References & Collections ---
-        const getUserProfileDocRef = (userId) => doc(db, 'artifacts', appId, 'users', userId, 'metadata', 'user_profile');
+        // --- Firestore Document References & Collections (UPDATED) ---
+        // Changed path to the root 'user_profiles' collection as requested
+        const getUserProfileDocRef = (userId) => doc(db, 'user_profiles', userId);
         const getFriendCodeDocRef = (code) => doc(db, 'friend_codes', code);
         const DAILY_PHOTO_COLLECTION = collection(db, 'daily_photos');
 
@@ -515,7 +508,8 @@
                     batch.set(userProfileRef, { 
                         friendCode: newCode,
                         friends: [],
-                        username: defaultUsername,
+                        // Set unique default username on initial creation
+                        username: defaultUsername, 
                         dailySlotsUsed: [], 
                         lastPostReset: serverTimestamp() 
                     }, { merge: true });
@@ -936,7 +930,7 @@
 
                     if (now - LAST_COMMENT_TIMESTAMP < COMMENT_DELAY_MS) {
                         const remaining = Math.ceil((COMMENT_DELAY_MS - (now - LAST_COMMENT_TIMESTAMP)) / 1000);
-                        // Use the new modal-specific message element
+                        // Use the modal-specific message element
                         showMessage(commentMessageElement, `Please wait ${remaining} seconds before commenting again.`, 'error');
                         return;
                     }
@@ -956,7 +950,7 @@
                         LAST_COMMENT_TIMESTAMP = now; 
                         commentMessageElement.textContent = ''; // Clear message on success
                     } catch(error) {
-                         // Use the new modal-specific message element
+                         // Use the modal-specific message element
                          showMessage(commentMessageElement, `Comment failed: ${error.message || error}`, 'error'); 
                          console.error("Commenting error:", error);
                     } finally {
@@ -987,7 +981,7 @@
             const title = document.getElementById('title-edit-input').value.trim();
             
             if (!title) {
-                // Using uploadMessage for general errors since usernameMessage was removed
+                // Now reporting to the upload message element since usernameMessage was removed
                 showMessage(uploadMessage, 'Title cannot be empty.', 'error'); 
                 return;
             }
@@ -1013,11 +1007,14 @@
         addFriendForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const friendCodeInput = document.getElementById('friend-code-input');
-            const code = friendCodeInput.value.trim().toUpperCase();
+            // Ensure input is only alphanumeric and capitalized
+            const code = friendCodeInput.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+            friendCodeInput.value = code; // Reflect clean, capitalized input
+            
             const currentUser = auth.currentUser;
             
             if (code.length !== 8) {
-                showMessage(addFriendMessage, 'Friend code must be 8 characters.');
+                showMessage(addFriendMessage, 'Friend code must be 8 characters (A-Z, 0-9).');
                 return;
             }
 
@@ -1108,7 +1105,8 @@
                     const username = friendProfileSnap.exists() ? friendProfileSnap.data().username : 'Unknown User';
 
                     const div = document.createElement('div');
-                    div.className = 'friend-item flex justify-between items-center';
+                    // Changed to compact-list-item
+                    div.className = 'compact-list-item flex justify-between items-center';
                     div.innerHTML = `
                         <span class="font-semibold">${username}</span>
                         <button data-uid="${friendUid}" class="remove-friend-btn text-red-400 hover:text-red-500 transition px-2 py-1" title="Remove Friend">
