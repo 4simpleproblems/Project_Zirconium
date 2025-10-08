@@ -274,8 +274,7 @@
                 <h2 class="text-xl font-bold mb-3">Your Friends</h2>
                 <div id="friends-list-wrapper" class="compact-list-wrapper">
                     <div id="friends-list-items" class="compact-list-items">
-                        <p class="text-sm text-gray-500">Loading friends list...</p>
-                    </div>
+                        </div>
                 </div>
             </div>
 
@@ -314,7 +313,7 @@
         // --- CONFIGURATION IMPORT (Kept the original external path as requested) ---
         import { firebaseConfig } from "../firebase-config.js";
         
-        // REMOVED: const appId = 'default-app-id'; 
+        const appId = '4sp-default-app'; // Match login.html constant
         const initialAuthToken = null; 
 
         // --- Initialize Firebase ---
@@ -350,9 +349,11 @@
         const modalCommentMessage = document.getElementById('modal-comment-message');
         // REMOVED: usernameInput and usernameMessage elements
 
-        // --- Firestore Document References & Collections (UPDATED) ---
-        // Changed path to the root 'user_profiles' collection as requested
-        const getUserProfileDocRef = (userId) => doc(db, 'user_profiles', userId);
+        // --- Firestore Document References & Collections (UPDATED TO MATCH login.html) ---
+        const getUserProfileDocRef = (userId) => {
+            // Path: artifacts/{appId}/users/{userId}/metadata/user_profile
+            return doc(db, 'artifacts', appId, 'users', userId, 'metadata', 'user_profile');
+        };
         const getFriendCodeDocRef = (code) => doc(db, 'friend_codes', code);
         const DAILY_PHOTO_COLLECTION = collection(db, 'daily_photos');
 
@@ -1014,7 +1015,7 @@
             const currentUser = auth.currentUser;
             
             if (code.length !== 8) {
-                showMessage(addFriendMessage, 'Friend code must be 8 characters (A-Z, 0-9).');
+                showMessage(addFriendMessage, 'Friend code must be 8 alphanumeric characters (A-Z, 0-9).');
                 return;
             }
 
