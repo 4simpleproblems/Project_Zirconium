@@ -82,7 +82,7 @@
              background-image: linear-gradient(to right, #4f46e5 0%, #4f46e5 90%);
         }
         
-        /* --- Compact List Styling for Friends and Daily Posts (Requested) --- */
+        /* --- Compact List Styling for Friends and Daily Posts --- */
         .compact-list-wrapper {
              background-color: #0d0d0d; 
              border-radius: 0.5rem;
@@ -133,6 +133,51 @@
             max-height: 12rem; /* Approx. 3-4 comments height to enable scroll */
         }
         
+        /* --- NEW: FEED DISPLAY STYLES --- */
+        .photo-grid {
+            display: grid;
+            /* 3 columns, each 1fr, with a gap for padding */
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 1rem; 
+        }
+        .photo-thumbnail {
+            position: relative;
+            overflow: hidden;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            aspect-ratio: 1 / 1; /* Make thumbnails square */
+            background-color: #070707;
+        }
+        .photo-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            /* Darken the image and make content centered at the top */
+            background-color: rgba(0, 0, 0, 0.4); /* Permanent darkening */
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start; /* Align content to the top */
+            align-items: center;
+            padding: 0.75rem;
+            opacity: 1; /* Always visible to show heart count */
+        }
+        
+        .overlay-content {
+            color: white;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.7);
+            font-weight: 700; /* Make the heart count stand out */
+        }
+        /* --- END FEED STYLES --- */
+
         .modal-backdrop {
             position: fixed;
             top: 0;
@@ -307,9 +352,9 @@
         let CURRENT_FRIENDS = [];
         let CURRENT_USERNAME = 'DailyUser'; 
         let UNSUBSCRIBE_POSTS_LISTENER = () => {};
-        let MODAL_UNSUBSCRIBE_LISTENER = () => {}; // NEW: To store the modal listener's unsubscribe function
+        let MODAL_UNSUBSCRIBE_LISTENER = () => {}; 
         let LAST_COMMENT_TIMESTAMP = 0; 
-        let PENDING_UPLOAD_FILE = null; // NEW: To hold the file during the upload process
+        let PENDING_UPLOAD_FILE = null; 
         const COMMENT_DELAY_MS = 5000;
         const POST_SLOTS_MAX = 3;
 
@@ -330,12 +375,12 @@
         const messageModalCloseBtn = document.getElementById('message-modal-close-btn');
         const titleModal = document.getElementById('title-modal');
         const editTitleForm = document.getElementById('edit-title-form');
-        const uploadMenuModal = document.getElementById('upload-menu-modal'); // NEW
-        const uploadFileInput = document.getElementById('upload-file-input'); // NEW
-        const uploadSelectOptions = document.getElementById('upload-select-options'); // NEW
-        const uploadPostCreator = document.getElementById('upload-post-creator'); // NEW
-        const imagePreview = document.getElementById('image-preview'); // NEW
-        const createPostForm = document.getElementById('create-post-form'); // NEW
+        const uploadMenuModal = document.getElementById('upload-menu-modal'); 
+        const uploadFileInput = document.getElementById('upload-file-input'); 
+        const uploadSelectOptions = document.getElementById('upload-select-options'); 
+        const uploadPostCreator = document.getElementById('upload-post-creator'); 
+        const imagePreview = document.getElementById('image-preview'); 
+        const createPostForm = document.getElementById('create-post-form'); 
 
 
         // --- Firestore Document References & Collections ---
@@ -642,11 +687,8 @@
                         } else if (change.type === 'modified' || change.type === 'added') {
                             const existingThumb = document.querySelector(`.photo-thumbnail[data-photo-id="${docId}"]`);
                             if (existingThumb) {
-                                // Update username in existing thumbnail
-                                const nameEl = existingThumb.querySelector('.overlay-content span:first-child');
-                                if (nameEl) nameEl.textContent = data.creatorUsername; 
-                                
-                                const heartCountEl = existingThumb.querySelector('.overlay-content span:last-child');
+                                // Update hearts count in existing thumbnail
+                                const heartCountEl = existingThumb.querySelector('.overlay-content span');
                                 if (heartCountEl) {
                                      heartCountEl.innerHTML = `<i class="fas fa-heart text-red-400 mr-1"></i> ${formatCount(data.hearts?.length || 0)}`;
                                 }
@@ -694,10 +736,10 @@
 
             const overlay = document.createElement('div');
             overlay.className = 'overlay';
+            // UPDATED: Simplfied overlay content to only show heart count
             overlay.innerHTML = `
                 <div class="overlay-content">
-                    <span class="font-semibold text-shadow-lg">${photoData.creatorUsername}</span>
-                    <span class="text-xl"><i class="fas fa-heart text-red-400 mr-1"></i> ${formatCount(photoData.hearts?.length || 0)}</span>
+                    <span class="text-xl font-bold"><i class="fas fa-heart text-red-400 mr-1"></i> ${formatCount(photoData.hearts?.length || 0)}</span>
                 </div>
             `;
             thumb.appendChild(overlay);
@@ -1006,8 +1048,9 @@
                         const newComment = {
                             uid: currentUser.uid,
                             username: CURRENT_USERNAME, 
-                            text: cleanedText, // Use the cleaned text
-                            timestamp: serverTimestamp()
+                            text: cleanedText, 
+                            // FIX: Use new Date() instead of serverTimestamp() inside arrayUnion
+                            timestamp: new Date() 
                         };
                         await updateDoc(photoRef, { comments: arrayUnion(newComment) });
                         commentInput.value = '';
@@ -1204,6 +1247,7 @@
                 container.querySelectorAll('.remove-friend-btn').forEach(button => {
                     button.addEventListener('click', async (e) => {
                         e.preventDefault();
+                        // Find the closest button element to ensure the click target is correct
                         const friendUidToRemove = e.target.closest('button').dataset.uid;
                         
                         const batch = writeBatch(db);
