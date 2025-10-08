@@ -25,6 +25,12 @@
             50% { box-shadow: 0 0 10px #818cf8, 0 0 20px #818cf8; }
             100% { box-shadow: 0 0 5px #4f46e5, 0 0 10px #4f46e5; }
         }
+        
+        /* Custom marquee animation */
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-100%); }
+        }
 
         /* --- FONT & BASE STYLING (THICKENED FONT) --- */
         body { 
@@ -130,7 +136,7 @@
         /* Custom scrollbar for comments */
         #comments-section {
             overflow-y: auto;
-            max-height: 12rem; /* Approx. 3-4 comments height to enable scroll */
+            max-height: 8rem; /* Reduced height to activate scroll sooner */
         }
         
         /* --- NEW: FEED DISPLAY STYLES --- */
@@ -155,26 +161,49 @@
             transition: transform 0.3s ease;
         }
 
+        /* Overlay for darkening only */
         .overlay {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            /* Darken the image and make content centered at the top */
             background-color: rgba(0, 0, 0, 0.4); /* Permanent darkening */
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start; /* Align content to the top */
-            align-items: center;
-            padding: 0.75rem;
-            opacity: 1; /* Always visible to show heart count */
+            pointer-events: none; /* Allows click-through to the thumbnail itself */
         }
         
-        .overlay-content {
+        /* New Title Overlay Styling (Bottom Right, Gradient Background, Marquee) */
+        .title-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 0.5rem 0.75rem;
             color: white;
-            text-shadow: 0 0 5px rgba(0, 0, 0, 0.7);
-            font-weight: 700; /* Make the heart count stand out */
+            font-size: 0.75rem; /* text-xs */
+            font-weight: 600;
+            /* Gradient for a subtle fade at the bottom */
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 100%);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+            height: 3rem; 
+            display: flex;
+            justify-content: flex-end; /* Align content to the right */
+            align-items: flex-end; /* Align content to the bottom */
+        }
+
+        .title-text-container {
+            /* Container to enforce max width for marquee */
+            max-width: 90%; 
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        
+        /* Marquee animation class for long titles */
+        .marquee-animation {
+            display: inline-block;
+            white-space: nowrap;
+            padding-left: 100%; /* Start the text fully off-screen */
+            animation: marquee 8s linear infinite; /* Increased duration for smoother scroll */
         }
         /* --- END FEED STYLES --- */
 
@@ -217,6 +246,7 @@
 </head>
 <body class="pt-16">
     
+    <!-- STANDARD MESSAGE MODAL -->
     <div id="message-modal" class="modal-backdrop hidden opacity-0">
         <div class="modal-content w-full max-w-sm p-6 text-center">
             <h3 id="message-modal-title" class="text-xl font-bold mb-4 text-white"></h3>
@@ -225,44 +255,54 @@
         </div>
     </div>
 
+    <!-- PHOTO VIEW MODAL -->
     <div id="photo-modal" class="modal-backdrop hidden">
         <div id="modal-content-container" class="modal-content flex flex-col md:flex-row gap-6">
             </div>
     </div>
     
+    <!-- TITLE EDIT MODAL (REUSED FOR NOW, BUT OBSOLETE BY NEW UPLOAD MODAL) -->
     <div id="title-modal" class="modal-backdrop hidden opacity-0">
         <div class="modal-content w-full max-w-sm p-6 text-center">
             <h3 class="text-xl font-bold mb-4 text-white">Edit Title</h3>
             <form id="edit-title-form" data-post-id="" class="flex flex-col gap-4">
-                <input type="text" id="title-edit-input" placeholder="Enter your photo title (max 50 chars)" class="p-3 bg-gray-900 border border-gray-700 rounded-md focus:ring-indigo-500" maxlength="50" required>
+                <!-- UPDATED: max length to 48 chars -->
+                <input type="text" id="title-edit-input" placeholder="Enter your photo title (max 48 chars)" class="p-3 bg-gray-900 border border-gray-700 rounded-md focus:ring-indigo-500" maxlength="48" required>
                 <button type="submit" class="px-4 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold w-full">Save Title</button>
             </form>
             <button id="title-modal-close-btn" class="mt-3 text-sm text-gray-400 hover:text-white">Cancel</button>
         </div>
     </div>
     
+    <!-- NEW: UPLOAD MENU MODAL -->
     <div id="upload-menu-modal" class="modal-backdrop hidden opacity-0">
         <div class="modal-content w-full max-w-sm p-6">
             <h3 id="upload-menu-title" class="text-xl font-bold mb-4 text-white">Post to Slot #1</h3>
             
+            <!-- Hidden File Input for Image Selection (One input for all methods) -->
             <input type="file" id="upload-file-input" class="hidden" accept="image/*" data-slot-index="" data-action="select-photo">
 
+            <!-- Initial selection buttons -->
             <div id="upload-select-options" class="flex flex-col gap-3 mb-6">
-                 <button id="upload-camera-btn" class="px-4 py-3 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold w-full">
+                 <!-- The 'capture' attribute for camera, works on mobile. -->
+                <button id="upload-camera-btn" class="px-4 py-3 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold w-full">
                     <i class="fas fa-camera mr-2"></i> Capture Image (Camera)
                 </button>
+                <!-- Separate button to trigger file/photo selection -->
                 <button id="upload-photo-file-btn" class="px-4 py-3 bg-gray-700 rounded-lg hover:bg-gray-800 transition font-semibold w-full">
                     <i class="fas fa-image mr-2"></i> Select Photo or File
                 </button>
             </div>
             
+            <!-- Image Preview and Title Input (Hidden until file is selected) -->
             <div id="upload-post-creator" class="hidden">
                  <div id="image-preview-container" class="mb-4 bg-gray-900 flex justify-center items-center">
                     <img id="image-preview" src="#" alt="Image Preview" class="w-full h-auto object-cover max-h-[300px]">
                  </div>
                  
                  <form id="create-post-form" class="flex flex-col gap-4">
-                    <input type="text" id="post-title-input" placeholder="Enter your photo title (max 50 chars)" class="p-3 bg-gray-900 border border-gray-700 rounded-md focus:ring-indigo-500" maxlength="50" required>
+                    <!-- UPDATED: max length to 48 chars -->
+                    <input type="text" id="post-title-input" placeholder="Enter your photo title (max 48 chars)" class="p-3 bg-gray-900 border border-gray-700 rounded-md focus:ring-indigo-500" maxlength="48" required>
                     <button type="submit" id="create-post-btn" class="px-4 py-3 bg-green-600 rounded-lg hover:bg-green-700 transition font-semibold w-full">
                         <i class="fas fa-check mr-2"></i> Create Daily Post
                     </button>
@@ -301,16 +341,19 @@
                 <h2 class="text-xl font-bold mb-3">Your Friends</h2>
                 <div id="friends-list-wrapper" class="compact-list-wrapper">
                     <div id="friends-list-items" class="compact-list-items">
-                        </div>
+                        <!-- Friend cards rendered here -->
+                    </div>
                 </div>
             </div>
 
             <div class="mb-6">
                 <h2 class="text-xl font-bold mb-2">Your Daily Posts</h2>
                 <p class="text-sm text-gray-400 mb-3">You have 3 slots per day (no cheating!).</p>
+                <!-- NEW: Daily Post Slots now use the compact-list-wrapper -->
                 <div id="daily-posts-wrapper" class="compact-list-wrapper">
                     <div id="daily-posts-container">
-                        </div>
+                        <!-- Daily Post Cards rendered here -->
+                    </div>
                 </div>
                 <div id="upload-message" class="text-sm mt-2 min-h-[20px]"></div>
             </div>
@@ -357,6 +400,7 @@
         let PENDING_UPLOAD_FILE = null; 
         const COMMENT_DELAY_MS = 5000;
         const POST_SLOTS_MAX = 3;
+        const MARQUEE_TRIGGER_LENGTH = 30; // Heuristic length for marquee on thumbnail
 
         // --- DOM Elements ---
         const loadingScreen = document.getElementById('loading-screen');
@@ -687,10 +731,21 @@
                         } else if (change.type === 'modified' || change.type === 'added') {
                             const existingThumb = document.querySelector(`.photo-thumbnail[data-photo-id="${docId}"]`);
                             if (existingThumb) {
-                                // Update hearts count in existing thumbnail
-                                const heartCountEl = existingThumb.querySelector('.overlay-content span');
+                                // Update hearts count in existing thumbnail (it now has a specific structure)
+                                const heartCountEl = existingThumb.querySelector('.heart-count-display');
                                 if (heartCountEl) {
-                                     heartCountEl.innerHTML = `<i class="fas fa-heart text-red-400 mr-1"></i> ${formatCount(data.hearts?.length || 0)}`;
+                                     heartCountEl.innerHTML = formatCount(data.hearts?.length || 0);
+                                }
+                                // Update title in case it changed (less likely, but safe)
+                                const titleSpan = existingThumb.querySelector('.title-text-span');
+                                if (titleSpan) {
+                                    titleSpan.textContent = data.title;
+                                    // Re-check for marquee if title was updated
+                                    if (data.title.length > MARQUEE_TRIGGER_LENGTH) {
+                                        titleSpan.classList.add('marquee-animation');
+                                    } else {
+                                        titleSpan.classList.remove('marquee-animation');
+                                    }
                                 }
                             } else if (change.type === 'modified') {
                                 // If modified and the thumbnail isn't present (e.g., title was just added), render it.
@@ -731,18 +786,34 @@
             img.src = photoData.imageBase64;
             img.alt = `${photoData.title || 'Photo'} by ${photoData.creatorUsername}`; 
             img.loading = 'lazy';
-            
             thumb.appendChild(img);
 
+            // 1. Permanent Darkening Overlay
             const overlay = document.createElement('div');
-            overlay.className = 'overlay';
-            // UPDATED: Simplfied overlay content to only show heart count
-            overlay.innerHTML = `
-                <div class="overlay-content">
-                    <span class="text-xl font-bold"><i class="fas fa-heart text-red-400 mr-1"></i> ${formatCount(photoData.hearts?.length || 0)}</span>
+            overlay.className = 'overlay'; // This class handles the 40% darkening
+            thumb.appendChild(overlay);
+
+            // 2. Heart Count (Top-Left)
+            const heartEl = document.createElement('div');
+            heartEl.className = 'absolute top-2 left-2 z-10 text-white text-xs bg-black/50 px-2 py-1 rounded-full flex items-center shadow-lg';
+            heartEl.innerHTML = `<i class="fas fa-heart text-red-400 mr-1"></i> <span class="font-bold heart-count-display">${formatCount(photoData.hearts?.length || 0)}</span>`;
+            thumb.appendChild(heartEl);
+
+            // 3. Title Display (Bottom-Right, Marquee)
+            const isLongTitle = photoData.title.length > MARQUEE_TRIGGER_LENGTH;
+            const displayTitle = isLongTitle ? photoData.title : photoData.title; // Show full title for marquee, or truncated for static if necessary
+
+            const titleOverlay = document.createElement('div');
+            titleOverlay.className = 'title-overlay'; 
+            titleOverlay.innerHTML = `
+                <div class="title-text-container">
+                    <span class="text-white text-right font-semibold text-xs title-text-span ${isLongTitle ? 'marquee-animation' : ''}">
+                        ${displayTitle}
+                    </span>
                 </div>
             `;
-            thumb.appendChild(overlay);
+            thumb.appendChild(titleOverlay);
+
 
             thumb.addEventListener('click', () => openPhotoModal(photoId));
             
@@ -848,11 +919,12 @@
             
             // 1. Get title and clean it
             const titleInput = document.getElementById('post-title-input');
-            const title = titleInput.value.trim();
+            let title = titleInput.value.trim();
             if (!title) {
                 showMessage(uploadMessage, 'Title cannot be empty.', 'error');
                 return;
             }
+            if (title.length > 48) title = title.substring(0, 48); // Enforce new client-side limit
             const cleanedTitle = await cleanText(title, 'post title');
             
             // 2. Disable button
@@ -994,7 +1066,8 @@
                         <div id="modal-comment-message" class="text-sm min-h-[20px]"></div>
 
                         <form id="comment-form" class="flex gap-2">
-                            <input type="text" id="comment-input" placeholder="Add a comment (max 500 chars)..." class="flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md" maxlength="500">
+                            <!-- UPDATED: max length to 480 chars -->
+                            <input type="text" id="comment-input" placeholder="Add a comment (max 480 chars)..." class="flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md" maxlength="480">
                             <button type="submit" id="comment-submit-btn" class="px-3 py-2 bg-indigo-600 rounded-md font-semibold" title="Post Comment">
                                 <i class="fas fa-comment"></i>
                             </button>
@@ -1030,7 +1103,8 @@
                     const now = Date.now();
                     
                     if (!text) return;
-                    if (text.length > 500) text = text.substring(0, 500); // Enforce client-side limit for extra safety
+                    // UPDATED: client-side limit to 480
+                    if (text.length > 480) text = text.substring(0, 480); 
 
                     if (now - LAST_COMMENT_TIMESTAMP < COMMENT_DELAY_MS) {
                         const remaining = Math.ceil((COMMENT_DELAY_MS - (now - LAST_COMMENT_TIMESTAMP)) / 1000);
@@ -1052,10 +1126,22 @@
                             // FIX: Use new Date() instead of serverTimestamp() inside arrayUnion
                             timestamp: new Date() 
                         };
+                        
+                        // Perform the write operation
                         await updateDoc(photoRef, { comments: arrayUnion(newComment) });
+                        
                         commentInput.value = '';
                         LAST_COMMENT_TIMESTAMP = now; 
                         commentMessageElement.textContent = ''; 
+
+                        // NEW: Auto-scroll to the bottom of the comments section
+                        setTimeout(() => {
+                            const commentsSection = document.getElementById('comments-section');
+                            if (commentsSection) {
+                                commentsSection.scrollTop = commentsSection.scrollHeight;
+                            }
+                        }, 100); // Small delay to allow onSnapshot to update DOM
+                        
                     } catch(error) {
                          showMessage(commentMessageElement, `Comment failed: ${error.message || error}`, 'error'); 
                          console.error("Commenting error:", error);
@@ -1109,12 +1195,13 @@
         editTitleForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const postId = e.currentTarget.dataset.postId;
-            const title = document.getElementById('title-edit-input').value.trim();
+            let title = document.getElementById('title-edit-input').value.trim();
             
             if (!title) {
                 showMessage(uploadMessage, 'Title cannot be empty.', 'error'); 
                 return;
             }
+            if (title.length > 48) title = title.substring(0, 48); // Enforce new client-side limit
 
             try {
                 // NEW: Clean the title before saving
