@@ -543,6 +543,7 @@
                     for (let i = 0; i < 8; i++) {
                         code += characters.charAt(Math.floor(Math.random() * characters.length));
                     }
+                    // Check existence in the canonical LOOKUP collection
                     const codeDoc = await getDoc(getFriendCodeDocRef(code));
                     if (!codeDoc.exists()) isUnique = true;
                 }
@@ -613,7 +614,6 @@
                 const userProfileSnap = await getDoc(userProfileRef);
 
                 let defaultUsername = `DailyUser-${Math.floor(Math.random() * 8999) + 1000}`;
-                // NEW: Clean the default username with Purgomalum
                 defaultUsername = await cleanText(defaultUsername, 'username');
                 
                 // Set initial CURRENT_USERNAME for use in listeners/posts
@@ -623,30 +623,31 @@
                     CURRENT_USERNAME = defaultUsername;
                 }
 
+                // If the profile does not exist OR is missing a friendCode, generate and save it
                 if (!userProfileSnap.exists() || !userProfileSnap.data().friendCode) {
-                    friendCodeDisplay.textContent = 'Generating...';
+                    
                     const newCode = await generateUniqueFriendCode();
                     
                     const batch = writeBatch(db);
                     
-                    // 1. Create the friend code mapping
+                    // 1. Single Source of Truth for LOOKUP: Create the code-to-user-ID mapping
                     batch.set(getFriendCodeDocRef(newCode), { userId: user.uid });
 
-                    // 2. Set/Update the user profile
+                    // 2. User Profile (Display reference): Set/Update the user profile
                     batch.set(userProfileRef, { 
-                        friendCode: newCode,
+                        friendCode: newCode, 
                         friends: userProfileSnap.data()?.friends || [],
                         username: defaultUsername, 
                         dailySlotsUsed: userProfileSnap.data()?.dailySlotsUsed || [], 
                         lastPostReset: userProfileSnap.data()?.lastPostReset || serverTimestamp() 
-                    }, { merge: true }); // Use merge: true to avoid overwriting existing data
+                    }, { merge: true }); 
 
-                    await batch.commit();
+                    await batch.commit(); // Wait for the batch to ensure consistency
                     
-                    console.log("New user profile and friend code created/updated.");
+                    console.log("New user profile and friend code created/updated via batch commit.");
                 }
                 
-                // Note: friendCodeDisplay.textContent will be set by the setupUserProfileListener now
+                // The setupUserProfileListener will read the committed friendCode and update the UI.
             } catch (error) {
                 console.error("Profile/Friend Code Setup Failed:", error);
                 throw new Error("Failed to set up user profile and friend code.");
@@ -1243,9 +1244,12 @@
             }
 
             try {
+                // *** This is the single source of truth for code lookup ***
                 const codeDocSnap = await getDoc(getFriendCodeDocRef(code));
+                
                 if (!codeDocSnap.exists()) {
-                    showMessage(messageEl, 'Friend code not found.', 'error');
+                    // This error indicates the code doesn't exist in the LOOKUP collection.
+                    showMessage(messageEl, 'Friend code not found. Please verify the 8-character code.');
                     return;
                 }
 
@@ -1261,7 +1265,7 @@
                 }
                 
                 const batch = writeBatch(db);
-                // 1. Add friend to current user's list
+                // 1. Add friend to current user's list (for feed/display)
                 batch.update(getUserProfileDocRef(currentUser.uid), { friends: arrayUnion(friendUid) });
                 // 2. Add current user to friend's list (mutual)
                 batch.update(getUserProfileDocRef(friendUid), { friends: arrayUnion(currentUser.uid) });
@@ -1270,7 +1274,7 @@
                 showMessage(messageEl, 'Friend added successfully!', 'success');
                 friendCodeInput.value = '';
             } catch (error) {
-                 showMessage(messageEl, 'Failed to add friend. Check console.', 'error');
+                 showMessage(messageEl, 'Failed to add friend. Check console for details.', 'error');
                  console.error("Add friend failed:", error);
             }
         });
@@ -1282,6 +1286,7 @@
                 try {
                     console.log("User signed in. UID:", user.uid);
                     
+                    // Runs the code generation batch if needed, ensuring the write completes before proceeding
                     await handleFriendCodeLogic(user); 
                     await cleanupOldPosts(user); 
 
@@ -1305,25 +1310,30 @@
             }
         });
 
-        // REPLACED setupFriendListListener with setupUserProfileListener for comprehensive, real-time updates
+        // This listener is the single source of truth for the Friend Code Display, Friends List, and CURRENT_FRIENDS/USERNAME
         function setupUserProfileListener(user) {
             const userProfileRef = getUserProfileDocRef(user.uid);
             
             onSnapshot(userProfileRef, async (docSnap) => {
                 const profileData = docSnap.data() || {};
-                const friendCode = profileData.friendCode || 'N/A';
+                const friendCode = profileData.friendCode || '';
                 const friends = profileData.friends || [];
                 const username = profileData.username || 'DailyUser';
 
                 // 1. Update Global State & Display
-                friendCodeDisplay.textContent = friendCode;
+                if (friendCode) {
+                    friendCodeDisplay.textContent = friendCode;
+                } else {
+                     // Show 'Generating...' briefly if the code is missing (e.g., right after sign-in, before the batch commits)
+                    friendCodeDisplay.textContent = 'Generating...'; 
+                }
+                
                 CURRENT_USERNAME = username;
                 
                 const friendsChanged = friends.length !== CURRENT_FRIENDS.length || friends.some((val, index) => val !== CURRENT_FRIENDS[index]);
 
                 if (friendsChanged) {
                     CURRENT_FRIENDS = friends; 
-                    // Re-run the feed listener only when friends change
                     setupFriendsFeedListener(user); 
                 }
 
