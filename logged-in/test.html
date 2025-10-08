@@ -261,17 +261,6 @@
         <aside class="left-panel">
             
             <div class="mb-6 border-b border-gray-800 pb-4">
-                <h2 class="text-xl font-bold mb-2">Set Display Name</h2>
-                <form id="set-username-form" class="flex gap-2">
-                    <input type="text" id="username-input" placeholder="Your desired name" class="flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
-                    <button type="submit" class="px-3 py-2 bg-indigo-600 rounded-md hover:bg-indigo-700 transition font-semibold" title="Update Username">
-                        <i class="fas fa-save"></i>
-                    </button>
-                </form>
-                <div id="username-message" class="text-sm mt-2 min-h-[20px]"></div>
-            </div>
-
-            <div class="mb-6 border-b border-gray-800 pb-4">
                 <h2 class="text-xl font-bold mb-2">Your Friend Code</h2>
                 <p class="text-sm text-gray-400 mb-3">Share this code with friends to add them.</p>
                 <div id="friend-code-display" class="p-3 text-center bg-gray-900 rounded-md font-mono text-lg tracking-widest text-indigo-400">
@@ -367,9 +356,7 @@
         const messageModalCloseBtn = document.getElementById('message-modal-close-btn');
         const titleModal = document.getElementById('title-modal');
         const editTitleForm = document.getElementById('edit-title-form');
-        const usernameInput = document.getElementById('username-input');
-        const usernameMessage = document.getElementById('username-message');
-
+        // Removed: usernameInput and usernameMessage elements
 
         // --- Firestore Document References & Collections ---
         const getUserProfileDocRef = (userId) => doc(db, 'artifacts', appId, 'users', userId, 'metadata', 'user_profile');
@@ -514,9 +501,8 @@
                 if (userProfileSnap.exists() && userProfileSnap.data().friendCode) {
                     const data = userProfileSnap.data();
                     friendCodeDisplay.textContent = data.friendCode;
-                    // FIX: Always retrieve and set the CURRENT_USERNAME from the database
+                    // Always retrieve and set the CURRENT_USERNAME from the database
                     CURRENT_USERNAME = data.username || defaultUsername; 
-                    usernameInput.value = CURRENT_USERNAME;
 
                 } else {
                     friendCodeDisplay.textContent = 'Generating...';
@@ -538,7 +524,6 @@
                     
                     friendCodeDisplay.textContent = newCode;
                     CURRENT_USERNAME = defaultUsername;
-                    usernameInput.value = CURRENT_USERNAME;
                 }
             } catch (error) {
                 console.error("Profile/Friend Code Setup Failed:", error);
@@ -607,7 +592,7 @@
                  return;
             }
             
-            // NOTE: The feed already uses an onSnapshot listener, fulfilling one of the user's requests.
+            // The feed uses an onSnapshot listener for real-time updates
             const photosQuery = query(
                 DAILY_PHOTO_COLLECTION,
                 where('creatorUid', 'in', uidsToQuery),
@@ -628,7 +613,7 @@
                         } else if (change.type === 'modified' || change.type === 'added') {
                             const existingThumb = document.querySelector(`.photo-thumbnail[data-photo-id="${docId}"]`);
                             if (existingThumb) {
-                                // Update username and heart count in existing thumbnail
+                                // Update username in existing thumbnail
                                 const nameEl = existingThumb.querySelector('.overlay-content span:first-child');
                                 if (nameEl) nameEl.textContent = data.creatorUsername; 
                                 
@@ -673,6 +658,7 @@
             
             const img = document.createElement('img');
             img.src = photoData.imageBase64;
+            // Uses creatorUsername from post data
             img.alt = `${photoData.title || 'Photo'} by ${photoData.creatorUsername}`; 
             img.loading = 'lazy';
             
@@ -835,7 +821,7 @@
                 const newPostRef = doc(DAILY_PHOTO_COLLECTION);
                 await setDoc(newPostRef, {
                     creatorUid: user.uid,
-                    creatorUsername: CURRENT_USERNAME, 
+                    creatorUsername: CURRENT_USERNAME, // Uses the stored username
                     createdAt: serverTimestamp(),
                     imageBase64: imageBase64,
                     title: null, 
@@ -896,6 +882,7 @@
                                 let html = '';
                                 const comments = photoData.comments || [];
                                 comments.sort((a, b) => (a.timestamp?.toDate() || new Date(0)) - (b.timestamp?.toDate() || new Date(0))).forEach(comment => {
+                                    // Uses comment.username (which is the account username)
                                     html += `<div class="mb-2"><p><strong class="font-semibold">${comment.username}</strong>: ${comment.text}</p></div>`;
                                 });
                                 return html || '<p class="text-sm text-gray-500">No comments yet. Be the first!</p>';
@@ -960,7 +947,7 @@
                     try {
                         const newComment = {
                             uid: currentUser.uid,
-                            username: CURRENT_USERNAME, // Ensure CURRENT_USERNAME is used here
+                            username: CURRENT_USERNAME, // Uses the current user's account username
                             text: text,
                             timestamp: new Date()
                         };
@@ -1000,7 +987,8 @@
             const title = document.getElementById('title-edit-input').value.trim();
             
             if (!title) {
-                showMessage(usernameMessage, 'Title cannot be empty.', 'error'); 
+                // Using uploadMessage for general errors since usernameMessage was removed
+                showMessage(uploadMessage, 'Title cannot be empty.', 'error'); 
                 return;
             }
 
@@ -1013,7 +1001,7 @@
                 showMessage(uploadMessage, 'Title saved successfully! Post is now live.', 'success');
                 closeTitleModal();
             } catch (error) {
-                showMessage(usernameMessage, `Failed to save title: ${error.message}`, 'error');
+                showMessage(uploadMessage, `Failed to save title: ${error.message}`, 'error');
             }
         });
 
@@ -1061,22 +1049,6 @@
             } catch (error) {
                  showMessage(addFriendMessage, 'Failed to add friend. Check console.', 'error');
                  console.error("Add friend failed:", error);
-            }
-        });
-
-        document.getElementById('set-username-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const newUsername = usernameInput.value.trim();
-            if (!newUsername) return;
-
-            try {
-                const userProfileRef = getUserProfileDocRef(auth.currentUser.uid);
-                await updateDoc(userProfileRef, { username: newUsername });
-                CURRENT_USERNAME = newUsername; 
-                showMessage(usernameMessage, 'Username updated successfully!', 'success');
-            } catch (error) {
-                showMessage(usernameMessage, `Failed to update username: ${error.message}`, 'error');
-                console.error("Username update failed:", error);
             }
         });
 
@@ -1132,7 +1104,7 @@
 
                 friendProfiles.forEach((friendProfileSnap, index) => {
                     const friendUid = friends[index];
-                    // NOTE: This correctly fetches the username from the friend's profile.
+                    // Confirmed: This correctly fetches the username from the friend's profile.
                     const username = friendProfileSnap.exists() ? friendProfileSnap.data().username : 'Unknown User';
 
                     const div = document.createElement('div');
