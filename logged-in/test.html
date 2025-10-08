@@ -101,6 +101,7 @@
         .compact-list-items::-webkit-scrollbar-thumb { background-color: #4f46e5; border-radius: 4px; }
         .compact-list-items::-webkit-scrollbar-track { background-color: #1f2937; }
 
+        /* General style for a list item/card (Friends list & NEW Daily Posts) */
         .compact-list-item {
             background-color: transparent; 
             border-radius: 0; /* No rounding */
@@ -111,86 +112,25 @@
         }
         .compact-list-item:hover {
             background-color: #1f1f1f;
-            transform: none; /* Remove previous transform */
+            transform: none; 
         }
         .compact-list-item:last-child {
              border-bottom: none;
         }
-
-        /* Apply similar compact style to Daily Posts container */
-        #daily-posts-container.compact-grid {
-            gap: 0.25rem; /* Very little spacing */
-            margin-top: 0.5rem;
-        }
-
-        /* Adjust Daily Post slots to be less "bubbly" and shorter/wider */
-        .user-post-slot, .user-post-empty, .user-post-locked, .user-post-deleted {
-            padding: 0.25rem; /* Less padding inside slot */
-            border-radius: 0.5rem; /* Less bubbly corners */
-            aspect-ratio: 1 / 1.25; /* Shorter/Wider */
-            box-shadow: none; /* Remove aggressive shadow */
-        }
-
-        .user-post-slot:hover, .user-post-empty:hover {
-            transform: translateY(-4px) scale(1.04) !important;
-            box-shadow: 0 8px 15px rgba(79, 70, 229, 0.4);
-        }
-
-        .user-post-slot .post-info-overlay {
-            border-radius: 0.5rem; /* Match slot corners */
-        }
-        /* --- END Compact List Styling --- */
-
-
-        /* --- Feed Grid (Masonry-like) --- */
-        .photo-grid {
-            columns: 3 300px;
-            column-gap: 1rem;
-        }
         
-        .photo-thumbnail {
-            break-inside: avoid-column;
-            margin-bottom: 1rem;
-            width: 100%;
-            border-radius: 0.5rem;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-            border: 1px solid #252525;
-            transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55), box-shadow 0.3s ease; 
-            display: block;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
-            animation: popIn 0.5s ease-out; 
+        /* NEW: Daily Post specific styles to match the friend cards */
+        .daily-post-card {
+            border-bottom: 1px solid #1a1a1a;
         }
-        .photo-thumbnail:hover { 
-            transform: translateY(-5px) scale(1.05); 
-            box-shadow: 0 15px 30px rgba(79, 70, 229, 0.4); 
+        .daily-post-card:last-child {
+             border-bottom: none;
         }
 
-        .photo-thumbnail img {
-            width: 100%;
-            height: auto;
-            display: block;
-            border-radius: 0.5rem;
-        }
-        
-        .overlay {
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 60%);
-            opacity: 1; 
-            display: flex;
-            align-items: flex-end;
-            padding: 0.75rem;
-            color: white;
-            transition: opacity 0.2s;
-        }
-        .overlay-content { display: flex; align-items: center; justify-content: space-between; width: 100%; }
 
         /* Custom scrollbar for comments */
         #comments-section {
             overflow-y: auto;
-            max-height: 12rem; 
+            max-height: 12rem; /* Approx. 3-4 comments height to enable scroll */
         }
         
         .modal-backdrop {
@@ -218,6 +158,16 @@
         #modal-content-container {
             max-width: 1000px;
         }
+        
+        #upload-menu-modal .modal-content {
+            max-width: 500px;
+        }
+        #upload-menu-modal #image-preview-container {
+             max-height: 300px;
+             overflow: hidden;
+             border-radius: 0.5rem;
+        }
+        
     </style>
 </head>
 <body class="pt-16">
@@ -237,7 +187,7 @@
     
     <div id="title-modal" class="modal-backdrop hidden opacity-0">
         <div class="modal-content w-full max-w-sm p-6 text-center">
-            <h3 class="text-xl font-bold mb-4 text-white">Add/Edit Title</h3>
+            <h3 class="text-xl font-bold mb-4 text-white">Edit Title</h3>
             <form id="edit-title-form" data-post-id="" class="flex flex-col gap-4">
                 <input type="text" id="title-edit-input" placeholder="Enter your photo title (max 50 chars)" class="p-3 bg-gray-900 border border-gray-700 rounded-md focus:ring-indigo-500" maxlength="50" required>
                 <button type="submit" class="px-4 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold w-full">Save Title</button>
@@ -246,6 +196,38 @@
         </div>
     </div>
     
+    <div id="upload-menu-modal" class="modal-backdrop hidden opacity-0">
+        <div class="modal-content w-full max-w-sm p-6">
+            <h3 id="upload-menu-title" class="text-xl font-bold mb-4 text-white">Post to Slot #1</h3>
+            
+            <input type="file" id="upload-file-input" class="hidden" accept="image/*" data-slot-index="" data-action="select-photo">
+
+            <div id="upload-select-options" class="flex flex-col gap-3 mb-6">
+                 <button id="upload-camera-btn" class="px-4 py-3 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold w-full">
+                    <i class="fas fa-camera mr-2"></i> Capture Image (Camera)
+                </button>
+                <button id="upload-photo-file-btn" class="px-4 py-3 bg-gray-700 rounded-lg hover:bg-gray-800 transition font-semibold w-full">
+                    <i class="fas fa-image mr-2"></i> Select Photo or File
+                </button>
+            </div>
+            
+            <div id="upload-post-creator" class="hidden">
+                 <div id="image-preview-container" class="mb-4 bg-gray-900 flex justify-center items-center">
+                    <img id="image-preview" src="#" alt="Image Preview" class="w-full h-auto object-cover max-h-[300px]">
+                 </div>
+                 
+                 <form id="create-post-form" class="flex flex-col gap-4">
+                    <input type="text" id="post-title-input" placeholder="Enter your photo title (max 50 chars)" class="p-3 bg-gray-900 border border-gray-700 rounded-md focus:ring-indigo-500" maxlength="50" required>
+                    <button type="submit" id="create-post-btn" class="px-4 py-3 bg-green-600 rounded-lg hover:bg-green-700 transition font-semibold w-full">
+                        <i class="fas fa-check mr-2"></i> Create Daily Post
+                    </button>
+                 </form>
+            </div>
+
+            <button id="upload-menu-close-btn" class="mt-6 text-sm text-gray-400 hover:text-white w-full">Cancel</button>
+        </div>
+    </div>
+
 
     <main id="messenger-ui" class="messenger-container" style="display: none;">
         
@@ -280,9 +262,9 @@
 
             <div class="mb-6">
                 <h2 class="text-xl font-bold mb-2">Your Daily Posts</h2>
-                <p class="text-sm text-gray-400 mb-3">You have 3 slots per day (no cheating!). Click a slot to post or edit.</p>
-                 <div id="daily-posts-wrapper" class="compact-list-wrapper">
-                    <div id="daily-posts-container" class="compact-grid">
+                <p class="text-sm text-gray-400 mb-3">You have 3 slots per day (no cheating!).</p>
+                <div id="daily-posts-wrapper" class="compact-list-wrapper">
+                    <div id="daily-posts-container">
                         </div>
                 </div>
                 <div id="upload-message" class="text-sm mt-2 min-h-[20px]"></div>
@@ -310,10 +292,10 @@
             getFirestore, doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, serverTimestamp, orderBy, deleteDoc, onSnapshot, writeBatch, limit
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
-        // --- CONFIGURATION IMPORT (Kept the original external path as requested) ---
+        // --- CONFIGURATION IMPORT ---
         import { firebaseConfig } from "../firebase-config.js";
         
-        const appId = '4sp-default-app'; // Match login.html constant
+        const appId = '4sp-default-app'; 
         const initialAuthToken = null; 
 
         // --- Initialize Firebase ---
@@ -325,7 +307,9 @@
         let CURRENT_FRIENDS = [];
         let CURRENT_USERNAME = 'DailyUser'; 
         let UNSUBSCRIBE_POSTS_LISTENER = () => {};
+        let MODAL_UNSUBSCRIBE_LISTENER = () => {}; // NEW: To store the modal listener's unsubscribe function
         let LAST_COMMENT_TIMESTAMP = 0; 
+        let PENDING_UPLOAD_FILE = null; // NEW: To hold the file during the upload process
         const COMMENT_DELAY_MS = 5000;
         const POST_SLOTS_MAX = 3;
 
@@ -346,10 +330,15 @@
         const messageModalCloseBtn = document.getElementById('message-modal-close-btn');
         const titleModal = document.getElementById('title-modal');
         const editTitleForm = document.getElementById('edit-title-form');
-        const modalCommentMessage = document.getElementById('modal-comment-message');
-        // REMOVED: usernameInput and usernameMessage elements
+        const uploadMenuModal = document.getElementById('upload-menu-modal'); // NEW
+        const uploadFileInput = document.getElementById('upload-file-input'); // NEW
+        const uploadSelectOptions = document.getElementById('upload-select-options'); // NEW
+        const uploadPostCreator = document.getElementById('upload-post-creator'); // NEW
+        const imagePreview = document.getElementById('image-preview'); // NEW
+        const createPostForm = document.getElementById('create-post-form'); // NEW
 
-        // --- Firestore Document References & Collections (UPDATED TO MATCH login.html) ---
+
+        // --- Firestore Document References & Collections ---
         const getUserProfileDocRef = (userId) => {
             // Path: artifacts/{appId}/users/{userId}/metadata/user_profile
             return doc(db, 'artifacts', appId, 'users', userId, 'metadata', 'user_profile');
@@ -361,6 +350,51 @@
         // =========================================================================
         // Helper Functions 
         // =========================================================================
+        
+        // NEW: Purgomalum API Text Cleaning
+        async function cleanText(text, type = 'text') {
+             if (!text) return '';
+             try {
+                const url = `https://www.purgomalum.com/service/plain?text=${encodeURIComponent(text)}`;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const cleanedText = await response.text();
+                return cleanedText.trim();
+            } catch (error) {
+                console.error(`Purgomalum ${type} filtering failed, using original text.`, error);
+                return text; 
+            }
+        }
+        
+        // NEW: Function to close the main photo modal and clear its listener
+        function closePhotoModal() {
+            photoModal.classList.add('hidden');
+            MODAL_UNSUBSCRIBE_LISTENER(); // Unsubscribe the real-time listener
+            MODAL_UNSUBSCRIBE_LISTENER = () => {}; // Reset the listener function
+        }
+        
+        // NEW: Functions to manage the upload menu modal
+        function openUploadMenu(slotIndex) {
+            document.getElementById('upload-menu-title').textContent = `Post to Slot #${slotIndex + 1}`;
+            uploadFileInput.dataset.slotIndex = slotIndex;
+            
+            // Reset state
+            uploadFileInput.value = '';
+            uploadSelectOptions.classList.remove('hidden');
+            uploadPostCreator.classList.add('hidden');
+            document.getElementById('post-title-input').value = '';
+            
+            uploadMenuModal.classList.remove('hidden');
+            setTimeout(() => uploadMenuModal.classList.add('opacity-100'), 10);
+        }
+        
+        function closeUploadMenu() {
+            uploadMenuModal.classList.remove('opacity-100');
+            uploadMenuModal.classList.add('opacity-0');
+            setTimeout(() => uploadMenuModal.classList.add('hidden'), 300);
+            PENDING_UPLOAD_FILE = null;
+        }
+
 
         function showMessage(element, text, type = 'error') {
             element.textContent = text;
@@ -491,11 +525,12 @@
                 const userProfileSnap = await getDoc(userProfileRef);
 
                 let defaultUsername = `DailyUser-${Math.floor(Math.random() * 8999) + 1000}`;
+                // NEW: Clean the default username with Purgomalum
+                defaultUsername = await cleanText(defaultUsername, 'username');
 
                 if (userProfileSnap.exists() && userProfileSnap.data().friendCode) {
                     const data = userProfileSnap.data();
                     friendCodeDisplay.textContent = data.friendCode;
-                    // Always retrieve and set the CURRENT_USERNAME from the database
                     CURRENT_USERNAME = data.username || defaultUsername; 
 
                 } else {
@@ -509,7 +544,6 @@
                     batch.set(userProfileRef, { 
                         friendCode: newCode,
                         friends: [],
-                        // Set unique default username on initial creation
                         username: defaultUsername, 
                         dailySlotsUsed: [], 
                         lastPostReset: serverTimestamp() 
@@ -641,47 +675,6 @@
             });
         }
 
-        function renderPhotoThumbnail(photoId, photoData, position = 'append') {
-            if (!photoData.title) return;
-            if (document.querySelector(`.photo-thumbnail[data-photo-id="${photoId}"]`)) {
-                return;
-            }
-
-            const thumb = document.createElement('div');
-            thumb.className = 'photo-thumbnail';
-            thumb.dataset.photoId = photoId;
-            
-            const img = document.createElement('img');
-            img.src = photoData.imageBase64;
-            // Uses creatorUsername from post data
-            img.alt = `${photoData.title || 'Photo'} by ${photoData.creatorUsername}`; 
-            img.loading = 'lazy';
-            
-            thumb.appendChild(img);
-
-            const overlay = document.createElement('div');
-            overlay.className = 'overlay';
-            overlay.innerHTML = `
-                <div class="overlay-content">
-                    <span class="font-semibold text-shadow-lg">${photoData.creatorUsername}</span>
-                    <span class="text-xl"><i class="fas fa-heart text-red-400 mr-1"></i> ${formatCount(photoData.hearts?.length || 0)}</span>
-                </div>
-            `;
-            thumb.appendChild(overlay);
-
-            thumb.addEventListener('click', () => openPhotoModal(photoId));
-            
-            if (position === 'prepend') {
-                 photoFeed.prepend(thumb);
-            } else {
-                 photoFeed.appendChild(thumb);
-            }
-
-            if (document.getElementById('feed-placeholder')) {
-                document.getElementById('feed-placeholder').remove();
-            }
-        }
-
         function setupDailyPostsListener(user) {
              const userProfileRef = getUserProfileDocRef(user.uid);
 
@@ -708,145 +701,171 @@
                 }, {});
 
                 for (let i = 0; i < POST_SLOTS_MAX; i++) {
-                    const slot = document.createElement('div');
                     
+                    const div = document.createElement('div');
+                    // NEW: Apply the compact-list-item and daily-post-card classes for consistent styling
+                    div.className = 'compact-list-item daily-post-card flex justify-between items-center';
+
                     if (dailySlotsUsed[i]) {
+                        // Slot is used
                         const postId = dailySlotsUsed[i];
                         const postData = postsToday[postId];
                         
+                        let name = postData ? (postData.title ? postData.title : 'TITLE MISSING') : `Slot #${i + 1} Used & Deleted`;
+                        let buttonHtml = postData 
+                            ? `<button class="view-post-btn text-indigo-400 hover:text-indigo-500 transition px-2 py-1" title="View Post">
+                                    <i class="fas fa-eye"></i>
+                                </button>`
+                            : `<span class="text-red-400 text-sm">Used</span>`;
+                        
+                        div.innerHTML = `
+                             <span class="font-semibold">${name}</span>
+                             ${buttonHtml}
+                        `;
+                        
                         if (postData) {
-                            slot.className = 'user-post-slot group';
-                            
-                            slot.innerHTML = `
-                                <img src="${postData.imageBase64}" class="w-full h-full object-cover rounded-2xl">
-                                <div class="post-info-overlay text-white text-center rounded-2xl">
-                                    <p class="text-sm font-bold">${postData.title ? postData.title : 'TITLE MISSING'}</p>
-                                    <span class="text-lg font-mono my-1"><i class="fas fa-heart text-red-400 mr-1"></i> ${formatCount(postData.hearts?.length || 0)}</span>
-                                    ${postData.title ? '<p class="text-xs text-gray-300 mt-2">View Post</p>' : '<button class="bg-indigo-600 text-white text-xs px-2 py-1 rounded-full mt-2 hover:bg-indigo-700">Add Title</button>'}
-                                </div>
-                            `;
-
-                            slot.addEventListener('click', () => {
-                                if (!postData.title) {
-                                     openTitleModal(postId, postData.title);
-                                } else {
-                                     openPhotoModal(postId);
-                                }
-                            });
-
-                        } else {
-                            slot.className = 'user-post-deleted';
-                            slot.title = "This slot was used today and cannot be reused (No Cheating!).";
-                            slot.innerHTML = `
-                                <div class="h-full w-full flex flex-col justify-center items-center">
-                                    <i class="fas fa-ban text-lg mb-2"></i>
-                                    <p class="text-center text-xs">Slot #${i + 1} Used & Deleted.</p>
-                                </div>
-                            `;
-                            slot.style.cursor = 'not-allowed';
+                             div.querySelector('.view-post-btn').addEventListener('click', () => {
+                                 // If title is missing, prompt to add it via the old modal (reusing logic)
+                                 if (!postData.title) {
+                                      openTitleModal(postId, postData.title);
+                                 } else {
+                                      openPhotoModal(postId);
+                                 }
+                             });
                         }
-
                     } else if (i === dailySlotsUsed.length) {
-                        slot.className = 'user-post-empty group';
-                        slot.innerHTML = `
-                            <div class="h-full w-full flex flex-col justify-center items-center p-2">
-                                <h4 class="font-extrabold text-sm mb-2">Post #${i + 1}</h4>
-                                <label for="photo-upload-${i}" class="block w-full text-center text-xs font-semibold p-2 transition rounded-full cursor-pointer hover:bg-gray-900 border border-indigo-400">
-                                    <i class="fas fa-camera mr-1"></i> Upload Photo
-                                </label>
-                            </div>
-                            <input type="file" id="photo-upload-${i}" class="hidden" accept="image/*" data-slot-index="${i}">
+                        // Next available slot
+                        div.innerHTML = `
+                            <span class="font-semibold text-gray-400">Post #${i + 1}</span>
+                            <button data-slot-index="${i}" class="open-upload-menu-btn px-3 py-1 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold text-white" title="Upload Photo">
+                                <i class="fas fa-image"></i>
+                            </button>
                         `;
-
-                        // Re-attach listeners after innerHTML update
-                        setTimeout(() => {
-                            const uploadInput = document.getElementById(`photo-upload-${i}`);
-                            if (uploadInput) {
-                                uploadInput.addEventListener('change', (e) => handlePhotoUploadLogic(e, user));
-                                // Listener to click the hidden input when the slot is clicked
-                                slot.addEventListener('click', (e) => {
-                                    if (e.target.tagName !== 'INPUT') { 
-                                        uploadInput.click();
-                                    }
-                                });
-                            }
-                        }, 0);
-
+                        div.querySelector('.open-upload-menu-btn').addEventListener('click', (e) => {
+                            openUploadMenu(parseInt(e.currentTarget.dataset.slotIndex));
+                        });
+                        
                     } else {
-                        slot.className = 'user-post-locked';
-                         slot.innerHTML = `
-                            <div class="h-full w-full flex flex-col justify-center items-center">
-                                <i class="fas fa-lock text-lg mb-2"></i>
-                                <p class="text-center text-xs">Slot #${i + 1} Locked. Post to #${i} first.</p>
-                            </div>
+                        // Locked slot
+                        div.innerHTML = `
+                            <span class="font-semibold text-gray-600">Post #${i + 1}</span>
+                            <span class="text-gray-600"><i class="fas fa-lock"></i> Locked</span>
                         `;
-                        slot.style.cursor = 'not-allowed';
                     }
-                    dailyPostsContainer.appendChild(slot);
+                    dailyPostsContainer.appendChild(div);
                 }
             });
             return [unsubscribeProfile]; 
         }
-
-        async function handlePhotoUploadLogic(e, user) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            const uploadInput = e.target;
-            const uploadSlot = uploadInput.closest('.user-post-empty');
-            const uploadBtnLabel = uploadSlot.querySelector('label');
+        
+        // Refactored upload logic to use the new modal/flow
+        async function handlePostCreationLogic(file, slotIndex) {
+            const currentUser = auth.currentUser;
+            const userProfileRef = getUserProfileDocRef(currentUser.uid);
             
-            uploadBtnLabel.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Processing...`;
-            uploadBtnLabel.classList.add('pointer-events-none', 'bg-gray-800');
-
-            const userProfileRef = getUserProfileDocRef(user.uid);
-            const userProfileSnap = await getDoc(userProfileRef);
-            const dailySlotsUsed = userProfileSnap.data().dailySlotsUsed || [];
-            
-            if (dailySlotsUsed.length >= POST_SLOTS_MAX) {
-                showMessage(uploadMessage, 'You have reached your daily limit of 3 posts.', 'error');
-                uploadBtnLabel.innerHTML = `<i class="fas fa-camera mr-1"></i> Upload Photo`;
-                uploadBtnLabel.classList.remove('pointer-events-none', 'bg-gray-800');
+            // 1. Get title and clean it
+            const titleInput = document.getElementById('post-title-input');
+            const title = titleInput.value.trim();
+            if (!title) {
+                showMessage(uploadMessage, 'Title cannot be empty.', 'error');
                 return;
             }
+            const cleanedTitle = await cleanText(title, 'post title');
+            
+            // 2. Disable button
+            const createBtn = document.getElementById('create-post-btn');
+            createBtn.disabled = true;
+            createBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Creating Post...`;
 
             try {
+                // 3. Check slot again and compress
+                const userProfileSnap = await getDoc(userProfileRef);
+                const dailySlotsUsed = userProfileSnap.data().dailySlotsUsed || [];
+                
+                if (dailySlotsUsed.length !== slotIndex) {
+                    throw new Error("Slot index mismatch. Please refresh.");
+                }
+
                 const imageBase64 = await compressImage(file);
                 
+                // 4. Write to Firestore
                 const newPostRef = doc(DAILY_PHOTO_COLLECTION);
                 await setDoc(newPostRef, {
-                    creatorUid: user.uid,
-                    creatorUsername: CURRENT_USERNAME, // Uses the stored username
+                    creatorUid: currentUser.uid,
+                    creatorUsername: CURRENT_USERNAME, 
                     createdAt: serverTimestamp(),
                     imageBase64: imageBase64,
-                    title: null, 
+                    title: cleanedTitle, 
                     hearts: [],
                     comments: [],
                 });
                 
+                // 5. Update user profile
                 await updateDoc(userProfileRef, {
                     dailySlotsUsed: arrayUnion(newPostRef.id)
                 });
 
-                showMessage(uploadMessage, 'Photo uploaded! Click the slot to add a title.', 'success');
+                closeUploadMenu();
+                showMessage(uploadMessage, 'Post created and is now live!', 'success');
             } catch (error) {
-                console.error("Upload error:", error);
-                showMessage(uploadMessage, `Upload failed: ${error.message || error}`);
+                console.error("Post creation error:", error);
+                showMessage(uploadMessage, `Post creation failed: ${error.message || error}`);
             } finally {
-                uploadInput.value = ''; 
+                createBtn.disabled = false;
+                createBtn.innerHTML = `<i class="fas fa-check mr-2"></i> Create Daily Post`;
             }
         }
+        
+        // NEW: Event listener for file input change
+        uploadFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) {
+                // If selection is cancelled, reset to options
+                uploadSelectOptions.classList.remove('hidden');
+                uploadPostCreator.classList.add('hidden');
+                PENDING_UPLOAD_FILE = null;
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                imagePreview.src = event.target.result;
+                PENDING_UPLOAD_FILE = file; // Store the file
+                
+                // Show preview/title section
+                uploadSelectOptions.classList.add('hidden');
+                uploadPostCreator.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // NEW: Event listener for final post creation form submit
+        createPostForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const slotIndex = parseInt(uploadFileInput.dataset.slotIndex);
+            if (PENDING_UPLOAD_FILE) {
+                handlePostCreationLogic(PENDING_UPLOAD_FILE, slotIndex);
+            } else {
+                showMessage(uploadMessage, 'No image selected to create post.', 'error');
+            }
+        });
+        
         
         function openPhotoModal(photoId) {
             const photoRef = doc(DAILY_PHOTO_COLLECTION, photoId);
             const currentUser = auth.currentUser;
             
+            // Unsubscribe from any previous modal listener before starting a new one
+            MODAL_UNSUBSCRIBE_LISTENER(); 
+
             // This onSnapshot listener ensures the modal content is real-time
-            onSnapshot(photoRef, (updatedSnap) => {
+            MODAL_UNSUBSCRIBE_LISTENER = onSnapshot(photoRef, (updatedSnap) => {
                 const modalContentContainer = document.getElementById('modal-content-container');
+                
+                // FIX: Close modal if the post document no longer exists
                 if (!updatedSnap.exists()) {
-                    photoModal.classList.add('hidden');
-                    showCustomModal("Post Expired", "This daily photo has expired and been deleted.");
+                    closePhotoModal();
+                    showCustomModal("Post Expired", "This daily photo has expired or has been deleted.");
                     return; 
                 }
                 
@@ -855,7 +874,7 @@
                 const hasHearted = hearts.includes(currentUser.uid);
 
                 if (!photoData.title) {
-                    photoModal.classList.add('hidden');
+                    closePhotoModal();
                     openTitleModal(photoId);
                     return;
                 }
@@ -877,7 +896,6 @@
                                 let html = '';
                                 const comments = photoData.comments || [];
                                 comments.sort((a, b) => (a.timestamp?.toDate() || new Date(0)) - (b.timestamp?.toDate() || new Date(0))).forEach(comment => {
-                                    // Uses comment.username (which is the account username)
                                     html += `<div class="mb-2"><p><strong class="font-semibold">${comment.username}</strong>: ${comment.text}</p></div>`;
                                 });
                                 return html || '<p class="text-sm text-gray-500">No comments yet. Be the first!</p>';
@@ -893,7 +911,7 @@
                         <div id="modal-comment-message" class="text-sm min-h-[20px]"></div>
 
                         <form id="comment-form" class="flex gap-2">
-                            <input type="text" id="comment-input" placeholder="Add a comment..." class="flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md">
+                            <input type="text" id="comment-input" placeholder="Add a comment (max 500 chars)..." class="flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md" maxlength="500">
                             <button type="submit" id="comment-submit-btn" class="px-3 py-2 bg-indigo-600 rounded-md font-semibold" title="Post Comment">
                                 <i class="fas fa-comment"></i>
                             </button>
@@ -913,7 +931,8 @@
                         const confirmed = await showCustomModal("Confirm Deletion", "Are you sure you want to delete this post? **Your daily post slot WILL NOT be freed up.**");
                         if (confirmed) {
                             await deleteDoc(photoRef);
-                            photoModal.classList.add('hidden');
+                            // The MODAL_UNSUBSCRIBE_LISTENER handles the closure, but we can call it here for immediate feedback
+                            closePhotoModal(); 
                             showMessage(uploadMessage, 'Post deleted, but the daily slot is still used.', 'success');
                         }
                     });
@@ -923,15 +942,15 @@
                     e.preventDefault();
                     const commentInput = document.getElementById('comment-input');
                     const submitBtn = document.getElementById('comment-submit-btn');
-                    const commentMessageElement = document.getElementById('modal-comment-message'); // Get the new element
-                    const text = commentInput.value.trim();
+                    const commentMessageElement = document.getElementById('modal-comment-message'); 
+                    let text = commentInput.value.trim();
                     const now = Date.now();
                     
                     if (!text) return;
+                    if (text.length > 500) text = text.substring(0, 500); // Enforce client-side limit for extra safety
 
                     if (now - LAST_COMMENT_TIMESTAMP < COMMENT_DELAY_MS) {
                         const remaining = Math.ceil((COMMENT_DELAY_MS - (now - LAST_COMMENT_TIMESTAMP)) / 1000);
-                        // Use the modal-specific message element
                         showMessage(commentMessageElement, `Please wait ${remaining} seconds before commenting again.`, 'error');
                         return;
                     }
@@ -940,18 +959,20 @@
                     submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
                     
                     try {
+                        // NEW: Clean the comment text
+                        const cleanedText = await cleanText(text, 'comment');
+
                         const newComment = {
                             uid: currentUser.uid,
-                            username: CURRENT_USERNAME, // Uses the current user's account username
-                            text: text,
-                            timestamp: new Date()
+                            username: CURRENT_USERNAME, 
+                            text: cleanedText, // Use the cleaned text
+                            timestamp: serverTimestamp()
                         };
                         await updateDoc(photoRef, { comments: arrayUnion(newComment) });
                         commentInput.value = '';
                         LAST_COMMENT_TIMESTAMP = now; 
-                        commentMessageElement.textContent = ''; // Clear message on success
+                        commentMessageElement.textContent = ''; 
                     } catch(error) {
-                         // Use the modal-specific message element
                          showMessage(commentMessageElement, `Comment failed: ${error.message || error}`, 'error'); 
                          console.error("Commenting error:", error);
                     } finally {
@@ -959,14 +980,19 @@
                         submitBtn.innerHTML = `<i class="fas fa-comment"></i>`;
                     }
                 });
+            }, (error) => {
+                // If the listener fails completely
+                 console.error("Modal listener failed:", error);
+                 closePhotoModal();
             });
+            
             photoModal.classList.remove('hidden');
         }
         
         // Modal closing handlers
         photoModal.addEventListener('click', (e) => {
             if (e.target === photoModal) { 
-                photoModal.classList.add('hidden');
+                closePhotoModal();
             }
         });
 
@@ -976,21 +1002,42 @@
             }
         });
 
+        uploadMenuModal.addEventListener('click', (e) => {
+             if (e.target === uploadMenuModal || e.target === document.getElementById('upload-menu-close-btn')) { 
+                closeUploadMenu();
+            }
+        });
+
+        // NEW: Upload menu button handlers
+        document.getElementById('upload-camera-btn').addEventListener('click', () => {
+             // Set the input's capture attribute to 'user' to hint the camera
+             uploadFileInput.setAttribute('capture', 'user');
+             uploadFileInput.click();
+        });
+
+        document.getElementById('upload-photo-file-btn').addEventListener('click', () => {
+             // Remove the capture attribute to allow file/photo selection
+             uploadFileInput.removeAttribute('capture');
+             uploadFileInput.click();
+        });
+
+
         editTitleForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const postId = e.currentTarget.dataset.postId;
             const title = document.getElementById('title-edit-input').value.trim();
             
             if (!title) {
-                // Now reporting to the upload message element since usernameMessage was removed
                 showMessage(uploadMessage, 'Title cannot be empty.', 'error'); 
                 return;
             }
 
             try {
-                // Ensure post has the latest CURRENT_USERNAME when title is set
+                // NEW: Clean the title before saving
+                const cleanedTitle = await cleanText(title, 'post title');
+                
                 await updateDoc(doc(DAILY_PHOTO_COLLECTION, postId), { 
-                    title: title,
+                    title: cleanedTitle,
                     creatorUsername: CURRENT_USERNAME 
                 });
                 showMessage(uploadMessage, 'Title saved successfully! Post is now live.', 'success');
@@ -1008,9 +1055,8 @@
         addFriendForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const friendCodeInput = document.getElementById('friend-code-input');
-            // Ensure input is only alphanumeric and capitalized
             const code = friendCodeInput.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-            friendCodeInput.value = code; // Reflect clean, capitalized input
+            friendCodeInput.value = code; 
             
             const currentUser = auth.currentUser;
             
@@ -1082,13 +1128,12 @@
             onSnapshot(getUserProfileDocRef(user.uid), async (docSnap) => {
                 const friends = docSnap.data()?.friends || [];
                 
-                // Optimization: skip update if friend list content hasn't changed
                 if (friends.length === CURRENT_FRIENDS.length && friends.every((val, index) => val === CURRENT_FRIENDS[index])) {
                     return;
                 }
 
                 CURRENT_FRIENDS = friends; 
-                setupFriendsFeedListener(user); // Restart feed listener with new friend list
+                setupFriendsFeedListener(user); 
 
                 const container = friendsListItems; 
                 container.innerHTML = ''; 
@@ -1102,11 +1147,9 @@
 
                 friendProfiles.forEach((friendProfileSnap, index) => {
                     const friendUid = friends[index];
-                    // Confirmed: This correctly fetches the username from the friend's profile.
                     const username = friendProfileSnap.exists() ? friendProfileSnap.data().username : 'Unknown User';
 
                     const div = document.createElement('div');
-                    // Changed to compact-list-item
                     div.className = 'compact-list-item flex justify-between items-center';
                     div.innerHTML = `
                         <span class="font-semibold">${username}</span>
@@ -1120,7 +1163,6 @@
                 container.querySelectorAll('.remove-friend-btn').forEach(button => {
                     button.addEventListener('click', async (e) => {
                         e.preventDefault();
-                        // Find the closest button element to ensure the click target is correct
                         const friendUidToRemove = e.target.closest('button').dataset.uid;
                         
                         const batch = writeBatch(db);
