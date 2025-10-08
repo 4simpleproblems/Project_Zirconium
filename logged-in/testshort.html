@@ -246,6 +246,7 @@
 </head>
 <body class="pt-16">
     
+    <!-- STANDARD MESSAGE MODAL -->
     <div id="message-modal" class="modal-backdrop hidden opacity-0">
         <div class="modal-content w-full max-w-sm p-6 text-center">
             <h3 id="message-modal-title" class="text-xl font-bold mb-4 text-white"></h3>
@@ -254,15 +255,18 @@
         </div>
     </div>
 
+    <!-- PHOTO VIEW MODAL -->
     <div id="photo-modal" class="modal-backdrop hidden">
         <div id="modal-content-container" class="modal-content flex flex-col md:flex-row gap-6">
             </div>
     </div>
     
+    <!-- TITLE EDIT MODAL (REUSED FOR NOW, BUT OBSOLETE BY NEW UPLOAD MODAL) -->
     <div id="title-modal" class="modal-backdrop hidden opacity-0">
         <div class="modal-content w-full max-w-sm p-6 text-center">
             <h3 class="text-xl font-bold mb-4 text-white">Edit Title</h3>
             <form id="edit-title-form" data-post-id="" class="flex flex-col gap-4">
+                <!-- UPDATED: max length to 48 chars -->
                 <input type="text" id="title-edit-input" placeholder="Enter your photo title (max 48 chars)" class="p-3 bg-gray-900 border border-gray-700 rounded-md focus:ring-indigo-500" maxlength="48" required>
                 <button type="submit" class="px-4 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold w-full">Save Title</button>
             </form>
@@ -270,27 +274,34 @@
         </div>
     </div>
     
+    <!-- NEW: UPLOAD MENU MODAL -->
     <div id="upload-menu-modal" class="modal-backdrop hidden opacity-0">
         <div class="modal-content w-full max-w-sm p-6">
             <h3 id="upload-menu-title" class="text-xl font-bold mb-4 text-white">Post to Slot #1</h3>
             
+            <!-- Hidden File Input for Image Selection (One input for all methods) -->
             <input type="file" id="upload-file-input" class="hidden" accept="image/*" data-slot-index="" data-action="select-photo">
 
+            <!-- Initial selection buttons -->
             <div id="upload-select-options" class="flex flex-col gap-3 mb-6">
-                 <button id="upload-camera-btn" class="px-4 py-3 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold w-full">
+                 <!-- The 'capture' attribute for camera, works on mobile. -->
+                <button id="upload-camera-btn" class="px-4 py-3 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold w-full">
                     <i class="fas fa-camera mr-2"></i> Capture Image (Camera)
                 </button>
+                <!-- Separate button to trigger file/photo selection -->
                 <button id="upload-photo-file-btn" class="px-4 py-3 bg-gray-700 rounded-lg hover:bg-gray-800 transition font-semibold w-full">
                     <i class="fas fa-image mr-2"></i> Select Photo or File
                 </button>
             </div>
             
+            <!-- Image Preview and Title Input (Hidden until file is selected) -->
             <div id="upload-post-creator" class="hidden">
                  <div id="image-preview-container" class="mb-4 bg-gray-900 flex justify-center items-center">
                     <img id="image-preview" src="#" alt="Image Preview" class="w-full h-auto object-cover max-h-[300px]">
                  </div>
                  
                  <form id="create-post-form" class="flex flex-col gap-4">
+                    <!-- UPDATED: max length to 48 chars -->
                     <input type="text" id="post-title-input" placeholder="Enter your photo title (max 48 chars)" class="p-3 bg-gray-900 border border-gray-700 rounded-md focus:ring-indigo-500" maxlength="48" required>
                     <button type="submit" id="create-post-btn" class="px-4 py-3 bg-green-600 rounded-lg hover:bg-green-700 transition font-semibold w-full">
                         <i class="fas fa-check mr-2"></i> Create Daily Post
@@ -330,16 +341,19 @@
                 <h2 class="text-xl font-bold mb-3">Your Friends</h2>
                 <div id="friends-list-wrapper" class="compact-list-wrapper">
                     <div id="friends-list-items" class="compact-list-items">
-                        </div>
+                        <!-- Friend cards rendered here -->
+                    </div>
                 </div>
             </div>
 
             <div class="mb-6">
                 <h2 class="text-xl font-bold mb-2">Your Daily Posts</h2>
                 <p class="text-sm text-gray-400 mb-3">You have 3 slots per day (no cheating!).</p>
+                <!-- NEW: Daily Post Slots now use the compact-list-wrapper -->
                 <div id="daily-posts-wrapper" class="compact-list-wrapper">
                     <div id="daily-posts-container">
-                        </div>
+                        <!-- Daily Post Cards rendered here -->
+                    </div>
                 </div>
                 <div id="upload-message" class="text-sm mt-2 min-h-[20px]"></div>
             </div>
@@ -1037,9 +1051,11 @@
                                 let html = '';
                                 const comments = photoData.comments || [];
                                 comments.sort((a, b) => (a.timestamp?.toDate() || new Date(0)) - (b.timestamp?.toDate() || new Date(0))).forEach(comment => {
-                                    html += `<div class="mb-2"><p><strong class="font-semibold">${comment.username}</strong>: ${comment.text}</p></div>`;
+                                    // ADDED `break-words` class to prevent horizontal overflow from long unbroken strings.
+                                    html += `<div class="mb-2"><p class="break-words"><strong class="font-semibold">${comment.username}</strong>: ${comment.text}</p></div>`;
                                 });
-                                return html || '<p class="text-sm text-gray-500">No comments yet. Be the first!</p>';
+                                // ADDED `break-words` to placeholder as well for consistency.
+                                return html || '<p class="text-sm text-gray-500 break-words">No comments yet. Be the first!</p>';
                             })()}
                         </div>
                         <div class="flex items-center gap-4 mb-4 pt-3 border-t border-gray-800">
@@ -1052,6 +1068,7 @@
                         <div id="modal-comment-message" class="text-sm min-h-[20px]"></div>
 
                         <form id="comment-form" class="flex gap-2">
+                            <!-- UPDATED: max length to 480 chars -->
                             <input type="text" id="comment-input" placeholder="Add a comment (max 480 chars)..." class="flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md" maxlength="480">
                             <button type="submit" id="comment-submit-btn" class="px-3 py-2 bg-indigo-600 rounded-md font-semibold" title="Post Comment">
                                 <i class="fas fa-comment"></i>
@@ -1240,8 +1257,10 @@
             
             try {
                 const batch = writeBatch(db);
-                batch.update(getUserProfileDocRef(currentUser.uid), { friends: arrayUnion(friendUid) });
-                batch.update(getUserProfileDocRef(friendUid), { friends: arrayUnion(currentUser.uid) });
+                // UPDATED: Use set with merge:true for robustness. This creates the document if it doesn't exist,
+                // preventing errors if a user has a code but their profile doc is missing for some reason.
+                batch.set(getUserProfileDocRef(currentUser.uid), { friends: arrayUnion(friendUid) }, { merge: true });
+                batch.set(getUserProfileDocRef(friendUid), { friends: arrayUnion(currentUser.uid) }, { merge: true });
                 await batch.commit();
 
                 showMessage(addFriendMessage, 'Friend added successfully!', 'success');
@@ -1299,9 +1318,10 @@
                     return;
                 }
                 
-                // Fetch each friend's profile document individually (similar to initial user setup) and render immediately.
-                for (const friendUid of friends) {
-                    const friendProfileSnap = await getDoc(getUserProfileDocRef(friendUid));
+                const friendProfiles = await Promise.all(friends.map(uid => getDoc(getUserProfileDocRef(uid))));
+
+                friendProfiles.forEach((friendProfileSnap, index) => {
+                    const friendUid = friends[index];
                     const username = friendProfileSnap.exists() ? friendProfileSnap.data().username : 'Unknown User';
 
                     const div = document.createElement('div');
@@ -1313,20 +1333,22 @@
                         </button>
                     `;
                     container.appendChild(div);
+                });
 
-                    // Attach listener directly to the created button
-                    div.querySelector('.remove-friend-btn').addEventListener('click', async (e) => {
+                container.querySelectorAll('.remove-friend-btn').forEach(button => {
+                    button.addEventListener('click', async (e) => {
                         e.preventDefault();
-                        // friendUid is correctly closed over by the loop
+                        // Find the closest button element to ensure the click target is correct
+                        const friendUidToRemove = e.target.closest('button').dataset.uid;
                         
                         const batch = writeBatch(db);
-                        batch.update(getUserProfileDocRef(user.uid), { friends: arrayRemove(friendUid) });
-                        batch.update(getUserProfileDocRef(friendUid), { friends: arrayRemove(user.uid) });
+                        batch.update(getUserProfileDocRef(user.uid), { friends: arrayRemove(friendUidToRemove) });
+                        batch.update(getUserProfileDocRef(friendUidToRemove), { friends: arrayRemove(user.uid) });
                         await batch.commit();
 
                         showMessage(addFriendMessage, 'Friend removed successfully!', 'success');
                     });
-                }
+                });
             });
         }
         
