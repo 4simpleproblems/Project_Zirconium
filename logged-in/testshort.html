@@ -71,22 +71,7 @@
         }
 
         /* --- Custom Friend Code Input Styling (8 character underlines) --- */
-        .friend-code-input-styled {
-            /* Create 8 repeating lines for each character space */
-            background-image: linear-gradient(to right, #252525 0%, #252525 90%);
-            background-size: 12.5% 2px; /* 100% / 8 slots = 12.5% width per segment */
-            background-repeat: repeat-x;
-            background-position: 0 90%;
-            letter-spacing: 0.5rem !important; /* Spacing between characters */
-            padding-left: 0.75rem !important;
-            padding-right: 0.75rem !important;
-            border: none !important;
-            box-shadow: none !important;
-        }
-        .friend-code-input-styled:focus {
-             /* Change color on focus */
-             background-image: linear-gradient(to right, #4f46e5 0%, #4f46e5 90%);
-        }
+        /* Removed as the 8-box system is now used */
         
         /* --- Compact List Styling for Friends and Daily Posts --- */
         .compact-list-wrapper {
@@ -330,10 +315,19 @@
 
             <div class="mb-6 border-b border-gray-800 pb-4">
                 <h2 class="text-xl font-bold mb-2">Add a Friend</h2>
-                <form id="add-friend-form" class="flex gap-2">
-                    <input type="text" id="friend-code-input" placeholder="********" maxlength="8" class="friend-code-input-styled flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase tracking-widest text-center" style="font-family: monospace;" pattern="[A-Z0-9]{8}" title="8 alphanumeric characters only">
-                    <button type="submit" class="px-3 py-2 bg-indigo-600 rounded-md hover:bg-indigo-700 transition font-semibold" title="Send Request">
-                        <i class="fas fa-user-plus"></i>
+                <form id="add-friend-form" class="flex flex-col gap-3">
+                    <div id="friend-code-input-container" class="flex justify-between items-center gap-1">
+                        <input type="text" class="code-box w-full p-2 bg-gray-900 border border-gray-700 rounded-md text-center text-lg font-mono uppercase focus:ring-2 focus:ring-indigo-500" maxlength="1" data-index="0" inputmode="text" title="Enter character 1">
+                        <input type="text" class="code-box w-full p-2 bg-gray-900 border border-gray-700 rounded-md text-center text-lg font-mono uppercase focus:ring-2 focus:ring-indigo-500" maxlength="1" data-index="1" inputmode="text" title="Enter character 2">
+                        <input type="text" class="code-box w-full p-2 bg-gray-900 border border-gray-700 rounded-md text-center text-lg font-mono uppercase focus:ring-2 focus:ring-indigo-500" maxlength="1" data-index="2" inputmode="text" title="Enter character 3">
+                        <input type="text" class="code-box w-full p-2 bg-gray-900 border border-gray-700 rounded-md text-center text-lg font-mono uppercase focus:ring-2 focus:ring-indigo-500" maxlength="1" data-index="3" inputmode="text" title="Enter character 4">
+                        <input type="text" class="code-box w-full p-2 bg-gray-900 border border-gray-700 rounded-md text-center text-lg font-mono uppercase focus:ring-2 focus:ring-indigo-500" maxlength="1" data-index="4" inputmode="text" title="Enter character 5">
+                        <input type="text" class="code-box w-full p-2 bg-gray-900 border border-gray-700 rounded-md text-center text-lg font-mono uppercase focus:ring-2 focus:ring-indigo-500" maxlength="1" data-index="5" inputmode="text" title="Enter character 6">
+                        <input type="text" class="code-box w-full p-2 bg-gray-900 border border-gray-700 rounded-md text-center text-lg font-mono uppercase focus:ring-2 focus:ring-indigo-500" maxlength="1" data-index="6" inputmode="text" title="Enter character 7">
+                        <input type="text" class="code-box w-full p-2 bg-gray-900 border border-gray-700 rounded-md text-center text-lg font-mono uppercase focus:ring-2 focus:ring-indigo-500" maxlength="1" data-index="7" inputmode="text" title="Enter character 8">
+                    </div>
+                    <button type="submit" class="px-3 py-2 bg-indigo-600 rounded-md hover:bg-indigo-700 transition font-semibold w-full" title="Send Request">
+                        Add Friend <i class="fas fa-user-plus ml-1"></i>
                     </button>
                 </form>
                 <div id="add-friend-message" class="text-sm mt-2 min-h-[20px]"></div>
@@ -424,6 +418,8 @@
         const uploadPostCreator = document.getElementById('upload-post-creator'); 
         const imagePreview = document.getElementById('image-preview'); 
         const createPostForm = document.getElementById('create-post-form'); 
+        // NEW: Friend code boxes element list
+        const codeBoxes = document.querySelectorAll('.code-box');
 
 
         // --- Firestore Document References & Collections ---
@@ -581,6 +577,36 @@
                     img.onerror = reject;
                 };
                 reader.onerror = reject;
+            });
+        }
+        
+        // ** NEW BACKEND LOGIC: Friend Code Lookup with Retry **
+        function getFriendCodeDocSnapWithRetry(code) {
+            return new Promise(async (resolve, reject) => {
+                const attemptLookup = async (attempt) => {
+                    const codeDocSnap = await getDoc(getFriendCodeDocRef(code));
+                    
+                    if (codeDocSnap.exists()) {
+                        resolve(codeDocSnap);
+                        return;
+                    }
+
+                    if (attempt < 2) { // Total of 2 attempts
+                        console.warn(`Friend code lookup failed on attempt ${attempt}. Retrying in 500ms...`);
+                        // Wait 500ms to allow for Firestore eventual consistency sync
+                        await new Promise(r => setTimeout(r, 500));
+                        await attemptLookup(attempt + 1);
+                    } else {
+                        // After all attempts, if it still doesn't exist, return null
+                        resolve(null); 
+                    }
+                };
+
+                try {
+                    await attemptLookup(1);
+                } catch (error) {
+                    reject(error);
+                }
             });
         }
 
@@ -1226,12 +1252,32 @@
         // =========================================================================
         // Main Event Listeners
         // =========================================================================
+        
+        // ** NEW FRONTEND LOGIC: Auto-Flow for Friend Code Boxes **
+        codeBoxes.forEach((box, index) => {
+            // Force uppercase and limit input
+            box.addEventListener('input', (e) => {
+                const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                e.target.value = value;
+                if (value.length === 1 && index < codeBoxes.length - 1) {
+                    codeBoxes[index + 1].focus();
+                }
+            });
+            
+            // Handle backspace to move backward
+            box.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && e.target.value === '' && index > 0) {
+                    codeBoxes[index - 1].focus();
+                }
+            });
+        });
+
 
         addFriendForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const friendCodeInput = document.getElementById('friend-code-input');
-            const code = friendCodeInput.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-            friendCodeInput.value = code; 
+            
+            // 1. Compile the code from the 8 boxes
+            const code = Array.from(codeBoxes).map(input => input.value.trim().toUpperCase()).join('');
             
             const currentUser = auth.currentUser;
             const messageEl = addFriendMessage;
@@ -1239,16 +1285,19 @@
             messageEl.textContent = 'Checking code...';
             
             if (code.length !== 8) {
-                showMessage(messageEl, 'Friend code must be 8 alphanumeric characters (A-Z, 0-9).');
+                showMessage(messageEl, 'Friend code must be 8 alphanumeric characters.');
+                // Focus on the first empty box if any
+                const firstEmpty = Array.from(codeBoxes).find(box => box.value === '');
+                if (firstEmpty) firstEmpty.focus();
                 return;
             }
 
             try {
-                // *** This is the single source of truth for code lookup ***
-                const codeDocSnap = await getDoc(getFriendCodeDocRef(code));
+                // 2. *** Backend Lookup with Retry Mechanism ***
+                const codeDocSnap = await getFriendCodeDocSnapWithRetry(code);
                 
-                if (!codeDocSnap.exists()) {
-                    // This error indicates the code doesn't exist in the LOOKUP collection.
+                if (!codeDocSnap || !codeDocSnap.exists()) {
+                    // This error indicates the code doesn't exist in the LOOKUP collection, even after retry.
                     showMessage(messageEl, 'Friend code not found. Please verify the 8-character code.');
                     return;
                 }
@@ -1264,15 +1313,17 @@
                     return;
                 }
                 
+                // 3. Commit the mutual friendship update
                 const batch = writeBatch(db);
-                // 1. Add friend to current user's list (for feed/display)
+                // a. Add friend to current user's list (for feed/display)
                 batch.update(getUserProfileDocRef(currentUser.uid), { friends: arrayUnion(friendUid) });
-                // 2. Add current user to friend's list (mutual)
+                // b. Add current user to friend's list (mutual)
                 batch.update(getUserProfileDocRef(friendUid), { friends: arrayUnion(currentUser.uid) });
                 await batch.commit();
 
                 showMessage(messageEl, 'Friend added successfully!', 'success');
-                friendCodeInput.value = '';
+                codeBoxes.forEach(box => box.value = ''); // Clear boxes
+                codeBoxes[0].focus();
             } catch (error) {
                  showMessage(messageEl, 'Failed to add friend. Check console for details.', 'error');
                  console.error("Add friend failed:", error);
