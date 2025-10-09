@@ -433,8 +433,8 @@
             return doc(db, 'artifacts', appId, 'users', userId, 'metadata', 'user_profile');
         };
         const getFriendCodeDocRef = (code) => {
-            // Path: artifacts/{appId}/public/friend_codes/{code}
-            return doc(db, 'artifacts', appId, 'public', 'friend_codes', code);
+            // Path: artifacts/{appId}/public/data/friend_codes/{code}
+            return doc(db, 'artifacts', appId, 'public', 'data', 'friend_codes', code);
         };
         const DAILY_PHOTO_COLLECTION = collection(db, 'daily_photos');
 
