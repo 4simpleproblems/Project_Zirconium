@@ -401,24 +401,11 @@
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
         // --- CONFIGURATION IMPORT ---
-        // Note: The original code assumes a firebase-config.js file is available
-        // Since that file is not provided in the context, I'm providing a placeholder import.
-        const firebaseConfig = { apiKey: "", authDomain: "", projectId: "", storageBucket: "", messagingSenderId: "", appId: "" };
-        
-        const appId = '4sp-default-app'; 
-        const initialAuthToken = null; 
+        // CRITICAL FIX: Use the global variables provided by the Canvas environment.
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; 
 
-        // --- Initialize Firebase ---
-        if (!firebaseConfig || !firebaseConfig.apiKey) {
-            document.getElementById('loading-screen').innerHTML = '<p class="text-red-400">ERROR: Missing or incomplete Firebase configuration. Check the console for details.</p>';
-            console.error("Firebase Configuration Error: Configuration is missing or invalid.");
-            // throw new Error("Missing Firebase Config."); // Commented out for smoother demo
-        }
-        
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        
         // --- Global State & Constants ---
         let CURRENT_FRIENDS = [];
         let CURRENT_USERNAME = 'DailyUser'; 
@@ -428,11 +415,25 @@
         let PENDING_UPLOAD_FILE = null; 
         const COMMENT_DELAY_MS = 5000;
         const POST_SLOTS_MAX = 3;
-        const MARQUEE_TRIGGER_LENGTH = 30; // Heuristic length for marquee on thumbnail
-        let UNREAD_COMMENTS_COUNT = 0; // NEW: Global state for unread comments in modal
+        const MARQUEE_TRIGGER_LENGTH = 30; 
+        let UNREAD_COMMENTS_COUNT = 0; 
 
 
-        // --- DOM Elements ---
+        // --- Initialize Firebase ---
+        let app, auth, db;
+        
+        if (!firebaseConfig || !firebaseConfig.apiKey || !appId) {
+            document.getElementById('loading-screen').innerHTML = '<p class="text-red-400">ERROR: Missing or incomplete Firebase configuration or App ID. Check the console for details. (Likely __firebase_config or __app_id are missing)</p>';
+            console.error("Firebase Configuration Error: Configuration is missing or invalid. Check __firebase_config and __app_id global variables.");
+            // Prevent further execution if config is definitively missing
+            throw new Error("Missing Firebase Config or App ID."); 
+        }
+
+        app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+        
+        // --- DOM Elements (Must be declared after the initial error check above) ---
         const loadingScreen = document.getElementById('loading-screen');
         const messengerUi = document.getElementById('messenger-ui');
         const friendCodeDisplay = document.getElementById('friend-code-display');
@@ -455,8 +456,8 @@
         const uploadPostCreator = document.getElementById('upload-post-creator'); 
         const imagePreview = document.getElementById('image-preview'); 
         const createPostForm = document.getElementById('create-post-form'); 
-        const unreadCommentsBtn = document.getElementById('unread-comments-btn'); // NEW
-        const unreadCountSpan = document.getElementById('unread-count'); // NEW
+        const unreadCommentsBtn = document.getElementById('unread-comments-btn'); 
+        const unreadCountSpan = document.getElementById('unread-count'); 
 
 
         // --- Firestore Document References & Collections ---
@@ -511,6 +512,7 @@
         
         function handleCommentScroll(e) {
             const commentsSection = e.target;
+            // Check if user is scrolled within 5 pixels of the bottom
             const isScrolledToBottom = commentsSection.scrollHeight - commentsSection.clientHeight <= commentsSection.scrollTop + 5;
             
             if (isScrolledToBottom && UNREAD_COMMENTS_COUNT > 0) {
@@ -852,7 +854,7 @@
                 return;
             }
 
-            const commentCount = photoData.comments?.length || 0; // NEW
+            const commentCount = photoData.comments?.length || 0; 
             
             const thumb = document.createElement('div');
             thumb.className = 'photo-thumbnail';
@@ -1251,6 +1253,62 @@
             }
         });
 
+        function setupDailyPostsListener(user) {
+            onSnapshot(getUserProfileDocRef(user.uid), (docSnap) => {
+                const profileData = docSnap.data() || {};
+                const slotsUsed = profileData.dailySlotsUsed || [];
+                const container = dailyPostsContainer;
+                container.innerHTML = '';
+                
+                for (let i = 0; i < POST_SLOTS_MAX; i++) {
+                    const slot = slotsUsed.find(s => s.slotIndex === i);
+                    
+                    const card = document.createElement('div');
+                    card.className = 'compact-list-item daily-post-card flex justify-between items-center';
+                    card.dataset.slotIndex = i;
+
+                    if (slot) {
+                        // Slot is used (Post exists)
+                        card.classList.add('bg-green-900/10');
+                        card.innerHTML = `
+                            <span class="font-semibold">${slot.title.substring(0, 30)}${slot.title.length > 30 ? '...' : ''}</span>
+                            <div class="flex gap-2">
+                                <button data-post-id="${slot.postId}" class="view-post-btn text-indigo-400 hover:text-indigo-500 transition px-2 py-1" title="View Post">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button data-post-id="${slot.postId}" data-title="${slot.title}" class="edit-title-btn text-yellow-400 hover:text-yellow-500 transition px-2 py-1" title="Edit Title">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </div>
+                        `;
+                        card.querySelector('.view-post-btn').addEventListener('click', (e) => {
+                            e.preventDefault();
+                            openPhotoModal(e.currentTarget.dataset.postId);
+                        });
+                         card.querySelector('.edit-title-btn').addEventListener('click', (e) => {
+                            e.preventDefault();
+                            openTitleModal(e.currentTarget.dataset.postId, e.currentTarget.dataset.title);
+                        });
+                    } else {
+                        // Slot is empty
+                        card.classList.add('text-gray-500');
+                        card.innerHTML = `
+                            <span class="font-semibold">Slot #${i + 1} (Empty)</span>
+                            <button class="add-post-btn text-green-400 hover:text-green-500 transition px-2 py-1" title="Add Post">
+                                <i class="fas fa-plus-circle"></i>
+                            </button>
+                        `;
+                        card.querySelector('.add-post-btn').addEventListener('click', (e) => {
+                             e.preventDefault();
+                             openUploadMenu(i);
+                        });
+                    }
+                    
+                    container.appendChild(card);
+                }
+            });
+        }
+        
         function setupFriendListListener(user) {
             onSnapshot(getUserProfileDocRef(user.uid), async (docSnap) => {
                 const profileData = docSnap.data() || {};
@@ -1372,6 +1430,182 @@
                 });
             });
         }
+        
+        // --- Friend Code Submission ---
+        addFriendForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const input = document.getElementById('friend-code-input');
+            const friendCode = input.value.trim().toUpperCase();
+            input.value = '';
+
+            const currentUser = auth.currentUser;
+            if (!currentUser) {
+                showMessage(addFriendMessage, 'Authentication not ready. Please wait.', 'error');
+                return;
+            }
+
+            if (friendCode.length !== 8) {
+                showMessage(addFriendMessage, 'Friend code must be 8 characters.', 'error');
+                return;
+            }
+
+            try {
+                // 1. Check if the code exists and get the target user ID
+                const codeDocSnap = await getDoc(getFriendCodeDocRef(friendCode));
+                if (!codeDocSnap.exists()) {
+                    showMessage(addFriendMessage, 'Invalid friend code.', 'error');
+                    return;
+                }
+                const targetUid = codeDocSnap.data().userId;
+
+                if (targetUid === currentUser.uid) {
+                    showMessage(addFriendMessage, "You can't add yourself.", 'error');
+                    return;
+                }
+
+                // 2. Check current user's profile for existing friends/pending requests
+                const currentUserProfileSnap = await getDoc(getUserProfileDocRef(currentUser.uid));
+                const currentUserProfile = currentUserProfileSnap.data() || {};
+                
+                if (currentUserProfile.friends?.includes(targetUid)) {
+                    showMessage(addFriendMessage, 'You are already friends!', 'error');
+                    return;
+                }
+                
+                if (currentUserProfile.pending_requests?.includes(targetUid)) {
+                    showMessage(addFriendMessage, 'You have a pending request from this user. Accept it above!', 'error');
+                    return;
+                }
+                
+                // 3. Check target user's profile for existing requests *from* the current user
+                const targetUserProfileRef = getUserProfileDocRef(targetUid);
+                const targetUserProfileSnap = await getDoc(targetUserProfileRef);
+                const targetUserProfile = targetUserProfileSnap.data() || {};
+                
+                if (targetUserProfile.pending_requests?.includes(currentUser.uid)) {
+                    showMessage(addFriendMessage, 'Friend request already sent.', 'error');
+                    return;
+                }
+                
+                // 4. Send the friend request (add current user's UID to target's pending_requests)
+                await updateDoc(targetUserProfileRef, { 
+                    pending_requests: arrayUnion(currentUser.uid) 
+                });
+
+                showMessage(addFriendMessage, 'Friend request sent!', 'success');
+
+            } catch (error) {
+                console.error("Error sending friend request:", error);
+                showMessage(addFriendMessage, 'Failed to send request. Check console.', 'error');
+            }
+        });
+        
+        // --- Upload Logic ---
+        
+        uploadFileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            const slotIndex = parseInt(e.target.dataset.slotIndex);
+            
+            if (!file) return;
+
+            // Display loading indicator
+            uploadMenuModal.querySelector('.modal-content').classList.add('opacity-50', 'pointer-events-none');
+            document.getElementById('upload-menu-title').textContent = `Processing image for Slot #${slotIndex + 1}...`;
+            
+            try {
+                // 1. Compress Image
+                const compressedDataUrl = await compressImage(file);
+                
+                PENDING_UPLOAD_FILE = compressedDataUrl;
+                
+                // 2. Show Preview and Title Input
+                imagePreview.src = compressedDataUrl;
+                
+                uploadSelectOptions.classList.add('hidden');
+                uploadPostCreator.classList.remove('hidden');
+                
+                document.getElementById('upload-menu-title').textContent = `Add Title for Slot #${slotIndex + 1}`;
+                
+            } catch (error) {
+                console.error("Image processing failed:", error);
+                closeUploadMenu();
+                showCustomModal("Upload Failed", `Could not process the image. Please try a different file. Error: ${error.message}`);
+            } finally {
+                uploadMenuModal.querySelector('.modal-content').classList.remove('opacity-50', 'pointer-events-none');
+            }
+        });
+        
+        createPostForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const currentUser = auth.currentUser;
+            const slotIndex = parseInt(uploadFileInput.dataset.slotIndex);
+            let title = document.getElementById('post-title-input').value.trim();
+            const createPostBtn = document.getElementById('create-post-btn');
+            
+            if (!currentUser || !PENDING_UPLOAD_FILE || isNaN(slotIndex)) {
+                showMessage(uploadMessage, 'Error: Missing photo or slot information.', 'error');
+                return;
+            }
+            if (!title) {
+                showMessage(uploadMessage, 'Please enter a title for your photo.', 'error');
+                return;
+            }
+            if (title.length > 48) title = title.substring(0, 48); 
+            
+            createPostBtn.disabled = true;
+            createPostBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Creating Post...`;
+
+            try {
+                const cleanedTitle = await cleanText(title, 'post title');
+                
+                // 1. Check if slot is already used (safety check)
+                const userProfileRef = getUserProfileDocRef(currentUser.uid);
+                const userProfileSnap = await getDoc(userProfileRef);
+                const slotsUsed = userProfileSnap.data()?.dailySlotsUsed || [];
+                
+                if (slotsUsed.some(s => s.slotIndex === slotIndex)) {
+                     throw new Error("Slot already used for today.");
+                }
+
+                // 2. Create the post in the public collection (using addDoc to get a new ID)
+                const newPostRef = await doc(DAILY_PHOTO_COLLECTION);
+                
+                const postData = {
+                    creatorUid: currentUser.uid,
+                    creatorUsername: CURRENT_USERNAME, 
+                    title: cleanedTitle, 
+                    imageBase64: PENDING_UPLOAD_FILE,
+                    createdAt: serverTimestamp(),
+                    hearts: [],
+                    comments: []
+                };
+
+                await setDoc(newPostRef, postData); 
+                
+                // 3. Update the user's profile with the used slot info
+                const newSlotEntry = {
+                    slotIndex: slotIndex,
+                    postId: newPostRef.id,
+                    title: cleanedTitle,
+                    createdAt: postData.createdAt 
+                };
+                
+                await updateDoc(userProfileRef, { 
+                    dailySlotsUsed: arrayUnion(newSlotEntry) 
+                });
+                
+                showMessage(uploadMessage, `Post to Slot #${slotIndex + 1} created successfully!`, 'success');
+                closeUploadMenu();
+                
+            } catch (error) {
+                 showMessage(uploadMessage, `Post creation failed: ${error.message}`, 'error');
+                 console.error("Post Creation Error:", error);
+            } finally {
+                 createPostBtn.disabled = false;
+                 createPostBtn.innerHTML = `<i class="fas fa-check mr-2"></i> Create Daily Post`;
+            }
+        });
+
         
     </script>
 </body>
