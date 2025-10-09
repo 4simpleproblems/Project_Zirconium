@@ -26,25 +26,7 @@
             100% { box-shadow: 0 0 5px #4f46e5, 0 0 10px #4f46e5; }
         }
         
-        /* UPDATED: New, staged marquee animation that pauses and reverses */
-        @keyframes marquee-reversible {
-            /* Stage 1: Pause at the start (0% to 15% of animation time) */
-            0%, 15% { transform: translateX(0); }
-
-            /* Stage 2: Scroll to the left (15% to 50%) */
-            50% {
-                /* Scrolls left by its own width, with a small offset to keep the end visible */
-                /* This is a heuristic that works well for most title lengths */
-                transform: translateX(calc(-100% + 40px));
-            }
-
-            /* Stage 3: Pause at the far-left position (50% to 65%) */
-            65% { transform: translateX(calc(-100% + 40px)); }
-            
-            /* Stage 4: Animate back to the start (65% to 100%) */
-            100% { transform: translateX(0); }
-        }
-
+        /* NOTE: Marquee animation removed per user request */
 
         /* --- FONT & BASE STYLING (THICKENED FONT) --- */
         body { 
@@ -52,12 +34,12 @@
             background-color: #070707; 
             color: #c0c0c0; 
             transition: all 0.3s ease;
-            font-weight: 300; /* Thicker (was 200) Geist Font for general text */
+            font-weight: 300; 
         }
         
         /* Ensure headings and strong text are slightly thicker but still thin */
         h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
-            font-weight: 400 !important; /* Thicker (was 300) for emphasis */
+            font-weight: 400 !important; 
         }
 
         /* Responsive Container */
@@ -70,28 +52,28 @@
             padding: 0 1rem;
         }
 
-        /* --- CONSISTENT PANEL STYLING --- */
+        /* --- CONSISTENT PANEL STYLING (UPDATED: Slight Rounding) --- */
         .left-panel, .feed-panel { 
             background-color: #111111; 
             border: 1px solid #252525; 
-            border-radius: 0.75rem; 
+            border-radius: 1rem; /* UPDATED: Increased rounding */
             padding: 1.5rem; 
             height: fit-content;
         }
         
         /* General input styling to use thin font */
         input.p-2 {
-            font-weight: 300 !important; /* Use the new general font weight */
+            font-weight: 300 !important; 
         }
 
         /* --- Custom Friend Code Input Styling (8 character underlines) --- */
         .friend-code-input-styled {
             /* Create 8 repeating lines for each character space */
             background-image: linear-gradient(to right, #252525 0%, #252525 90%);
-            background-size: 12.5% 2px; /* 100% / 8 slots = 12.5% width per segment */
+            background-size: 12.5% 2px; 
             background-repeat: repeat-x;
             background-position: 0 90%;
-            letter-spacing: 0.5rem !important; /* Spacing between characters */
+            letter-spacing: 0.5rem !important; 
             padding-left: 0.75rem !important;
             padding-right: 0.75rem !important;
             border: none !important;
@@ -102,17 +84,17 @@
              background-image: linear-gradient(to right, #4f46e5 0%, #4f46e5 90%);
         }
         
-        /* --- Compact List Styling for Friends and Daily Posts --- */
+        /* --- Compact List Styling for Friends and Daily Posts (UPDATED: Slight Rounding) --- */
         .compact-list-wrapper {
              background-color: #0d0d0d; 
-             border-radius: 0.5rem;
-             padding: 0.25rem 0.5rem; /* Little padding */
+             border-radius: 0.75rem; /* UPDATED: Slightly rounded wrapper */
+             padding: 0.25rem 0.5rem; 
              border: 1px solid #1a1a1a;
              margin-top: 0.75rem;
         }
         .compact-list-items {
             overflow-y: auto;
-            max-height: 250px; /* Scroll limit */
+            max-height: 250px; 
             padding-right: 0.25rem; 
         }
         
@@ -124,11 +106,12 @@
         /* General style for a list item/card (Friends list & NEW Daily Posts) */
         .compact-list-item {
             background-color: transparent; 
-            border-radius: 0; /* No rounding */
-            margin-bottom: 0.1rem; /* Little spacing */
-            padding: 0.5rem 0.5rem; /* Little padding */
+            border-radius: 0.5rem; /* UPDATED: Rounded item cards */
+            margin-bottom: 0.25rem; /* Spacing */
+            padding: 0.5rem 0.5rem; 
             transition: background-color 0.2s;
-            border-bottom: 1px solid #1a1a1a;
+            /* Removed border-bottom for cleaner look with rounded cards */
+            border-bottom: none;
         }
         .compact-list-item:hover {
             background-color: #1f1f1f;
@@ -140,16 +123,17 @@
         
         /* NEW: Daily Post specific styles to match the friend cards */
         .daily-post-card {
-            border-bottom: 1px solid #1a1a1a;
+            border-bottom: none; /* Ensure no border separation for rounded cards */
         }
         .daily-post-card:last-child {
              border-bottom: none;
         }
         
-        /* FIX: Ensure comments section can scroll */
+        /* FIX: Ensure comments section can scroll (UPDATED: Increased max-height for activation) */
         #comments-section {
             overflow-y: auto;
-            /* Removed fixed max-height here, will be set dynamically in modal HTML */
+            max-height: 50vh; /* Set maximum height to enforce scrolling */
+            flex-grow: 1; 
         }
         
         /* FIX: Added global break-words for comment text to prevent horizontal overflow */
@@ -161,7 +145,6 @@
         /* --- NEW: FEED DISPLAY STYLING --- */
         .photo-grid {
             display: grid;
-            /* 3 columns, each 1fr, with a gap for padding */
             grid-template-columns: repeat(3, 1fr); 
             gap: 1rem; 
         }
@@ -170,7 +153,7 @@
             overflow: hidden;
             border-radius: 0.5rem;
             cursor: pointer;
-            aspect-ratio: 1 / 1; /* Make thumbnails square */
+            aspect-ratio: 1 / 1; 
             background-color: #070707;
         }
         .photo-thumbnail img {
@@ -187,41 +170,47 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.4); /* Permanent darkening */
-            pointer-events: none; /* Allows click-through to the thumbnail itself */
+            background-color: rgba(0, 0, 0, 0.4); 
+            pointer-events: none; 
         }
         
-        /* UPDATED: Title Overlay has a darker gradient and more horizontal padding */
+        /* UPDATED: Title Overlay (Title is now static and clipped) */
         .title-overlay {
             position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 0.75rem 1rem; /* More horizontal padding */
+            top: 0.5rem; 
+            right: 0.5rem; 
+            
+            /* NEW: Label styling */
+            background-color: rgba(0, 0, 0, 0.75); /* Solid, dark background */
+            border-radius: 0.5rem; /* Label rounding */
+            padding: 0.25rem 0.5rem; /* Smaller padding for label look */
+            max-width: 70%; /* Constraint width */
+            
             color: white;
-            font-size: 0.75rem; /* text-xs */
+            font-size: 0.75rem; 
             font-weight: 600;
-            background: linear-gradient(to top, rgba(0, 0, 0, 1) 20%, transparent 100%); 
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-            height: 3rem; 
+            
+            background: rgba(0, 0, 0, 0.75);
+            text-shadow: none; 
+            height: 1.5rem; 
             display: flex;
-            justify-content: center; /* Align content to the center */
-            align-items: flex-end; /* Align content to the bottom */
-            overflow: hidden; /* Important for marquee */
+            justify-content: flex-start;
+            align-items: center; 
+            overflow: hidden; 
+            z-index: 10; 
         }
 
         .title-text-container {
             max-width: 100%; 
-            overflow: hidden;
+            overflow: hidden; /* Ensure text is clipped */
             white-space: nowrap;
-            text-align: center; 
+            /* Marquee logic removed: text will clip naturally */
         }
         
-        /* UPDATED: Marquee animation class now uses the staged animation */
-        .marquee-animation {
-            display: inline-block;
-            white-space: nowrap;
-            animation: marquee-reversible 12s ease-in-out infinite;
+        .title-text-span {
+            /* Ensures long text that is clipped shows an ellipsis */
+            text-overflow: ellipsis; 
+            display: block; 
         }
         
         #unread-comments-badge {
@@ -235,7 +224,7 @@
         
         .modal-title-container {
              max-width: 100%;
-             overflow: hidden;
+             overflow: hidden; /* Clips the modal title */
              white-space: nowrap;
              display: flex;
              font-weight: 700;
@@ -245,15 +234,46 @@
             line-height: 2rem;
             display: inline-block;
             white-space: nowrap;
+            text-overflow: ellipsis; 
+            overflow: hidden;
         }
         
         .photo-modal-img {
-            width: auto; 
+            width: 100%; /* Fill container */
+            height: 100%; /* Fill container */
             max-width: 100%;
             object-fit: contain; 
+            transition: all 0.3s ease;
         }
         
-        /* --- NEW: Drag and Drop Upload Area --- */
+        /* NEW: Fullscreen Image Mode (Step 5: Styles to expand image and hide comments) */
+        .modal-content.fullscreen-image-mode {
+             /* Remove padding/gap for a true fullscreen feel within the modal */
+             padding: 0;
+             gap: 0;
+        }
+        .modal-content.fullscreen-image-mode #photo-view-main {
+            /* Fullscreen mode is handled within the modal-content container */
+            flex-direction: row; 
+            width: 100%;
+            height: 100%;
+            max-height: 90vh; /* Match modal-content max height */
+        }
+        .modal-content.fullscreen-image-mode #photo-display-area {
+            flex-grow: 10; /* Image dominates */
+        }
+        .modal-content.fullscreen-image-mode #photo-info-panel {
+            /* Fades away the comment section */
+            opacity: 0;
+            pointer-events: none;
+            width: 0;
+            transition: opacity 0.3s ease-out, width 0.3s ease-out;
+        }
+        #photo-info-panel {
+             transition: opacity 0.3s ease-in, width 0.3s ease-in;
+        }
+        /* --- END FEED STYLES --- */
+
         .upload-drop-zone {
             background-color: #0a0a0a;
             border: 2px dashed #252525;
@@ -272,7 +292,6 @@
             border-color: #818cf8;
             background-color: #1a1a2e;
         }
-        /* --- END FEED STYLES --- */
 
         .modal-backdrop {
             position: fixed;
@@ -293,16 +312,25 @@
             border: 1px solid #252525; 
             border-radius: 1rem;
             padding: 2rem;
-            max-height: 90vh;
+            
+            /* UPDATED: Set max dimensions based on a 7:4 aspect ratio (width: 7 / height: 4) */
             max-width: 90%;
+            max-height: calc(90vw * 4 / 7); /* Max height is constrained by max width */
+            aspect-ratio: 7 / 4; /* Enforce 7:4 aspect ratio */
+            
+            display: flex;
+            flex-direction: column; 
         }
         #modal-content-container {
             max-width: 1000px;
             position: relative; 
+            flex-grow: 1; /* Allow content container to fill available space */
         }
         
         #upload-menu-modal .modal-content {
             max-width: 500px;
+            aspect-ratio: auto;
+            max-height: 90vh; 
         }
         #upload-menu-modal #image-preview-container {
              max-height: 300px;
@@ -456,11 +484,13 @@
         let UNSUBSCRIBE_POSTS_LISTENER = () => {};
         let MODAL_UNSUBSCRIBE_LISTENER = () => {}; 
         let LAST_COMMENT_TIMESTAMP = 0; 
+        let LAST_HEART_TIMESTAMP = 0; // NEW: Global state for heart debounce
         let UNREAD_COMMENTS_COUNT = 0;
         let PENDING_UPLOAD_FILE = null; 
         const COMMENT_DELAY_MS = 5000;
         const POST_SLOTS_MAX = 3;
-        const MARQUEE_TRIGGER_LENGTH = 30;
+        const MARQUEE_TRIGGER_LENGTH = 30; // Marquee logic removed, but keeping constant for title length checks if needed later
+        const HEART_DELAY_MS = 750; // NEW: Debounce hearting for 0.75 seconds
 
         // --- DOM Elements ---
         const loadingScreen = document.getElementById('loading-screen');
@@ -485,7 +515,7 @@
         const uploadPostCreator = document.getElementById('upload-post-creator'); 
         const imagePreview = document.getElementById('image-preview'); 
         const createPostForm = document.getElementById('create-post-form'); 
-        const uploadDropArea = document.getElementById('upload-drop-area'); // New element
+        const uploadDropArea = document.getElementById('upload-drop-area'); 
 
 
         // --- Firestore Document References & Collections ---
@@ -511,11 +541,43 @@
             }
         }
         
+        /**
+         * @brief Formats large numbers into abbreviated strings (K, M, B).
+         * @param {number} num The number to format.
+         * @returns {string} The formatted string (e.g., 1234 -> 1.2K). Capped at 999B.
+         */
+        function formatCount(num) {
+            if (typeof num !== 'number' || isNaN(num)) return '0';
+            if (num < 1000) return String(num); 
+
+            const suffixes = ["", "K", "M", "B"];
+            let tier = 0;
+            let currentNum = num;
+            
+            // Calculate tier (1=K, 2=M, 3=B)
+            while (currentNum >= 1000 && tier < suffixes.length - 1) {
+                currentNum /= 1000;
+                tier++;
+            }
+
+            // Apply the user's specific cap for B (999B)
+            if (tier === 3) {
+                if (currentNum >= 999.5) return '999B';
+            }
+
+            // Format the number to one decimal place, removing .0 if it's a whole number
+            const formatted = currentNum.toFixed(1).replace(/\.0$/, '');
+            
+            return formatted + suffixes[tier];
+        }
+
         function closePhotoModal() {
             photoModal.classList.add('hidden');
             MODAL_UNSUBSCRIBE_LISTENER();
             MODAL_UNSUBSCRIBE_LISTENER = () => {};
             document.getElementById('modal-content-container').innerHTML = '';
+            // Reset fullscreen state when closing
+            document.getElementById('modal-content-container').classList.remove('fullscreen-image-mode'); 
         }
         
         function openUploadMenu(slotIndex) {
@@ -574,18 +636,12 @@
             setTimeout(() => titleModal.classList.add('hidden'), 300);
         }
 
-        function formatCount(num) {
-            if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
-            if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
-            return num;
-        }
-
         async function generateUniqueFriendCode() {
             let code, isUnique = false;
             const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
             try {
                 while (!isUnique) {
-                    code = Array.from({ length: 8 }, () => characters.charAt(Math.floor(Math.random() * characters.length)).join('');
+                    code = Array.from({ length: 8 }, () => characters.charAt(Math.floor(Math.random() * characters.length))).join('');
                     const codeDoc = await getDoc(getFriendCodeDocRef(code));
                     if (!codeDoc.exists()) isUnique = true;
                 }
@@ -617,6 +673,36 @@
                 };
                 reader.onerror = reject;
             });
+        }
+        
+        /**
+         * @brief Creates and returns a single photo thumbnail element.
+         * @param {string} photoId 
+         * @param {object} photoData 
+         * @returns {HTMLElement} The created thumbnail div.
+         */
+        function createPhotoThumbnailElement(photoId, photoData) {
+            const titleText = photoData.title;
+            const heartsCount = photoData.hearts?.length || 0;
+            const commentsCount = photoData.comments?.length || 0;
+            
+            const thumb = document.createElement('div');
+            thumb.className = 'photo-thumbnail';
+            thumb.dataset.photoId = photoId;
+            thumb.innerHTML = `
+                <img src="${photoData.imageBase64}" alt="${titleText || 'Photo'} by ${photoData.creatorUsername}" loading="lazy">
+                <div class="overlay"></div>
+                <div class="absolute top-2 left-2 z-10 text-white text-xs bg-black/50 px-2 py-1 rounded-full flex items-center shadow-lg">
+                    <i class="fas fa-heart text-red-400 mr-1"></i> <span class="font-bold heart-count-display">${formatCount(heartsCount)}</span>
+                    <i class="fas fa-comment text-indigo-400 ml-2 mr-1"></i> <span class="font-bold comment-count-display">${formatCount(commentsCount)}</span>
+                </div>
+                <div class="title-overlay">
+                    <div class="title-text-container">
+                        <span class="text-white font-semibold title-text-span">${titleText}</span>
+                    </div>
+                </div>`;
+            thumb.addEventListener('click', () => openPhotoModal(photoId));
+            return thumb;
         }
 
         // =========================================================================
@@ -718,123 +804,103 @@
             }
             
             const photosQuery = query(DAILY_PHOTO_COLLECTION, where('creatorUid', 'in', uidsToQuery), where('createdAt', '>=', startOfDay), orderBy('createdAt', 'desc'));
+            
+            // REFACTOR: Use a full-snapshot processing approach to eliminate duplicate rendering issues.
             UNSUBSCRIBE_POSTS_LISTENER = onSnapshot(photosQuery, (snapshot) => {
-                const existingIds = new Set(Array.from(photoFeed.children, el => el.dataset.photoId).filter(Boolean));
-                snapshot.docChanges().forEach(change => {
-                    const docId = change.doc.id;
-                    const data = change.doc.data();
-                    const existingThumb = document.querySelector(`.photo-thumbnail[data-photo-id="${docId}"]`);
-
-                    if (change.type === 'removed' || (change.type === 'modified' && !data.title)) {
-                        existingThumb?.remove();
-                    } else if (data.title) {
-                        if (change.type === 'added' && !existingIds.has(docId)) {
-                            renderPhotoThumbnail(docId, data, 'prepend');
-                        } else if (change.type === 'modified') {
-                            if (existingThumb) {
-                                existingThumb.querySelector('.heart-count-display').innerHTML = formatCount(data.hearts?.length || 0);
-                                existingThumb.querySelector('.comment-count-display').innerHTML = formatCount(data.comments?.length || 0);
-                                const titleSpan = existingThumb.querySelector('.title-text-span');
-                                titleSpan.textContent = data.title;
-                                titleSpan.classList.toggle('marquee-animation', data.title.length > MARQUEE_TRIGGER_LENGTH);
-                            } else {
-                                renderPhotoThumbnail(docId, data, 'prepend');
-                            }
-                        }
+                const fragment = document.createDocumentFragment();
+                
+                // 1. Process the entire snapshot (in sorted order)
+                snapshot.docs.forEach(doc => {
+                    const docId = doc.id;
+                    const data = doc.data();
+                    
+                    if (!data.title) return; // Skip posts without titles
+                    
+                    // Try to reuse an existing element to minimize DOM thrashing
+                    let thumb = document.querySelector(`.photo-thumbnail[data-photo-id="${docId}"]`);
+                    
+                    if (thumb) {
+                        // Update existing element properties
+                        thumb.querySelector('.heart-count-display').innerHTML = formatCount(data.hearts?.length || 0);
+                        thumb.querySelector('.comment-count-display').innerHTML = formatCount(data.comments?.length || 0);
+                        thumb.querySelector('.title-text-span').textContent = data.title;
+                    } else {
+                        // Create a new element
+                        thumb = createPhotoThumbnailElement(docId, data);
                     }
+                    
+                    // Append the element (new or reused) to the fragment, preserving sort order
+                    fragment.appendChild(thumb);
                 });
+
+                // 2. Clear the existing feed and replace it with the new, correct one
+                photoFeed.innerHTML = '';
+                photoFeed.appendChild(fragment);
+
                 if (photoFeed.children.length === 0) photoFeed.innerHTML = '<p id="feed-placeholder" class="text-gray-500">No posts found today from you or your friends!</p>';
                 else document.getElementById('feed-placeholder')?.remove();
+
             }, (error) => {
                  console.error("Error fetching feed:", error);
                  photoFeed.innerHTML = '<p class="text-red-400">Error loading feed.</p>';
             });
         }
         
-        function renderPhotoThumbnail(photoId, photoData, position = 'append') {
-            if (!photoData.title || document.querySelector(`.photo-thumbnail[data-photo-id="${photoId}"]`)) return;
-
-            const thumb = document.createElement('div');
-            thumb.className = 'photo-thumbnail';
-            thumb.dataset.photoId = photoId;
-            thumb.innerHTML = `
-                <img src="${photoData.imageBase64}" alt="${photoData.title || 'Photo'} by ${photoData.creatorUsername}" loading="lazy">
-                <div class="overlay"></div>
-                <div class="absolute top-2 left-2 z-10 text-white text-xs bg-black/50 px-2 py-1 rounded-full flex items-center shadow-lg">
-                    <i class="fas fa-heart text-red-400 mr-1"></i> <span class="font-bold heart-count-display">${formatCount(photoData.hearts?.length || 0)}</span>
-                    <i class="fas fa-comment text-indigo-400 ml-2 mr-1"></i> <span class="font-bold comment-count-display">${formatCount(photoData.comments?.length || 0)}</span>
-                </div>
-                <div class="title-overlay">
-                    <div class="title-text-container">
-                        <span class="text-white font-semibold text-xs title-text-span ${photoData.title.length > MARQUEE_TRIGGER_LENGTH ? 'marquee-animation' : ''}">${photoData.title}</span>
-                    </div>
-                </div>`;
-            thumb.addEventListener('click', () => openPhotoModal(photoId));
-            
-            if (position === 'prepend') photoFeed.prepend(thumb);
-            else photoFeed.appendChild(thumb);
-            document.getElementById('feed-placeholder')?.remove();
-        }
+        // REFACTOR: Replaced the old renderPhotoThumbnail logic with the new one which returns the element
+        // (Moved to helper functions: createPhotoThumbnailElement)
 
         function setupDailyPostsListener(user) {
-            const userProfileRef = getUserProfileDocRef(user.uid);
-            let dailySlotsUsed = [];
-            let postsToday = {}; // Holds the real-time data for today's user posts
-            
-            // 1. Centralized Rendering Function
-            const renderDailyPosts = () => {
+             const userProfileRef = getUserProfileDocRef(user.uid);
+            onSnapshot(userProfileRef, async (profileSnap) => {
+                const profileData = profileSnap.data() || {};
+                const dailySlotsUsed = profileData.dailySlotsUsed || []; 
                 dailyPostsContainer.innerHTML = ''; 
                 
+                const startOfDay = new Date();
+                startOfDay.setHours(0, 0, 0, 0);
+                // Fetch only posts that are linked in the dailySlotsUsed array for efficiency
+                const postsQuery = query(DAILY_PHOTO_COLLECTION, where('creatorUid', '==', user.uid), where('createdAt', '>=', startOfDay), orderBy('createdAt', 'asc'));
+                const postsSnapshot = await getDocs(postsQuery);
+                const postsToday = postsSnapshot.docs.reduce((acc, doc) => ({ ...acc, [doc.id]: doc.data() }), {});
+
                 for (let i = 0; i < POST_SLOTS_MAX; i++) {
                     const div = document.createElement('div');
                     div.className = 'compact-list-item daily-post-card flex justify-between items-center';
-                    const postId = dailySlotsUsed[i];
+                    const postId = dailySlotsUsed[i]; // Check for the post ID in the correct slot
                     
                     if (postId) {
                         const postData = postsToday[postId];
                         const name = postData ? (postData.title || 'TITLE MISSING') : `Slot #${i + 1} Used & Deleted`;
                         
-                        // Add marquee logic to the title span
-                        const titleSpanHtml = `<span class="font-semibold inline-block ${name.length > MARQUEE_TRIGGER_LENGTH ? 'marquee-animation' : ''}">${name}</span>`;
-                        
+                        // Check if the post exists and has a title to show the 'View' button
+                        const isViewable = postData && postData.title; 
+
                         div.innerHTML = `
                             <div class="flex-grow overflow-hidden whitespace-nowrap mr-2">
-                                ${titleSpanHtml}
+                                <span class="font-semibold inline-block title-text-span">${name}</span>
                             </div>
-                            ${postData ? `<button class="view-post-btn text-indigo-400 hover:text-indigo-500 transition px-2 py-1" title="View Post"><i class="fas fa-eye"></i></button>` : `<span class="text-red-400 text-sm">Used</span>`}`;
+                            ${isViewable ? `<button class="view-post-btn text-indigo-400 hover:text-indigo-500 transition px-2 py-1" title="View Post"><i class="fas fa-eye"></i></button>` : `<span class="text-gray-600 text-sm">${postData ? 'No Title' : 'Slot Used'}</span>`}`;
                         
-                        if (postData) {
-                            // Re-attaches event listener on re-render
-                            div.querySelector('.view-post-btn').addEventListener('click', () => postData.title ? openPhotoModal(postId) : openTitleModal(postId, postData.title));
+                        if (isViewable) {
+                            div.querySelector('.view-post-btn').addEventListener('click', () => openPhotoModal(postId));
+                        } else if (postData && !postData.title) {
+                             // Allow editing if the slot is used but the post is missing a title
+                             div.querySelector('span:last-child').textContent = 'Needs Title';
+                             div.querySelector('span:last-child').className = 'text-yellow-500 text-sm cursor-pointer';
+                             div.querySelector('span:last-child').addEventListener('click', () => openTitleModal(postId, postData.title));
                         }
                     } else if (i === dailySlotsUsed.length) {
+                        // Available slot is the one immediately after the last used slot
                         div.innerHTML = `
                             <span class="font-semibold text-gray-400">Post #${i + 1}</span>
                             <button data-slot-index="${i}" class="open-upload-menu-btn px-3 py-1 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold text-white" title="Upload Photo"><i class="fas fa-image"></i></button>`;
-                        // Re-attaches event listener on re-render
                         div.querySelector('.open-upload-menu-btn').addEventListener('click', e => openUploadMenu(parseInt(e.currentTarget.dataset.slotIndex)));
                     } else {
+                        // Locked slots (only slots after the next available slot are locked)
                         div.innerHTML = `<span class="font-semibold text-gray-600">Post #${i + 1}</span><span class="text-gray-600"><i class="fas fa-lock"></i> Locked</span>`;
                     }
                     dailyPostsContainer.appendChild(div);
                 }
-            };
-            
-            // 2. Profile Listener: Tracks which slots are used (dailySlotsUsed)
-            onSnapshot(userProfileRef, (profileSnap) => {
-                const profileData = profileSnap.data() || {};
-                dailySlotsUsed = profileData.dailySlotsUsed || []; 
-                renderDailyPosts(); // Re-render when slots change
-            });
-            
-            // 3. User Posts Listener: Tracks real-time changes to the posts themselves (title edits, etc.)
-            const startOfDay = new Date();
-            startOfDay.setHours(0, 0, 0, 0);
-            const postsQuery = query(DAILY_PHOTO_COLLECTION, where('creatorUid', '==', user.uid), where('createdAt', '>=', startOfDay), orderBy('createdAt', 'asc'));
-            
-            onSnapshot(postsQuery, (postsSnapshot) => {
-                postsToday = postsSnapshot.docs.reduce((acc, doc) => ({ ...acc, [doc.id]: doc.data() }), {});
-                renderDailyPosts(); // Re-render when post data changes
             });
         }
         
@@ -868,11 +934,13 @@
 
             try {
                 const userProfileSnap = await getDoc(userProfileRef);
+                // REFACTOR: The check below is now only a sanity check, the UI handles slot selection
                 if ((userProfileSnap.data().dailySlotsUsed || []).length !== slotIndex) throw new Error("Slot index mismatch. Please refresh.");
                 
                 const imageBase64 = await compressImage(file);
                 const newPostRef = doc(DAILY_PHOTO_COLLECTION);
                 
+                // IMPORTANT: The post MUST have a title to be viewable on the feed
                 await setDoc(newPostRef, {
                     creatorUid: currentUser.uid, creatorUsername: CURRENT_USERNAME, createdAt: serverTimestamp(),
                     imageBase64, title: cleanedTitle, hearts: [], comments: []
@@ -886,7 +954,7 @@
                 showMessage(uploadMessage, `Post creation failed: ${error.message || error}`);
             } finally {
                 createBtn.disabled = false;
-                createBtn.innerHTML = `<i class="fas fa-check mr-2"></i> Create Daily Post`;
+                createPostBtn.innerHTML = `<i class="fas fa-check mr-2"></i> Create Daily Post`;
             }
         }
         
@@ -946,10 +1014,12 @@
                 }
                 
                 if (!isModalAlreadyOpen) {
+                    // UPDATED: Marquee classes removed from title
                     modalContentContainer.innerHTML = `
-                        <div id="photo-view-main" class="flex flex-col md:flex-row gap-6 w-full h-full">
-                            <div id="photo-display-area" class="flex-grow flex justify-center items-center">
+                        <div id="photo-view-main" class="flex flex-col md:flex-row gap-6 w-full h-full flex-grow">
+                            <div id="photo-display-area" class="flex-grow flex justify-center items-center cursor-pointer relative" data-image-toggle>
                                 <img id="modal-main-image" src="${photoData.imageBase64}" alt="${photoData.title}" class="rounded-lg photo-modal-img">
+                                <span class="absolute bottom-2 text-white/70 text-sm italic pointer-events-none">Click image to view fullscreen.</span>
                             </div>
                             <div id="photo-info-panel" class="w-full md:w-[350px] flex-shrink-0 flex flex-col relative">
                                 <button id="close-modal-btn" class="absolute top-0 right-0 p-2 text-white/50 hover:text-white transition" title="Close"><i class="fas fa-times"></i></button>
@@ -957,20 +1027,20 @@
                                     <span id="unread-comments-badge" class="hidden bg-red-600 text-white font-bold rounded-full flex items-center justify-center" title="Unread Comments"></span>
                                 </div>
                                 <div class="border-b border-gray-700 pb-3 mb-3 pt-6">
-                                    <div class="modal-title-container mb-1"><span class="modal-title-text text-white ${photoData.title.length > MARQUEE_TRIGGER_LENGTH ? 'marquee-animation' : ''}">${photoData.title}</span></div>
+                                    <div class="modal-title-container mb-1"><span class="modal-title-text text-white">${photoData.title}</span></div>
                                     <p class="font-semibold text-lg text-indigo-400">${photoData.creatorUsername}</p>
                                     <p class="text-sm text-gray-400">${new Date(photoData.createdAt?.toDate()).toLocaleString()}</p>
                                     ${photoData.creatorUid === currentUser.uid ? `<button id="delete-post-trigger-btn" class="text-red-400 text-sm mt-2 hover:text-red-500"><i class="fas fa-trash-alt mr-1"></i> Delete Post</button>` : ''}
                                 </div>
-                                <div id="comments-section" class="flex-grow mb-4 pr-2 overflow-y-auto max-h-[300px]">
+                                <div id="comments-section" class="flex-grow mb-4 pr-2"> 
                                     ${comments.map(c => `<div class="mb-2"><p class="comment-text"><strong class="font-semibold">${c.username}</strong>: ${c.text}</p></div>`).join('') || '<p class="text-sm text-gray-500 comment-text">No comments yet. Be the first!</p>'}
                                 </div>
-                                <div class="flex items-center gap-4 mb-4 pt-3 border-t border-gray-800">
-                                    <button id="heart-btn" data-hearted="${hasHearted}" class="text-3xl ${hasHearted ? 'text-red-500' : 'text-gray-400'} hover:text-red-500 transition" title="${hasHearted ? 'Unheart' : 'Heart'}"><i class="fas fa-heart"></i></button>
+                                <div class="flex items-center gap-4 mb-4 pt-3 border-t border-gray-800 flex-shrink-0">
+                                    <button id="heart-btn" data-post-id="${photoId}" data-hearted="${hasHearted}" class="text-3xl ${hasHearted ? 'text-red-500' : 'text-gray-400'} hover:text-red-500 transition" title="${hasHearted ? 'Unheart' : 'Heart'}"><i class="fas fa-heart"></i></button>
                                     <span class="text-xl">${formatCount(hearts.length)}</span>
                                 </div>
-                                <div id="modal-comment-message" class="text-sm min-h-[20px]"></div>
-                                <form id="comment-form" class="flex gap-2">
+                                <div id="modal-comment-message" class="text-sm min-h-[20px] flex-shrink-0"></div>
+                                <form id="comment-form" class="flex gap-2 flex-shrink-0">
                                     <input type="text" id="comment-input" placeholder="Add a comment..." class="flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md" maxlength="480">
                                     <button type="submit" id="comment-submit-btn" class="px-3 py-2 bg-indigo-600 rounded-md font-semibold" title="Post Comment"><i class="fas fa-comment"></i></button>
                                 </form>
@@ -1012,10 +1082,32 @@
         
         photoModal.addEventListener('click', e => {
             if (e.target === photoModal || e.target.closest('#close-modal-btn')) closePhotoModal();
-            if (e.target.closest('#heart-btn')) {
-                const isHearted = e.target.closest('#heart-btn').dataset.hearted === 'true';
-                updateDoc(doc(DAILY_PHOTO_COLLECTION, photoFeed.querySelector('.photo-thumbnail').dataset.photoId), { hearts: isHearted ? arrayRemove(auth.currentUser.uid) : arrayUnion(auth.currentUser.uid) });
+            
+            const heartBtn = e.target.closest('#heart-btn');
+            if (heartBtn) {
+                const photoId = heartBtn.dataset.postId;
+                
+                // --- NEW: Hearting/Unhearting Delay Logic ---
+                if (Date.now() - LAST_HEART_TIMESTAMP < HEART_DELAY_MS) {
+                    return; // Secretly ignore the click if within the delay period
+                }
+                LAST_HEART_TIMESTAMP = Date.now();
+                // ---------------------------------------------
+
+                const isHearted = heartBtn.dataset.hearted === 'true';
+                updateDoc(doc(DAILY_PHOTO_COLLECTION, photoId), { 
+                    hearts: isHearted ? arrayRemove(auth.currentUser.uid) : arrayUnion(auth.currentUser.uid) 
+                });
             }
+
+            // NEW: Fullscreen Image Toggle Logic
+            const imageToggle = e.target.closest('[data-image-toggle]');
+            if (imageToggle) {
+                const modalContentContainer = document.getElementById('modal-content-container');
+                // Toggle the class on the modal content to trigger CSS transitions (Step 5)
+                modalContentContainer.classList.toggle('fullscreen-image-mode');
+            }
+
             const deleteTrigger = e.target.closest('#delete-post-trigger-btn');
             if (deleteTrigger) {
                 document.getElementById('photo-view-main').style.opacity = '0.1';
@@ -1052,7 +1144,11 @@
             btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
             try {
                 const cleanedText = await cleanText(text, 'comment');
-                await updateDoc(doc(DAILY_PHOTO_COLLECTION, photoFeed.querySelector('.photo-thumbnail').dataset.photoId), { comments: arrayUnion({ uid: auth.currentUser.uid, username: CURRENT_USERNAME, text: cleanedText, timestamp: new Date() }) });
+                // Use the data-post-id from the heart button to get the current post ID
+                const currentPostId = document.getElementById('heart-btn')?.dataset.postId || photoFeed.querySelector('.photo-thumbnail')?.dataset.photoId;
+                if (!currentPostId) throw new Error("Could not find current post ID for comment.");
+                
+                await updateDoc(doc(DAILY_PHOTO_COLLECTION, currentPostId), { comments: arrayUnion({ uid: auth.currentUser.uid, username: CURRENT_USERNAME, text: cleanedText, timestamp: new Date() }) });
                 input.value = '';
                 LAST_COMMENT_TIMESTAMP = Date.now();
             } catch (error) {
