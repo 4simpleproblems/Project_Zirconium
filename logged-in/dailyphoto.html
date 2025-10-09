@@ -484,68 +484,45 @@
         // Helper Functions 
         // =========================================================================
         
-        // NEW: Function for ProfanityAPI (profanity.dev)
+        // UPDATED: Function for ProfanityAPI (vector.profanity.dev)
         async function cleanText(text, type = 'text') {
-            if (!text) return '';
-            
-            // IMPORTANT: Replace 'YOUR_PROFANTY_API_KEY' with your actual key from profanity.dev
-            const apiKey = "YOUR_PROFANTY_API_KEY"; 
-            const apiUrl = 'https://api.profanity.dev/api/v2/profanity';
-            const MIN_SCORE_TO_REPLACE = 0.9;
-            
-            // If the API key is not set, skip filtering and return the original text.
-            if (apiKey === "YOUR_PROFANTY_API_KEY" || !apiKey) {
-                console.warn(`Skipping ${type} filtering: Profanity API key is not set. Please update the 'cleanText' function.`);
+            if (!text || !text.trim()) {
                 return text;
             }
+            
+            const apiUrl = 'https://vector.profanity.dev';
 
             try {
+                const message = text; // API expects a 'message' property in the body
                 const response = await fetch(apiUrl, {
                     method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'X-API-Key': apiKey // Assuming API key is passed via header
-                    },
-                    body: JSON.stringify({
-                        text: text,
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message }),
                 });
 
                 if (!response.ok) {
-                    console.error(`Profanity API HTTP error! status: ${response.status}`);
-                    return text; // Return original text on API failure
+                    console.error(`Profanity API HTTP error! Status: ${response.status}`);
+                    return text; // On failure, return the original text
                 }
 
                 const data = await response.json();
                 
-                if (data.isProfanity) {
-                    let cleanedText = text;
-                    const matches = data.matches || [];
-
-                    // Sort matches by start index descending to prevent index shifts during replacement
-                    matches.sort((a, b) => b.start - a.start); 
-
-                    for (const match of matches) {
-                        // Check if the profanity score is 0.9 or higher as requested
-                        if (match.score >= MIN_SCORE_TO_REPLACE) {
-                            const wordToReplace = text.substring(match.start, match.end);
-                            const asterisks = '*'.repeat(wordToReplace.length);
-                            
-                            // Replace the profanity with asterisks
-                            cleanedText = cleanedText.substring(0, match.start) + 
-                                           asterisks + 
-                                           cleanedText.substring(match.end);
-                        }
-                    }
-                    return cleanedText;
+                // Assuming the API's successful response contains the cleaned text
+                // in a property named 'clean' or 'message'. Prioritize 'clean'.
+                if (data && typeof data.clean === 'string') {
+                    return data.clean;
+                }
+                if (data && typeof data.message === 'string') {
+                    return data.message;
                 }
 
-                // No profanity found or isProfanity is false
+                // If the response format is unexpected, log it and return original text
+                console.warn(`Profanity API response format was not as expected for ${type}.`, data);
                 return text;
 
             } catch (error) {
-                console.error(`Profanity API ${type} filtering failed, using original text.`, error);
-                return text; 
+                console.error(`Profanity API call for ${type} failed.`, error);
+                return text; // Return original text on exception
             }
         }
         
@@ -1277,12 +1254,13 @@
                 // Get the new DOM elements
                 const currentCommentsSection = document.getElementById('comments-section');
                 
-                // NEW: 14:9 Aspect Ratio Constraint Logic
+                // 14:9 Aspect Ratio Constraint Logic
                 const photoDisplayArea = document.getElementById('photo-display-area');
                 const mainImage = document.getElementById('modal-main-image');
 
                 if (photoDisplayArea && mainImage) {
-                    // Wait for the browser to render the flex layout and calculate the container width
+                    // This logic ensures the image does not become too tall by constraining its max-height
+                    // based on a 14:9 aspect ratio relative to its container's width.
                     setTimeout(() => {
                         const availableWidth = photoDisplayArea.clientWidth;
                         
@@ -1296,7 +1274,7 @@
                         // Use the smallest of the two constraints (ratio or viewport limit)
                         const finalMaxHeight = Math.min(maxHeightFromRatio, viewportMaxHeight);
 
-                        // Apply the calculated max height
+                        // Apply the calculated max height to the image
                         mainImage.style.maxHeight = `${finalMaxHeight}px`;
 
                     }, 100); 
@@ -1456,7 +1434,7 @@
         
         // Modal closing handlers
         photoModal.addEventListener('click', (e) => {
-            if (e.target === photoModal) { 
+            if (e.target === photoModal || e.target.closest('#close-modal-btn')) { 
                 closePhotoModal();
             }
         });
