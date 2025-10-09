@@ -26,12 +26,12 @@
             100% { box-shadow: 0 0 5px #4f46e5, 0 0 10px #4f46e5; }
         }
         
-        /* UPDATED: Marquee animation for smoother, centered scrolling */
+        /* UPDATED: Marquee animation is now "wider" by increasing travel distance */
         @keyframes marquee {
-            /* Start fully off-screen right */
-            0% { transform: translateX(100%); }
+            /* Start further off-screen right */
+            0% { transform: translateX(110%); }
             /* Scroll until it's fully off-screen left */
-            100% { transform: translateX(-100%); }
+            100% { transform: translateX(-110%); }
         }
 
         /* --- FONT & BASE STYLING (THICKENED FONT) --- */
@@ -179,7 +179,7 @@
             pointer-events: none; /* Allows click-through to the thumbnail itself */
         }
         
-        /* UPDATED: New Title Overlay Styling (Bottom Center, Stronger Gradient, Marquee) */
+        /* UPDATED: Title Overlay has a darker, stronger gradient */
         .title-overlay {
             position: absolute;
             bottom: 0;
@@ -189,12 +189,12 @@
             color: white;
             font-size: 0.75rem; /* text-xs */
             font-weight: 600;
-            /* UPDATED: Stronger Gradient for a better title background (fade to black) */
-            background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0) 100%); 
+            /* UPDATED: Stronger, darker gradient for a better title background */
+            background: linear-gradient(to top, rgba(0, 0, 0, 1) 20%, transparent 100%); 
             text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
             height: 3rem; 
             display: flex;
-            justify-content: center; /* UPDATED: Align content to the center */
+            justify-content: center; /* Align content to the center */
             align-items: flex-end; /* Align content to the bottom */
             overflow: hidden; /* Important for marquee */
         }
@@ -322,9 +322,6 @@
             <input type="file" id="upload-file-input" class="hidden" accept="image/*" data-slot-index="" data-action="select-photo">
 
             <div id="upload-select-options" class="flex flex-col gap-3 mb-6">
-                 <button id="upload-camera-btn" class="px-4 py-3 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold w-full">
-                    <i class="fas fa-camera mr-2"></i> Capture Image (Camera)
-                </button>
                 <button id="upload-photo-file-btn" class="px-4 py-3 bg-gray-700 rounded-lg hover:bg-gray-800 transition font-semibold w-full">
                     <i class="fas fa-image mr-2"></i> Select Photo or File
                 </button>
@@ -514,6 +511,8 @@
             photoModal.classList.add('hidden');
             MODAL_UNSUBSCRIBE_LISTENER(); // Unsubscribe the real-time listener
             MODAL_UNSUBSCRIBE_LISTENER = () => {}; // Reset the listener function
+            // FIX: Clear the modal content on close to prevent stale data on next open
+            document.getElementById('modal-content-container').innerHTML = '';
         }
         
         // Functions to manage the upload menu modal
@@ -1099,6 +1098,11 @@
         
         
         function openPhotoModal(photoId) {
+            const modalContentContainer = document.getElementById('modal-content-container');
+            // FIX: Clear previous content immediately and show a loading indicator
+            modalContentContainer.innerHTML = `<div class="flex justify-center items-center p-8"><i class="fas fa-spinner fa-spin text-3xl text-white"></i></div>`;
+            photoModal.classList.remove('hidden');
+            
             const photoRef = doc(DAILY_PHOTO_COLLECTION, photoId);
             const currentUser = auth.currentUser;
             
@@ -1136,7 +1140,6 @@
 
             // This onSnapshot listener ensures the modal content is real-time
             MODAL_UNSUBSCRIBE_LISTENER = onSnapshot(photoRef, (updatedSnap) => {
-                const modalContentContainer = document.getElementById('modal-content-container');
                 const isModalAlreadyOpen = !!document.getElementById('photo-view-main');
                 
                 // FIX: Close modal and unsubscribe if the post document no longer exists
@@ -1316,7 +1319,6 @@
                         commentsSection.addEventListener('scroll', () => handleScroll(commentsSection));
                         handleScroll(commentsSection);
                     }
-                    photoModal.classList.remove('hidden');
 
                 } else { // --- Modal is ALREADY OPEN, perform targeted updates to prevent flicker ---
                     
@@ -1360,8 +1362,6 @@
                  console.error("Modal listener failed:", error);
                  closePhotoModal();
             });
-            
-            photoModal.classList.remove('hidden');
         }
         
         // Modal closing handlers
@@ -1383,16 +1383,8 @@
             }
         });
 
-        // NEW: Upload menu button handlers
-        document.getElementById('upload-camera-btn').addEventListener('click', () => {
-             // Set the input's capture attribute to 'user' to hint the camera
-             uploadFileInput.setAttribute('capture', 'user');
-             uploadFileInput.click();
-        });
-
+        // NEW: Upload menu button handler
         document.getElementById('upload-photo-file-btn').addEventListener('click', () => {
-             // Remove the capture attribute to allow file/photo selection
-             uploadFileInput.removeAttribute('capture');
              uploadFileInput.click();
         });
 
@@ -1510,21 +1502,47 @@
             }
         });
 
+        // Helper function for accepting/rejecting friend requests
+        const friendRequestLogic = async (friendUid, actionType, user) => {
+            const friendProfileRef = getUserProfileDocRef(friendUid);
+            const userProfileRef = getUserProfileDocRef(user.uid);
+            
+            const batch = writeBatch(db);
+            
+            // Always remove the request from the current user's pending_requests array
+            batch.update(userProfileRef, { pending_requests: arrayRemove(friendUid) });
+            
+            if (actionType === 'accept') {
+                // Add to friends list for both users
+                batch.update(userProfileRef, { friends: arrayUnion(friendUid) });
+                batch.update(friendProfileRef, { friends: arrayUnion(user.uid) });
+                showMessage(addFriendMessage, 'Friend request accepted!', 'success');
+            } else if (actionType === 'reject') {
+                // Request is simply removed
+                showMessage(addFriendMessage, 'Friend request rejected.', 'success');
+            }
+            
+            try {
+                await batch.commit();
+            } catch (error) {
+                 showMessage(addFriendMessage, `Failed to ${actionType} request. Check console.`, 'error');
+                 console.error(`Friend request ${actionType} failed:`, error);
+            }
+        };
+
         function setupFriendListListener(user) {
             onSnapshot(getUserProfileDocRef(user.uid), async (docSnap) => {
                 const profileData = docSnap.data() || {};
                 const friends = profileData.friends || [];
-                const pendingRequests = profileData.pending_requests || []; // NEW
+                const pendingRequests = profileData.pending_requests || [];
                 
-                if (friends.length === CURRENT_FRIENDS.length && friends.every((val, index) => val === CURRENT_FRIENDS[index])) {
-                    // Only return if friend list is identical (simple check, ignores request changes which is fine)
-                    // The feed listener will be re-run on every friend change anyway.
+                // Only update feed if the actual list of friends has changed
+                if (friends.length !== CURRENT_FRIENDS.length || !friends.every((val, index) => val === CURRENT_FRIENDS[index])) {
+                    CURRENT_FRIENDS = friends; 
+                    setupFriendsFeedListener(user); 
                 }
 
-                CURRENT_FRIENDS = friends; 
-                setupFriendsFeedListener(user); 
-
-                const container = friendsListItems; // This is the inner <div>
+                const container = friendsListItems;
                 container.innerHTML = ''; 
                 
                 let combinedHtml = '';
@@ -1533,14 +1551,12 @@
                 if (pendingRequests.length > 0) {
                     const requestProfiles = await Promise.all(pendingRequests.map(uid => getDoc(getUserProfileDocRef(uid))));
                     
-                    // Header for pending requests
                     combinedHtml += `<div class="p-2 text-sm font-bold text-yellow-400 bg-yellow-900/30 rounded-t-md -mx-1 -mt-1 mb-2">Pending Requests (${pendingRequests.length})</div>`;
                     
                     requestProfiles.forEach((requestProfileSnap, index) => {
                         const requesterUid = pendingRequests[index];
                         const username = requestProfileSnap.exists() ? requestProfileSnap.data().username : 'Unknown User';
                         
-                        // The item itself with accept/reject buttons
                         combinedHtml += `
                             <div class="compact-list-item flex justify-between items-center bg-yellow-900/10">
                                 <span class="font-semibold text-yellow-300">${username}</span>
@@ -1555,14 +1571,11 @@
                             </div>
                         `;
                     });
-                     // Separator between requests and friends
                      combinedHtml += `<div class="border-b border-gray-700 my-2"></div>`; 
                 }
 
-
                 // --- 2. HANDLE CURRENT FRIENDS ---
                 if (friends.length === 0 && pendingRequests.length === 0) {
-                    // Only show placeholder if absolutely no friends or requests
                     combinedHtml += '<p class="text-sm text-gray-500 p-2 text-center">No friends yet. Add one above!</p>';
                 } else if (friends.length > 0) {
                     const friendProfiles = await Promise.all(friends.map(uid => getDoc(getUserProfileDocRef(uid))));
@@ -1583,71 +1596,29 @@
                 }
                 
                 container.innerHTML = combinedHtml;
+            });
 
+            // --- PERFORMANCE FIX: Use Event Delegation for the entire friends list ---
+            friendsListItems.addEventListener('click', async (e) => {
+                const acceptBtn = e.target.closest('.accept-request-btn');
+                const rejectBtn = e.target.closest('.reject-request-btn');
+                const removeBtn = e.target.closest('.remove-friend-btn');
 
-                // --- 3. ATTACH NEW EVENT LISTENERS (Accept/Reject) ---
-                const friendRequestLogic = async (friendUid, actionType) => {
-                    const friendProfileRef = getUserProfileDocRef(friendUid);
-                    const userProfileRef = getUserProfileDocRef(user.uid);
-                    
+                if (acceptBtn) {
+                    friendRequestLogic(acceptBtn.dataset.uid, 'accept', user);
+                } else if (rejectBtn) {
+                    friendRequestLogic(rejectBtn.dataset.uid, 'reject', user);
+                } else if (removeBtn) {
+                    const friendUidToRemove = removeBtn.dataset.uid;
                     const batch = writeBatch(db);
-                    
-                    // Always remove the request from the current user's pending_requests array
-                    batch.update(userProfileRef, { pending_requests: arrayRemove(friendUid) });
-                    
-                    if (actionType === 'accept') {
-                        // Add to friends list for both users
-                        batch.update(userProfileRef, { friends: arrayUnion(friendUid) });
-                        batch.update(friendProfileRef, { friends: arrayUnion(user.uid) });
-                        showMessage(addFriendMessage, 'Friend request accepted!', 'success');
-                    } else if (actionType === 'reject') {
-                        // Request is simply removed
-                        showMessage(addFriendMessage, 'Friend request rejected.', 'success');
-                    }
-                    
-                    try {
-                        await batch.commit();
-                    } catch (error) {
-                         showMessage(addFriendMessage, `Failed to ${actionType} request. Check console.`, 'error');
-                         console.error(`Friend request ${actionType} failed:`, error);
-                    }
-                };
-                
-                // Add listeners for accept/reject buttons
-                container.querySelectorAll('.accept-request-btn').forEach(button => {
-                    button.addEventListener('click', (e) => {
-                        const uid = e.currentTarget.dataset.uid;
-                        friendRequestLogic(uid, 'accept');
-                    });
-                });
-                
-                container.querySelectorAll('.reject-request-btn').forEach(button => {
-                    button.addEventListener('click', (e) => {
-                        const uid = e.currentTarget.dataset.uid;
-                        friendRequestLogic(uid, 'reject');
-                    });
-                });
-                
-
-                // Keep existing remove friend listener
-                container.querySelectorAll('.remove-friend-btn').forEach(button => {
-                    button.addEventListener('click', async (e) => {
-                        e.preventDefault();
-                        // Find the closest button element to ensure the click target is correct
-                        const friendUidToRemove = e.target.closest('button').dataset.uid;
-                        
-                        const batch = writeBatch(db);
-                        batch.update(getUserProfileDocRef(user.uid), { friends: arrayRemove(friendUidToRemove) });
-                        batch.update(getUserProfileDocRef(friendUidToRemove), { friends: arrayRemove(user.uid) });
-                        await batch.commit();
-
-                        showMessage(addFriendMessage, 'Friend removed successfully!', 'success');
-                    });
-                });
+                    batch.update(getUserProfileDocRef(user.uid), { friends: arrayRemove(friendUidToRemove) });
+                    batch.update(getUserProfileDocRef(friendUidToRemove), { friends: arrayRemove(user.uid) });
+                    await batch.commit();
+                    showMessage(addFriendMessage, 'Friend removed successfully!', 'success');
+                }
             });
         }
         
     </script>
 </body>
 </html>
-
