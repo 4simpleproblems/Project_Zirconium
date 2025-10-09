@@ -131,13 +131,19 @@
         .daily-post-card:last-child {
              border-bottom: none;
         }
-
-        /* Custom scrollbar for comments */
+        
+        /* FIX: Ensure comments section can scroll */
         #comments-section {
             overflow-y: auto;
             max-height: 8rem; /* Reduced height to activate scroll sooner */
         }
         
+        /* FIX: Added global break-words for comment text to prevent horizontal overflow */
+        .comment-text {
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
         /* --- NEW: FEED DISPLAY STYLES --- */
         .photo-grid {
             display: grid;
@@ -203,6 +209,21 @@
             white-space: nowrap;
             padding-left: 100%; /* Start the text fully off-screen */
             animation: marquee 8s linear infinite; /* Increased duration for smoother scroll */
+        }
+        
+        /* NEW: Styles for the title in the full modal view */
+        .modal-title-container {
+             max-width: 100%; /* Ensure it respects parent width */
+             overflow: hidden;
+             white-space: nowrap;
+             display: flex; /* Flex to align the title span properly */
+             font-weight: 700; /* Extra bold for the modal title */
+        }
+        .modal-title-text {
+            font-size: 1.5rem; /* text-2xl equivalent */
+            line-height: 2rem;
+            display: inline-block;
+            white-space: nowrap;
         }
         /* --- END FEED STYLES --- */
 
@@ -798,7 +819,7 @@
                 });
                 
                 if (photoFeed.children.length === 0) {
-                    photoFeed.innerHTML = '<p id="feed-placeholder" class="text-gray-500">No posts found today from you or your friends.</p>';
+                    photoFeed.innerHTML = '<p id="feed-placeholder" class="text-gray-500">No posts found today from you or your friends!</p>';
                 } else if (document.getElementById('feed-placeholder')) {
                     document.getElementById('feed-placeholder').remove();
                 }
@@ -1079,34 +1100,49 @@
                     return;
                 }
                 
+                // --- NEW MARQUEE LOGIC FOR MODAL TITLE ---
+                const isLongTitle = photoData.title.length > MARQUEE_TRIGGER_LENGTH;
+                const titleClass = isLongTitle ? 'marquee-animation' : '';
+                
+                const titleHtml = `
+                    <div class="modal-title-container mb-1">
+                        <span class="modal-title-text text-white ${titleClass}">${photoData.title || 'Untitled Daily Post'}</span>
+                    </div>
+                `;
+                // ----------------------------------------
+
+                
                 // Content generation for the modal
                 // NEW: Added main content wrapper and delete confirmation overlay
                 modalContentContainer.innerHTML = `
                     <!-- Main Photo/Comment View -->
                     <div id="photo-view-main" class="flex-grow flex flex-col md:flex-row gap-6 transition-opacity duration-300">
                         <div class="md:w-2/3 flex justify-center items-center">
-                            <img src="${photoData.imageBase64}" alt="${photoData.title || 'Photo'}" class="rounded-lg">
+                            <img src="${photoData.imageBase64}" alt="${photoData.title || 'Photo'}" class="rounded-lg max-h-[80vh] w-auto">
                         </div>
                         <div id="photo-info-panel" class="md:w-1/3 flex flex-col">
                             <div class="border-b border-gray-700 pb-3 mb-3">
-                                <p class="font-bold text-xl">${photoData.title || 'Untitled Daily Post'}</p>
+                                <!-- Title with Marquee -->
+                                ${titleHtml}
                                 <p class="font-semibold text-lg text-indigo-400">${photoData.creatorUsername}</p>
                                 <p class="text-sm text-gray-400">${photoData.createdAt.toDate().toLocaleString()}</p>
                                 ${photoData.creatorUid === currentUser.uid 
                                     ? `<button id="delete-post-trigger-btn" class="text-red-400 text-sm mt-2 hover:text-red-500"><i class="fas fa-trash-alt mr-1"></i> Delete Post</button>` 
                                     : ''}
                             </div>
-                            <div class="flex-grow overflow-y-auto mb-4 pr-1" id="comments-section">
-                                ${(() => {
-                                    let html = '';
-                                    const comments = photoData.comments || [];
-                                    comments.sort((a, b) => (a.timestamp?.toDate() || new Date(0)) - (b.timestamp?.toDate() || new Date(0))).forEach(comment => {
-                                        // ADDED `break-words` class to prevent horizontal overflow from long unbroken strings.
-                                        html += `<div class="mb-2"><p class="break-words"><strong class="font-semibold">${comment.username}</strong>: ${comment.text}</p></div>`;
-                                    });
-                                    // ADDED `break-words` to placeholder as well for consistency.
-                                    return html || '<p class="text-sm text-gray-500 break-words">No comments yet. Be the first!</p>';
-                                })()}
+                            <!-- FIX: Removed overflow-y-auto from this section to rely on #comments-section scroll -->
+                            <div class="flex-grow mb-4 pr-1">
+                                <div id="comments-section">
+                                    ${(() => {
+                                        let html = '';
+                                        const comments = photoData.comments || [];
+                                        comments.sort((a, b) => (a.timestamp?.toDate() || new Date(0)) - (b.timestamp?.toDate() || new Date(0))).forEach(comment => {
+                                            // FIX: Apply comment-text class (with break-words CSS) to the content
+                                            html += `<div class="mb-2"><p class="comment-text"><strong class="font-semibold">${comment.username}</strong>: ${comment.text}</p></div>`;
+                                        });
+                                        return html || '<p class="text-sm text-gray-500 comment-text">No comments yet. Be the first!</p>';
+                                    })()}
+                                </div>
                             </div>
                             <div class="flex items-center gap-4 mb-4 pt-3 border-t border-gray-800">
                                 <button id="heart-btn" data-hearted="${hasHearted}" class="text-3xl ${hasHearted ? 'text-red-500' : 'text-gray-400'} hover:text-red-500 transition" title="${hasHearted ? 'Unheart' : 'Heart'} Post">
