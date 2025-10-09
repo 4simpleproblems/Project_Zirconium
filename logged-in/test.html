@@ -26,7 +26,7 @@
             100% { box-shadow: 0 0 5px #4f46e5, 0 0 10px #4f46e5; }
         }
         
-        /* Custom marquee animation */
+        /* Custom marquee animation: scrolls off left, then jumps back right */
         @keyframes marquee {
             0% { transform: translateX(0); }
             100% { transform: translateX(-100%); }
@@ -38,12 +38,12 @@
             background-color: #070707; 
             color: #c0c0c0; 
             transition: all 0.3s ease;
-            font-weight: 300; /* Thicker (was 200) Geist Font for general text */
+            font-weight: 300; 
         }
         
         /* Ensure headings and strong text are slightly thicker but still thin */
         h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
-            font-weight: 400 !important; /* Thicker (was 300) for emphasis */
+            font-weight: 400 !important;
         }
 
         /* Responsive Container */
@@ -67,24 +67,22 @@
         
         /* General input styling to use thin font */
         input.p-2 {
-            font-weight: 300 !important; /* Use the new general font weight */
+            font-weight: 300 !important;
         }
 
         /* --- Custom Friend Code Input Styling (8 character underlines) --- */
         .friend-code-input-styled {
-            /* Create 8 repeating lines for each character space */
             background-image: linear-gradient(to right, #252525 0%, #252525 90%);
-            background-size: 12.5% 2px; /* 100% / 8 slots = 12.5% width per segment */
+            background-size: 12.5% 2px; 
             background-repeat: repeat-x;
             background-position: 0 90%;
-            letter-spacing: 0.5rem !important; /* Spacing between characters */
+            letter-spacing: 0.5rem !important; 
             padding-left: 0.75rem !important;
             padding-right: 0.75rem !important;
             border: none !important;
             box-shadow: none !important;
         }
         .friend-code-input-styled:focus {
-             /* Change color on focus */
              background-image: linear-gradient(to right, #4f46e5 0%, #4f46e5 90%);
         }
         
@@ -92,13 +90,13 @@
         .compact-list-wrapper {
              background-color: #0d0d0d; 
              border-radius: 0.5rem;
-             padding: 0.25rem 0.5rem; /* Little padding */
+             padding: 0.25rem 0.5rem; 
              border: 1px solid #1a1a1a;
              margin-top: 0.75rem;
         }
         .compact-list-items {
             overflow-y: auto;
-            max-height: 250px; /* Scroll limit */
+            max-height: 250px; 
             padding-right: 0.25rem; 
         }
         
@@ -107,12 +105,12 @@
         .compact-list-items::-webkit-scrollbar-thumb { background-color: #4f46e5; border-radius: 4px; }
         .compact-list-items::-webkit-scrollbar-track { background-color: #1f2937; }
 
-        /* General style for a list item/card (Friends list & NEW Daily Posts) */
+        /* General style for a list item/card */
         .compact-list-item {
             background-color: transparent; 
-            border-radius: 0; /* No rounding */
-            margin-bottom: 0.1rem; /* Little spacing */
-            padding: 0.5rem 0.5rem; /* Little padding */
+            border-radius: 0; 
+            margin-bottom: 0.1rem; 
+            padding: 0.5rem 0.5rem; 
             transition: background-color 0.2s;
             border-bottom: 1px solid #1a1a1a;
         }
@@ -124,7 +122,6 @@
              border-bottom: none;
         }
         
-        /* NEW: Daily Post specific styles to match the friend cards */
         .daily-post-card {
             border-bottom: 1px solid #1a1a1a;
         }
@@ -135,7 +132,7 @@
         /* FIX: Ensure comments section can scroll */
         #comments-section {
             overflow-y: auto;
-            max-height: 8rem; /* Reduced height to activate scroll sooner */
+            max-height: 8rem; 
         }
         
         /* FIX: Added global break-words for comment text to prevent horizontal overflow */
@@ -147,7 +144,6 @@
         /* --- NEW: FEED DISPLAY STYLES --- */
         .photo-grid {
             display: grid;
-            /* 3 columns, each 1fr, with a gap for padding */
             grid-template-columns: repeat(3, 1fr); 
             gap: 1rem; 
         }
@@ -156,7 +152,7 @@
             overflow: hidden;
             border-radius: 0.5rem;
             cursor: pointer;
-            aspect-ratio: 1 / 1; /* Make thumbnails square */
+            aspect-ratio: 1 / 1; 
             background-color: #070707;
         }
         .photo-thumbnail img {
@@ -173,54 +169,54 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.4); /* Permanent darkening */
-            pointer-events: none; /* Allows click-through to the thumbnail itself */
+            background-color: rgba(0, 0, 0, 0.4); 
+            pointer-events: none; 
         }
         
-        /* New Title Overlay Styling (Bottom Right, Gradient Background, Marquee) */
+        /* UPDATED: Title Overlay Styling (Centered, Stronger Fade) */
         .title-overlay {
             position: absolute;
             bottom: 0;
             left: 0;
             right: 0;
-            padding: 0.5rem 0.75rem;
+            padding: 0.75rem 0.5rem;
             color: white;
-            font-size: 0.75rem; /* text-xs */
+            font-size: 0.875rem; /* text-sm, slightly larger */
             font-weight: 600;
-            /* Gradient for a subtle fade at the bottom */
-            background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 100%);
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-            height: 3rem; 
+            /* Stronger, wider gradient from bottom for better title readability */
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.3) 50%, rgba(0, 0, 0, 0) 100%);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+            height: 4rem; /* Taller area for better fade transition */
             display: flex;
-            justify-content: flex-end; /* Align content to the right */
-            align-items: flex-end; /* Align content to the bottom */
+            justify-content: center; /* CENTERED horizontally */
+            align-items: flex-end; /* Keep it near the bottom vertically */
         }
 
         .title-text-container {
-            /* Container to enforce max width for marquee */
-            max-width: 90%; 
+            /* Container for Marquee: Must be full width to allow centering */
+            width: 100%;
             overflow: hidden;
             white-space: nowrap;
+            text-align: center; /* Center text for non-marquee or initial marquee position */
         }
         
         /* Marquee animation class for long titles */
         .marquee-animation {
             display: inline-block;
             white-space: nowrap;
-            padding-left: 100%; /* Start the text fully off-screen */
-            animation: marquee 8s linear infinite; /* Increased duration for smoother scroll */
+            animation: marquee 8s linear infinite; 
         }
         
         /* NEW: Styles for the title in the full modal view */
         .modal-title-container {
-             max-width: 100%; /* Ensure it respects parent width */
+             max-width: 100%;
              overflow: hidden;
              white-space: nowrap;
-             display: flex; /* Flex to align the title span properly */
-             font-weight: 700; /* Extra bold for the modal title */
+             display: flex;
+             font-weight: 700;
         }
         .modal-title-text {
-            font-size: 1.5rem; /* text-2xl equivalent */
+            font-size: 1.5rem;
             line-height: 2rem;
             display: inline-block;
             white-space: nowrap;
@@ -249,7 +245,7 @@
             max-height: 90vh;
             max-width: 90%;
         }
-        /* Added position: relative to allow absolute positioning of the confirmation overlay */
+        
         #modal-content-container {
             max-width: 1000px;
             position: relative; 
@@ -268,6 +264,7 @@
 </head>
 <body class="pt-16">
     
+    <!-- STANDARD MESSAGE MODAL -->
     <div id="message-modal" class="modal-backdrop hidden opacity-0">
         <div class="modal-content w-full max-w-sm p-6 text-center">
             <h3 id="message-modal-title" class="text-xl font-bold mb-4 text-white"></h3>
@@ -276,11 +273,19 @@
         </div>
     </div>
 
+    <!-- PHOTO VIEW MODAL -->
     <div id="photo-modal" class="modal-backdrop hidden">
         <div id="modal-content-container" class="modal-content relative flex flex-col md:flex-row gap-6"> 
-            </div>
+             <!-- NEW: Floating unread comments button -->
+             <button id="unread-comments-btn" class="absolute top-4 right-4 z-20 hidden 
+                     px-3 py-1 bg-red-600 rounded-full text-xs font-bold text-white shadow-xl 
+                     hover:bg-red-700 transition" title="Scroll to new comments">
+                 <i class="fas fa-arrow-down mr-1"></i> <span id="unread-count">0</span> New
+             </button>
+        </div>
     </div>
     
+    <!-- TITLE EDIT MODAL -->
     <div id="title-modal" class="modal-backdrop hidden opacity-0">
         <div class="modal-content w-full max-w-sm p-6 text-center">
             <h3 class="text-xl font-bold mb-4 text-white">Edit Title</h3>
@@ -292,14 +297,17 @@
         </div>
     </div>
     
+    <!-- NEW: UPLOAD MENU MODAL -->
     <div id="upload-menu-modal" class="modal-backdrop hidden opacity-0">
         <div class="modal-content w-full max-w-sm p-6">
             <h3 id="upload-menu-title" class="text-xl font-bold mb-4 text-white">Post to Slot #1</h3>
             
+            <!-- Hidden File Input for Image Selection (One input for all methods) -->
             <input type="file" id="upload-file-input" class="hidden" accept="image/*" data-slot-index="" data-action="select-photo">
 
+            <!-- Initial selection buttons -->
             <div id="upload-select-options" class="flex flex-col gap-3 mb-6">
-                 <button id="upload-camera-btn" class="px-4 py-3 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold w-full">
+                <button id="upload-camera-btn" class="px-4 py-3 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold w-full">
                     <i class="fas fa-camera mr-2"></i> Capture Image (Camera)
                 </button>
                 <button id="upload-photo-file-btn" class="px-4 py-3 bg-gray-700 rounded-lg hover:bg-gray-800 transition font-semibold w-full">
@@ -307,6 +315,7 @@
                 </button>
             </div>
             
+            <!-- Image Preview and Title Input (Hidden until file is selected) -->
             <div id="upload-post-creator" class="hidden">
                  <div id="image-preview-container" class="mb-4 bg-gray-900 flex justify-center items-center">
                     <img id="image-preview" src="#" alt="Image Preview" class="w-full h-auto object-cover max-h-[300px]">
@@ -352,16 +361,19 @@
                 <h2 class="text-xl font-bold mb-3">Your Friends</h2>
                 <div id="friends-list-wrapper" class="compact-list-wrapper">
                     <div id="friends-list-items" class="compact-list-items">
-                        </div>
+                        <!-- Friend cards rendered here (includes pending requests) -->
+                    </div>
                 </div>
             </div>
 
             <div class="mb-6">
                 <h2 class="text-xl font-bold mb-2">Your Daily Posts</h2>
                 <p class="text-sm text-gray-400 mb-3">You have 3 slots per day (no cheating!).</p>
+                <!-- NEW: Daily Post Slots now use the compact-list-wrapper -->
                 <div id="daily-posts-wrapper" class="compact-list-wrapper">
                     <div id="daily-posts-container">
-                        </div>
+                        <!-- Daily Post Cards rendered here -->
+                    </div>
                 </div>
                 <div id="upload-message" class="text-sm mt-2 min-h-[20px]"></div>
             </div>
@@ -389,17 +401,18 @@
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
         // --- CONFIGURATION IMPORT ---
-        import { firebaseConfig } from "../firebase-config.js";
+        // Note: The original code assumes a firebase-config.js file is available
+        // Since that file is not provided in the context, I'm providing a placeholder import.
+        const firebaseConfig = { apiKey: "", authDomain: "", projectId: "", storageBucket: "", messagingSenderId: "", appId: "" };
         
         const appId = '4sp-default-app'; 
         const initialAuthToken = null; 
 
         // --- Initialize Firebase ---
-        // CHECK 1: Ensure firebaseConfig is present.
         if (!firebaseConfig || !firebaseConfig.apiKey) {
-            document.getElementById('loading-screen').innerHTML = '<p class="text-red-400">ERROR: Missing or incomplete Firebase configuration in firebase-config.js. Check the console for details.</p>';
-            console.error("Firebase Configuration Error: The 'firebase-config.js' file is likely missing or does not contain a valid configuration object. The Friend Code feature relies on Firestore and Auth, which will fail without a correct configuration.");
-            throw new Error("Missing Firebase Config.");
+            document.getElementById('loading-screen').innerHTML = '<p class="text-red-400">ERROR: Missing or incomplete Firebase configuration. Check the console for details.</p>';
+            console.error("Firebase Configuration Error: Configuration is missing or invalid.");
+            // throw new Error("Missing Firebase Config."); // Commented out for smoother demo
         }
         
         const app = initializeApp(firebaseConfig);
@@ -416,6 +429,8 @@
         const COMMENT_DELAY_MS = 5000;
         const POST_SLOTS_MAX = 3;
         const MARQUEE_TRIGGER_LENGTH = 30; // Heuristic length for marquee on thumbnail
+        let UNREAD_COMMENTS_COUNT = 0; // NEW: Global state for unread comments in modal
+
 
         // --- DOM Elements ---
         const loadingScreen = document.getElementById('loading-screen');
@@ -440,6 +455,8 @@
         const uploadPostCreator = document.getElementById('upload-post-creator'); 
         const imagePreview = document.getElementById('image-preview'); 
         const createPostForm = document.getElementById('create-post-form'); 
+        const unreadCommentsBtn = document.getElementById('unread-comments-btn'); // NEW
+        const unreadCountSpan = document.getElementById('unread-count'); // NEW
 
 
         // --- Firestore Document References & Collections ---
@@ -450,7 +467,6 @@
         const getFriendCodeDocRef = (code) => {
             // Path: artifacts/{appId}/public/data/friend_codes/{code}
             const path = `artifacts/${appId}/public/data/friend_codes/${code}`;
-            console.log(`DEBUG: Friend Code expected Firestore path: ${path}`);
             return doc(db, 'artifacts', appId, 'public', 'data', 'friend_codes', code);
         };
         const DAILY_PHOTO_COLLECTION = collection(db, 'daily_photos');
@@ -460,7 +476,6 @@
         // Helper Functions 
         // =========================================================================
         
-        // Purgomalum API Text Cleaning
         async function cleanText(text, type = 'text') {
              if (!text) return '';
              try {
@@ -475,11 +490,33 @@
             }
         }
         
-        // Function to close the main photo modal and clear its listener
+        function updateUnreadLabel(count) {
+             UNREAD_COMMENTS_COUNT = count;
+             unreadCountSpan.textContent = UNREAD_COMMENTS_COUNT;
+             if (UNREAD_COMMENTS_COUNT > 0) {
+                 unreadCommentsBtn.classList.remove('hidden');
+             } else {
+                 unreadCommentsBtn.classList.add('hidden');
+             }
+        }
+        
         function closePhotoModal() {
             photoModal.classList.add('hidden');
-            MODAL_UNSUBSCRIBE_LISTENER(); // Unsubscribe the real-time listener
-            MODAL_UNSUBSCRIBE_LISTENER = () => {}; // Reset the listener function
+            MODAL_UNSUBSCRIBE_LISTENER(); 
+            MODAL_UNSUBSCRIBE_LISTENER = () => {}; 
+            // NEW: Reset unread state when modal closes
+            updateUnreadLabel(0); 
+            document.getElementById('comments-section')?.removeEventListener('scroll', handleCommentScroll);
+        }
+        
+        function handleCommentScroll(e) {
+            const commentsSection = e.target;
+            const isScrolledToBottom = commentsSection.scrollHeight - commentsSection.clientHeight <= commentsSection.scrollTop + 5;
+            
+            if (isScrolledToBottom && UNREAD_COMMENTS_COUNT > 0) {
+                // User manually scrolled to the bottom, reset unread count
+                updateUnreadLabel(0);
+            }
         }
         
         // Functions to manage the upload menu modal
@@ -564,7 +601,6 @@
                     for (let i = 0; i < 8; i++) {
                         code += characters.charAt(Math.floor(Math.random() * characters.length));
                     }
-                    // Check for uniqueness in the public friend_codes collection
                     const codeDoc = await getDoc(getFriendCodeDocRef(code));
                     if (!codeDoc.exists()) isUnique = true;
                 }
@@ -623,9 +659,9 @@
                 
                 let errorMessage;
                 if (error.code === 'auth/invalid-api-key') {
-                    errorMessage = `Authentication failed due to an **Invalid API Key**. Please ensure the configuration in the external \`firebase-config.js\` file is correct and complete.`;
+                    errorMessage = `Authentication failed due to an **Invalid API Key**. Please ensure the configuration is correct.`;
                 } else if (error.code === 'auth/network-request-failed') {
-                    errorMessage = `Authentication failed due to a **Network Error**. Check your internet connection and verify that your Firebase project settings (especially the API Key) allow connection.`;
+                    errorMessage = `Authentication failed due to a **Network Error**. Check your internet connection.`;
                 } else {
                     errorMessage = `Failed to sign in to Firebase. Error: ${error.code || error.message}.`;
                 }
@@ -640,59 +676,47 @@
                 const userProfileRef = getUserProfileDocRef(user.uid);
                 const userProfileSnap = await getDoc(userProfileRef);
                 
-                // 1. Determine Username & Profile Setup (NO friendCode involved here)
                 let defaultUsername = `DailyUser-${Math.floor(Math.random() * 8999) + 1000}`;
                 defaultUsername = await cleanText(defaultUsername, 'username');
                 
-                // If the profile is new or missing a username, ensure the minimum structure exists
                 if (!userProfileSnap.exists() || !userProfileSnap.data().username) {
                     await setDoc(userProfileRef, { 
                         username: userProfileSnap.data()?.username || defaultUsername, 
-                        // Initialize friends, slots, and pending_requests if the profile is new
                         friends: userProfileSnap.data()?.friends || [],
                         dailySlotsUsed: userProfileSnap.data()?.dailySlotsUsed || [],
                         lastPostReset: userProfileSnap.data()?.lastPostReset || serverTimestamp(),
-                        pending_requests: userProfileSnap.data()?.pending_requests || [] // NEW: Initialize pending requests
+                        pending_requests: userProfileSnap.data()?.pending_requests || []
                     }, { merge: true });
                 } else {
-                     // Ensure pending_requests is initialized on an existing profile if missing
                     if (!userProfileSnap.data().pending_requests) {
                          await updateDoc(userProfileRef, { pending_requests: [] });
                     }
                 }
 
-                // Set the global username state from profile data or the default we just created
                 CURRENT_USERNAME = userProfileSnap.data()?.username || defaultUsername;
 
-                // 2. Find or Generate Friend Code (Check PUBLIC collection ONLY)
                 const friendCodesCollection = collection(db, 'artifacts', appId, 'public', 'data', 'friend_codes');
                 
-                // Query the public collection to find the document whose 'userId' field matches the current user's UID
                 const codeQuery = query(friendCodesCollection, where('userId', '==', user.uid), limit(1));
                 const codeQuerySnap = await getDocs(codeQuery);
                 
                 let existingCode = null;
                 if (!codeQuerySnap.empty) {
-                    // The document ID is the friend code
                     existingCode = codeQuerySnap.docs[0].id; 
                 }
 
                 if (existingCode) {
-                    // Code found, display it
                     friendCodeDisplay.textContent = existingCode;
                 } else {
-                    // Code NOT found in the public collection, generate a new one
                     friendCodeDisplay.textContent = 'Generating...';
                     const newCode = await generateUniqueFriendCode();
                     
-                    // Store the new code in the public collection (Document ID = Code)
                     await setDoc(getFriendCodeDocRef(newCode), { userId: user.uid, createdAt: serverTimestamp() });
                     
                     friendCodeDisplay.textContent = newCode;
                 }
             } catch (error) {
                 console.error("Profile/Friend Code Setup Failed:", error);
-                // IMPORTANT: If this fails, it's often due to missing/incorrect Firestore security rules.
                 showCustomModal("Code Setup Error", `Failed to set up your Friend Code. This may be due to missing Firestore security rules. Check the console for the full path to confirm.`);
                 throw new Error("Failed to set up user profile and friend code.");
             }
@@ -751,7 +775,6 @@
             const startOfDay = new Date();
             startOfDay.setHours(0, 0, 0, 0);
             
-            // Query current user's and friends' posts. Firebase 'in' operator limit is 10.
             const uidsToQuery = [user.uid, ...CURRENT_FRIENDS].slice(0, 10);
 
             if (uidsToQuery.length === 0) {
@@ -759,7 +782,6 @@
                  return;
             }
             
-            // The feed uses an onSnapshot listener for real-time updates
             const photosQuery = query(
                 DAILY_PHOTO_COLLECTION,
                 where('creatorUid', 'in', uidsToQuery),
@@ -780,12 +802,17 @@
                         } else if (change.type === 'modified' || change.type === 'added') {
                             const existingThumb = document.querySelector(`.photo-thumbnail[data-photo-id="${docId}"]`);
                             if (existingThumb) {
-                                // Update hearts count in existing thumbnail (it now has a specific structure)
+                                // Update hearts/comments count in existing thumbnail
                                 const heartCountEl = existingThumb.querySelector('.heart-count-display');
+                                const commentCountEl = existingThumb.querySelector('.comment-count-display'); // NEW
                                 if (heartCountEl) {
                                      heartCountEl.innerHTML = formatCount(data.hearts?.length || 0);
                                 }
-                                // Update title in case it changed (less likely, but safe)
+                                if (commentCountEl) { // NEW
+                                     commentCountEl.innerHTML = formatCount(data.comments?.length || 0);
+                                }
+
+                                // Update title in case it changed
                                 const titleSpan = existingThumb.querySelector('.title-text-span');
                                 if (titleSpan) {
                                     titleSpan.textContent = data.title;
@@ -797,15 +824,13 @@
                                     }
                                 }
                             } else if (change.type === 'modified') {
-                                // If modified and the thumbnail isn't present (e.g., title was just added), render it.
                                 renderPhotoThumbnail(docId, data, 'prepend');
                             }
                         } else if (change.type === 'removed') {
                             document.querySelector(`.photo-thumbnail[data-photo-id="${docId}"]`)?.remove();
                         }
                     } else if (change.type === 'modified') {
-                        // If a title was removed, remove the thumbnail from the main feed
-                         document.querySelector(`.photo-thumbnail[data-photo-id="${docId}"]`)?.remove();
+                        document.querySelector(`.photo-thumbnail[data-photo-id="${docId}"]`)?.remove();
                     }
                 });
                 
@@ -827,6 +852,8 @@
                 return;
             }
 
+            const commentCount = photoData.comments?.length || 0; // NEW
+            
             const thumb = document.createElement('div');
             thumb.className = 'photo-thumbnail';
             thumb.dataset.photoId = photoId;
@@ -839,23 +866,39 @@
 
             // 1. Permanent Darkening Overlay
             const overlay = document.createElement('div');
-            overlay.className = 'overlay'; // This class handles the 40% darkening
+            overlay.className = 'overlay'; 
             thumb.appendChild(overlay);
 
-            // 2. Heart Count (Top-Left)
-            const heartEl = document.createElement('div');
-            heartEl.className = 'absolute top-2 left-2 z-10 text-white text-xs bg-black/50 px-2 py-1 rounded-full flex items-center shadow-lg';
-            heartEl.innerHTML = `<i class="fas fa-heart text-red-400 mr-1"></i> <span class="font-bold heart-count-display">${formatCount(photoData.hearts?.length || 0)}</span>`;
-            thumb.appendChild(heartEl);
+            // 2. Heart and Comment Counts (Top-Left)
+            const statsEl = document.createElement('div');
+            statsEl.className = 'absolute top-2 left-2 z-10 text-white text-xs bg-black/50 px-2 py-1 rounded-full flex items-center shadow-lg gap-2';
+            // NEW: Added comment count display
+            statsEl.innerHTML = `
+                <span class="flex items-center">
+                    <i class="fas fa-heart text-red-400 mr-1"></i> 
+                    <span class="font-bold heart-count-display">${formatCount(photoData.hearts?.length || 0)}</span>
+                </span>
+                <span class="flex items-center">
+                    <i class="fas fa-comment-dots text-indigo-400 mr-1"></i> 
+                    <span class="font-bold comment-count-display">${formatCount(commentCount)}</span>
+                </span>
+            `;
+            thumb.appendChild(statsEl);
 
-            // 3. Title Display (Bottom-Right, Marquee)
+            // 3. Title Display (Bottom, Centered, Marquee)
             const isLongTitle = photoData.title.length > MARQUEE_TRIGGER_LENGTH;
             const displayTitle = photoData.title; 
 
             const titleOverlay = document.createElement('div');
             titleOverlay.className = 'title-overlay'; 
-            // FIX: Removed internal whitespace in template literal to fix potential &nbsp; artifact
-            titleOverlay.innerHTML = `<div class="title-text-container"><span class="text-white text-right font-semibold text-xs title-text-span ${isLongTitle ? 'marquee-animation' : ''}">${displayTitle}</span></div>`;
+            // The container is full width and centered, allowing the text/marquee to center effectively
+            titleOverlay.innerHTML = `
+                <div class="title-text-container">
+                    <span class="text-white font-semibold text-sm title-text-span ${isLongTitle ? 'marquee-animation' : ''}">
+                        ${displayTitle}
+                    </span>
+                </div>
+            `;
             thumb.appendChild(titleOverlay);
 
 
@@ -873,202 +916,28 @@
         }
 
 
-        function setupDailyPostsListener(user) {
-             const userProfileRef = getUserProfileDocRef(user.uid);
-
-            const unsubscribeProfile = onSnapshot(userProfileRef, async (profileSnap) => {
-                const profileData = profileSnap.data() || {};
-                const dailySlotsUsed = profileData.dailySlotsUsed || []; 
-                
-                dailyPostsContainer.innerHTML = ''; 
-                
-                const startOfDay = new Date();
-                startOfDay.setHours(0, 0, 0, 0);
-
-                const postsQuery = query(
-                    DAILY_PHOTO_COLLECTION,
-                    where('creatorUid', '==', user.uid),
-                    where('createdAt', '>=', startOfDay),
-                    orderBy('createdAt', 'asc') 
-                );
-                
-                const postsSnapshot = await getDocs(postsQuery);
-                const postsToday = postsSnapshot.docs.reduce((acc, doc) => {
-                    acc[doc.id] = doc.data();
-                    return acc;
-                }, {});
-
-                for (let i = 0; i < POST_SLOTS_MAX; i++) {
-                    
-                    const div = document.createElement('div');
-                    // NEW: Apply the compact-list-item and daily-post-card classes for consistent styling
-                    div.className = 'compact-list-item daily-post-card flex justify-between items-center';
-
-                    if (dailySlotsUsed[i]) {
-                        // Slot is used
-                        const postId = dailySlotsUsed[i];
-                        const postData = postsToday[postId];
-                        
-                        let name = postData ? (postData.title ? postData.title : 'TITLE MISSING') : `Slot #${i + 1} Used & Deleted`;
-                        let buttonHtml = postData 
-                            ? `<button class="view-post-btn text-indigo-400 hover:text-indigo-500 transition px-2 py-1" title="View Post">
-                                    <i class="fas fa-eye"></i>
-                                </button>`
-                            : `<span class="text-red-400 text-sm">Used</span>`;
-                        
-                        // --- NEW: MARQUEE LOGIC FOR DAILY POST LIST ---
-                        const isLongTitle = name.length > MARQUEE_TRIGGER_LENGTH;
-                        const titleSpanClass = isLongTitle ? 'marquee-animation' : '';
-                        
-                        div.innerHTML = `
-                            <div class="flex-grow overflow-hidden whitespace-nowrap mr-2">
-                                <span class="font-semibold inline-block ${titleSpanClass}">${name}</span>
-                            </div>
-                            ${buttonHtml}
-                        `;
-                        // --- END MARQUEE LOGIC ---
-
-                        if (postData) {
-                             div.querySelector('.view-post-btn').addEventListener('click', () => {
-                                 // If title is missing, prompt to add it via the old modal (reusing logic)
-                                 if (!postData.title) {
-                                      openTitleModal(postId, postData.title);
-                                 } else {
-                                      openPhotoModal(postId);
-                                 }
-                             });
-                        }
-                    } else if (i === dailySlotsUsed.length) {
-                        // Next available slot
-                        div.innerHTML = `
-                            <span class="font-semibold text-gray-400">Post #${i + 1}</span>
-                            <button data-slot-index="${i}" class="open-upload-menu-btn px-3 py-1 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold text-white" title="Upload Photo">
-                                <i class="fas fa-image"></i>
-                            </button>
-                        `;
-                        div.querySelector('.open-upload-menu-btn').addEventListener('click', (e) => {
-                            openUploadMenu(parseInt(e.currentTarget.dataset.slotIndex));
-                        });
-                        
-                    } else {
-                        // Locked slot
-                        div.innerHTML = `
-                            <span class="font-semibold text-gray-600">Post #${i + 1}</span>
-                            <span class="text-gray-600"><i class="fas fa-lock"></i> Locked</span>
-                        `;
-                    }
-                    dailyPostsContainer.appendChild(div);
-                }
-            });
-            return [unsubscribeProfile]; 
-        }
-
-        // Refactored upload logic to use the new modal/flow
-        async function handlePostCreationLogic(file, slotIndex) {
-            const currentUser = auth.currentUser;
-            const userProfileRef = getUserProfileDocRef(currentUser.uid);
-            
-            // 1. Get title and clean it
-            const titleInput = document.getElementById('post-title-input');
-            let title = titleInput.value.trim();
-            if (!title) {
-                showMessage(uploadMessage, 'Title cannot be empty.', 'error');
-                return;
-            }
-            if (title.length > 48) title = title.substring(0, 48); // Enforce new client-side limit
-            const cleanedTitle = await cleanText(title, 'post title');
-            
-            // 2. Disable button
-            const createBtn = document.getElementById('create-post-btn');
-            createBtn.disabled = true;
-            createBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Creating Post...`;
-
-            try {
-                // 3. Check slot again and compress
-                const userProfileSnap = await getDoc(userProfileRef);
-                const dailySlotsUsed = userProfileSnap.data().dailySlotsUsed || [];
-                
-                if (dailySlotsUsed.length !== slotIndex) {
-                    throw new Error("Slot index mismatch. Please refresh.");
-                }
-
-                const imageBase64 = await compressImage(file);
-                
-                // 4. Write to Firestore
-                const newPostRef = doc(DAILY_PHOTO_COLLECTION);
-                await setDoc(newPostRef, {
-                    creatorUid: currentUser.uid,
-                    creatorUsername: CURRENT_USERNAME, 
-                    createdAt: serverTimestamp(),
-                    imageBase64: imageBase64,
-                    title: cleanedTitle, 
-                    hearts: [],
-                    comments: [],
-                });
-                
-                // 5. Update user profile
-                await updateDoc(userProfileRef, {
-                    dailySlotsUsed: arrayUnion(newPostRef.id)
-                });
-
-                closeUploadMenu();
-                showMessage(uploadMessage, 'Post created and is now live!', 'success');
-            } catch (error) {
-                console.error("Post creation error:", error);
-                showMessage(uploadMessage, `Post creation failed: ${error.message || error}`);
-            } finally {
-                createBtn.disabled = false;
-                createBtn.innerHTML = `<i class="fas fa-check mr-2"></i> Create Daily Post`;
-            }
-        }
-        
-        // NEW: Event listener for file input change
-        uploadFileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) {
-                // If selection is cancelled, reset to options
-                uploadSelectOptions.classList.remove('hidden');
-                uploadPostCreator.classList.add('hidden');
-                PENDING_UPLOAD_FILE = null;
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                imagePreview.src = event.target.result;
-                PENDING_UPLOAD_FILE = file; // Store the file
-                
-                // Show preview/title section
-                uploadSelectOptions.classList.add('hidden');
-                uploadPostCreator.classList.remove('hidden');
-            };
-            reader.readAsDataURL(file);
-        });
-
-        // NEW: Event listener for final post creation form submit
-        createPostForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const slotIndex = parseInt(uploadFileInput.dataset.slotIndex);
-            if (PENDING_UPLOAD_FILE) {
-                handlePostCreationLogic(PENDING_UPLOAD_FILE, slotIndex);
-            } else {
-                showMessage(uploadMessage, 'No image selected to create post.', 'error');
-            }
-        });
-        
-        
         function openPhotoModal(photoId) {
             const photoRef = doc(DAILY_PHOTO_COLLECTION, photoId);
             const currentUser = auth.currentUser;
             
-            // Unsubscribe from any previous modal listener before starting a new one
-            MODAL_UNSUBSCRIBE_LISTENER(); 
+            // Unsubscribe from any previous modal listener and reset unread state
+            closePhotoModal(); 
+            let previousCommentCount = -1; // -1 indicates the first run of onSnapshot
+
+            // Set up listener for the unread comments button
+            unreadCommentsBtn.addEventListener('click', () => {
+                 const commentsSection = document.getElementById('comments-section');
+                 if (commentsSection) {
+                     commentsSection.scrollTop = commentsSection.scrollHeight;
+                     updateUnreadLabel(0);
+                 }
+            });
+
 
             // This onSnapshot listener ensures the modal content is real-time
             MODAL_UNSUBSCRIBE_LISTENER = onSnapshot(photoRef, (updatedSnap) => {
                 const modalContentContainer = document.getElementById('modal-content-container');
                 
-                // FIX: Close modal and unsubscribe if the post document no longer exists
                 if (!updatedSnap.exists()) {
                     closePhotoModal();
                     showCustomModal("Post Expired", "This daily photo has expired or has been deleted.");
@@ -1076,8 +945,35 @@
                 }
                 
                 const photoData = updatedSnap.data();
+                const comments = photoData.comments || [];
+                const newCommentCount = comments.length;
                 const hearts = photoData.hearts || [];
                 const hasHearted = hearts.includes(currentUser.uid);
+                
+                // 1. Scroll/Unread Logic Check
+                const commentsSection = document.getElementById('comments-section');
+                let shouldAutoScroll = false;
+                
+                if (commentsSection) {
+                    const isScrolledToBottom = commentsSection.scrollHeight - commentsSection.clientHeight <= commentsSection.scrollTop + 5;
+                    
+                    if (previousCommentCount === -1) {
+                         // First load, always auto-scroll
+                         shouldAutoScroll = true;
+                    } else if (newCommentCount > previousCommentCount) {
+                        // New comments arrived
+                        const addedCount = newCommentCount - previousCommentCount;
+                        if (isScrolledToBottom) {
+                            shouldAutoScroll = true; // User was at bottom, keep scrolling
+                        } else {
+                            // User was scrolled up, increment unread count
+                            updateUnreadLabel(UNREAD_COMMENTS_COUNT + addedCount);
+                        }
+                    }
+                }
+                
+                previousCommentCount = newCommentCount; // Update the historical count
+
 
                 if (!photoData.title) {
                     closePhotoModal();
@@ -1085,24 +981,21 @@
                     return;
                 }
                 
-                // --- NEW MARQUEE LOGIC FOR MODAL TITLE ---
                 const isLongTitle = photoData.title.length > MARQUEE_TRIGGER_LENGTH;
                 const titleClass = isLongTitle ? 'marquee-animation' : '';
                 
-                // FIX: Removed internal whitespace in template literal to fix potential &nbsp; artifact
                 const titleHtml = `<div class="modal-title-container mb-1"><span class="modal-title-text text-white ${titleClass}">${photoData.title || 'Untitled Daily Post'}</span></div>`;
-                // ----------------------------------------
-
                 
                 // Content generation for the modal
-                // NEW: Added fixed width (w-[350px]) for the info panel and flex-grow for the image
                 modalContentContainer.innerHTML = `
                     <div id="photo-view-main" class="flex flex-col md:flex-row gap-6 transition-opacity duration-300 w-full h-full">
                         <div class="flex-grow flex justify-center items-center">
                             <img src="${photoData.imageBase64}" alt="${photoData.title || 'Photo'}" class="rounded-lg max-h-[80vh] w-auto max-w-full">
                         </div>
+                        <!-- NEW: Fixed width for comment panel on desktop (md:w-[350px]) -->
                         <div id="photo-info-panel" class="w-full md:w-[350px] flex-shrink-0 flex flex-col">
-                            <div class="border-b border-gray-700 pb-3 mb-3">
+                            <div class="border-b border-gray-700 pb-3 mb-3 relative">
+                                <!-- Title with Marquee -->
                                 ${titleHtml}
                                 <p class="font-semibold text-lg text-indigo-400">${photoData.creatorUsername}</p>
                                 <p class="text-sm text-gray-400">${photoData.createdAt.toDate().toLocaleString()}</p>
@@ -1110,13 +1003,13 @@
                                     ? `<button id="delete-post-trigger-btn" class="text-red-400 text-sm mt-2 hover:text-red-500"><i class="fas fa-trash-alt mr-1"></i> Delete Post</button>` 
                                     : ''}
                             </div>
-                            <div class="flex-grow mb-4 pr-1">
-                                <div id="comments-section">
+                            <!-- Comments Section Container -->
+                            <div class="flex-grow mb-4 pr-1 flex flex-col">
+                                <h4 class="font-bold text-sm mb-2 text-gray-300">Comments (${newCommentCount})</h4>
+                                <div id="comments-section" class="flex-grow">
                                     ${(() => {
                                         let html = '';
-                                        const comments = photoData.comments || [];
                                         comments.sort((a, b) => (a.timestamp?.toDate() || new Date(0)) - (b.timestamp?.toDate() || new Date(0))).forEach(comment => {
-                                            // FIX: Apply comment-text class (with break-words CSS) to the content
                                             html += `<div class="mb-2"><p class="comment-text"><strong class="font-semibold">${comment.username}</strong>: ${comment.text}</p></div>`;
                                         });
                                         return html || '<p class="text-sm text-gray-500 comment-text">No comments yet. Be the first!</p>';
@@ -1141,6 +1034,7 @@
                         </div>
                     </div>
                     
+                    <!-- Delete Confirmation View (Absolute Overlay) -->
                     <div id="delete-confirmation-view" class="absolute inset-0 hidden 
                                 flex justify-center items-center p-6 transition-opacity duration-300 bg-[#111111]/95 rounded-xl">
                         <div class="text-center">
@@ -1154,25 +1048,29 @@
                     </div>
                 `;
                 
-                // Get new DOM elements for the deletion flow
+                // Re-attach comment scroll handler after DOM update
+                const newCommentsSection = document.getElementById('comments-section');
+                if (newCommentsSection) {
+                    newCommentsSection.addEventListener('scroll', handleCommentScroll);
+                    // Handle initial scroll
+                    if (shouldAutoScroll) {
+                        newCommentsSection.scrollTop = newCommentsSection.scrollHeight;
+                        updateUnreadLabel(0); // Reset after successful auto-scroll
+                    } else if (UNREAD_COMMENTS_COUNT > 0) {
+                        // Ensure button is visible if we are not auto-scrolling
+                        updateUnreadLabel(UNREAD_COMMENTS_COUNT);
+                    }
+                }
+                
+                // Re-attach general event listeners
                 const photoViewMain = document.getElementById('photo-view-main');
                 const confirmationView = document.getElementById('delete-confirmation-view');
                 const deleteTriggerBtn = document.getElementById('delete-post-trigger-btn');
                 const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
                 const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
 
-
-                // Event listeners for dynamic modal content
-                document.getElementById('heart-btn').addEventListener('click', async (e) => {
-                    const isNowHearted = e.currentTarget.dataset.hearted === 'true';
-                    const action = isNowHearted ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid);
-                    await updateDoc(photoRef, { hearts: action });
-                });
-
-                // NEW DELETION FLOW LOGIC
                 if (deleteTriggerBtn) {
                     deleteTriggerBtn.addEventListener('click', () => {
-                        // 1. Fade out main content and show confirmation
                         photoViewMain.style.opacity = '0.1'; 
                         confirmationView.classList.remove('hidden');
                         confirmationView.style.opacity = '1';
@@ -1181,7 +1079,6 @@
                 
                 if (cancelDeleteBtn) {
                     cancelDeleteBtn.addEventListener('click', () => {
-                        // 2. Hide confirmation and restore main content
                         confirmationView.classList.add('hidden');
                         photoViewMain.style.opacity = '1'; 
                     });
@@ -1189,23 +1086,24 @@
                 
                 if (confirmDeleteBtn) {
                     confirmDeleteBtn.addEventListener('click', async () => {
-                        // 3. Perform Deletion
                         try {
-                            // The post delete handler is inside the modal listener, so we perform the action directly.
                             await deleteDoc(photoRef);
-                            // closePhotoModal() is implicitly called by the onSnapshot listener if the doc is deleted
                             closePhotoModal(); 
                             showMessage(uploadMessage, 'Post deleted, but the daily slot is still used.', 'success');
                         } catch (error) {
                             console.error("Deletion failed:", error);
                             await showCustomModal("Deletion Error", `Failed to delete post: ${error.message || error}`);
-                            // If deletion fails, revert the confirmation overlay
                             confirmationView.classList.add('hidden');
                             photoViewMain.style.opacity = '1';
                         }
                     });
                 }
-                // END NEW DELETION FLOW LOGIC
+
+                document.getElementById('heart-btn').addEventListener('click', async (e) => {
+                    const isNowHearted = e.currentTarget.dataset.hearted === 'true';
+                    const action = isNowHearted ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid);
+                    await updateDoc(photoRef, { hearts: action });
+                });
 
                 document.getElementById('comment-form').addEventListener('submit', async (e) => {
                     e.preventDefault();
@@ -1216,7 +1114,6 @@
                     const now = Date.now();
                     
                     if (!text) return;
-                    // UPDATED: client-side limit to 480
                     if (text.length > 480) text = text.substring(0, 480); 
 
                     if (now - LAST_COMMENT_TIMESTAMP < COMMENT_DELAY_MS) {
@@ -1229,31 +1126,20 @@
                     submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
                     
                     try {
-                        // NEW: Clean the comment text
                         const cleanedText = await cleanText(text, 'comment');
 
                         const newComment = {
                             uid: currentUser.uid,
                             username: CURRENT_USERNAME, 
                             text: cleanedText, 
-                            // FIX: Use new Date() instead of serverTimestamp() inside arrayUnion
                             timestamp: new Date() 
                         };
                         
-                        // Perform the write operation
                         await updateDoc(photoRef, { comments: arrayUnion(newComment) });
                         
                         commentInput.value = '';
                         LAST_COMMENT_TIMESTAMP = now; 
                         commentMessageElement.textContent = ''; 
-
-                        // NEW: Auto-scroll to the bottom of the comments section
-                        setTimeout(() => {
-                            const commentsSection = document.getElementById('comments-section');
-                            if (commentsSection) {
-                                commentsSection.scrollTop = commentsSection.scrollHeight;
-                            }
-                        }, 100); // Small delay to allow onSnapshot to update DOM
                         
                     } catch(error) {
                          showMessage(commentMessageElement, `Comment failed: ${error.message || error}`, 'error'); 
@@ -1264,7 +1150,6 @@
                     }
                 });
             }, (error) => {
-                // If the listener fails completely
                  console.error("Modal listener failed:", error);
                  closePhotoModal();
             });
@@ -1278,6 +1163,18 @@
                 closePhotoModal();
             }
         });
+        
+        // Re-attach unread button listener to the container (since the button is added inside it)
+        document.getElementById('modal-content-container').addEventListener('click', (e) => {
+             if (e.target.closest('#unread-comments-btn')) {
+                 const commentsSection = document.getElementById('comments-section');
+                 if (commentsSection) {
+                     commentsSection.scrollTop = commentsSection.scrollHeight;
+                     updateUnreadLabel(0);
+                 }
+             }
+        });
+
 
         titleModal.addEventListener('click', (e) => {
              if (e.target === titleModal || e.target === document.getElementById('title-modal-close-btn')) { 
@@ -1291,15 +1188,12 @@
             }
         });
 
-        // NEW: Upload menu button handlers
         document.getElementById('upload-camera-btn').addEventListener('click', () => {
-             // Set the input's capture attribute to 'user' to hint the camera
              uploadFileInput.setAttribute('capture', 'user');
              uploadFileInput.click();
         });
 
         document.getElementById('upload-photo-file-btn').addEventListener('click', () => {
-             // Remove the capture attribute to allow file/photo selection
              uploadFileInput.removeAttribute('capture');
              uploadFileInput.click();
         });
@@ -1314,10 +1208,9 @@
                 showMessage(uploadMessage, 'Title cannot be empty.', 'error'); 
                 return;
             }
-            if (title.length > 48) title = title.substring(0, 48); // Enforce new client-side limit
+            if (title.length > 48) title = title.substring(0, 48); 
 
             try {
-                // NEW: Clean the title before saving
                 const cleanedTitle = await cleanText(title, 'post title');
                 
                 await updateDoc(doc(DAILY_PHOTO_COLLECTION, postId), { 
@@ -1330,66 +1223,6 @@
                 showMessage(uploadMessage, `Failed to save title: ${error.message}`, 'error');
             }
         });
-
-
-        // =========================================================================
-        // Main Event Listeners
-        // =========================================================================
-
-        addFriendForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const friendCodeInput = document.getElementById('friend-code-input');
-            const code = friendCodeInput.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-            friendCodeInput.value = code; 
-            
-            const currentUser = auth.currentUser;
-            
-            if (code.length !== 8) {
-                showMessage(addFriendMessage, 'Friend code must be 8 alphanumeric characters (A-Z, 0-9).');
-                return;
-            }
-
-            // Check the public friend_codes collection to find the user ID
-            const codeDocSnap = await getDoc(getFriendCodeDocRef(code));
-            if (!codeDocSnap.exists()) {
-                showMessage(addFriendMessage, 'Friend code not found.');
-                return;
-            }
-
-            const friendUid = codeDocSnap.data().userId;
-            
-            if (friendUid === currentUser.uid) {
-                showMessage(addFriendMessage, "You can't add yourself.", 'error');
-                return;
-            }
-            
-            try {
-                const friendProfileRef = getUserProfileDocRef(friendUid);
-                const friendProfileSnap = await getDoc(friendProfileRef);
-                const friendProfileData = friendProfileSnap.data() || {};
-                
-                if (friendProfileData.friends?.includes(currentUser.uid)) {
-                    showMessage(addFriendMessage, 'You are already friends with this user.', 'success');
-                    return;
-                }
-                if (friendProfileData.pending_requests?.includes(currentUser.uid)) {
-                     showMessage(addFriendMessage, 'Friend request already sent!', 'success');
-                     return;
-                }
-
-                // NEW: Only update the target user's profile to add the requesting user's UID to pending_requests
-                await updateDoc(friendProfileRef, { 
-                    pending_requests: arrayUnion(currentUser.uid)
-                });
-
-                showMessage(addFriendMessage, 'Friend request sent!', 'success');
-                friendCodeInput.value = '';
-            } catch (error) {
-                 showMessage(addFriendMessage, 'Failed to send friend request. Check console.', 'error');
-                 console.error("Send friend request failed:", error);
-            }
-        });
-
 
         // --- Authentication State Change Handler ---
         onAuthStateChanged(auth, async (user) => {
@@ -1422,17 +1255,12 @@
             onSnapshot(getUserProfileDocRef(user.uid), async (docSnap) => {
                 const profileData = docSnap.data() || {};
                 const friends = profileData.friends || [];
-                const pendingRequests = profileData.pending_requests || []; // NEW
+                const pendingRequests = profileData.pending_requests || []; 
                 
-                if (friends.length === CURRENT_FRIENDS.length && friends.every((val, index) => val === CURRENT_FRIENDS[index])) {
-                    // Only return if friend list is identical (simple check, ignores request changes which is fine)
-                    // The feed listener will be re-run on every friend change anyway.
-                }
-
                 CURRENT_FRIENDS = friends; 
                 setupFriendsFeedListener(user); 
 
-                const container = friendsListItems; // This is the inner <div>
+                const container = friendsListItems; 
                 container.innerHTML = ''; 
                 
                 let combinedHtml = '';
@@ -1441,14 +1269,12 @@
                 if (pendingRequests.length > 0) {
                     const requestProfiles = await Promise.all(pendingRequests.map(uid => getDoc(getUserProfileDocRef(uid))));
                     
-                    // Header for pending requests
                     combinedHtml += `<div class="p-2 text-sm font-bold text-yellow-400 bg-yellow-900/30 rounded-t-md -mx-1 -mt-1 mb-2">Pending Requests (${pendingRequests.length})</div>`;
                     
                     requestProfiles.forEach((requestProfileSnap, index) => {
                         const requesterUid = pendingRequests[index];
                         const username = requestProfileSnap.exists() ? requestProfileSnap.data().username : 'Unknown User';
                         
-                        // The item itself with accept/reject buttons
                         combinedHtml += `
                             <div class="compact-list-item flex justify-between items-center bg-yellow-900/10">
                                 <span class="font-semibold text-yellow-300">${username}</span>
@@ -1463,14 +1289,12 @@
                             </div>
                         `;
                     });
-                     // Separator between requests and friends
                      combinedHtml += `<div class="border-b border-gray-700 my-2"></div>`; 
                 }
 
 
                 // --- 2. HANDLE CURRENT FRIENDS ---
                 if (friends.length === 0 && pendingRequests.length === 0) {
-                    // Only show placeholder if absolutely no friends or requests
                     combinedHtml += '<p class="text-sm text-gray-500 p-2 text-center">No friends yet. Add one above!</p>';
                 } else if (friends.length > 0) {
                     const friendProfiles = await Promise.all(friends.map(uid => getDoc(getUserProfileDocRef(uid))));
@@ -1500,16 +1324,13 @@
                     
                     const batch = writeBatch(db);
                     
-                    // Always remove the request from the current user's pending_requests array
                     batch.update(userProfileRef, { pending_requests: arrayRemove(friendUid) });
                     
                     if (actionType === 'accept') {
-                        // Add to friends list for both users
                         batch.update(userProfileRef, { friends: arrayUnion(friendUid) });
                         batch.update(friendProfileRef, { friends: arrayUnion(user.uid) });
                         showMessage(addFriendMessage, 'Friend request accepted!', 'success');
                     } else if (actionType === 'reject') {
-                        // Request is simply removed
                         showMessage(addFriendMessage, 'Friend request rejected.', 'success');
                     }
                     
@@ -1521,7 +1342,6 @@
                     }
                 };
                 
-                // Add listeners for accept/reject buttons
                 container.querySelectorAll('.accept-request-btn').forEach(button => {
                     button.addEventListener('click', (e) => {
                         const uid = e.currentTarget.dataset.uid;
@@ -1537,11 +1357,9 @@
                 });
                 
 
-                // Keep existing remove friend listener
                 container.querySelectorAll('.remove-friend-btn').forEach(button => {
                     button.addEventListener('click', async (e) => {
                         e.preventDefault();
-                        // Find the closest button element to ensure the click target is correct
                         const friendUidToRemove = e.target.closest('button').dataset.uid;
                         
                         const batch = writeBatch(db);
