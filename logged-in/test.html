@@ -26,25 +26,12 @@
             100% { box-shadow: 0 0 5px #4f46e5, 0 0 10px #4f46e5; }
         }
         
-        /* UPDATED: New, staged marquee animation that pauses and reverses */
-        @keyframes marquee-reversible {
-            /* Stage 1: Pause at the start (0% to 15% of animation time) */
-            0%, 15% { transform: translateX(0); }
-
-            /* Stage 2: Scroll to the left (15% to 50%) */
-            50% {
-                /* Scrolls left by its own width, with a small offset to keep the end visible */
-                /* This is a heuristic that works well for most title lengths */
-                transform: translateX(calc(-100% + 40px));
-            }
-
-            /* Stage 3: Pause at the far-left position (50% to 65%) */
-            65% { transform: translateX(calc(-100% + 40px)); }
-            
-            /* Stage 4: Animate back to the start (65% to 100%) */
-            100% { transform: translateX(0); }
+        /* UPDATED: New, continuous marquee animation (scrolls fully around) */
+        @keyframes marquee-continuous {
+            /* Scrolls 50% since content is duplicated (Content: Title + Title). */
+            0% { transform: translateX(0%); } 
+            100% { transform: translateX(-50%); } 
         }
-
 
         /* --- FONT & BASE STYLING (THICKENED FONT) --- */
         body { 
@@ -52,12 +39,12 @@
             background-color: #070707; 
             color: #c0c0c0; 
             transition: all 0.3s ease;
-            font-weight: 300; /* Thicker (was 200) Geist Font for general text */
+            font-weight: 300; 
         }
         
         /* Ensure headings and strong text are slightly thicker but still thin */
         h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
-            font-weight: 400 !important; /* Thicker (was 300) for emphasis */
+            font-weight: 400 !important; 
         }
 
         /* Responsive Container */
@@ -70,28 +57,28 @@
             padding: 0 1rem;
         }
 
-        /* --- CONSISTENT PANEL STYLING --- */
+        /* --- CONSISTENT PANEL STYLING (UPDATED: Slight Rounding) --- */
         .left-panel, .feed-panel { 
             background-color: #111111; 
             border: 1px solid #252525; 
-            border-radius: 0.75rem; 
+            border-radius: 1rem; /* UPDATED: Increased rounding */
             padding: 1.5rem; 
             height: fit-content;
         }
         
         /* General input styling to use thin font */
         input.p-2 {
-            font-weight: 300 !important; /* Use the new general font weight */
+            font-weight: 300 !important; 
         }
 
         /* --- Custom Friend Code Input Styling (8 character underlines) --- */
         .friend-code-input-styled {
             /* Create 8 repeating lines for each character space */
             background-image: linear-gradient(to right, #252525 0%, #252525 90%);
-            background-size: 12.5% 2px; /* 100% / 8 slots = 12.5% width per segment */
+            background-size: 12.5% 2px; 
             background-repeat: repeat-x;
             background-position: 0 90%;
-            letter-spacing: 0.5rem !important; /* Spacing between characters */
+            letter-spacing: 0.5rem !important; 
             padding-left: 0.75rem !important;
             padding-right: 0.75rem !important;
             border: none !important;
@@ -102,17 +89,17 @@
              background-image: linear-gradient(to right, #4f46e5 0%, #4f46e5 90%);
         }
         
-        /* --- Compact List Styling for Friends and Daily Posts --- */
+        /* --- Compact List Styling for Friends and Daily Posts (UPDATED: Slight Rounding) --- */
         .compact-list-wrapper {
              background-color: #0d0d0d; 
-             border-radius: 0.5rem;
-             padding: 0.25rem 0.5rem; /* Little padding */
+             border-radius: 0.75rem; /* UPDATED: Slightly rounded wrapper */
+             padding: 0.25rem 0.5rem; 
              border: 1px solid #1a1a1a;
              margin-top: 0.75rem;
         }
         .compact-list-items {
             overflow-y: auto;
-            max-height: 250px; /* Scroll limit */
+            max-height: 250px; 
             padding-right: 0.25rem; 
         }
         
@@ -124,11 +111,12 @@
         /* General style for a list item/card (Friends list & NEW Daily Posts) */
         .compact-list-item {
             background-color: transparent; 
-            border-radius: 0; /* No rounding */
-            margin-bottom: 0.1rem; /* Little spacing */
-            padding: 0.5rem 0.5rem; /* Little padding */
+            border-radius: 0.5rem; /* UPDATED: Rounded item cards */
+            margin-bottom: 0.25rem; /* Spacing */
+            padding: 0.5rem 0.5rem; 
             transition: background-color 0.2s;
-            border-bottom: 1px solid #1a1a1a;
+            /* Removed border-bottom for cleaner look with rounded cards */
+            border-bottom: none;
         }
         .compact-list-item:hover {
             background-color: #1f1f1f;
@@ -140,16 +128,16 @@
         
         /* NEW: Daily Post specific styles to match the friend cards */
         .daily-post-card {
-            border-bottom: 1px solid #1a1a1a;
+            border-bottom: none; /* Ensure no border separation for rounded cards */
         }
         .daily-post-card:last-child {
              border-bottom: none;
         }
         
-        /* FIX: Ensure comments section can scroll */
+        /* FIX: Ensure comments section can scroll (UPDATED: Added max-height) */
         #comments-section {
             overflow-y: auto;
-            /* Removed fixed max-height here, will be set dynamically in modal HTML */
+            max-height: 40vh; /* Set maximum height to enforce scrolling */
         }
         
         /* FIX: Added global break-words for comment text to prevent horizontal overflow */
@@ -161,7 +149,6 @@
         /* --- NEW: FEED DISPLAY STYLING --- */
         .photo-grid {
             display: grid;
-            /* 3 columns, each 1fr, with a gap for padding */
             grid-template-columns: repeat(3, 1fr); 
             gap: 1rem; 
         }
@@ -170,7 +157,7 @@
             overflow: hidden;
             border-radius: 0.5rem;
             cursor: pointer;
-            aspect-ratio: 1 / 1; /* Make thumbnails square */
+            aspect-ratio: 1 / 1; 
             background-color: #070707;
         }
         .photo-thumbnail img {
@@ -187,41 +174,56 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.4); /* Permanent darkening */
-            pointer-events: none; /* Allows click-through to the thumbnail itself */
+            background-color: rgba(0, 0, 0, 0.4); 
+            pointer-events: none; 
         }
         
-        /* UPDATED: Title Overlay has a darker gradient and more horizontal padding */
+        /* UPDATED: Title Overlay (Top-right corner, Label style, No Gradient) */
         .title-overlay {
             position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 0.75rem 1rem; /* More horizontal padding */
+            top: 0.5rem; /* NEW: Position from top */
+            right: 0.5rem; /* NEW: Position from right */
+            
+            /* NEW: Label styling */
+            background-color: rgba(0, 0, 0, 0.75); /* Solid, dark background */
+            border-radius: 0.5rem; /* Label rounding */
+            padding: 0.25rem 0.5rem; /* Smaller padding for label look */
+            max-width: 70%; /* Constraint width */
+            
             color: white;
-            font-size: 0.75rem; /* text-xs */
+            font-size: 0.75rem; 
             font-weight: 600;
-            background: linear-gradient(to top, rgba(0, 0, 0, 1) 20%, transparent 100%); 
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-            height: 3rem; 
+            
+            /* DELETED: background: linear-gradient(...) and text-shadow */
+            background: rgba(0, 0, 0, 0.75);
+            text-shadow: none; 
+            height: 1.5rem; /* Fixed height for small label */
             display: flex;
-            justify-content: center; /* Align content to the center */
-            align-items: flex-end; /* Align content to the bottom */
-            overflow: hidden; /* Important for marquee */
+            justify-content: flex-start;
+            align-items: center; 
+            overflow: hidden; 
+            z-index: 10; 
         }
 
         .title-text-container {
             max-width: 100%; 
             overflow: hidden;
             white-space: nowrap;
-            text-align: center; 
+            /* UPDATED: Reduced spacing between duplicates for a less gappy marquee */
+            padding-right: 0.5rem; 
         }
         
-        /* UPDATED: Marquee animation class now uses the staged animation */
+        /* UPDATED: Marquee animation class uses the continuous keyframes */
         .marquee-animation {
             display: inline-block;
             white-space: nowrap;
-            animation: marquee-reversible 12s ease-in-out infinite;
+            animation: marquee-continuous 8s linear infinite; /* Shorter duration for speed */
+        }
+        
+        /* NEW: Class to stop the marquee when the title is short */
+        .marquee-animation.stopped {
+             animation: none !important;
+             transform: none !important;
         }
         
         #unread-comments-badge {
@@ -248,12 +250,41 @@
         }
         
         .photo-modal-img {
-            width: auto; 
+            width: 100%; /* Fill container */
+            height: 100%; /* Fill container */
             max-width: 100%;
             object-fit: contain; 
+            transition: all 0.3s ease;
         }
         
-        /* --- NEW: Drag and Drop Upload Area --- */
+        /* NEW: Fullscreen Image Mode (Step 5: Styles to expand image and hide comments) */
+        .modal-content.fullscreen-image-mode {
+             /* Remove padding/gap for a true fullscreen feel within the modal */
+             padding: 0;
+             gap: 0;
+        }
+        .modal-content.fullscreen-image-mode #photo-view-main {
+            /* Fullscreen mode is handled within the modal-content container */
+            flex-direction: row; 
+            width: 100%;
+            height: 100%;
+            max-height: 90vh; /* Match modal-content max height */
+        }
+        .modal-content.fullscreen-image-mode #photo-display-area {
+            flex-grow: 10; /* Image dominates */
+        }
+        .modal-content.fullscreen-image-mode #photo-info-panel {
+            /* Fades away the comment section */
+            opacity: 0;
+            pointer-events: none;
+            width: 0;
+            transition: opacity 0.3s ease-out, width 0.3s ease-out;
+        }
+        #photo-info-panel {
+             transition: opacity 0.3s ease-in, width 0.3s ease-in;
+        }
+        /* --- END FEED STYLES --- */
+
         .upload-drop-zone {
             background-color: #0a0a0a;
             border: 2px dashed #252525;
@@ -272,7 +303,6 @@
             border-color: #818cf8;
             background-color: #1a1a2e;
         }
-        /* --- END FEED STYLES --- */
 
         .modal-backdrop {
             position: fixed;
@@ -295,10 +325,14 @@
             padding: 2rem;
             max-height: 90vh;
             max-width: 90%;
+            /* Ensure the modal content itself is flexible to support fullscreen */
+            display: flex;
+            flex-direction: column; 
         }
         #modal-content-container {
             max-width: 1000px;
             position: relative; 
+            flex-grow: 1; /* Allow content container to fill available space */
         }
         
         #upload-menu-modal .modal-content {
@@ -485,7 +519,7 @@
         const uploadPostCreator = document.getElementById('upload-post-creator'); 
         const imagePreview = document.getElementById('image-preview'); 
         const createPostForm = document.getElementById('create-post-form'); 
-        const uploadDropArea = document.getElementById('upload-drop-area'); // New element
+        const uploadDropArea = document.getElementById('upload-drop-area'); 
 
 
         // --- Firestore Document References & Collections ---
@@ -516,6 +550,8 @@
             MODAL_UNSUBSCRIBE_LISTENER();
             MODAL_UNSUBSCRIBE_LISTENER = () => {};
             document.getElementById('modal-content-container').innerHTML = '';
+            // Reset fullscreen state when closing
+            document.getElementById('modal-content-container').classList.remove('fullscreen-image-mode'); 
         }
         
         function openUploadMenu(slotIndex) {
@@ -734,9 +770,24 @@
                             if (existingThumb) {
                                 existingThumb.querySelector('.heart-count-display').innerHTML = formatCount(data.hearts?.length || 0);
                                 existingThumb.querySelector('.comment-count-display').innerHTML = formatCount(data.comments?.length || 0);
-                                const titleSpan = existingThumb.querySelector('.title-text-span');
-                                titleSpan.textContent = data.title;
-                                titleSpan.classList.toggle('marquee-animation', data.title.length > MARQUEE_TRIGGER_LENGTH);
+                                
+                                // UPDATED: Re-render title container for continuous marquee logic
+                                const titleContainer = existingThumb.querySelector('.title-text-container');
+                                titleContainer.innerHTML = ''; // Clear container
+                                const needsMarquee = data.title.length > MARQUEE_TRIGGER_LENGTH;
+                                const marqueeClass = needsMarquee ? 'marquee-animation' : 'stopped';
+                                
+                                const span1 = document.createElement('span');
+                                span1.className = `text-white font-semibold title-text-span ${marqueeClass}`;
+                                span1.textContent = data.title;
+                                titleContainer.appendChild(span1);
+
+                                if (needsMarquee) {
+                                    const span2 = document.createElement('span');
+                                    span2.className = `text-white font-semibold title-text-span ${marqueeClass}`;
+                                    span2.textContent = data.title;
+                                    titleContainer.appendChild(span2);
+                                }
                             } else {
                                 renderPhotoThumbnail(docId, data, 'prepend');
                             }
@@ -754,11 +805,15 @@
         function renderPhotoThumbnail(photoId, photoData, position = 'append') {
             if (!photoData.title || document.querySelector(`.photo-thumbnail[data-photo-id="${photoId}"]`)) return;
 
+            const titleText = photoData.title;
+            const needsMarquee = titleText.length > MARQUEE_TRIGGER_LENGTH;
+            const marqueeClass = needsMarquee ? 'marquee-animation' : 'stopped'; // Use 'stopped' class for no movement
+            
             const thumb = document.createElement('div');
             thumb.className = 'photo-thumbnail';
             thumb.dataset.photoId = photoId;
             thumb.innerHTML = `
-                <img src="${photoData.imageBase64}" alt="${photoData.title || 'Photo'} by ${photoData.creatorUsername}" loading="lazy">
+                <img src="${photoData.imageBase64}" alt="${titleText || 'Photo'} by ${photoData.creatorUsername}" loading="lazy">
                 <div class="overlay"></div>
                 <div class="absolute top-2 left-2 z-10 text-white text-xs bg-black/50 px-2 py-1 rounded-full flex items-center shadow-lg">
                     <i class="fas fa-heart text-red-400 mr-1"></i> <span class="font-bold heart-count-display">${formatCount(photoData.hearts?.length || 0)}</span>
@@ -766,7 +821,8 @@
                 </div>
                 <div class="title-overlay">
                     <div class="title-text-container">
-                        <span class="text-white font-semibold text-xs title-text-span ${photoData.title.length > MARQUEE_TRIGGER_LENGTH ? 'marquee-animation' : ''}">${photoData.title}</span>
+                        <span class="text-white font-semibold title-text-span ${marqueeClass}">${titleText}</span>
+                        ${needsMarquee ? `<span class="text-white font-semibold title-text-span ${marqueeClass}">${titleText}</span>` : ''}
                     </div>
                 </div>`;
             thumb.addEventListener('click', () => openPhotoModal(photoId));
@@ -797,9 +853,15 @@
                     if (postId) {
                         const postData = postsToday[postId];
                         const name = postData ? (postData.title || 'TITLE MISSING') : `Slot #${i + 1} Used & Deleted`;
+                        
+                        // UPDATED: Added duplicate span for continuous marquee and 'stopped' class
+                        const needsMarquee = name.length > MARQUEE_TRIGGER_LENGTH;
+                        const marqueeClass = needsMarquee ? 'marquee-animation' : 'stopped';
+                        
                         div.innerHTML = `
                             <div class="flex-grow overflow-hidden whitespace-nowrap mr-2">
-                                <span class="font-semibold inline-block ${name.length > MARQUEE_TRIGGER_LENGTH ? 'marquee-animation' : ''}">${name}</span>
+                                <span class="font-semibold inline-block ${marqueeClass}">${name}</span>
+                                ${needsMarquee ? `<span class="font-semibold inline-block ${marqueeClass}">${name}</span>` : ''}
                             </div>
                             ${postData ? `<button class="view-post-btn text-indigo-400 hover:text-indigo-500 transition px-2 py-1" title="View Post"><i class="fas fa-eye"></i></button>` : `<span class="text-red-400 text-sm">Used</span>`}`;
                         if (postData) {
@@ -866,7 +928,7 @@
                 showMessage(uploadMessage, `Post creation failed: ${error.message || error}`);
             } finally {
                 createBtn.disabled = false;
-                createBtn.innerHTML = `<i class="fas fa-check mr-2"></i> Create Daily Post`;
+                createPostBtn.innerHTML = `<i class="fas fa-check mr-2"></i> Create Daily Post`;
             }
         }
         
@@ -926,10 +988,12 @@
                 }
                 
                 if (!isModalAlreadyOpen) {
+                    // UPDATED: HTML structure to include data-image-toggle and flexible layout for fullscreen
                     modalContentContainer.innerHTML = `
-                        <div id="photo-view-main" class="flex flex-col md:flex-row gap-6 w-full h-full">
-                            <div id="photo-display-area" class="flex-grow flex justify-center items-center">
+                        <div id="photo-view-main" class="flex flex-col md:flex-row gap-6 w-full h-full flex-grow">
+                            <div id="photo-display-area" class="flex-grow flex justify-center items-center cursor-pointer relative" data-image-toggle>
                                 <img id="modal-main-image" src="${photoData.imageBase64}" alt="${photoData.title}" class="rounded-lg photo-modal-img">
+                                <span class="absolute bottom-2 text-white/70 text-sm italic pointer-events-none">Click image to view fullscreen.</span>
                             </div>
                             <div id="photo-info-panel" class="w-full md:w-[350px] flex-shrink-0 flex flex-col relative">
                                 <button id="close-modal-btn" class="absolute top-0 right-0 p-2 text-white/50 hover:text-white transition" title="Close"><i class="fas fa-times"></i></button>
@@ -937,20 +1001,20 @@
                                     <span id="unread-comments-badge" class="hidden bg-red-600 text-white font-bold rounded-full flex items-center justify-center" title="Unread Comments"></span>
                                 </div>
                                 <div class="border-b border-gray-700 pb-3 mb-3 pt-6">
-                                    <div class="modal-title-container mb-1"><span class="modal-title-text text-white ${photoData.title.length > MARQUEE_TRIGGER_LENGTH ? 'marquee-animation' : ''}">${photoData.title}</span></div>
+                                    <div class="modal-title-container mb-1"><span class="modal-title-text text-white ${photoData.title.length > MARQUEE_TRIGGER_LENGTH ? 'marquee-animation' : 'stopped'}">${photoData.title}</span></div>
                                     <p class="font-semibold text-lg text-indigo-400">${photoData.creatorUsername}</p>
                                     <p class="text-sm text-gray-400">${new Date(photoData.createdAt?.toDate()).toLocaleString()}</p>
                                     ${photoData.creatorUid === currentUser.uid ? `<button id="delete-post-trigger-btn" class="text-red-400 text-sm mt-2 hover:text-red-500"><i class="fas fa-trash-alt mr-1"></i> Delete Post</button>` : ''}
                                 </div>
-                                <div id="comments-section" class="flex-grow mb-4 pr-2 overflow-y-auto max-h-[300px]">
+                                <div id="comments-section" class="flex-grow mb-4 pr-2"> 
                                     ${comments.map(c => `<div class="mb-2"><p class="comment-text"><strong class="font-semibold">${c.username}</strong>: ${c.text}</p></div>`).join('') || '<p class="text-sm text-gray-500 comment-text">No comments yet. Be the first!</p>'}
                                 </div>
-                                <div class="flex items-center gap-4 mb-4 pt-3 border-t border-gray-800">
+                                <div class="flex items-center gap-4 mb-4 pt-3 border-t border-gray-800 flex-shrink-0">
                                     <button id="heart-btn" data-hearted="${hasHearted}" class="text-3xl ${hasHearted ? 'text-red-500' : 'text-gray-400'} hover:text-red-500 transition" title="${hasHearted ? 'Unheart' : 'Heart'}"><i class="fas fa-heart"></i></button>
                                     <span class="text-xl">${formatCount(hearts.length)}</span>
                                 </div>
-                                <div id="modal-comment-message" class="text-sm min-h-[20px]"></div>
-                                <form id="comment-form" class="flex gap-2">
+                                <div id="modal-comment-message" class="text-sm min-h-[20px] flex-shrink-0"></div>
+                                <form id="comment-form" class="flex gap-2 flex-shrink-0">
                                     <input type="text" id="comment-input" placeholder="Add a comment..." class="flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md" maxlength="480">
                                     <button type="submit" id="comment-submit-btn" class="px-3 py-2 bg-indigo-600 rounded-md font-semibold" title="Post Comment"><i class="fas fa-comment"></i></button>
                                 </form>
@@ -996,6 +1060,15 @@
                 const isHearted = e.target.closest('#heart-btn').dataset.hearted === 'true';
                 updateDoc(doc(DAILY_PHOTO_COLLECTION, photoFeed.querySelector('.photo-thumbnail').dataset.photoId), { hearts: isHearted ? arrayRemove(auth.currentUser.uid) : arrayUnion(auth.currentUser.uid) });
             }
+
+            // NEW: Fullscreen Image Toggle Logic
+            const imageToggle = e.target.closest('[data-image-toggle]');
+            if (imageToggle) {
+                const modalContentContainer = document.getElementById('modal-content-container');
+                // Toggle the class on the modal content to trigger CSS transitions (Step 5)
+                modalContentContainer.classList.toggle('fullscreen-image-mode');
+            }
+
             const deleteTrigger = e.target.closest('#delete-post-trigger-btn');
             if (deleteTrigger) {
                 document.getElementById('photo-view-main').style.opacity = '0.1';
