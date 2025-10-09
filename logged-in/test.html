@@ -541,6 +541,36 @@
             }
         }
         
+        /**
+         * @brief Formats large numbers into abbreviated strings (K, M, B).
+         * @param {number} num The number to format.
+         * @returns {string} The formatted string (e.g., 1234 -> 1.2K). Capped at 999B.
+         */
+        function formatCount(num) {
+            if (typeof num !== 'number' || isNaN(num)) return '0';
+            if (num < 1000) return String(num); 
+
+            const suffixes = ["", "K", "M", "B"];
+            let tier = 0;
+            let currentNum = num;
+            
+            // Calculate tier (1=K, 2=M, 3=B)
+            while (currentNum >= 1000 && tier < suffixes.length - 1) {
+                currentNum /= 1000;
+                tier++;
+            }
+
+            // Apply the user's specific cap for B (999B)
+            if (tier === 3) {
+                if (currentNum >= 999.5) return '999B';
+            }
+
+            // Format the number to one decimal place, removing .0 if it's a whole number
+            const formatted = currentNum.toFixed(1).replace(/\.0$/, '');
+            
+            return formatted + suffixes[tier];
+        }
+
         function closePhotoModal() {
             photoModal.classList.add('hidden');
             MODAL_UNSUBSCRIBE_LISTENER();
@@ -606,12 +636,6 @@
             setTimeout(() => titleModal.classList.add('hidden'), 300);
         }
 
-        function formatCount(num) {
-            if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
-            if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
-            return num;
-        }
-
         async function generateUniqueFriendCode() {
             let code, isUnique = false;
             const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -649,6 +673,36 @@
                 };
                 reader.onerror = reject;
             });
+        }
+        
+        /**
+         * @brief Creates and returns a single photo thumbnail element.
+         * @param {string} photoId 
+         * @param {object} photoData 
+         * @returns {HTMLElement} The created thumbnail div.
+         */
+        function createPhotoThumbnailElement(photoId, photoData) {
+            const titleText = photoData.title;
+            const heartsCount = photoData.hearts?.length || 0;
+            const commentsCount = photoData.comments?.length || 0;
+            
+            const thumb = document.createElement('div');
+            thumb.className = 'photo-thumbnail';
+            thumb.dataset.photoId = photoId;
+            thumb.innerHTML = `
+                <img src="${photoData.imageBase64}" alt="${titleText || 'Photo'} by ${photoData.creatorUsername}" loading="lazy">
+                <div class="overlay"></div>
+                <div class="absolute top-2 left-2 z-10 text-white text-xs bg-black/50 px-2 py-1 rounded-full flex items-center shadow-lg">
+                    <i class="fas fa-heart text-red-400 mr-1"></i> <span class="font-bold heart-count-display">${formatCount(heartsCount)}</span>
+                    <i class="fas fa-comment text-indigo-400 ml-2 mr-1"></i> <span class="font-bold comment-count-display">${formatCount(commentsCount)}</span>
+                </div>
+                <div class="title-overlay">
+                    <div class="title-text-container">
+                        <span class="text-white font-semibold title-text-span">${titleText}</span>
+                    </div>
+                </div>`;
+            thumb.addEventListener('click', () => openPhotoModal(photoId));
+            return thumb;
         }
 
         // =========================================================================
@@ -750,66 +804,50 @@
             }
             
             const photosQuery = query(DAILY_PHOTO_COLLECTION, where('creatorUid', 'in', uidsToQuery), where('createdAt', '>=', startOfDay), orderBy('createdAt', 'desc'));
+            
+            // REFACTOR: Use a full-snapshot processing approach to eliminate duplicate rendering issues.
             UNSUBSCRIBE_POSTS_LISTENER = onSnapshot(photosQuery, (snapshot) => {
-                const existingIds = new Set(Array.from(photoFeed.children, el => el.dataset.photoId).filter(Boolean));
-                snapshot.docChanges().forEach(change => {
-                    const docId = change.doc.id;
-                    const data = change.doc.data();
-                    const existingThumb = document.querySelector(`.photo-thumbnail[data-photo-id="${docId}"]`);
-
-                    if (change.type === 'removed' || (change.type === 'modified' && !data.title)) {
-                        existingThumb?.remove();
-                    } else if (data.title) {
-                        if (change.type === 'added' && !existingIds.has(docId)) {
-                            renderPhotoThumbnail(docId, data, 'prepend');
-                        } else if (change.type === 'modified') {
-                            if (existingThumb) {
-                                existingThumb.querySelector('.heart-count-display').innerHTML = formatCount(data.hearts?.length || 0);
-                                existingThumb.querySelector('.comment-count-display').innerHTML = formatCount(data.comments?.length || 0);
-                                
-                                // UPDATED: Marquee logic removed, using simple clipping
-                                const titleContainer = existingThumb.querySelector('.title-text-container');
-                                titleContainer.innerHTML = `<span class="text-white font-semibold title-text-span">${data.title}</span>`;
-                            } else {
-                                renderPhotoThumbnail(docId, data, 'prepend');
-                            }
-                        }
+                const fragment = document.createDocumentFragment();
+                
+                // 1. Process the entire snapshot (in sorted order)
+                snapshot.docs.forEach(doc => {
+                    const docId = doc.id;
+                    const data = doc.data();
+                    
+                    if (!data.title) return; // Skip posts without titles
+                    
+                    // Try to reuse an existing element to minimize DOM thrashing
+                    let thumb = document.querySelector(`.photo-thumbnail[data-photo-id="${docId}"]`);
+                    
+                    if (thumb) {
+                        // Update existing element properties
+                        thumb.querySelector('.heart-count-display').innerHTML = formatCount(data.hearts?.length || 0);
+                        thumb.querySelector('.comment-count-display').innerHTML = formatCount(data.comments?.length || 0);
+                        thumb.querySelector('.title-text-span').textContent = data.title;
+                    } else {
+                        // Create a new element
+                        thumb = createPhotoThumbnailElement(docId, data);
                     }
+                    
+                    // Append the element (new or reused) to the fragment, preserving sort order
+                    fragment.appendChild(thumb);
                 });
+
+                // 2. Clear the existing feed and replace it with the new, correct one
+                photoFeed.innerHTML = '';
+                photoFeed.appendChild(fragment);
+
                 if (photoFeed.children.length === 0) photoFeed.innerHTML = '<p id="feed-placeholder" class="text-gray-500">No posts found today from you or your friends!</p>';
                 else document.getElementById('feed-placeholder')?.remove();
+
             }, (error) => {
                  console.error("Error fetching feed:", error);
                  photoFeed.innerHTML = '<p class="text-red-400">Error loading feed.</p>';
             });
         }
         
-        function renderPhotoThumbnail(photoId, photoData, position = 'append') {
-            if (!photoData.title || document.querySelector(`.photo-thumbnail[data-photo-id="${photoId}"]`)) return;
-
-            const titleText = photoData.title;
-            
-            const thumb = document.createElement('div');
-            thumb.className = 'photo-thumbnail';
-            thumb.dataset.photoId = photoId;
-            thumb.innerHTML = `
-                <img src="${photoData.imageBase64}" alt="${titleText || 'Photo'} by ${photoData.creatorUsername}" loading="lazy">
-                <div class="overlay"></div>
-                <div class="absolute top-2 left-2 z-10 text-white text-xs bg-black/50 px-2 py-1 rounded-full flex items-center shadow-lg">
-                    <i class="fas fa-heart text-red-400 mr-1"></i> <span class="font-bold heart-count-display">${formatCount(photoData.hearts?.length || 0)}</span>
-                    <i class="fas fa-comment text-indigo-400 ml-2 mr-1"></i> <span class="font-bold comment-count-display">${formatCount(photoData.comments?.length || 0)}</span>
-                </div>
-                <div class="title-overlay">
-                    <div class="title-text-container">
-                        <span class="text-white font-semibold title-text-span">${titleText}</span>
-                    </div>
-                </div>`;
-            thumb.addEventListener('click', () => openPhotoModal(photoId));
-            
-            if (position === 'prepend') photoFeed.prepend(thumb);
-            else photoFeed.appendChild(thumb);
-            document.getElementById('feed-placeholder')?.remove();
-        }
+        // REFACTOR: Replaced the old renderPhotoThumbnail logic with the new one which returns the element
+        // (Moved to helper functions: createPhotoThumbnailElement)
 
         function setupDailyPostsListener(user) {
              const userProfileRef = getUserProfileDocRef(user.uid);
@@ -820,6 +858,7 @@
                 
                 const startOfDay = new Date();
                 startOfDay.setHours(0, 0, 0, 0);
+                // Fetch only posts that are linked in the dailySlotsUsed array for efficiency
                 const postsQuery = query(DAILY_PHOTO_COLLECTION, where('creatorUid', '==', user.uid), where('createdAt', '>=', startOfDay), orderBy('createdAt', 'asc'));
                 const postsSnapshot = await getDocs(postsQuery);
                 const postsToday = postsSnapshot.docs.reduce((acc, doc) => ({ ...acc, [doc.id]: doc.data() }), {});
@@ -827,28 +866,37 @@
                 for (let i = 0; i < POST_SLOTS_MAX; i++) {
                     const div = document.createElement('div');
                     div.className = 'compact-list-item daily-post-card flex justify-between items-center';
-                    const postId = dailySlotsUsed[i];
+                    const postId = dailySlotsUsed[i]; // Check for the post ID in the correct slot
                     
                     if (postId) {
                         const postData = postsToday[postId];
                         const name = postData ? (postData.title || 'TITLE MISSING') : `Slot #${i + 1} Used & Deleted`;
                         
-                        // UPDATED: Removed marquee logic, using simple clipping
+                        // Check if the post exists and has a title to show the 'View' button
+                        const isViewable = postData && postData.title; 
+
                         div.innerHTML = `
                             <div class="flex-grow overflow-hidden whitespace-nowrap mr-2">
                                 <span class="font-semibold inline-block title-text-span">${name}</span>
                             </div>
-                            ${postData ? `<button class="view-post-btn text-indigo-400 hover:text-indigo-500 transition px-2 py-1" title="View Post"><i class="fas fa-eye"></i></button>` : `<span class="text-red-400 text-sm">Used</span>`}`;
+                            ${isViewable ? `<button class="view-post-btn text-indigo-400 hover:text-indigo-500 transition px-2 py-1" title="View Post"><i class="fas fa-eye"></i></button>` : `<span class="text-gray-600 text-sm">${postData ? 'No Title' : 'Slot Used'}</span>`}`;
                         
-                        if (postData) {
-                            div.querySelector('.view-post-btn').addEventListener('click', () => postData.title ? openPhotoModal(postId) : openTitleModal(postId, postData.title));
+                        if (isViewable) {
+                            div.querySelector('.view-post-btn').addEventListener('click', () => openPhotoModal(postId));
+                        } else if (postData && !postData.title) {
+                             // Allow editing if the slot is used but the post is missing a title
+                             div.querySelector('span:last-child').textContent = 'Needs Title';
+                             div.querySelector('span:last-child').className = 'text-yellow-500 text-sm cursor-pointer';
+                             div.querySelector('span:last-child').addEventListener('click', () => openTitleModal(postId, postData.title));
                         }
                     } else if (i === dailySlotsUsed.length) {
+                        // Available slot is the one immediately after the last used slot
                         div.innerHTML = `
                             <span class="font-semibold text-gray-400">Post #${i + 1}</span>
                             <button data-slot-index="${i}" class="open-upload-menu-btn px-3 py-1 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold text-white" title="Upload Photo"><i class="fas fa-image"></i></button>`;
                         div.querySelector('.open-upload-menu-btn').addEventListener('click', e => openUploadMenu(parseInt(e.currentTarget.dataset.slotIndex)));
                     } else {
+                        // Locked slots (only slots after the next available slot are locked)
                         div.innerHTML = `<span class="font-semibold text-gray-600">Post #${i + 1}</span><span class="text-gray-600"><i class="fas fa-lock"></i> Locked</span>`;
                     }
                     dailyPostsContainer.appendChild(div);
@@ -886,11 +934,13 @@
 
             try {
                 const userProfileSnap = await getDoc(userProfileRef);
+                // REFACTOR: The check below is now only a sanity check, the UI handles slot selection
                 if ((userProfileSnap.data().dailySlotsUsed || []).length !== slotIndex) throw new Error("Slot index mismatch. Please refresh.");
                 
                 const imageBase64 = await compressImage(file);
                 const newPostRef = doc(DAILY_PHOTO_COLLECTION);
                 
+                // IMPORTANT: The post MUST have a title to be viewable on the feed
                 await setDoc(newPostRef, {
                     creatorUid: currentUser.uid, creatorUsername: CURRENT_USERNAME, createdAt: serverTimestamp(),
                     imageBase64, title: cleanedTitle, hearts: [], comments: []
