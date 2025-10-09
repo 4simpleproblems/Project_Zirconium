@@ -585,7 +585,7 @@
             const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
             try {
                 while (!isUnique) {
-                    code = Array.from({ length: 8 }, () => characters.charAt(Math.floor(Math.random() * characters.length))).join('');
+                    code = Array.from({ length: 8 }, () => characters.charAt(Math.floor(Math.random() * characters.length)).join('');
                     const codeDoc = await getDoc(getFriendCodeDocRef(code));
                     if (!codeDoc.exists()) isUnique = true;
                 }
@@ -777,18 +777,14 @@
         }
 
         function setupDailyPostsListener(user) {
-             const userProfileRef = getUserProfileDocRef(user.uid);
-            onSnapshot(userProfileRef, async (profileSnap) => {
-                const profileData = profileSnap.data() || {};
-                const dailySlotsUsed = profileData.dailySlotsUsed || []; 
+            const userProfileRef = getUserProfileDocRef(user.uid);
+            let dailySlotsUsed = [];
+            let postsToday = {}; // Holds the real-time data for today's user posts
+            
+            // 1. Centralized Rendering Function
+            const renderDailyPosts = () => {
                 dailyPostsContainer.innerHTML = ''; 
                 
-                const startOfDay = new Date();
-                startOfDay.setHours(0, 0, 0, 0);
-                const postsQuery = query(DAILY_PHOTO_COLLECTION, where('creatorUid', '==', user.uid), where('createdAt', '>=', startOfDay), orderBy('createdAt', 'asc'));
-                const postsSnapshot = await getDocs(postsQuery);
-                const postsToday = postsSnapshot.docs.reduce((acc, doc) => ({ ...acc, [doc.id]: doc.data() }), {});
-
                 for (let i = 0; i < POST_SLOTS_MAX; i++) {
                     const div = document.createElement('div');
                     div.className = 'compact-list-item daily-post-card flex justify-between items-center';
@@ -797,24 +793,48 @@
                     if (postId) {
                         const postData = postsToday[postId];
                         const name = postData ? (postData.title || 'TITLE MISSING') : `Slot #${i + 1} Used & Deleted`;
+                        
+                        // Add marquee logic to the title span
+                        const titleSpanHtml = `<span class="font-semibold inline-block ${name.length > MARQUEE_TRIGGER_LENGTH ? 'marquee-animation' : ''}">${name}</span>`;
+                        
                         div.innerHTML = `
                             <div class="flex-grow overflow-hidden whitespace-nowrap mr-2">
-                                <span class="font-semibold inline-block ${name.length > MARQUEE_TRIGGER_LENGTH ? 'marquee-animation' : ''}">${name}</span>
+                                ${titleSpanHtml}
                             </div>
                             ${postData ? `<button class="view-post-btn text-indigo-400 hover:text-indigo-500 transition px-2 py-1" title="View Post"><i class="fas fa-eye"></i></button>` : `<span class="text-red-400 text-sm">Used</span>`}`;
+                        
                         if (postData) {
+                            // Re-attaches event listener on re-render
                             div.querySelector('.view-post-btn').addEventListener('click', () => postData.title ? openPhotoModal(postId) : openTitleModal(postId, postData.title));
                         }
                     } else if (i === dailySlotsUsed.length) {
                         div.innerHTML = `
                             <span class="font-semibold text-gray-400">Post #${i + 1}</span>
                             <button data-slot-index="${i}" class="open-upload-menu-btn px-3 py-1 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold text-white" title="Upload Photo"><i class="fas fa-image"></i></button>`;
+                        // Re-attaches event listener on re-render
                         div.querySelector('.open-upload-menu-btn').addEventListener('click', e => openUploadMenu(parseInt(e.currentTarget.dataset.slotIndex)));
                     } else {
                         div.innerHTML = `<span class="font-semibold text-gray-600">Post #${i + 1}</span><span class="text-gray-600"><i class="fas fa-lock"></i> Locked</span>`;
                     }
                     dailyPostsContainer.appendChild(div);
                 }
+            };
+            
+            // 2. Profile Listener: Tracks which slots are used (dailySlotsUsed)
+            onSnapshot(userProfileRef, (profileSnap) => {
+                const profileData = profileSnap.data() || {};
+                dailySlotsUsed = profileData.dailySlotsUsed || []; 
+                renderDailyPosts(); // Re-render when slots change
+            });
+            
+            // 3. User Posts Listener: Tracks real-time changes to the posts themselves (title edits, etc.)
+            const startOfDay = new Date();
+            startOfDay.setHours(0, 0, 0, 0);
+            const postsQuery = query(DAILY_PHOTO_COLLECTION, where('creatorUid', '==', user.uid), where('createdAt', '>=', startOfDay), orderBy('createdAt', 'asc'));
+            
+            onSnapshot(postsQuery, (postsSnapshot) => {
+                postsToday = postsSnapshot.docs.reduce((acc, doc) => ({ ...acc, [doc.id]: doc.data() }), {});
+                renderDailyPosts(); // Re-render when post data changes
             });
         }
         
@@ -908,7 +928,6 @@
                 badge.textContent = UNREAD_COMMENTS_COUNT > 99 ? '99+' : UNREAD_COMMENTS_COUNT;
             };
 
-            // FIX: The missing closing parenthesis for onSnapshot was here, after the callback function definition.
             MODAL_UNSUBSCRIBE_LISTENER = onSnapshot(photoRef, (updatedSnap) => {
                 const isModalAlreadyOpen = !!document.getElementById('photo-view-main');
                 if (!updatedSnap.exists()) {
@@ -988,7 +1007,7 @@
                     }
                     handleScroll(commentsSection);
                 }
-            }); // <-- ADDED MISSING CLOSING PARENTHESIS HERE
+            });
         }
         
         photoModal.addEventListener('click', e => {
