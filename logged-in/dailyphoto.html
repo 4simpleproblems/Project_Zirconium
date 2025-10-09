@@ -482,6 +482,7 @@
         let CURRENT_FRIENDS = [];
         let CURRENT_USERNAME = 'DailyUser'; 
         let UNSUBSCRIBE_POSTS_LISTENER = () => {};
+        let UNSUBSCRIBE_DAILY_SLOTS_LISTENER = () => {}; // NEW: Separate listener for daily post slots
         let MODAL_UNSUBSCRIBE_LISTENER = () => {}; 
         let LAST_COMMENT_TIMESTAMP = 0; 
         let LAST_HEART_TIMESTAMP = 0; // NEW: Global state for heart debounce
@@ -846,62 +847,88 @@
             });
         }
         
-        // REFACTOR: Replaced the old renderPhotoThumbnail logic with the new one which returns the element
-        // (Moved to helper functions: createPhotoThumbnailElement)
+        /**
+         * @brief Renders the user's daily post slots based on profile data and post snapshots.
+         * @param {object} profileData The user's profile data from Firestore.
+         * @param {object} postsToday A map of postId -> postData for all user's posts today.
+         */
+        function renderDailyPosts(profileData, postsToday) {
+            const currentUser = auth.currentUser;
+            const dailySlotsUsed = profileData.dailySlotsUsed || []; 
+            dailyPostsContainer.innerHTML = ''; 
 
+            for (let i = 0; i < POST_SLOTS_MAX; i++) {
+                const div = document.createElement('div');
+                div.className = 'compact-list-item daily-post-card flex justify-between items-center';
+                const postId = dailySlotsUsed[i]; 
+                
+                if (postId) {
+                    const postData = postsToday[postId];
+                    const name = postData ? (postData.title || 'TITLE MISSING') : `Slot #${i + 1} Used & Deleted`;
+                    
+                    // Check if the post exists and has a title to show the 'View' button
+                    const isViewable = postData && postData.title; 
+
+                    div.innerHTML = `
+                        <div class="flex-grow overflow-hidden whitespace-nowrap mr-2">
+                            <span class="font-semibold inline-block title-text-span">${name}</span>
+                        </div>
+                        ${isViewable ? `<button class="view-post-btn text-indigo-400 hover:text-indigo-500 transition px-2 py-1" title="View Post"><i class="fas fa-eye"></i></button>` : `<span class="text-gray-600 text-sm">${postData ? 'No Title' : 'Slot Used'}</span>`}`;
+                    
+                    if (isViewable) {
+                        div.querySelector('.view-post-btn').addEventListener('click', () => openPhotoModal(postId));
+                    } else if (postData && !postData.title) {
+                         // Allow editing if the slot is used but the post is missing a title
+                         div.querySelector('span:last-child').textContent = 'Needs Title';
+                         div.querySelector('span:last-child').className = 'text-yellow-500 text-sm cursor-pointer';
+                         div.querySelector('span:last-child').addEventListener('click', () => openTitleModal(postId, postData.title));
+                    }
+                } else if (i === dailySlotsUsed.length) {
+                    // Available slot is the one immediately after the last used slot
+                    div.innerHTML = `
+                        <span class="font-semibold text-gray-400">Post #${i + 1}</span>
+                        <button data-slot-index="${i}" class="open-upload-menu-btn px-3 py-1 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold text-white" title="Upload Photo"><i class="fas fa-image"></i></button>`;
+                    div.querySelector('.open-upload-menu-btn').addEventListener('click', e => openUploadMenu(parseInt(e.currentTarget.dataset.slotIndex)));
+                } else {
+                    // Locked slots (only slots after the next available slot are locked)
+                    div.innerHTML = `<span class="font-semibold text-gray-600">Post #${i + 1}</span><span class="text-gray-600"><i class="fas fa-lock"></i> Locked</span>`;
+                }
+                dailyPostsContainer.appendChild(div);
+            }
+        }
+
+        // REFACTOR: The main listener function now coordinates two listeners: one for the profile/slots, one for the posts.
         function setupDailyPostsListener(user) {
              const userProfileRef = getUserProfileDocRef(user.uid);
-            onSnapshot(userProfileRef, async (profileSnap) => {
-                const profileData = profileSnap.data() || {};
-                const dailySlotsUsed = profileData.dailySlotsUsed || []; 
-                dailyPostsContainer.innerHTML = ''; 
-                
-                const startOfDay = new Date();
-                startOfDay.setHours(0, 0, 0, 0);
-                // Fetch only posts that are linked in the dailySlotsUsed array for efficiency
-                const postsQuery = query(DAILY_PHOTO_COLLECTION, where('creatorUid', '==', user.uid), where('createdAt', '>=', startOfDay), orderBy('createdAt', 'asc'));
-                const postsSnapshot = await getDocs(postsQuery);
-                const postsToday = postsSnapshot.docs.reduce((acc, doc) => ({ ...acc, [doc.id]: doc.data() }), {});
+             const startOfDay = new Date();
+             startOfDay.setHours(0, 0, 0, 0);
 
-                for (let i = 0; i < POST_SLOTS_MAX; i++) {
-                    const div = document.createElement('div');
-                    div.className = 'compact-list-item daily-post-card flex justify-between items-center';
-                    const postId = dailySlotsUsed[i]; // Check for the post ID in the correct slot
-                    
-                    if (postId) {
-                        const postData = postsToday[postId];
-                        const name = postData ? (postData.title || 'TITLE MISSING') : `Slot #${i + 1} Used & Deleted`;
-                        
-                        // Check if the post exists and has a title to show the 'View' button
-                        const isViewable = postData && postData.title; 
+             let currentProfileData = {};
+             let currentPostsData = {};
 
-                        div.innerHTML = `
-                            <div class="flex-grow overflow-hidden whitespace-nowrap mr-2">
-                                <span class="font-semibold inline-block title-text-span">${name}</span>
-                            </div>
-                            ${isViewable ? `<button class="view-post-btn text-indigo-400 hover:text-indigo-500 transition px-2 py-1" title="View Post"><i class="fas fa-eye"></i></button>` : `<span class="text-gray-600 text-sm">${postData ? 'No Title' : 'Slot Used'}</span>`}`;
-                        
-                        if (isViewable) {
-                            div.querySelector('.view-post-btn').addEventListener('click', () => openPhotoModal(postId));
-                        } else if (postData && !postData.title) {
-                             // Allow editing if the slot is used but the post is missing a title
-                             div.querySelector('span:last-child').textContent = 'Needs Title';
-                             div.querySelector('span:last-child').className = 'text-yellow-500 text-sm cursor-pointer';
-                             div.querySelector('span:last-child').addEventListener('click', () => openTitleModal(postId, postData.title));
-                        }
-                    } else if (i === dailySlotsUsed.length) {
-                        // Available slot is the one immediately after the last used slot
-                        div.innerHTML = `
-                            <span class="font-semibold text-gray-400">Post #${i + 1}</span>
-                            <button data-slot-index="${i}" class="open-upload-menu-btn px-3 py-1 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold text-white" title="Upload Photo"><i class="fas fa-image"></i></button>`;
-                        div.querySelector('.open-upload-menu-btn').addEventListener('click', e => openUploadMenu(parseInt(e.currentTarget.dataset.slotIndex)));
-                    } else {
-                        // Locked slots (only slots after the next available slot are locked)
-                        div.innerHTML = `<span class="font-semibold text-gray-600">Post #${i + 1}</span><span class="text-gray-600"><i class="fas fa-lock"></i> Locked</span>`;
-                    }
-                    dailyPostsContainer.appendChild(div);
-                }
-            });
+             // Listener 1: Real-time listener for the user's daily posts
+             const postsQuery = query(DAILY_PHOTO_COLLECTION, where('creatorUid', '==', user.uid), where('createdAt', '>=', startOfDay), orderBy('createdAt', 'asc'));
+             
+             // UNUSED: This listener is no longer strictly needed but serves as a way to cache post data changes
+             // and trigger a re-render based on the profile data.
+             const unsubscribePostsCache = onSnapshot(postsQuery, (snapshot) => {
+                currentPostsData = snapshot.docs.reduce((acc, doc) => ({ ...acc, [doc.id]: doc.data() }), {});
+                // Re-render the slots view whenever the underlying post data changes
+                renderDailyPosts(currentProfileData, currentPostsData);
+             });
+             
+             // Listener 2: Real-time listener for the user's profile to track dailySlotsUsed
+             UNSUBSCRIBE_DAILY_SLOTS_LISTENER = onSnapshot(userProfileRef, (profileSnap) => {
+                currentProfileData = profileSnap.data() || {};
+                // Re-render the slots view whenever the profile/slots change
+                renderDailyPosts(currentProfileData, currentPostsData);
+             });
+             
+             // Store the unsubscribe function for cleanup
+             setupDailyPostsListener.unsubscribe = () => {
+                 unsubscribePostsCache();
+                 UNSUBSCRIBE_DAILY_SLOTS_LISTENER();
+             };
         }
         
         function handleFileUpload(file) {
@@ -1120,12 +1147,18 @@
             }
             const confirmDelete = e.target.closest('#confirm-delete-btn');
             if (confirmDelete) {
-                deleteDoc(doc(DAILY_PHOTO_COLLECTION, photoFeed.querySelector('.photo-thumbnail').dataset.photoId))
-                    .then(() => {
-                        closePhotoModal();
-                        showMessage(uploadMessage, 'Post deleted.', 'success');
-                    })
-                    .catch(error => showCustomModal("Deletion Error", `Failed to delete post: ${error.message}`));
+                // IMPORTANT: Use the correct post ID lookup from the heart button dataset as it's reliable in the modal
+                const currentPostId = document.getElementById('heart-btn')?.dataset.postId;
+                if (currentPostId) {
+                    deleteDoc(doc(DAILY_PHOTO_COLLECTION, currentPostId))
+                        .then(() => {
+                            closePhotoModal();
+                            showMessage(uploadMessage, 'Post deleted.', 'success');
+                        })
+                        .catch(error => showCustomModal("Deletion Error", `Failed to delete post: ${error.message}`));
+                } else {
+                     showCustomModal("Deletion Error", `Could not find post ID.`);
+                }
             }
         });
 
@@ -1145,7 +1178,7 @@
             try {
                 const cleanedText = await cleanText(text, 'comment');
                 // Use the data-post-id from the heart button to get the current post ID
-                const currentPostId = document.getElementById('heart-btn')?.dataset.postId || photoFeed.querySelector('.photo-thumbnail')?.dataset.photoId;
+                const currentPostId = document.getElementById('heart-btn')?.dataset.postId;
                 if (!currentPostId) throw new Error("Could not find current post ID for comment.");
                 
                 await updateDoc(doc(DAILY_PHOTO_COLLECTION, currentPostId), { comments: arrayUnion({ uid: auth.currentUser.uid, username: CURRENT_USERNAME, text: cleanedText, timestamp: new Date() }) });
@@ -1213,7 +1246,7 @@
                     await handleFriendCodeLogic(user); 
                     await cleanupOldPosts(user); 
                     setupFriendListListener(user); 
-                    setupDailyPostsListener(user); 
+                    setupDailyPostsListener(user); // Initial setup for both profile and post listeners
                     loadingScreen.style.display = 'none';
                     messengerUi.style.display = 'grid';
                 } catch (e) {
@@ -1246,6 +1279,7 @@
             onSnapshot(getUserProfileDocRef(user.uid), async (docSnap) => {
                 const profileData = docSnap.data() || {};
                 const friends = profileData.friends || [];
+                // Only re-run the feed listener if the actual friends list changes
                 if (friends.length !== CURRENT_FRIENDS.length || !friends.every((val, i) => val === CURRENT_FRIENDS[i])) {
                     CURRENT_FRIENDS = friends; 
                     setupFriendsFeedListener(user); 
