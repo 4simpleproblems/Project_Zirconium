@@ -133,11 +133,11 @@
         }
         
         /* FIX: Ensure comments section can scroll */
-        #comments-section {
-            /* CHANGED: Forces the scrollbar track to always be visible, reserving its horizontal space */
-            overflow-y: scroll;
-            max-height: 8rem; /* Reduced height to activate scroll sooner */
-        }
+        /* --- RULE REMOVED --- 
+           Overflow and max-height for #comments-section are now applied using
+           Tailwind classes directly on the element in the JavaScript template 
+           to ensure higher precedence and fix the layout shift bug.
+        */
         
         /* FIX: Added global break-words for comment text to prevent horizontal overflow */
         .comment-text {
@@ -359,7 +359,7 @@
 
             <div class="mb-6">
                 <h2 class="text-xl font-bold mb-2">Your Daily Posts</h2>
-                <p class="text-sm text-gray-400 mb-3">You have 3 slots per day (no cheating!).</p>
+                <p class="text-sm text-gray-400 mb-3">You have 5 slots per day (no cheating!).</p>
                 <div id="daily-posts-wrapper" class="compact-list-wrapper">
                     <div id="daily-posts-container">
                         </div>
@@ -415,7 +415,7 @@
         let LAST_COMMENT_TIMESTAMP = 0; 
         let PENDING_UPLOAD_FILE = null; 
         const COMMENT_DELAY_MS = 5000;
-        const POST_SLOTS_MAX = 3;
+        const POST_SLOTS_MAX = 5; // Updated limit from 3 to 5
         const MARQUEE_TRIGGER_LENGTH = 30; // Heuristic length for marquee on thumbnail
 
         // --- DOM Elements ---
@@ -878,7 +878,10 @@
 
             const unsubscribeProfile = onSnapshot(userProfileRef, async (profileSnap) => {
                 const profileData = profileSnap.data() || {};
-                const dailySlotsUsed = profileData.dailySlotsUsed || []; 
+                
+                // FIX: Deduplicate the array to prevent rendering duplicate posts from corrupted data
+                const rawDailySlotsUsed = profileData.dailySlotsUsed || [];
+                const dailySlotsUsed = Array.from(new Set(rawDailySlotsUsed)); // Deduplicate
                 
                 dailyPostsContainer.innerHTML = ''; 
                 
@@ -1114,7 +1117,7 @@
                                     : ''}
                             </div>
                             <div class="flex-grow mb-4 pr-1">
-                                <div id="comments-section">
+                                <div id="comments-section" class="overflow-y-scroll max-h-32">
                                     ${(() => {
                                         let html = '';
                                         const comments = photoData.comments || [];
