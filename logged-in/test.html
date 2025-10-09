@@ -246,7 +246,6 @@
 </head>
 <body class="pt-16">
     
-    <!-- STANDARD MESSAGE MODAL -->
     <div id="message-modal" class="modal-backdrop hidden opacity-0">
         <div class="modal-content w-full max-w-sm p-6 text-center">
             <h3 id="message-modal-title" class="text-xl font-bold mb-4 text-white"></h3>
@@ -255,18 +254,15 @@
         </div>
     </div>
 
-    <!-- PHOTO VIEW MODAL -->
     <div id="photo-modal" class="modal-backdrop hidden">
         <div id="modal-content-container" class="modal-content flex flex-col md:flex-row gap-6">
             </div>
     </div>
     
-    <!-- TITLE EDIT MODAL (REUSED FOR NOW, BUT OBSOLETE BY NEW UPLOAD MODAL) -->
     <div id="title-modal" class="modal-backdrop hidden opacity-0">
         <div class="modal-content w-full max-w-sm p-6 text-center">
             <h3 class="text-xl font-bold mb-4 text-white">Edit Title</h3>
             <form id="edit-title-form" data-post-id="" class="flex flex-col gap-4">
-                <!-- UPDATED: max length to 48 chars -->
                 <input type="text" id="title-edit-input" placeholder="Enter your photo title (max 48 chars)" class="p-3 bg-gray-900 border border-gray-700 rounded-md focus:ring-indigo-500" maxlength="48" required>
                 <button type="submit" class="px-4 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold w-full">Save Title</button>
             </form>
@@ -274,34 +270,27 @@
         </div>
     </div>
     
-    <!-- NEW: UPLOAD MENU MODAL -->
     <div id="upload-menu-modal" class="modal-backdrop hidden opacity-0">
         <div class="modal-content w-full max-w-sm p-6">
             <h3 id="upload-menu-title" class="text-xl font-bold mb-4 text-white">Post to Slot #1</h3>
             
-            <!-- Hidden File Input for Image Selection (One input for all methods) -->
             <input type="file" id="upload-file-input" class="hidden" accept="image/*" data-slot-index="" data-action="select-photo">
 
-            <!-- Initial selection buttons -->
             <div id="upload-select-options" class="flex flex-col gap-3 mb-6">
-                 <!-- The 'capture' attribute for camera, works on mobile. -->
-                <button id="upload-camera-btn" class="px-4 py-3 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold w-full">
+                 <button id="upload-camera-btn" class="px-4 py-3 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold w-full">
                     <i class="fas fa-camera mr-2"></i> Capture Image (Camera)
                 </button>
-                <!-- Separate button to trigger file/photo selection -->
                 <button id="upload-photo-file-btn" class="px-4 py-3 bg-gray-700 rounded-lg hover:bg-gray-800 transition font-semibold w-full">
                     <i class="fas fa-image mr-2"></i> Select Photo or File
                 </button>
             </div>
             
-            <!-- Image Preview and Title Input (Hidden until file is selected) -->
             <div id="upload-post-creator" class="hidden">
                  <div id="image-preview-container" class="mb-4 bg-gray-900 flex justify-center items-center">
                     <img id="image-preview" src="#" alt="Image Preview" class="w-full h-auto object-cover max-h-[300px]">
                  </div>
                  
                  <form id="create-post-form" class="flex flex-col gap-4">
-                    <!-- UPDATED: max length to 48 chars -->
                     <input type="text" id="post-title-input" placeholder="Enter your photo title (max 48 chars)" class="p-3 bg-gray-900 border border-gray-700 rounded-md focus:ring-indigo-500" maxlength="48" required>
                     <button type="submit" id="create-post-btn" class="px-4 py-3 bg-green-600 rounded-lg hover:bg-green-700 transition font-semibold w-full">
                         <i class="fas fa-check mr-2"></i> Create Daily Post
@@ -341,19 +330,16 @@
                 <h2 class="text-xl font-bold mb-3">Your Friends</h2>
                 <div id="friends-list-wrapper" class="compact-list-wrapper">
                     <div id="friends-list-items" class="compact-list-items">
-                        <!-- Friend cards rendered here -->
-                    </div>
+                        </div>
                 </div>
             </div>
 
             <div class="mb-6">
                 <h2 class="text-xl font-bold mb-2">Your Daily Posts</h2>
                 <p class="text-sm text-gray-400 mb-3">You have 3 slots per day (no cheating!).</p>
-                <!-- NEW: Daily Post Slots now use the compact-list-wrapper -->
                 <div id="daily-posts-wrapper" class="compact-list-wrapper">
                     <div id="daily-posts-container">
-                        <!-- Daily Post Cards rendered here -->
-                    </div>
+                        </div>
                 </div>
                 <div id="upload-message" class="text-sm mt-2 min-h-[20px]"></div>
             </div>
@@ -387,6 +373,13 @@
         const initialAuthToken = null; 
 
         // --- Initialize Firebase ---
+        // CHECK 1: Ensure firebaseConfig is present.
+        if (!firebaseConfig || !firebaseConfig.apiKey) {
+            document.getElementById('loading-screen').innerHTML = '<p class="text-red-400">ERROR: Missing or incomplete Firebase configuration in firebase-config.js. Check the console for details.</p>';
+            console.error("Firebase Configuration Error: The 'firebase-config.js' file is likely missing or does not contain a valid configuration object. The Friend Code feature relies on Firestore and Auth, which will fail without a correct configuration.");
+            throw new Error("Missing Firebase Config.");
+        }
+        
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -434,6 +427,8 @@
         };
         const getFriendCodeDocRef = (code) => {
             // Path: artifacts/{appId}/public/data/friend_codes/{code}
+            const path = `artifacts/${appId}/public/data/friend_codes/${code}`;
+            console.log(`DEBUG: Friend Code expected Firestore path: ${path}`); // Added debug path
             return doc(db, 'artifacts', appId, 'public', 'data', 'friend_codes', code);
         };
         const DAILY_PHOTO_COLLECTION = collection(db, 'daily_photos');
@@ -602,9 +597,15 @@
             } catch (error) {
                 console.error("Firebase authentication failed:", error);
                 loadingScreen.style.display = 'none'; 
-                const errorMessage = error.code === 'auth/invalid-api-key' 
-                    ? `Authentication failed due to an **Invalid API Key**. Please ensure the configuration in the external \`firebase-config.js\` file is correct and complete.` 
-                    : `Failed to sign in to Firebase. Error: ${error.code || error.message}.`;
+                
+                let errorMessage;
+                if (error.code === 'auth/invalid-api-key') {
+                    errorMessage = `Authentication failed due to an **Invalid API Key**. Please ensure the configuration in the external \`firebase-config.js\` file is correct and complete.`;
+                } else if (error.code === 'auth/network-request-failed') {
+                    errorMessage = `Authentication failed due to a **Network Error**. Check your internet connection and verify that your Firebase project settings (especially the API Key) allow connection.`;
+                } else {
+                    errorMessage = `Failed to sign in to Firebase. Error: ${error.code || error.message}.`;
+                }
                     
                 showCustomModal("Authentication Error", errorMessage);
                 throw error; 
@@ -647,6 +648,8 @@
                 }
             } catch (error) {
                 console.error("Profile/Friend Code Setup Failed:", error);
+                // IMPORTANT: If this fails, it's often due to missing/incorrect Firestore security rules.
+                showCustomModal("Code Setup Error", `Failed to set up your Friend Code. This may be due to missing Firestore security rules. Check the console for the full path to confirm.`);
                 throw new Error("Failed to set up user profile and friend code.");
             }
         }
@@ -1070,7 +1073,6 @@
                         <div id="modal-comment-message" class="text-sm min-h-[20px]"></div>
 
                         <form id="comment-form" class="flex gap-2">
-                            <!-- UPDATED: max length to 480 chars -->
                             <input type="text" id="comment-input" placeholder="Add a comment (max 480 chars)..." class="flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md" maxlength="480">
                             <button type="submit" id="comment-submit-btn" class="px-3 py-2 bg-indigo-600 rounded-md font-semibold" title="Post Comment">
                                 <i class="fas fa-comment"></i>
@@ -1355,4 +1357,3 @@
     </script>
 </body>
 </html>
-
