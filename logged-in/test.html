@@ -41,38 +41,26 @@
             white-space: nowrap;
             min-width: 0; /* Important for flex children to prevent container from over-growing */
         }
-        .text-fade-container::before, .text-fade-container::after {
-            content: "";
-            position: absolute;
-            top: 0;
-            width: 2rem; /* Fade width */
-            height: 100%;
-            z-index: 10; 
-            pointer-events: none;
+        
+        /* NEW: Base mask for dark/list backgrounds (2rem fade) - Fades to transparent text */
+        .text-fade-container.has-fade {
+            /* Mask-image defines the opacity (black=opaque, transparent=invisible) */
+            mask-image: linear-gradient(to right, transparent 0%, black 2rem, black calc(100% - 2rem), transparent 100%);
+            -webkit-mask-image: linear-gradient(to right, transparent 0%, black 2rem, black calc(100% - 2rem), transparent 100%);
         }
         
-        /* Fade for panels/modal info (#111111 background) */
-        .fade-dark-bg::before { left: 0; background: linear-gradient(to right, #111111 5%, rgba(17, 17, 17, 0) 100%); }
-        .fade-dark-bg::after { right: 0; background: linear-gradient(to left, #111111 5%, rgba(17, 17, 17, 0) 100%); }
-        
-        /* Fade for daily posts list (#0d0d0d background) */
-        .fade-list-bg::before { left: 0; background: linear-gradient(to right, #0d0d0d 5%, rgba(13, 13, 13, 0) 100%); }
-        .fade-list-bg::after { right: 0; background: linear-gradient(to left, #0d0d0d 5%, rgba(13, 13, 13, 0) 100%); }
-        
-        /* Fade for thumbnail title overlay (needs a smaller fade and different background color) */
-        .fade-thumb-bg { 
-            position: relative; 
-            overflow: hidden; 
-            white-space: nowrap; 
-            /* Set a width so it's consistent with the old .title-text-container */
-            max-width: 90%; 
+        /* NEW: Smaller mask for thumbnail title (1rem fade) */
+        .fade-thumb-bg.has-fade {
+            mask-image: linear-gradient(to right, transparent 0%, black 1rem, black calc(100% - 1rem), transparent 100%);
+            -webkit-mask-image: linear-gradient(to right, transparent 0%, black 1rem, black calc(100% - 1rem), transparent 100%);
         }
+        
+        /* FIX: Ensure old pseudo-elements for fading are disabled as we now use mask-image */
+        .text-fade-container::before, .text-fade-container::after, 
         .fade-thumb-bg::before, .fade-thumb-bg::after {
-            content: ""; position: absolute; top: 0; width: 1rem; height: 100%; z-index: 10; pointer-events: none;
+            content: none !important;
+            display: none !important;
         }
-        /* Fades to the bottom-most color of the title-overlay gradient: rgba(0, 0, 0, 0.8) */
-        .fade-thumb-bg::before { left: 0; background: linear-gradient(to right, rgba(0, 0, 0, 0.8) 5%, rgba(0, 0, 0, 0) 100%); }
-        .fade-thumb-bg::after { right: 0; background: linear-gradient(to left, rgba(0, 0, 0, 0.8) 5%, rgba(0, 0, 0, 0) 100%); }
 
         /* --- FONT & BASE STYLING (THICKENED FONT) --- */
         body { 
@@ -232,9 +220,7 @@
         .marquee-animation {
             display: inline-block;
             white-space: nowrap;
-            /* Remove original padding-left: 100% since we now use spacing characters */
             animation: marquee 8s linear infinite;
-            /* Ensure the scrolling element doesn't wrap */
             flex-shrink: 0;
         }
         
@@ -434,7 +420,7 @@
         let PENDING_UPLOAD_FILE = null; 
         const COMMENT_DELAY_MS = 5000;
         const POST_SLOTS_MAX = 5; 
-        const MARQUEE_TRIGGER_LENGTH = 30;
+        const MARQUEE_TRIGGER_LENGTH = 30; // Titles longer than this will use marquee/fade
 
         // --- DOM Elements ---
         const loadingScreen = document.getElementById('loading-screen');
@@ -763,6 +749,9 @@
                     const data = change.doc.data();
                     
                     if (data.title) { 
+                         const isLongTitle = data.title.length > MARQUEE_TRIGGER_LENGTH;
+                         const fadeClass = isLongTitle ? 'has-fade' : '';
+
                          if (change.type === 'added' && !existingIds.has(docId)) {
                             renderPhotoThumbnail(docId, data, 'prepend');
                         } else if (change.type === 'modified' || change.type === 'added') {
@@ -772,13 +761,18 @@
                                 if (heartCountEl) {
                                      heartCountEl.innerHTML = formatCount(data.hearts?.length || 0);
                                 }
+                                const titleContainer = existingThumb.querySelector('.fade-thumb-bg');
                                 const titleSpan = existingThumb.querySelector('.title-text-span');
+                                
                                 if (titleSpan) {
                                     titleSpan.textContent = data.title + ' &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'; // Added spacing
-                                    if (data.title.length > MARQUEE_TRIGGER_LENGTH) {
+                                    
+                                    if (isLongTitle) {
                                         titleSpan.classList.add('marquee-animation');
+                                        titleContainer.classList.add('has-fade');
                                     } else {
                                         titleSpan.classList.remove('marquee-animation');
+                                        titleContainer.classList.remove('has-fade');
                                     }
                                 }
                             } else if (change.type === 'modified') {
@@ -831,12 +825,15 @@
 
             const isLongTitle = photoData.title.length > MARQUEE_TRIGGER_LENGTH;
             const displayTitle = photoData.title; 
+            // MODIFIED: Apply has-fade class conditionally to the outer container
+            const fadeClass = isLongTitle ? 'has-fade' : '';
 
             const titleOverlay = document.createElement('div');
             titleOverlay.className = 'title-overlay'; 
-            // MODIFIED: Use fade-thumb-bg for the fade effect
+            
+            // MODIFIED: Use fade-thumb-bg and conditionally apply has-fade for the fade effect
             titleOverlay.innerHTML = `
-                <div class="fade-thumb-bg">
+                <div class="fade-thumb-bg ${fadeClass}"> 
                     <span class="text-white text-right font-semibold text-xs title-text-span ${isLongTitle ? 'marquee-animation' : ''}">
                         ${displayTitle} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                     </span>
@@ -904,10 +901,12 @@
                         
                         const isLongTitle = name.length > MARQUEE_TRIGGER_LENGTH;
                         const titleSpanClass = isLongTitle ? 'marquee-animation' : '';
+                        // MODIFIED: Apply has-fade class conditionally to the outer container
+                        const fadeClass = isLongTitle ? 'has-fade' : '';
                         
-                        // MODIFIED: Use text-fade-container and fade-list-bg for fade effect
+                        // MODIFIED: Use text-fade-container and conditionally apply has-fade for fade effect
                         div.innerHTML = `
-                            <div class="flex-grow mr-2 text-fade-container fade-list-bg">
+                            <div class="flex-grow mr-2 text-fade-container ${fadeClass}">
                                 <span class="font-semibold inline-block ${titleSpanClass}">${name} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
                             </div>
                             ${buttonHtml}
@@ -1101,10 +1100,12 @@
                 
                 const isLongTitle = photoData.title.length > MARQUEE_TRIGGER_LENGTH;
                 const titleClass = isLongTitle ? 'marquee-animation' : '';
+                // MODIFIED: Apply has-fade class conditionally to the outer container
+                const fadeClass = isLongTitle ? 'has-fade' : '';
                 
-                // MODIFIED: Added text-fade-container and fade-dark-bg for the fade effect
+                // MODIFIED: Added text-fade-container and conditionally apply has-fade for the fade effect
                 const titleHtml = `
-                    <div class="modal-title-container mb-1 text-fade-container fade-dark-bg">
+                    <div class="modal-title-container mb-1 text-fade-container ${fadeClass}"> 
                         <span class="modal-title-text text-white ${titleClass}">
                             ${photoData.title || 'Untitled Daily Post'} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                         </span>
@@ -1113,11 +1114,11 @@
 
                 modalContentContainer.innerHTML = `
                     <div id="photo-view-main" class="flex-grow flex h-full transition-opacity duration-300">
-                        <div class="w-[60%] flex justify-center items-center p-8 bg-[#090909] rounded-l-xl">
-                            <img src="${photoData.imageBase64}" alt="${photoData.title || 'Photo'}" class="rounded-lg max-h-full max-w-full w-full h-full object-contain">
+                        <div id="image-panel" class="w-[60%] flex justify-center items-center p-8 bg-[#090909] rounded-l-xl transition-all duration-300">
+                            <img id="full-view-image" src="${photoData.imageBase64}" alt="${photoData.title || 'Photo'}" class="rounded-lg max-h-full max-w-full w-full h-full object-contain cursor-zoom-in">
                         </div>
                         
-                        <div id="photo-info-panel" class="w-[40%] flex flex-col h-full p-6">
+                        <div id="photo-info-panel" class="w-[40%] flex flex-col h-full p-6 transition-all duration-300">
                             <div class="border-b border-gray-700 pb-3 mb-3 shrink-0">
                                 ${titleHtml}
                                 <p class="font-semibold text-lg text-indigo-400">${photoData.creatorUsername}</p>
@@ -1174,6 +1175,35 @@
                 const deleteTriggerBtn = document.getElementById('delete-post-trigger-btn');
                 const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
                 const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+                
+                // NEW: Zoom implementation logic
+                const imagePanel = document.getElementById('image-panel');
+                const infoPanel = document.getElementById('photo-info-panel');
+                const fullViewImage = document.getElementById('full-view-image');
+                let isZoomed = false; // State for the zoom
+
+                const toggleZoom = () => {
+                    isZoomed = !isZoomed;
+
+                    if (isZoomed) {
+                        // Zoom in: Image panel goes full width, info panel hides
+                        imagePanel.classList.replace('w-[60%]', 'w-full');
+                        imagePanel.classList.add('rounded-r-xl'); // Round the right side
+                        infoPanel.classList.replace('w-[40%]', 'w-0');
+                        infoPanel.classList.add('opacity-0', 'pointer-events-none');
+                        fullViewImage.classList.replace('cursor-zoom-in', 'cursor-zoom-out');
+                    } else {
+                        // Zoom out: Restore original widths
+                        imagePanel.classList.replace('w-full', 'w-[60%]');
+                        imagePanel.classList.remove('rounded-r-xl');
+                        infoPanel.classList.replace('w-0', 'w-[40%]');
+                        infoPanel.classList.remove('opacity-0', 'pointer-events-none');
+                        fullViewImage.classList.replace('cursor-zoom-out', 'cursor-zoom-in');
+                    }
+                };
+
+                fullViewImage.addEventListener('click', toggleZoom);
+                // END NEW: Zoom implementation logic
 
 
                 document.getElementById('heart-btn').addEventListener('click', async (e) => {
@@ -1429,6 +1459,7 @@
                 container.querySelectorAll('.remove-friend-btn').forEach(button => {
                     button.addEventListener('click', async (e) => {
                         e.preventDefault();
+                        // Find the closest button element to ensure the click target is correct
                         const friendUidToRemove = e.target.closest('button').dataset.uid;
                         
                         const batch = writeBatch(db);
