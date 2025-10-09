@@ -239,6 +239,15 @@
             display: inline-block;
             white-space: nowrap;
         }
+        
+        /* NEW: Image constraint for 14:9 aspect ratio */
+        .photo-modal-img {
+            /* Fallback and ensures responsive behavior */
+            width: auto; 
+            max-width: 100%;
+            /* max-height will be set dynamically via JS to enforce the 14:9 ratio constraint */
+            object-fit: contain; 
+        }
         /* --- END FEED STYLES --- */
 
         .modal-backdrop {
@@ -475,17 +484,67 @@
         // Helper Functions 
         // =========================================================================
         
-        // Purgomalum API Text Cleaning
+        // NEW: Function for ProfanityAPI (profanity.dev)
         async function cleanText(text, type = 'text') {
-             if (!text) return '';
-             try {
-                const url = `https://www.purgomalum.com/service/plain?text=${encodeURIComponent(text)}`;
-                const response = await fetch(url);
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                const cleanedText = await response.text();
-                return cleanedText.trim();
+            if (!text) return '';
+            
+            // IMPORTANT: Replace 'YOUR_PROFANTY_API_KEY' with your actual key from profanity.dev
+            const apiKey = "YOUR_PROFANTY_API_KEY"; 
+            const apiUrl = 'https://api.profanity.dev/api/v2/profanity';
+            const MIN_SCORE_TO_REPLACE = 0.9;
+            
+            // If the API key is not set, skip filtering and return the original text.
+            if (apiKey === "YOUR_PROFANTY_API_KEY" || !apiKey) {
+                console.warn(`Skipping ${type} filtering: Profanity API key is not set. Please update the 'cleanText' function.`);
+                return text;
+            }
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-API-Key': apiKey // Assuming API key is passed via header
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                    })
+                });
+
+                if (!response.ok) {
+                    console.error(`Profanity API HTTP error! status: ${response.status}`);
+                    return text; // Return original text on API failure
+                }
+
+                const data = await response.json();
+                
+                if (data.isProfanity) {
+                    let cleanedText = text;
+                    const matches = data.matches || [];
+
+                    // Sort matches by start index descending to prevent index shifts during replacement
+                    matches.sort((a, b) => b.start - a.start); 
+
+                    for (const match of matches) {
+                        // Check if the profanity score is 0.9 or higher as requested
+                        if (match.score >= MIN_SCORE_TO_REPLACE) {
+                            const wordToReplace = text.substring(match.start, match.end);
+                            const asterisks = '*'.repeat(wordToReplace.length);
+                            
+                            // Replace the profanity with asterisks
+                            cleanedText = cleanedText.substring(0, match.start) + 
+                                           asterisks + 
+                                           cleanedText.substring(match.end);
+                        }
+                    }
+                    return cleanedText;
+                }
+
+                // No profanity found or isProfanity is false
+                return text;
+
             } catch (error) {
-                console.error(`Purgomalum ${type} filtering failed, using original text.`, error);
+                console.error(`Profanity API ${type} filtering failed, using original text.`, error);
                 return text; 
             }
         }
@@ -1152,10 +1211,11 @@
                 // UPDATED: Added close button, badge container, and padding to the info panel
                 modalContentContainer.innerHTML = `
                     <div id="photo-view-main" class="flex flex-col md:flex-row gap-6 transition-opacity duration-300 w-full h-full">
-                        <div class="flex-grow flex justify-center items-center">
-                            <img src="${photoData.imageBase64}" alt="${photoData.title || 'Photo'}" class="rounded-lg max-h-[80vh] w-auto max-w-full">
+                        <div id="photo-display-area" class="flex-grow flex justify-center items-center">
+                            <img id="modal-main-image" src="${photoData.imageBase64}" alt="${photoData.title || 'Photo'}" class="rounded-lg photo-modal-img">
                         </div>
                         <div id="photo-info-panel" class="w-full md:w-[350px] flex-shrink-0 flex flex-col relative">
+                            <!-- NEW: Close button and badge -->
                             <button id="close-modal-btn" class="absolute top-0 right-0 p-2 text-white/50 hover:text-white transition" title="Close"><i class="fas fa-times"></i></button>
                             <div class="absolute top-0 right-8">
                                 <span id="unread-comments-badge" class="hidden bg-red-600 text-white font-bold rounded-full flex items-center justify-center" title="Unread Comments"></span>
@@ -1170,6 +1230,7 @@
                                     : ''}
                             </div>
                             <div class="flex-grow mb-4 pr-1">
+                                <!-- UPDATED: Added max-h-[300px] class for scrollable area -->
                                 <div id="comments-section" class="pr-1 overflow-y-auto max-h-[300px]">
                                     ${(() => {
                                         let html = '';
@@ -1215,6 +1276,31 @@
                 
                 // Get the new DOM elements
                 const currentCommentsSection = document.getElementById('comments-section');
+                
+                // NEW: 14:9 Aspect Ratio Constraint Logic
+                const photoDisplayArea = document.getElementById('photo-display-area');
+                const mainImage = document.getElementById('modal-main-image');
+
+                if (photoDisplayArea && mainImage) {
+                    // Wait for the browser to render the flex layout and calculate the container width
+                    setTimeout(() => {
+                        const availableWidth = photoDisplayArea.clientWidth;
+                        
+                        // Calculate max height based on 9/14 of the available width (14:9 ratio)
+                        const MAX_HEIGHT_RATIO_FACTOR = 9 / 14; 
+                        const maxHeightFromRatio = availableWidth * MAX_HEIGHT_RATIO_FACTOR;
+                        
+                        // Also respect the vertical limit of the viewport (90% of screen height)
+                        const viewportMaxHeight = window.innerHeight * 0.9; 
+                        
+                        // Use the smallest of the two constraints (ratio or viewport limit)
+                        const finalMaxHeight = Math.min(maxHeightFromRatio, viewportMaxHeight);
+
+                        // Apply the calculated max height
+                        mainImage.style.maxHeight = `${finalMaxHeight}px`;
+
+                    }, 100); 
+                }
 
                 // --- NEW SCROLL AND BADGE LOGIC ---
                 // Only run scroll logic if the component has been rendered (oldCommentsSection will be null on first render)
@@ -1246,8 +1332,6 @@
                 currentCommentsSection.addEventListener('scroll', () => handleScroll(currentCommentsSection));
                 handleScroll(currentCommentsSection); // Run immediately on update
 
-                // ... (rest of event listeners for heart, delete, etc.)
-                
                 
                 // Get new DOM elements for the deletion flow
                 const photoViewMain = document.getElementById('photo-view-main');
@@ -1324,7 +1408,7 @@
                     submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
                     
                     try {
-                        // NEW: Clean the comment text
+                        // UPDATED: Clean the comment text using the new ProfanityAPI function
                         const cleanedText = await cleanText(text, 'comment');
 
                         const newComment = {
@@ -1415,7 +1499,7 @@
             if (title.length > 48) title = title.substring(0, 48); // Enforce new client-side limit
 
             try {
-                // NEW: Clean the title before saving
+                // UPDATED: Clean the title before saving
                 const cleanedTitle = await cleanText(title, 'post title');
                 
                 await updateDoc(doc(DAILY_PHOTO_COLLECTION, postId), { 
