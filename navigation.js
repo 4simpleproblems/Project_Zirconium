@@ -43,8 +43,9 @@ const PAGE_CONFIG_URL = '../page-identification.json';
         return;
     }
 
-    // --- 1. DYNAMICALLY LOAD FIREBASE SDKs ---
-    // This ensures Firebase is loaded before our code runs.
+    // --- 1. DYNAMICALLY LOAD EXTERNAL ASSETS (Optimized) ---
+    
+    // Helper to load external JS files
     const loadScript = (src) => {
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
@@ -56,8 +57,34 @@ const PAGE_CONFIG_URL = '../page-identification.json';
         });
     };
 
+    // Helper to load external CSS files (Faster for icons)
+    const loadCSS = (href) => {
+        return new Promise((resolve) => {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = href;
+            // Resolve immediately and proceed, as icons are non-critical path for the script logic
+            link.onload = resolve;
+            link.onerror = resolve; 
+            document.head.appendChild(link);
+        });
+    };
+    
+    // Simple debounce utility for performance
+    const debounce = (func, delay) => {
+        let timeoutId;
+        return (...args) => {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => func.apply(this, args), delay);
+        };
+    };
+
     const run = async () => {
         let pages = {};
+        
+        // Load Icons CSS first for immediate visual display (Faster than JS file)
+        await loadCSS("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css");
+
         // Fetch page configuration for the tabs
         try {
             const response = await fetch(PAGE_CONFIG_URL);
@@ -70,13 +97,10 @@ const PAGE_CONFIG_URL = '../page-identification.json';
         }
 
         try {
-            // Sequentially load Firebase modules. This is crucial for correct initialization.
+            // Sequentially load Firebase modules (compat versions for simplicity).
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js");
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js");
-            // Load Font Awesome for tab icons (assuming user has Font Awesome configured)
-            await loadScript("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js");
-
 
             // Now that scripts are loaded, we can use the `firebase` global object
             initializeApp(pages);
@@ -92,13 +116,14 @@ const PAGE_CONFIG_URL = '../page-identification.json';
         const auth = firebase.auth();
         const db = firebase.firestore();
 
-        // --- 3. INJECT CSS STYLES ---
+        // --- 3. INJECT CSS STYLES (UPDATED for Opacity) ---
         const injectStyles = () => {
             const style = document.createElement('style');
             style.textContent = `
                 /* Base Styles */
                 body { padding-top: 4rem; /* 64px, equal to navbar height */ }
-                .auth-navbar { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: rgba(0,0,0,0.8); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid rgb(31 41 55); height: 4rem; }
+                /* Nav bar is now fully opaque (#111827 - dark gray/black) */
+                .auth-navbar { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: #111827; border-bottom: 1px solid rgb(31 41 55); height: 4rem; }
                 /* Nav now needs relative positioning for glide buttons */
                 .auth-navbar nav { max-width: 80rem; margin: auto; padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
                 .initial-avatar { background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: 'Geist', sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; }
@@ -106,7 +131,7 @@ const PAGE_CONFIG_URL = '../page-identification.json';
                 /* Auth Dropdown Menu Styles (UPDATED: Black background and blur) */
                 .auth-menu-container { 
                     position: absolute; right: 0; top: 50px; width: 16rem; 
-                    background: rgba(0, 0, 0, 0.9); /* Closer to black */
+                    background: rgba(0, 0, 0, 0.95); /* Closer to black */
                     backdrop-filter: blur(8px); 
                     -webkit-backdrop-filter: blur(8px);
                     border: 1px solid rgb(55 65 81); border-radius: 0.75rem; padding: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
@@ -138,31 +163,31 @@ const PAGE_CONFIG_URL = '../page-identification.json';
                     -ms-overflow-style: none; /* Hide scrollbar for IE and Edge */
                     padding-bottom: 5px; /* Add padding for scroll visibility */
                     margin-bottom: -5px; /* Counteract padding-bottom for visual alignment */
-                    scroll-behavior: smooth; /* ADDED for smooth scrolling */
+                    scroll-behavior: smooth; 
                 }
                 /* Hide scrollbar for Chrome, Safari, and Opera */
                 .tab-scroll-container::-webkit-scrollbar { display: none; }
 
-                /* Scroll Glide Buttons (NEW) */
+                /* Scroll Glide Buttons (UPDATED: opacity is 0.8 by default for instant load) */
                 .scroll-glide-button {
                     position: absolute;
                     top: 0;
                     height: 100%;
-                    width: 2rem; /* Half button width */
+                    width: 2rem; 
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    background: rgba(0, 0, 0, 0.7); /* Black, semi-transparent */
+                    background: #111827; /* Solid color matching navbar */
                     color: white;
                     font-size: 1.2rem;
                     cursor: pointer;
-                    opacity: 0; /* Hidden by default, managed by JS */
+                    opacity: 0.8; /* Always visible slightly so they don't 'wake up' */
                     transition: opacity 0.3s, background 0.3s;
                     z-index: 10;
-                    pointer-events: none; /* Disable interaction when hidden */
+                    pointer-events: auto; /* Allow interaction */
                 }
                 .scroll-glide-button:hover {
-                    background: rgba(0, 0, 0, 0.9);
+                    opacity: 1;
                 }
                 
                 /* Position and gradient for left button */
@@ -170,8 +195,7 @@ const PAGE_CONFIG_URL = '../page-identification.json';
                     left: 0;
                     border-top-right-radius: 0.5rem;
                     border-bottom-right-radius: 0.5rem;
-                    /* Fade effect to blend into the tabs */
-                    background: linear-gradient(to right, rgba(0, 0, 0, 0.7), transparent);
+                    background: linear-gradient(to right, #111827 50%, transparent); /* Opaque fade */
                 }
 
                 /* Position and gradient for right button */
@@ -179,14 +203,13 @@ const PAGE_CONFIG_URL = '../page-identification.json';
                     right: 0;
                     border-top-left-radius: 0.5rem;
                     border-bottom-left-radius: 0.5rem;
-                    /* Fade effect to blend into the tabs */
-                    background: linear-gradient(to left, rgba(0, 0, 0, 0.7), transparent);
+                    background: linear-gradient(to left, #111827 50%, transparent); /* Opaque fade */
                 }
-
-                /* Visibility class controlled by JS */
-                .scroll-glide-button.visible {
-                    opacity: 1;
-                    pointer-events: auto;
+                
+                /* Visibility class controlled by JS to hide when not needed */
+                .scroll-glide-button.hidden {
+                    opacity: 0 !important;
+                    pointer-events: none !important;
                 }
 
                 .nav-tab {
@@ -222,27 +245,40 @@ const PAGE_CONFIG_URL = '../page-identification.json';
             document.head.appendChild(style);
         };
 
-        // --- Helper to normalize URL paths for comparison ---
-        const normalizePath = (url) => {
-            try {
-                // Ensure URL is absolute for proper parsing relative to the current domain
-                let path = new URL(url, window.location.origin).pathname;
-                // Replace multiple slashes with single slash (for consistency)
-                path = path.replace(/\/+/g, '/');
-                // Ensure it starts with a '/' and doesn't end with one (unless it's just '/')
-                if (path !== '/' && path.endsWith('/')) {
+        // --- NEW: Function to robustly determine active tab (GitHub Pages fix) ---
+        const isTabActive = (tabUrl) => {
+            const tabPathname = new URL(tabUrl, window.location.origin).pathname.toLowerCase();
+            const currentPathname = window.location.pathname.toLowerCase();
+
+            // Helper to clean paths: remove trailing slash (unless it's root) and replace /index.html with /
+            const cleanPath = (path) => {
+                if (path.length > 1 && path.endsWith('/')) {
                     path = path.slice(0, -1);
                 }
-                // Ensure it starts with '/'
-                if (!path.startsWith('/')) {
-                    path = '/' + path;
+                if (path.endsWith('/index.html')) {
+                    return path.substring(0, path.lastIndexOf('/')) + '/';
                 }
-                // Convert to lowercase for case-insensitive comparison
-                return path.toLowerCase();
-            } catch (e) {
-                console.error("Error normalizing URL:", url, e);
-                return '';
+                return path;
+            };
+
+            const currentCanonical = cleanPath(currentPathname);
+            const tabCanonical = cleanPath(tabPathname);
+            
+            // 1. Exact canonical match (e.g., /dashboard === /dashboard)
+            if (currentCanonical === tabCanonical) {
+                return true;
             }
+
+            // 2. GitHub Pages/Subdirectory match: Check if the current path ends with the tab path.
+            // This handles cases like: current: /my-repo/about.html, tab: /about.html
+            // We compare 'my-repo/about.html' (suffix of current) with 'about.html' (suffix of tab).
+            const tabPathSuffix = tabPathname.startsWith('/') ? tabPathname.substring(1) : tabPathname;
+            
+            if (currentPathname.endsWith(tabPathSuffix)) {
+                return true;
+            }
+
+            return false;
         };
         
         // --- NEW: Function to control visibility of scroll glide buttons ---
@@ -253,23 +289,20 @@ const PAGE_CONFIG_URL = '../page-identification.json';
 
             if (!container || !leftButton || !rightButton) return;
             
-            // Determine scroll state
-            // scrollLeft < 1 means it's scrolled all the way to the start (left)
-            const isScrolledToLeft = container.scrollLeft < 1; 
-            // Check if scrollLeft + offsetWidth is very close to scrollWidth (scrolled all the way to the end/right)
-            const isScrolledToRight = container.scrollLeft + container.offsetWidth >= container.scrollWidth - 1; 
+            const isScrolledToLeft = container.scrollLeft < 5; // Tolerance for floating point math
+            const isScrolledToRight = container.scrollLeft + container.offsetWidth >= container.scrollWidth - 5; // Tolerance
             const hasHorizontalOverflow = container.scrollWidth > container.offsetWidth;
 
             // Visibility logic
             if (hasHorizontalOverflow) {
-                // Show left button if not at the start
-                leftButton.classList.toggle('visible', !isScrolledToLeft);
-                // Show right button if not at the end
-                rightButton.classList.toggle('visible', !isScrolledToRight);
+                // Hide left button if at the start
+                leftButton.classList.toggle('hidden', isScrolledToLeft);
+                // Hide right button if at the end
+                rightButton.classList.toggle('hidden', isScrolledToRight);
             } else {
                 // Hide both buttons if there is no content overflow
-                leftButton.classList.remove('visible');
-                rightButton.classList.remove('visible');
+                leftButton.classList.add('hidden');
+                rightButton.classList.add('hidden');
             }
         };
 
@@ -279,14 +312,11 @@ const PAGE_CONFIG_URL = '../page-identification.json';
             if (!container) return;
 
             const logoPath = "/images/logo.png"; // Using root-relative path
-            const currentPagePath = normalizePath(window.location.pathname);
 
             // --- Tab Generation ---
             const tabsHtml = Object.values(pages || {}).map(page => {
-                const tabPath = normalizePath(page.url);
-
-                // Determine active state by comparing normalized paths
-                const isActive = tabPath === currentPagePath;
+                // Use the new robust check for active state
+                const isActive = isTabActive(page.url);
                 const activeClass = isActive ? 'active' : '';
 
                 return `
@@ -318,7 +348,7 @@ const PAGE_CONFIG_URL = '../page-identification.json';
 
                 const avatar = photoURL ?
                     `<img src="${photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">` :
-                    `<div class="initial-avatar w-full h-full rounded-full text-sm font-semibold">${initial}</div>`;
+                    `<div class="initial-avatar w-8 h-8 rounded-full text-sm font-semibold">${initial}</div>`;
 
                 return `
                     <div class="relative flex-shrink-0">
@@ -349,13 +379,14 @@ const PAGE_CONFIG_URL = '../page-identification.json';
 
                         <!-- 2. Scrollable Tabs (Center, takes up all remaining space) -->
                         <div class="tab-wrapper">
-                            <button id="glide-left" class="scroll-glide-button"><i class="fas fa-chevron-left"></i></button>
+                            <!-- Glide buttons are now slightly visible by default via CSS for instant load -->
+                            <button id="glide-left" class="scroll-glide-button hidden"><i class="fas fa-chevron-left"></i></button>
 
                             <div class="tab-scroll-container">
                                 ${tabsHtml}
                             </div>
                             
-                            <button id="glide-right" class="scroll-glide-button"><i class="fas fa-chevron-right"></i></button>
+                            <button id="glide-right" class="scroll-glide-button hidden"><i class="fas fa-chevron-right"></i></button>
                         </div>
 
                         <!-- 3. Auth Menu (Right) -->
@@ -376,7 +407,6 @@ const PAGE_CONFIG_URL = '../page-identification.json';
             }
             
             // INITIAL CHECK: After rendering and auto-scrolling, update glide button visibility
-            // This is crucial to ensure the buttons are visible/hidden correctly on page load.
             updateScrollGilders();
         };
 
@@ -389,24 +419,27 @@ const PAGE_CONFIG_URL = '../page-identification.json';
             const leftButton = document.getElementById('glide-left');
             const rightButton = document.getElementById('glide-right');
 
+            // Use debounced function for scroll and resize updates (Performance fix)
+            const debouncedUpdateGilders = debounce(updateScrollGilders, 50);
+
             if (tabContainer) {
-                // Calculate dynamic scroll amount based on container width (e.g., 80% of visible width)
-                // This replaces the fixed '150' to ensure a larger, more satisfying jump.
+                // Calculate dynamic scroll amount based on container width
                 const scrollAmount = tabContainer.offsetWidth * 0.8; 
 
                 // Update visibility on scroll
-                tabContainer.addEventListener('scroll', updateScrollGilders);
+                tabContainer.addEventListener('scroll', debouncedUpdateGilders);
+                
+                // Update visibility on window resize
+                window.addEventListener('resize', debouncedUpdateGilders);
                 
                 // Add click behavior for glide buttons
                 if (leftButton) {
                     leftButton.addEventListener('click', () => {
-                        // Scroll back by 80% of the container width
                         tabContainer.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
                     });
                 }
                 if (rightButton) {
                     rightButton.addEventListener('click', () => {
-                        // Scroll forward by 80% of the container width
                         tabContainer.scrollBy({ left: scrollAmount, behavior: 'smooth' });
                     });
                 }
