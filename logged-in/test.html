@@ -329,7 +329,7 @@
             <div class="mb-6 border-b border-gray-800 pb-4">
                 <h2 class="text-xl font-bold mb-2">Add a Friend</h2>
                 <form id="add-friend-form" class="flex gap-2">
-                    <input type="text" id="friend-code-input" placeholder="********" maxlength="8" class="friend-code-input-styled flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase tracking-widest text-center" style="font-family: monospace;" pattern="[A-Z0-9]{8}" title="8 alphanumeric characters only">
+                    <input type="text" id="friend-code-input" placeholder="********" maxlength="8" class="friend-code-input-styled flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase tracking-widest text-center" style="font-family: monospace;" title="8 alphanumeric characters only">
                     <button type="submit" class="px-3 py-2 bg-indigo-600 rounded-md hover:bg-indigo-700 transition font-semibold" title="Send Request">
                         <i class="fas fa-user-plus"></i>
                     </button>
@@ -432,7 +432,10 @@
             // Path: artifacts/{appId}/users/{userId}/metadata/user_profile
             return doc(db, 'artifacts', appId, 'users', userId, 'metadata', 'user_profile');
         };
-        const getFriendCodeDocRef = (code) => doc(db, 'friend_codes', code);
+        const getFriendCodeDocRef = (code) => {
+            // Path: artifacts/{appId}/public/friend_codes/{code}
+            return doc(db, 'artifacts', appId, 'public', 'friend_codes', code);
+        };
         const DAILY_PHOTO_COLLECTION = collection(db, 'daily_photos');
 
 
@@ -614,7 +617,6 @@
                 const userProfileSnap = await getDoc(userProfileRef);
 
                 let defaultUsername = `DailyUser-${Math.floor(Math.random() * 8999) + 1000}`;
-                // NEW: Clean the default username with Purgomalum
                 defaultUsername = await cleanText(defaultUsername, 'username');
 
                 if (userProfileSnap.exists() && userProfileSnap.data().friendCode) {
@@ -626,20 +628,20 @@
                     friendCodeDisplay.textContent = 'Generating...';
                     const newCode = await generateUniqueFriendCode();
                     
-                    const batch = writeBatch(db);
+                    // NEW/REVISED LOGIC:
+                    // 1. Secure the code in the 'friend_codes' collection first.
+                    await setDoc(getFriendCodeDocRef(newCode), { userId: user.uid });
                     
-                    batch.set(getFriendCodeDocRef(newCode), { userId: user.uid });
-
-                    batch.set(userProfileRef, { 
+                    // 2. NOW, create/update the user's profile with the confirmed code.
+                    await setDoc(userProfileRef, { 
                         friendCode: newCode,
-                        friends: [],
                         username: defaultUsername, 
-                        dailySlotsUsed: [], 
-                        lastPostReset: serverTimestamp() 
+                        // Initialize friends and slots if the profile is new
+                        friends: userProfileSnap.data()?.friends || [],
+                        dailySlotsUsed: userProfileSnap.data()?.dailySlotsUsed || [],
+                        lastPostReset: userProfileSnap.data()?.lastPostReset || serverTimestamp() 
                     }, { merge: true });
 
-                    await batch.commit();
-                    
                     friendCodeDisplay.textContent = newCode;
                     CURRENT_USERNAME = defaultUsername;
                 }
@@ -1051,9 +1053,11 @@
                                 let html = '';
                                 const comments = photoData.comments || [];
                                 comments.sort((a, b) => (a.timestamp?.toDate() || new Date(0)) - (b.timestamp?.toDate() || new Date(0))).forEach(comment => {
-                                    html += `<div class="mb-2"><p><strong class="font-semibold">${comment.username}</strong>: ${comment.text}</p></div>`;
+                                    // ADDED `break-words` class to prevent horizontal overflow from long unbroken strings.
+                                    html += `<div class="mb-2"><p class="break-words"><strong class="font-semibold">${comment.username}</strong>: ${comment.text}</p></div>`;
                                 });
-                                return html || '<p class="text-sm text-gray-500">No comments yet. Be the first!</p>';
+                                // ADDED `break-words` to placeholder as well for consistency.
+                                return html || '<p class="text-sm text-gray-500 break-words">No comments yet. Be the first!</p>';
                             })()}
                         </div>
                         <div class="flex items-center gap-4 mb-4 pt-3 border-t border-gray-800">
@@ -1255,8 +1259,8 @@
             
             try {
                 const batch = writeBatch(db);
-                batch.update(getUserProfileDocRef(currentUser.uid), { friends: arrayUnion(friendUid) });
-                batch.update(getUserProfileDocRef(friendUid), { friends: arrayUnion(currentUser.uid) });
+                batch.set(getUserProfileDocRef(currentUser.uid), { friends: arrayUnion(friendUid) }, { merge: true });
+                batch.set(getUserProfileDocRef(friendUid), { friends: arrayUnion(currentUser.uid) }, { merge: true });
                 await batch.commit();
 
                 showMessage(addFriendMessage, 'Friend added successfully!', 'success');
@@ -1351,3 +1355,4 @@
     </script>
 </body>
 </html>
+
