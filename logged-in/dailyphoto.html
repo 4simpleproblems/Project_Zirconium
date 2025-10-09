@@ -26,13 +26,25 @@
             100% { box-shadow: 0 0 5px #4f46e5, 0 0 10px #4f46e5; }
         }
         
-        /* UPDATED: Marquee animation is now "wider" by increasing travel distance */
-        @keyframes marquee {
-            /* Start further off-screen right */
-            0% { transform: translateX(110%); }
-            /* Scroll until it's fully off-screen left */
-            100% { transform: translateX(-110%); }
+        /* UPDATED: New, staged marquee animation that pauses and reverses */
+        @keyframes marquee-reversible {
+            /* Stage 1: Pause at the start (0% to 15% of animation time) */
+            0%, 15% { transform: translateX(0); }
+
+            /* Stage 2: Scroll to the left (15% to 50%) */
+            50% {
+                /* Scrolls left by its own width, with a small offset to keep the end visible */
+                /* This is a heuristic that works well for most title lengths */
+                transform: translateX(calc(-100% + 40px));
+            }
+
+            /* Stage 3: Pause at the far-left position (50% to 65%) */
+            65% { transform: translateX(calc(-100% + 40px)); }
+            
+            /* Stage 4: Animate back to the start (65% to 100%) */
+            100% { transform: translateX(0); }
         }
+
 
         /* --- FONT & BASE STYLING (THICKENED FONT) --- */
         body { 
@@ -146,7 +158,7 @@
             overflow-wrap: break-word;
         }
 
-        /* --- NEW: FEED DISPLAY STYLES --- */
+        /* --- NEW: FEED DISPLAY STYLING --- */
         .photo-grid {
             display: grid;
             /* 3 columns, each 1fr, with a gap for padding */
@@ -179,17 +191,16 @@
             pointer-events: none; /* Allows click-through to the thumbnail itself */
         }
         
-        /* UPDATED: Title Overlay has a darker, stronger gradient */
+        /* UPDATED: Title Overlay has a darker gradient and more horizontal padding */
         .title-overlay {
             position: absolute;
             bottom: 0;
             left: 0;
             right: 0;
-            padding: 0.5rem 0.75rem;
+            padding: 0.75rem 1rem; /* More horizontal padding */
             color: white;
             font-size: 0.75rem; /* text-xs */
             font-weight: 600;
-            /* UPDATED: Stronger, darker gradient for a better title background */
             background: linear-gradient(to top, rgba(0, 0, 0, 1) 20%, transparent 100%); 
             text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
             height: 3rem; 
@@ -200,22 +211,19 @@
         }
 
         .title-text-container {
-            /* Container for the text that might marquee */
             max-width: 100%; 
             overflow: hidden;
             white-space: nowrap;
             text-align: center; 
         }
         
-        /* Marquee animation class for long titles */
+        /* UPDATED: Marquee animation class now uses the staged animation */
         .marquee-animation {
             display: inline-block;
             white-space: nowrap;
-            /* Force the animation to take over positioning */
-            animation: marquee 8s linear infinite; 
+            animation: marquee-reversible 12s ease-in-out infinite;
         }
         
-        /* NEW: Styles for the unread comment badge in the modal */
         #unread-comments-badge {
             animation: popIn 0.3s ease-out;
             height: 1.25rem; 
@@ -225,28 +233,44 @@
             text-align: center;
         }
         
-        /* NEW: Styles for the title in the full modal view */
         .modal-title-container {
-             max-width: 100%; /* Ensure it respects parent width */
+             max-width: 100%;
              overflow: hidden;
              white-space: nowrap;
-             display: flex; /* Flex to align the title span properly */
-             font-weight: 700; /* Extra bold for the modal title */
+             display: flex;
+             font-weight: 700;
         }
         .modal-title-text {
-            font-size: 1.5rem; /* text-2xl equivalent */
+            font-size: 1.5rem;
             line-height: 2rem;
             display: inline-block;
             white-space: nowrap;
         }
         
-        /* NEW: Image constraint for 14:9 aspect ratio */
         .photo-modal-img {
-            /* Fallback and ensures responsive behavior */
             width: auto; 
             max-width: 100%;
-            /* max-height will be set dynamically via JS to enforce the 14:9 ratio constraint */
             object-fit: contain; 
+        }
+        
+        /* --- NEW: Drag and Drop Upload Area --- */
+        .upload-drop-zone {
+            background-color: #0a0a0a;
+            border: 2px dashed #252525;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            text-align: center;
+            color: #505050;
+            cursor: pointer;
+            transition: border-color 0.2s ease, background-color 0.2s ease;
+        }
+        .upload-drop-zone:hover {
+            border-color: #4f46e5;
+            background-color: #111;
+        }
+        .upload-drop-zone.drag-over {
+            border-color: #818cf8;
+            background-color: #1a1a2e;
         }
         /* --- END FEED STYLES --- */
 
@@ -272,7 +296,6 @@
             max-height: 90vh;
             max-width: 90%;
         }
-        /* Added position: relative to allow absolute positioning of the confirmation overlay */
         #modal-content-container {
             max-width: 1000px;
             position: relative; 
@@ -322,9 +345,11 @@
             <input type="file" id="upload-file-input" class="hidden" accept="image/*" data-slot-index="" data-action="select-photo">
 
             <div id="upload-select-options" class="flex flex-col gap-3 mb-6">
-                <button id="upload-photo-file-btn" class="px-4 py-3 bg-gray-700 rounded-lg hover:bg-gray-800 transition font-semibold w-full">
-                    <i class="fas fa-image mr-2"></i> Select Photo or File
-                </button>
+                 <label for="upload-file-input" id="upload-drop-area" class="upload-drop-zone flex flex-col items-center justify-center">
+                    <i class="fas fa-file-image text-4xl mb-3"></i>
+                    <span class="font-semibold text-gray-300">Drag & Drop Image</span>
+                    <span class="text-sm">or click to browse</span>
+                 </label>
             </div>
             
             <div id="upload-post-creator" class="hidden">
@@ -415,7 +440,6 @@
         const initialAuthToken = null; 
 
         // --- Initialize Firebase ---
-        // CHECK 1: Ensure firebaseConfig is present.
         if (!firebaseConfig || !firebaseConfig.apiKey) {
             document.getElementById('loading-screen').innerHTML = '<p class="text-red-400">ERROR: Missing or incomplete Firebase configuration in firebase-config.js. Check the console for details.</p>';
             console.error("Firebase Configuration Error: The 'firebase-config.js' file is likely missing or does not contain a valid configuration object. The Friend Code feature relies on Firestore and Auth, which will fail without a correct configuration.");
@@ -432,11 +456,11 @@
         let UNSUBSCRIBE_POSTS_LISTENER = () => {};
         let MODAL_UNSUBSCRIBE_LISTENER = () => {}; 
         let LAST_COMMENT_TIMESTAMP = 0; 
-        let UNREAD_COMMENTS_COUNT = 0; // NEW: Track unread comments in modal
+        let UNREAD_COMMENTS_COUNT = 0;
         let PENDING_UPLOAD_FILE = null; 
         const COMMENT_DELAY_MS = 5000;
         const POST_SLOTS_MAX = 3;
-        const MARQUEE_TRIGGER_LENGTH = 30; // Heuristic length for marquee on thumbnail
+        const MARQUEE_TRIGGER_LENGTH = 30;
 
         // --- DOM Elements ---
         const loadingScreen = document.getElementById('loading-screen');
@@ -461,71 +485,46 @@
         const uploadPostCreator = document.getElementById('upload-post-creator'); 
         const imagePreview = document.getElementById('image-preview'); 
         const createPostForm = document.getElementById('create-post-form'); 
+        const uploadDropArea = document.getElementById('upload-drop-area'); // New element
 
 
         // --- Firestore Document References & Collections ---
-        const getUserProfileDocRef = (userId) => {
-            // Path: artifacts/{appId}/users/{userId}/metadata/user_profile
-            return doc(db, 'artifacts', appId, 'users', userId, 'metadata', 'user_profile');
-        };
-        const getFriendCodeDocRef = (code) => {
-            // Path: artifacts/{appId}/public/data/friend_codes/{code}
-            const path = `artifacts/${appId}/public/data/friend_codes/${code}`;
-            console.log(`DEBUG: Friend Code expected Firestore path: ${path}`);
-            return doc(db, 'artifacts', appId, 'public', 'data', 'friend_codes', code);
-        };
+        const getUserProfileDocRef = (userId) => doc(db, 'artifacts', appId, 'users', userId, 'metadata', 'user_profile');
+        const getFriendCodeDocRef = (code) => doc(db, 'artifacts', appId, 'public', 'data', 'friend_codes', code);
         const DAILY_PHOTO_COLLECTION = collection(db, 'daily_photos');
-
 
         // =========================================================================
         // Helper Functions 
         // =========================================================================
         
-        // UPDATED: Function for Profanity Filtering using Purgomalum
         async function cleanText(text, type = 'text') {
-            if (!text || !text.trim()) {
-                return text;
-            }
-            
-            // Using Purgomalum as a reliable, open-source profanity filtering service.
+            if (!text || !text.trim()) return text;
             const purgomalumUrl = `https://www.purgomalum.com/service/json?text=${encodeURIComponent(text)}`;
-
             try {
                 const response = await fetch(purgomalumUrl);
-                if (!response.ok) {
-                    // This will be caught by the catch block
-                    throw new Error(`Purgomalum API HTTP error! Status: ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`Purgomalum API HTTP error! Status: ${response.status}`);
                 const data = await response.json();
-                // Purgomalum returns the filtered text in the 'result' property
                 return data.result || text;
             } catch (error) {
                 console.error(`Profanity filtering with Purgomalum failed for ${type}. Returning original text.`, error);
-                // If the primary service fails, we just return the original text.
                 return text;
             }
         }
         
-        // Function to close the main photo modal and clear its listener
         function closePhotoModal() {
             photoModal.classList.add('hidden');
-            MODAL_UNSUBSCRIBE_LISTENER(); // Unsubscribe the real-time listener
-            MODAL_UNSUBSCRIBE_LISTENER = () => {}; // Reset the listener function
-            // FIX: Clear the modal content on close to prevent stale data on next open
+            MODAL_UNSUBSCRIBE_LISTENER();
+            MODAL_UNSUBSCRIBE_LISTENER = () => {};
             document.getElementById('modal-content-container').innerHTML = '';
         }
         
-        // Functions to manage the upload menu modal
         function openUploadMenu(slotIndex) {
             document.getElementById('upload-menu-title').textContent = `Post to Slot #${slotIndex + 1}`;
             uploadFileInput.dataset.slotIndex = slotIndex;
-            
-            // Reset state
             uploadFileInput.value = '';
             uploadSelectOptions.classList.remove('hidden');
             uploadPostCreator.classList.add('hidden');
             document.getElementById('post-title-input').value = '';
-            
             uploadMenuModal.classList.remove('hidden');
             setTimeout(() => uploadMenuModal.classList.add('opacity-100'), 10);
         }
@@ -536,7 +535,6 @@
             setTimeout(() => uploadMenuModal.classList.add('hidden'), 300);
             PENDING_UPLOAD_FILE = null;
         }
-
 
         function showMessage(element, text, type = 'error') {
             element.textContent = text;
@@ -558,7 +556,6 @@
                     messageModalCloseBtn.removeEventListener('click', handler);
                     resolve(true); 
                 };
-
                 messageModalCloseBtn.addEventListener('click', handler);
             });
         }
@@ -567,7 +564,6 @@
             const input = document.getElementById('title-edit-input');
             input.value = currentTitle;
             editTitleForm.dataset.postId = postId;
-            
             titleModal.classList.remove('hidden');
             setTimeout(() => titleModal.classList.add('opacity-100'), 10);
         }
@@ -579,12 +575,8 @@
         }
 
         function formatCount(num) {
-            if (num >= 1000000) {
-                return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
-            }
-            if (num >= 1000) {
-                return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
-            }
+            if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
             return num;
         }
 
@@ -593,11 +585,7 @@
             const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
             try {
                 while (!isUnique) {
-                    code = '';
-                    for (let i = 0; i < 8; i++) {
-                        code += characters.charAt(Math.floor(Math.random() * characters.length));
-                    }
-                    // Check for uniqueness in the public friend_codes collection
+                    code = Array.from({ length: 8 }, () => characters.charAt(Math.floor(Math.random() * characters.length)).join('');
                     const codeDoc = await getDoc(getFriendCodeDocRef(code));
                     if (!codeDoc.exists()) isUnique = true;
                 }
@@ -619,18 +607,11 @@
                         const canvas = document.createElement('canvas');
                         const MAX_WIDTH = 800; 
                         const scaleSize = MAX_WIDTH / img.width;
-
-                        const width = MAX_WIDTH;
-                        const height = img.height * scaleSize;
-
-                        canvas.width = width;
-                        canvas.height = height;
-
+                        canvas.width = MAX_WIDTH;
+                        canvas.height = img.height * scaleSize;
                         const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-                        
-                        const compressedDataUrl = ctx.canvas.toDataURL('image/jpeg', 0.8);
-                        resolve(compressedDataUrl);
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        resolve(ctx.canvas.toDataURL('image/jpeg', 0.8));
                     };
                     img.onerror = reject;
                 };
@@ -638,31 +619,19 @@
             });
         }
 
-
         // =========================================================================
         // Core Logic - Authentication & Initialization 
         // =========================================================================
 
         async function initializeAuth() {
             try {
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
+                await (initialAuthToken ? signInWithCustomToken(auth, initialAuthToken) : signInAnonymously(auth));
             } catch (error) {
                 console.error("Firebase authentication failed:", error);
                 loadingScreen.style.display = 'none'; 
-                
-                let errorMessage;
-                if (error.code === 'auth/invalid-api-key') {
-                    errorMessage = `Authentication failed due to an **Invalid API Key**. Please ensure the configuration in the external \`firebase-config.js\` file is correct and complete.`;
-                } else if (error.code === 'auth/network-request-failed') {
-                    errorMessage = `Authentication failed due to a **Network Error**. Check your internet connection and verify that your Firebase project settings (especially the API Key) allow connection.`;
-                } else {
-                    errorMessage = `Failed to sign in to Firebase. Error: ${error.code || error.message}.`;
-                }
-                    
+                let errorMessage = `Failed to sign in to Firebase. Error: ${error.code || error.message}.`;
+                if (error.code === 'auth/invalid-api-key') errorMessage = `Authentication failed due to an **Invalid API Key**. Please ensure the configuration in 'firebase-config.js' is correct.`;
+                if (error.code === 'auth/network-request-failed') errorMessage = `Authentication failed due to a **Network Error**. Check your internet connection and Firebase project settings.`;
                 showCustomModal("Authentication Error", errorMessage);
                 throw error; 
             }
@@ -671,62 +640,38 @@
         async function handleFriendCodeLogic(user) {
             try {
                 const userProfileRef = getUserProfileDocRef(user.uid);
-                const userProfileSnap = await getDoc(userProfileRef);
+                let userProfileSnap = await getDoc(userProfileRef);
                 
-                // 1. Determine Username & Profile Setup (NO friendCode involved here)
-                let defaultUsername = `DailyUser-${Math.floor(Math.random() * 8999) + 1000}`;
-                defaultUsername = await cleanText(defaultUsername, 'username');
-                
-                // If the profile is new or missing a username, ensure the minimum structure exists
                 if (!userProfileSnap.exists() || !userProfileSnap.data().username) {
+                    let defaultUsername = `DailyUser-${Math.floor(Math.random() * 8999) + 1000}`;
+                    defaultUsername = await cleanText(defaultUsername, 'username');
                     await setDoc(userProfileRef, { 
-                        username: userProfileSnap.data()?.username || defaultUsername, 
-                        // Initialize friends, slots, and pending_requests if the profile is new
-                        friends: userProfileSnap.data()?.friends || [],
-                        dailySlotsUsed: userProfileSnap.data()?.dailySlotsUsed || [],
-                        lastPostReset: userProfileSnap.data()?.lastPostReset || serverTimestamp(),
-                        pending_requests: userProfileSnap.data()?.pending_requests || [] // NEW: Initialize pending requests
+                        username: defaultUsername, 
+                        friends: [],
+                        dailySlotsUsed: [],
+                        lastPostReset: serverTimestamp(),
+                        pending_requests: []
                     }, { merge: true });
-                } else {
-                     // Ensure pending_requests is initialized on an existing profile if missing
-                    if (!userProfileSnap.data().pending_requests) {
-                         await updateDoc(userProfileRef, { pending_requests: [] });
-                    }
+                    userProfileSnap = await getDoc(userProfileRef);
+                } else if (!userProfileSnap.data().pending_requests) {
+                    await updateDoc(userProfileRef, { pending_requests: [] });
                 }
 
-                // Set the global username state from profile data or the default we just created
-                CURRENT_USERNAME = userProfileSnap.data()?.username || defaultUsername;
+                CURRENT_USERNAME = userProfileSnap.data()?.username;
 
-                // 2. Find or Generate Friend Code (Check PUBLIC collection ONLY)
-                const friendCodesCollection = collection(db, 'artifacts', appId, 'public', 'data', 'friend_codes');
-                
-                // Query the public collection to find the document whose 'userId' field matches the current user's UID
-                const codeQuery = query(friendCodesCollection, where('userId', '==', user.uid), limit(1));
+                const codeQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'friend_codes'), where('userId', '==', user.uid), limit(1));
                 const codeQuerySnap = await getDocs(codeQuery);
                 
-                let existingCode = null;
-                if (!codeQuerySnap.empty) {
-                    // The document ID is the friend code
-                    existingCode = codeQuerySnap.docs[0].id; 
-                }
-
-                if (existingCode) {
-                    // Code found, display it
-                    friendCodeDisplay.textContent = existingCode;
-                } else {
-                    // Code NOT found in the public collection, generate a new one
+                let existingCode = codeQuerySnap.empty ? null : codeQuerySnap.docs[0].id;
+                if (!existingCode) {
                     friendCodeDisplay.textContent = 'Generating...';
-                    const newCode = await generateUniqueFriendCode();
-                    
-                    // Store the new code in the public collection (Document ID = Code)
-                    await setDoc(getFriendCodeDocRef(newCode), { userId: user.uid, createdAt: serverTimestamp() });
-                    
-                    friendCodeDisplay.textContent = newCode;
+                    existingCode = await generateUniqueFriendCode();
+                    await setDoc(getFriendCodeDocRef(existingCode), { userId: user.uid, createdAt: serverTimestamp() });
                 }
+                friendCodeDisplay.textContent = existingCode;
             } catch (error) {
                 console.error("Profile/Friend Code Setup Failed:", error);
-                // IMPORTANT: If this fails, it's often due to missing/incorrect Firestore security rules.
-                showCustomModal("Code Setup Error", `Failed to set up your Friend Code. This may be due to missing Firestore security rules. Check the console for the full path to confirm.`);
+                showCustomModal("Code Setup Error", `Failed to set up your Friend Code. This may be due to missing Firestore security rules.`);
                 throw new Error("Failed to set up user profile and friend code.");
             }
         }
@@ -734,38 +679,22 @@
         async function cleanupOldPosts(user) {
             try {
                 const now = new Date();
-                const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+                const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
                 const userProfileRef = getUserProfileDocRef(user.uid);
                 const userProfileSnap = await getDoc(userProfileRef);
-                const profileData = userProfileSnap.data() || {};
-
-                // 1. Daily Reset Check 
-                const lastReset = profileData.lastPostReset?.toDate() || new Date(0);
+                const lastReset = userProfileSnap.data()?.lastPostReset?.toDate() || new Date(0);
+                
                 if (lastReset < startOfToday) {
-                     await updateDoc(userProfileRef, { 
-                        dailySlotsUsed: [], 
-                        lastPostReset: serverTimestamp()
-                    });
+                    await updateDoc(userProfileRef, { dailySlotsUsed: [], lastPostReset: serverTimestamp() });
                     console.log("Daily post slots reset for new day.");
                 }
 
-                // 2. Post Deletion 
-                const oldPostsQuery = query(
-                    DAILY_PHOTO_COLLECTION,
-                    where('createdAt', '<', startOfToday),
-                    limit(50) 
-                );
-
+                const oldPostsQuery = query(DAILY_PHOTO_COLLECTION, where('createdAt', '<', startOfToday), limit(50));
                 const snapshot = await getDocs(oldPostsQuery);
-                if (snapshot.empty) {
-                    return;
-                }
+                if (snapshot.empty) return;
 
                 const batch = writeBatch(db);
-                snapshot.docs.forEach(doc => {
-                    batch.delete(doc.ref);
-                });
-
+                snapshot.forEach(doc => batch.delete(doc.ref));
                 await batch.commit();
                 console.log(`Cleaned up ${snapshot.size} expired daily posts.`);
             } catch (error) {
@@ -773,86 +702,49 @@
             }
         }
 
-
         // =========================================================================
         // Real-Time Listener Implementations
         // =========================================================================
         
         function setupFriendsFeedListener(user) {
             UNSUBSCRIBE_POSTS_LISTENER(); 
-            
             const startOfDay = new Date();
             startOfDay.setHours(0, 0, 0, 0);
             
-            // Query current user's and friends' posts. Firebase 'in' operator limit is 10.
             const uidsToQuery = [user.uid, ...CURRENT_FRIENDS].slice(0, 10);
-
             if (uidsToQuery.length === 0) {
                  photoFeed.innerHTML = '<p id="feed-placeholder" class="text-gray-500">Add some friends to see their daily photos!</p>';
                  return;
             }
             
-            // The feed uses an onSnapshot listener for real-time updates
-            const photosQuery = query(
-                DAILY_PHOTO_COLLECTION,
-                where('creatorUid', 'in', uidsToQuery),
-                where('createdAt', '>=', startOfDay),
-                orderBy('createdAt', 'desc')
-            );
-
+            const photosQuery = query(DAILY_PHOTO_COLLECTION, where('creatorUid', 'in', uidsToQuery), where('createdAt', '>=', startOfDay), orderBy('createdAt', 'desc'));
             UNSUBSCRIBE_POSTS_LISTENER = onSnapshot(photosQuery, (snapshot) => {
-                const existingIds = new Set(Array.from(photoFeed.children).map(el => el.dataset.photoId).filter(Boolean));
-                
+                const existingIds = new Set(Array.from(photoFeed.children, el => el.dataset.photoId).filter(Boolean));
                 snapshot.docChanges().forEach(change => {
                     const docId = change.doc.id;
                     const data = change.doc.data();
-                    
-                    if (data.title) { 
-                         if (change.type === 'added' && !existingIds.has(docId)) {
+                    const existingThumb = document.querySelector(`.photo-thumbnail[data-photo-id="${docId}"]`);
+
+                    if (change.type === 'removed' || (change.type === 'modified' && !data.title)) {
+                        existingThumb?.remove();
+                    } else if (data.title) {
+                        if (change.type === 'added' && !existingIds.has(docId)) {
                             renderPhotoThumbnail(docId, data, 'prepend');
-                        } else if (change.type === 'modified' || change.type === 'added') {
-                            const existingThumb = document.querySelector(`.photo-thumbnail[data-photo-id="${docId}"]`);
+                        } else if (change.type === 'modified') {
                             if (existingThumb) {
-                                // Update hearts count in existing thumbnail
-                                const heartCountEl = existingThumb.querySelector('.heart-count-display');
-                                if (heartCountEl) {
-                                     heartCountEl.innerHTML = formatCount(data.hearts?.length || 0);
-                                }
-                                // NEW: Update comments count in existing thumbnail
-                                const commentCountEl = existingThumb.querySelector('.comment-count-display');
-                                if (commentCountEl) {
-                                     commentCountEl.innerHTML = formatCount(data.comments?.length || 0);
-                                }
-                                // Update title in case it changed (less likely, but safe)
+                                existingThumb.querySelector('.heart-count-display').innerHTML = formatCount(data.hearts?.length || 0);
+                                existingThumb.querySelector('.comment-count-display').innerHTML = formatCount(data.comments?.length || 0);
                                 const titleSpan = existingThumb.querySelector('.title-text-span');
-                                if (titleSpan) {
-                                    titleSpan.textContent = data.title;
-                                    // Re-check for marquee if title was updated
-                                    if (data.title.length > MARQUEE_TRIGGER_LENGTH) {
-                                        titleSpan.classList.add('marquee-animation');
-                                    } else {
-                                        titleSpan.classList.remove('marquee-animation');
-                                    }
-                                }
-                            } else if (change.type === 'modified') {
-                                // If modified and the thumbnail isn't present (e.g., title was just added), render it.
+                                titleSpan.textContent = data.title;
+                                titleSpan.classList.toggle('marquee-animation', data.title.length > MARQUEE_TRIGGER_LENGTH);
+                            } else {
                                 renderPhotoThumbnail(docId, data, 'prepend');
                             }
-                        } else if (change.type === 'removed') {
-                            document.querySelector(`.photo-thumbnail[data-photo-id="${docId}"]`)?.remove();
                         }
-                    } else if (change.type === 'modified') {
-                        // If a title was removed, remove the thumbnail from the main feed
-                         document.querySelector(`.photo-thumbnail[data-photo-id="${docId}"]`)?.remove();
                     }
                 });
-                
-                if (photoFeed.children.length === 0) {
-                    photoFeed.innerHTML = '<p id="feed-placeholder" class="text-gray-500">No posts found today from you or your friends!</p>';
-                } else if (document.getElementById('feed-placeholder')) {
-                    document.getElementById('feed-placeholder').remove();
-                }
-                
+                if (photoFeed.children.length === 0) photoFeed.innerHTML = '<p id="feed-placeholder" class="text-gray-500">No posts found today from you or your friends!</p>';
+                else document.getElementById('feed-placeholder')?.remove();
             }, (error) => {
                  console.error("Error fetching feed:", error);
                  photoFeed.innerHTML = '<p class="text-red-400">Error loading feed.</p>';
@@ -860,199 +752,135 @@
         }
         
         function renderPhotoThumbnail(photoId, photoData, position = 'append') {
-            if (!photoData.title) return;
-            if (document.querySelector(`.photo-thumbnail[data-photo-id="${photoId}"]`)) {
-                return;
-            }
+            if (!photoData.title || document.querySelector(`.photo-thumbnail[data-photo-id="${photoId}"]`)) return;
 
             const thumb = document.createElement('div');
             thumb.className = 'photo-thumbnail';
             thumb.dataset.photoId = photoId;
-            
-            const img = document.createElement('img');
-            img.src = photoData.imageBase64;
-            img.alt = `${photoData.title || 'Photo'} by ${photoData.creatorUsername}`; 
-            img.loading = 'lazy';
-            thumb.appendChild(img);
-
-            // 1. Permanent Darkening Overlay
-            const overlay = document.createElement('div');
-            overlay.className = 'overlay'; // This class handles the 40% darkening
-            thumb.appendChild(overlay);
-
-            // 2. Heart/Comment Count (Top-Left) - UPDATED
-            const countEl = document.createElement('div');
-            countEl.className = 'absolute top-2 left-2 z-10 text-white text-xs bg-black/50 px-2 py-1 rounded-full flex items-center shadow-lg';
-            countEl.innerHTML = 
-                `<i class="fas fa-heart text-red-400 mr-1"></i> <span class="font-bold heart-count-display">${formatCount(photoData.hearts?.length || 0)}</span>` +
-                `<i class="fas fa-comment text-indigo-400 ml-2 mr-1"></i> <span class="font-bold comment-count-display">${formatCount(photoData.comments?.length || 0)}</span>`; // ADDED COMMENT COUNT
-            thumb.appendChild(countEl);
-
-            // 3. Title Display (Bottom-Center, Marquee) - UPDATED
-            const isLongTitle = photoData.title.length > MARQUEE_TRIGGER_LENGTH;
-            const displayTitle = photoData.title; 
-
-            const titleOverlay = document.createElement('div');
-            titleOverlay.className = 'title-overlay'; 
-            // The title-text-container now handles centering and overflow due to CSS update
-            titleOverlay.innerHTML = `<div class="title-text-container"><span class="text-white font-semibold text-xs title-text-span ${isLongTitle ? 'marquee-animation' : ''}">${displayTitle}</span></div>`;
-            thumb.appendChild(titleOverlay);
-
-
+            thumb.innerHTML = `
+                <img src="${photoData.imageBase64}" alt="${photoData.title || 'Photo'} by ${photoData.creatorUsername}" loading="lazy">
+                <div class="overlay"></div>
+                <div class="absolute top-2 left-2 z-10 text-white text-xs bg-black/50 px-2 py-1 rounded-full flex items-center shadow-lg">
+                    <i class="fas fa-heart text-red-400 mr-1"></i> <span class="font-bold heart-count-display">${formatCount(photoData.hearts?.length || 0)}</span>
+                    <i class="fas fa-comment text-indigo-400 ml-2 mr-1"></i> <span class="font-bold comment-count-display">${formatCount(photoData.comments?.length || 0)}</span>
+                </div>
+                <div class="title-overlay">
+                    <div class="title-text-container">
+                        <span class="text-white font-semibold text-xs title-text-span ${photoData.title.length > MARQUEE_TRIGGER_LENGTH ? 'marquee-animation' : ''}">${photoData.title}</span>
+                    </div>
+                </div>`;
             thumb.addEventListener('click', () => openPhotoModal(photoId));
             
-            if (position === 'prepend') {
-                 photoFeed.prepend(thumb);
-            } else {
-                 photoFeed.appendChild(thumb);
-            }
-
-            if (document.getElementById('feed-placeholder')) {
-                document.getElementById('feed-placeholder').remove();
-            }
+            if (position === 'prepend') photoFeed.prepend(thumb);
+            else photoFeed.appendChild(thumb);
+            document.getElementById('feed-placeholder')?.remove();
         }
 
-
         function setupDailyPostsListener(user) {
-             const userProfileRef = getUserProfileDocRef(user.uid);
-
-            const unsubscribeProfile = onSnapshot(userProfileRef, async (profileSnap) => {
-                const profileData = profileSnap.data() || {};
-                const dailySlotsUsed = profileData.dailySlotsUsed || []; 
-                
+            const userProfileRef = getUserProfileDocRef(user.uid);
+            let dailySlotsUsed = [];
+            let postsToday = {}; // Holds the real-time data for today's user posts
+            
+            // 1. Centralized Rendering Function
+            const renderDailyPosts = () => {
                 dailyPostsContainer.innerHTML = ''; 
                 
-                const startOfDay = new Date();
-                startOfDay.setHours(0, 0, 0, 0);
-
-                const postsQuery = query(
-                    DAILY_PHOTO_COLLECTION,
-                    where('creatorUid', '==', user.uid),
-                    where('createdAt', '>=', startOfDay),
-                    orderBy('createdAt', 'asc') 
-                );
-                
-                const postsSnapshot = await getDocs(postsQuery);
-                const postsToday = postsSnapshot.docs.reduce((acc, doc) => {
-                    acc[doc.id] = doc.data();
-                    return acc;
-                }, {});
-
                 for (let i = 0; i < POST_SLOTS_MAX; i++) {
-                    
                     const div = document.createElement('div');
-                    // NEW: Apply the compact-list-item and daily-post-card classes for consistent styling
                     div.className = 'compact-list-item daily-post-card flex justify-between items-center';
-
-                    if (dailySlotsUsed[i]) {
-                        // Slot is used
-                        const postId = dailySlotsUsed[i];
+                    const postId = dailySlotsUsed[i];
+                    
+                    if (postId) {
                         const postData = postsToday[postId];
+                        const name = postData ? (postData.title || 'TITLE MISSING') : `Slot #${i + 1} Used & Deleted`;
                         
-                        let name = postData ? (postData.title ? postData.title : 'TITLE MISSING') : `Slot #${i + 1} Used & Deleted`;
-                        let buttonHtml = postData 
-                            ? `<button class="view-post-btn text-indigo-400 hover:text-indigo-500 transition px-2 py-1" title="View Post">
-                                    <i class="fas fa-eye"></i>
-                                </button>`
-                            : `<span class="text-red-400 text-sm">Used</span>`;
-                        
-                        // --- NEW: MARQUEE LOGIC FOR DAILY POST LIST ---
-                        const isLongTitle = name.length > MARQUEE_TRIGGER_LENGTH;
-                        const titleSpanClass = isLongTitle ? 'marquee-animation' : '';
+                        // Add marquee logic to the title span
+                        const titleSpanHtml = `<span class="font-semibold inline-block ${name.length > MARQUEE_TRIGGER_LENGTH ? 'marquee-animation' : ''}">${name}</span>`;
                         
                         div.innerHTML = `
                             <div class="flex-grow overflow-hidden whitespace-nowrap mr-2">
-                                <span class="font-semibold inline-block ${titleSpanClass}">${name}</span>
+                                ${titleSpanHtml}
                             </div>
-                            ${buttonHtml}
-                        `;
-                        // --- END MARQUEE LOGIC ---
-
+                            ${postData ? `<button class="view-post-btn text-indigo-400 hover:text-indigo-500 transition px-2 py-1" title="View Post"><i class="fas fa-eye"></i></button>` : `<span class="text-red-400 text-sm">Used</span>`}`;
+                        
                         if (postData) {
-                             div.querySelector('.view-post-btn').addEventListener('click', () => {
-                                 // If title is missing, prompt to add it via the old modal (reusing logic)
-                                 if (!postData.title) {
-                                      openTitleModal(postId, postData.title);
-                                 } else {
-                                      openPhotoModal(postId);
-                                 }
-                             });
+                            // Re-attaches event listener on re-render
+                            div.querySelector('.view-post-btn').addEventListener('click', () => postData.title ? openPhotoModal(postId) : openTitleModal(postId, postData.title));
                         }
                     } else if (i === dailySlotsUsed.length) {
-                        // Next available slot
                         div.innerHTML = `
                             <span class="font-semibold text-gray-400">Post #${i + 1}</span>
-                            <button data-slot-index="${i}" class="open-upload-menu-btn px-3 py-1 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold text-white" title="Upload Photo">
-                                <i class="fas fa-image"></i>
-                            </button>
-                        `;
-                        div.querySelector('.open-upload-menu-btn').addEventListener('click', (e) => {
-                            openUploadMenu(parseInt(e.currentTarget.dataset.slotIndex));
-                        });
-                        
+                            <button data-slot-index="${i}" class="open-upload-menu-btn px-3 py-1 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold text-white" title="Upload Photo"><i class="fas fa-image"></i></button>`;
+                        // Re-attaches event listener on re-render
+                        div.querySelector('.open-upload-menu-btn').addEventListener('click', e => openUploadMenu(parseInt(e.currentTarget.dataset.slotIndex)));
                     } else {
-                        // Locked slot
-                        div.innerHTML = `
-                            <span class="font-semibold text-gray-600">Post #${i + 1}</span>
-                            <span class="text-gray-600"><i class="fas fa-lock"></i> Locked</span>
-                        `;
+                        div.innerHTML = `<span class="font-semibold text-gray-600">Post #${i + 1}</span><span class="text-gray-600"><i class="fas fa-lock"></i> Locked</span>`;
                     }
                     dailyPostsContainer.appendChild(div);
                 }
+            };
+            
+            // 2. Profile Listener: Tracks which slots are used (dailySlotsUsed)
+            onSnapshot(userProfileRef, (profileSnap) => {
+                const profileData = profileSnap.data() || {};
+                dailySlotsUsed = profileData.dailySlotsUsed || []; 
+                renderDailyPosts(); // Re-render when slots change
             });
-            return [unsubscribeProfile]; 
+            
+            // 3. User Posts Listener: Tracks real-time changes to the posts themselves (title edits, etc.)
+            const startOfDay = new Date();
+            startOfDay.setHours(0, 0, 0, 0);
+            const postsQuery = query(DAILY_PHOTO_COLLECTION, where('creatorUid', '==', user.uid), where('createdAt', '>=', startOfDay), orderBy('createdAt', 'asc'));
+            
+            onSnapshot(postsQuery, (postsSnapshot) => {
+                postsToday = postsSnapshot.docs.reduce((acc, doc) => ({ ...acc, [doc.id]: doc.data() }), {});
+                renderDailyPosts(); // Re-render when post data changes
+            });
+        }
+        
+        function handleFileUpload(file) {
+            if (!file || !file.type.startsWith('image/')) {
+                showMessage(uploadMessage, 'Please select a valid image file.', 'error');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                imagePreview.src = event.target.result;
+                PENDING_UPLOAD_FILE = file;
+                uploadSelectOptions.classList.add('hidden');
+                uploadPostCreator.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
         }
 
-        // Refactored upload logic to use the new modal/flow
         async function handlePostCreationLogic(file, slotIndex) {
             const currentUser = auth.currentUser;
             const userProfileRef = getUserProfileDocRef(currentUser.uid);
             
-            // 1. Get title and clean it
-            const titleInput = document.getElementById('post-title-input');
-            let title = titleInput.value.trim();
-            if (!title) {
-                showMessage(uploadMessage, 'Title cannot be empty.', 'error');
-                return;
-            }
-            if (title.length > 48) title = title.substring(0, 48); // Enforce new client-side limit
+            let title = document.getElementById('post-title-input').value.trim();
+            if (!title) { showMessage(uploadMessage, 'Title cannot be empty.', 'error'); return; }
+            if (title.length > 48) title = title.substring(0, 48);
             const cleanedTitle = await cleanText(title, 'post title');
             
-            // 2. Disable button
             const createBtn = document.getElementById('create-post-btn');
             createBtn.disabled = true;
-            createBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Creating Post...`;
+            createBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Creating...`;
 
             try {
-                // 3. Check slot again and compress
                 const userProfileSnap = await getDoc(userProfileRef);
-                const dailySlotsUsed = userProfileSnap.data().dailySlotsUsed || [];
+                if ((userProfileSnap.data().dailySlotsUsed || []).length !== slotIndex) throw new Error("Slot index mismatch. Please refresh.");
                 
-                if (dailySlotsUsed.length !== slotIndex) {
-                    throw new Error("Slot index mismatch. Please refresh.");
-                }
-
                 const imageBase64 = await compressImage(file);
-                
-                // 4. Write to Firestore
                 const newPostRef = doc(DAILY_PHOTO_COLLECTION);
-                await setDoc(newPostRef, {
-                    creatorUid: currentUser.uid,
-                    creatorUsername: CURRENT_USERNAME, 
-                    createdAt: serverTimestamp(),
-                    imageBase64: imageBase64,
-                    title: cleanedTitle, 
-                    hearts: [],
-                    comments: [],
-                });
                 
-                // 5. Update user profile
-                await updateDoc(userProfileRef, {
-                    dailySlotsUsed: arrayUnion(newPostRef.id)
+                await setDoc(newPostRef, {
+                    creatorUid: currentUser.uid, creatorUsername: CURRENT_USERNAME, createdAt: serverTimestamp(),
+                    imageBase64, title: cleanedTitle, hearts: [], comments: []
                 });
+                await updateDoc(userProfileRef, { dailySlotsUsed: arrayUnion(newPostRef.id) });
 
                 closeUploadMenu();
-                showMessage(uploadMessage, 'Post created and is now live!', 'success');
+                showMessage(uploadMessage, 'Post created successfully!', 'success');
             } catch (error) {
                 console.error("Post creation error:", error);
                 showMessage(uploadMessage, `Post creation failed: ${error.message || error}`);
@@ -1062,470 +890,258 @@
             }
         }
         
-        // NEW: Event listener for file input change
-        uploadFileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) {
-                // If selection is cancelled, reset to options
-                uploadSelectOptions.classList.remove('hidden');
-                uploadPostCreator.classList.add('hidden');
-                PENDING_UPLOAD_FILE = null;
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                imagePreview.src = event.target.result;
-                PENDING_UPLOAD_FILE = file; // Store the file
-                
-                // Show preview/title section
-                uploadSelectOptions.classList.add('hidden');
-                uploadPostCreator.classList.remove('hidden');
-            };
-            reader.readAsDataURL(file);
-        });
-
-        // NEW: Event listener for final post creation form submit
+        uploadFileInput.addEventListener('change', (e) => handleFileUpload(e.target.files[0]));
         createPostForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const slotIndex = parseInt(uploadFileInput.dataset.slotIndex);
-            if (PENDING_UPLOAD_FILE) {
-                handlePostCreationLogic(PENDING_UPLOAD_FILE, slotIndex);
-            } else {
-                showMessage(uploadMessage, 'No image selected to create post.', 'error');
-            }
+            if (PENDING_UPLOAD_FILE) handlePostCreationLogic(PENDING_UPLOAD_FILE, parseInt(uploadFileInput.dataset.slotIndex));
+            else showMessage(uploadMessage, 'No image selected.', 'error');
         });
         
+        // --- Drag and Drop Logic ---
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => uploadDropArea.addEventListener(eventName, e => e.preventDefault()));
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadDropArea.addEventListener(eventName, () => uploadDropArea.classList.add('drag-over'));
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadDropArea.addEventListener(eventName, () => uploadDropArea.classList.remove('drag-over'));
+        });
+        uploadDropArea.addEventListener('drop', e => handleFileUpload(e.dataTransfer.files[0]));
         
         function openPhotoModal(photoId) {
             const modalContentContainer = document.getElementById('modal-content-container');
-            // FIX: Clear previous content immediately and show a loading indicator
             modalContentContainer.innerHTML = `<div class="flex justify-center items-center p-8"><i class="fas fa-spinner fa-spin text-3xl text-white"></i></div>`;
             photoModal.classList.remove('hidden');
             
             const photoRef = doc(DAILY_PHOTO_COLLECTION, photoId);
             const currentUser = auth.currentUser;
             
-            // Unsubscribe from any previous modal listener before starting a new one
-            MODAL_UNSUBSCRIBE_LISTENER(); 
-            UNREAD_COMMENTS_COUNT = 0; // NEW: Reset unread count for the new modal
+            MODAL_UNSUBSCRIBE_LISTENER();
+            UNREAD_COMMENTS_COUNT = 0;
 
-            // Handler to manage scroll and badge visibility
             const handleScroll = (commentsSection) => {
                 if (!commentsSection) return;
-
-                // Check if the user is scrolled to the bottom (within 20 pixels tolerance)
-                const SCROLL_TOLERANCE = 20; 
-                const isScrolledToBottom = commentsSection.scrollHeight - commentsSection.clientHeight <= commentsSection.scrollTop + SCROLL_TOLERANCE;
-
-                if (isScrolledToBottom) {
-                    UNREAD_COMMENTS_COUNT = 0; // All comments are now read
-                }
-                
+                const isScrolledToBottom = commentsSection.scrollHeight - commentsSection.clientHeight <= commentsSection.scrollTop + 20;
+                if (isScrolledToBottom) UNREAD_COMMENTS_COUNT = 0;
                 const badge = document.getElementById('unread-comments-badge');
-                if (badge) {
-                    if (UNREAD_COMMENTS_COUNT > 0 && UNREAD_COMMENTS_COUNT < 100) {
-                        badge.textContent = UNREAD_COMMENTS_COUNT;
-                        badge.classList.remove('hidden');
-                    } else if (UNREAD_COMMENTS_COUNT >= 100) {
-                        badge.textContent = '99+';
-                        badge.classList.remove('hidden');
-                    }
-                    else {
-                        badge.classList.add('hidden');
-                    }
-                }
+                if (!badge) return;
+                badge.classList.toggle('hidden', UNREAD_COMMENTS_COUNT <= 0);
+                badge.textContent = UNREAD_COMMENTS_COUNT > 99 ? '99+' : UNREAD_COMMENTS_COUNT;
             };
 
-
-            // This onSnapshot listener ensures the modal content is real-time
             MODAL_UNSUBSCRIBE_LISTENER = onSnapshot(photoRef, (updatedSnap) => {
                 const isModalAlreadyOpen = !!document.getElementById('photo-view-main');
-                
-                // FIX: Close modal and unsubscribe if the post document no longer exists
                 if (!updatedSnap.exists()) {
                     closePhotoModal();
-                    showCustomModal("Post Expired", "This daily photo has expired or has been deleted.");
-                    return; 
+                    return showCustomModal("Post Expired", "This daily photo has been deleted.");
                 }
                 
                 const photoData = updatedSnap.data();
                 const hearts = photoData.hearts || [];
                 const hasHearted = hearts.includes(currentUser.uid);
-                
-                // Get current comments, sort them once
-                const comments = photoData.comments || [];
-                comments.sort((a, b) => (a.timestamp?.toDate() || new Date(0)) - (b.timestamp?.toDate() || new Date(0)));
+                const comments = (photoData.comments || []).sort((a, b) => (a.timestamp?.toDate() || 0) - (b.timestamp?.toDate() || 0));
 
                 if (!photoData.title && !isModalAlreadyOpen) {
                     closePhotoModal();
-                    openTitleModal(photoId);
-                    return;
+                    return openTitleModal(photoId);
                 }
                 
-                // --- If modal isn't rendered yet, perform the full initial render ---
                 if (!isModalAlreadyOpen) {
-                    const isLongTitle = photoData.title.length > MARQUEE_TRIGGER_LENGTH;
-                    const titleClass = isLongTitle ? 'marquee-animation' : '';
-                    const titleHtml = `<div class="modal-title-container mb-1"><span class="modal-title-text text-white ${titleClass}">${photoData.title || 'Untitled Daily Post'}</span></div>`;
-
-                    let commentsHtml = '';
-                    comments.forEach(comment => {
-                        commentsHtml += `<div class="mb-2"><p class="comment-text"><strong class="font-semibold">${comment.username}</strong>: ${comment.text}</p></div>`;
-                    });
-                
-                    // Content generation for the modal
                     modalContentContainer.innerHTML = `
-                        <div id="photo-view-main" class="flex flex-col md:flex-row gap-6 transition-opacity duration-300 w-full h-full">
+                        <div id="photo-view-main" class="flex flex-col md:flex-row gap-6 w-full h-full">
                             <div id="photo-display-area" class="flex-grow flex justify-center items-center">
-                                <img id="modal-main-image" src="${photoData.imageBase64}" alt="${photoData.title || 'Photo'}" class="rounded-lg photo-modal-img">
+                                <img id="modal-main-image" src="${photoData.imageBase64}" alt="${photoData.title}" class="rounded-lg photo-modal-img">
                             </div>
                             <div id="photo-info-panel" class="w-full md:w-[350px] flex-shrink-0 flex flex-col relative">
                                 <button id="close-modal-btn" class="absolute top-0 right-0 p-2 text-white/50 hover:text-white transition" title="Close"><i class="fas fa-times"></i></button>
                                 <div class="absolute top-0 right-8">
                                     <span id="unread-comments-badge" class="hidden bg-red-600 text-white font-bold rounded-full flex items-center justify-center" title="Unread Comments"></span>
                                 </div>
-
                                 <div class="border-b border-gray-700 pb-3 mb-3 pt-6">
-                                    ${titleHtml}
+                                    <div class="modal-title-container mb-1"><span class="modal-title-text text-white ${photoData.title.length > MARQUEE_TRIGGER_LENGTH ? 'marquee-animation' : ''}">${photoData.title}</span></div>
                                     <p class="font-semibold text-lg text-indigo-400">${photoData.creatorUsername}</p>
                                     <p class="text-sm text-gray-400">${new Date(photoData.createdAt?.toDate()).toLocaleString()}</p>
-                                    ${photoData.creatorUid === currentUser.uid 
-                                        ? `<button id="delete-post-trigger-btn" class="text-red-400 text-sm mt-2 hover:text-red-500"><i class="fas fa-trash-alt mr-1"></i> Delete Post</button>` 
-                                        : ''}
+                                    ${photoData.creatorUid === currentUser.uid ? `<button id="delete-post-trigger-btn" class="text-red-400 text-sm mt-2 hover:text-red-500"><i class="fas fa-trash-alt mr-1"></i> Delete Post</button>` : ''}
                                 </div>
-                                <div class="flex-grow mb-4 pr-1">
-                                    <div id="comments-section" class="pr-1 overflow-y-auto max-h-[300px]">
-                                        ${commentsHtml || '<p class="text-sm text-gray-500 comment-text">No comments yet. Be the first!</p>'}
-                                    </div>
+                                <div id="comments-section" class="flex-grow mb-4 pr-2 overflow-y-auto max-h-[300px]">
+                                    ${comments.map(c => `<div class="mb-2"><p class="comment-text"><strong class="font-semibold">${c.username}</strong>: ${c.text}</p></div>`).join('') || '<p class="text-sm text-gray-500 comment-text">No comments yet. Be the first!</p>'}
                                 </div>
                                 <div class="flex items-center gap-4 mb-4 pt-3 border-t border-gray-800">
-                                    <button id="heart-btn" data-hearted="${hasHearted}" class="text-3xl ${hasHearted ? 'text-red-500' : 'text-gray-400'} hover:text-red-500 transition" title="${hasHearted ? 'Unheart' : 'Heart'} Post">
-                                        <i class="fas fa-heart"></i>
-                                    </button>
+                                    <button id="heart-btn" data-hearted="${hasHearted}" class="text-3xl ${hasHearted ? 'text-red-500' : 'text-gray-400'} hover:text-red-500 transition" title="${hasHearted ? 'Unheart' : 'Heart'}"><i class="fas fa-heart"></i></button>
                                     <span class="text-xl">${formatCount(hearts.length)}</span>
                                 </div>
-                                
                                 <div id="modal-comment-message" class="text-sm min-h-[20px]"></div>
-
                                 <form id="comment-form" class="flex gap-2">
-                                    <input type="text" id="comment-input" placeholder="Add a comment (max 480 chars)..." class="flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md" maxlength="480">
-                                    <button type="submit" id="comment-submit-btn" class="px-3 py-2 bg-indigo-600 rounded-md font-semibold" title="Post Comment">
-                                        <i class="fas fa-comment"></i>
-                                    </button>
+                                    <input type="text" id="comment-input" placeholder="Add a comment..." class="flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md" maxlength="480">
+                                    <button type="submit" id="comment-submit-btn" class="px-3 py-2 bg-indigo-600 rounded-md font-semibold" title="Post Comment"><i class="fas fa-comment"></i></button>
                                 </form>
                             </div>
                         </div>
-                        
-                        <div id="delete-confirmation-view" class="absolute inset-0 hidden 
-                                    flex justify-center items-center p-6 transition-opacity duration-300 bg-[#111111]/95 rounded-xl">
+                        <div id="delete-confirmation-view" class="absolute inset-0 hidden flex justify-center items-center p-6 bg-[#111111]/95 rounded-xl">
                             <div class="text-center">
-                                <h4 class="text-2xl font-bold text-red-400 mb-4">Are you absolutely sure?</h4>
-                                <p class="text-gray-300 mb-6">Deleting this post **WILL NOT** free up your daily slot.</p>
+                                <h4 class="text-2xl font-bold text-red-400 mb-4">Are you sure?</h4>
+                                <p class="text-gray-300 mb-6">Deleting this post will not free up your daily slot.</p>
                                 <div class="flex justify-center gap-4">
-                                    <button id="confirm-delete-btn" class="px-5 py-2 bg-red-600 rounded-lg hover:bg-red-700 transition font-semibold">Yes, Delete It</button>
-                                    <button id="cancel-delete-btn" class="px-5 py-2 bg-gray-700 rounded-lg hover:bg-gray-800 transition font-semibold">Cancel</button>
+                                    <button id="confirm-delete-btn" class="px-5 py-2 bg-red-600 rounded-lg hover:bg-red-700 font-semibold">Yes, Delete It</button>
+                                    <button id="cancel-delete-btn" class="px-5 py-2 bg-gray-700 rounded-lg hover:bg-gray-800 font-semibold">Cancel</button>
                                 </div>
                             </div>
-                        </div>
-                    `;
+                        </div>`;
                     
-                    // --- ATTACH EVENT LISTENERS (ONCE) ---
-                    const photoViewMain = document.getElementById('photo-view-main');
-                    const confirmationView = document.getElementById('delete-confirmation-view');
                     const commentsSection = document.getElementById('comments-section');
+                    setTimeout(() => commentsSection.scrollTop = commentsSection.scrollHeight, 50);
+                    commentsSection.addEventListener('scroll', () => handleScroll(commentsSection));
+                    handleScroll(commentsSection);
 
-                    document.getElementById('heart-btn').addEventListener('click', async (e) => {
-                        const isNowHearted = e.currentTarget.dataset.hearted === 'true';
-                        const action = isNowHearted ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid);
-                        await updateDoc(photoRef, { hearts: action });
-                    });
+                } else {
+                    document.querySelector('#heart-btn').dataset.hearted = hasHearted;
+                    document.querySelector('#heart-btn').className = `text-3xl ${hasHearted ? 'text-red-500' : 'text-gray-400'} hover:text-red-500 transition`;
+                    document.querySelector('#heart-btn + span').textContent = formatCount(hearts.length);
 
-                    document.getElementById('comment-form').addEventListener('submit', async (e) => {
-                        e.preventDefault();
-                        const commentInput = document.getElementById('comment-input');
-                        const submitBtn = document.getElementById('comment-submit-btn');
-                        const commentMessageElement = document.getElementById('modal-comment-message'); 
-                        let text = commentInput.value.trim();
-                        const now = Date.now();
-                        
-                        if (!text) return;
-                        if (text.length > 480) text = text.substring(0, 480); 
-
-                        if (now - LAST_COMMENT_TIMESTAMP < COMMENT_DELAY_MS) {
-                            const remaining = Math.ceil((COMMENT_DELAY_MS - (now - LAST_COMMENT_TIMESTAMP)) / 1000);
-                            showMessage(commentMessageElement, `Please wait ${remaining} seconds before commenting again.`, 'error');
-                            return;
-                        }
-
-                        submitBtn.disabled = true;
-                        submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
-                        
-                        try {
-                            const cleanedText = await cleanText(text, 'comment');
-                            const newComment = { uid: currentUser.uid, username: CURRENT_USERNAME, text: cleanedText, timestamp: new Date() };
-                            await updateDoc(photoRef, { comments: arrayUnion(newComment) });
-                            commentInput.value = '';
-                            LAST_COMMENT_TIMESTAMP = now; 
-                            commentMessageElement.textContent = ''; 
-                        } catch(error) {
-                             showMessage(commentMessageElement, `Comment failed: ${error.message || error}`, 'error'); 
-                             console.error("Commenting error:", error);
-                        } finally {
-                            submitBtn.disabled = false;
-                            submitBtn.innerHTML = `<i class="fas fa-comment"></i>`;
-                        }
-                    });
-
-                    if (photoData.creatorUid === currentUser.uid) {
-                        document.getElementById('delete-post-trigger-btn').addEventListener('click', () => {
-                            photoViewMain.style.opacity = '0.1'; 
-                            confirmationView.classList.remove('hidden');
-                            confirmationView.style.opacity = '1';
-                        });
-                        document.getElementById('cancel-delete-btn').addEventListener('click', () => {
-                            confirmationView.classList.add('hidden');
-                            photoViewMain.style.opacity = '1'; 
-                        });
-                        document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
-                            try {
-                                await deleteDoc(photoRef);
-                                closePhotoModal(); 
-                                showMessage(uploadMessage, 'Post deleted, but the daily slot is still used.', 'success');
-                            } catch (error) {
-                                console.error("Deletion failed:", error);
-                                await showCustomModal("Deletion Error", `Failed to delete post: ${error.message || error}`);
-                                confirmationView.classList.add('hidden');
-                                photoViewMain.style.opacity = '1';
-                            }
-                        });
-                    }
-                    
-                    // --- 14:9 ASPECT RATIO & SCROLL LOGIC (ONCE) ---
-                    const photoDisplayArea = document.getElementById('photo-display-area');
-                    const mainImage = document.getElementById('modal-main-image');
-
-                    if (photoDisplayArea && mainImage) {
-                        requestAnimationFrame(() => {
-                            const availableWidth = photoDisplayArea.clientWidth;
-                            const maxHeightFromRatio = availableWidth * (9 / 14);
-                            const viewportMaxHeight = window.innerHeight * 0.9;
-                            const finalMaxHeight = Math.min(maxHeightFromRatio, viewportMaxHeight);
-                            mainImage.style.maxHeight = `${finalMaxHeight}px`;
-                        });
-                    }
-                    if (commentsSection) {
-                        setTimeout(() => commentsSection.scrollTop = commentsSection.scrollHeight, 50);
-                        commentsSection.addEventListener('scroll', () => handleScroll(commentsSection));
-                        handleScroll(commentsSection);
-                    }
-
-                } else { // --- Modal is ALREADY OPEN, perform targeted updates to prevent flicker ---
-                    
-                    // 1. Update hearts
-                    const heartBtn = document.getElementById('heart-btn');
-                    if (heartBtn) {
-                        heartBtn.dataset.hearted = hasHearted;
-                        heartBtn.className = `text-3xl ${hasHearted ? 'text-red-500' : 'text-gray-400'} hover:text-red-500 transition`;
-                        heartBtn.title = `${hasHearted ? 'Unheart' : 'Heart'} Post`;
-                        heartBtn.nextElementSibling.textContent = formatCount(hearts.length);
-                    }
-
-                    // 2. Update comments
                     const commentsSection = document.getElementById('comments-section');
-                    if (commentsSection) {
-                        const previousCommentCount = commentsSection.children.length;
-                        const isNewComment = comments.length > previousCommentCount;
-                        const isScrolledToBottomBeforeUpdate = commentsSection.scrollHeight - commentsSection.clientHeight <= commentsSection.scrollTop + 20;
-
-                        let commentsHtml = '';
-                        comments.forEach(comment => {
-                             commentsHtml += `<div class="mb-2"><p class="comment-text"><strong class="font-semibold">${comment.username}</strong>: ${comment.text}</p></div>`;
-                        });
-                        commentsSection.innerHTML = commentsHtml || '<p class="text-sm text-gray-500 comment-text">No comments yet. Be the first!</p>';
-                        
-                        // Smart scroll and unread badge logic
-                        if (isNewComment) {
-                            if (isScrolledToBottomBeforeUpdate) {
-                                // If user was at the bottom, auto-scroll to the new comment
-                                setTimeout(() => commentsSection.scrollTop = commentsSection.scrollHeight, 50);
-                            } else {
-                                // Otherwise, increment unread count
-                                UNREAD_COMMENTS_COUNT += (comments.length - previousCommentCount);
-                            }
-                        }
-                        handleScroll(commentsSection); // Update badge visibility
+                    const oldCommentCount = commentsSection.children.length;
+                    const wasScrolledToBottom = commentsSection.scrollHeight - commentsSection.clientHeight <= commentsSection.scrollTop + 20;
+                    commentsSection.innerHTML = comments.map(c => `<div class="mb-2"><p class="comment-text"><strong class="font-semibold">${c.username}</strong>: ${c.text}</p></div>`).join('') || '<p class="text-sm text-gray-500 comment-text">No comments yet. Be the first!</p>';
+                    if (comments.length > oldCommentCount) {
+                        if (wasScrolledToBottom) setTimeout(() => commentsSection.scrollTop = commentsSection.scrollHeight, 50);
+                        else UNREAD_COMMENTS_COUNT += (comments.length - oldCommentCount);
                     }
+                    handleScroll(commentsSection);
                 }
-            }, (error) => {
-                // If the listener fails completely
-                 console.error("Modal listener failed:", error);
-                 closePhotoModal();
             });
         }
         
-        // Modal closing handlers
-        photoModal.addEventListener('click', (e) => {
-            if (e.target === photoModal || e.target.closest('#close-modal-btn')) { 
-                closePhotoModal();
+        photoModal.addEventListener('click', e => {
+            if (e.target === photoModal || e.target.closest('#close-modal-btn')) closePhotoModal();
+            if (e.target.closest('#heart-btn')) {
+                const isHearted = e.target.closest('#heart-btn').dataset.hearted === 'true';
+                updateDoc(doc(DAILY_PHOTO_COLLECTION, photoFeed.querySelector('.photo-thumbnail').dataset.photoId), { hearts: isHearted ? arrayRemove(auth.currentUser.uid) : arrayUnion(auth.currentUser.uid) });
+            }
+            const deleteTrigger = e.target.closest('#delete-post-trigger-btn');
+            if (deleteTrigger) {
+                document.getElementById('photo-view-main').style.opacity = '0.1';
+                document.getElementById('delete-confirmation-view').classList.remove('hidden');
+            }
+            const cancelDelete = e.target.closest('#cancel-delete-btn');
+            if (cancelDelete) {
+                document.getElementById('delete-confirmation-view').classList.add('hidden');
+                document.getElementById('photo-view-main').style.opacity = '1';
+            }
+            const confirmDelete = e.target.closest('#confirm-delete-btn');
+            if (confirmDelete) {
+                deleteDoc(doc(DAILY_PHOTO_COLLECTION, photoFeed.querySelector('.photo-thumbnail').dataset.photoId))
+                    .then(() => {
+                        closePhotoModal();
+                        showMessage(uploadMessage, 'Post deleted.', 'success');
+                    })
+                    .catch(error => showCustomModal("Deletion Error", `Failed to delete post: ${error.message}`));
             }
         });
 
-        titleModal.addEventListener('click', (e) => {
-             if (e.target === titleModal || e.target === document.getElementById('title-modal-close-btn')) { 
-                closeTitleModal();
+        document.getElementById('modal-content-container').addEventListener('submit', async e => {
+            if (e.target.id !== 'comment-form') return;
+            e.preventDefault();
+            const input = document.getElementById('comment-input');
+            const btn = document.getElementById('comment-submit-btn');
+            let text = input.value.trim();
+            if (!text) return;
+            if (Date.now() - LAST_COMMENT_TIMESTAMP < COMMENT_DELAY_MS) {
+                const remaining = Math.ceil((COMMENT_DELAY_MS - (Date.now() - LAST_COMMENT_TIMESTAMP)) / 1000);
+                return showMessage(document.getElementById('modal-comment-message'), `Please wait ${remaining}s.`, 'error');
+            }
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
+            try {
+                const cleanedText = await cleanText(text, 'comment');
+                await updateDoc(doc(DAILY_PHOTO_COLLECTION, photoFeed.querySelector('.photo-thumbnail').dataset.photoId), { comments: arrayUnion({ uid: auth.currentUser.uid, username: CURRENT_USERNAME, text: cleanedText, timestamp: new Date() }) });
+                input.value = '';
+                LAST_COMMENT_TIMESTAMP = Date.now();
+            } catch (error) {
+                showMessage(document.getElementById('modal-comment-message'), `Comment failed: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fas fa-comment"></i>`;
             }
         });
-
-        uploadMenuModal.addEventListener('click', (e) => {
-             if (e.target === uploadMenuModal || e.target === document.getElementById('upload-menu-close-btn')) { 
-                closeUploadMenu();
-            }
-        });
-
-        // NEW: Upload menu button handler
-        document.getElementById('upload-photo-file-btn').addEventListener('click', () => {
-             uploadFileInput.click();
-        });
-
+        
+        titleModal.addEventListener('click', e => { if (e.target === titleModal || e.target.closest('#title-modal-close-btn')) closeTitleModal(); });
+        uploadMenuModal.addEventListener('click', e => { if (e.target === uploadMenuModal || e.target.closest('#upload-menu-close-btn')) closeUploadMenu(); });
 
         editTitleForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const postId = e.currentTarget.dataset.postId;
             let title = document.getElementById('title-edit-input').value.trim();
-            
-            if (!title) {
-                showMessage(uploadMessage, 'Title cannot be empty.', 'error'); 
-                return;
-            }
-            if (title.length > 48) title = title.substring(0, 48); // Enforce new client-side limit
-
+            if (!title) return showMessage(uploadMessage, 'Title cannot be empty.', 'error');
+            if (title.length > 48) title = title.substring(0, 48);
             try {
-                // UPDATED: Clean the title before saving
                 const cleanedTitle = await cleanText(title, 'post title');
-                
-                await updateDoc(doc(DAILY_PHOTO_COLLECTION, postId), { 
-                    title: cleanedTitle,
-                    creatorUsername: CURRENT_USERNAME 
-                });
-                showMessage(uploadMessage, 'Title saved successfully! Post is now live.', 'success');
+                await updateDoc(doc(DAILY_PHOTO_COLLECTION, postId), { title: cleanedTitle, creatorUsername: CURRENT_USERNAME });
+                showMessage(uploadMessage, 'Title saved! Your post is now live.', 'success');
                 closeTitleModal();
             } catch (error) {
                 showMessage(uploadMessage, `Failed to save title: ${error.message}`, 'error');
             }
         });
 
-
-        // =========================================================================
-        // Main Event Listeners
-        // =========================================================================
-
         addFriendForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const friendCodeInput = document.getElementById('friend-code-input');
-            const code = friendCodeInput.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-            friendCodeInput.value = code; 
+            const input = document.getElementById('friend-code-input');
+            const code = input.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+            input.value = code; 
+            if (code.length !== 8) return showMessage(addFriendMessage, 'Code must be 8 characters.');
             
-            const currentUser = auth.currentUser;
-            
-            if (code.length !== 8) {
-                showMessage(addFriendMessage, 'Friend code must be 8 alphanumeric characters (A-Z, 0-9).');
-                return;
-            }
-
-            // Check the public friend_codes collection to find the user ID
             const codeDocSnap = await getDoc(getFriendCodeDocRef(code));
-            if (!codeDocSnap.exists()) {
-                showMessage(addFriendMessage, 'Friend code not found.');
-                return;
-            }
+            if (!codeDocSnap.exists()) return showMessage(addFriendMessage, 'Friend code not found.');
 
             const friendUid = codeDocSnap.data().userId;
-            
-            if (friendUid === currentUser.uid) {
-                showMessage(addFriendMessage, "You can't add yourself.", 'error');
-                return;
-            }
+            if (friendUid === auth.currentUser.uid) return showMessage(addFriendMessage, "You can't add yourself.", 'error');
             
             try {
                 const friendProfileRef = getUserProfileDocRef(friendUid);
                 const friendProfileSnap = await getDoc(friendProfileRef);
-                const friendProfileData = friendProfileSnap.data() || {};
+                const data = friendProfileSnap.data() || {};
+                if (data.friends?.includes(auth.currentUser.uid)) return showMessage(addFriendMessage, 'You are already friends.', 'success');
+                if (data.pending_requests?.includes(auth.currentUser.uid)) return showMessage(addFriendMessage, 'Friend request already sent!', 'success');
                 
-                if (friendProfileData.friends?.includes(currentUser.uid)) {
-                    showMessage(addFriendMessage, 'You are already friends with this user.', 'success');
-                    return;
-                }
-                if (friendProfileData.pending_requests?.includes(currentUser.uid)) {
-                     showMessage(addFriendMessage, 'Friend request already sent!', 'success');
-                     return;
-                }
-
-                // NEW: Only update the target user's profile to add the requesting user's UID to pending_requests
-                await updateDoc(friendProfileRef, { 
-                    pending_requests: arrayUnion(currentUser.uid)
-                });
-
+                await updateDoc(friendProfileRef, { pending_requests: arrayUnion(auth.currentUser.uid) });
                 showMessage(addFriendMessage, 'Friend request sent!', 'success');
-                friendCodeInput.value = '';
+                input.value = '';
             } catch (error) {
-                 showMessage(addFriendMessage, 'Failed to send friend request. Check console.', 'error');
+                 showMessage(addFriendMessage, 'Failed to send request. Check console.', 'error');
                  console.error("Send friend request failed:", error);
             }
         });
 
-
-        // --- Authentication State Change Handler ---
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 try {
-                    console.log("User signed in. UID:", user.uid);
-                    
                     await handleFriendCodeLogic(user); 
                     await cleanupOldPosts(user); 
-
                     setupFriendListListener(user); 
                     setupDailyPostsListener(user); 
-
                     loadingScreen.style.display = 'none';
                     messengerUi.style.display = 'grid';
-
                 } catch (e) {
                     console.error("Application Initialization Failed:", e);
                     loadingScreen.style.display = 'none';
-                    showCustomModal("Startup Error", `The messenger failed to initialize all features after sign-in. Error: ${e.message}.`);
+                    showCustomModal("Startup Error", `The messenger failed to initialize. Error: ${e.message}.`);
                 }
-
             } else {
-                console.log("No user found. Attempting sign-in...");
                 await initializeAuth(); 
             }
         });
 
-        // Helper function for accepting/rejecting friend requests
         const friendRequestLogic = async (friendUid, actionType, user) => {
-            const friendProfileRef = getUserProfileDocRef(friendUid);
-            const userProfileRef = getUserProfileDocRef(user.uid);
-            
             const batch = writeBatch(db);
-            
-            // Always remove the request from the current user's pending_requests array
-            batch.update(userProfileRef, { pending_requests: arrayRemove(friendUid) });
-            
+            batch.update(getUserProfileDocRef(user.uid), { pending_requests: arrayRemove(friendUid) });
             if (actionType === 'accept') {
-                // Add to friends list for both users
-                batch.update(userProfileRef, { friends: arrayUnion(friendUid) });
-                batch.update(friendProfileRef, { friends: arrayUnion(user.uid) });
-                showMessage(addFriendMessage, 'Friend request accepted!', 'success');
-            } else if (actionType === 'reject') {
-                // Request is simply removed
-                showMessage(addFriendMessage, 'Friend request rejected.', 'success');
+                batch.update(getUserProfileDocRef(user.uid), { friends: arrayUnion(friendUid) });
+                batch.update(getUserProfileDocRef(friendUid), { friends: arrayUnion(user.uid) });
             }
-            
             try {
                 await batch.commit();
+                showMessage(addFriendMessage, `Friend request ${actionType}ed!`, 'success');
             } catch (error) {
-                 showMessage(addFriendMessage, `Failed to ${actionType} request. Check console.`, 'error');
+                 showMessage(addFriendMessage, `Failed to ${actionType} request.`, 'error');
                  console.error(`Friend request ${actionType} failed:`, error);
             }
         };
@@ -1534,91 +1150,49 @@
             onSnapshot(getUserProfileDocRef(user.uid), async (docSnap) => {
                 const profileData = docSnap.data() || {};
                 const friends = profileData.friends || [];
-                const pendingRequests = profileData.pending_requests || [];
-                
-                // Only update feed if the actual list of friends has changed
-                if (friends.length !== CURRENT_FRIENDS.length || !friends.every((val, index) => val === CURRENT_FRIENDS[index])) {
+                if (friends.length !== CURRENT_FRIENDS.length || !friends.every((val, i) => val === CURRENT_FRIENDS[i])) {
                     CURRENT_FRIENDS = friends; 
                     setupFriendsFeedListener(user); 
                 }
-
-                const container = friendsListItems;
-                container.innerHTML = ''; 
                 
+                const pendingRequests = profileData.pending_requests || [];
                 let combinedHtml = '';
-                
-                // --- 1. HANDLE PENDING REQUESTS ---
+
                 if (pendingRequests.length > 0) {
-                    const requestProfiles = await Promise.all(pendingRequests.map(uid => getDoc(getUserProfileDocRef(uid))));
-                    
+                    const reqProfiles = await Promise.all(pendingRequests.map(uid => getDoc(getUserProfileDocRef(uid))));
                     combinedHtml += `<div class="p-2 text-sm font-bold text-yellow-400 bg-yellow-900/30 rounded-t-md -mx-1 -mt-1 mb-2">Pending Requests (${pendingRequests.length})</div>`;
-                    
-                    requestProfiles.forEach((requestProfileSnap, index) => {
-                        const requesterUid = pendingRequests[index];
-                        const username = requestProfileSnap.exists() ? requestProfileSnap.data().username : 'Unknown User';
-                        
-                        combinedHtml += `
-                            <div class="compact-list-item flex justify-between items-center bg-yellow-900/10">
-                                <span class="font-semibold text-yellow-300">${username}</span>
-                                <div class="flex gap-2">
-                                    <button data-uid="${requesterUid}" class="accept-request-btn text-green-400 hover:text-green-500 transition px-2 py-1" title="Accept Request">
-                                        <i class="fas fa-check"></i>
-                                    </button>
-                                    <button data-uid="${requesterUid}" class="reject-request-btn text-red-400 hover:text-red-500 transition px-2 py-1" title="Reject Request">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        `;
+                    reqProfiles.forEach((snap, i) => {
+                        combinedHtml += `<div class="compact-list-item flex justify-between items-center bg-yellow-900/10"><span class="font-semibold text-yellow-300">${snap.data()?.username || 'Unknown'}</span><div class="flex gap-2"><button data-uid="${pendingRequests[i]}" class="accept-request-btn text-green-400 hover:text-green-500 px-2 py-1" title="Accept"><i class="fas fa-check"></i></button><button data-uid="${pendingRequests[i]}" class="reject-request-btn text-red-400 hover:text-red-500 px-2 py-1" title="Reject"><i class="fas fa-times"></i></button></div></div>`;
                     });
-                     combinedHtml += `<div class="border-b border-gray-700 my-2"></div>`; 
+                    combinedHtml += `<div class="border-b border-gray-700 my-2"></div>`;
                 }
 
-                // --- 2. HANDLE CURRENT FRIENDS ---
-                if (friends.length === 0 && pendingRequests.length === 0) {
-                    combinedHtml += '<p class="text-sm text-gray-500 p-2 text-center">No friends yet. Add one above!</p>';
-                } else if (friends.length > 0) {
+                if (friends.length > 0) {
                     const friendProfiles = await Promise.all(friends.map(uid => getDoc(getUserProfileDocRef(uid))));
-
-                    friendProfiles.forEach((friendProfileSnap, index) => {
-                        const friendUid = friends[index];
-                        const username = friendProfileSnap.exists() ? friendProfileSnap.data().username : 'Unknown User';
-
-                        combinedHtml += `
-                            <div class="compact-list-item flex justify-between items-center">
-                                <span class="font-semibold">${username}</span>
-                                <button data-uid="${friendUid}" class="remove-friend-btn text-red-400 hover:text-red-500 transition px-2 py-1" title="Remove Friend">
-                                    <i class="fas fa-user-minus"></i>
-                                </button>
-                            </div>
-                        `;
+                    friendProfiles.forEach((snap, i) => {
+                        combinedHtml += `<div class="compact-list-item flex justify-between items-center"><span class="font-semibold">${snap.data()?.username || 'Unknown'}</span><button data-uid="${friends[i]}" class="remove-friend-btn text-red-400 hover:text-red-500 px-2 py-1" title="Remove Friend"><i class="fas fa-user-minus"></i></button></div>`;
                     });
                 }
                 
-                container.innerHTML = combinedHtml;
+                if (!combinedHtml) combinedHtml = '<p class="text-sm text-gray-500 p-2 text-center">No friends yet. Add one above!</p>';
+                friendsListItems.innerHTML = combinedHtml;
             });
 
-            // --- PERFORMANCE FIX: Use Event Delegation for the entire friends list ---
             friendsListItems.addEventListener('click', async (e) => {
                 const acceptBtn = e.target.closest('.accept-request-btn');
                 const rejectBtn = e.target.closest('.reject-request-btn');
                 const removeBtn = e.target.closest('.remove-friend-btn');
-
-                if (acceptBtn) {
-                    friendRequestLogic(acceptBtn.dataset.uid, 'accept', user);
-                } else if (rejectBtn) {
-                    friendRequestLogic(rejectBtn.dataset.uid, 'reject', user);
-                } else if (removeBtn) {
-                    const friendUidToRemove = removeBtn.dataset.uid;
+                if (acceptBtn) friendRequestLogic(acceptBtn.dataset.uid, 'accept', user);
+                else if (rejectBtn) friendRequestLogic(rejectBtn.dataset.uid, 'reject', user);
+                else if (removeBtn) {
                     const batch = writeBatch(db);
-                    batch.update(getUserProfileDocRef(user.uid), { friends: arrayRemove(friendUidToRemove) });
-                    batch.update(getUserProfileDocRef(friendUidToRemove), { friends: arrayRemove(user.uid) });
+                    batch.update(getUserProfileDocRef(user.uid), { friends: arrayRemove(removeBtn.dataset.uid) });
+                    batch.update(getUserProfileDocRef(removeBtn.dataset.uid), { friends: arrayRemove(user.uid) });
                     await batch.commit();
-                    showMessage(addFriendMessage, 'Friend removed successfully!', 'success');
+                    showMessage(addFriendMessage, 'Friend removed.', 'success');
                 }
             });
         }
-        
     </script>
 </body>
 </html>
