@@ -16,7 +16,7 @@
     },
      "notes-again": {
         "name": "Dailyphoto",
-        "icon": "fa-photo",
+        "icon": "fa-image",
         "url": "../logged-in/dailyphoto.html"
     },
     "countdowns": {
