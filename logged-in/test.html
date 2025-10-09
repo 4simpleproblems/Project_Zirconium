@@ -26,13 +26,7 @@
             100% { box-shadow: 0 0 5px #4f46e5, 0 0 10px #4f46e5; }
         }
         
-        /* UPDATED: New, continuous marquee animation (scrolls fully around) */
-        @keyframes marquee-continuous {
-            /* Scrolls 50% since content is duplicated (Content: Title + Title). */
-            0% { transform: translateX(0%); } 
-            /* Speed adjustment: Reduced from 8s to 6s for a faster, constant speed. */
-            100% { transform: translateX(-50%); } 
-        }
+        /* NOTE: Marquee animation removed per user request */
 
         /* --- FONT & BASE STYLING (THICKENED FONT) --- */
         body { 
@@ -180,11 +174,11 @@
             pointer-events: none; 
         }
         
-        /* UPDATED: Title Overlay (Top-right corner, Label style, No Gradient) */
+        /* UPDATED: Title Overlay (Title is now static and clipped) */
         .title-overlay {
             position: absolute;
-            top: 0.5rem; /* NEW: Position from top */
-            right: 0.5rem; /* NEW: Position from right */
+            top: 0.5rem; 
+            right: 0.5rem; 
             
             /* NEW: Label styling */
             background-color: rgba(0, 0, 0, 0.75); /* Solid, dark background */
@@ -198,7 +192,7 @@
             
             background: rgba(0, 0, 0, 0.75);
             text-shadow: none; 
-            height: 1.5rem; /* Fixed height for small label */
+            height: 1.5rem; 
             display: flex;
             justify-content: flex-start;
             align-items: center; 
@@ -208,23 +202,15 @@
 
         .title-text-container {
             max-width: 100%; 
-            overflow: hidden;
+            overflow: hidden; /* Ensure text is clipped */
             white-space: nowrap;
-            /* UPDATED: Reduced spacing between duplicates for a less gappy marquee */
-            padding-right: 0.5rem; 
+            /* Marquee logic removed: text will clip naturally */
         }
         
-        /* UPDATED: Marquee animation class uses the continuous keyframes */
-        .marquee-animation {
-            display: inline-block;
-            white-space: nowrap;
-            animation: marquee-continuous 6s linear infinite; /* Faster speed */
-        }
-        
-        /* NEW: Class to stop the marquee when the title is short */
-        .marquee-animation.stopped {
-             animation: none !important;
-             transform: none !important;
+        .title-text-span {
+            /* Ensures long text that is clipped shows an ellipsis */
+            text-overflow: ellipsis; 
+            display: block; 
         }
         
         #unread-comments-badge {
@@ -238,7 +224,7 @@
         
         .modal-title-container {
              max-width: 100%;
-             overflow: hidden;
+             overflow: hidden; /* Clips the modal title */
              white-space: nowrap;
              display: flex;
              font-weight: 700;
@@ -248,6 +234,8 @@
             line-height: 2rem;
             display: inline-block;
             white-space: nowrap;
+            text-overflow: ellipsis; 
+            overflow: hidden;
         }
         
         .photo-modal-img {
@@ -496,11 +484,13 @@
         let UNSUBSCRIBE_POSTS_LISTENER = () => {};
         let MODAL_UNSUBSCRIBE_LISTENER = () => {}; 
         let LAST_COMMENT_TIMESTAMP = 0; 
+        let LAST_HEART_TIMESTAMP = 0; // NEW: Global state for heart debounce
         let UNREAD_COMMENTS_COUNT = 0;
         let PENDING_UPLOAD_FILE = null; 
         const COMMENT_DELAY_MS = 5000;
         const POST_SLOTS_MAX = 3;
-        const MARQUEE_TRIGGER_LENGTH = 30;
+        const MARQUEE_TRIGGER_LENGTH = 30; // Marquee logic removed, but keeping constant for title length checks if needed later
+        const HEART_DELAY_MS = 750; // NEW: Debounce hearting for 0.75 seconds
 
         // --- DOM Elements ---
         const loadingScreen = document.getElementById('loading-screen');
@@ -777,23 +767,9 @@
                                 existingThumb.querySelector('.heart-count-display').innerHTML = formatCount(data.hearts?.length || 0);
                                 existingThumb.querySelector('.comment-count-display').innerHTML = formatCount(data.comments?.length || 0);
                                 
-                                // UPDATED: Re-render title container for continuous marquee logic
+                                // UPDATED: Marquee logic removed, using simple clipping
                                 const titleContainer = existingThumb.querySelector('.title-text-container');
-                                titleContainer.innerHTML = ''; // Clear container
-                                const needsMarquee = data.title.length > MARQUEE_TRIGGER_LENGTH;
-                                const marqueeClass = needsMarquee ? 'marquee-animation' : 'stopped';
-                                
-                                const span1 = document.createElement('span');
-                                span1.className = `text-white font-semibold title-text-span ${marqueeClass}`;
-                                span1.textContent = data.title;
-                                titleContainer.appendChild(span1);
-
-                                if (needsMarquee) {
-                                    const span2 = document.createElement('span');
-                                    span2.className = `text-white font-semibold title-text-span ${marqueeClass}`;
-                                    span2.textContent = data.title;
-                                    titleContainer.appendChild(span2);
-                                }
+                                titleContainer.innerHTML = `<span class="text-white font-semibold title-text-span">${data.title}</span>`;
                             } else {
                                 renderPhotoThumbnail(docId, data, 'prepend');
                             }
@@ -812,8 +788,6 @@
             if (!photoData.title || document.querySelector(`.photo-thumbnail[data-photo-id="${photoId}"]`)) return;
 
             const titleText = photoData.title;
-            const needsMarquee = titleText.length > MARQUEE_TRIGGER_LENGTH;
-            const marqueeClass = needsMarquee ? 'marquee-animation' : 'stopped'; // Use 'stopped' class for no movement
             
             const thumb = document.createElement('div');
             thumb.className = 'photo-thumbnail';
@@ -827,8 +801,7 @@
                 </div>
                 <div class="title-overlay">
                     <div class="title-text-container">
-                        <span class="text-white font-semibold title-text-span ${marqueeClass}">${titleText}</span>
-                        ${needsMarquee ? `<span class="text-white font-semibold title-text-span ${marqueeClass}">${titleText}</span>` : ''}
+                        <span class="text-white font-semibold title-text-span">${titleText}</span>
                     </div>
                 </div>`;
             thumb.addEventListener('click', () => openPhotoModal(photoId));
@@ -860,16 +833,10 @@
                         const postData = postsToday[postId];
                         const name = postData ? (postData.title || 'TITLE MISSING') : `Slot #${i + 1} Used & Deleted`;
                         
-                        // UPDATED: Added duplicate span for continuous marquee and 'stopped' class for the list items
-                        const needsMarquee = name.length > MARQUEE_TRIGGER_LENGTH;
-                        const marqueeClass = needsMarquee ? 'marquee-animation' : 'stopped';
-                        
+                        // UPDATED: Removed marquee logic, using simple clipping
                         div.innerHTML = `
                             <div class="flex-grow overflow-hidden whitespace-nowrap mr-2">
-                                <div class="inline-block ${needsMarquee ? 'whitespace-nowrap' : ''}">
-                                    <span class="font-semibold inline-block title-text-span ${marqueeClass}">${name}</span>
-                                    ${needsMarquee ? `<span class="font-semibold inline-block title-text-span ${marqueeClass}">${name}</span>` : ''}
-                                </div>
+                                <span class="font-semibold inline-block title-text-span">${name}</span>
                             </div>
                             ${postData ? `<button class="view-post-btn text-indigo-400 hover:text-indigo-500 transition px-2 py-1" title="View Post"><i class="fas fa-eye"></i></button>` : `<span class="text-red-400 text-sm">Used</span>`}`;
                         
@@ -997,7 +964,7 @@
                 }
                 
                 if (!isModalAlreadyOpen) {
-                    // UPDATED: HTML structure to include data-image-toggle and flexible layout for fullscreen
+                    // UPDATED: Marquee classes removed from title
                     modalContentContainer.innerHTML = `
                         <div id="photo-view-main" class="flex flex-col md:flex-row gap-6 w-full h-full flex-grow">
                             <div id="photo-display-area" class="flex-grow flex justify-center items-center cursor-pointer relative" data-image-toggle>
@@ -1010,7 +977,7 @@
                                     <span id="unread-comments-badge" class="hidden bg-red-600 text-white font-bold rounded-full flex items-center justify-center" title="Unread Comments"></span>
                                 </div>
                                 <div class="border-b border-gray-700 pb-3 mb-3 pt-6">
-                                    <div class="modal-title-container mb-1"><span class="modal-title-text text-white ${photoData.title.length > MARQUEE_TRIGGER_LENGTH ? 'marquee-animation' : 'stopped'}">${photoData.title}</span></div>
+                                    <div class="modal-title-container mb-1"><span class="modal-title-text text-white">${photoData.title}</span></div>
                                     <p class="font-semibold text-lg text-indigo-400">${photoData.creatorUsername}</p>
                                     <p class="text-sm text-gray-400">${new Date(photoData.createdAt?.toDate()).toLocaleString()}</p>
                                     ${photoData.creatorUid === currentUser.uid ? `<button id="delete-post-trigger-btn" class="text-red-400 text-sm mt-2 hover:text-red-500"><i class="fas fa-trash-alt mr-1"></i> Delete Post</button>` : ''}
@@ -1019,7 +986,7 @@
                                     ${comments.map(c => `<div class="mb-2"><p class="comment-text"><strong class="font-semibold">${c.username}</strong>: ${c.text}</p></div>`).join('') || '<p class="text-sm text-gray-500 comment-text">No comments yet. Be the first!</p>'}
                                 </div>
                                 <div class="flex items-center gap-4 mb-4 pt-3 border-t border-gray-800 flex-shrink-0">
-                                    <button id="heart-btn" data-hearted="${hasHearted}" class="text-3xl ${hasHearted ? 'text-red-500' : 'text-gray-400'} hover:text-red-500 transition" title="${hasHearted ? 'Unheart' : 'Heart'}"><i class="fas fa-heart"></i></button>
+                                    <button id="heart-btn" data-post-id="${photoId}" data-hearted="${hasHearted}" class="text-3xl ${hasHearted ? 'text-red-500' : 'text-gray-400'} hover:text-red-500 transition" title="${hasHearted ? 'Unheart' : 'Heart'}"><i class="fas fa-heart"></i></button>
                                     <span class="text-xl">${formatCount(hearts.length)}</span>
                                 </div>
                                 <div id="modal-comment-message" class="text-sm min-h-[20px] flex-shrink-0"></div>
@@ -1065,9 +1032,22 @@
         
         photoModal.addEventListener('click', e => {
             if (e.target === photoModal || e.target.closest('#close-modal-btn')) closePhotoModal();
-            if (e.target.closest('#heart-btn')) {
-                const isHearted = e.target.closest('#heart-btn').dataset.hearted === 'true';
-                updateDoc(doc(DAILY_PHOTO_COLLECTION, photoFeed.querySelector('.photo-thumbnail').dataset.photoId), { hearts: isHearted ? arrayRemove(auth.currentUser.uid) : arrayUnion(auth.currentUser.uid) });
+            
+            const heartBtn = e.target.closest('#heart-btn');
+            if (heartBtn) {
+                const photoId = heartBtn.dataset.postId;
+                
+                // --- NEW: Hearting/Unhearting Delay Logic ---
+                if (Date.now() - LAST_HEART_TIMESTAMP < HEART_DELAY_MS) {
+                    return; // Secretly ignore the click if within the delay period
+                }
+                LAST_HEART_TIMESTAMP = Date.now();
+                // ---------------------------------------------
+
+                const isHearted = heartBtn.dataset.hearted === 'true';
+                updateDoc(doc(DAILY_PHOTO_COLLECTION, photoId), { 
+                    hearts: isHearted ? arrayRemove(auth.currentUser.uid) : arrayUnion(auth.currentUser.uid) 
+                });
             }
 
             // NEW: Fullscreen Image Toggle Logic
@@ -1114,7 +1094,11 @@
             btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
             try {
                 const cleanedText = await cleanText(text, 'comment');
-                await updateDoc(doc(DAILY_PHOTO_COLLECTION, photoFeed.querySelector('.photo-thumbnail').dataset.photoId), { comments: arrayUnion({ uid: auth.currentUser.uid, username: CURRENT_USERNAME, text: cleanedText, timestamp: new Date() }) });
+                // Use the data-post-id from the heart button to get the current post ID
+                const currentPostId = document.getElementById('heart-btn')?.dataset.postId || photoFeed.querySelector('.photo-thumbnail')?.dataset.photoId;
+                if (!currentPostId) throw new Error("Could not find current post ID for comment.");
+                
+                await updateDoc(doc(DAILY_PHOTO_COLLECTION, currentPostId), { comments: arrayUnion({ uid: auth.currentUser.uid, username: CURRENT_USERNAME, text: cleanedText, timestamp: new Date() }) });
                 input.value = '';
                 LAST_COMMENT_TIMESTAMP = Date.now();
             } catch (error) {
