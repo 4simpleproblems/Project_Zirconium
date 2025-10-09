@@ -26,9 +26,11 @@
             100% { box-shadow: 0 0 5px #4f46e5, 0 0 10px #4f46e5; }
         }
         
-        /* Custom marquee animation */
+        /* UPDATED: Marquee animation for smoother, centered scrolling */
         @keyframes marquee {
-            0% { transform: translateX(0); }
+            /* Start fully off-screen right */
+            0% { transform: translateX(100%); }
+            /* Scroll until it's fully off-screen left */
             100% { transform: translateX(-100%); }
         }
 
@@ -135,7 +137,7 @@
         /* FIX: Ensure comments section can scroll */
         #comments-section {
             overflow-y: auto;
-            max-height: 8rem; /* Reduced height to activate scroll sooner */
+            /* Removed fixed max-height here, will be set dynamically in modal HTML */
         }
         
         /* FIX: Added global break-words for comment text to prevent horizontal overflow */
@@ -177,7 +179,7 @@
             pointer-events: none; /* Allows click-through to the thumbnail itself */
         }
         
-        /* New Title Overlay Styling (Bottom Right, Gradient Background, Marquee) */
+        /* UPDATED: New Title Overlay Styling (Bottom Center, Stronger Gradient, Marquee) */
         .title-overlay {
             position: absolute;
             bottom: 0;
@@ -187,28 +189,40 @@
             color: white;
             font-size: 0.75rem; /* text-xs */
             font-weight: 600;
-            /* Gradient for a subtle fade at the bottom */
-            background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 100%);
+            /* UPDATED: Stronger Gradient for a better title background (fade to black) */
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0) 100%); 
             text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
             height: 3rem; 
             display: flex;
-            justify-content: flex-end; /* Align content to the right */
+            justify-content: center; /* UPDATED: Align content to the center */
             align-items: flex-end; /* Align content to the bottom */
+            overflow: hidden; /* Important for marquee */
         }
 
         .title-text-container {
-            /* Container to enforce max width for marquee */
-            max-width: 90%; 
+            /* Container for the text that might marquee */
+            max-width: 100%; 
             overflow: hidden;
             white-space: nowrap;
+            text-align: center; 
         }
         
         /* Marquee animation class for long titles */
         .marquee-animation {
             display: inline-block;
             white-space: nowrap;
-            padding-left: 100%; /* Start the text fully off-screen */
-            animation: marquee 8s linear infinite; /* Increased duration for smoother scroll */
+            /* Force the animation to take over positioning */
+            animation: marquee 8s linear infinite; 
+        }
+        
+        /* NEW: Styles for the unread comment badge in the modal */
+        #unread-comments-badge {
+            animation: popIn 0.3s ease-out;
+            height: 1.25rem; 
+            width: 1.25rem; 
+            font-size: 0.65rem;
+            line-height: 1.25rem;
+            text-align: center;
         }
         
         /* NEW: Styles for the title in the full modal view */
@@ -412,6 +426,7 @@
         let UNSUBSCRIBE_POSTS_LISTENER = () => {};
         let MODAL_UNSUBSCRIBE_LISTENER = () => {}; 
         let LAST_COMMENT_TIMESTAMP = 0; 
+        let UNREAD_COMMENTS_COUNT = 0; // NEW: Track unread comments in modal
         let PENDING_UPLOAD_FILE = null; 
         const COMMENT_DELAY_MS = 5000;
         const POST_SLOTS_MAX = 3;
@@ -780,10 +795,15 @@
                         } else if (change.type === 'modified' || change.type === 'added') {
                             const existingThumb = document.querySelector(`.photo-thumbnail[data-photo-id="${docId}"]`);
                             if (existingThumb) {
-                                // Update hearts count in existing thumbnail (it now has a specific structure)
+                                // Update hearts count in existing thumbnail
                                 const heartCountEl = existingThumb.querySelector('.heart-count-display');
                                 if (heartCountEl) {
                                      heartCountEl.innerHTML = formatCount(data.hearts?.length || 0);
+                                }
+                                // NEW: Update comments count in existing thumbnail
+                                const commentCountEl = existingThumb.querySelector('.comment-count-display');
+                                if (commentCountEl) {
+                                     commentCountEl.innerHTML = formatCount(data.comments?.length || 0);
                                 }
                                 // Update title in case it changed (less likely, but safe)
                                 const titleSpan = existingThumb.querySelector('.title-text-span');
@@ -842,20 +862,22 @@
             overlay.className = 'overlay'; // This class handles the 40% darkening
             thumb.appendChild(overlay);
 
-            // 2. Heart Count (Top-Left)
-            const heartEl = document.createElement('div');
-            heartEl.className = 'absolute top-2 left-2 z-10 text-white text-xs bg-black/50 px-2 py-1 rounded-full flex items-center shadow-lg';
-            heartEl.innerHTML = `<i class="fas fa-heart text-red-400 mr-1"></i> <span class="font-bold heart-count-display">${formatCount(photoData.hearts?.length || 0)}</span>`;
-            thumb.appendChild(heartEl);
+            // 2. Heart/Comment Count (Top-Left) - UPDATED
+            const countEl = document.createElement('div');
+            countEl.className = 'absolute top-2 left-2 z-10 text-white text-xs bg-black/50 px-2 py-1 rounded-full flex items-center shadow-lg';
+            countEl.innerHTML = 
+                `<i class="fas fa-heart text-red-400 mr-1"></i> <span class="font-bold heart-count-display">${formatCount(photoData.hearts?.length || 0)}</span>` +
+                `<i class="fas fa-comment text-indigo-400 ml-2 mr-1"></i> <span class="font-bold comment-count-display">${formatCount(photoData.comments?.length || 0)}</span>`; // ADDED COMMENT COUNT
+            thumb.appendChild(countEl);
 
-            // 3. Title Display (Bottom-Right, Marquee)
+            // 3. Title Display (Bottom-Center, Marquee) - UPDATED
             const isLongTitle = photoData.title.length > MARQUEE_TRIGGER_LENGTH;
             const displayTitle = photoData.title; 
 
             const titleOverlay = document.createElement('div');
             titleOverlay.className = 'title-overlay'; 
-            // FIX: Removed internal whitespace in template literal to fix potential &nbsp; artifact
-            titleOverlay.innerHTML = `<div class="title-text-container"><span class="text-white text-right font-semibold text-xs title-text-span ${isLongTitle ? 'marquee-animation' : ''}">${displayTitle}</span></div>`;
+            // The title-text-container now handles centering and overflow due to CSS update
+            titleOverlay.innerHTML = `<div class="title-text-container"><span class="text-white font-semibold text-xs title-text-span ${isLongTitle ? 'marquee-animation' : ''}">${displayTitle}</span></div>`;
             thumb.appendChild(titleOverlay);
 
 
@@ -1063,6 +1085,31 @@
             
             // Unsubscribe from any previous modal listener before starting a new one
             MODAL_UNSUBSCRIBE_LISTENER(); 
+            UNREAD_COMMENTS_COUNT = 0; // NEW: Reset unread count for the new modal
+
+            // Handler to manage scroll and badge visibility
+            const handleScroll = (commentsSection) => {
+                if (!commentsSection) return;
+
+                // Check if the user is scrolled to the bottom (within 20 pixels tolerance)
+                const SCROLL_TOLERANCE = 20; 
+                const isScrolledToBottom = commentsSection.scrollHeight - commentsSection.clientHeight <= commentsSection.scrollTop + SCROLL_TOLERANCE;
+
+                if (isScrolledToBottom) {
+                    UNREAD_COMMENTS_COUNT = 0; // All comments are now read
+                }
+                
+                const badge = document.getElementById('unread-comments-badge');
+                if (badge) {
+                    if (UNREAD_COMMENTS_COUNT > 0) {
+                        badge.textContent = UNREAD_COMMENTS_COUNT;
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+                }
+            };
+
 
             // This onSnapshot listener ensures the modal content is real-time
             MODAL_UNSUBSCRIBE_LISTENER = onSnapshot(photoRef, (updatedSnap) => {
@@ -1078,6 +1125,13 @@
                 const photoData = updatedSnap.data();
                 const hearts = photoData.hearts || [];
                 const hasHearted = hearts.includes(currentUser.uid);
+                
+                // Get current comment count and the comment section element (old DOM if updating)
+                const currentCommentCount = (photoData.comments || []).length;
+                const oldCommentsSection = document.getElementById('comments-section');
+                const previousCommentCount = oldCommentsSection ? oldCommentsSection.children.length : 0;
+                let isNewComment = currentCommentCount > previousCommentCount;
+
 
                 if (!photoData.title) {
                     closePhotoModal();
@@ -1085,7 +1139,7 @@
                     return;
                 }
                 
-                // --- NEW MARQUEE LOGIC FOR MODAL TITLE ---
+                // --- MARQUEE LOGIC FOR MODAL TITLE ---
                 const isLongTitle = photoData.title.length > MARQUEE_TRIGGER_LENGTH;
                 const titleClass = isLongTitle ? 'marquee-animation' : '';
                 
@@ -1095,14 +1149,19 @@
 
                 
                 // Content generation for the modal
-                // NEW: Added fixed width (w-[350px]) for the info panel and flex-grow for the image
+                // UPDATED: Added close button, badge container, and padding to the info panel
                 modalContentContainer.innerHTML = `
                     <div id="photo-view-main" class="flex flex-col md:flex-row gap-6 transition-opacity duration-300 w-full h-full">
                         <div class="flex-grow flex justify-center items-center">
                             <img src="${photoData.imageBase64}" alt="${photoData.title || 'Photo'}" class="rounded-lg max-h-[80vh] w-auto max-w-full">
                         </div>
-                        <div id="photo-info-panel" class="w-full md:w-[350px] flex-shrink-0 flex flex-col">
-                            <div class="border-b border-gray-700 pb-3 mb-3">
+                        <div id="photo-info-panel" class="w-full md:w-[350px] flex-shrink-0 flex flex-col relative">
+                            <button id="close-modal-btn" class="absolute top-0 right-0 p-2 text-white/50 hover:text-white transition" title="Close"><i class="fas fa-times"></i></button>
+                            <div class="absolute top-0 right-8">
+                                <span id="unread-comments-badge" class="hidden bg-red-600 text-white font-bold rounded-full flex items-center justify-center" title="Unread Comments"></span>
+                            </div>
+
+                            <div class="border-b border-gray-700 pb-3 mb-3 pt-6">
                                 ${titleHtml}
                                 <p class="font-semibold text-lg text-indigo-400">${photoData.creatorUsername}</p>
                                 <p class="text-sm text-gray-400">${photoData.createdAt.toDate().toLocaleString()}</p>
@@ -1111,7 +1170,7 @@
                                     : ''}
                             </div>
                             <div class="flex-grow mb-4 pr-1">
-                                <div id="comments-section">
+                                <div id="comments-section" class="pr-1 overflow-y-auto max-h-[300px]">
                                     ${(() => {
                                         let html = '';
                                         const comments = photoData.comments || [];
@@ -1153,6 +1212,42 @@
                         </div>
                     </div>
                 `;
+                
+                // Get the new DOM elements
+                const currentCommentsSection = document.getElementById('comments-section');
+
+                // --- NEW SCROLL AND BADGE LOGIC ---
+                // Only run scroll logic if the component has been rendered (oldCommentsSection will be null on first render)
+                if (oldCommentsSection) {
+                    // Determine if user was scrolled to the bottom BEFORE the DOM update
+                    const isScrolledToBottomBeforeUpdate = oldCommentsSection.scrollHeight - oldCommentsSection.clientHeight <= oldCommentsSection.scrollTop + 20;
+
+                    if (isNewComment) {
+                        if (isScrolledToBottomBeforeUpdate) {
+                            // If user was at the bottom (or close), auto-scroll to the new bottom
+                            setTimeout(() => {
+                                currentCommentsSection.scrollTop = currentCommentsSection.scrollHeight;
+                            }, 50);
+                        } else {
+                            // User was not at the bottom, increment unread count by the difference
+                            UNREAD_COMMENTS_COUNT = UNREAD_COMMENTS_COUNT + (currentCommentCount - previousCommentCount);
+                        }
+                    }
+                } else {
+                    // First render: always scroll to the bottom for the initial full view
+                     setTimeout(() => {
+                        if (currentCommentsSection) {
+                            currentCommentsSection.scrollTop = currentCommentsSection.scrollHeight;
+                        }
+                    }, 50);
+                }
+                
+                // Attach the scroll handler and run once on initial load/update
+                currentCommentsSection.addEventListener('scroll', () => handleScroll(currentCommentsSection));
+                handleScroll(currentCommentsSection); // Run immediately on update
+
+                // ... (rest of event listeners for heart, delete, etc.)
+                
                 
                 // Get new DOM elements for the deletion flow
                 const photoViewMain = document.getElementById('photo-view-main');
@@ -1247,13 +1342,16 @@
                         LAST_COMMENT_TIMESTAMP = now; 
                         commentMessageElement.textContent = ''; 
 
+                        // NEW: Comment submission success - ensure the comment is now considered 'read' for the local user
+                        UNREAD_COMMENTS_COUNT = 0;
+                        handleScroll(currentCommentsSection); // Update badge and check scroll
+
                         // NEW: Auto-scroll to the bottom of the comments section
                         setTimeout(() => {
-                            const commentsSection = document.getElementById('comments-section');
-                            if (commentsSection) {
-                                commentsSection.scrollTop = commentsSection.scrollHeight;
+                            if (currentCommentsSection) {
+                                currentCommentsSection.scrollTop = currentCommentsSection.scrollHeight;
                             }
-                        }, 100); // Small delay to allow onSnapshot to update DOM
+                        }, 50); // Small delay to allow onSnapshot to update DOM
                         
                     } catch(error) {
                          showMessage(commentMessageElement, `Comment failed: ${error.message || error}`, 'error'); 
