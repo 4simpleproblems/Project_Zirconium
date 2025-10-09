@@ -134,7 +134,8 @@
         
         /* FIX: Ensure comments section can scroll */
         #comments-section {
-            overflow-y: auto;
+            /* CHANGED: Forces the scrollbar track to always be visible, reserving its horizontal space */
+            overflow-y: scroll;
             max-height: 8rem; /* Reduced height to activate scroll sooner */
         }
         
@@ -268,7 +269,6 @@
 </head>
 <body class="pt-16">
     
-    <!-- STANDARD MESSAGE MODAL -->
     <div id="message-modal" class="modal-backdrop hidden opacity-0">
         <div class="modal-content w-full max-w-sm p-6 text-center">
             <h3 id="message-modal-title" class="text-xl font-bold mb-4 text-white"></h3>
@@ -277,19 +277,15 @@
         </div>
     </div>
 
-    <!-- PHOTO VIEW MODAL -->
     <div id="photo-modal" class="modal-backdrop hidden">
-        <!-- Added 'relative' class to modal-content-container for absolute positioning of confirmation overlay -->
         <div id="modal-content-container" class="modal-content relative flex flex-col md:flex-row gap-6"> 
             </div>
     </div>
     
-    <!-- TITLE EDIT MODAL -->
     <div id="title-modal" class="modal-backdrop hidden opacity-0">
         <div class="modal-content w-full max-w-sm p-6 text-center">
             <h3 class="text-xl font-bold mb-4 text-white">Edit Title</h3>
             <form id="edit-title-form" data-post-id="" class="flex flex-col gap-4">
-                <!-- UPDATED: max length to 48 chars -->
                 <input type="text" id="title-edit-input" placeholder="Enter your photo title (max 48 chars)" class="p-3 bg-gray-900 border border-gray-700 rounded-md focus:ring-indigo-500" maxlength="48" required>
                 <button type="submit" class="px-4 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold w-full">Save Title</button>
             </form>
@@ -297,34 +293,27 @@
         </div>
     </div>
     
-    <!-- NEW: UPLOAD MENU MODAL -->
     <div id="upload-menu-modal" class="modal-backdrop hidden opacity-0">
         <div class="modal-content w-full max-w-sm p-6">
             <h3 id="upload-menu-title" class="text-xl font-bold mb-4 text-white">Post to Slot #1</h3>
             
-            <!-- Hidden File Input for Image Selection (One input for all methods) -->
             <input type="file" id="upload-file-input" class="hidden" accept="image/*" data-slot-index="" data-action="select-photo">
 
-            <!-- Initial selection buttons -->
             <div id="upload-select-options" class="flex flex-col gap-3 mb-6">
-                 <!-- The 'capture' attribute for camera, works on mobile. -->
-                <button id="upload-camera-btn" class="px-4 py-3 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold w-full">
+                 <button id="upload-camera-btn" class="px-4 py-3 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold w-full">
                     <i class="fas fa-camera mr-2"></i> Capture Image (Camera)
                 </button>
-                <!-- Separate button to trigger file/photo selection -->
                 <button id="upload-photo-file-btn" class="px-4 py-3 bg-gray-700 rounded-lg hover:bg-gray-800 transition font-semibold w-full">
                     <i class="fas fa-image mr-2"></i> Select Photo or File
                 </button>
             </div>
             
-            <!-- Image Preview and Title Input (Hidden until file is selected) -->
             <div id="upload-post-creator" class="hidden">
                  <div id="image-preview-container" class="mb-4 bg-gray-900 flex justify-center items-center">
                     <img id="image-preview" src="#" alt="Image Preview" class="w-full h-auto object-cover max-h-[300px]">
                  </div>
                  
                  <form id="create-post-form" class="flex flex-col gap-4">
-                    <!-- UPDATED: max length to 48 chars -->
                     <input type="text" id="post-title-input" placeholder="Enter your photo title (max 48 chars)" class="p-3 bg-gray-900 border border-gray-700 rounded-md focus:ring-indigo-500" maxlength="48" required>
                     <button type="submit" id="create-post-btn" class="px-4 py-3 bg-green-600 rounded-lg hover:bg-green-700 transition font-semibold w-full">
                         <i class="fas fa-check mr-2"></i> Create Daily Post
@@ -364,19 +353,16 @@
                 <h2 class="text-xl font-bold mb-3">Your Friends</h2>
                 <div id="friends-list-wrapper" class="compact-list-wrapper">
                     <div id="friends-list-items" class="compact-list-items">
-                        <!-- Friend cards rendered here -->
-                    </div>
+                        </div>
                 </div>
             </div>
 
             <div class="mb-6">
                 <h2 class="text-xl font-bold mb-2">Your Daily Posts</h2>
                 <p class="text-sm text-gray-400 mb-3">You have 3 slots per day (no cheating!).</p>
-                <!-- NEW: Daily Post Slots now use the compact-list-wrapper -->
                 <div id="daily-posts-wrapper" class="compact-list-wrapper">
                     <div id="daily-posts-container">
-                        <!-- Daily Post Cards rendered here -->
-                    </div>
+                        </div>
                 </div>
                 <div id="upload-message" class="text-sm mt-2 min-h-[20px]"></div>
             </div>
@@ -857,7 +843,7 @@
             heartEl.innerHTML = `<i class="fas fa-heart text-red-400 mr-1"></i> <span class="font-bold heart-count-display">${formatCount(photoData.hearts?.length || 0)}</span>`;
             thumb.appendChild(heartEl);
 
-            // 3. Title Display (Bottom-Right, Marquee)
+            // 3. Title Display (Bottom-Right, Gradient Background, Marquee)
             const isLongTitle = photoData.title.length > MARQUEE_TRIGGER_LENGTH;
             const displayTitle = photoData.title; 
 
@@ -935,7 +921,6 @@
                         const titleSpanClass = isLongTitle ? 'marquee-animation' : '';
                         
                         div.innerHTML = `
-                            <!-- Container for Marquee: needs flex-grow, overflow-hidden, whitespace-nowrap -->
                             <div class="flex-grow overflow-hidden whitespace-nowrap mr-2">
                                 <span class="font-semibold inline-block ${titleSpanClass}">${name}</span>
                             </div>
@@ -1115,14 +1100,12 @@
                 // Content generation for the modal
                 // NEW: Added main content wrapper and delete confirmation overlay
                 modalContentContainer.innerHTML = `
-                    <!-- Main Photo/Comment View -->
                     <div id="photo-view-main" class="flex-grow flex flex-col md:flex-row gap-6 transition-opacity duration-300">
                         <div class="md:w-2/3 flex justify-center items-center">
                             <img src="${photoData.imageBase64}" alt="${photoData.title || 'Photo'}" class="rounded-lg max-h-[80vh] w-auto">
                         </div>
                         <div id="photo-info-panel" class="md:w-1/3 flex flex-col">
                             <div class="border-b border-gray-700 pb-3 mb-3">
-                                <!-- Title with Marquee -->
                                 ${titleHtml}
                                 <p class="font-semibold text-lg text-indigo-400">${photoData.creatorUsername}</p>
                                 <p class="text-sm text-gray-400">${photoData.createdAt.toDate().toLocaleString()}</p>
@@ -1130,7 +1113,6 @@
                                     ? `<button id="delete-post-trigger-btn" class="text-red-400 text-sm mt-2 hover:text-red-500"><i class="fas fa-trash-alt mr-1"></i> Delete Post</button>` 
                                     : ''}
                             </div>
-                            <!-- FIX: Removed overflow-y-auto from this section to rely on #comments-section scroll -->
                             <div class="flex-grow mb-4 pr-1">
                                 <div id="comments-section">
                                     ${(() => {
@@ -1154,7 +1136,6 @@
                             <div id="modal-comment-message" class="text-sm min-h-[20px]"></div>
 
                             <form id="comment-form" class="flex gap-2">
-                                <!-- UPDATED: max length to 480 chars -->
                                 <input type="text" id="comment-input" placeholder="Add a comment (max 480 chars)..." class="flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md" maxlength="480">
                                 <button type="submit" id="comment-submit-btn" class="px-3 py-2 bg-indigo-600 rounded-md font-semibold" title="Post Comment">
                                     <i class="fas fa-comment"></i>
@@ -1163,7 +1144,6 @@
                         </div>
                     </div>
                     
-                    <!-- Delete Confirmation View (Absolute Overlay) -->
                     <div id="delete-confirmation-view" class="absolute inset-0 hidden 
                                 flex justify-center items-center p-6 transition-opacity duration-300 bg-[#111111]/95 rounded-xl">
                         <div class="text-center">
