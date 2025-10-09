@@ -15,9 +15,9 @@
         "url": "../logged-in/notes.html"
     },
      "notes-again": {
-        "name": "Test",
-        "icon": "fa-file",
-        "url": "../logged-in/test.html"
+        "name": "Dailyphoto",
+        "icon": "fa-photo",
+        "url": "../logged-in/dailyphoto.html"
     },
     "countdowns": {
         "name": "Countdowns",
