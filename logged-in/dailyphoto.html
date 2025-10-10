@@ -431,7 +431,7 @@
 
             <div class="mb-6">
                 <h2 class="text-xl font-bold mb-2">Your Daily Posts</h2>
-                <p class="text-sm text-gray-400 mb-3">You have 3 slots per day (no cheating!).</p>
+                <p class="text-sm text-gray-400 mb-3">You get 5 post slots per day.</p>
                 <div id="daily-posts-wrapper" class="compact-list-wrapper">
                     <div id="daily-posts-container">
                         </div>
@@ -488,10 +488,10 @@
         let LAST_HEART_TIMESTAMP = 0; // NEW: Global state for heart debounce
         let UNREAD_COMMENTS_COUNT = 0;
         let PENDING_UPLOAD_FILE = null; 
-        const COMMENT_DELAY_MS = 5000;
-        const POST_SLOTS_MAX = 3;
+        const COMMENT_DELAY_MS = 3000;
+        const POST_SLOTS_MAX = 5;
         const MARQUEE_TRIGGER_LENGTH = 30; // Marquee logic removed, but keeping constant for title length checks if needed later
-        const HEART_DELAY_MS = 750; // NEW: Debounce hearting for 0.75 seconds
+        const HEART_DELAY_MS = 500; // NEW: Debounce hearting for 0.75 seconds
 
         // --- DOM Elements ---
         const loadingScreen = document.getElementById('loading-screen');
