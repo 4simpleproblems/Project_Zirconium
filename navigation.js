@@ -122,18 +122,18 @@ const PAGE_CONFIG_URL = '../page-identification.json';
             style.textContent = `
                 /* Base Styles */
                 body { padding-top: 4rem; /* 64px, equal to navbar height */ }
-                /* Nav bar is now fully opaque (#111827 - dark gray/black) */
-                .auth-navbar { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: #111827; border-bottom: 1px solid rgb(31 41 55); height: 4rem; }
+                /* Nav bar is now fully opaque (#000000 - pure black) */
+                .auth-navbar { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: #000000; border-bottom: 1px solid rgb(31 41 55); height: 4rem; }
                 /* Nav now needs relative positioning for glide buttons */
                 .auth-navbar nav { max-width: 80rem; margin: auto; padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
                 .initial-avatar { background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: 'Geist', sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; }
                 
-                /* Auth Dropdown Menu Styles (UPDATED: Black background and blur) */
+                /* Auth Dropdown Menu Styles (UPDATED: Pure Black background) */
                 .auth-menu-container { 
                     position: absolute; right: 0; top: 50px; width: 16rem; 
-                    background: rgba(0, 0, 0, 0.95); /* Closer to black */
-                    backdrop-filter: blur(8px); 
-                    -webkit-backdrop-filter: blur(8px);
+                    background: #000000; /* Pure black */
+                    backdrop-filter: none; /* Removed backdrop filter for pure black */
+                    -webkit-backdrop-filter: none;
                     border: 1px solid rgb(55 65 81); border-radius: 0.75rem; padding: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
                     transition: transform 0.2s ease-out, opacity 0.2s ease-out; transform-origin: top right; 
                 }
@@ -177,7 +177,7 @@ const PAGE_CONFIG_URL = '../page-identification.json';
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    background: #111827; /* Solid color matching navbar */
+                    background: #000000; /* Solid color matching navbar */
                     color: white;
                     font-size: 1.2rem;
                     cursor: pointer;
@@ -195,7 +195,7 @@ const PAGE_CONFIG_URL = '../page-identification.json';
                     left: 0;
                     border-top-right-radius: 0.5rem;
                     border-bottom-right-radius: 0.5rem;
-                    background: linear-gradient(to right, #111827 50%, transparent); /* Opaque fade */
+                    background: linear-gradient(to right, #000000 50%, transparent); /* Opaque fade */
                 }
 
                 /* Position and gradient for right button */
@@ -203,7 +203,7 @@ const PAGE_CONFIG_URL = '../page-identification.json';
                     right: 0;
                     border-top-left-radius: 0.5rem;
                     border-bottom-left-radius: 0.5rem;
-                    background: linear-gradient(to left, #111827 50%, transparent); /* Opaque fade */
+                    background: linear-gradient(to left, #000000 50%, transparent); /* Opaque fade */
                 }
                 
                 /* Visibility class controlled by JS to hide when not needed */
