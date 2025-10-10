@@ -520,7 +520,7 @@
 
 
         // --- Firestore Document References & Collections ---
-        const getUserProfileDocRef = (userId) => doc(db, 'artifacts', appId, 'users', userId, 'metadata', 'user_profile');
+        const getUserProfileDocRef = (userId) => doc(db, 'users', userId);
         const getFriendCodeDocRef = (code) => doc(db, 'artifacts', appId, 'public', 'data', 'friend_codes', code);
         const DAILY_PHOTO_COLLECTION = collection(db, 'daily_photos');
 
@@ -728,20 +728,24 @@
             try {
                 const userProfileRef = getUserProfileDocRef(user.uid);
                 let userProfileSnap = await getDoc(userProfileRef);
-                
-                if (!userProfileSnap.exists() || !userProfileSnap.data().username) {
-                    let defaultUsername = `DailyUser-${Math.floor(Math.random() * 8999) + 1000}`;
-                    defaultUsername = await cleanText(defaultUsername, 'username');
-                    await setDoc(userProfileRef, { 
-                        username: defaultUsername, 
-                        friends: [],
-                        dailySlotsUsed: [],
-                        lastPostReset: serverTimestamp()
-                    }, { merge: true });
-                    userProfileSnap = await getDoc(userProfileRef);
-                }
 
-                CURRENT_USERNAME = userProfileSnap.data()?.username;
+                if (!userProfileSnap.exists() || !userProfileSnap.data()?.username) {
+                    console.error("User profile document or username field not found for UID:", user.uid);
+                    showCustomModal("Profile Error", `Your user profile could not be loaded. This might be because it hasn't been created in the database yet. Please contact support.`);
+                    throw new Error(`User profile or username not found for ${user.uid}`);
+                }
+                
+                const profileData = userProfileSnap.data();
+                CURRENT_USERNAME = profileData.username;
+
+                // Ensure app-specific fields exist on the user document without overwriting
+                if (profileData.friends === undefined || profileData.dailySlotsUsed === undefined || profileData.lastPostReset === undefined) {
+                    await setDoc(userProfileRef, {
+                        friends: profileData.friends || [],
+                        dailySlotsUsed: profileData.dailySlotsUsed || [],
+                        lastPostReset: profileData.lastPostReset || serverTimestamp()
+                    }, { merge: true }); // Use set with merge to add fields without overwriting existing ones
+                }
 
                 const codeQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'friend_codes'), where('userId', '==', user.uid), limit(1));
                 const codeQuerySnap = await getDocs(codeQuery);
@@ -1326,3 +1330,4 @@
     </script>
 </body>
 </html>
+
