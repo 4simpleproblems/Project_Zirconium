@@ -475,21 +475,14 @@
             getFirestore, doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, serverTimestamp, orderBy, deleteDoc, onSnapshot, writeBatch, limit
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
-        // --- Firebase Config (You should replace this with your actual config) ---
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_AUTH_DOMAIN",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_STORAGE_BUCKET",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
+        // --- CONFIGURATION IMPORT ---
+        import { firebaseConfig } from "../firebase-config.js";
         
         const appId = typeof __app_id !== 'undefined' ? __app_id : '4sp-default-app'; 
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; 
 
         // --- Initialize Firebase ---
-        if (!firebaseConfig || !firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_API_KEY") {
+        if (!firebaseConfig || !firebaseConfig.apiKey) {
             document.getElementById('loading-screen').innerHTML = '<p class="text-red-400">ERROR: Firebase is not configured. Please add your configuration in the script.</p>';
             throw new Error("Missing Firebase Config.");
         }
@@ -1365,3 +1358,4 @@
     </script>
 </body>
 </html>
+
