@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>4SP - DAILYPHOTO</title>
-    <meta name="description" content="Share your school day with friends through five daily photos, with safe censorship.">
+    <meta name="description" content="Share your day with friends through three daily photos.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,8 +25,6 @@
             50% { box-shadow: 0 0 10px #818cf8, 0 0 20px #818cf8; }
             100% { box-shadow: 0 0 5px #4f46e5, 0 0 10px #4f46e5; }
         }
-        
-        /* NOTE: Marquee animation removed per user request */
 
         /* --- FONT & BASE STYLING (THICKENED FONT) --- */
         body { 
@@ -37,12 +35,11 @@
             font-weight: 300; 
         }
         
-        /* Ensure headings and strong text are slightly thicker but still thin */
         h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
             font-weight: 400 !important; 
         }
 
-        /* Responsive Container */
+        /* --- LAYOUT CONTAINERS --- */
         .messenger-container {
             display: grid;
             grid-template-columns: 350px 1fr;
@@ -52,23 +49,20 @@
             padding: 0 1rem;
         }
 
-        /* --- CONSISTENT PANEL STYLING (UPDATED: Slight Rounding) --- */
         .left-panel, .feed-panel { 
             background-color: #111111; 
             border: 1px solid #252525; 
-            border-radius: 1rem; /* UPDATED: Increased rounding */
+            border-radius: 1rem;
             padding: 1.5rem; 
             height: fit-content;
         }
         
-        /* General input styling to use thin font */
         input.p-2 {
             font-weight: 300 !important; 
         }
 
-        /* --- Custom Friend Code Input Styling (8 character underlines) --- */
+        /* --- Custom Friend Code Input Styling --- */
         .friend-code-input-styled {
-            /* Create 8 repeating lines for each character space */
             background-image: linear-gradient(to right, #252525 0%, #252525 90%);
             background-size: 12.5% 2px; 
             background-repeat: repeat-x;
@@ -80,14 +74,13 @@
             box-shadow: none !important;
         }
         .friend-code-input-styled:focus {
-             /* Change color on focus */
              background-image: linear-gradient(to right, #4f46e5 0%, #4f46e5 90%);
         }
         
-        /* --- Compact List Styling for Friends and Daily Posts (UPDATED: Slight Rounding) --- */
+        /* --- Compact List Styling for Friends and Daily Posts --- */
         .compact-list-wrapper {
              background-color: #0d0d0d; 
-             border-radius: 0.75rem; /* UPDATED: Slightly rounded wrapper */
+             border-radius: 0.75rem;
              padding: 0.25rem 0.5rem; 
              border: 1px solid #1a1a1a;
              margin-top: 0.75rem;
@@ -98,19 +91,16 @@
             padding-right: 0.25rem; 
         }
         
-        /* Custom scrollbar styles */
         .compact-list-items::-webkit-scrollbar, #chat-messages-container::-webkit-scrollbar { width: 8px; }
         .compact-list-items::-webkit-scrollbar-thumb, #chat-messages-container::-webkit-scrollbar-thumb { background-color: #4f46e5; border-radius: 4px; }
         .compact-list-items::-webkit-scrollbar-track, #chat-messages-container::-webkit-scrollbar-track { background-color: #1f2937; }
 
-        /* General style for a list item/card (Friends list & NEW Daily Posts) */
         .compact-list-item {
             background-color: transparent; 
-            border-radius: 0.5rem; /* UPDATED: Rounded item cards */
-            margin-bottom: 0.25rem; /* Spacing */
+            border-radius: 0.5rem;
+            margin-bottom: 0.25rem;
             padding: 0.5rem 0.5rem; 
             transition: background-color 0.2s;
-            /* Removed border-bottom for cleaner look with rounded cards */
             border-bottom: none;
         }
         .compact-list-item:hover {
@@ -121,28 +111,23 @@
              border-bottom: none;
         }
         
-        /* NEW: Daily Post specific styles to match the friend cards */
-        .daily-post-card {
-            border-bottom: none; /* Ensure no border separation for rounded cards */
-        }
-        .daily-post-card:last-child {
-             border-bottom: none;
+        .daily-post-card, .daily-post-card:last-child {
+            border-bottom: none;
         }
         
-        /* FIX: Ensure comments section can scroll (UPDATED: Increased max-height for activation) */
+        /* --- MODAL & COMMENT STYLING --- */
         #comments-section {
             overflow-y: auto;
-            max-height: 50vh; /* Set maximum height to enforce scrolling */
+            max-height: 50vh;
             flex-grow: 1; 
         }
         
-        /* FIX: Added global break-words for comment text to prevent horizontal overflow */
         .comment-text {
             word-wrap: break-word;
             overflow-wrap: break-word;
         }
 
-        /* --- NEW: FEED DISPLAY STYLING --- */
+        /* --- FEED DISPLAY STYLING --- */
         .photo-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr); 
@@ -163,7 +148,6 @@
             transition: transform 0.3s ease;
         }
 
-        /* Overlay for darkening only */
         .overlay {
             position: absolute;
             top: 0;
@@ -174,27 +158,19 @@
             pointer-events: none; 
         }
         
-        /* UPDATED: Title Overlay (Title is now static and clipped) */
         .title-overlay {
             position: absolute;
             top: 0.5rem; 
             right: 0.5rem; 
-            
-            /* NEW: Label styling */
-            background-color: rgba(0, 0, 0, 0.75); /* Solid, dark background */
-            border-radius: 0.5rem; /* Label rounding */
-            padding: 0.25rem 0.5rem; /* Smaller padding for label look */
-            max-width: 70%; /* Constraint width */
-            
+            background-color: rgba(0, 0, 0, 0.75);
+            border-radius: 0.5rem;
+            padding: 0.25rem 0.5rem;
+            max-width: 70%;
             color: white;
             font-size: 0.75rem; 
             font-weight: 600;
-            
-            background: rgba(0, 0, 0, 0.75);
-            text-shadow: none; 
             height: 1.5rem; 
             display: flex;
-            justify-content: flex-start;
             align-items: center; 
             overflow: hidden; 
             z-index: 10; 
@@ -202,13 +178,11 @@
 
         .title-text-container {
             max-width: 100%; 
-            overflow: hidden; /* Ensure text is clipped */
+            overflow: hidden;
             white-space: nowrap;
-            /* Marquee logic removed: text will clip naturally */
         }
         
         .title-text-span {
-            /* Ensures long text that is clipped shows an ellipsis */
             text-overflow: ellipsis; 
             display: block; 
         }
@@ -224,7 +198,7 @@
         
         .modal-title-container {
              max-width: 100%;
-             overflow: hidden; /* Clips the modal title */
+             overflow: hidden;
              white-space: nowrap;
              display: flex;
              font-weight: 700;
@@ -239,31 +213,27 @@
         }
         
         .photo-modal-img {
-            width: 100%; /* Fill container */
-            height: 100%; /* Fill container */
+            width: 100%;
+            height: 100%;
             max-width: 100%;
             object-fit: contain; 
             transition: all 0.3s ease;
         }
         
-        /* NEW: Fullscreen Image Mode (Step 5: Styles to expand image and hide comments) */
         .modal-content.fullscreen-image-mode {
-             /* Remove padding/gap for a true fullscreen feel within the modal */
              padding: 0;
              gap: 0;
         }
         .modal-content.fullscreen-image-mode #photo-view-main {
-            /* Fullscreen mode is handled within the modal-content container */
             flex-direction: row; 
             width: 100%;
             height: 100%;
-            max-height: 90vh; /* Match modal-content max height */
+            max-height: 90vh;
         }
         .modal-content.fullscreen-image-mode #photo-display-area {
-            flex-grow: 10; /* Image dominates */
+            flex-grow: 10;
         }
         .modal-content.fullscreen-image-mode #photo-info-panel {
-            /* Fades away the comment section */
             opacity: 0;
             pointer-events: none;
             width: 0;
@@ -272,7 +242,6 @@
         #photo-info-panel {
              transition: opacity 0.3s ease-in, width 0.3s ease-in;
         }
-        /* --- END FEED STYLES --- */
 
         .upload-drop-zone {
             background-color: #0a0a0a;
@@ -317,13 +286,13 @@
         }
         #modal-content-container {
             max-width: 1000px;
-            max-height: calc(90vw * 4 / 7); /* Max height is constrained by max width */
-            aspect-ratio: 7 / 4; /* Enforce 7:4 aspect ratio */
+            max-height: calc(90vw * 4 / 7);
+            aspect-ratio: 7 / 4;
             position: relative; 
-            flex-grow: 1; /* Allow content container to fill available space */
+            flex-grow: 1;
         }
         
-        #upload-menu-modal .modal-content, #chat-modal .modal-content {
+        #upload-menu-modal .modal-content {
             max-width: 500px;
             aspect-ratio: auto;
             max-height: 90vh; 
@@ -334,21 +303,42 @@
              border-radius: 0.5rem;
         }
         
-        /* --- NEW: MESSENGER STYLES --- */
-        #chat-modal .modal-content {
-            height: 80vh;
-            padding: 0;
+        /* --- NEW: MESSENGER VIEW STYLES --- */
+        #chat-view-container {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #070707;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+        }
+        #chat-view-content {
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background-color: #111111;
         }
         #chat-messages-container {
             overflow-y: auto;
             padding: 1.5rem;
             flex-grow: 1;
         }
+        .chat-message-wrapper {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 1rem;
+        }
         .chat-message-bubble {
             max-width: 75%;
             padding: 0.75rem 1rem;
             border-radius: 1.25rem;
             word-wrap: break-word;
+            line-height: 1.4;
         }
         .chat-message-sent {
             background-color: #4f46e5;
@@ -361,6 +351,22 @@
             border-bottom-left-radius: 0.25rem;
             align-self: flex-start;
         }
+        .chat-timestamp {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+        .sent-timestamp { align-self: flex-end; padding-right: 0.5rem; }
+        .received-timestamp { align-self: flex-start; padding-left: 0.5rem; }
+
+        .chat-date-separator {
+            text-align: center;
+            margin: 1.5rem 0;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #8b8b8b;
+        }
+
     </style>
 </head>
 <body class="pt-16">
@@ -420,27 +426,8 @@
         </div>
     </div>
 
-    <div id="chat-modal" class="modal-backdrop hidden opacity-0">
-        <div class="modal-content w-full max-w-md">
-            <header class="p-4 border-b border-gray-800 flex-shrink-0 flex justify-between items-center">
-                <h3 id="chat-modal-title" class="text-xl font-bold text-white">Chat with...</h3>
-                <button id="chat-modal-close-btn" class="p-2 text-white/50 hover:text-white transition" title="Close"><i class="fas fa-times"></i></button>
-            </header>
-            <div id="chat-messages-container" class="flex flex-col gap-4">
-                </div>
-            <footer class="p-4 border-t border-gray-800 flex-shrink-0">
-                <form id="chat-message-form" class="flex gap-2">
-                    <input type="text" id="chat-message-input" placeholder="Type a message..." class="flex-grow p-3 bg-gray-900 border border-gray-700 rounded-lg focus:ring-indigo-500" maxlength="1000" required>
-                    <button type="submit" id="chat-send-btn" class="px-4 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold" title="Send Message">
-                        <i class="fas fa-paper-plane"></i>
-                    </button>
-                </form>
-            </footer>
-        </div>
-    </div>
 
-
-    <main id="messenger-ui" class="messenger-container" style="display: none;">
+    <main id="messenger-ui" class="messenger-container">
         
         <aside class="left-panel">
             
@@ -490,6 +477,28 @@
         </section>
 
     </main>
+    
+    <div id="chat-view-container" class="hidden">
+        <div id="chat-view-content">
+            <header class="p-4 border-b border-gray-800 flex-shrink-0 flex items-center gap-4">
+                <button id="chat-back-btn" class="p-2 text-white/50 hover:text-white transition" title="Back to Feed">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <h3 id="chat-view-title" class="text-xl font-bold text-white">Chat</h3>
+            </header>
+            <div id="chat-messages-container">
+                </div>
+            <footer class="p-4 border-t border-gray-800 flex-shrink-0 bg-[#070707]">
+                <form id="chat-message-form" class="flex gap-2">
+                    <input type="text" id="chat-message-input" placeholder="Type a message..." class="flex-grow p-3 bg-gray-900 border border-gray-700 rounded-lg focus:ring-indigo-500" maxlength="1000" required>
+                    <button type="submit" id="chat-send-btn" class="px-4 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold" title="Send Message">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </form>
+            </footer>
+        </div>
+    </div>
+
 
     <div id="loading-screen" class="flex justify-center items-center h-screen">
         <p class="text-xl">Authenticating and loading messenger...</p>
@@ -526,15 +535,14 @@
         let UNSUBSCRIBE_POSTS_LISTENER = () => {};
         let UNSUBSCRIBE_DAILY_SLOTS_LISTENER = () => {};
         let MODAL_UNSUBSCRIBE_LISTENER = () => {}; 
-        let UNSUBSCRIBE_CHAT_LISTENER = () => {}; // NEW: For chat messages
-        let CURRENT_CHAT_PARTNER = null; // NEW: { uid, username }
+        let UNSUBSCRIBE_CHAT_LISTENER = () => {};
+        let CURRENT_CHAT_PARTNER = null;
         let LAST_COMMENT_TIMESTAMP = 0; 
         let LAST_HEART_TIMESTAMP = 0; 
         let UNREAD_COMMENTS_COUNT = 0;
         let PENDING_UPLOAD_FILE = null; 
         const COMMENT_DELAY_MS = 3000;
         const POST_SLOTS_MAX = 5;
-        const MARQUEE_TRIGGER_LENGTH = 30; 
         const HEART_DELAY_MS = 500; 
 
         // --- DOM Elements ---
@@ -561,19 +569,20 @@
         const imagePreview = document.getElementById('image-preview'); 
         const createPostForm = document.getElementById('create-post-form'); 
         const uploadDropArea = document.getElementById('upload-drop-area'); 
-        // NEW: Chat Modal Elements
-        const chatModal = document.getElementById('chat-modal');
-        const chatModalTitle = document.getElementById('chat-modal-title');
+        // NEW: Chat View Elements
+        const chatViewContainer = document.getElementById('chat-view-container');
+        const chatViewTitle = document.getElementById('chat-view-title');
         const chatMessagesContainer = document.getElementById('chat-messages-container');
         const chatMessageForm = document.getElementById('chat-message-form');
         const chatMessageInput = document.getElementById('chat-message-input');
+        const chatBackButton = document.getElementById('chat-back-btn');
 
 
         // --- Firestore Document References & Collections ---
         const getUserProfileDocRef = (userId) => doc(db, 'users', userId);
         const getFriendCodeDocRef = (code) => doc(db, 'artifacts', appId, 'public', 'data', 'friend_codes', code);
         const DAILY_PHOTO_COLLECTION = collection(db, 'daily_photos');
-        const CHATS_COLLECTION = collection(db, 'chats'); // NEW: For messenger
+        const CHATS_COLLECTION = collection(db, 'chats');
 
         // =========================================================================
         // Helper Functions 
@@ -596,22 +605,15 @@
         function formatCount(num) {
             if (typeof num !== 'number' || isNaN(num)) return '0';
             if (num < 1000) return String(num); 
-
             const suffixes = ["", "K", "M", "B"];
             let tier = 0;
             let currentNum = num;
-            
             while (currentNum >= 1000 && tier < suffixes.length - 1) {
                 currentNum /= 1000;
                 tier++;
             }
-
-            if (tier === 3) {
-                if (currentNum >= 999.5) return '999B';
-            }
-
+            if (tier === 3 && currentNum >= 999.5) return '999B';
             const formatted = currentNum.toFixed(1).replace(/\.0$/, '');
-            
             return formatted + suffixes[tier];
         }
 
@@ -653,7 +655,6 @@
                 messageModalBody.textContent = body;
                 messageModal.classList.remove('hidden', 'opacity-0');
                 messageModal.classList.add('opacity-100');
-                
                 const handler = () => {
                     messageModal.classList.remove('opacity-100');
                     messageModal.classList.add('opacity-0');
@@ -722,7 +723,6 @@
             const titleText = photoData.title;
             const heartsCount = photoData.hearts?.length || 0;
             const commentsCount = photoData.comments?.length || 0;
-            
             const thumb = document.createElement('div');
             thumb.className = 'photo-thumbnail';
             thumb.dataset.photoId = photoId;
@@ -764,16 +764,13 @@
             try {
                 const userProfileRef = getUserProfileDocRef(user.uid);
                 let userProfileSnap = await getDoc(userProfileRef);
-
                 if (!userProfileSnap.exists() || !userProfileSnap.data()?.username) {
                     console.error("User profile document or username field not found for UID:", user.uid);
                     showCustomModal("Profile Error", `Your user profile could not be loaded. This might be because it hasn't been created in the database yet. Please contact support.`);
                     throw new Error(`User profile or username not found for ${user.uid}`);
                 }
-                
                 const profileData = userProfileSnap.data();
                 CURRENT_USERNAME = profileData.username;
-
                 if (profileData.friends === undefined || profileData.dailySlotsUsed === undefined || profileData.lastPostReset === undefined || profileData.pending_requests === undefined) {
                     await setDoc(userProfileRef, {
                         friends: profileData.friends || [],
@@ -782,10 +779,8 @@
                         pending_requests: profileData.pending_requests || []
                     }, { merge: true });
                 }
-
                 const codeQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'friend_codes'), where('userId', '==', user.uid), limit(1));
                 const codeQuerySnap = await getDocs(codeQuery);
-                
                 let existingCode = codeQuerySnap.empty ? null : codeQuerySnap.docs[0].id;
                 if (!existingCode) {
                     friendCodeDisplay.textContent = 'Generating...';
@@ -807,16 +802,13 @@
                 const userProfileRef = getUserProfileDocRef(user.uid);
                 const userProfileSnap = await getDoc(userProfileRef);
                 const lastReset = userProfileSnap.data()?.lastPostReset?.toDate() || new Date(0);
-                
                 if (lastReset < startOfToday) {
                     await updateDoc(userProfileRef, { dailySlotsUsed: [], lastPostReset: serverTimestamp() });
                     console.log("Daily post slots reset for new day.");
                 }
-
                 const oldPostsQuery = query(DAILY_PHOTO_COLLECTION, where('createdAt', '<', startOfToday), limit(50));
                 const snapshot = await getDocs(oldPostsQuery);
                 if (snapshot.empty) return;
-
                 const batch = writeBatch(db);
                 snapshot.forEach(doc => batch.delete(doc.ref));
                 await batch.commit();
@@ -834,26 +826,19 @@
             UNSUBSCRIBE_POSTS_LISTENER(); 
             const startOfDay = new Date();
             startOfDay.setHours(0, 0, 0, 0);
-            
             const uidsToQuery = [user.uid, ...CURRENT_FRIENDS].slice(0, 10);
             if (uidsToQuery.length === 0) {
                  photoFeed.innerHTML = '<p id="feed-placeholder" class="text-gray-500">Add some friends to see their daily photos!</p>';
                  return;
             }
-            
             const photosQuery = query(DAILY_PHOTO_COLLECTION, where('creatorUid', 'in', uidsToQuery), where('createdAt', '>=', startOfDay), orderBy('createdAt', 'desc'));
-            
             UNSUBSCRIBE_POSTS_LISTENER = onSnapshot(photosQuery, (snapshot) => {
                 const fragment = document.createDocumentFragment();
-                
                 snapshot.docs.forEach(doc => {
                     const docId = doc.id;
                     const data = doc.data();
-                    
                     if (!data.title) return;
-                    
                     let thumb = document.querySelector(`.photo-thumbnail[data-photo-id="${docId}"]`);
-                    
                     if (thumb) {
                         thumb.querySelector('.heart-count-display').innerHTML = formatCount(data.hearts?.length || 0);
                         thumb.querySelector('.comment-count-display').innerHTML = formatCount(data.comments?.length || 0);
@@ -861,16 +846,12 @@
                     } else {
                         thumb = createPhotoThumbnailElement(docId, data);
                     }
-                    
                     fragment.appendChild(thumb);
                 });
-
                 photoFeed.innerHTML = '';
                 photoFeed.appendChild(fragment);
-
                 if (photoFeed.children.length === 0) photoFeed.innerHTML = '<p id="feed-placeholder" class="text-gray-500">No posts found today from you or your friends!</p>';
                 else document.getElementById('feed-placeholder')?.remove();
-
             }, (error) => {
                  console.error("Error fetching feed:", error);
                  photoFeed.innerHTML = '<p class="text-red-400">Error loading feed.</p>';
@@ -878,26 +859,21 @@
         }
         
         function renderDailyPosts(profileData, postsToday) {
-            const currentUser = auth.currentUser;
             const dailySlotsUsed = profileData.dailySlotsUsed || []; 
             dailyPostsContainer.innerHTML = ''; 
-
             for (let i = 0; i < POST_SLOTS_MAX; i++) {
                 const div = document.createElement('div');
                 div.className = 'compact-list-item daily-post-card flex justify-between items-center';
                 const postId = dailySlotsUsed[i]; 
-                
                 if (postId) {
                     const postData = postsToday[postId];
                     const name = postData ? (postData.title || 'TITLE MISSING') : `Slot #${i + 1} Used & Deleted`;
                     const isViewable = postData && postData.title; 
-
                     div.innerHTML = `
                         <div class="flex-grow overflow-hidden whitespace-nowrap mr-2">
                             <span class="font-semibold inline-block title-text-span">${name}</span>
                         </div>
                         ${isViewable ? `<button class="view-post-btn text-indigo-400 hover:text-indigo-500 transition px-2 py-1" title="View Post"><i class="fas fa-eye"></i></button>` : `<span class="text-gray-600 text-sm">${postData ? 'No Title' : 'Slot Used'}</span>`}`;
-                    
                     if (isViewable) {
                         div.querySelector('.view-post-btn').addEventListener('click', () => openPhotoModal(postId));
                     } else if (postData && !postData.title) {
@@ -921,22 +897,17 @@
              const userProfileRef = getUserProfileDocRef(user.uid);
              const startOfDay = new Date();
              startOfDay.setHours(0, 0, 0, 0);
-
              let currentProfileData = {};
              let currentPostsData = {};
-
              const postsQuery = query(DAILY_PHOTO_COLLECTION, where('creatorUid', '==', user.uid), where('createdAt', '>=', startOfDay), orderBy('createdAt', 'asc'));
-             
              const unsubscribePostsCache = onSnapshot(postsQuery, (snapshot) => {
                 currentPostsData = snapshot.docs.reduce((acc, doc) => ({ ...acc, [doc.id]: doc.data() }), {});
                 renderDailyPosts(currentProfileData, currentPostsData);
              });
-             
              UNSUBSCRIBE_DAILY_SLOTS_LISTENER = onSnapshot(userProfileRef, (profileSnap) => {
                 currentProfileData = profileSnap.data() || {};
                 renderDailyPosts(currentProfileData, currentPostsData);
              });
-             
              setupDailyPostsListener.unsubscribe = () => {
                  unsubscribePostsCache();
                  UNSUBSCRIBE_DAILY_SLOTS_LISTENER();
@@ -961,29 +932,23 @@
         async function handlePostCreationLogic(file, slotIndex) {
             const currentUser = auth.currentUser;
             const userProfileRef = getUserProfileDocRef(currentUser.uid);
-            
             let title = document.getElementById('post-title-input').value.trim();
             if (!title) { showMessage(uploadMessage, 'Title cannot be empty.', 'error'); return; }
             if (title.length > 48) title = title.substring(0, 48);
             const cleanedTitle = await cleanText(title, 'post title');
-            
             const createBtn = document.getElementById('create-post-btn');
             createBtn.disabled = true;
             createBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Creating...`;
-
             try {
                 const userProfileSnap = await getDoc(userProfileRef);
                 if ((userProfileSnap.data().dailySlotsUsed || []).length !== slotIndex) throw new Error("Slot index mismatch. Please refresh.");
-                
                 const imageBase64 = await compressImage(file);
                 const newPostRef = doc(DAILY_PHOTO_COLLECTION);
-                
                 await setDoc(newPostRef, {
                     creatorUid: currentUser.uid, creatorUsername: CURRENT_USERNAME, createdAt: serverTimestamp(),
                     imageBase64, title: cleanedTitle, hearts: [], comments: []
                 });
                 await updateDoc(userProfileRef, { dailySlotsUsed: arrayUnion(newPostRef.id) });
-
                 closeUploadMenu();
                 showMessage(uploadMessage, 'Post created successfully!', 'success');
             } catch (error) {
@@ -1003,25 +968,18 @@
         });
         
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => uploadDropArea.addEventListener(eventName, e => e.preventDefault()));
-        ['dragenter', 'dragover'].forEach(eventName => {
-            uploadDropArea.addEventListener(eventName, () => uploadDropArea.classList.add('drag-over'));
-        });
-        ['dragleave', 'drop'].forEach(eventName => {
-            uploadDropArea.addEventListener(eventName, () => uploadDropArea.classList.remove('drag-over'));
-        });
+        ['dragenter', 'dragover'].forEach(eventName => uploadDropArea.addEventListener(eventName, () => uploadDropArea.classList.add('drag-over')));
+        ['dragleave', 'drop'].forEach(eventName => uploadDropArea.addEventListener(eventName, () => uploadDropArea.classList.remove('drag-over')));
         uploadDropArea.addEventListener('drop', e => handleFileUpload(e.dataTransfer.files[0]));
         
         function openPhotoModal(photoId) {
             const modalContentContainer = document.getElementById('modal-content-container');
             modalContentContainer.innerHTML = `<div class="flex justify-center items-center p-8"><i class="fas fa-spinner fa-spin text-3xl text-white"></i></div>`;
             photoModal.classList.remove('hidden');
-            
             const photoRef = doc(DAILY_PHOTO_COLLECTION, photoId);
             const currentUser = auth.currentUser;
-            
             MODAL_UNSUBSCRIBE_LISTENER();
             UNREAD_COMMENTS_COUNT = 0;
-
             const handleScroll = (commentsSection) => {
                 if (!commentsSection) return;
                 const isScrolledToBottom = commentsSection.scrollHeight - commentsSection.clientHeight <= commentsSection.scrollTop + 20;
@@ -1031,24 +989,20 @@
                 badge.classList.toggle('hidden', UNREAD_COMMENTS_COUNT <= 0);
                 badge.textContent = UNREAD_COMMENTS_COUNT > 99 ? '99+' : UNREAD_COMMENTS_COUNT;
             };
-
             MODAL_UNSUBSCRIBE_LISTENER = onSnapshot(photoRef, (updatedSnap) => {
                 const isModalAlreadyOpen = !!document.getElementById('photo-view-main');
                 if (!updatedSnap.exists()) {
                     closePhotoModal();
                     return showCustomModal("Post Expired", "This daily photo has been deleted.");
                 }
-                
                 const photoData = updatedSnap.data();
                 const hearts = photoData.hearts || [];
                 const hasHearted = hearts.includes(currentUser.uid);
                 const comments = (photoData.comments || []).sort((a, b) => (a.timestamp?.toDate() || 0) - (b.timestamp?.toDate() || 0));
-
                 if (!photoData.title && !isModalAlreadyOpen) {
                     closePhotoModal();
                     return openTitleModal(photoId);
                 }
-                
                 if (!isModalAlreadyOpen) {
                     modalContentContainer.innerHTML = `
                         <div id="photo-view-main" class="flex flex-col md:flex-row gap-6 w-full h-full flex-grow">
@@ -1090,17 +1044,14 @@
                                 </div>
                             </div>
                         </div>`;
-                    
                     const commentsSection = document.getElementById('comments-section');
                     setTimeout(() => commentsSection.scrollTop = commentsSection.scrollHeight, 50);
                     commentsSection.addEventListener('scroll', () => handleScroll(commentsSection));
                     handleScroll(commentsSection);
-
                 } else {
                     document.querySelector('#heart-btn').dataset.hearted = hasHearted;
                     document.querySelector('#heart-btn').className = `text-3xl ${hasHearted ? 'text-red-500' : 'text-gray-400'} hover:text-red-500 transition`;
                     document.querySelector('#heart-btn + span').textContent = formatCount(hearts.length);
-
                     const commentsSection = document.getElementById('comments-section');
                     const oldCommentCount = commentsSection.children.length;
                     const wasScrolledToBottom = commentsSection.scrollHeight - commentsSection.clientHeight <= commentsSection.scrollTop + 20;
@@ -1116,26 +1067,18 @@
         
         photoModal.addEventListener('click', e => {
             if (e.target === photoModal || e.target.closest('#close-modal-btn')) closePhotoModal();
-            
             const heartBtn = e.target.closest('#heart-btn');
             if (heartBtn) {
                 const photoId = heartBtn.dataset.postId;
-                if (Date.now() - LAST_HEART_TIMESTAMP < HEART_DELAY_MS) {
-                    return; 
-                }
+                if (Date.now() - LAST_HEART_TIMESTAMP < HEART_DELAY_MS) return; 
                 LAST_HEART_TIMESTAMP = Date.now();
                 const isHearted = heartBtn.dataset.hearted === 'true';
                 updateDoc(doc(DAILY_PHOTO_COLLECTION, photoId), { 
                     hearts: isHearted ? arrayRemove(auth.currentUser.uid) : arrayUnion(auth.currentUser.uid) 
                 });
             }
-
             const imageToggle = e.target.closest('[data-image-toggle]');
-            if (imageToggle) {
-                const modalContentContainer = document.getElementById('modal-content-container');
-                modalContentContainer.classList.toggle('fullscreen-image-mode');
-            }
-
+            if (imageToggle) document.getElementById('modal-content-container').classList.toggle('fullscreen-image-mode');
             const deleteTrigger = e.target.closest('#delete-post-trigger-btn');
             if (deleteTrigger) {
                 document.getElementById('photo-view-main').style.opacity = '0.1';
@@ -1179,7 +1122,6 @@
                 const cleanedText = await cleanText(text, 'comment');
                 const currentPostId = document.getElementById('heart-btn')?.dataset.postId;
                 if (!currentPostId) throw new Error("Could not find current post ID for comment.");
-                
                 await updateDoc(doc(DAILY_PHOTO_COLLECTION, currentPostId), { comments: arrayUnion({ uid: auth.currentUser.uid, username: CURRENT_USERNAME, text: cleanedText, timestamp: new Date() }) });
                 input.value = '';
                 LAST_COMMENT_TIMESTAMP = Date.now();
@@ -1216,20 +1158,16 @@
             const code = input.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
             input.value = code; 
             if (code.length !== 8) return showMessage(addFriendMessage, 'Code must be 8 characters.');
-            
             const codeDocSnap = await getDoc(getFriendCodeDocRef(code));
             if (!codeDocSnap.exists()) return showMessage(addFriendMessage, 'Friend code not found.');
-
             const friendUid = codeDocSnap.data().userId;
             if (friendUid === auth.currentUser.uid) return showMessage(addFriendMessage, "You can't add yourself.", 'error');
-            
             try {
                 const friendProfileRef = getUserProfileDocRef(friendUid);
                 const friendProfileSnap = await getDoc(friendProfileRef);
                 const data = friendProfileSnap.data() || {};
                 if (data.friends?.includes(auth.currentUser.uid)) return showMessage(addFriendMessage, 'You are already friends.', 'success');
                 if (data.pending_requests?.includes(auth.currentUser.uid)) return showMessage(addFriendMessage, 'Friend request already sent!', 'success');
-                
                 await updateDoc(friendProfileRef, { pending_requests: arrayUnion(auth.currentUser.uid) });
                 showMessage(addFriendMessage, 'Friend request sent!', 'success');
                 input.value = '';
@@ -1243,21 +1181,26 @@
         // NEW: MESSENGER LOGIC
         // =========================================================================
 
-        function openChatModal(friendUid, friendUsername) {
+        function openChatView(friendUid, friendUsername) {
             CURRENT_CHAT_PARTNER = { uid: friendUid, username: friendUsername };
-            chatModalTitle.textContent = `Chat with ${friendUsername}`;
+            chatViewTitle.textContent = `Chat with ${friendUsername}`;
             chatMessagesContainer.innerHTML = '';
-            chatModal.classList.remove('hidden');
-            setTimeout(() => chatModal.classList.add('opacity-100'), 10);
+            messengerUi.style.display = 'none';
+            chatViewContainer.classList.remove('hidden');
             listenForChatMessages(friendUid);
         }
 
-        function closeChatModal() {
-            chatModal.classList.remove('opacity-100');
-            chatModal.classList.add('opacity-0');
-            setTimeout(() => chatModal.classList.add('hidden'), 300);
+        function closeChatView() {
+            chatViewContainer.classList.add('hidden');
+            messengerUi.style.display = 'grid';
             UNSUBSCRIBE_CHAT_LISTENER();
             CURRENT_CHAT_PARTNER = null;
+        }
+
+        function isSameDay(d1, d2) {
+            return d1.getFullYear() === d2.getFullYear() &&
+                   d1.getMonth() === d2.getMonth() &&
+                   d1.getDate() === d2.getDate();
         }
 
         function listenForChatMessages(friendUid) {
@@ -1268,20 +1211,45 @@
 
             UNSUBSCRIBE_CHAT_LISTENER = onSnapshot(chatDocRef, (snap) => {
                 chatMessagesContainer.innerHTML = '';
+                let lastMessageDate = null;
+
                 if (snap.exists()) {
                     const messages = snap.data().messages || [];
-                    messages.forEach(msg => renderChatMessage(msg));
+                    messages.forEach(msg => {
+                        const currentMessageDate = msg.timestamp?.toDate();
+                        if (!currentMessageDate) return;
+
+                        if (!lastMessageDate || !isSameDay(lastMessageDate, currentMessageDate)) {
+                            const dateSeparator = document.createElement('div');
+                            dateSeparator.className = 'chat-date-separator';
+                            dateSeparator.textContent = currentMessageDate.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+                            chatMessagesContainer.appendChild(dateSeparator);
+                        }
+                        renderChatMessage(msg);
+                        lastMessageDate = currentMessageDate;
+                    });
                 }
                 setTimeout(() => chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight, 50);
             });
         }
 
         function renderChatMessage(messageData) {
-            const div = document.createElement('div');
+            const wrapper = document.createElement('div');
+            wrapper.className = 'chat-message-wrapper';
+
+            const bubble = document.createElement('div');
             const isSent = messageData.senderId === auth.currentUser.uid;
-            div.className = `chat-message-bubble ${isSent ? 'chat-message-sent' : 'chat-message-received'}`;
-            div.textContent = messageData.text;
-            chatMessagesContainer.appendChild(div);
+            bubble.className = `chat-message-bubble ${isSent ? 'chat-message-sent' : 'chat-message-received'}`;
+            bubble.textContent = messageData.text;
+
+            const timestamp = document.createElement('p');
+            const time = messageData.timestamp?.toDate()?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || '';
+            timestamp.textContent = time;
+            timestamp.className = `chat-timestamp ${isSent ? 'sent-timestamp' : 'received-timestamp'}`;
+
+            wrapper.appendChild(bubble);
+            wrapper.appendChild(timestamp);
+            chatMessagesContainer.appendChild(wrapper);
         }
 
         async function handleSendMessage(e) {
@@ -1296,7 +1264,7 @@
                 text: cleanedText,
                 senderId: currentUser.uid,
                 senderUsername: CURRENT_USERNAME,
-                timestamp: serverTimestamp()
+                timestamp: new Date() // FIX: Use client-side timestamp
             };
             
             const chatId = [currentUser.uid, CURRENT_CHAT_PARTNER.uid].sort().join('_');
@@ -1307,22 +1275,16 @@
             try {
                 const chatDocSnap = await getDoc(chatDocRef);
                 const currentMessages = chatDocSnap.exists() ? chatDocSnap.data().messages || [] : [];
-                
                 currentMessages.push(newMessage);
-                
-                // Keep only the last 3 messages
-                const updatedMessages = currentMessages.slice(-3);
-
+                const updatedMessages = currentMessages.slice(-3); // Keep only the last 3
                 await setDoc(chatDocRef, { messages: updatedMessages }, { merge: true });
-
             } catch (error) {
                 console.error("Error sending message:", error);
-                // Optionally show an error to the user
-                chatMessageInput.value = text; // Put text back on error
+                chatMessageInput.value = text;
             }
         }
-
-        chatModal.addEventListener('click', e => { if (e.target === chatModal || e.target.closest('#chat-modal-close-btn')) closeChatModal(); });
+        
+        chatBackButton.addEventListener('click', closeChatView);
         chatMessageForm.addEventListener('submit', handleSendMessage);
 
         // =========================================================================
@@ -1372,10 +1334,8 @@
                     CURRENT_FRIENDS = friends; 
                     setupFriendsFeedListener(user); 
                 }
-                
                 const pendingRequests = profileData.pending_requests || [];
                 let combinedHtml = '';
-
                 if (pendingRequests.length > 0) {
                     const reqProfiles = await Promise.all(pendingRequests.map(uid => getDoc(getUserProfileDocRef(uid))));
                     combinedHtml += `<div class="p-2 text-sm font-bold text-yellow-400 bg-yellow-900/30 rounded-t-md -mx-1 -mt-1 mb-2">Pending Requests (${pendingRequests.length})</div>`;
@@ -1384,7 +1344,6 @@
                     });
                     combinedHtml += `<div class="border-b border-gray-700 my-2"></div>`;
                 }
-
                 if (friends.length > 0) {
                     const friendProfiles = await Promise.all(friends.map(uid => getDoc(getUserProfileDocRef(uid))));
                     friendProfiles.forEach((snap, i) => {
@@ -1399,7 +1358,6 @@
                             </div>`;
                     });
                 }
-                
                 if (!combinedHtml) combinedHtml = '<p class="text-sm text-gray-500 p-2 text-center">No friends yet. Add one above!</p>';
                 friendsListItems.innerHTML = combinedHtml;
             });
@@ -1408,8 +1366,7 @@
                 const acceptBtn = e.target.closest('.accept-request-btn');
                 const rejectBtn = e.target.closest('.reject-request-btn');
                 const removeBtn = e.target.closest('.remove-friend-btn');
-                const chatTrigger = e.target.closest('[data-action="open-chat"]'); // NEW
-
+                const chatTrigger = e.target.closest('[data-action="open-chat"]');
                 if (acceptBtn) friendRequestLogic(acceptBtn.dataset.uid, 'accept', user);
                 else if (rejectBtn) friendRequestLogic(rejectBtn.dataset.uid, 'reject', user);
                 else if (removeBtn) {
@@ -1418,8 +1375,8 @@
                     batch.update(getUserProfileDocRef(removeBtn.dataset.uid), { friends: arrayRemove(user.uid) });
                     await batch.commit();
                     showMessage(addFriendMessage, 'Friend removed.', 'success');
-                } else if (chatTrigger) { // NEW
-                    openChatModal(chatTrigger.dataset.uid, chatTrigger.dataset.username);
+                } else if (chatTrigger) {
+                    openChatView(chatTrigger.dataset.uid, chatTrigger.dataset.username);
                 }
             });
         }
