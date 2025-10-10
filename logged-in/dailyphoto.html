@@ -520,7 +520,7 @@
 
 
         // --- Firestore Document References & Collections ---
-        const getUserProfileDocRef = (userId) => doc(db, 'artifacts', appId, 'users', userId, 'metadata', 'user_profile');
+        const getUserProfileDocRef = (userId) => doc(db, 'users', userId);
         const getFriendCodeDocRef = (code) => doc(db, 'artifacts', appId, 'public', 'data', 'friend_codes', code);
         const DAILY_PHOTO_COLLECTION = collection(db, 'daily_photos');
 
@@ -728,23 +728,25 @@
             try {
                 const userProfileRef = getUserProfileDocRef(user.uid);
                 let userProfileSnap = await getDoc(userProfileRef);
-                
-                if (!userProfileSnap.exists() || !userProfileSnap.data().username) {
-                    let defaultUsername = `DailyUser-${Math.floor(Math.random() * 8999) + 1000}`;
-                    defaultUsername = await cleanText(defaultUsername, 'username');
-                    await setDoc(userProfileRef, { 
-                        username: defaultUsername, 
-                        friends: [],
-                        dailySlotsUsed: [],
-                        lastPostReset: serverTimestamp(),
-                        pending_requests: []
-                    }, { merge: true });
-                    userProfileSnap = await getDoc(userProfileRef);
-                } else if (!userProfileSnap.data().pending_requests) {
-                    await updateDoc(userProfileRef, { pending_requests: [] });
-                }
 
-                CURRENT_USERNAME = userProfileSnap.data()?.username;
+                if (!userProfileSnap.exists() || !userProfileSnap.data()?.username) {
+                    console.error("User profile document or username field not found for UID:", user.uid);
+                    showCustomModal("Profile Error", `Your user profile could not be loaded. This might be because it hasn't been created in the database yet. Please contact support.`);
+                    throw new Error(`User profile or username not found for ${user.uid}`);
+                }
+                
+                const profileData = userProfileSnap.data();
+                CURRENT_USERNAME = profileData.username;
+
+                // Ensure app-specific fields exist on the user document without overwriting
+                if (profileData.friends === undefined || profileData.dailySlotsUsed === undefined || profileData.lastPostReset === undefined || profileData.pending_requests === undefined) {
+                    await setDoc(userProfileRef, {
+                        friends: profileData.friends || [],
+                        dailySlotsUsed: profileData.dailySlotsUsed || [],
+                        lastPostReset: profileData.lastPostReset || serverTimestamp(),
+                        pending_requests: profileData.pending_requests || []
+                    }, { merge: true }); // Use set with merge to add fields without overwriting existing ones
+                }
 
                 const codeQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'friend_codes'), where('userId', '==', user.uid), limit(1));
                 const codeQuerySnap = await getDocs(codeQuery);
@@ -1046,7 +1048,6 @@
                         <div id="photo-view-main" class="flex flex-col md:flex-row gap-6 w-full h-full flex-grow">
                             <div id="photo-display-area" class="flex-grow flex justify-center items-center cursor-pointer relative" data-image-toggle>
                                 <img id="modal-main-image" src="${photoData.imageBase64}" alt="${photoData.title}" class="rounded-lg photo-modal-img">
-                                <span class="absolute bottom-2 text-white/70 text-sm italic pointer-events-none">Click image to view fullscreen.</span>
                             </div>
                             <div id="photo-info-panel" class="w-full md:w-[350px] flex-shrink-0 flex flex-col relative">
                                 <button id="close-modal-btn" class="absolute top-0 right-0 p-2 text-white/50 hover:text-white transition" title="Close"><i class="fas fa-times"></i></button>
@@ -1292,8 +1293,7 @@
                     const reqProfiles = await Promise.all(pendingRequests.map(uid => getDoc(getUserProfileDocRef(uid))));
                     combinedHtml += `<div class="p-2 text-sm font-bold text-yellow-400 bg-yellow-900/30 rounded-t-md -mx-1 -mt-1 mb-2">Pending Requests (${pendingRequests.length})</div>`;
                     reqProfiles.forEach((snap, i) => {
-                        const username = snap.exists() ? snap.data().username : 'Unknown User';
-                        combinedHtml += `<div class="compact-list-item flex justify-between items-center bg-yellow-900/10"><span class="font-semibold text-yellow-300">${username}</span><div class="flex gap-2"><button data-uid="${pendingRequests[i]}" class="accept-request-btn text-green-400 hover:text-green-500 px-2 py-1" title="Accept"><i class="fas fa-check"></i></button><button data-uid="${pendingRequests[i]}" class="reject-request-btn text-red-400 hover:text-red-500 px-2 py-1" title="Reject"><i class="fas fa-times"></i></button></div></div>`;
+                        combinedHtml += `<div class="compact-list-item flex justify-between items-center bg-yellow-900/10"><span class="font-semibold text-yellow-300">${snap.data()?.username || 'Unknown'}</span><div class="flex gap-2"><button data-uid="${pendingRequests[i]}" class="accept-request-btn text-green-400 hover:text-green-500 px-2 py-1" title="Accept"><i class="fas fa-check"></i></button><button data-uid="${pendingRequests[i]}" class="reject-request-btn text-red-400 hover:text-red-500 px-2 py-1" title="Reject"><i class="fas fa-times"></i></button></div></div>`;
                     });
                     combinedHtml += `<div class="border-b border-gray-700 my-2"></div>`;
                 }
@@ -1301,8 +1301,7 @@
                 if (friends.length > 0) {
                     const friendProfiles = await Promise.all(friends.map(uid => getDoc(getUserProfileDocRef(uid))));
                     friendProfiles.forEach((snap, i) => {
-                        const username = snap.exists() ? snap.data().username : 'Unknown User';
-                        combinedHtml += `<div class="compact-list-item flex justify-between items-center"><span class="font-semibold">${username}</span><button data-uid="${friends[i]}" class="remove-friend-btn text-red-400 hover:text-red-500 px-2 py-1" title="Remove Friend"><i class="fas fa-user-minus"></i></button></div>`;
+                        combinedHtml += `<div class="compact-list-item flex justify-between items-center"><span class="font-semibold">${snap.data()?.username || 'Unknown'}</span><button data-uid="${friends[i]}" class="remove-friend-btn text-red-400 hover:text-red-500 px-2 py-1" title="Remove Friend"><i class="fas fa-user-minus"></i></button></div>`;
                     });
                 }
                 
@@ -1325,7 +1324,7 @@
                 }
             });
         }
-
     </script>
 </body>
 </html>
+
