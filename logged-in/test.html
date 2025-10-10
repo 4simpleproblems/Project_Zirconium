@@ -303,7 +303,7 @@
              border-radius: 0.5rem;
         }
         
-        /* --- NEW: MESSENGER VIEW STYLES --- */
+        /* --- MESSENGER VIEW STYLES --- */
         #chat-view-container {
             position: fixed;
             top: 0; left: 0;
@@ -427,7 +427,7 @@
     </div>
 
 
-    <main id="messenger-ui" class="messenger-container">
+    <main id="messenger-ui" class="messenger-container" style="display: none;">
         
         <aside class="left-panel">
             
@@ -569,7 +569,6 @@
         const imagePreview = document.getElementById('image-preview'); 
         const createPostForm = document.getElementById('create-post-form'); 
         const uploadDropArea = document.getElementById('upload-drop-area'); 
-        // NEW: Chat View Elements
         const chatViewContainer = document.getElementById('chat-view-container');
         const chatViewTitle = document.getElementById('chat-view-title');
         const chatMessagesContainer = document.getElementById('chat-messages-container');
@@ -1172,13 +1171,13 @@
                 showMessage(addFriendMessage, 'Friend request sent!', 'success');
                 input.value = '';
             } catch (error) {
-                 showMessage(addFriendMessage, 'Failed to send request. Check console.', 'error');
+                 showMessage(addFriendMessage, `Failed to send request. Check console.', 'error'`);
                  console.error("Send friend request failed:", error);
             }
         });
         
         // =========================================================================
-        // NEW: MESSENGER LOGIC
+        // MESSENGER LOGIC
         // =========================================================================
 
         function openChatView(friendUid, friendUsername) {
@@ -1264,7 +1263,7 @@
                 text: cleanedText,
                 senderId: currentUser.uid,
                 senderUsername: CURRENT_USERNAME,
-                timestamp: new Date() // FIX: Use client-side timestamp
+                timestamp: new Date() // Use client-side timestamp
             };
             
             const chatId = [currentUser.uid, CURRENT_CHAT_PARTNER.uid].sort().join('_');
@@ -1276,7 +1275,7 @@
                 const chatDocSnap = await getDoc(chatDocRef);
                 const currentMessages = chatDocSnap.exists() ? chatDocSnap.data().messages || [] : [];
                 currentMessages.push(newMessage);
-                const updatedMessages = currentMessages.slice(-3); // Keep only the last 3
+                const updatedMessages = currentMessages.slice(-3);
                 await setDoc(chatDocRef, { messages: updatedMessages }, { merge: true });
             } catch (error) {
                 console.error("Error sending message:", error);
