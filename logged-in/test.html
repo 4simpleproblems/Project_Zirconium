@@ -403,8 +403,8 @@
         <aside class="left-panel">
             
             <div class="mb-6 border-b border-gray-800 pb-4">
-                <h2 class="text-xl font-bold mb-2">Your Username</h2>
-                <p class="text-sm text-gray-400 mb-3">Share this username with friends to add them.</p>
+                <h2 class="text-xl font-bold mb-2">Your Friend Code</h2>
+                <p class="text-sm text-gray-400 mb-3">Share this code with friends to add them.</p>
                 <div id="friend-code-display" class="p-3 text-center bg-gray-900 rounded-md font-mono text-lg tracking-widest text-indigo-400">
                     Loading...
                 </div>
@@ -413,7 +413,7 @@
             <div class="mb-6 border-b border-gray-800 pb-4">
                 <h2 class="text-xl font-bold mb-2">Add a Friend</h2>
                 <form id="add-friend-form" class="flex gap-2">
-                    <input type="text" id="friend-code-input" placeholder="Enter Username" class="flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-left" title="Enter a friend's username">
+                    <input type="text" id="friend-code-input" placeholder="********" maxlength="8" class="friend-code-input-styled flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase tracking-widest text-center" style="font-family: monospace;" title="8 alphanumeric characters only">
                     <button type="submit" class="px-3 py-2 bg-indigo-600 rounded-md hover:bg-indigo-700 transition font-semibold" title="Send Request">
                         <i class="fas fa-user-plus"></i>
                     </button>
@@ -520,12 +520,8 @@
 
 
         // --- Firestore Document References & Collections ---
-        // NEW: The public collection where each document ID is the Firebase UID 
-        // and contains the searchable 'username' field.
-        const USER_PROFILES_COLLECTION = collection(db, 'user_profiles');
-        const getUserProfileDocRef = (userId) => doc(USER_PROFILES_COLLECTION, userId); 
-        
-        // REMOVED: getFriendCodeDocRef is no longer used for friend finding.
+        const getUserProfileDocRef = (userId) => doc(db, 'artifacts', appId, 'users', userId, 'metadata', 'user_profile');
+        const getFriendCodeDocRef = (code) => doc(db, 'artifacts', appId, 'public', 'data', 'friend_codes', code);
         const DAILY_PHOTO_COLLECTION = collection(db, 'daily_photos');
 
         // =========================================================================
@@ -641,7 +637,21 @@
             setTimeout(() => titleModal.classList.add('hidden'), 300);
         }
 
-        /* REMOVED: generateUniqueFriendCode function is no longer needed */
+        async function generateUniqueFriendCode() {
+            let code, isUnique = false;
+            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            try {
+                while (!isUnique) {
+                    code = Array.from({ length: 8 }, () => characters.charAt(Math.floor(Math.random() * characters.length))).join('');
+                    const codeDoc = await getDoc(getFriendCodeDocRef(code));
+                    if (!codeDoc.exists()) isUnique = true;
+                }
+                return code;
+            } catch (error) {
+                console.error("Error generating friend code:", error);
+                throw new Error("Failed to generate unique friend code.");
+            }
+        }
         
         function compressImage(file) {
             return new Promise((resolve, reject) => {
@@ -714,42 +724,41 @@
             }
         }
 
-        // UPDATED FUNCTION: Renamed and simplified for username-based profile setup
-        async function handleUserProfileSetup(user) {
+        async function handleFriendCodeLogic(user) {
             try {
                 const userProfileRef = getUserProfileDocRef(user.uid);
                 let userProfileSnap = await getDoc(userProfileRef);
                 
-                // If profile doesn't exist or username is missing, create a default profile.
                 if (!userProfileSnap.exists() || !userProfileSnap.data().username) {
                     let defaultUsername = `DailyUser-${Math.floor(Math.random() * 8999) + 1000}`;
                     defaultUsername = await cleanText(defaultUsername, 'username');
-                    
-                    // NOTE: The entire profile is now stored in the public collection 'user_profiles'
                     await setDoc(userProfileRef, { 
                         username: defaultUsername, 
                         friends: [],
                         dailySlotsUsed: [],
-                        lastPostReset: serverTimestamp(),
-                        pending_requests: []
+                        lastPostReset: serverTimestamp()
                     }, { merge: true });
                     userProfileSnap = await getDoc(userProfileRef);
-                } else if (!userProfileSnap.data().pending_requests) {
-                    await updateDoc(userProfileRef, { pending_requests: [] });
                 }
 
                 CURRENT_USERNAME = userProfileSnap.data()?.username;
 
-                // NEW: Display the username, which is now the searchable public identifier.
-                friendCodeDisplay.textContent = CURRENT_USERNAME;
+                const codeQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'friend_codes'), where('userId', '==', user.uid), limit(1));
+                const codeQuerySnap = await getDocs(codeQuery);
                 
+                let existingCode = codeQuerySnap.empty ? null : codeQuerySnap.docs[0].id;
+                if (!existingCode) {
+                    friendCodeDisplay.textContent = 'Generating...';
+                    existingCode = await generateUniqueFriendCode();
+                    await setDoc(getFriendCodeDocRef(existingCode), { userId: user.uid, createdAt: serverTimestamp() });
+                }
+                friendCodeDisplay.textContent = existingCode;
             } catch (error) {
-                console.error("Profile Setup Failed:", error);
-                showCustomModal("Setup Error", `Failed to set up your User Profile. This may be due to missing Firestore security rules.`);
-                throw new Error("Failed to set up user profile.");
+                console.error("Profile/Friend Code Setup Failed:", error);
+                showCustomModal("Code Setup Error", `Failed to set up your Friend Code. This may be due to missing Firestore security rules.`);
+                throw new Error("Failed to set up user profile and friend code.");
             }
         }
-
 
         async function cleanupOldPosts(user) {
             try {
@@ -1199,47 +1208,54 @@
             }
         });
 
-        // UPDATED: Friend search logic now queries by username
         addFriendForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const input = document.getElementById('friend-code-input');
-            // UPDATED: Use input value directly as the username to search for
-            const username = input.value.trim(); 
+            const friendCodeInput = document.getElementById('friend-code-input');
+            const code = friendCodeInput.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+            friendCodeInput.value = code; 
             
-            if (username.length === 0) return showMessage(addFriendMessage, 'Enter a username.');
+            const currentUser = auth.currentUser;
             
-            // NEW: Query the USER_PROFILES_COLLECTION for a matching username field
-            const q = query(USER_PROFILES_COLLECTION, where('username', '==', username), limit(1));
-            const querySnap = await getDocs(q);
-            
-            if (querySnap.empty) return showMessage(addFriendMessage, 'User not found.');
+            if (code.length !== 8) {
+                showMessage(addFriendMessage, 'Friend code must be 8 alphanumeric characters (A-Z, 0-9).');
+                return;
+            }
 
-            // NEW: The friend's UID is the document ID of the matching profile
-            const friendUid = querySnap.docs[0].id;
-            if (friendUid === auth.currentUser.uid) return showMessage(addFriendMessage, "You can't add yourself.", 'error');
+            const codeDocSnap = await getDoc(getFriendCodeDocRef(code));
+            if (!codeDocSnap.exists()) {
+                showMessage(addFriendMessage, 'Friend code not found.');
+                return;
+            }
+
+            const friendUid = codeDocSnap.data().userId;
+            
+            if (friendUid === currentUser.uid) {
+                showMessage(addFriendMessage, "You can't add yourself.", 'error');
+                return;
+            }
+            if (CURRENT_FRIENDS.includes(friendUid)) {
+                showMessage(addFriendMessage, 'You are already friends with this user.', 'success');
+                return;
+            }
             
             try {
-                // The rest of the logic remains the same, using the retrieved friendUid
-                const friendProfileRef = getUserProfileDocRef(friendUid);
-                const friendProfileSnap = await getDoc(friendProfileRef);
-                const data = friendProfileSnap.data() || {};
-                if (data.friends?.includes(auth.currentUser.uid)) return showMessage(addFriendMessage, 'You are already friends.', 'success');
-                if (data.pending_requests?.includes(auth.currentUser.uid)) return showMessage(addFriendMessage, 'Friend request already sent!', 'success');
-                
-                await updateDoc(friendProfileRef, { pending_requests: arrayUnion(auth.currentUser.uid) });
-                showMessage(addFriendMessage, 'Friend request sent!', 'success');
-                input.value = '';
+                const batch = writeBatch(db);
+                batch.update(getUserProfileDocRef(currentUser.uid), { friends: arrayUnion(friendUid) });
+                batch.update(getUserProfileDocRef(friendUid), { friends: arrayUnion(currentUser.uid) });
+                await batch.commit();
+
+                showMessage(addFriendMessage, 'Friend added successfully!', 'success');
+                friendCodeInput.value = '';
             } catch (error) {
-                 showMessage(addFriendMessage, 'Failed to send request. Check console.', 'error');
-                 console.error("Send friend request failed:", error);
+                 showMessage(addFriendMessage, 'Failed to add friend. Check console.', 'error');
+                 console.error("Add friend failed:", error);
             }
         });
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 try {
-                    // UPDATED CALL
-                    await handleUserProfileSetup(user); 
+                    await handleFriendCodeLogic(user); 
                     await cleanupOldPosts(user); 
                     setupFriendListListener(user); 
                     setupDailyPostsListener(user); // Initial setup for both profile and post listeners
@@ -1255,68 +1271,56 @@
             }
         });
 
-        const friendRequestLogic = async (friendUid, actionType, user) => {
-            const batch = writeBatch(db);
-            batch.update(getUserProfileDocRef(user.uid), { pending_requests: arrayRemove(friendUid) });
-            if (actionType === 'accept') {
-                batch.update(getUserProfileDocRef(user.uid), { friends: arrayUnion(friendUid) });
-                batch.update(getUserProfileDocRef(friendUid), { friends: arrayUnion(user.uid) });
-            }
-            try {
-                await batch.commit();
-                showMessage(addFriendMessage, `Friend request ${actionType}ed!`, 'success');
-            } catch (error) {
-                 showMessage(addFriendMessage, `Failed to ${actionType} request.`, 'error');
-                 console.error(`Friend request ${actionType} failed:`, error);
-            }
-        };
-
         function setupFriendListListener(user) {
             onSnapshot(getUserProfileDocRef(user.uid), async (docSnap) => {
-                const profileData = docSnap.data() || {};
-                const friends = profileData.friends || [];
-                // Only re-run the feed listener if the actual friends list changes
-                if (friends.length !== CURRENT_FRIENDS.length || !friends.every((val, i) => val === CURRENT_FRIENDS[i])) {
-                    CURRENT_FRIENDS = friends; 
-                    setupFriendsFeedListener(user); 
+                const friends = docSnap.data()?.friends || [];
+                
+                if (friends.length === CURRENT_FRIENDS.length && friends.every((val, index) => val === CURRENT_FRIENDS[index])) {
+                    return;
+                }
+
+                CURRENT_FRIENDS = friends; 
+                setupFriendsFeedListener(user); 
+
+                const container = friendsListItems; 
+                container.innerHTML = ''; 
+
+                if (friends.length === 0) {
+                    container.innerHTML = '<p class="text-sm text-gray-500 mt-2">No friends yet. Add one above!</p>';
+                    return;
                 }
                 
-                const pendingRequests = profileData.pending_requests || [];
-                let combinedHtml = '';
+                const friendProfiles = await Promise.all(friends.map(uid => getDoc(getUserProfileDocRef(uid))));
 
-                if (pendingRequests.length > 0) {
-                    const reqProfiles = await Promise.all(pendingRequests.map(uid => getDoc(getUserProfileDocRef(uid))));
-                    combinedHtml += `<div class="p-2 text-sm font-bold text-yellow-400 bg-yellow-900/30 rounded-t-md -mx-1 -mt-1 mb-2">Pending Requests (${pendingRequests.length})</div>`;
-                    reqProfiles.forEach((snap, i) => {
-                        combinedHtml += `<div class="compact-list-item flex justify-between items-center bg-yellow-900/10"><span class="font-semibold text-yellow-300">${snap.data()?.username || 'Unknown'}</span><div class="flex gap-2"><button data-uid="${pendingRequests[i]}" class="accept-request-btn text-green-400 hover:text-green-500 px-2 py-1" title="Accept"><i class="fas fa-check"></i></button><button data-uid="${pendingRequests[i]}" class="reject-request-btn text-red-400 hover:text-red-500 px-2 py-1" title="Reject"><i class="fas fa-times"></i></button></div></div>`;
+                friendProfiles.forEach((friendProfileSnap, index) => {
+                    const friendUid = friends[index];
+                    const username = friendProfileSnap.exists() ? friendProfileSnap.data().username : 'Unknown User';
+
+                    const div = document.createElement('div');
+                    div.className = 'compact-list-item flex justify-between items-center';
+                    div.innerHTML = `
+                        <span class="font-semibold">${username}</span>
+                        <button data-uid="${friendUid}" class="remove-friend-btn text-red-400 hover:text-red-500 transition px-2 py-1" title="Remove Friend">
+                            <i class="fas fa-user-minus"></i>
+                        </button>
+                    `;
+                    container.appendChild(div);
+                });
+
+                container.querySelectorAll('.remove-friend-btn').forEach(button => {
+                    button.addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        // Find the closest button element to ensure the click target is correct
+                        const friendUidToRemove = e.target.closest('button').dataset.uid;
+                        
+                        const batch = writeBatch(db);
+                        batch.update(getUserProfileDocRef(user.uid), { friends: arrayRemove(friendUidToRemove) });
+                        batch.update(getUserProfileDocRef(friendUidToRemove), { friends: arrayRemove(user.uid) });
+                        await batch.commit();
+
+                        showMessage(addFriendMessage, 'Friend removed successfully!', 'success');
                     });
-                    combinedHtml += `<div class="border-b border-gray-700 my-2"></div>`;
-                }
-
-                if (friends.length > 0) {
-                    const friendProfiles = await Promise.all(friends.map(uid => getDoc(getUserProfileDocRef(uid))));
-                    friendProfiles.forEach((snap, i) => {
-                        combinedHtml += `<div class="compact-list-item flex justify-between items-center"><span class="font-semibold">${snap.data()?.username || 'Unknown'}</span><button data-uid="${friends[i]}" class="remove-friend-btn text-red-400 hover:text-red-500 px-2 py-1" title="Remove Friend"><i class="fas fa-user-minus"></i></button></div>`;
-                    });
-                }
-                
-                if (!combinedHtml) combinedHtml = '<p class="text-sm text-gray-500 p-2 text-center">No friends yet. Add one above!</p>';
-                friendsListItems.innerHTML = combinedHtml;
-            });
-
-            friendsListItems.addEventListener('click', async (e) => {
-                const acceptBtn = e.target.closest('.accept-request-btn');
-                const rejectBtn = e.target.closest('.reject-request-btn');
-                const removeBtn = e.target.closest('.remove-friend-btn');
-                if (acceptBtn) friendRequestLogic(acceptBtn.dataset.uid, 'accept', user);
-                else if (rejectBtn) friendRequestLogic(rejectBtn.dataset.uid, 'reject', user);
-                else if (removeBtn) {
-                    const batch = writeBatch(db);
-                    batch.update(getUserProfileDocRef(user.uid), { friends: arrayRemove(removeBtn.dataset.uid) });
-                    batch.update(getUserProfileDocRef(removeBtn.dataset.uid), { friends: arrayRemove(user.uid) });
-                    await batch.commit();
-                    showMessage(addFriendMessage, 'Friend removed.', 'success');
-                }
+                });
             });
         }
     </script>
