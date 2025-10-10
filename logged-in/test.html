@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="../navigation.js"></script>
+    
 
     <style>
         /* BUBBLY ANIMATIONS: Keyframes for cute/bubbly effects */
@@ -26,8 +26,6 @@
             100% { box-shadow: 0 0 5px #4f46e5, 0 0 10px #4f46e5; }
         }
         
-        /* NOTE: Marquee animation removed per user request */
-
         /* --- FONT & BASE STYLING (THICKENED FONT) --- */
         body { 
             font-family: 'Geist', sans-serif; 
@@ -37,7 +35,6 @@
             font-weight: 300; 
         }
         
-        /* Ensure headings and strong text are slightly thicker but still thin */
         h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
             font-weight: 400 !important; 
         }
@@ -50,25 +47,25 @@
             max-width: 1400px;
             margin: 2rem auto;
             padding: 0 1rem;
+            transition: grid-template-columns 0.4s ease;
         }
 
-        /* --- CONSISTENT PANEL STYLING (UPDATED: Slight Rounding) --- */
-        .left-panel, .feed-panel { 
+        /* --- CONSISTENT PANEL STYLING --- */
+        .left-panel, .feed-panel, .messenger-panel { 
             background-color: #111111; 
             border: 1px solid #252525; 
-            border-radius: 1rem; /* UPDATED: Increased rounding */
+            border-radius: 1rem;
             padding: 1.5rem; 
-            height: fit-content;
+            height: calc(100vh - 4rem - 32px); /* Full viewport height minus margin and nav */
+            display: flex;
+            flex-direction: column;
         }
         
-        /* General input styling to use thin font */
         input.p-2 {
             font-weight: 300 !important; 
         }
 
-        /* --- Custom Friend Code Input Styling (8 character underlines) --- */
         .friend-code-input-styled {
-            /* Create 8 repeating lines for each character space */
             background-image: linear-gradient(to right, #252525 0%, #252525 90%);
             background-size: 12.5% 2px; 
             background-repeat: repeat-x;
@@ -80,14 +77,13 @@
             box-shadow: none !important;
         }
         .friend-code-input-styled:focus {
-             /* Change color on focus */
              background-image: linear-gradient(to right, #4f46e5 0%, #4f46e5 90%);
         }
         
-        /* --- Compact List Styling for Friends and Daily Posts (UPDATED: Slight Rounding) --- */
+        /* --- Compact List Styling --- */
         .compact-list-wrapper {
              background-color: #0d0d0d; 
-             border-radius: 0.75rem; /* UPDATED: Slightly rounded wrapper */
+             border-radius: 0.75rem;
              padding: 0.25rem 0.5rem; 
              border: 1px solid #1a1a1a;
              margin-top: 0.75rem;
@@ -99,53 +95,41 @@
         }
         
         /* Custom scrollbar styles */
-        .compact-list-items::-webkit-scrollbar, #chat-messages::-webkit-scrollbar { width: 8px; }
-        .compact-list-items::-webkit-scrollbar-thumb, #chat-messages::-webkit-scrollbar-thumb { background-color: #4f46e5; border-radius: 4px; }
-        .compact-list-items::-webkit-scrollbar-track, #chat-messages::-webkit-scrollbar-track { background-color: #1f2937; }
+        .compact-list-items::-webkit-scrollbar, #chat-messages::-webkit-scrollbar, #messenger-messages::-webkit-scrollbar { width: 8px; }
+        .compact-list-items::-webkit-scrollbar-thumb, #chat-messages::-webkit-scrollbar-thumb, #messenger-messages::-webkit-scrollbar-thumb { background-color: #4f46e5; border-radius: 4px; }
+        .compact-list-items::-webkit-scrollbar-track, #chat-messages::-webkit-scrollbar-track, #messenger-messages::-webkit-scrollbar-track { background-color: #1f2937; }
 
-        /* General style for a list item/card (Friends list & NEW Daily Posts) */
         .compact-list-item {
             background-color: transparent; 
-            border-radius: 0.5rem; /* UPDATED: Rounded item cards */
-            margin-bottom: 0.25rem; /* Spacing */
+            border-radius: 0.5rem;
+            margin-bottom: 0.25rem;
             padding: 0.5rem 0.5rem; 
             transition: background-color 0.2s;
-            /* Removed border-bottom for cleaner look with rounded cards */
             border-bottom: none;
         }
         .compact-list-item:hover {
             background-color: #1f1f1f;
-            transform: none; 
-        }
-        .compact-list-item:last-child {
-             border-bottom: none;
         }
         
-        /* NEW: Daily Post specific styles to match the friend cards */
-        .daily-post-card {
-            border-bottom: none; /* Ensure no border separation for rounded cards */
-        }
         .daily-post-card:last-child {
              border-bottom: none;
         }
         
-        /* FIX: Ensure comments section can scroll (UPDATED: Increased max-height for activation) */
         #comments-section {
             overflow-y: auto;
-            max-height: 50vh; /* Set maximum height to enforce scrolling */
+            max-height: 50vh;
             flex-grow: 1; 
         }
         
-        /* FIX: Added global break-words for comment text to prevent horizontal overflow */
         .comment-text {
             word-wrap: break-word;
             overflow-wrap: break-word;
         }
 
-        /* --- NEW: FEED DISPLAY STYLING --- */
+        /* --- FEED DISPLAY STYLING --- */
         .photo-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr); 
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); 
             gap: 1rem; 
         }
         .photo-thumbnail {
@@ -163,7 +147,6 @@
             transition: transform 0.3s ease;
         }
 
-        /* Overlay for darkening only */
         .overlay {
             position: absolute;
             top: 0;
@@ -174,23 +157,17 @@
             pointer-events: none; 
         }
         
-        /* UPDATED: Title Overlay (Title is now static and clipped) */
         .title-overlay {
             position: absolute;
             top: 0.5rem; 
             right: 0.5rem; 
-            
-            /* NEW: Label styling */
-            background-color: rgba(0, 0, 0, 0.75); /* Solid, dark background */
-            border-radius: 0.5rem; /* Label rounding */
-            padding: 0.25rem 0.5rem; /* Smaller padding for label look */
-            max-width: 70%; /* Constraint width */
-            
+            background-color: rgba(0, 0, 0, 0.75);
+            border-radius: 0.5rem;
+            padding: 0.25rem 0.5rem;
+            max-width: 70%; 
             color: white;
             font-size: 0.75rem; 
             font-weight: 600;
-            
-            background: rgba(0, 0, 0, 0.75);
             text-shadow: none; 
             height: 1.5rem; 
             display: flex;
@@ -202,13 +179,11 @@
 
         .title-text-container {
             max-width: 100%; 
-            overflow: hidden; /* Ensure text is clipped */
+            overflow: hidden;
             white-space: nowrap;
-            /* Marquee logic removed: text will clip naturally */
         }
         
         .title-text-span {
-            /* Ensures long text that is clipped shows an ellipsis */
             text-overflow: ellipsis; 
             display: block; 
         }
@@ -224,7 +199,7 @@
         
         .modal-title-container {
              max-width: 100%;
-             overflow: hidden; /* Clips the modal title */
+             overflow: hidden;
              white-space: nowrap;
              display: flex;
              font-weight: 700;
@@ -239,31 +214,27 @@
         }
         
         .photo-modal-img {
-            width: 100%; /* Fill container */
-            height: 100%; /* Fill container */
+            width: 100%;
+            height: 100%;
             max-width: 100%;
             object-fit: contain; 
             transition: all 0.3s ease;
         }
         
-        /* NEW: Fullscreen Image Mode (Step 5: Styles to expand image and hide comments) */
         .modal-content.fullscreen-image-mode {
-             /* Remove padding/gap for a true fullscreen feel within the modal */
              padding: 0;
              gap: 0;
         }
         .modal-content.fullscreen-image-mode #photo-view-main {
-            /* Fullscreen mode is handled within the modal-content container */
             flex-direction: row; 
             width: 100%;
             height: 100%;
-            max-height: 90vh; /* Match modal-content max height */
+            max-height: 90vh;
         }
         .modal-content.fullscreen-image-mode #photo-display-area {
-            flex-grow: 10; /* Image dominates */
+            flex-grow: 10;
         }
         .modal-content.fullscreen-image-mode #photo-info-panel {
-            /* Fades away the comment section */
             opacity: 0;
             pointer-events: none;
             width: 0;
@@ -272,8 +243,7 @@
         #photo-info-panel {
              transition: opacity 0.3s ease-in, width 0.3s ease-in;
         }
-        /* --- END FEED STYLES --- */
-
+        
         .upload-drop-zone {
             background-color: #0a0a0a;
             border: 2px dashed #252525;
@@ -312,22 +282,19 @@
             border: 1px solid #252525; 
             border-radius: 1rem;
             padding: 2rem;
-            
-            /* UPDATED: Set max dimensions based on a 7:4 aspect ratio (width: 7 / height: 4) */
             max-width: 90%;
-            max-height: calc(90vw * 4 / 7); /* Max height is constrained by max width */
-            aspect-ratio: 7 / 4; /* Enforce 7:4 aspect ratio */
-            
+            max-height: calc(90vw * 4 / 7);
+            aspect-ratio: 7 / 4;
             display: flex;
             flex-direction: column; 
         }
         #modal-content-container {
             max-width: 1000px;
             position: relative; 
-            flex-grow: 1; /* Allow content container to fill available space */
+            flex-grow: 1;
         }
         
-        #upload-menu-modal .modal-content, #chat-modal .modal-content {
+        #upload-menu-modal .modal-content {
             max-width: 500px;
             aspect-ratio: auto;
             max-height: 90vh; 
@@ -339,37 +306,54 @@
         }
         
         /* --- NEW: MESSENGER/CHAT STYLES --- */
-        #chat-modal .modal-content {
-            height: 80vh;
-            max-height: 700px;
-            padding: 0; /* Remove padding to allow full-height sections */
-            overflow: hidden;
+        .messenger-panel {
+            padding: 0; /* Full bleed */
         }
-        #chat-messages {
+        #messenger-messages {
             overflow-y: auto;
             flex-grow: 1;
             padding: 1.5rem;
+            display: flex;
+            flex-direction: column-reverse; /* Shows newest messages at the bottom */
         }
         .message-bubble {
             max-width: 75%;
             word-wrap: break-word;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
         }
         .message-bubble.sent {
-            background-color: #4f46e5;
+            background-color: #9333ea; /* Purple for sent messages */
             color: white;
             border-radius: 1.25rem 1.25rem 0.25rem 1.25rem;
+            align-self: flex-end;
         }
         .message-bubble.received {
-            background-color: #1f1f1f;
-            color: #c0c0c0;
-            border: 1px solid #252525;
+            /* Glassy texture with glossy outline */
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #e0e0e0;
             border-radius: 1.25rem 1.25rem 1.25rem 0.25rem;
+            align-self: flex-start;
+        }
+        #left-panel-feed-view, #left-panel-chat-view {
+            transition: opacity 0.3s, transform 0.3s;
+        }
+        .view-hidden {
+            opacity: 0;
+            transform: translateY(-10px);
+            pointer-events: none;
+            position: absolute;
+            width: calc(100% - 3rem);
         }
         
     </style>
 </head>
 <body class="pt-16">
     
+    <!-- Modals -->
     <div id="message-modal" class="modal-backdrop hidden opacity-0">
         <div class="modal-content w-full max-w-sm p-6 text-center">
             <h3 id="message-modal-title" class="text-xl font-bold mb-4 text-white"></h3>
@@ -377,12 +361,9 @@
             <button id="message-modal-close-btn" class="px-4 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold w-full">Close</button>
         </div>
     </div>
-
     <div id="photo-modal" class="modal-backdrop hidden">
-        <div id="modal-content-container" class="modal-content relative flex flex-col md:flex-row gap-6"> 
-            </div>
+        <div id="modal-content-container" class="modal-content relative flex flex-col md:flex-row gap-6"></div>
     </div>
-    
     <div id="title-modal" class="modal-backdrop hidden opacity-0">
         <div class="modal-content w-full max-w-sm p-6 text-center">
             <h3 class="text-xl font-bold mb-4 text-white">Edit Title</h3>
@@ -393,36 +374,10 @@
             <button id="title-modal-close-btn" class="mt-3 text-sm text-gray-400 hover:text-white">Cancel</button>
         </div>
     </div>
-    
-    <div id="chat-modal" class="modal-backdrop hidden opacity-0">
-        <div class="modal-content flex flex-col">
-            <header class="p-4 border-b border-gray-800 flex items-center justify-between flex-shrink-0">
-                <h2 id="chat-header" class="text-lg font-bold">Chat</h2>
-                <button id="close-chat-btn" class="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-800 transition-colors">
-                    <i class="fas fa-times"></i>
-                </button>
-            </header>
-            
-            <div id="chat-messages" class="flex-grow p-4 space-y-4">
-                </div>
-            
-            <footer class="p-4 border-t border-gray-800 flex-shrink-0 bg-black/50">
-                <form id="chat-message-form" class="flex gap-3 items-center">
-                    <input type="text" id="chat-message-input" placeholder="Type a message..." class="w-full bg-gray-900 border border-gray-700 rounded-full py-2 px-4 focus:ring-2 focus:ring-indigo-500 transition">
-                    <button type="submit" id="chat-send-btn" class="w-10 h-10 flex-shrink-0 bg-indigo-600 text-white rounded-full flex items-center justify-center hover:bg-indigo-700 transition-colors disabled:opacity-50">
-                        <i class="fas fa-paper-plane"></i>
-                    </button>
-                </form>
-            </footer>
-        </div>
-    </div>
-
     <div id="upload-menu-modal" class="modal-backdrop hidden opacity-0">
         <div class="modal-content w-full max-w-sm p-6">
             <h3 id="upload-menu-title" class="text-xl font-bold mb-4 text-white">Post to Slot #1</h3>
-            
             <input type="file" id="upload-file-input" class="hidden" accept="image/*" data-slot-index="" data-action="select-photo">
-
             <div id="upload-select-options" class="flex flex-col gap-3 mb-6">
                  <label for="upload-file-input" id="upload-drop-area" class="upload-drop-zone flex flex-col items-center justify-center">
                     <i class="fas fa-file-image text-4xl mb-3"></i>
@@ -430,72 +385,80 @@
                     <span class="text-sm">or click to browse</span>
                  </label>
             </div>
-            
             <div id="upload-post-creator" class="hidden">
                  <div id="image-preview-container" class="mb-4 bg-gray-900 flex justify-center items-center">
                     <img id="image-preview" src="#" alt="Image Preview" class="w-full h-auto object-cover max-h-[300px]">
                  </div>
-                 
                  <form id="create-post-form" class="flex flex-col gap-4">
                     <input type="text" id="post-title-input" placeholder="Enter your photo title (max 48 chars)" class="p-3 bg-gray-900 border border-gray-700 rounded-md focus:ring-indigo-500" maxlength="48" required>
-                    <button type="submit" id="create-post-btn" class="px-4 py-3 bg-green-600 rounded-lg hover:bg-green-700 transition font-semibold w-full">
-                        <i class="fas fa-check mr-2"></i> Create Daily Post
-                    </button>
+                    <button type="submit" id="create-post-btn" class="px-4 py-3 bg-green-600 rounded-lg hover:bg-green-700 transition font-semibold w-full"><i class="fas fa-check mr-2"></i> Create Daily Post</button>
                  </form>
             </div>
-
             <button id="upload-menu-close-btn" class="mt-6 text-sm text-gray-400 hover:text-white w-full">Cancel</button>
         </div>
     </div>
 
-
+    <!-- Main UI -->
     <main id="messenger-ui" class="messenger-container" style="display: none;">
         
-        <aside class="left-panel">
-            
-            <div class="mb-6 border-b border-gray-800 pb-4">
-                <h2 class="text-xl font-bold mb-2">Your Friend Code</h2>
-                <p class="text-sm text-gray-400 mb-3">Share this code with friends to add them.</p>
-                <div id="friend-code-display" class="p-3 text-center bg-gray-900 rounded-md font-mono text-lg tracking-widest text-indigo-400">
-                    Loading...
+        <aside class="left-panel relative overflow-hidden">
+            <!-- Feed View -->
+            <div id="left-panel-feed-view">
+                <div class="mb-6 border-b border-gray-800 pb-4">
+                    <h2 class="text-xl font-bold mb-2">Your Friend Code</h2>
+                    <p class="text-sm text-gray-400 mb-3">Share this code with friends to add them.</p>
+                    <div id="friend-code-display" class="p-3 text-center bg-gray-900 rounded-md font-mono text-lg tracking-widest text-indigo-400">Loading...</div>
+                </div>
+                <div class="mb-6 border-b border-gray-800 pb-4">
+                    <h2 class="text-xl font-bold mb-2">Add a Friend</h2>
+                    <form id="add-friend-form" class="flex gap-2">
+                        <input type="text" id="friend-code-input" placeholder="********" maxlength="8" class="friend-code-input-styled flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase tracking-widest text-center" style="font-family: monospace;" title="8 alphanumeric characters only">
+                        <button type="submit" class="px-3 py-2 bg-indigo-600 rounded-md hover:bg-indigo-700 transition font-semibold" title="Send Request"><i class="fas fa-user-plus"></i></button>
+                    </form>
+                    <div id="add-friend-message" class="text-sm mt-2 min-h-[20px]"></div>
+                </div>
+                <div class="mb-6 border-b border-gray-800 pb-4">
+                    <h2 class="text-xl font-bold mb-3">Your Friends</h2>
+                    <div id="friends-list-wrapper" class="compact-list-wrapper">
+                        <div id="friends-list-items" class="compact-list-items"></div>
+                    </div>
+                </div>
+                <div class="mb-6">
+                    <h2 class="text-xl font-bold mb-2">Your Daily Posts</h2>
+                    <p class="text-sm text-gray-400 mb-3">You get 5 post slots per day.</p>
+                    <div id="daily-posts-wrapper" class="compact-list-wrapper">
+                        <div id="daily-posts-container"></div>
+                    </div>
+                    <div id="upload-message" class="text-sm mt-2 min-h-[20px]"></div>
                 </div>
             </div>
-
-            <div class="mb-6 border-b border-gray-800 pb-4">
-                <h2 class="text-xl font-bold mb-2">Add a Friend</h2>
-                <form id="add-friend-form" class="flex gap-2">
-                    <input type="text" id="friend-code-input" placeholder="********" maxlength="8" class="friend-code-input-styled flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase tracking-widest text-center" style="font-family: monospace;" title="8 alphanumeric characters only">
-                    <button type="submit" class="px-3 py-2 bg-indigo-600 rounded-md hover:bg-indigo-700 transition font-semibold" title="Send Request">
-                        <i class="fas fa-user-plus"></i>
-                    </button>
-                </form>
-                <div id="add-friend-message" class="text-sm mt-2 min-h-[20px]"></div>
-            </div>
-
-            <div class="mb-6 border-b border-gray-800 pb-4">
-                <h2 class="text-xl font-bold mb-3">Your Friends</h2>
-                <div id="friends-list-wrapper" class="compact-list-wrapper">
-                    <div id="friends-list-items" class="compact-list-items">
-                        </div>
-                </div>
-            </div>
-
-            <div class="mb-6">
-                <h2 class="text-xl font-bold mb-2">Your Daily Posts</h2>
-                <p class="text-sm text-gray-400 mb-3">You get 5 post slots per day.</p>
-                <div id="daily-posts-wrapper" class="compact-list-wrapper">
-                    <div id="daily-posts-container">
-                        </div>
-                </div>
-                <div id="upload-message" class="text-sm mt-2 min-h-[20px]"></div>
+            <!-- Chat View -->
+            <div id="left-panel-chat-view" class="view-hidden">
+                 <button id="back-to-feed-btn" class="mb-4 text-gray-400 hover:text-white transition"><i class="fas fa-arrow-left mr-2"></i> Back to Feed</button>
+                 <h2 class="text-xl font-bold mb-2">Chatting with</h2>
+                 <p id="chat-partner-name-display" class="text-2xl font-bold text-indigo-400"></p>
             </div>
         </aside>
 
-        <section class="feed-panel">
+        <section id="feed-panel" class="feed-panel">
             <h1 class="text-2xl font-bold mb-4">Today's Feed</h1>
             <div id="photo-feed" class="photo-grid">
                 <p id="feed-placeholder">Add some friends to see their daily photos!</p>
             </div>
+        </section>
+
+        <section id="messenger-panel" class="messenger-panel hidden">
+            <div id="messenger-messages" class="flex-grow">
+                <!-- Messages will be injected here -->
+            </div>
+            <footer class="p-4 border-t border-gray-800 flex-shrink-0 bg-black/20">
+                <form id="chat-message-form" class="flex gap-3 items-center">
+                    <input type="text" id="chat-message-input" placeholder="Type a message..." class="w-full bg-gray-900 border border-gray-700 rounded-full py-2 px-4 focus:ring-2 focus:ring-indigo-500 transition">
+                    <button type="submit" id="chat-send-btn" class="w-10 h-10 flex-shrink-0 bg-indigo-600 text-white rounded-full flex items-center justify-center hover:bg-indigo-700 transition-colors disabled:opacity-50">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </form>
+            </footer>
         </section>
 
     </main>
@@ -512,16 +475,22 @@
             getFirestore, doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, serverTimestamp, orderBy, deleteDoc, onSnapshot, writeBatch, limit
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
-        // --- CONFIGURATION IMPORT ---
-        import { firebaseConfig } from "../firebase-config.js";
+        // --- Firebase Config (You should replace this with your actual config) ---
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
         
-        const appId = '4sp-default-app'; 
-        const initialAuthToken = null; 
+        const appId = typeof __app_id !== 'undefined' ? __app_id : '4sp-default-app'; 
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; 
 
         // --- Initialize Firebase ---
-        if (!firebaseConfig || !firebaseConfig.apiKey) {
-            document.getElementById('loading-screen').innerHTML = '<p class="text-red-400">ERROR: Missing or incomplete Firebase configuration in firebase-config.js. Check the console for details.</p>';
-            console.error("Firebase Configuration Error: The 'firebase-config.js' file is likely missing or does not contain a valid configuration object. The Friend Code feature relies on Firestore and Auth, which will fail without a correct configuration.");
+        if (!firebaseConfig || !firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_API_KEY") {
+            document.getElementById('loading-screen').innerHTML = '<p class="text-red-400">ERROR: Firebase is not configured. Please add your configuration in the script.</p>';
             throw new Error("Missing Firebase Config.");
         }
         
@@ -533,22 +502,21 @@
         let CURRENT_FRIENDS = [];
         let CURRENT_USERNAME = 'DailyUser'; 
         let UNSUBSCRIBE_POSTS_LISTENER = () => {};
-        let UNSUBSCRIBE_DAILY_SLOTS_LISTENER = () => {}; // NEW: Separate listener for daily post slots
+        let UNSUBSCRIBE_DAILY_SLOTS_LISTENER = () => {};
         let MODAL_UNSUBSCRIBE_LISTENER = () => {}; 
         let LAST_COMMENT_TIMESTAMP = 0; 
-        let LAST_HEART_TIMESTAMP = 0; // NEW: Global state for heart debounce
+        let LAST_HEART_TIMESTAMP = 0;
         let UNREAD_COMMENTS_COUNT = 0;
         let PENDING_UPLOAD_FILE = null; 
         const COMMENT_DELAY_MS = 3000;
         const POST_SLOTS_MAX = 5;
-        const MARQUEE_TRIGGER_LENGTH = 30; // Marquee logic removed, but keeping constant for title length checks if needed later
-        const HEART_DELAY_MS = 500; // NEW: Debounce hearting for 0.75 seconds
+        const HEART_DELAY_MS = 500;
 
-        // --- Messenger Integration State ---
+        // --- Messenger State ---
         let currentChatPartner = null;
         let unsubscribeMessages = () => {};
-        let localMessagesCache = JSON.parse(localStorage.getItem('dailyPhotoMessagesCache')) || {};
-
+        let indexedDBInstance = null;
+        
         // --- DOM Elements ---
         const loadingScreen = document.getElementById('loading-screen');
         const messengerUi = document.getElementById('messenger-ui');
@@ -572,12 +540,16 @@
         const uploadPostCreator = document.getElementById('upload-post-creator'); 
         const imagePreview = document.getElementById('image-preview'); 
         const createPostForm = document.getElementById('create-post-form'); 
-        const uploadDropArea = document.getElementById('upload-drop-area'); 
+        const uploadDropArea = document.getElementById('upload-drop-area');
         
-        // --- Messenger Integration DOM Elements ---
-        const chatModal = document.getElementById('chat-modal');
-        const chatHeader = document.getElementById('chat-header');
-        const chatMessagesContainer = document.getElementById('chat-messages');
+        // --- Messenger DOM Elements ---
+        const feedPanel = document.getElementById('feed-panel');
+        const messengerPanel = document.getElementById('messenger-panel');
+        const leftPanelFeedView = document.getElementById('left-panel-feed-view');
+        const leftPanelChatView = document.getElementById('left-panel-chat-view');
+        const backToFeedBtn = document.getElementById('back-to-feed-btn');
+        const chatPartnerNameDisplay = document.getElementById('chat-partner-name-display');
+        const messengerMessagesContainer = document.getElementById('messenger-messages');
         const chatMessageForm = document.getElementById('chat-message-form');
         const chatMessageInput = document.getElementById('chat-message-input');
         const chatSendBtn = document.getElementById('chat-send-btn');
@@ -588,6 +560,51 @@
         const getFriendCodeDocRef = (code) => doc(db, 'artifacts', appId, 'public', 'data', 'friend_codes', code);
         const DAILY_PHOTO_COLLECTION = collection(db, 'daily_photos');
         const CHATS_COLLECTION = collection(db, 'chats');
+
+        // =========================================================================
+        // IndexedDB Helper Functions
+        // =========================================================================
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('infiniteMessengerDB', 1);
+                request.onupgradeneeded = event => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('messages')) {
+                        const store = db.createObjectStore('messages', { keyPath: 'id' });
+                        store.createIndex('chatId', 'chatId', { unique: false });
+                    }
+                };
+                request.onsuccess = event => {
+                    indexedDBInstance = event.target.result;
+                    resolve(indexedDBInstance);
+                };
+                request.onerror = event => reject(event.target.error);
+            });
+        }
+
+        function saveMessageToDB(message) {
+            return new Promise((resolve, reject) => {
+                if (!indexedDBInstance) return reject('DB not initialized');
+                const transaction = indexedDBInstance.transaction('messages', 'readwrite');
+                const store = transaction.objectStore('messages');
+                const request = store.put({ ...message, id: `${message.chatId}-${message.timestamp}` });
+                request.onsuccess = () => resolve();
+                request.onerror = event => reject(event.target.error);
+            });
+        }
+
+        function getMessagesFromDB(chatId) {
+            return new Promise((resolve, reject) => {
+                if (!indexedDBInstance) return reject('DB not initialized');
+                const transaction = indexedDBInstance.transaction('messages', 'readonly');
+                const store = transaction.objectStore('messages');
+                const index = store.index('chatId');
+                const request = index.getAll(chatId);
+                request.onsuccess = event => resolve(event.target.result.sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp)));
+                request.onerror = event => reject(event.target.error);
+            });
+        }
+
 
         // =========================================================================
         // Helper Functions 
@@ -602,38 +619,23 @@
                 const data = await response.json();
                 return data.result || text;
             } catch (error) {
-                console.error(`Profanity filtering with Purgomalum failed for ${type}. Returning original text.`, error);
+                console.error(`Profanity filtering failed for ${type}. Returning original text.`, error);
                 return text;
             }
         }
         
-        /**
-         * @brief Formats large numbers into abbreviated strings (K, M, B).
-         * @param {number} num The number to format.
-         * @returns {string} The formatted string (e.g., 1234 -> 1.2K). Capped at 999B.
-         */
         function formatCount(num) {
             if (typeof num !== 'number' || isNaN(num)) return '0';
             if (num < 1000) return String(num); 
-
             const suffixes = ["", "K", "M", "B"];
             let tier = 0;
             let currentNum = num;
-            
-            // Calculate tier (1=K, 2=M, 3=B)
             while (currentNum >= 1000 && tier < suffixes.length - 1) {
                 currentNum /= 1000;
                 tier++;
             }
-
-            // Apply the user's specific cap for B (999B)
-            if (tier === 3) {
-                if (currentNum >= 999.5) return '999B';
-            }
-
-            // Format the number to one decimal place, removing .0 if it's a whole number
+            if (tier === 3 && currentNum >= 999.5) return '999B';
             const formatted = currentNum.toFixed(1).replace(/\.0$/, '');
-            
             return formatted + suffixes[tier];
         }
 
@@ -642,7 +644,6 @@
             MODAL_UNSUBSCRIBE_LISTENER();
             MODAL_UNSUBSCRIBE_LISTENER = () => {};
             document.getElementById('modal-content-container').innerHTML = '';
-            // Reset fullscreen state when closing
             document.getElementById('modal-content-container').classList.remove('fullscreen-image-mode'); 
         }
         
@@ -689,8 +690,7 @@
         }
         
         function openTitleModal(postId, currentTitle = '') {
-            const input = document.getElementById('title-edit-input');
-            input.value = currentTitle;
+            document.getElementById('title-edit-input').value = currentTitle;
             editTitleForm.dataset.postId = postId;
             titleModal.classList.remove('hidden');
             setTimeout(() => titleModal.classList.add('opacity-100'), 10);
@@ -741,30 +741,20 @@
             });
         }
         
-        /**
-         * @brief Creates and returns a single photo thumbnail element.
-         * @param {string} photoId 
-         * @param {object} photoData 
-         * @returns {HTMLElement} The created thumbnail div.
-         */
         function createPhotoThumbnailElement(photoId, photoData) {
-            const titleText = photoData.title;
-            const heartsCount = photoData.hearts?.length || 0;
-            const commentsCount = photoData.comments?.length || 0;
-            
             const thumb = document.createElement('div');
             thumb.className = 'photo-thumbnail';
             thumb.dataset.photoId = photoId;
             thumb.innerHTML = `
-                <img src="${photoData.imageBase64}" alt="${titleText || 'Photo'} by ${photoData.creatorUsername}" loading="lazy">
+                <img src="${photoData.imageBase64}" alt="${photoData.title || 'Photo'}" loading="lazy">
                 <div class="overlay"></div>
                 <div class="absolute top-2 left-2 z-10 text-white text-xs bg-black/50 px-2 py-1 rounded-full flex items-center shadow-lg">
-                    <i class="fas fa-heart text-red-400 mr-1"></i> <span class="font-bold heart-count-display">${formatCount(heartsCount)}</span>
-                    <i class="fas fa-comment text-indigo-400 ml-2 mr-1"></i> <span class="font-bold comment-count-display">${formatCount(commentsCount)}</span>
+                    <i class="fas fa-heart text-red-400 mr-1"></i> <span class="font-bold heart-count-display">${formatCount(photoData.hearts?.length || 0)}</span>
+                    <i class="fas fa-comment text-indigo-400 ml-2 mr-1"></i> <span class="font-bold comment-count-display">${formatCount(photoData.comments?.length || 0)}</span>
                 </div>
                 <div class="title-overlay">
                     <div class="title-text-container">
-                        <span class="text-white font-semibold title-text-span">${titleText}</span>
+                        <span class="text-white font-semibold title-text-span">${photoData.title}</span>
                     </div>
                 </div>`;
             thumb.addEventListener('click', () => openPhotoModal(photoId));
@@ -777,14 +767,12 @@
 
         async function initializeAuth() {
             try {
-                await (initialAuthToken ? signInWithCustomToken(auth, initialAuthToken) : signInAnonymously(auth));
+                if(initialAuthToken) await signInWithCustomToken(auth, initialAuthToken);
+                else await signInAnonymously(auth);
             } catch (error) {
                 console.error("Firebase authentication failed:", error);
                 loadingScreen.style.display = 'none'; 
-                let errorMessage = `Failed to sign in to Firebase. Error: ${error.code || error.message}.`;
-                if (error.code === 'auth/invalid-api-key') errorMessage = `Authentication failed due to an **Invalid API Key**. Please ensure the configuration in 'firebase-config.js' is correct.`;
-                if (error.code === 'auth/network-request-failed') errorMessage = `Authentication failed due to a **Network Error**. Check your internet connection and Firebase project settings.`;
-                showCustomModal("Authentication Error", errorMessage);
+                showCustomModal("Authentication Error", `Failed to sign in. Error: ${error.code || error.message}.`);
                 throw error; 
             }
         }
@@ -795,22 +783,16 @@
                 let userProfileSnap = await getDoc(userProfileRef);
 
                 if (!userProfileSnap.exists() || !userProfileSnap.data()?.username) {
-                    console.error("User profile document or username field not found for UID:", user.uid);
-                    showCustomModal("Profile Error", `Your user profile could not be loaded. This might be because it hasn't been created in the database yet. Please contact support.`);
-                    throw new Error(`User profile or username not found for ${user.uid}`);
+                    console.error("User profile document or username field not found:", user.uid);
+                    showCustomModal("Profile Error", `Your user profile could not be loaded.`);
+                    return;
                 }
                 
                 const profileData = userProfileSnap.data();
                 CURRENT_USERNAME = profileData.username;
-
-                // Ensure app-specific fields exist on the user document without overwriting
-                if (profileData.friends === undefined || profileData.dailySlotsUsed === undefined || profileData.lastPostReset === undefined || profileData.pending_requests === undefined) {
-                    await setDoc(userProfileRef, {
-                        friends: profileData.friends || [],
-                        dailySlotsUsed: profileData.dailySlotsUsed || [],
-                        lastPostReset: profileData.lastPostReset || serverTimestamp(),
-                        pending_requests: profileData.pending_requests || []
-                    }, { merge: true }); // Use set with merge to add fields without overwriting existing ones
+                
+                if (profileData.friends === undefined) {
+                    await setDoc(userProfileRef, { friends: [], dailySlotsUsed: [], lastPostReset: serverTimestamp(), pending_requests: [] }, { merge: true });
                 }
 
                 const codeQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'friend_codes'), where('userId', '==', user.uid), limit(1));
@@ -825,24 +807,15 @@
                 friendCodeDisplay.textContent = existingCode;
             } catch (error) {
                 console.error("Profile/Friend Code Setup Failed:", error);
-                showCustomModal("Code Setup Error", `Failed to set up your Friend Code. This may be due to missing Firestore security rules.`);
-                throw new Error("Failed to set up user profile and friend code.");
+                showCustomModal("Code Setup Error", `Failed to set up your Friend Code.`);
             }
         }
 
-        async function cleanupOldPosts(user) {
+        async function cleanupOldPosts() {
             try {
                 const now = new Date();
                 const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                const userProfileRef = getUserProfileDocRef(user.uid);
-                const userProfileSnap = await getDoc(userProfileRef);
-                const lastReset = userProfileSnap.data()?.lastPostReset?.toDate() || new Date(0);
                 
-                if (lastReset < startOfToday) {
-                    await updateDoc(userProfileRef, { dailySlotsUsed: [], lastPostReset: serverTimestamp() });
-                    console.log("Daily post slots reset for new day.");
-                }
-
                 const oldPostsQuery = query(DAILY_PHOTO_COLLECTION, where('createdAt', '<', startOfToday), limit(50));
                 const snapshot = await getDocs(oldPostsQuery);
                 if (snapshot.empty) return;
@@ -852,69 +825,77 @@
                 await batch.commit();
                 console.log(`Cleaned up ${snapshot.size} expired daily posts.`);
             } catch (error) {
-                console.warn("Post cleanup failed, proceeding with app load:", error);
+                console.warn("Post cleanup failed:", error);
             }
         }
 
         // =========================================================================
-        // MESSENGER INTEGRATION
+        // MESSENGER LOGIC
         // =========================================================================
 
-        function openChatModal(friendUid, friendUsername) {
+        function switchToChatView(friendUid, friendUsername) {
             currentChatPartner = { uid: friendUid, name: friendUsername };
-            chatHeader.textContent = `Chat with ${friendUsername}`;
-            chatMessagesContainer.innerHTML = '';
             
-            loadLocalMessages(friendUid);
+            // UI transition
+            feedPanel.classList.add('hidden');
+            messengerPanel.classList.remove('hidden');
+            leftPanelFeedView.classList.add('view-hidden');
+            leftPanelChatView.classList.remove('view-hidden');
+            chatPartnerNameDisplay.textContent = friendUsername;
+            messengerMessagesContainer.innerHTML = '';
+            
             listenForMessages();
-
-            chatModal.classList.remove('hidden', 'opacity-0');
-            chatModal.classList.add('opacity-100');
             chatMessageInput.focus();
         }
 
-        function closeChatModal() {
+        function switchToFeedView() {
             unsubscribeMessages();
             currentChatPartner = null;
-            chatModal.classList.remove('opacity-100');
-            chatModal.classList.add('opacity-0');
-            setTimeout(() => chatModal.classList.add('hidden'), 300);
+            
+            // UI transition
+            messengerPanel.classList.add('hidden');
+            feedPanel.classList.remove('hidden');
+            leftPanelChatView.classList.add('view-hidden');
+            leftPanelFeedView.classList.remove('view-hidden');
         }
 
-        function scrollToChatBottom() {
-            chatMessagesContainer.scrollTo({ top: chatMessagesContainer.scrollHeight, behavior: 'smooth' });
-        }
-
-        function renderMessage(messageData) {
+        function renderMessage(messageData, container) {
             if (!messageData || !messageData.text) return;
 
             const isSent = messageData.senderId === auth.currentUser.uid;
-            const messageWrapper = document.createElement('div');
-            messageWrapper.className = `flex ${isSent ? 'justify-end' : 'justify-start'}`;
+            const messageBubble = document.createElement('div');
+            messageBubble.className = `message-bubble ${isSent ? 'sent' : 'received'}`;
 
-            const time = new Date(messageData.timestamp?.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const time = new Date(messageData.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-            messageWrapper.innerHTML = `
-                <div class="message-bubble p-3">
-                    <p class="text-sm">${messageData.text}</p>
-                    <p class="text-xs ${isSent ? 'text-gray-300' : 'text-gray-500'} mt-1 text-right">${time}</p>
-                </div>`;
-            chatMessagesContainer.appendChild(messageWrapper);
+            messageBubble.innerHTML = `
+                <p class="text-sm">${messageData.text}</p>
+                <p class="text-xs ${isSent ? 'text-gray-300' : 'text-gray-400'} mt-1 text-right">${time}</p>`;
+            
+            container.prepend(messageBubble); // Prepend to show new messages at bottom
         }
 
-        function listenForMessages() {
+        async function listenForMessages() {
             unsubscribeMessages();
             const chatId = [auth.currentUser.uid, currentChatPartner.uid].sort().join('_');
             const chatDocRef = doc(CHATS_COLLECTION, chatId);
 
+            // 1. Load historical messages from IndexedDB
+            const localMessages = await getMessagesFromDB(chatId);
+            messengerMessagesContainer.innerHTML = '';
+            localMessages.forEach(msg => renderMessage(msg, messengerMessagesContainer));
+
+            // 2. Listen for real-time messages from Firebase
             unsubscribeMessages = onSnapshot(chatDocRef, (docSnap) => {
-                chatMessagesContainer.innerHTML = '';
-                const messages = docSnap.data()?.messages || [];
+                const remoteMessages = docSnap.exists() ? docSnap.data().messages.map(m => ({...m, timestamp: m.timestamp.toDate()})) : [];
                 
-                messages.forEach(renderMessage);
-                
-                saveMessagesToCache(currentChatPartner.uid, messages);
-                scrollToChatBottom();
+                // Simple merge: clear and re-render all
+                messengerMessagesContainer.innerHTML = '';
+                const allMessages = [...localMessages, ...remoteMessages]
+                    .filter((v,i,a)=>a.findIndex(t=>(t.timestamp.getTime() === v.timestamp.getTime()))===i) // Deduplicate
+                    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+                allMessages.forEach(msg => renderMessage(msg, messengerMessagesContainer));
             });
         }
         
@@ -924,6 +905,8 @@
             if (!text || !currentChatPartner) return;
             
             chatSendBtn.disabled = true;
+            const originalText = chatMessageInput.value;
+            chatMessageInput.value = '';
 
             try {
                 const cleanedText = await cleanText(text, 'chat message');
@@ -938,41 +921,27 @@
                 };
 
                 const chatDocSnap = await getDoc(chatDocRef);
-                const existingMessages = chatDocSnap.exists() ? chatDocSnap.data().messages : [];
+                const existingMessages = chatDocSnap.exists() ? chatDocSnap.data().messages.map(m => ({...m, timestamp: m.timestamp.toDate()})) : [];
                 
+                // Save oldest message to IndexedDB if capacity is reached
+                if (existingMessages.length >= 3) {
+                    const oldestMessage = { ...existingMessages[0], chatId };
+                    await saveMessageToDB(oldestMessage);
+                }
+
                 existingMessages.push(newMessage);
-                const updatedMessages = existingMessages.slice(-3); // Keep only the last 3 messages
+                const updatedMessages = existingMessages.slice(-3); // Keep only the last 3
 
                 await setDoc(chatDocRef, { messages: updatedMessages }, { merge: true });
-                chatMessageInput.value = '';
 
             } catch (error) {
                 console.error("Error sending message:", error);
-                // Optionally show an error message to the user
+                chatMessageInput.value = originalText; // Restore on error
             } finally {
                 chatSendBtn.disabled = false;
                 chatMessageInput.focus();
             }
         }
-        
-        function loadLocalMessages(friendUid) {
-            const messages = localMessagesCache[friendUid] || [];
-            chatMessagesContainer.innerHTML = '';
-            messages.forEach(msg => {
-                const renderableMsg = { ...msg, timestamp: { toDate: () => new Date(msg.timestamp) } };
-                renderMessage(renderableMsg);
-            });
-            scrollToChatBottom();
-        }
-
-        function saveMessagesToCache(friendUid, messages) {
-            localMessagesCache[friendUid] = messages.map(msg => ({
-                ...msg,
-                timestamp: msg.timestamp.toDate ? msg.timestamp.toDate().toISOString() : msg.timestamp
-            }));
-            localStorage.setItem('dailyPhotoMessagesCache', JSON.stringify(localMessagesCache));
-        }
-
 
         // =========================================================================
         // Real-Time Listener Implementations
@@ -991,39 +960,17 @@
             
             const photosQuery = query(DAILY_PHOTO_COLLECTION, where('creatorUid', 'in', uidsToQuery), where('createdAt', '>=', startOfDay), orderBy('createdAt', 'desc'));
             
-            // REFACTOR: Use a full-snapshot processing approach to eliminate duplicate rendering issues.
             UNSUBSCRIBE_POSTS_LISTENER = onSnapshot(photosQuery, (snapshot) => {
                 const fragment = document.createDocumentFragment();
-                
-                // 1. Process the entire snapshot (in sorted order)
                 snapshot.docs.forEach(doc => {
-                    const docId = doc.id;
-                    const data = doc.data();
-                    
-                    if (!data.title) return; // Skip posts without titles
-                    
-                    // Try to reuse an existing element to minimize DOM thrashing
-                    let thumb = document.querySelector(`.photo-thumbnail[data-photo-id="${docId}"]`);
-                    
-                    if (thumb) {
-                        // Update existing element properties
-                        thumb.querySelector('.heart-count-display').innerHTML = formatCount(data.hearts?.length || 0);
-                        thumb.querySelector('.comment-count-display').innerHTML = formatCount(data.comments?.length || 0);
-                        thumb.querySelector('.title-text-span').textContent = data.title;
-                    } else {
-                        // Create a new element
-                        thumb = createPhotoThumbnailElement(docId, data);
-                    }
-                    
-                    // Append the element (new or reused) to the fragment, preserving sort order
-                    fragment.appendChild(thumb);
+                    if (!doc.data().title) return;
+                    fragment.appendChild(createPhotoThumbnailElement(doc.id, doc.data()));
                 });
 
-                // 2. Clear the existing feed and replace it with the new, correct one
                 photoFeed.innerHTML = '';
                 photoFeed.appendChild(fragment);
 
-                if (photoFeed.children.length === 0) photoFeed.innerHTML = '<p id="feed-placeholder" class="text-gray-500">No posts found today from you or your friends!</p>';
+                if (photoFeed.children.length === 0) photoFeed.innerHTML = '<p id="feed-placeholder" class="text-gray-500">No posts today!</p>';
                 else document.getElementById('feed-placeholder')?.remove();
 
             }, (error) => {
@@ -1032,13 +979,7 @@
             });
         }
         
-        /**
-         * @brief Renders the user's daily post slots based on profile data and post snapshots.
-         * @param {object} profileData The user's profile data from Firestore.
-         * @param {object} postsToday A map of postId -> postData for all user's posts today.
-         */
         function renderDailyPosts(profileData, postsToday) {
-            const currentUser = auth.currentUser;
             const dailySlotsUsed = profileData.dailySlotsUsed || []; 
             dailyPostsContainer.innerHTML = ''; 
 
@@ -1049,9 +990,7 @@
                 
                 if (postId) {
                     const postData = postsToday[postId];
-                    const name = postData ? (postData.title || 'TITLE MISSING') : `Slot #${i + 1} Used & Deleted`;
-                    
-                    // Check if the post exists and has a title to show the 'View' button
+                    const name = postData ? (postData.title || 'TITLE MISSING') : `Slot #${i + 1} Used`;
                     const isViewable = postData && postData.title; 
 
                     div.innerHTML = `
@@ -1062,27 +1001,19 @@
                     
                     if (isViewable) {
                         div.querySelector('.view-post-btn').addEventListener('click', () => openPhotoModal(postId));
-                    } else if (postData && !postData.title) {
-                         // Allow editing if the slot is used but the post is missing a title
-                         div.querySelector('span:last-child').textContent = 'Needs Title';
-                         div.querySelector('span:last-child').className = 'text-yellow-500 text-sm cursor-pointer';
-                         div.querySelector('span:last-child').addEventListener('click', () => openTitleModal(postId, postData.title));
                     }
                 } else if (i === dailySlotsUsed.length) {
-                    // Available slot is the one immediately after the last used slot
                     div.innerHTML = `
                         <span class="font-semibold text-gray-400">Post #${i + 1}</span>
                         <button data-slot-index="${i}" class="open-upload-menu-btn px-3 py-1 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold text-white" title="Upload Photo"><i class="fas fa-image"></i></button>`;
                     div.querySelector('.open-upload-menu-btn').addEventListener('click', e => openUploadMenu(parseInt(e.currentTarget.dataset.slotIndex)));
                 } else {
-                    // Locked slots (only slots after the next available slot are locked)
                     div.innerHTML = `<span class="font-semibold text-gray-600">Post #${i + 1}</span><span class="text-gray-600"><i class="fas fa-lock"></i> Locked</span>`;
                 }
                 dailyPostsContainer.appendChild(div);
             }
         }
 
-        // REFACTOR: The main listener function now coordinates two listeners: one for the profile/slots, one for the posts.
         function setupDailyPostsListener(user) {
              const userProfileRef = getUserProfileDocRef(user.uid);
              const startOfDay = new Date();
@@ -1090,26 +1021,19 @@
 
              let currentProfileData = {};
              let currentPostsData = {};
-
-             // Listener 1: Real-time listener for the user's daily posts
+             
              const postsQuery = query(DAILY_PHOTO_COLLECTION, where('creatorUid', '==', user.uid), where('createdAt', '>=', startOfDay), orderBy('createdAt', 'asc'));
              
-             // UNUSED: This listener is no longer strictly needed but serves as a way to cache post data changes
-             // and trigger a re-render based on the profile data.
              const unsubscribePostsCache = onSnapshot(postsQuery, (snapshot) => {
                 currentPostsData = snapshot.docs.reduce((acc, doc) => ({ ...acc, [doc.id]: doc.data() }), {});
-                // Re-render the slots view whenever the underlying post data changes
                 renderDailyPosts(currentProfileData, currentPostsData);
              });
              
-             // Listener 2: Real-time listener for the user's profile to track dailySlotsUsed
              UNSUBSCRIBE_DAILY_SLOTS_LISTENER = onSnapshot(userProfileRef, (profileSnap) => {
                 currentProfileData = profileSnap.data() || {};
-                // Re-render the slots view whenever the profile/slots change
                 renderDailyPosts(currentProfileData, currentPostsData);
              });
              
-             // Store the unsubscribe function for cleanup
              setupDailyPostsListener.unsubscribe = () => {
                  unsubscribePostsCache();
                  UNSUBSCRIBE_DAILY_SLOTS_LISTENER();
@@ -1137,8 +1061,7 @@
             
             let title = document.getElementById('post-title-input').value.trim();
             if (!title) { showMessage(uploadMessage, 'Title cannot be empty.', 'error'); return; }
-            if (title.length > 48) title = title.substring(0, 48);
-            const cleanedTitle = await cleanText(title, 'post title');
+            const cleanedTitle = await cleanText(title.substring(0, 48), 'post title');
             
             const createBtn = document.getElementById('create-post-btn');
             createBtn.disabled = true;
@@ -1146,13 +1069,11 @@
 
             try {
                 const userProfileSnap = await getDoc(userProfileRef);
-                // REFACTOR: The check below is now only a sanity check, the UI handles slot selection
-                if ((userProfileSnap.data().dailySlotsUsed || []).length !== slotIndex) throw new Error("Slot index mismatch. Please refresh.");
+                if ((userProfileSnap.data().dailySlotsUsed || []).length !== slotIndex) throw new Error("Slot index mismatch.");
                 
                 const imageBase64 = await compressImage(file);
                 const newPostRef = doc(DAILY_PHOTO_COLLECTION);
                 
-                // IMPORTANT: The post MUST have a title to be viewable on the feed
                 await setDoc(newPostRef, {
                     creatorUid: currentUser.uid, creatorUsername: CURRENT_USERNAME, createdAt: serverTimestamp(),
                     imageBase64, title: cleanedTitle, hearts: [], comments: []
@@ -1160,13 +1081,13 @@
                 await updateDoc(userProfileRef, { dailySlotsUsed: arrayUnion(newPostRef.id) });
 
                 closeUploadMenu();
-                showMessage(uploadMessage, 'Post created successfully!', 'success');
+                showMessage(uploadMessage, 'Post created!', 'success');
             } catch (error) {
                 console.error("Post creation error:", error);
                 showMessage(uploadMessage, `Post creation failed: ${error.message || error}`);
             } finally {
                 createBtn.disabled = false;
-                createPostBtn.innerHTML = `<i class="fas fa-check mr-2"></i> Create Daily Post`;
+                createBtn.innerHTML = `<i class="fas fa-check mr-2"></i> Create Daily Post`;
             }
         }
         
@@ -1179,12 +1100,8 @@
         
         // --- Drag and Drop Logic ---
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => uploadDropArea.addEventListener(eventName, e => e.preventDefault()));
-        ['dragenter', 'dragover'].forEach(eventName => {
-            uploadDropArea.addEventListener(eventName, () => uploadDropArea.classList.add('drag-over'));
-        });
-        ['dragleave', 'drop'].forEach(eventName => {
-            uploadDropArea.addEventListener(eventName, () => uploadDropArea.classList.remove('drag-over'));
-        });
+        ['dragenter', 'dragover'].forEach(eventName => uploadDropArea.addEventListener(eventName, () => uploadDropArea.classList.add('drag-over')));
+        ['dragleave', 'drop'].forEach(eventName => uploadDropArea.addEventListener(eventName, () => uploadDropArea.classList.remove('drag-over')));
         uploadDropArea.addEventListener('drop', e => handleFileUpload(e.dataTransfer.files[0]));
         
         function openPhotoModal(photoId) {
@@ -1197,16 +1114,6 @@
             
             MODAL_UNSUBSCRIBE_LISTENER();
             UNREAD_COMMENTS_COUNT = 0;
-
-            const handleScroll = (commentsSection) => {
-                if (!commentsSection) return;
-                const isScrolledToBottom = commentsSection.scrollHeight - commentsSection.clientHeight <= commentsSection.scrollTop + 20;
-                if (isScrolledToBottom) UNREAD_COMMENTS_COUNT = 0;
-                const badge = document.getElementById('unread-comments-badge');
-                if (!badge) return;
-                badge.classList.toggle('hidden', UNREAD_COMMENTS_COUNT <= 0);
-                badge.textContent = UNREAD_COMMENTS_COUNT > 99 ? '99+' : UNREAD_COMMENTS_COUNT;
-            };
 
             MODAL_UNSUBSCRIBE_LISTENER = onSnapshot(photoRef, (updatedSnap) => {
                 const isModalAlreadyOpen = !!document.getElementById('photo-view-main');
@@ -1226,7 +1133,6 @@
                 }
                 
                 if (!isModalAlreadyOpen) {
-                    // UPDATED: Marquee classes removed from title
                     modalContentContainer.innerHTML = `
                         <div id="photo-view-main" class="flex flex-col md:flex-row gap-6 w-full h-full flex-grow">
                             <div id="photo-display-area" class="flex-grow flex justify-center items-center cursor-pointer relative" data-image-toggle>
@@ -1234,59 +1140,37 @@
                             </div>
                             <div id="photo-info-panel" class="w-full md:w-[350px] flex-shrink-0 flex flex-col relative">
                                 <button id="close-modal-btn" class="absolute top-0 right-0 p-2 text-white/50 hover:text-white transition" title="Close"><i class="fas fa-times"></i></button>
-                                <div class="absolute top-0 right-8">
-                                    <span id="unread-comments-badge" class="hidden bg-red-600 text-white font-bold rounded-full flex items-center justify-center" title="Unread Comments"></span>
-                                </div>
                                 <div class="border-b border-gray-700 pb-3 mb-3 pt-6">
                                     <div class="modal-title-container mb-1"><span class="modal-title-text text-white">${photoData.title}</span></div>
                                     <p class="font-semibold text-lg text-indigo-400">${photoData.creatorUsername}</p>
                                     <p class="text-sm text-gray-400">${new Date(photoData.createdAt?.toDate()).toLocaleString()}</p>
-                                    ${photoData.creatorUid === currentUser.uid ? `<button id="delete-post-trigger-btn" class="text-red-400 text-sm mt-2 hover:text-red-500"><i class="fas fa-trash-alt mr-1"></i> Delete Post</button>` : ''}
+                                    ${photoData.creatorUid === currentUser.uid ? `<button id="delete-post-trigger-btn" class="text-red-400 text-sm mt-2 hover:text-red-500"><i class="fas fa-trash-alt mr-1"></i> Delete</button>` : ''}
                                 </div>
                                 <div id="comments-section" class="flex-grow mb-4 pr-2"> 
-                                    ${comments.map(c => `<div class="mb-2"><p class="comment-text"><strong class="font-semibold">${c.username}</strong>: ${c.text}</p></div>`).join('') || '<p class="text-sm text-gray-500 comment-text">No comments yet. Be the first!</p>'}
+                                    ${comments.map(c => `<div class="mb-2"><p class="comment-text"><strong class="font-semibold">${c.username}</strong>: ${c.text}</p></div>`).join('') || '<p class="text-sm text-gray-500">No comments yet.</p>'}
                                 </div>
                                 <div class="flex items-center gap-4 mb-4 pt-3 border-t border-gray-800 flex-shrink-0">
-                                    <button id="heart-btn" data-post-id="${photoId}" data-hearted="${hasHearted}" class="text-3xl ${hasHearted ? 'text-red-500' : 'text-gray-400'} hover:text-red-500 transition" title="${hasHearted ? 'Unheart' : 'Heart'}"><i class="fas fa-heart"></i></button>
+                                    <button id="heart-btn" data-post-id="${photoId}" data-hearted="${hasHearted}" class="text-3xl ${hasHearted ? 'text-red-500' : 'text-gray-400'} hover:text-red-500 transition"><i class="fas fa-heart"></i></button>
                                     <span class="text-xl">${formatCount(hearts.length)}</span>
                                 </div>
-                                <div id="modal-comment-message" class="text-sm min-h-[20px] flex-shrink-0"></div>
                                 <form id="comment-form" class="flex gap-2 flex-shrink-0">
                                     <input type="text" id="comment-input" placeholder="Add a comment..." class="flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md" maxlength="480">
-                                    <button type="submit" id="comment-submit-btn" class="px-3 py-2 bg-indigo-600 rounded-md font-semibold" title="Post Comment"><i class="fas fa-comment"></i></button>
+                                    <button type="submit" id="comment-submit-btn" class="px-3 py-2 bg-indigo-600 rounded-md font-semibold"><i class="fas fa-comment"></i></button>
                                 </form>
-                            </div>
-                        </div>
-                        <div id="delete-confirmation-view" class="absolute inset-0 hidden flex justify-center items-center p-6 bg-[#111111]/95 rounded-xl">
-                            <div class="text-center">
-                                <h4 class="text-2xl font-bold text-red-400 mb-4">Are you sure?</h4>
-                                <p class="text-gray-300 mb-6">Deleting this post will not free up your daily slot.</p>
-                                <div class="flex justify-center gap-4">
-                                    <button id="confirm-delete-btn" class="px-5 py-2 bg-red-600 rounded-lg hover:bg-red-700 font-semibold">Yes, Delete It</button>
-                                    <button id="cancel-delete-btn" class="px-5 py-2 bg-gray-700 rounded-lg hover:bg-gray-800 font-semibold">Cancel</button>
-                                </div>
                             </div>
                         </div>`;
                     
                     const commentsSection = document.getElementById('comments-section');
                     setTimeout(() => commentsSection.scrollTop = commentsSection.scrollHeight, 50);
-                    commentsSection.addEventListener('scroll', () => handleScroll(commentsSection));
-                    handleScroll(commentsSection);
-
                 } else {
-                    document.querySelector('#heart-btn').dataset.hearted = hasHearted;
+                     document.querySelector('#heart-btn').dataset.hearted = hasHearted;
                     document.querySelector('#heart-btn').className = `text-3xl ${hasHearted ? 'text-red-500' : 'text-gray-400'} hover:text-red-500 transition`;
                     document.querySelector('#heart-btn + span').textContent = formatCount(hearts.length);
 
                     const commentsSection = document.getElementById('comments-section');
-                    const oldCommentCount = commentsSection.children.length;
                     const wasScrolledToBottom = commentsSection.scrollHeight - commentsSection.clientHeight <= commentsSection.scrollTop + 20;
-                    commentsSection.innerHTML = comments.map(c => `<div class="mb-2"><p class="comment-text"><strong class="font-semibold">${c.username}</strong>: ${c.text}</p></div>`).join('') || '<p class="text-sm text-gray-500 comment-text">No comments yet. Be the first!</p>';
-                    if (comments.length > oldCommentCount) {
-                        if (wasScrolledToBottom) setTimeout(() => commentsSection.scrollTop = commentsSection.scrollHeight, 50);
-                        else UNREAD_COMMENTS_COUNT += (comments.length - oldCommentCount);
-                    }
-                    handleScroll(commentsSection);
+                    commentsSection.innerHTML = comments.map(c => `<div class="mb-2"><p class="comment-text"><strong class="font-semibold">${c.username}</strong>: ${c.text}</p></div>`).join('') || '<p class="text-sm text-gray-500">No comments yet.</p>';
+                    if (wasScrolledToBottom) setTimeout(() => commentsSection.scrollTop = commentsSection.scrollHeight, 50);
                 }
             });
         }
@@ -1296,52 +1180,24 @@
             
             const heartBtn = e.target.closest('#heart-btn');
             if (heartBtn) {
-                const photoId = heartBtn.dataset.postId;
-                
-                // --- NEW: Hearting/Unhearting Delay Logic ---
-                if (Date.now() - LAST_HEART_TIMESTAMP < HEART_DELAY_MS) {
-                    return; // Secretly ignore the click if within the delay period
-                }
+                if (Date.now() - LAST_HEART_TIMESTAMP < HEART_DELAY_MS) return;
                 LAST_HEART_TIMESTAMP = Date.now();
-                // ---------------------------------------------
-
-                const isHearted = heartBtn.dataset.hearted === 'true';
-                updateDoc(doc(DAILY_PHOTO_COLLECTION, photoId), { 
-                    hearts: isHearted ? arrayRemove(auth.currentUser.uid) : arrayUnion(auth.currentUser.uid) 
+                updateDoc(doc(DAILY_PHOTO_COLLECTION, heartBtn.dataset.postId), { 
+                    hearts: heartBtn.dataset.hearted === 'true' ? arrayRemove(auth.currentUser.uid) : arrayUnion(auth.currentUser.uid) 
                 });
             }
 
-            // NEW: Fullscreen Image Toggle Logic
-            const imageToggle = e.target.closest('[data-image-toggle]');
-            if (imageToggle) {
-                const modalContentContainer = document.getElementById('modal-content-container');
-                // Toggle the class on the modal content to trigger CSS transitions (Step 5)
-                modalContentContainer.classList.toggle('fullscreen-image-mode');
+            if (e.target.closest('[data-image-toggle]')) {
+                document.getElementById('modal-content-container').classList.toggle('fullscreen-image-mode');
             }
 
-            const deleteTrigger = e.target.closest('#delete-post-trigger-btn');
-            if (deleteTrigger) {
-                document.getElementById('photo-view-main').style.opacity = '0.1';
-                document.getElementById('delete-confirmation-view').classList.remove('hidden');
-            }
-            const cancelDelete = e.target.closest('#cancel-delete-btn');
-            if (cancelDelete) {
-                document.getElementById('delete-confirmation-view').classList.add('hidden');
-                document.getElementById('photo-view-main').style.opacity = '1';
-            }
             const confirmDelete = e.target.closest('#confirm-delete-btn');
             if (confirmDelete) {
-                // IMPORTANT: Use the correct post ID lookup from the heart button dataset as it's reliable in the modal
                 const currentPostId = document.getElementById('heart-btn')?.dataset.postId;
                 if (currentPostId) {
                     deleteDoc(doc(DAILY_PHOTO_COLLECTION, currentPostId))
-                        .then(() => {
-                            closePhotoModal();
-                            showMessage(uploadMessage, 'Post deleted.', 'success');
-                        })
-                        .catch(error => showCustomModal("Deletion Error", `Failed to delete post: ${error.message}`));
-                } else {
-                     showCustomModal("Deletion Error", `Could not find post ID.`);
+                        .then(() => closePhotoModal())
+                        .catch(error => showCustomModal("Deletion Error", `Failed to delete: ${error.message}`));
                 }
             }
         });
@@ -1353,44 +1209,37 @@
             const btn = document.getElementById('comment-submit-btn');
             let text = input.value.trim();
             if (!text) return;
-            if (Date.now() - LAST_COMMENT_TIMESTAMP < COMMENT_DELAY_MS) {
-                const remaining = Math.ceil((COMMENT_DELAY_MS - (Date.now() - LAST_COMMENT_TIMESTAMP)) / 1000);
-                return showMessage(document.getElementById('modal-comment-message'), `Please wait ${remaining}s.`, 'error');
-            }
+            
             btn.disabled = true;
-            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
             try {
                 const cleanedText = await cleanText(text, 'comment');
-                // Use the data-post-id from the heart button to get the current post ID
                 const currentPostId = document.getElementById('heart-btn')?.dataset.postId;
-                if (!currentPostId) throw new Error("Could not find current post ID for comment.");
+                if (!currentPostId) throw new Error("Could not find post ID.");
                 
                 await updateDoc(doc(DAILY_PHOTO_COLLECTION, currentPostId), { comments: arrayUnion({ uid: auth.currentUser.uid, username: CURRENT_USERNAME, text: cleanedText, timestamp: new Date() }) });
                 input.value = '';
                 LAST_COMMENT_TIMESTAMP = Date.now();
             } catch (error) {
-                showMessage(document.getElementById('modal-comment-message'), `Comment failed: ${error.message}`, 'error');
+                console.error('Comment Error:', error);
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = `<i class="fas fa-comment"></i>`;
             }
         });
         
         titleModal.addEventListener('click', e => { if (e.target === titleModal || e.target.closest('#title-modal-close-btn')) closeTitleModal(); });
         uploadMenuModal.addEventListener('click', e => { if (e.target === uploadMenuModal || e.target.closest('#upload-menu-close-btn')) closeUploadMenu(); });
-        chatModal.addEventListener('click', e => { if (e.target === chatModal || e.target.closest('#close-chat-btn')) closeChatModal(); });
         chatMessageForm.addEventListener('submit', handleSendMessage);
+        backToFeedBtn.addEventListener('click', switchToFeedView);
 
         editTitleForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const postId = e.currentTarget.dataset.postId;
             let title = document.getElementById('title-edit-input').value.trim();
-            if (!title) return showMessage(uploadMessage, 'Title cannot be empty.', 'error');
-            if (title.length > 48) title = title.substring(0, 48);
+            if (!title) return;
             try {
-                const cleanedTitle = await cleanText(title, 'post title');
+                const cleanedTitle = await cleanText(title.substring(0, 48), 'post title');
                 await updateDoc(doc(DAILY_PHOTO_COLLECTION, postId), { title: cleanedTitle, creatorUsername: CURRENT_USERNAME });
-                showMessage(uploadMessage, 'Title saved! Your post is now live.', 'success');
+                showMessage(uploadMessage, 'Title saved!', 'success');
                 closeTitleModal();
             } catch (error) {
                 showMessage(uploadMessage, `Failed to save title: ${error.message}`, 'error');
@@ -1412,16 +1261,11 @@
             
             try {
                 const friendProfileRef = getUserProfileDocRef(friendUid);
-                const friendProfileSnap = await getDoc(friendProfileRef);
-                const data = friendProfileSnap.data() || {};
-                if (data.friends?.includes(auth.currentUser.uid)) return showMessage(addFriendMessage, 'You are already friends.', 'success');
-                if (data.pending_requests?.includes(auth.currentUser.uid)) return showMessage(addFriendMessage, 'Friend request already sent!', 'success');
-                
                 await updateDoc(friendProfileRef, { pending_requests: arrayUnion(auth.currentUser.uid) });
                 showMessage(addFriendMessage, 'Friend request sent!', 'success');
                 input.value = '';
             } catch (error) {
-                 showMessage(addFriendMessage, 'Failed to send request. Check console.', 'error');
+                 showMessage(addFriendMessage, 'Failed to send request.', 'error');
                  console.error("Send friend request failed:", error);
             }
         });
@@ -1429,16 +1273,17 @@
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 try {
+                    await initDB();
                     await handleFriendCodeLogic(user); 
-                    await cleanupOldPosts(user); 
+                    await cleanupOldPosts(); 
                     setupFriendListListener(user); 
-                    setupDailyPostsListener(user); // Initial setup for both profile and post listeners
+                    setupDailyPostsListener(user);
                     loadingScreen.style.display = 'none';
                     messengerUi.style.display = 'grid';
                 } catch (e) {
-                    console.error("Application Initialization Failed:", e);
+                    console.error("App Initialization Failed:", e);
                     loadingScreen.style.display = 'none';
-                    showCustomModal("Startup Error", `The messenger failed to initialize. Error: ${e.message}.`);
+                    showCustomModal("Startup Error", `The messenger failed to initialize: ${e.message}.`);
                 }
             } else {
                 await initializeAuth(); 
@@ -1447,22 +1292,15 @@
 
         const friendRequestLogic = async (friendUid, actionType, user, friendUsername) => {
             const batch = writeBatch(db);
-            batch.update(getUserProfileDocRef(user.uid), { pending_requests: arrayRemove(friendUid) });
+            const userProfileRef = getUserProfileDocRef(user.uid);
+            batch.update(userProfileRef, { pending_requests: arrayRemove(friendUid) });
             if (actionType === 'accept') {
-                batch.update(getUserProfileDocRef(user.uid), { friends: arrayUnion(friendUid) });
+                batch.update(userProfileRef, { friends: arrayUnion(friendUid) });
                 batch.update(getUserProfileDocRef(friendUid), { friends: arrayUnion(user.uid) });
-                
-                // Create contact entries for the chat feature
-                const userContactRef = doc(db, `users/${user.uid}/contacts`, friendUid);
-                const friendContactRef = doc(db, `users/${friendUid}/contacts`, user.uid);
-                batch.set(userContactRef, { name: friendUsername, uid: friendUid });
-                batch.set(friendContactRef, { name: CURRENT_USERNAME, uid: user.uid });
             }
             try {
                 await batch.commit();
-                showMessage(addFriendMessage, `Friend request ${actionType}ed!`, 'success');
             } catch (error) {
-                 showMessage(addFriendMessage, `Failed to ${actionType} request.`, 'error');
                  console.error(`Friend request ${actionType} failed:`, error);
             }
         };
@@ -1471,8 +1309,7 @@
             onSnapshot(getUserProfileDocRef(user.uid), async (docSnap) => {
                 const profileData = docSnap.data() || {};
                 const friends = profileData.friends || [];
-                // Only re-run the feed listener if the actual friends list changes
-                if (friends.length !== CURRENT_FRIENDS.length || !friends.every((val, i) => val === CURRENT_FRIENDS[i])) {
+                if (JSON.stringify(friends) !== JSON.stringify(CURRENT_FRIENDS)) {
                     CURRENT_FRIENDS = friends; 
                     setupFriendsFeedListener(user); 
                 }
@@ -1482,10 +1319,10 @@
 
                 if (pendingRequests.length > 0) {
                     const reqProfiles = await Promise.all(pendingRequests.map(uid => getDoc(getUserProfileDocRef(uid))));
-                    combinedHtml += `<div class="p-2 text-sm font-bold text-yellow-400 bg-yellow-900/30 rounded-t-md -mx-1 -mt-1 mb-2">Pending Requests (${pendingRequests.length})</div>`;
+                    combinedHtml += `<div class="p-2 text-sm font-bold text-yellow-400">Pending (${pendingRequests.length})</div>`;
                     reqProfiles.forEach((snap, i) => {
                         const username = snap.data()?.username || 'Unknown';
-                        combinedHtml += `<div class="compact-list-item flex justify-between items-center bg-yellow-900/10"><span class="font-semibold text-yellow-300">${username}</span><div class="flex gap-2"><button data-uid="${pendingRequests[i]}" data-username="${username}" class="accept-request-btn text-green-400 hover:text-green-500 px-2 py-1" title="Accept"><i class="fas fa-check"></i></button><button data-uid="${pendingRequests[i]}" class="reject-request-btn text-red-400 hover:text-red-500 px-2 py-1" title="Reject"><i class="fas fa-times"></i></button></div></div>`;
+                        combinedHtml += `<div class="compact-list-item flex justify-between items-center"><span class="font-semibold text-yellow-300">${username}</span><div class="flex gap-2"><button data-uid="${pendingRequests[i]}" data-username="${username}" class="accept-request-btn text-green-400"><i class="fas fa-check"></i></button><button data-uid="${pendingRequests[i]}" class="reject-request-btn text-red-400"><i class="fas fa-times"></i></button></div></div>`;
                     });
                     combinedHtml += `<div class="border-b border-gray-700 my-2"></div>`;
                 }
@@ -1497,14 +1334,14 @@
                         combinedHtml += `<div class="compact-list-item flex justify-between items-center">
                             <span class="font-semibold flex-grow">${username}</span>
                             <div class="flex-shrink-0 flex items-center gap-2">
-                                <button data-uid="${friends[i]}" data-username="${username}" class="chat-friend-btn text-indigo-400 hover:text-indigo-500 px-2 py-1" title="Chat with ${username}"><i class="fas fa-comment-dots"></i></button>
-                                <button data-uid="${friends[i]}" class="remove-friend-btn text-red-400 hover:text-red-500 px-2 py-1" title="Remove Friend"><i class="fas fa-user-minus"></i></button>
+                                <button data-uid="${friends[i]}" data-username="${username}" class="chat-friend-btn text-indigo-400"><i class="fas fa-comment-dots"></i></button>
+                                <button data-uid="${friends[i]}" class="remove-friend-btn text-red-400"><i class="fas fa-user-minus"></i></button>
                             </div>
                         </div>`;
                     });
                 }
                 
-                if (!combinedHtml) combinedHtml = '<p class="text-sm text-gray-500 p-2 text-center">No friends yet. Add one above!</p>';
+                if (!combinedHtml) combinedHtml = '<p class="text-sm text-gray-500 p-2 text-center">No friends yet.</p>';
                 friendsListItems.innerHTML = combinedHtml;
             });
 
@@ -1516,18 +1353,12 @@
 
                 if (acceptBtn) friendRequestLogic(acceptBtn.dataset.uid, 'accept', user, acceptBtn.dataset.username);
                 else if (rejectBtn) friendRequestLogic(rejectBtn.dataset.uid, 'reject', user);
-                else if (chatBtn) openChatModal(chatBtn.dataset.uid, chatBtn.dataset.username);
+                else if (chatBtn) switchToChatView(chatBtn.dataset.uid, chatBtn.dataset.username);
                 else if (removeBtn) {
                     const batch = writeBatch(db);
                     batch.update(getUserProfileDocRef(user.uid), { friends: arrayRemove(removeBtn.dataset.uid) });
                     batch.update(getUserProfileDocRef(removeBtn.dataset.uid), { friends: arrayRemove(user.uid) });
-                    
-                    // Also remove contact entries for chat
-                    batch.delete(doc(db, `users/${user.uid}/contacts`, removeBtn.dataset.uid));
-                    batch.delete(doc(db, `users/${removeBtn.dataset.uid}/contacts`, user.uid));
-                    
                     await batch.commit();
-                    showMessage(addFriendMessage, 'Friend removed.', 'success');
                 }
             });
         }
