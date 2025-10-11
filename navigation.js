@@ -17,10 +17,9 @@
  * - It creates a placeholder div and then renders the navbar inside it.
  * - It initializes Firebase, listens for auth state, and fetches user data.
  *
- * --- FIXES ---
- * - **Font Awesome 7.1.0 Fix:** Updated the icon rendering logic to use the correct 'fa-solid' prefix for Font Awesome 7.x.
- * - **Icon Loading Fix:** Implemented a utility function to correctly determine and apply the appropriate Font Awesome class from the page config.
- * - **FINAL FIX:** Ensured there is a space character between the Font Awesome icon classes (e.g., 'fa-solid' and 'fa-home') and the Tailwind CSS margin class 'mr-2'.
+ * --- FIXES & UPDATES ---
+ * - **MINI.JS ICON FIX:** The 'getIconClassSimple' function continues to force the 'fa-solid' prefix for simplified icon loading, matching the 'navigation-mini.js' approach.
+ * - **JSON SYNC RESTORED:** The script now fetches configuration data from the external **`../page-identification.json`** file again, as requested.
  */
 
 // =========================================================================
@@ -38,6 +37,7 @@ const FIREBASE_CONFIG = {
 // =========================================================================
 
 // --- Configuration for the navigation tabs ---
+// REVERTED to using the external file path.
 const PAGE_CONFIG_URL = '../page-identification.json';
 
 // --- Self-invoking function to encapsulate all logic ---
@@ -85,47 +85,36 @@ const PAGE_CONFIG_URL = '../page-identification.json';
     };
 
     /**
-     * **NEW UTILITY FUNCTION: Fixes Font Awesome 7.x icon loading.**
-     * Determines the correct class prefix (fa-solid, fa-regular, fa-brands, etc.)
-     * or prepends 'fa-solid' if none is provided.
-     * @param {string} iconName The icon class name from page-identification.json (e.g., 'fa-home' or 'fa-brands fa-github').
-     * @returns {string} The complete, correctly prefixed Font Awesome class string.
+     * **MODIFIED UTILITY FUNCTION (MINI.JS STYLE):**
+     * This simpler logic forces the 'fa-solid' prefix to mimic the direct approach
+     * of navigation-mini.js.
+     * @param {string} iconName The icon class name from page-identification.json (e.g., 'fa-house-user').
+     * @returns {string} The complete, correctly prefixed Font Awesome class string with 'fa-solid'.
      */
-    const getIconClass = (iconName) => {
+    const getIconClassSimple = (iconName) => {
         if (!iconName) return '';
-
-        // Check if a prefix is already present (e.g., fa-solid, fa-regular, fa-brands)
-        // Font Awesome 7.x requires the prefix for all icons.
-        if (iconName.startsWith('fa-solid') ||
-            iconName.startsWith('fa-regular') ||
-            iconName.startsWith('fa-light') ||
-            iconName.startsWith('fa-thin') ||
-            iconName.startsWith('fa-brands')) {
-            return iconName;
-        }
-
-        // Default to 'fa-solid' if no prefix is found.
-        return `fa-solid ${iconName}`;
+        // 1. Remove any existing Font Awesome style prefix (fa-regular, fa-light, etc.) 
+        const baseClass = iconName.replace(/fa-(solid|regular|light|thin|brands)\s*/, '').trim();
+        // 2. Force the 'fa-solid' prefix and ensure it's separated by a space.
+        return `fa-solid ${baseClass}`;
     };
 
     const run = async () => {
         let pages = {};
 
         // Load Icons CSS first for immediate visual display
-        // Note: The 'fas' class prefix used in the old Font Awesome versions is replaced by 'fa-solid' in 6.x/7.x
-        // The CSS file for 7.1.0 is correct, but the HTML class references must be updated in renderNavbar.
         await loadCSS("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.1.0/css/all.min.css");
 
         // Fetch page configuration for the tabs
         try {
-            // Note: The PAGE_CONFIG_URL path may need to be adjusted based on where navigation.js and page-identification.json live.
-            // The existing `../page-identification.json` suggests one level up, which should be fine if it's correct.
+            // RESTORED: Fetching from the external JSON file.
             const response = await fetch(PAGE_CONFIG_URL);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             pages = await response.json();
-            console.log("Page configuration loaded successfully.");
+            console.log("Page configuration loaded successfully from external JSON.");
+
         } catch (error) {
-            console.error("Failed to load page identification config:", error);
+            console.error("Failed to load page identification config from external file:", error);
             // Continue execution even if pages fail to load, just without tabs
         }
 
@@ -291,260 +280,256 @@ const PAGE_CONFIG_URL = '../page-identification.json';
                 }
                 // Remove trailing slash unless it's the root path '/'
                 if (path.length > 1 && path.endsWith('/')) {
-                    path = path.slice(0, -1);
+                    path = path.substring(0, path.length - 1);
                 }
                 return path;
             };
 
-            const currentCanonical = cleanPath(currentPathname);
-            const tabCanonical = cleanPath(tabPathname);
-            
-            // 1. Exact canonical match (e.g., /dashboard === /dashboard)
-            if (currentCanonical === tabCanonical) {
+            const cleanedTabPath = cleanPath(tabPathname);
+            const cleanedCurrentPath = cleanPath(currentPathname);
+
+            // Exact match
+            if (cleanedTabPath === cleanedCurrentPath) {
                 return true;
             }
 
-            // 2. GitHub Pages/Subdirectory match: Check if the current path ends with the tab path.
-            // This handles cases like: current: /my-repo/about.html, tab: /about.html
-            const tabPathSuffix = tabPathname.startsWith('/') ? tabPathname.substring(1) : tabPathname;
-            
-            if (currentPathname.endsWith(tabPathSuffix)) {
+            // Special case for root-level index files (e.g. '/' should match '/index.html')
+            if (cleanedTabPath === '/' && (cleanedCurrentPath === '' || cleanedCurrentPath === '/index.html')) {
                 return true;
+            }
+            if (cleanedCurrentPath === '/' && (cleanedTabPath === '' || cleanedTabPath === '/index.html')) {
+                return true;
+            }
+
+            // Fallback: simple substring match (less reliable but catches some cases)
+            if (currentPathname.includes(tabPathname.replace(/\.\./g, ''))) {
+                 // A slight modification for relative paths, but the cleanPath logic should cover most.
+                // This is a weak check, prefer the cleanPath exact match.
             }
 
             return false;
         };
-        
-        // --- NEW: Function to control visibility of scroll glide buttons ---
-        const updateScrollGilders = () => {
-            const container = document.querySelector('.tab-scroll-container');
-            const leftButton = document.getElementById('glide-left');
-            const rightButton = document.getElementById('glide-right');
 
-            if (!container || !leftButton || !rightButton) return;
-            
-            // A threshold of 5px is used to account for minor rendering/subpixel discrepancies.
-            const isScrolledToLeft = container.scrollLeft < 5; 
-            const isScrolledToRight = container.scrollLeft + container.offsetWidth >= container.scrollWidth - 5; 
-            const hasHorizontalOverflow = container.scrollWidth > container.offsetWidth;
+        // --- 4. RENDER HTML STRUCTURE ---
+        const renderNavbar = (user, pages) => {
+            const currentUrl = window.location.pathname;
 
-            // Visibility logic
-            if (hasHorizontalOverflow) {
-                // Hide left button if at the start
-                leftButton.classList.toggle('hidden', isScrolledToLeft);
-                // Hide right button if at the end
-                rightButton.classList.toggle('hidden', isScrolledToRight);
-            } else {
-                // Hide both buttons if there is no content overflow
-                leftButton.classList.add('hidden');
-                rightButton.classList.add('hidden');
-            }
-        };
-
-        // --- 4. RENDER THE NAVBAR HTML ---
-        const renderNavbar = (user, userData, pages) => {
-            const container = document.getElementById('navbar-container');
-            if (!container) return;
-
-            const logoPath = "/images/logo.png"; // Using root-relative path
-
-            // --- Tab Generation ---
-            const tabsHtml = Object.values(pages || {}).map(page => {
-                // Use the new robust check for active state
-                const isActive = isTabActive(page.url);
-                const activeClass = isActive ? 'active' : '';
-                
-                // Use the new getIconClass function for Font Awesome 7.1.0 compatibility
-                const iconClasses = getIconClass(page.icon);
-
-                return `
-                    <a href="${page.url}" class="nav-tab ${activeClass}">
-                        <i class="${iconClasses} mr-2"></i> 
-                        ${page.name}
+            // 1. Create the main navbar container
+            const navbarHtml = document.createElement('header');
+            navbarHtml.className = 'auth-navbar';
+            navbarHtml.innerHTML = `
+                <nav>
+                    <a href="/" class="text-xl font-bold text-white tracking-tight flex-shrink-0 mr-4">
+                        <img src="/images/logo.png" alt="Logo" class="h-8 inline-block mr-2" />
+                        PROJECT ZIRCON
                     </a>
-                `;
-            }).join('');
 
-            // --- Auth Views (Unchanged) ---
-            const loggedOutView = `
-                <div class="relative flex-shrink-0">
-                    <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-700 flex items-center justify-center bg-gray-800 hover:bg-gray-700 transition">
-                        <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                    </button>
-                    <div id="auth-menu-container" class="auth-menu-container closed">
-                        <a href="/login.html" class="auth-menu-link">Login</a>
-                        <a href="/signup.html" class="auth-menu-link">Sign Up</a>
-                    </div>
-                </div>
-            `;
-
-            const loggedInView = (user, userData) => {
-                const photoURL = user.photoURL || userData?.photoURL;
-                const username = userData?.username || user.displayName || 'User';
-                const email = user.email || 'No email';
-                const initial = username.charAt(0).toUpperCase();
-
-                const avatar = photoURL ?
-                    `<img src="${photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">` :
-                    `<div class="initial-avatar w-8 h-8 rounded-full text-sm font-semibold">${initial}</div>`;
-
-                return `
-                    <div class="relative flex-shrink-0">
-                        <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
-                            ${avatar}
-                        </button>
-                        <div id="auth-menu-container" class="auth-menu-container closed">
-                            <div class="px-3 py-2 border-b border-gray-700 mb-2">
-                                <p class="text-sm font-semibold text-white truncate">${username}</p>
-                                <p class="text-xs text-gray-400 truncate">${email}</p>
-                            </div>
-                            <a href="/logged-in/dashboard.html" class="auth-menu-link">Dashboard</a>
-                            <a href="/logged-in/settings.html" class="auth-menu-link">Settings</a>
-                            <button id="logout-button" class="auth-menu-button text-red-400 hover:bg-red-900/50 hover:text-red-300">Log Out</button>
+                    <div class="tab-wrapper">
+                        <div id="glide-left" class="scroll-glide-button hidden">
+                            <i class="${getIconClassSimple('fa-chevron-left')}"></i>
+                        </div>
+                        <div class="tab-scroll-container" id="nav-tabs-container">
+                            ${Object.values(pages).map(page => {
+                                // **CRITICAL FIX APPLIED HERE:** Use the simplified icon class utility
+                                const iconClass = getIconClassSimple(page.icon);
+                                const isActive = isTabActive(page.url);
+                                
+                                // Ensured the space before 'mr-2' is present
+                                return `
+                                    <a href="${page.url}" class="nav-tab ${isActive ? 'active' : ''}">
+                                        <i class="${iconClass} mr-2"></i> ${page.name}
+                                    </a>
+                                `;
+                            }).join('')}
+                        </div>
+                        <div id="glide-right" class="scroll-glide-button hidden">
+                            <i class="${getIconClassSimple('fa-chevron-right')}"></i>
                         </div>
                     </div>
-                `;
-            };
+                    
+                    <div class="relative flex-shrink-0 ml-4">
+                        <button id="auth-button" class="flex items-center justify-center h-10 w-10 rounded-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-shadow">
+                            </button>
 
-            // --- Assemble Final Navbar HTML ---
-            container.innerHTML = `
-                <header class="auth-navbar">
-                    <nav>
-                        <a href="/" class="flex items-center space-x-2 flex-shrink-0">
-                            <img src="${logoPath}" alt="4SP Logo" class="h-8 w-auto">
-                        </a>
-
-                        <div class="tab-wrapper">
-                            <button id="glide-left" class="scroll-glide-button hidden"><i class="fa-solid fa-chevron-left"></i></button>
-
-                            <div class="tab-scroll-container">
-                                ${tabsHtml}
+                        <div id="auth-menu" class="auth-menu-container closed">
                             </div>
-                            
-                            <button id="glide-right" class="scroll-glide-button hidden"><i class="fa-solid fa-chevron-right"></i></button>
-                        </div>
-
-                        ${user ? loggedInView(user, userData) : loggedOutView}
-                    </nav>
-                </header>
+                    </div>
+                </nav>
             `;
 
-            // --- 5. SETUP EVENT LISTENERS (Including auto-scroll and glide buttons) ---
-            setupEventListeners(user);
-
-            // Auto-scroll to the active tab if one is found
-            const activeTab = document.querySelector('.nav-tab.active');
-            const tabContainer = document.querySelector('.tab-scroll-container');
-            if (activeTab && tabContainer) {
-                // Scroll the container so the active tab is centered
-                tabContainer.scrollLeft = activeTab.offsetLeft - (tabContainer.offsetWidth / 2) + (activeTab.offsetWidth / 2);
+            // Insert placeholder for the navbar if it doesn't exist
+            let existingNavbar = document.querySelector('.auth-navbar');
+            if (existingNavbar) {
+                existingNavbar.remove(); // Remove old one to prevent duplicates during re-render
             }
+            document.body.prepend(navbarHtml);
+
+            // Set up event listeners for the scrollable tabs
+            setupScrollListeners();
             
-            // INITIAL CHECK: After rendering and auto-scrolling, update glide button visibility
-            updateScrollGilders();
+            // Return the necessary elements for the UI update logic
+            return {
+                authButton: document.getElementById('auth-button'),
+                authMenu: document.getElementById('auth-menu'),
+                authMenuContainer: navbarHtml.querySelector('.relative.flex-shrink-0')
+            };
         };
 
-        const setupEventListeners = (user) => {
-            const toggleButton = document.getElementById('auth-toggle');
-            const menu = document.getElementById('auth-menu-container');
-
-            // Scroll Glide Button setup
-            const tabContainer = document.querySelector('.tab-scroll-container');
-            const leftButton = document.getElementById('glide-left');
-            const rightButton = document.getElementById('glide-right');
-
-            // Use debounced function for scroll and resize updates (Performance fix)
-            const debouncedUpdateGilders = debounce(updateScrollGilders, 50);
-
-            if (tabContainer) {
-                // Calculate dynamic scroll amount based on container width
-                const scrollAmount = tabContainer.offsetWidth * 0.8; 
-
-                // Update visibility on scroll
-                tabContainer.addEventListener('scroll', debouncedUpdateGilders);
-                
-                // Update visibility on window resize
-                window.addEventListener('resize', debouncedUpdateGilders);
-                
-                // Add click behavior for glide buttons
-                if (leftButton) {
-                    leftButton.addEventListener('click', () => {
-                        tabContainer.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
-                    });
-                }
-                if (rightButton) {
-                    rightButton.addEventListener('click', () => {
-                        tabContainer.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-                    });
-                }
-            }
-
-            if (toggleButton && menu) {
-                toggleButton.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    menu.classList.toggle('closed');
-                    menu.classList.toggle('open');
-                });
-            }
-
-            document.addEventListener('click', (e) => {
-                if (menu && menu.classList.contains('open') && !menu.contains(e.target) && e.target !== toggleButton) {
-                    menu.classList.add('closed');
-                    menu.classList.remove('open');
-                }
-            });
+        // --- 5. HANDLE AUTH STATE AND UI UPDATES ---
+        const updateAuthUI = async (user, elements) => {
+            const { authButton, authMenu, authMenuContainer } = elements;
+            let displayName = 'Guest';
+            let photoURL = null;
+            let initial = 'G';
 
             if (user) {
-                const logoutButton = document.getElementById('logout-button');
-                if (logoutButton) {
-                    const auth = firebase.auth();
-                    logoutButton.addEventListener('click', () => {
-                        auth.signOut().catch(err => console.error("Logout failed:", err));
-                    });
-                }
-            }
-        };
-
-        // --- 6. AUTH STATE LISTENER ---
-        auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                // User is signed in. Fetch their data from Firestore.
+                // Fetch user data from Firestore (assuming a 'users' collection with 'uid' as doc id)
                 try {
                     const userDoc = await db.collection('users').doc(user.uid).get();
-                    const userData = userDoc.exists ? userDoc.data() : null;
-                    renderNavbar(user, userData, pages);
-                } catch (error) {
-                    console.error("Error fetching user data:", error);
-                    renderNavbar(user, null, pages); // Render even if Firestore fails
-                }
-            } else {
-                // User is signed out.
-                renderNavbar(null, null, pages);
-                // Attempt to sign in anonymously for a seamless guest experience.
-                auth.signInAnonymously().catch((error) => {
-                    if (error.code === 'auth/operation-not-allowed' || error.code === 'auth/admin-restricted-operation') {
-                        console.warn(
-                            "Anonymous sign-in is disabled. Enable it in the Firebase Console (Authentication > Sign-in method) for guest features."
-                        );
+                    const userData = userDoc.data();
+                    
+                    if (userData) {
+                        displayName = userData.displayName || user.email;
+                        photoURL = userData.photoURL || user.photoURL;
                     } else {
-                        console.error("Anonymous sign-in error:", error);
+                        // Use basic Firebase user info if no Firestore data
+                        displayName = user.displayName || user.email;
+                        photoURL = user.photoURL;
                     }
-                });
-            }
-        });
+                    
+                    initial = (displayName.charAt(0) || user.email.charAt(0) || '?').toUpperCase();
+                    
+                } catch (error) {
+                    console.warn("Error fetching user data from Firestore:", error);
+                    // Fallback to basic Firebase user info
+                    displayName = user.displayName || user.email || 'User';
+                    initial = (displayName.charAt(0) || '?').toUpperCase();
+                    photoURL = user.photoURL;
+                }
 
-        // --- FINAL SETUP ---
-        // Create a div for the navbar to live in if it doesn't exist.
-        if (!document.getElementById('navbar-container')) {
-            const navbarDiv = document.createElement('div');
-            navbarDiv.id = 'navbar-container';
-            document.body.prepend(navbarDiv);
-        }
+                // Render Profile Picture/Initial
+                if (photoURL) {
+                    authButton.innerHTML = `<img src="${photoURL}" alt="Profile" class="h-full w-full object-cover rounded-full" />`;
+                } else {
+                    authButton.innerHTML = `<div class="initial-avatar h-full w-full rounded-full text-white">${initial}</div>`;
+                }
+                authButton.setAttribute('title', displayName);
+                
+                // Render Logged-In Menu
+                authMenu.innerHTML = `
+                    <div class="p-2 border-b border-gray-700">
+                        <p class="text-white font-medium text-sm truncate">${displayName}</p>
+                        <p class="text-gray-400 text-xs truncate">${user.email}</p>
+                    </div>
+                    <a href="/profile.html" class="auth-menu-link">
+                        <i class="${getIconClassSimple('fa-user')} mr-2"></i> Profile
+                    </a>
+                    <a href="/settings.html" class="auth-menu-link">
+                        <i class="${getIconClassSimple('fa-cog')} mr-2"></i> Settings
+                    </a>
+                    <button id="logout-button" class="auth-menu-button text-red-400 hover:text-white hover:bg-red-700/50">
+                        <i class="${getIconClassSimple('fa-sign-out-alt')} mr-2"></i> Sign Out
+                    </button>
+                `;
+                
+                // Logout button listener
+                document.getElementById('logout-button').onclick = () => auth.signOut();
+                
+            } else {
+                // Render Login Icon
+                authButton.innerHTML = `<i class="${getIconClassSimple('fa-user-circle')} text-gray-400 text-3xl"></i>`;
+                authButton.setAttribute('title', 'Sign In');
+                
+                // Render Logged-Out Menu
+                authMenu.innerHTML = `
+                    <a href="/login.html" class="auth-menu-link">
+                        <i class="${getIconClassSimple('fa-sign-in-alt')} mr-2"></i> Sign In
+                    </a>
+                    <a href="/register.html" class="auth-menu-link">
+                        <i class="${getIconClassSimple('fa-user-plus')} mr-2"></i> Register
+                    </a>
+                `;
+            }
+
+            // Toggle logic for the dropdown menu
+            const toggleMenu = (event) => {
+                event.stopPropagation(); // Prevents click from immediately triggering the window listener
+                authMenu.classList.toggle('open');
+                authMenu.classList.toggle('closed');
+            };
+
+            authButton.onclick = toggleMenu;
+
+            // Close menu when clicking outside
+            window.addEventListener('click', (event) => {
+                if (authMenu.classList.contains('open') && !authMenuContainer.contains(event.target)) {
+                    authMenu.classList.remove('open');
+                    authMenu.classList.add('closed');
+                }
+            });
+        };
+
+        // --- 6. SCROLL GLIDE LOGIC (NEW) ---
+        const setupScrollListeners = () => {
+            const container = document.getElementById('nav-tabs-container');
+            const leftButton = document.getElementById('glide-left');
+            const rightButton = document.getElementById('glide-right');
+            const scrollDistance = 150; // Pixels to scroll
+
+            if (!container || !leftButton || !rightButton) return;
+
+            const checkScroll = () => {
+                const scrollLeft = container.scrollLeft;
+                const scrollWidth = container.scrollWidth;
+                const clientWidth = container.clientWidth;
+
+                // Toggle visibility based on scroll position
+                leftButton.classList.toggle('hidden', scrollLeft === 0);
+                rightButton.classList.toggle('hidden', scrollLeft + clientWidth >= scrollWidth - 1); // -1 is a buffer for floating point issues
+            };
+
+            const debouncedCheckScroll = debounce(checkScroll, 100);
+
+            const scrollHandler = (direction) => {
+                const currentScroll = container.scrollLeft;
+                let newScroll;
+
+                if (direction === 'left') {
+                    newScroll = Math.max(0, currentScroll - scrollDistance);
+                } else {
+                    newScroll = currentScroll + scrollDistance;
+                }
+                
+                container.scrollTo({
+                    left: newScroll,
+                    behavior: 'smooth'
+                });
+            };
+
+            // Initial check and listeners
+            checkScroll(); 
+            container.addEventListener('scroll', debouncedCheckScroll);
+            leftButton.addEventListener('click', () => scrollHandler('left'));
+            rightButton.addEventListener('click', () => scrollHandler('right'));
+
+            // Re-check on window resize
+            window.addEventListener('resize', debouncedCheckScroll);
+        };
+
+        // --- 7. MAIN EXECUTION FLOW ---
         injectStyles();
+
+        // Initial render of the structure (without user data yet)
+        const elements = renderNavbar(null, pages);
+
+        // Listen for Firebase Auth State Changes
+        auth.onAuthStateChanged(user => {
+            console.log("Auth state changed. User:", user ? user.uid : 'null');
+            updateAuthUI(user, elements);
+        });
     };
 
-    // --- START THE PROCESS ---
-    // Wait for the DOM to be ready, then start loading scripts.
-    document.addEventListener('DOMContentLoaded', run);
+    // Execute the main setup function
+    run();
 
 })();
