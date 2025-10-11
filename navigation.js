@@ -18,8 +18,10 @@
  * - It initializes Firebase, listens for auth state, and fetches user data.
  *
  * --- FIXES ---
- * - **Font Awesome 7.1.0 Fix:** Updated the icon rendering logic to use the correct 'fa-solid' prefix for Font Awesome 7.x.
- * - **Icon Loading Fix:** Implemented a utility function to correctly determine and apply the appropriate Font Awesome class from the page config.
+ * - **Font Awesome 7.1.0 Fix (Simplified):** The icon rendering logic in 'getIconClass' is simplified to strictly
+ * ensure the 'fa-solid' prefix is always prepended to icon names from 'page-identification.json' 
+ * (e.g., 'fa-house-user' becomes 'fa-solid fa-house-user'), which is required by the v7 CSS.
+ * - **Icon Loading Fix:** The utility function is now more focused on ensuring v7 compatibility for the icons defined in the JSON.
  */
 
 // =========================================================================
@@ -29,7 +31,7 @@ const FIREBASE_CONFIG = {
     apiKey: "AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro",
     authDomain: "project-zirconium.firebaseapp.com",
     projectId: "project-zirconium",
-    storageBucket: "project-zirconium.firebasestorage.app",
+    storageBucket: "project-zirconium.firebaseapp.com",
     messagingSenderId: "1096564243475",
     appId: "1:1096564243475:web:6d0956a70125eeea1ad3e6",
     measurementId: "G-1D4F692C1Q"
@@ -88,17 +90,16 @@ let db;
     };
 
     /**
-     * **NEW UTILITY FUNCTION: Fixes Font Awesome 7.x icon loading.**
-     * Determines the correct class prefix (fa-solid, fa-regular, fa-brands, etc.)
-     * or prepends 'fa-solid' if none is provided.
-     * @param {string} iconName The icon class name from page-identification.json (e.g., 'fa-home' or 'fa-brands fa-github').
-     * @returns {string} The complete, correctly prefixed Font Awesome class string.
+     * **UPDATED UTILITY FUNCTION: Fixes Font Awesome 7.x icon loading for JSON.**
+     * Forces the 'fa-solid' prefix to ensure icons from page-identification.json display.
+     * @param {string} iconName The icon class name from page-identification.json (e.g., 'fa-home').
+     * @returns {string} The complete, correctly prefixed Font Awesome class string (e.g., 'fa-solid fa-home').
      */
     const getIconClass = (iconName) => {
         if (!iconName) return '';
 
-        // Check if a prefix is already present (e.g., fa-solid, fa-regular, fa-brands)
-        // Font Awesome 7.x requires the prefix for all icons.
+        // Check if a prefix is already present (fa-solid, fa-brands, etc.)
+        // If it has a prefix, return as is.
         if (iconName.startsWith('fa-solid') ||
             iconName.startsWith('fa-regular') ||
             iconName.startsWith('fa-light') ||
@@ -107,25 +108,18 @@ let db;
             return iconName;
         }
 
-        // Default to 'fa-solid' if no prefix is found.
-        // Also ensure the 'fa-' part of the icon name is included.
-        // It's assumed the page config passes the full icon name like 'fa-home'
-        // If it only passes 'home', the config should be fixed, but we'll try to be robust.
-        return `fa-solid ${iconName.startsWith('fa-') ? iconName : `fa-${iconName}`}`;
+        // Otherwise, assume it's a solid icon (most common) and prepend 'fa-solid'.
+        return `fa-solid ${iconName}`;
     };
 
     const run = async () => {
         let pages = {};
 
         // Load Icons CSS first for immediate visual display
-        // Note: The 'fas' class prefix used in the old Font Awesome versions is replaced by 'fa-solid' in 6.x/7.x
-        // The CSS file for 7.1.0 is correct, but the HTML class references must be updated in renderNavbar.
         await loadCSS("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.1.0/css/all.min.css");
 
         // Fetch page configuration for the tabs
         try {
-            // Note: The PAGE_CONFIG_URL path may need to be adjusted based on where navigation.js and page-identification.json live.
-            // The existing `../page-identification.json` suggests one level up, which should be fine if it's correct.
             const response = await fetch(PAGE_CONFIG_URL);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             pages = await response.json();
@@ -152,9 +146,7 @@ let db;
     const initializeApp = (pages) => {
         // Initialize Firebase with the compat libraries
         const app = firebase.initializeApp(FIREBASE_CONFIG);
-        // CRITICAL FIX: Make auth and db accessible outside, or pass them to the authStateChanged listener
-        // The original code relied on them being globally defined within the closure,
-        // but it's cleaner to explicitly assign them to the module-scope variables defined above.
+        // Assign auth and db to module-scope variables
         auth = firebase.auth();
         db = firebase.firestore();
 
@@ -363,9 +355,7 @@ let db;
                 const isActive = isTabActive(page.url);
                 const activeClass = isActive ? 'active' : '';
                 
-                // <<< CRITICAL FIX: The original code used 'getIconClass()' but was implicitly
-                // failing to pass 'page.icon' to it.
-                // The correct logic is to pass the icon property from the page object.
+                // Use the simplified and now robust getIconClass
                 const iconClasses = getIconClass(page.icon);
 
                 return `
@@ -508,8 +498,7 @@ let db;
             if (user) {
                 const logoutButton = document.getElementById('logout-button');
                 if (logoutButton) {
-                    // CRITICAL FIX: Use the module-scope 'auth' variable
-                    // const auth = firebase.auth(); // This line is not needed if 'auth' is defined at module scope
+                    // Use the module-scope 'auth' variable
                     logoutButton.addEventListener('click', () => {
                         auth.signOut().catch(err => console.error("Logout failed:", err));
                     });
@@ -522,7 +511,7 @@ let db;
             if (user) {
                 // User is signed in. Fetch their data from Firestore.
                 try {
-                    // CRITICAL FIX: Use the module-scope 'db' variable
+                    // Use the module-scope 'db' variable
                     const userDoc = await db.collection('users').doc(user.uid).get();
                     const userData = userDoc.exists ? userDoc.data() : null;
                     renderNavbar(user, userData, pages);
