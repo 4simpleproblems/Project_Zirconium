@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - Interactive Dictionary</title>
+    <title>4SP - DICTIONARY</title>
     <meta name="description" content="A simple interactive dictionary with search and definition display using dictionaryapi.dev.">
 
     <!-- Fonts, Icons, and Tailwind CSS -->
@@ -223,17 +223,24 @@
         }
 
         /**
-         * Replaces standalone words (3+ chars) in the definition text with clickable spans.
-         * Excludes common function words.
+         * Replaces standalone words (4+ chars) in the definition text with clickable spans.
+         * Excludes an expanded list of common function words.
          * @param {string} text The definition text.
          * @returns {string} The text with clickable links.
          */
         function highlightDefinitionText(text) {
-            // List of common short words to exclude from linking
-            const commonWords = ['the', 'and', 'but', 'not', 'for', 'with', 'from', 'that', 'this', 'have', 'when', 'what', 'which', 'will', 'was', 'are', 'you', 'can', 'one', 'use', 'any', 'all', 'out', 'into', 'upon', 'like', 'than', 'only', 'much'];
+            // List of common words to exclude from linking. Increased for more selective highlighting.
+            const commonWords = [
+                'the', 'and', 'but', 'not', 'for', 'with', 'from', 'that', 'this', 'have', 
+                'when', 'what', 'which', 'will', 'was', 'are', 'you', 'can', 'one', 'use', 
+                'any', 'all', 'out', 'into', 'upon', 'like', 'than', 'only', 'much', 'about', 
+                'just', 'over', 'under', 'also', 'some', 'they', 'them', 'their', 'your', 
+                'most', 'such', 'make', 'take', 'look', 'find', 'away', 'down', 'here', 'more',
+                'must', 'once', 'sure', 'into', 'then', 'than'
+            ];
             
-            // Regex to find standalone words (alphabetic characters, 3+ chars) surrounded by non-word chars
-            return text.replace(/\b([a-zA-Z]{3,})\b/g, (match) => {
+            // Regex changed to find standalone words that are 4 characters or more ({4,})
+            return text.replace(/\b([a-zA-Z]{4,})\b/g, (match) => {
                 if (commonWords.includes(match.toLowerCase())) {
                     return match;
                 }
