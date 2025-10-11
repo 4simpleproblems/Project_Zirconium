@@ -87,7 +87,7 @@
         /* --- Compact List Styling for Friends and Daily Posts (UPDATED: Slight Rounding) --- */
         .compact-list-wrapper {
              background-color: #0d0d0d; 
-             border-radius: 0.75rem; /* UPDATED: Slightly rounded wrapper */
+             border-radius: 0.75rem; /* Slightly rounded wrapper */
              padding: 0.25rem 0.5rem; 
              border: 1px solid #1a1a1a;
              margin-top: 0.75rem;
@@ -106,7 +106,7 @@
         /* General style for a list item/card (Friends list & NEW Daily Posts) */
         .compact-list-item {
             background-color: transparent; 
-            border-radius: 0.5rem; /* UPDATED: Rounded item cards */
+            border-radius: 0.5rem; /* Rounded item cards */
             margin-bottom: 0.25rem; /* Spacing */
             padding: 0.5rem 0.5rem; 
             transition: background-color 0.2s;
@@ -273,8 +273,22 @@
         /* --- END FEED STYLES --- */
         
         /* --- CHAT STYLES --- */
+        
+        /* Request 2: Shorter Chat Height */
+        #messages-container {
+            display: flex;
+            flex-direction: column;
+            max-height: 60vh; /* Shorter max height for chat messages */
+            height: 60vh; /* Fixed height for consistent look */
+            flex-grow: 0; /* Override flex-grow to respect max-height */
+            overflow-y: auto;
+            padding-right: 0.5rem; /* Keep scrollbar space */
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
         .message-bubble {
-            max-width: 70%;
+            max-width: 70%; /* Request 4: Max width */
             padding: 0.75rem 1rem;
             border-radius: 1.25rem;
             word-wrap: break-word;
@@ -292,9 +306,41 @@
             color: #c0c0c0;
             border-bottom-left-radius: 0.5rem; /* Pointed corner */
         }
-        #messages-container {
+        
+        /* Request 5: Large Text Handling */
+        .message-content-wrapper {
+            max-height: 200px; /* Max height before truncation */
+            overflow: hidden;
+            position: relative;
+        }
+        .message-fade-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            pointer-events: none; 
+        }
+        .message-bubble.mine .message-fade-overlay {
+            background: linear-gradient(to bottom, transparent, #4f46e5 95%); 
+        }
+        .message-bubble.theirs .message-fade-overlay {
+            background: linear-gradient(to bottom, transparent, #252525 95%); 
+        }
+        .read-more-btn {
+            position: absolute;
+            bottom: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            padding: 4px 8px;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+            opacity: 0.9;
             display: flex;
-            flex-direction: column;
+            align-items: center;
+            font-weight: 600;
         }
         /* --- END CHAT STYLES --- */
 
@@ -352,7 +398,8 @@
             flex-grow: 1; /* Allow content container to fill available space */
         }
         
-        #upload-menu-modal .modal-content {
+        #upload-menu-modal .modal-content,
+        #large-text-modal .modal-content {
             max-width: 500px;
             aspect-ratio: auto;
             max-height: 90vh; 
@@ -375,6 +422,13 @@
         </div>
     </div>
 
+    <div id="large-text-modal" class="modal-backdrop hidden opacity-0">
+        <div class="modal-content w-full max-w-lg p-6 flex flex-col">
+            <h3 class="text-xl font-bold mb-4 text-white">Full Message View</h3>
+            <div id="large-text-content" class="text-gray-300 whitespace-pre-wrap overflow-y-auto max-h-[70vh] mb-4 text-sm md:text-base"></div>
+            <button id="large-text-close-btn" class="px-4 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold w-full">Close</button>
+        </div>
+    </div>
     <div id="photo-modal" class="modal-backdrop hidden">
         <div id="modal-content-container" class="modal-content relative flex flex-col md:flex-row gap-6"> 
             </div>
@@ -528,17 +582,18 @@
         let UNSUBSCRIBE_POSTS_LISTENER = () => {};
         let UNSUBSCRIBE_DAILY_SLOTS_LISTENER = () => {}; 
         let MODAL_UNSUBSCRIBE_LISTENER = () => {}; 
-        let UNSUBSCRIBE_CHAT_LISTENER = () => {}; // NEW: Chat listener
-        let ACTIVE_CHAT_UID = null; // NEW: Active chat partner UID
+        let UNSUBSCRIBE_CHAT_LISTENER = () => {}; // Chat listener
+        let ACTIVE_CHAT_UID = null; // Active chat partner UID
         let LAST_COMMENT_TIMESTAMP = 0; 
         let LAST_HEART_TIMESTAMP = 0; 
-        let LAST_CHAT_TIMESTAMP = 0; // NEW: Chat debounce timestamp
+        let LAST_CHAT_TIMESTAMP = 0; // Chat debounce timestamp
         let UNREAD_COMMENTS_COUNT = 0;
         let PENDING_UPLOAD_FILE = null; 
         const COMMENT_DELAY_MS = 3000;
         const HEART_DELAY_MS = 500; 
-        const CHAT_DELAY_MS = 1000; // NEW: Chat message delay
+        const CHAT_DELAY_MS = 1000; // Chat message delay
         const POST_SLOTS_MAX = 5;
+        const LARGE_MESSAGE_CHAR_LIMIT = 2000; // Character limit for truncation
         const MARQUEE_TRIGGER_LENGTH = 30; 
 
         // --- DOM Elements ---
@@ -547,7 +602,7 @@
         const friendCodeDisplay = document.getElementById('friend-code-display');
         const addFriendForm = document.getElementById('add-friend-form');
         const addFriendMessage = document.getElementById('add-friend-message');
-        const feedTitle = document.getElementById('feed-title'); // NEW: For toggling between feed/chat title
+        const feedTitle = document.getElementById('feed-title'); // For toggling between feed/chat title
         const photoFeed = document.getElementById('photo-feed');
         const friendsListItems = document.getElementById('friends-list-items'); 
         const dailyPostsContainer = document.getElementById('daily-posts-container');
@@ -566,23 +621,38 @@
         const imagePreview = document.getElementById('image-preview'); 
         const createPostForm = document.getElementById('create-post-form'); 
         const uploadDropArea = document.getElementById('upload-drop-area'); 
-        const chatPanel = document.getElementById('chat-panel'); // NEW
-        const chatFriendName = document.getElementById('chat-friend-name'); // NEW
-        const messagesContainer = document.getElementById('messages-container'); // NEW
-        const chatMessageForm = document.getElementById('chat-message-form'); // NEW
-        const chatMessageInput = document.getElementById('chat-message-input'); // NEW
-        const closeChatBtn = document.getElementById('close-chat-btn'); // NEW
+        const chatPanel = document.getElementById('chat-panel'); 
+        const chatFriendName = document.getElementById('chat-friend-name'); 
+        const messagesContainer = document.getElementById('messages-container'); 
+        const chatMessageForm = document.getElementById('chat-message-form'); 
+        const chatMessageInput = document.getElementById('chat-message-input'); 
+        const closeChatBtn = document.getElementById('close-chat-btn'); 
+        const largeTextModal = document.getElementById('large-text-modal'); // NEW
+        const largeTextContent = document.getElementById('large-text-content'); // NEW
+        const largeTextCloseBtn = document.getElementById('large-text-close-btn'); // NEW
 
 
         // --- Firestore Document References & Collections ---
         const getUserProfileDocRef = (userId) => doc(db, 'users', userId);
         const getFriendCodeDocRef = (code) => doc(db, 'artifacts', appId, 'public', 'data', 'friend_codes', code);
         const DAILY_PHOTO_COLLECTION = collection(db, 'daily_photos');
-        const CHAT_COLLECTION = collection(db, 'chats'); // NEW
+        const CHAT_COLLECTION = collection(db, 'chats'); 
 
         // =========================================================================
         // Helper Functions 
         // =========================================================================
+        
+        /**
+         * @brief Utility function to escape HTML special characters.
+         */
+        function escapeHtml(unsafe) {
+            return unsafe
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+        }
         
         /**
          * @brief Creates a deterministic Chat ID by sorting the two UIDs.
@@ -764,7 +834,7 @@
         }
 
         // =========================================================================
-        // Chat Functions (NEW)
+        // Chat Functions 
         // =========================================================================
         
         function closeChatPanel() {
@@ -781,13 +851,27 @@
             const bubbleWrapper = document.createElement('div');
             bubbleWrapper.className = `flex ${isMine ? 'justify-end' : 'justify-start'}`;
             
+            // Request 5: Large Text Handling
+            const isLongMessage = message.text.length > LARGE_MESSAGE_CHAR_LIMIT; 
+            const escapedText = escapeHtml(message.text);
+
+            const messageDisplay = isLongMessage 
+                ? `<div class="message-content-wrapper" data-message-text="${escapedText}">
+                       <p>${message.text}</p>
+                       <div class="message-fade-overlay"></div>
+                       <button class="read-more-btn bg-indigo-600 text-white hover:bg-indigo-700" title="Read Full Message">
+                           Read More <i class="fas fa-chevron-down ml-1"></i>
+                       </button>
+                   </div>`
+                : `<p>${message.text}</p>`;
+
             bubbleWrapper.innerHTML = `
-                <div class="message-bubble ${isMine ? 'mine' : 'theirs'}">
-                    <p class="text-xs font-semibold mb-1 ${isMine ? 'text-white/80' : 'text-indigo-400'}">${isMine ? 'You' : message.username}</p>
-                    <p>${message.text}</p>
+                <div class="message-bubble ${isMine ? 'mine' : 'theirs'} relative">
+                    ${messageDisplay}
                     <p class="text-[0.6rem] mt-1 text-right ${isMine ? 'text-white/70' : 'text-gray-400'}">${time}</p>
                 </div>
             `;
+            
             return bubbleWrapper;
         }
 
@@ -1338,6 +1422,15 @@
         
         titleModal.addEventListener('click', e => { if (e.target === titleModal || e.target.closest('#title-modal-close-btn')) closeTitleModal(); });
         uploadMenuModal.addEventListener('click', e => { if (e.target === uploadMenuModal || e.target.closest('#upload-menu-close-btn')) closeUploadMenu(); });
+        
+        // NEW: Large Text Modal Close Handler
+        largeTextModal.addEventListener('click', e => { 
+            if (e.target === largeTextModal || e.target.closest('#large-text-close-btn')) {
+                largeTextModal.classList.remove('opacity-100');
+                largeTextModal.classList.add('opacity-0');
+                setTimeout(() => largeTextModal.classList.add('hidden'), 300);
+            } 
+        });
 
         editTitleForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -1427,7 +1520,7 @@
                         const friendUsername = snap.data()?.username || 'Unknown';
                         const friendUid = friends[i];
                         
-                        // NEW: Added chat-friend-item class and data attributes to make it clickable
+                        // Added chat-friend-item class and data attributes to make it clickable
                         combinedHtml += `<div data-uid="${friendUid}" data-username="${friendUsername}" class="chat-friend-item compact-list-item flex justify-between items-center cursor-pointer hover:bg-indigo-900/10"><span class="font-semibold">${friendUsername}</span><button data-uid="${friendUid}" class="remove-friend-btn text-red-400 hover:text-red-500 px-2 py-1" title="Remove Friend"><i class="fas fa-user-minus"></i></button></div>`;
                     });
                 }
@@ -1435,7 +1528,7 @@
                 if (!combinedHtml) combinedHtml = '<p class="text-sm text-gray-500 p-2 text-center">No friends yet. Add one above!</p>';
                 friendsListItems.innerHTML = combinedHtml;
 
-                // NEW: Add chat open listener to new elements
+                // Add chat open listener to new elements
                 friendsListItems.querySelectorAll('.chat-friend-item').forEach(item => {
                     item.addEventListener('click', (e) => {
                         // Prevent chat from opening if the remove button is clicked
@@ -1464,9 +1557,24 @@
             });
         }
         
-        // NEW: Chat Form and Close Listener
+        // Chat Form and Close Listener
         chatMessageForm.addEventListener('submit', handleSendMessage);
         closeChatBtn.addEventListener('click', closeChatPanel);
+
+        // NEW: Event listener for Read More button inside messages container
+        messagesContainer.addEventListener('click', (e) => {
+            const readMoreBtn = e.target.closest('.read-more-btn');
+            if (readMoreBtn) {
+                e.preventDefault();
+                const messageWrapper = readMoreBtn.closest('.message-content-wrapper');
+                // The full text is stored in the data attribute of the wrapper
+                const fullText = messageWrapper.dataset.messageText; 
+
+                largeTextContent.textContent = fullText;
+                largeTextModal.classList.remove('hidden', 'opacity-0');
+                setTimeout(() => largeTextModal.classList.add('opacity-100'), 10);
+            }
+        });
 
 
         onAuthStateChanged(auth, async (user) => {
