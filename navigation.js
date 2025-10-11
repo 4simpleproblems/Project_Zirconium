@@ -359,7 +359,7 @@ const PAGE_CONFIG_URL = '../page-identification.json';
 
                 return `
                     <a href="${page.url}" class="nav-tab ${activeClass}">
-                        <i class="${iconClasses} mr-2"></i> // *** THE FIX IS HERE: Ensured a space exists before 'mr-2' ***
+                        <i class="${iconClasses} mr-2"></i> 
                         ${page.name}
                     </a>
                 `;
