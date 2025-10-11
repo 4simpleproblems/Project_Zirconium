@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>4SP - Secure Messenger</title>
-    <meta name="description" content="A secure, real-time messaging application for your social platform.">
+    <meta name="description" content="A secure, real-time messaging application.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -57,28 +57,12 @@
             padding: 2rem;
         }
         
-        /* --- REUSABLE BUTTON STYLING (from base-template) --- */
-        .btn-primary {
-            padding: 8px 16px;
-            border-radius: 6px;
-            background-color: #4f46e5;
-            color: white;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .btn-primary:hover {
-            background-color: #4338ca;
-        }
-        
-        /* --- MESSENGER CUSTOM STYLES (Adapted from old messenger.html) --- */
-        /* Custom scrollbar for a cleaner look (Adjusted for dark base-template colors) */
+        /* --- MESSENGER CUSTOM STYLES (Merged) --- */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
 
-        /* Smooth transitions */
         .view-transition {
             transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
         }
@@ -86,12 +70,6 @@
             opacity: 0;
             transform: scale(0.98);
             pointer-events: none;
-        }
-        
-        /* Ensure headers use Geist font */
-        #contacts-view h1, #contacts-view h2 {
-            font-family: 'Geist', sans-serif !important;
-            font-weight: 400 !important;
         }
     </style>
 </head>
@@ -113,6 +91,7 @@
         <div class="container mx-auto p-4">
             <header class="flex justify-between items-center mb-8 pt-4">
                 <h1 class="text-3xl font-bold text-white">Secure Messenger</h1>
+                <button onclick="navigateHome()" class="text-sm text-indigo-400 hover:text-indigo-300 transition"><i class="fa-solid fa-house mr-1"></i> Dashboard</button>
             </header>
             
             <section class="p-0 bg-gray-900/50 border border-[#252525] rounded-xl shadow-lg h-[80vh] min-h-[500px] flex items-center justify-center">
@@ -128,6 +107,7 @@
                                         <span>|</span>
                                         <span id="local-time">--:--</span>
                                     </div>
+                                    <button id="dark-mode-toggle" class="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:bg-[#252525] transition-colors"></button>
                                 </div>
                             </div>
                             <div class="mt-4 bg-[#070707] p-3 rounded-lg flex items-center justify-between">
@@ -214,8 +194,9 @@
         }
     </script>
     
-    <script type="module">
+    <script>
         // --- ADAPTED FIREBASE IMPORTS (Using compatibility SDK from base-template) ---
+        // Global variables are now available thanks to the compatibility SDK script tags
         const app = firebase.app();
         const auth = firebase.auth();
         const db = firebase.firestore();
@@ -245,38 +226,41 @@
             messageForm: document.getElementById('message-form'),
             messageInput: document.getElementById('message-input'),
             sendBtn: document.getElementById('send-btn'),
+            darkModeToggle: document.getElementById('dark-mode-toggle'),
             batteryStatusEl: document.getElementById('battery-status'),
             localTimeEl: document.getElementById('local-time'),
         };
 
         const icons = {
+            sun: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>`,
+            moon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>`,
             send: `<svg class="w-5 h-5 transform rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>`,
             check: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`,
         };
 
-        // --- MAIN APP LOGIC ENTRY POINT (Called by base-template after authentication) ---
+        // --- MAIN APP ENTRY POINT (Required by base-template) ---
         window.pageInit = function(user) {
             currentUser = user;
-            main();
-        }
-        
-        function main() {
+            initTheme();
             setupEventListeners();
-            handleAuthStateChange(currentUser); 
+            handleAuthStateChange(currentUser); // Call the core logic
         }
 
-        // FIX FOR LOADING SCREEN: Function is ASYNC and calls contentReady() at the end.
+        // --- CORE LOGIC ---
+        // Made async to ensure all data fetching completes before showing content
         async function handleAuthStateChange(user) {
             if (user) {
+                // All Firebase references are now using the compatibility syntax
                 await setupUserDocument();
                 listenForUserDocChanges();
                 listenForContacts();
                 startStatusUpdates();
                 
-                // FINAL STEP: Show the content now that initial data is loaded
+                // FIX: CALL CONTENTREADY HERE, AFTER INITIAL FIREBASE SETUP IS COMPLETE.
                 contentReady();
             } else {
                 stopStatusUpdates();
+                // Redirection is handled by the base-template auth script
             }
         }
         
@@ -303,6 +287,25 @@
             });
         }
 
+        // --- UI & THEME ---
+
+        function initTheme() {
+            if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                dom.darkModeToggle.innerHTML = icons.sun;
+            } else {
+                document.documentElement.classList.remove('dark');
+                dom.darkModeToggle.innerHTML = icons.moon;
+            }
+        }
+
+        function toggleTheme() {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            localStorage.theme = isDark ? 'dark' : 'light';
+            dom.darkModeToggle.innerHTML = isDark ? icons.sun : icons.moon;
+        }
+
         function scrollToBottom() {
             setTimeout(() => {
                 dom.messagesContainerEl.scrollTo({ top: dom.messagesContainerEl.scrollHeight, behavior: 'smooth' });
@@ -310,6 +313,7 @@
         }
 
         // --- STATUS BAR ---
+
         function startStatusUpdates() {
             stopStatusUpdates();
             const update = async () => {
@@ -358,16 +362,18 @@
 
             const name = data.name || 'Unnamed';
             const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+            const unreadClass = data.unread ? 'text-white font-semibold' : 'text-gray-400';
+            const timeClass = data.unread ? 'text-gray-400' : 'text-gray-500';
 
             let indicatorHTML = '';
             if (data.unread) {
                 indicatorHTML = `
-                    <p class="text-sm text-white font-semibold truncate max-w-[150px]">${data.lastMessage || ''}</p>
+                    <p class="text-sm ${unreadClass} truncate max-w-[150px]">${data.lastMessage || ''}</p>
                     <span class="w-2.5 h-2.5 bg-indigo-500 rounded-full ml-auto"></span>`;
             } else if (data.lastMessage) {
                 indicatorHTML = `
-                    <p class="text-sm text-gray-400 truncate max-w-[150px]">${data.lastMessage || ''}</p>
-                    <p class="text-xs text-gray-500 ml-auto whitespace-nowrap">${formatTimestamp(data.timestamp)}</p>`;
+                    <p class="text-sm ${unreadClass} truncate max-w-[150px]">${data.lastMessage || ''}</p>
+                    <p class="text-xs ${timeClass} ml-auto whitespace-nowrap">${formatTimestamp(data.timestamp)}</p>`;
             } else {
                  indicatorHTML = `<p class="text-sm text-gray-500">No messages yet.</p>`;
             }
@@ -427,7 +433,9 @@
             const chatId = [currentUser.uid, currentChatPartner.uid].sort().join('_');
             const chatDocRef = db.collection('chats').doc(chatId);
 
+            // FIX: Using onSnapshot compatibility syntax
             unsubscribeMessages = chatDocRef.onSnapshot((doc) => {
+                // if (doc.metadata.hasPendingWrites || !doc.exists()) return; // Removed modular syntax
                 if (!doc.exists) return;
                 
                 const messageData = doc.data();
@@ -513,6 +521,7 @@
         async function generateUniqueId(length = 8) {
             while (true) {
                 const id = Math.random().toString(36).substring(2, 2 + length);
+                // FIX: Using compatibility query syntax
                 const q = db.collection('users').where('publicId', '==', id);
                 const snapshot = await q.get();
                 if (snapshot.empty) return id;
@@ -538,10 +547,12 @@
             }
 
             const filteredText = await filterProfanity(text);
+            // FIX: Using compatibility ServerTimestamp syntax
             const messageData = { text: filteredText, senderId: currentUser.uid, timestamp: firebase.firestore.FieldValue.serverTimestamp() };
             const chatId = [currentUser.uid, currentChatPartner.uid].sort().join('_');
 
             try {
+                // FIX: Using compatibility setDoc syntax
                 await db.collection('chats').doc(chatId).set(messageData, { merge: true });
                 
                 const recipientContactRef = db.collection(`users/${currentChatPartner.uid}/contacts`).doc(currentUser.uid);
@@ -567,6 +578,7 @@
             if (id.length !== 8) return showCustomModal('Invalid ID', 'Please enter a valid 8-character ID.');
             if (id === dom.myIdEl.textContent) return showCustomModal('Invalid Action', "You can't add yourself as a contact.");
 
+            // FIX: Using compatibility query syntax
             const q = db.collection('users').where('publicId', '==', id);
             const snapshot = await q.get();
             if (snapshot.empty) return showCustomModal('User Not Found', 'No user found with that ID.');
@@ -574,6 +586,7 @@
             const contactUser = snapshot.docs[0].data();
             const name = prompt("Enter a name for this contact:", "New Contact");
             if (name) {
+                // FIX: Using compatibility setDoc syntax
                 await db.collection(`users/${currentUser.uid}/contacts`).doc(contactUser.uid).set({ name, unread: false, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
                 
                 const myUserDoc = await db.collection('users').doc(currentUser.uid).get();
@@ -607,6 +620,7 @@
             } else if (action === 'block') {
                 const userDocRef = db.collection('users').doc(currentUser.uid);
                 const isBlocked = blockedUsers.includes(uid);
+                // FIX: Using compatibility array operation syntax
                 const operation = isBlocked ? firebase.firestore.FieldValue.arrayRemove : firebase.firestore.FieldValue.arrayUnion;
                 const confirmationText = isBlocked ? `Are you sure you want to unblock ${name}?` : `Are you sure you want to block ${name}? They will not be able to send you messages.`;
                 if (confirm(confirmationText)) {
@@ -618,7 +632,7 @@
                 }
             }
         }
-        
+
         function handleCopyId() {
             const textArea = document.createElement("textarea");
             textArea.value = dom.myIdEl.textContent;
@@ -636,6 +650,7 @@
         }
 
         function setupEventListeners() {
+            dom.darkModeToggle.addEventListener('click', toggleTheme);
             dom.addContactBtn.addEventListener('click', handleAddContact);
             dom.contactsListEl.addEventListener('click', handleContactsListClick);
             dom.backToContactsBtn.addEventListener('click', closeChat);
@@ -648,30 +663,24 @@
                 }
             })
         }
-
-        // --- START THE APP ---
     </script>
-
+    
     <script type="module">
-        // Base-template authentication check
+        // Base-template authentication check (Copied from base-template.html)
         const auth = firebase.auth();
         
         auth.onAuthStateChanged(user => {
             if (!user) {
-                // User is NOT signed in. Redirect to the login page.
                 console.log("User not logged in. Redirecting to ../index.html");
                 window.location.href = '../index.html'; 
             } else {
-                // User IS signed in.
                 console.log("User logged in:", user.uid);
 
                 if (typeof pageInit === 'function') {
-                    // pageInit calls the messenger's main logic
+                    // Call the messenger's pageInit function, which handles all async setup
                     pageInit(user); 
                 }
-
-                // NOTE: contentReady() is called inside the async pageInit function
-                // to ensure the UI only shows after Firebase user data is fetched.
+                // REMOVED: contentReady() is now called inside the async pageInit/handleAuthStateChange
             }
         });
     </script>
