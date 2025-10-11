@@ -53,18 +53,12 @@
         }
 
         /* --- CONSISTENT PANEL STYLING (UPDATED: Slight Rounding) --- */
-        .left-panel, .feed-panel, .chat-panel { /* Added .chat-panel */
+        .left-panel, .feed-panel { 
             background-color: #111111; 
             border: 1px solid #252525; 
             border-radius: 1rem; /* UPDATED: Increased rounding */
             padding: 1.5rem; 
             height: fit-content;
-        }
-        .chat-panel {
-            height: 70vh; /* Set a fixed height for the chat panel */
-            display: flex;
-            flex-direction: column;
-            padding: 0; /* Removed padding for full-height chat UI */
         }
         
         /* General input styling to use thin font */
@@ -118,9 +112,8 @@
             transition: background-color 0.2s;
             /* Removed border-bottom for cleaner look with rounded cards */
             border-bottom: none;
-            cursor: pointer; /* Added cursor pointer for clickable items */
         }
-        .compact-list-item:hover, .compact-list-item.chat-active {
+        .compact-list-item:hover {
             background-color: #1f1f1f;
             transform: none; 
         }
@@ -344,99 +337,7 @@
              overflow: hidden;
              border-radius: 0.5rem;
         }
-
-        /* --- NEW MESSAGING STYLES --- */
-        #messages-container {
-            flex-grow: 1;
-            overflow-y: auto;
-            padding: 1.5rem;
-            display: flex;
-            flex-direction: column-reverse; /* New messages at the bottom */
-            gap: 0.5rem;
-            background-color: #0d0d0d;
-        }
-        #messages-container::-webkit-scrollbar { width: 8px; }
-        #messages-container::-webkit-scrollbar-thumb { background-color: #4f46e5; border-radius: 4px; }
-        #messages-container::-webkit-scrollbar-track { background-color: #1f2937; }
-
-        .message {
-            max-width: 70%;
-            padding: 0.75rem;
-            border-radius: 0.75rem;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-        }
-
-        .message.self {
-            align-self: flex-end;
-            background-color: #4f46e5;
-            color: white;
-            border-bottom-right-radius: 0.25rem;
-        }
         
-        .message.other {
-            align-self: flex-start;
-            background-color: #252525;
-            color: #c0c0c0;
-            border-bottom-left-radius: 0.25rem;
-        }
-        
-        .chat-header {
-            background-color: #111111;
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid #252525;
-            border-top-left-radius: 1rem;
-            border-top-right-radius: 1rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .chat-footer {
-            background-color: #111111;
-            padding: 1rem 1.5rem;
-            border-top: 1px solid #252525;
-            border-bottom-left-radius: 1rem;
-            border-bottom-right-radius: 1rem;
-        }
-
-        #chat-placeholder {
-            flex-grow: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: #4f46e5;
-            font-size: 1.5rem;
-        }
-        
-        .mode-switch-btn {
-            width: 100%;
-            padding: 0.75rem;
-            margin-bottom: 1.5rem;
-            font-size: 1.1rem;
-            font-weight: 400;
-            border-radius: 0.5rem;
-            transition: all 0.2s ease;
-        }
-        
-        .mode-switch-btn.active {
-            background-color: #4f46e5;
-            color: white;
-            box-shadow: 0 4px 10px rgba(79, 70, 229, 0.4);
-        }
-
-        .mode-switch-btn:not(.active) {
-            background-color: #252525;
-            color: #9ca3af;
-        }
-        
-        .chat-list-item.group-chat-item .group-icon {
-             color: #10b981; /* Green for group chats */
-        }
-        
-        .chat-list-item.friend-chat-item .friend-icon {
-             color: #4f46e5; /* Indigo for friend chats */
-        }
     </style>
 </head>
 <body class="pt-16">
@@ -495,33 +396,11 @@
             <button id="upload-menu-close-btn" class="mt-6 text-sm text-gray-400 hover:text-white w-full">Cancel</button>
         </div>
     </div>
-    
-    <div id="group-chat-modal" class="modal-backdrop hidden opacity-0">
-        <div class="modal-content w-full max-w-sm p-6">
-            <h3 class="text-xl font-bold mb-4 text-white">Create Group Chat</h3>
-            <form id="create-group-chat-form" class="flex flex-col gap-4">
-                <input type="text" id="group-name-input" placeholder="Group Name (max 30 chars)" class="p-3 bg-gray-900 border border-gray-700 rounded-md focus:ring-indigo-500" maxlength="30" required>
-                <div id="group-members-list" class="flex flex-col gap-2 p-3 bg-gray-900 rounded-md max-h-40 overflow-y-auto border border-gray-700">
-                    <p class="text-sm text-gray-400">Select friends for the group:</p>
-                </div>
-                <button type="submit" class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-700 transition font-semibold w-full">Create Group</button>
-            </form>
-            <button id="group-chat-modal-close-btn" class="mt-3 text-sm text-gray-400 hover:text-white">Cancel</button>
-        </div>
-    </div>
 
 
     <main id="messenger-ui" class="messenger-container" style="display: none;">
         
         <aside class="left-panel">
-            
-            <div class="mb-6 border-b border-gray-800 pb-4">
-                <h2 class="text-xl font-bold mb-2">Mode Switch</h2>
-                <div class="flex gap-2">
-                    <button id="social-mode-btn" class="mode-switch-btn active" data-mode="social"><i class="fas fa-camera mr-2"></i> Social</button>
-                    <button id="messaging-mode-btn" class="mode-switch-btn" data-mode="messaging"><i class="fas fa-comment-dots mr-2"></i> Messaging</button>
-                </div>
-            </div>
             
             <div class="mb-6 border-b border-gray-800 pb-4">
                 <h2 class="text-xl font-bold mb-2">Your Friend Code</h2>
@@ -531,7 +410,7 @@
                 </div>
             </div>
 
-            <div id="social-add-friend-section" class="mb-6 border-b border-gray-800 pb-4">
+            <div class="mb-6 border-b border-gray-800 pb-4">
                 <h2 class="text-xl font-bold mb-2">Add a Friend</h2>
                 <form id="add-friend-form" class="flex gap-2">
                     <input type="text" id="friend-code-input" placeholder="********" maxlength="8" class="friend-code-input-styled flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase tracking-widest text-center" style="font-family: monospace;" title="8 alphanumeric characters only">
@@ -543,15 +422,14 @@
             </div>
 
             <div class="mb-6 border-b border-gray-800 pb-4">
-                <h2 id="friends-list-title" class="text-xl font-bold mb-3">Your Friends</h2>
+                <h2 class="text-xl font-bold mb-3">Your Friends</h2>
                 <div id="friends-list-wrapper" class="compact-list-wrapper">
                     <div id="friends-list-items" class="compact-list-items">
                         </div>
                 </div>
-                <button id="create-group-chat-btn" class="mt-2 text-sm text-green-400 hover:text-green-500 transition hidden"><i class="fas fa-plus-circle mr-1"></i> Create Group Chat</button>
             </div>
 
-            <div id="social-daily-posts-section" class="mb-6">
+            <div class="mb-6">
                 <h2 class="text-xl font-bold mb-2">Your Daily Posts</h2>
                 <p class="text-sm text-gray-400 mb-3">You get 5 post slots per day.</p>
                 <div id="daily-posts-wrapper" class="compact-list-wrapper">
@@ -562,33 +440,10 @@
             </div>
         </aside>
 
-        <section id="social-feed-panel" class="feed-panel">
+        <section class="feed-panel">
             <h1 class="text-2xl font-bold mb-4">Today's Feed</h1>
             <div id="photo-feed" class="photo-grid">
                 <p id="feed-placeholder">Add some friends to see their daily photos!</p>
-            </div>
-        </section>
-        
-        <section id="messaging-chat-panel" class="chat-panel hidden">
-            <div id="chat-placeholder" class="text-center p-8">
-                 <i class="fas fa-hand-point-left mr-2"></i> Select a friend or group chat to start messaging!
-            </div>
-            
-            <div id="active-chat-window" class="hidden h-full flex flex-col">
-                <div id="chat-header" class="chat-header">
-                    <h2 id="chat-title" class="text-xl font-bold text-white"></h2>
-                    <span id="chat-cooldown-display" class="text-sm text-red-400 font-semibold hidden"></span>
-                </div>
-                <div id="messages-container" class="flex-grow">
-                    </div>
-                <div id="chat-footer" class="chat-footer">
-                    <form id="chat-message-form" class="flex gap-2">
-                        <input type="text" id="message-input" placeholder="Send a message..." class="flex-grow p-3 bg-gray-900 border border-gray-700 rounded-md focus:ring-indigo-500" maxlength="500">
-                        <button type="submit" id="send-message-btn" class="px-3 py-2 bg-indigo-600 rounded-md font-semibold disabled:opacity-50" title="Send Message">
-                            <i class="fas fa-paper-plane"></i>
-                        </button>
-                    </form>
-                </div>
             </div>
         </section>
 
@@ -625,31 +480,18 @@
         
         // --- Global State & Constants ---
         let CURRENT_FRIENDS = [];
-        let CURRENT_FRIEND_PROFILES = {}; // New cache for friend profiles (uid -> {username})
         let CURRENT_USERNAME = 'DailyUser'; 
         let UNSUBSCRIBE_POSTS_LISTENER = () => {};
-        let UNSUBSCRIBE_DAILY_SLOTS_LISTENER = () => {}; 
-        let UNSUBSCRIBE_MESSAGES_LISTENER = () => {}; // NEW: Chat listener
-        let UNSUBSCRIBE_CHATS_LISTENER = () => {}; // NEW: Chats list listener
+        let UNSUBSCRIBE_DAILY_SLOTS_LISTENER = () => {}; // NEW: Separate listener for daily post slots
         let MODAL_UNSUBSCRIBE_LISTENER = () => {}; 
         let LAST_COMMENT_TIMESTAMP = 0; 
-        let LAST_HEART_TIMESTAMP = 0; 
-        let LAST_MESSAGE_TIMESTAMP = 0; // NEW: Global state for chat debounce
+        let LAST_HEART_TIMESTAMP = 0; // NEW: Global state for heart debounce
         let UNREAD_COMMENTS_COUNT = 0;
         let PENDING_UPLOAD_FILE = null; 
-        let CURRENT_CHAT = null; // NEW: { chatId, type: 'friend'|'group', name, cooldownMs }
         const COMMENT_DELAY_MS = 3000;
-        const HEART_DELAY_MS = 500; 
-        const FRIEND_CHAT_DELAY_MS = 3000; // 3 seconds for friend chats
-        const GROUP_CHAT_DELAY_MS = 5000;  // 5 seconds for group chats
         const POST_SLOTS_MAX = 5;
-        const MARQUEE_TRIGGER_LENGTH = 30; 
-        
-        // --- IndexedDB Constants & State ---
-        const DB_NAME = '4spMessengerDB';
-        const DB_VERSION = 1;
-        const STORE_NAME = 'messages';
-        let dbCache = null;
+        const MARQUEE_TRIGGER_LENGTH = 30; // Marquee logic removed, but keeping constant for title length checks if needed later
+        const HEART_DELAY_MS = 500; // NEW: Debounce hearting for 0.75 seconds
 
         // --- DOM Elements ---
         const loadingScreen = document.getElementById('loading-screen');
@@ -675,39 +517,15 @@
         const imagePreview = document.getElementById('image-preview'); 
         const createPostForm = document.getElementById('create-post-form'); 
         const uploadDropArea = document.getElementById('upload-drop-area'); 
-        
-        // --- NEW CHAT ELEMENTS ---
-        const socialModeBtn = document.getElementById('social-mode-btn');
-        const messagingModeBtn = document.getElementById('messaging-mode-btn');
-        const socialFeedPanel = document.getElementById('social-feed-panel');
-        const messagingChatPanel = document.getElementById('messaging-chat-panel');
-        const socialAddFriendSection = document.getElementById('social-add-friend-section');
-        const socialDailyPostsSection = document.getElementById('social-daily-posts-section');
-        const friendsListTitle = document.getElementById('friends-list-title');
-        const createGroupChatBtn = document.getElementById('create-group-chat-btn');
-        const chatPlaceholder = document.getElementById('chat-placeholder');
-        const activeChatWindow = document.getElementById('active-chat-window');
-        const chatTitle = document.getElementById('chat-title');
-        const messagesContainer = document.getElementById('messages-container');
-        const chatMessageForm = document.getElementById('chat-message-form');
-        const messageInput = document.getElementById('message-input');
-        const sendMessageBtn = document.getElementById('send-message-btn');
-        const chatCooldownDisplay = document.getElementById('chat-cooldown-display');
-        const groupChatModal = document.getElementById('group-chat-modal');
-        const groupChatModalCloseBtn = document.getElementById('group-chat-modal-close-btn');
-        const createGroupChatForm = document.getElementById('create-group-chat-form');
-        const groupMembersList = document.getElementById('group-members-list');
 
 
         // --- Firestore Document References & Collections ---
         const getUserProfileDocRef = (userId) => doc(db, 'users', userId);
         const getFriendCodeDocRef = (code) => doc(db, 'artifacts', appId, 'public', 'data', 'friend_codes', code);
         const DAILY_PHOTO_COLLECTION = collection(db, 'daily_photos');
-        const CHATS_COLLECTION = collection(db, 'chats');
-        const getChatDocRef = (chatId) => doc(CHATS_COLLECTION, chatId);
 
         // =========================================================================
-        // Helper Functions (Existing & New)
+        // Helper Functions 
         // =========================================================================
         
         async function cleanText(text, type = 'text') {
@@ -724,8 +542,12 @@
             }
         }
         
+        /**
+         * @brief Formats large numbers into abbreviated strings (K, M, B).
+         * @param {number} num The number to format.
+         * @returns {string} The formatted string (e.g., 1234 -> 1.2K). Capped at 999B.
+         */
         function formatCount(num) {
-            // ... (formatCount logic remains the same) ...
             if (typeof num !== 'number' || isNaN(num)) return '0';
             if (num < 1000) return String(num); 
 
@@ -733,487 +555,438 @@
             let tier = 0;
             let currentNum = num;
             
+            // Calculate tier (1=K, 2=M, 3=B)
             while (currentNum >= 1000 && tier < suffixes.length - 1) {
                 currentNum /= 1000;
                 tier++;
             }
 
+            // Apply the user's specific cap for B (999B)
             if (tier === 3) {
                 if (currentNum >= 999.5) return '999B';
             }
 
+            // Format the number to one decimal place, removing .0 if it's a whole number
             const formatted = currentNum.toFixed(1).replace(/\.0$/, '');
             
             return formatted + suffixes[tier];
         }
 
         function closePhotoModal() {
-            // ... (closePhotoModal logic remains the same) ...
             photoModal.classList.add('hidden');
             MODAL_UNSUBSCRIBE_LISTENER();
             MODAL_UNSUBSCRIBE_LISTENER = () => {};
             document.getElementById('modal-content-container').innerHTML = '';
+            // Reset fullscreen state when closing
             document.getElementById('modal-content-container').classList.remove('fullscreen-image-mode'); 
         }
         
+        function openUploadMenu(slotIndex) {
+            document.getElementById('upload-menu-title').textContent = `Post to Slot #${slotIndex + 1}`;
+            uploadFileInput.dataset.slotIndex = slotIndex;
+            uploadFileInput.value = '';
+            uploadSelectOptions.classList.remove('hidden');
+            uploadPostCreator.classList.add('hidden');
+            document.getElementById('post-title-input').value = '';
+            uploadMenuModal.classList.remove('hidden');
+            setTimeout(() => uploadMenuModal.classList.add('opacity-100'), 10);
+        }
+        
+        function closeUploadMenu() {
+            uploadMenuModal.classList.remove('opacity-100');
+            uploadMenuModal.classList.add('opacity-0');
+            setTimeout(() => uploadMenuModal.classList.add('hidden'), 300);
+            PENDING_UPLOAD_FILE = null;
+        }
+
         function showMessage(element, text, type = 'error') {
-            // ... (showMessage logic remains the same) ...
             element.textContent = text;
             element.className = `text-sm mt-2 min-h-[20px] ${type === 'success' ? 'text-green-400' : 'text-red-400'}`;
             setTimeout(() => element.textContent = '', 4000);
         }
 
-        // =========================================================================
-        // NEW: IndexedDB Caching for Messages
-        // =========================================================================
-        
-        function initDB() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-                request.onerror = (event) => {
-                    console.error("IndexedDB error:", event.target.error);
-                    reject(event.target.error);
-                };
-
-                request.onupgradeneeded = (event) => {
-                    const db = event.target.result;
-                    if (!db.objectStoreNames.contains(STORE_NAME)) {
-                        const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-                        // Index to quickly look up messages by chatId and timestamp
-                        objectStore.createIndex("chatId", "chatId", { unique: false });
-                        objectStore.createIndex("timestamp", "timestamp", { unique: false });
-                    }
-                };
-
-                request.onsuccess = (event) => {
-                    dbCache = event.target.result;
-                    resolve(dbCache);
-                };
-            });
-        }
-        
-        /**
-         * @brief Saves a message to the IndexedDB cache.
-         * @param {string} chatId 
-         * @param {object} message 
-         */
-        function saveMessageToCache(chatId, message) {
-            if (!dbCache) return;
-            const tx = dbCache.transaction(STORE_NAME, 'readwrite');
-            const store = tx.objectStore(STORE_NAME);
-            
-            // The message object from Firestore/Local needs a unique 'id' for the keyPath
-            const cacheMessage = { 
-                id: `${chatId}_${message.id}`, // Unique ID based on chat and message ID
-                chatId: chatId, 
-                senderUid: message.senderUid, 
-                senderUsername: message.senderUsername,
-                text: message.text, 
-                timestamp: message.timestamp instanceof Date ? message.timestamp.getTime() : message.timestamp.toDate().getTime()
-            };
-            
-            store.put(cacheMessage);
-        }
-        
-        /**
-         * @brief Loads messages for a specific chat from the IndexedDB cache.
-         * @param {string} chatId 
-         * @returns {Promise<Array>} List of cached messages.
-         */
-        function loadMessagesFromCache(chatId) {
-            return new Promise((resolve, reject) => {
-                if (!dbCache) return resolve([]);
-                const tx = dbCache.transaction(STORE_NAME, 'readonly');
-                const store = tx.objectStore(STORE_NAME);
-                const index = store.index('chatId');
-                const request = index.getAll(chatId);
-
-                request.onsuccess = (event) => {
-                    // Sort messages by timestamp (oldest first)
-                    const messages = event.target.result.sort((a, b) => a.timestamp - b.timestamp);
-                    // Convert back to Firestore-like objects with Date objects
-                    resolve(messages.map(m => ({
-                        id: m.id, 
-                        senderUid: m.senderUid, 
-                        senderUsername: m.senderUsername, 
-                        text: m.text, 
-                        timestamp: new Date(m.timestamp)
-                    })));
-                };
-
-                request.onerror = (event) => {
-                    console.error("Error loading messages from cache:", event.target.error);
-                    reject(event.target.error);
-                };
-            });
-        }
-
-        // =========================================================================
-        // NEW: Messaging Logic
-        // =========================================================================
-        
-        /**
-         * @brief Renders messages in the active chat window.
-         * @param {Array<object>} messages 
-         */
-        function renderMessages(messages) {
-            messagesContainer.innerHTML = '';
-            const fragment = document.createDocumentFragment();
-            const currentUserUid = auth.currentUser.uid;
-            
-            // Reverse the array to render newest messages at the bottom (via flex-direction: column-reverse)
-            messages.slice().reverse().forEach(msg => {
-                const isSelf = msg.senderUid === currentUserUid;
-                const messageDiv = document.createElement('div');
-                messageDiv.className = `message ${isSelf ? 'self' : 'other'}`;
-                messageDiv.innerHTML = `
-                    ${!isSelf ? `<strong class="font-semibold text-sm">${msg.senderUsername}</strong><br>` : ''}
-                    ${msg.text}
-                    <span class="block text-xs text-right opacity-75 mt-1">${new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                `;
-                fragment.appendChild(messageDiv);
-            });
-
-            messagesContainer.appendChild(fragment);
-            // Scroll to the bottom only if it's the initial load or a new message from someone else
-            // Because we use column-reverse, we just scroll to the top.
-            messagesContainer.scrollTop = 0; 
-        }
-
-        /**
-         * @brief Starts the real-time listener for messages in the current chat.
-         * @param {string} chatId 
-         */
-        async function setupMessageListener(chatId) {
-            UNSUBSCRIBE_MESSAGES_LISTENER(); // Clean up previous listener
-            
-            const chatMessagesRef = collection(getChatDocRef(chatId), 'messages');
-            const messagesQuery = query(chatMessagesRef, orderBy('timestamp', 'desc'), limit(50)); // Only load last 50
-            
-            // 1. Load initial messages from cache (fast loading)
-            const cachedMessages = await loadMessagesFromCache(chatId);
-            if (cachedMessages.length > 0) renderMessages(cachedMessages);
-            else renderMessages([{ senderUid: 'system', senderUsername: 'System', text: 'No cached messages found. Loading from server...', timestamp: new Date() }]);
-
-            // 2. Start real-time listener (updates cache and UI)
-            UNSUBSCRIBE_MESSAGES_LISTENER = onSnapshot(messagesQuery, (snapshot) => {
-                const allMessages = [];
-                snapshot.docs.forEach(doc => {
-                    const msgData = { ...doc.data(), id: doc.id };
-                    allMessages.push(msgData);
-                    saveMessageToCache(chatId, msgData); // Cache new/updated messages
-                });
+        function showCustomModal(title, body) {
+            return new Promise(resolve => {
+                messageModalTitle.textContent = title;
+                messageModalBody.textContent = body;
+                messageModal.classList.remove('hidden', 'opacity-0');
+                messageModal.classList.add('opacity-100');
                 
-                // Sort by timestamp for rendering
-                const sortedMessages = allMessages.sort((a, b) => (a.timestamp?.toDate() || 0) - (b.timestamp?.toDate() || 0));
-                renderMessages(sortedMessages);
+                const handler = () => {
+                    messageModal.classList.remove('opacity-100');
+                    messageModal.classList.add('opacity-0');
+                    setTimeout(() => messageModal.classList.add('hidden'), 300);
+                    messageModalCloseBtn.removeEventListener('click', handler);
+                    resolve(true); 
+                };
+                messageModalCloseBtn.addEventListener('click', handler);
+            });
+        }
+        
+        function openTitleModal(postId, currentTitle = '') {
+            const input = document.getElementById('title-edit-input');
+            input.value = currentTitle;
+            editTitleForm.dataset.postId = postId;
+            titleModal.classList.remove('hidden');
+            setTimeout(() => titleModal.classList.add('opacity-100'), 10);
+        }
+
+        function closeTitleModal() {
+            titleModal.classList.remove('opacity-100');
+            titleModal.classList.add('opacity-0');
+            setTimeout(() => titleModal.classList.add('hidden'), 300);
+        }
+
+        async function generateUniqueFriendCode() {
+            let code, isUnique = false;
+            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            try {
+                while (!isUnique) {
+                    code = Array.from({ length: 8 }, () => characters.charAt(Math.floor(Math.random() * characters.length))).join('');
+                    const codeDoc = await getDoc(getFriendCodeDocRef(code));
+                    if (!codeDoc.exists()) isUnique = true;
+                }
+                return code;
+            } catch (error) {
+                console.error("Error generating friend code:", error);
+                throw new Error("Failed to generate unique friend code.");
+            }
+        }
+        
+        function compressImage(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = event => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 800; 
+                        const scaleSize = MAX_WIDTH / img.width;
+                        canvas.width = MAX_WIDTH;
+                        canvas.height = img.height * scaleSize;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        resolve(ctx.canvas.toDataURL('image/jpeg', 0.8));
+                    };
+                    img.onerror = reject;
+                };
+                reader.onerror = reject;
+            });
+        }
+        
+        /**
+         * @brief Creates and returns a single photo thumbnail element.
+         * @param {string} photoId 
+         * @param {object} photoData 
+         * @returns {HTMLElement} The created thumbnail div.
+         */
+        function createPhotoThumbnailElement(photoId, photoData) {
+            const titleText = photoData.title;
+            const heartsCount = photoData.hearts?.length || 0;
+            const commentsCount = photoData.comments?.length || 0;
+            
+            const thumb = document.createElement('div');
+            thumb.className = 'photo-thumbnail';
+            thumb.dataset.photoId = photoId;
+            thumb.innerHTML = `
+                <img src="${photoData.imageBase64}" alt="${titleText || 'Photo'} by ${photoData.creatorUsername}" loading="lazy">
+                <div class="overlay"></div>
+                <div class="absolute top-2 left-2 z-10 text-white text-xs bg-black/50 px-2 py-1 rounded-full flex items-center shadow-lg">
+                    <i class="fas fa-heart text-red-400 mr-1"></i> <span class="font-bold heart-count-display">${formatCount(heartsCount)}</span>
+                    <i class="fas fa-comment text-indigo-400 ml-2 mr-1"></i> <span class="font-bold comment-count-display">${formatCount(commentsCount)}</span>
+                </div>
+                <div class="title-overlay">
+                    <div class="title-text-container">
+                        <span class="text-white font-semibold title-text-span">${titleText}</span>
+                    </div>
+                </div>`;
+            thumb.addEventListener('click', () => openPhotoModal(photoId));
+            return thumb;
+        }
+
+        // =========================================================================
+        // Core Logic - Authentication & Initialization 
+        // =========================================================================
+
+        async function initializeAuth() {
+            try {
+                await (initialAuthToken ? signInWithCustomToken(auth, initialAuthToken) : signInAnonymously(auth));
+            } catch (error) {
+                console.error("Firebase authentication failed:", error);
+                loadingScreen.style.display = 'none'; 
+                let errorMessage = `Failed to sign in to Firebase. Error: ${error.code || error.message}.`;
+                if (error.code === 'auth/invalid-api-key') errorMessage = `Authentication failed due to an **Invalid API Key**. Please ensure the configuration in 'firebase-config.js' is correct.`;
+                if (error.code === 'auth/network-request-failed') errorMessage = `Authentication failed due to a **Network Error**. Check your internet connection and Firebase project settings.`;
+                showCustomModal("Authentication Error", errorMessage);
+                throw error; 
+            }
+        }
+
+        async function handleFriendCodeLogic(user) {
+            try {
+                const userProfileRef = getUserProfileDocRef(user.uid);
+                let userProfileSnap = await getDoc(userProfileRef);
+
+                if (!userProfileSnap.exists() || !userProfileSnap.data()?.username) {
+                    console.error("User profile document or username field not found for UID:", user.uid);
+                    showCustomModal("Profile Error", `Your user profile could not be loaded. This might be because it hasn't been created in the database yet. Please contact support.`);
+                    throw new Error(`User profile or username not found for ${user.uid}`);
+                }
+                
+                const profileData = userProfileSnap.data();
+                CURRENT_USERNAME = profileData.username;
+
+                // Ensure app-specific fields exist on the user document without overwriting
+                if (profileData.friends === undefined || profileData.dailySlotsUsed === undefined || profileData.lastPostReset === undefined || profileData.pending_requests === undefined) {
+                    await setDoc(userProfileRef, {
+                        friends: profileData.friends || [],
+                        dailySlotsUsed: profileData.dailySlotsUsed || [],
+                        lastPostReset: profileData.lastPostReset || serverTimestamp(),
+                        pending_requests: profileData.pending_requests || []
+                    }, { merge: true }); // Use set with merge to add fields without overwriting existing ones
+                }
+
+                const codeQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'friend_codes'), where('userId', '==', user.uid), limit(1));
+                const codeQuerySnap = await getDocs(codeQuery);
+                
+                let existingCode = codeQuerySnap.empty ? null : codeQuerySnap.docs[0].id;
+                if (!existingCode) {
+                    friendCodeDisplay.textContent = 'Generating...';
+                    existingCode = await generateUniqueFriendCode();
+                    await setDoc(getFriendCodeDocRef(existingCode), { userId: user.uid, createdAt: serverTimestamp() });
+                }
+                friendCodeDisplay.textContent = existingCode;
+            } catch (error) {
+                console.error("Profile/Friend Code Setup Failed:", error);
+                showCustomModal("Code Setup Error", `Failed to set up your Friend Code. This may be due to missing Firestore security rules.`);
+                throw new Error("Failed to set up user profile and friend code.");
+            }
+        }
+
+        async function cleanupOldPosts(user) {
+            try {
+                const now = new Date();
+                const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const userProfileRef = getUserProfileDocRef(user.uid);
+                const userProfileSnap = await getDoc(userProfileRef);
+                const lastReset = userProfileSnap.data()?.lastPostReset?.toDate() || new Date(0);
+                
+                if (lastReset < startOfToday) {
+                    await updateDoc(userProfileRef, { dailySlotsUsed: [], lastPostReset: serverTimestamp() });
+                    console.log("Daily post slots reset for new day.");
+                }
+
+                const oldPostsQuery = query(DAILY_PHOTO_COLLECTION, where('createdAt', '<', startOfToday), limit(50));
+                const snapshot = await getDocs(oldPostsQuery);
+                if (snapshot.empty) return;
+
+                const batch = writeBatch(db);
+                snapshot.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+                console.log(`Cleaned up ${snapshot.size} expired daily posts.`);
+            } catch (error) {
+                console.warn("Post cleanup failed, proceeding with app load:", error);
+            }
+        }
+
+        // =========================================================================
+        // Real-Time Listener Implementations
+        // =========================================================================
+        
+        function setupFriendsFeedListener(user) {
+            UNSUBSCRIBE_POSTS_LISTENER(); 
+            const startOfDay = new Date();
+            startOfDay.setHours(0, 0, 0, 0);
+            
+            const uidsToQuery = [user.uid, ...CURRENT_FRIENDS].slice(0, 10);
+            if (uidsToQuery.length === 0) {
+                 photoFeed.innerHTML = '<p id="feed-placeholder" class="text-gray-500">Add some friends to see their daily photos!</p>';
+                 return;
+            }
+            
+            const photosQuery = query(DAILY_PHOTO_COLLECTION, where('creatorUid', 'in', uidsToQuery), where('createdAt', '>=', startOfDay), orderBy('createdAt', 'desc'));
+            
+            // REFACTOR: Use a full-snapshot processing approach to eliminate duplicate rendering issues.
+            UNSUBSCRIBE_POSTS_LISTENER = onSnapshot(photosQuery, (snapshot) => {
+                const fragment = document.createDocumentFragment();
+                
+                // 1. Process the entire snapshot (in sorted order)
+                snapshot.docs.forEach(doc => {
+                    const docId = doc.id;
+                    const data = doc.data();
+                    
+                    if (!data.title) return; // Skip posts without titles
+                    
+                    // Try to reuse an existing element to minimize DOM thrashing
+                    let thumb = document.querySelector(`.photo-thumbnail[data-photo-id="${docId}"]`);
+                    
+                    if (thumb) {
+                        // Update existing element properties
+                        thumb.querySelector('.heart-count-display').innerHTML = formatCount(data.hearts?.length || 0);
+                        thumb.querySelector('.comment-count-display').innerHTML = formatCount(data.comments?.length || 0);
+                        thumb.querySelector('.title-text-span').textContent = data.title;
+                    } else {
+                        // Create a new element
+                        thumb = createPhotoThumbnailElement(docId, data);
+                    }
+                    
+                    // Append the element (new or reused) to the fragment, preserving sort order
+                    fragment.appendChild(thumb);
+                });
+
+                // 2. Clear the existing feed and replace it with the new, correct one
+                photoFeed.innerHTML = '';
+                photoFeed.appendChild(fragment);
+
+                if (photoFeed.children.length === 0) photoFeed.innerHTML = '<p id="feed-placeholder" class="text-gray-500">No posts found today from you or your friends!</p>';
+                else document.getElementById('feed-placeholder')?.remove();
 
             }, (error) => {
-                 console.error("Error fetching messages:", error);
-                 renderMessages([{ senderUid: 'system', senderUsername: 'System', text: `Error loading chat: ${error.message}`, timestamp: new Date() }]);
+                 console.error("Error fetching feed:", error);
+                 photoFeed.innerHTML = '<p class="text-red-400">Error loading feed.</p>';
             });
         }
         
         /**
-         * @brief Opens a friend or group chat.
-         * @param {string} chatId 
-         * @param {string} name 
-         * @param {'friend'|'group'} type 
+         * @brief Renders the user's daily post slots based on profile data and post snapshots.
+         * @param {object} profileData The user's profile data from Firestore.
+         * @param {object} postsToday A map of postId -> postData for all user's posts today.
          */
-        function openChat(chatId, name, type) {
-            if (CURRENT_CHAT?.chatId === chatId) return; // Already open
+        function renderDailyPosts(profileData, postsToday) {
+            const currentUser = auth.currentUser;
+            const dailySlotsUsed = profileData.dailySlotsUsed || []; 
+            dailyPostsContainer.innerHTML = ''; 
 
-            // Set current chat state
-            CURRENT_CHAT = {
-                chatId: chatId,
-                type: type,
-                name: name,
-                cooldownMs: type === 'group' ? GROUP_CHAT_DELAY_MS : FRIEND_CHAT_DELAY_MS
-            };
-            
-            // Update UI
-            document.querySelectorAll('.compact-list-item').forEach(el => el.classList.remove('chat-active'));
-            document.querySelector(`.compact-list-item[data-chat-id="${chatId}"]`)?.classList.add('chat-active');
-            
-            chatPlaceholder.classList.add('hidden');
-            activeChatWindow.classList.remove('hidden');
-            chatTitle.textContent = name;
-            
-            // Start listener
-            setupMessageListener(chatId);
-            
-            // Reset message input and cooldown
-            messageInput.value = '';
-            messageInput.disabled = false;
-            sendMessageBtn.disabled = false;
-            chatCooldownDisplay.classList.add('hidden');
+            for (let i = 0; i < POST_SLOTS_MAX; i++) {
+                const div = document.createElement('div');
+                div.className = 'compact-list-item daily-post-card flex justify-between items-center';
+                const postId = dailySlotsUsed[i]; 
+                
+                if (postId) {
+                    const postData = postsToday[postId];
+                    const name = postData ? (postData.title || 'TITLE MISSING') : `Slot #${i + 1} Used & Deleted`;
+                    
+                    // Check if the post exists and has a title to show the 'View' button
+                    const isViewable = postData && postData.title; 
+
+                    div.innerHTML = `
+                        <div class="flex-grow overflow-hidden whitespace-nowrap mr-2">
+                            <span class="font-semibold inline-block title-text-span">${name}</span>
+                        </div>
+                        ${isViewable ? `<button class="view-post-btn text-indigo-400 hover:text-indigo-500 transition px-2 py-1" title="View Post"><i class="fas fa-eye"></i></button>` : `<span class="text-gray-600 text-sm">${postData ? 'No Title' : 'Slot Used'}</span>`}`;
+                    
+                    if (isViewable) {
+                        div.querySelector('.view-post-btn').addEventListener('click', () => openPhotoModal(postId));
+                    } else if (postData && !postData.title) {
+                         // Allow editing if the slot is used but the post is missing a title
+                         div.querySelector('span:last-child').textContent = 'Needs Title';
+                         div.querySelector('span:last-child').className = 'text-yellow-500 text-sm cursor-pointer';
+                         div.querySelector('span:last-child').addEventListener('click', () => openTitleModal(postId, postData.title));
+                    }
+                } else if (i === dailySlotsUsed.length) {
+                    // Available slot is the one immediately after the last used slot
+                    div.innerHTML = `
+                        <span class="font-semibold text-gray-400">Post #${i + 1}</span>
+                        <button data-slot-index="${i}" class="open-upload-menu-btn px-3 py-1 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold text-white" title="Upload Photo"><i class="fas fa-image"></i></button>`;
+                    div.querySelector('.open-upload-menu-btn').addEventListener('click', e => openUploadMenu(parseInt(e.currentTarget.dataset.slotIndex)));
+                } else {
+                    // Locked slots (only slots after the next available slot are locked)
+                    div.innerHTML = `<span class="font-semibold text-gray-600">Post #${i + 1}</span><span class="text-gray-600"><i class="fas fa-lock"></i> Locked</span>`;
+                }
+                dailyPostsContainer.appendChild(div);
+            }
         }
 
-        /**
-         * @brief Handles message sending logic, including cooldown.
-         */
-        async function sendMessage() {
-            const text = messageInput.value.trim();
-            if (!text || !CURRENT_CHAT) return;
-            
-            const now = Date.now();
-            if (now - LAST_MESSAGE_TIMESTAMP < CURRENT_CHAT.cooldownMs) {
-                const remaining = Math.ceil((CURRENT_CHAT.cooldownMs - (now - LAST_MESSAGE_TIMESTAMP)) / 1000);
-                showMessage(document.getElementById('chat-footer').querySelector('.text-sm') || document.createElement('div'), `Cooldown: Wait ${remaining}s.`, 'error');
+        // REFACTOR: The main listener function now coordinates two listeners: one for the profile/slots, one for the posts.
+        function setupDailyPostsListener(user) {
+             const userProfileRef = getUserProfileDocRef(user.uid);
+             const startOfDay = new Date();
+             startOfDay.setHours(0, 0, 0, 0);
+
+             let currentProfileData = {};
+             let currentPostsData = {};
+
+             // Listener 1: Real-time listener for the user's daily posts
+             const postsQuery = query(DAILY_PHOTO_COLLECTION, where('creatorUid', '==', user.uid), where('createdAt', '>=', startOfDay), orderBy('createdAt', 'asc'));
+             
+             // UNUSED: This listener is no longer strictly needed but serves as a way to cache post data changes
+             // and trigger a re-render based on the profile data.
+             const unsubscribePostsCache = onSnapshot(postsQuery, (snapshot) => {
+                currentPostsData = snapshot.docs.reduce((acc, doc) => ({ ...acc, [doc.id]: doc.data() }), {});
+                // Re-render the slots view whenever the underlying post data changes
+                renderDailyPosts(currentProfileData, currentPostsData);
+             });
+             
+             // Listener 2: Real-time listener for the user's profile to track dailySlotsUsed
+             UNSUBSCRIBE_DAILY_SLOTS_LISTENER = onSnapshot(userProfileRef, (profileSnap) => {
+                currentProfileData = profileSnap.data() || {};
+                // Re-render the slots view whenever the profile/slots change
+                renderDailyPosts(currentProfileData, currentPostsData);
+             });
+             
+             // Store the unsubscribe function for cleanup
+             setupDailyPostsListener.unsubscribe = () => {
+                 unsubscribePostsCache();
+                 UNSUBSCRIBE_DAILY_SLOTS_LISTENER();
+             };
+        }
+        
+        function handleFileUpload(file) {
+            if (!file || !file.type.startsWith('image/')) {
+                showMessage(uploadMessage, 'Please select a valid image file.', 'error');
                 return;
             }
-            
-            sendMessageBtn.disabled = true;
-            sendMessageBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
-            messageInput.disabled = true;
-            
-            try {
-                const cleanedText = await cleanText(text, 'message');
-                const chatMessagesRef = collection(getChatDocRef(CURRENT_CHAT.chatId), 'messages');
-                
-                // Check if it's a group chat and if the user is a member (Firestore security rules should also enforce this)
-                if (CURRENT_CHAT.type === 'group') {
-                    const chatDoc = await getDoc(getChatDocRef(CURRENT_CHAT.chatId));
-                    if (!chatDoc.exists() || !chatDoc.data().members.includes(auth.currentUser.uid)) {
-                        throw new Error("You are not a member of this group chat.");
-                    }
-                }
-                
-                await setDoc(doc(chatMessagesRef), { 
-                    senderUid: auth.currentUser.uid, 
-                    senderUsername: CURRENT_USERNAME, 
-                    text: cleanedText, 
-                    timestamp: serverTimestamp() 
-                });
-                
-                messageInput.value = '';
-                LAST_MESSAGE_TIMESTAMP = now;
-                
-                // Start cooldown timer
-                startCooldownTimer(CURRENT_CHAT.cooldownMs);
-
-            } catch (error) {
-                console.error("Message send failed:", error);
-                showMessage(document.getElementById('chat-footer').querySelector('.text-sm') || document.createElement('div'), `Send failed: ${error.message}`, 'error');
-            } finally {
-                sendMessageBtn.disabled = false;
-                sendMessageBtn.innerHTML = `<i class="fas fa-paper-plane"></i>`;
-                messageInput.disabled = false;
-            }
-        }
-        
-        /**
-         * @brief Visually enforces the chat cooldown.
-         * @param {number} cooldownMs 
-         */
-        function startCooldownTimer(cooldownMs) {
-            let remainingMs = cooldownMs;
-            chatCooldownDisplay.classList.remove('hidden');
-            messageInput.disabled = true;
-            sendMessageBtn.disabled = true;
-
-            const timer = setInterval(() => {
-                remainingMs -= 100;
-                if (remainingMs <= 0) {
-                    clearInterval(timer);
-                    chatCooldownDisplay.classList.add('hidden');
-                    messageInput.disabled = false;
-                    sendMessageBtn.disabled = false;
-                } else {
-                    const seconds = (remainingMs / 1000).toFixed(1);
-                    chatCooldownDisplay.textContent = `Cooldown: ${seconds}s`;
-                }
-            }, 100);
-        }
-        
-        /**
-         * @brief Creates a unique chat ID for a private friend chat.
-         * @param {string} uid1 
-         * @param {string} uid2 
-         * @returns {string} Lexicographically sorted ID.
-         */
-        function getPrivateChatId(uid1, uid2) {
-             return [uid1, uid2].sort().join('_');
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                imagePreview.src = event.target.result;
+                PENDING_UPLOAD_FILE = file;
+                uploadSelectOptions.classList.add('hidden');
+                uploadPostCreator.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
         }
 
-        /**
-         * @brief Renders the list of friends and group chats for the Messaging mode.
-         * @param {Array<object>} friendProfiles 
-         * @param {Array<object>} groupChats 
-         */
-        function renderChatList(friendProfiles, groupChats) {
-            friendsListItems.innerHTML = '';
-            let combinedHtml = '';
+        async function handlePostCreationLogic(file, slotIndex) {
+            const currentUser = auth.currentUser;
+            const userProfileRef = getUserProfileDocRef(currentUser.uid);
             
-            if (groupChats.length > 0) {
-                 combinedHtml += `<div class="p-2 text-sm font-bold text-green-400 bg-green-900/30 rounded-t-md -mx-1 -mt-1 mb-2">Group Chats</div>`;
-                 groupChats.forEach(chat => {
-                     combinedHtml += `<div data-chat-id="${chat.id}" data-chat-name="${chat.name}" data-chat-type="group" class="compact-list-item chat-list-item group-chat-item flex justify-between items-center"><span class="font-semibold"><i class="fas fa-users mr-2 group-icon"></i>${chat.name}</span><span class="text-xs text-gray-500">${chat.members.length} members</span></div>`;
-                 });
-                 combinedHtml += `<div class="border-b border-gray-700 my-2"></div>`;
-            }
-
-            if (friendProfiles.length > 0) {
-                combinedHtml += `<div class="p-2 text-sm font-bold text-indigo-400 bg-indigo-900/30 rounded-t-md -mx-1 -mt-1 mb-2">Friends</div>`;
-                friendProfiles.forEach(profile => {
-                    const chatId = getPrivateChatId(auth.currentUser.uid, profile.uid);
-                    combinedHtml += `<div data-chat-id="${chatId}" data-chat-name="${profile.username}" data-chat-type="friend" class="compact-list-item chat-list-item friend-chat-item flex justify-between items-center"><span class="font-semibold"><i class="fas fa-user mr-2 friend-icon"></i>${profile.username}</span></div>`;
-                });
-            }
+            let title = document.getElementById('post-title-input').value.trim();
+            if (!title) { showMessage(uploadMessage, 'Title cannot be empty.', 'error'); return; }
+            if (title.length > 48) title = title.substring(0, 48);
+            const cleanedTitle = await cleanText(title, 'post title');
             
-            if (!combinedHtml) combinedHtml = '<p class="text-sm text-gray-500 p-2 text-center">No friends or group chats. Add a friend!</p>';
-            friendsListItems.innerHTML = combinedHtml;
-            
-            // Add click listeners to chat items
-            friendsListItems.querySelectorAll('.chat-list-item').forEach(item => {
-                item.addEventListener('click', (e) => {
-                    const chatId = e.currentTarget.dataset.chatId;
-                    const chatName = e.currentTarget.dataset.chatName;
-                    const chatType = e.currentTarget.dataset.chatType;
-                    openChat(chatId, chatName, chatType);
-                });
-            });
-            
-            // Re-select the currently active chat
-            if (CURRENT_CHAT) {
-                document.querySelector(`.compact-list-item[data-chat-id="${CURRENT_CHAT.chatId}"]`)?.classList.add('chat-active');
-            }
-        }
-        
-        /**
-         * @brief Listener to fetch all groups the user is a member of.
-         */
-        function setupChatsListener(user) {
-            UNSUBSCRIBE_CHATS_LISTENER();
-            
-            // Query for group chats where the user is a member
-            const groupQuery = query(CHATS_COLLECTION, where('type', '==', 'group'), where('members', 'array-contains', user.uid));
-            
-            UNSUBSCRIBE_CHATS_LISTENER = onSnapshot(groupQuery, async (snapshot) => {
-                const groupChats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                
-                // Get all friend profiles from the cached list
-                const friendProfiles = CURRENT_FRIENDS.map(uid => CURRENT_FRIEND_PROFILES[uid]).filter(Boolean);
-                
-                // Render the combined list
-                renderChatList(friendProfiles, groupChats);
-            });
-        }
-        
-        // =========================================================================
-        // UI Mode Switching & Group Creation
-        // =========================================================================
-        
-        function switchUIMode(mode) {
-            socialModeBtn.classList.toggle('active', mode === 'social');
-            messagingModeBtn.classList.toggle('active', mode === 'messaging');
-            
-            socialFeedPanel.classList.toggle('hidden', mode === 'messaging');
-            messagingChatPanel.classList.toggle('hidden', mode === 'social');
-            socialAddFriendSection.classList.toggle('hidden', mode === 'messaging');
-            socialDailyPostsSection.classList.toggle('hidden', mode === 'messaging');
-            createGroupChatBtn.classList.toggle('hidden', mode === 'social');
-
-            friendsListTitle.textContent = mode === 'social' ? 'Your Friends' : 'Friends & Chats';
-            
-            // Re-render the friends list content based on the mode
-            if (auth.currentUser) {
-                if (mode === 'social') {
-                    // Re-run the friend list listener for the social view (requests/remove buttons)
-                    setupFriendListListener(auth.currentUser); 
-                    UNSUBSCRIBE_CHATS_LISTENER(); // Stop the chat list listener
-                } else {
-                    // Re-run the chat list listener (friend and group chats)
-                    setupChatsListener(auth.currentUser);
-                    setupFriendListListener.unsubscribe(); // Stop the social friend list listener
-                }
-            }
-        }
-        
-        socialModeBtn.addEventListener('click', () => switchUIMode('social'));
-        messagingModeBtn.addEventListener('click', () => switchUIMode('messaging'));
-        
-        createGroupChatBtn.addEventListener('click', () => {
-            const currentUserUid = auth.currentUser.uid;
-            groupMembersList.innerHTML = '';
-            
-            // Populate the member selection list
-            CURRENT_FRIENDS.forEach(friendUid => {
-                const profile = CURRENT_FRIEND_PROFILES[friendUid];
-                if (profile) {
-                    groupMembersList.innerHTML += `
-                        <label class="flex items-center gap-2 text-gray-300">
-                            <input type="checkbox" name="member" value="${friendUid}" class="h-4 w-4 text-indigo-600 rounded border-gray-700 bg-gray-900">
-                            ${profile.username}
-                        </label>
-                    `;
-                }
-            });
-            
-            if (CURRENT_FRIENDS.length === 0) {
-                 groupMembersList.innerHTML = '<p class="text-sm text-red-400">You must have friends to create a group chat.</p>';
-            }
-            
-            document.getElementById('group-name-input').value = '';
-            groupChatModal.classList.remove('hidden');
-            setTimeout(() => groupChatModal.classList.add('opacity-100'), 10);
-        });
-
-        groupChatModal.addEventListener('click', e => { if (e.target === groupChatModal || e.target.closest('#group-chat-modal-close-btn')) closeGroupChatModal(); });
-
-        function closeGroupChatModal() {
-            groupChatModal.classList.remove('opacity-100');
-            groupChatModal.classList.add('opacity-0');
-            setTimeout(() => groupChatModal.classList.add('hidden'), 300);
-        }
-        
-        createGroupChatForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const form = e.currentTarget;
-            const groupName = document.getElementById('group-name-input').value.trim();
-            const selectedMemberInputs = Array.from(form.querySelectorAll('input[name="member"]:checked'));
-            const memberUids = selectedMemberInputs.map(input => input.value);
-            memberUids.push(auth.currentUser.uid); // Add current user to members list
-
-            if (!groupName || groupName.length > 30) return showCustomModal('Error', 'Group name is required and must be under 30 characters.');
-            if (memberUids.length < 2) return showCustomModal('Error', 'A group chat must have at least one other member (2 total).');
-
-            form.querySelector('button[type="submit"]').disabled = true;
+            const createBtn = document.getElementById('create-post-btn');
+            createBtn.disabled = true;
+            createBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Creating...`;
 
             try {
-                const newChatRef = doc(CHATS_COLLECTION);
-                await setDoc(newChatRef, {
-                    name: groupName,
-                    type: 'group',
-                    members: memberUids,
-                    createdAt: serverTimestamp(),
-                    // Firestore is terrible for group chats due to index limits on arrays.
-                    // This is the *only* rule built-in, a group must have at least 2 members.
-                    // Security rules must enforce the member count and prevent array-contains queries on the messages subcollection.
+                const userProfileSnap = await getDoc(userProfileRef);
+                // REFACTOR: The check below is now only a sanity check, the UI handles slot selection
+                if ((userProfileSnap.data().dailySlotsUsed || []).length !== slotIndex) throw new Error("Slot index mismatch. Please refresh.");
+                
+                const imageBase64 = await compressImage(file);
+                const newPostRef = doc(DAILY_PHOTO_COLLECTION);
+                
+                // IMPORTANT: The post MUST have a title to be viewable on the feed
+                await setDoc(newPostRef, {
+                    creatorUid: currentUser.uid, creatorUsername: CURRENT_USERNAME, createdAt: serverTimestamp(),
+                    imageBase64, title: cleanedTitle, hearts: [], comments: []
                 });
-                
-                closeGroupChatModal();
-                showCustomModal('Success', `${groupName} group chat created successfully!`);
-                
+                await updateDoc(userProfileRef, { dailySlotsUsed: arrayUnion(newPostRef.id) });
+
+                closeUploadMenu();
+                showMessage(uploadMessage, 'Post created successfully!', 'success');
             } catch (error) {
-                console.error("Group chat creation failed:", error);
-                showCustomModal('Error', `Failed to create group chat: ${error.message}`);
+                console.error("Post creation error:", error);
+                showMessage(uploadMessage, `Post creation failed: ${error.message || error}`);
             } finally {
-                form.querySelector('button[type="submit"]').disabled = false;
+                createBtn.disabled = false;
+                createPostBtn.innerHTML = `<i class="fas fa-check mr-2"></i> Create Daily Post`;
             }
-        });
-
-        // =========================================================================
-        // Event Listeners (Existing & New)
-        // =========================================================================
+        }
         
-        chatMessageForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            sendMessage();
-        });
-
-        // ... (Other existing event listeners for photo modal, upload, etc. remain here) ...
         uploadFileInput.addEventListener('change', (e) => handleFileUpload(e.target.files[0]));
         createPostForm.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -1232,7 +1005,6 @@
         uploadDropArea.addEventListener('drop', e => handleFileUpload(e.dataTransfer.files[0]));
         
         function openPhotoModal(photoId) {
-            // ... (openPhotoModal logic remains the same) ...
             const modalContentContainer = document.getElementById('modal-content-container');
             modalContentContainer.innerHTML = `<div class="flex justify-center items-center p-8"><i class="fas fa-spinner fa-spin text-3xl text-white"></i></div>`;
             photoModal.classList.remove('hidden');
@@ -1271,6 +1043,7 @@
                 }
                 
                 if (!isModalAlreadyOpen) {
+                    // UPDATED: Marquee classes removed from title
                     modalContentContainer.innerHTML = `
                         <div id="photo-view-main" class="flex flex-col md:flex-row gap-6 w-full h-full flex-grow">
                             <div id="photo-display-area" class="flex-grow flex justify-center items-center cursor-pointer relative" data-image-toggle>
@@ -1342,10 +1115,12 @@
             if (heartBtn) {
                 const photoId = heartBtn.dataset.postId;
                 
+                // --- NEW: Hearting/Unhearting Delay Logic ---
                 if (Date.now() - LAST_HEART_TIMESTAMP < HEART_DELAY_MS) {
-                    return; 
+                    return; // Secretly ignore the click if within the delay period
                 }
                 LAST_HEART_TIMESTAMP = Date.now();
+                // ---------------------------------------------
 
                 const isHearted = heartBtn.dataset.hearted === 'true';
                 updateDoc(doc(DAILY_PHOTO_COLLECTION, photoId), { 
@@ -1353,9 +1128,11 @@
                 });
             }
 
+            // NEW: Fullscreen Image Toggle Logic
             const imageToggle = e.target.closest('[data-image-toggle]');
             if (imageToggle) {
                 const modalContentContainer = document.getElementById('modal-content-container');
+                // Toggle the class on the modal content to trigger CSS transitions (Step 5)
                 modalContentContainer.classList.toggle('fullscreen-image-mode');
             }
 
@@ -1371,6 +1148,7 @@
             }
             const confirmDelete = e.target.closest('#confirm-delete-btn');
             if (confirmDelete) {
+                // IMPORTANT: Use the correct post ID lookup from the heart button dataset as it's reliable in the modal
                 const currentPostId = document.getElementById('heart-btn')?.dataset.postId;
                 if (currentPostId) {
                     deleteDoc(doc(DAILY_PHOTO_COLLECTION, currentPostId))
@@ -1385,7 +1163,6 @@
             }
         });
 
-        // ... (Remaining listeners for comments, title, upload, and friend requests) ...
         document.getElementById('modal-content-container').addEventListener('submit', async e => {
             if (e.target.id !== 'comment-form') return;
             e.preventDefault();
@@ -1401,6 +1178,7 @@
             btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
             try {
                 const cleanedText = await cleanText(text, 'comment');
+                // Use the data-post-id from the heart button to get the current post ID
                 const currentPostId = document.getElementById('heart-btn')?.dataset.postId;
                 if (!currentPostId) throw new Error("Could not find current post ID for comment.");
                 
@@ -1462,52 +1240,73 @@
                  console.error("Send friend request failed:", error);
             }
         });
-        
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                try {
+                    await handleFriendCodeLogic(user); 
+                    await cleanupOldPosts(user); 
+                    setupFriendListListener(user); 
+                    setupDailyPostsListener(user); // Initial setup for both profile and post listeners
+                    loadingScreen.style.display = 'none';
+                    messengerUi.style.display = 'grid';
+                } catch (e) {
+                    console.error("Application Initialization Failed:", e);
+                    loadingScreen.style.display = 'none';
+                    showCustomModal("Startup Error", `The messenger failed to initialize. Error: ${e.message}.`);
+                }
+            } else {
+                await initializeAuth(); 
+            }
+        });
+
+        const friendRequestLogic = async (friendUid, actionType, user) => {
+            const batch = writeBatch(db);
+            batch.update(getUserProfileDocRef(user.uid), { pending_requests: arrayRemove(friendUid) });
+            if (actionType === 'accept') {
+                batch.update(getUserProfileDocRef(user.uid), { friends: arrayUnion(friendUid) });
+                batch.update(getUserProfileDocRef(friendUid), { friends: arrayUnion(user.uid) });
+            }
+            try {
+                await batch.commit();
+                showMessage(addFriendMessage, `Friend request ${actionType}ed!`, 'success');
+            } catch (error) {
+                 showMessage(addFriendMessage, `Failed to ${actionType} request.`, 'error');
+                 console.error(`Friend request ${actionType} failed:`, error);
+            }
+        };
+
         function setupFriendListListener(user) {
             onSnapshot(getUserProfileDocRef(user.uid), async (docSnap) => {
                 const profileData = docSnap.data() || {};
                 const friends = profileData.friends || [];
-                
-                // Fetch friend profiles and cache them
-                const friendProfiles = await Promise.all(friends.map(uid => getDoc(getUserProfileDocRef(uid))));
-                CURRENT_FRIEND_PROFILES = friendProfiles.reduce((acc, snap) => {
-                    const data = snap.data();
-                    if (data?.username) acc[snap.id] = { uid: snap.id, username: data.username };
-                    return acc;
-                }, {});
-
-                // Only re-run the feed listener if the actual friends list UIDs changes
+                // Only re-run the feed listener if the actual friends list changes
                 if (friends.length !== CURRENT_FRIENDS.length || !friends.every((val, i) => val === CURRENT_FRIENDS[i])) {
                     CURRENT_FRIENDS = friends; 
-                    if (!socialFeedPanel.classList.contains('hidden')) {
-                        setupFriendsFeedListener(user); 
-                    }
+                    setupFriendsFeedListener(user); 
                 }
                 
-                // Only render the friend list section if we are in social mode
-                if (!socialFeedPanel.classList.contains('hidden')) {
-                    const pendingRequests = profileData.pending_requests || [];
-                    let combinedHtml = '';
+                const pendingRequests = profileData.pending_requests || [];
+                let combinedHtml = '';
 
-                    if (pendingRequests.length > 0) {
-                        const reqProfiles = await Promise.all(pendingRequests.map(uid => getDoc(getUserProfileDocRef(uid))));
-                        combinedHtml += `<div class="p-2 text-sm font-bold text-yellow-400 bg-yellow-900/30 rounded-t-md -mx-1 -mt-1 mb-2">Pending Requests (${pendingRequests.length})</div>`;
-                        reqProfiles.forEach((snap, i) => {
-                            combinedHtml += `<div class="compact-list-item flex justify-between items-center bg-yellow-900/10"><span class="font-semibold text-yellow-300">${snap.data()?.username || 'Unknown'}</span><div class="flex gap-2"><button data-uid="${pendingRequests[i]}" class="accept-request-btn text-green-400 hover:text-green-500 px-2 py-1" title="Accept"><i class="fas fa-check"></i></button><button data-uid="${pendingRequests[i]}" class="reject-request-btn text-red-400 hover:text-red-500 px-2 py-1" title="Reject"><i class="fas fa-times"></i></button></div></div>`;
-                        });
-                        combinedHtml += `<div class="border-b border-gray-700 my-2"></div>`;
-                    }
-
-                    if (friends.length > 0) {
-                        friends.forEach(uid => {
-                             const profile = CURRENT_FRIEND_PROFILES[uid];
-                             combinedHtml += `<div class="compact-list-item flex justify-between items-center"><span class="font-semibold">${profile?.username || 'Unknown'}</span><button data-uid="${uid}" class="remove-friend-btn text-red-400 hover:text-red-500 px-2 py-1" title="Remove Friend"><i class="fas fa-user-minus"></i></button></div>`;
-                        });
-                    }
-                    
-                    if (!combinedHtml) combinedHtml = '<p class="text-sm text-gray-500 p-2 text-center">No friends yet. Add one above!</p>';
-                    friendsListItems.innerHTML = combinedHtml;
+                if (pendingRequests.length > 0) {
+                    const reqProfiles = await Promise.all(pendingRequests.map(uid => getDoc(getUserProfileDocRef(uid))));
+                    combinedHtml += `<div class="p-2 text-sm font-bold text-yellow-400 bg-yellow-900/30 rounded-t-md -mx-1 -mt-1 mb-2">Pending Requests (${pendingRequests.length})</div>`;
+                    reqProfiles.forEach((snap, i) => {
+                        combinedHtml += `<div class="compact-list-item flex justify-between items-center bg-yellow-900/10"><span class="font-semibold text-yellow-300">${snap.data()?.username || 'Unknown'}</span><div class="flex gap-2"><button data-uid="${pendingRequests[i]}" class="accept-request-btn text-green-400 hover:text-green-500 px-2 py-1" title="Accept"><i class="fas fa-check"></i></button><button data-uid="${pendingRequests[i]}" class="reject-request-btn text-red-400 hover:text-red-500 px-2 py-1" title="Reject"><i class="fas fa-times"></i></button></div></div>`;
+                    });
+                    combinedHtml += `<div class="border-b border-gray-700 my-2"></div>`;
                 }
+
+                if (friends.length > 0) {
+                    const friendProfiles = await Promise.all(friends.map(uid => getDoc(getUserProfileDocRef(uid))));
+                    friendProfiles.forEach((snap, i) => {
+                        combinedHtml += `<div class="compact-list-item flex justify-between items-center"><span class="font-semibold">${snap.data()?.username || 'Unknown'}</span><button data-uid="${friends[i]}" class="remove-friend-btn text-red-400 hover:text-red-500 px-2 py-1" title="Remove Friend"><i class="fas fa-user-minus"></i></button></div>`;
+                    });
+                }
+                
+                if (!combinedHtml) combinedHtml = '<p class="text-sm text-gray-500 p-2 text-center">No friends yet. Add one above!</p>';
+                friendsListItems.innerHTML = combinedHtml;
             });
 
             friendsListItems.addEventListener('click', async (e) => {
@@ -1524,114 +1323,7 @@
                     showMessage(addFriendMessage, 'Friend removed.', 'success');
                 }
             });
-            // Attach a no-op unsubscribe function for the social listener
-            setupFriendListListener.unsubscribe = () => { /* Listener is on the user profile, will be re-used */ };
         }
-
-
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                try {
-                    // Initialize IndexedDB first
-                    await initDB();
-                    
-                    await handleFriendCodeLogic(user); 
-                    await cleanupOldPosts(user); 
-                    
-                    // Initial setup of listeners for the default 'social' mode
-                    setupFriendListListener(user); 
-                    setupDailyPostsListener(user); 
-
-                    loadingScreen.style.display = 'none';
-                    messengerUi.style.display = 'grid';
-                } catch (e) {
-                    console.error("Application Initialization Failed:", e);
-                    loadingScreen.style.display = 'none';
-                    showCustomModal("Startup Error", `The messenger failed to initialize. Error: ${e.message}.`);
-                }
-            } else {
-                await initializeAuth(); 
-            }
-        });
-        
-        // ... (Remaining existing functions for setupFriendsFeedListener, handlePostCreationLogic, etc. remain here) ...
-        function setupFriendsFeedListener(user) {
-            UNSUBSCRIBE_POSTS_LISTENER(); 
-            const startOfDay = new Date();
-            startOfDay.setHours(0, 0, 0, 0);
-            
-            const uidsToQuery = [user.uid, ...CURRENT_FRIENDS].slice(0, 10);
-            if (uidsToQuery.length === 0) {
-                 photoFeed.innerHTML = '<p id="feed-placeholder" class="text-gray-500">Add some friends to see their daily photos!</p>';
-                 return;
-            }
-            
-            const photosQuery = query(DAILY_PHOTO_COLLECTION, where('creatorUid', 'in', uidsToQuery), where('createdAt', '>=', startOfDay), orderBy('createdAt', 'desc'));
-            
-            UNSUBSCRIBE_POSTS_LISTENER = onSnapshot(photosQuery, (snapshot) => {
-                const fragment = document.createDocumentFragment();
-                
-                snapshot.docs.forEach(doc => {
-                    const docId = doc.id;
-                    const data = doc.data();
-                    
-                    if (!data.title) return;
-                    
-                    let thumb = document.querySelector(`.photo-thumbnail[data-photo-id="${docId}"]`);
-                    
-                    if (thumb) {
-                        thumb.querySelector('.heart-count-display').innerHTML = formatCount(data.hearts?.length || 0);
-                        thumb.querySelector('.comment-count-display').innerHTML = formatCount(data.comments?.length || 0);
-                        thumb.querySelector('.title-text-span').textContent = data.title;
-                    } else {
-                        thumb = createPhotoThumbnailElement(docId, data);
-                    }
-                    
-                    fragment.appendChild(thumb);
-                });
-
-                photoFeed.innerHTML = '';
-                photoFeed.appendChild(fragment);
-
-                if (photoFeed.children.length === 0) photoFeed.innerHTML = '<p id="feed-placeholder" class="text-gray-500">No posts found today from you or your friends!</p>';
-                else document.getElementById('feed-placeholder')?.remove();
-
-            }, (error) => {
-                 console.error("Error fetching feed:", error);
-                 photoFeed.innerHTML = '<p class="text-red-400">Error loading feed.</p>';
-            });
-        }
-        
-        function setupDailyPostsListener(user) {
-             const userProfileRef = getUserProfileDocRef(user.uid);
-             const startOfDay = new Date();
-             startOfDay.setHours(0, 0, 0, 0);
-
-             let currentProfileData = {};
-             let currentPostsData = {};
-
-             const postsQuery = query(DAILY_PHOTO_COLLECTION, where('creatorUid', '==', user.uid), where('createdAt', '>=', startOfDay), orderBy('createdAt', 'asc'));
-             
-             const unsubscribePostsCache = onSnapshot(postsQuery, (snapshot) => {
-                currentPostsData = snapshot.docs.reduce((acc, doc) => ({ ...acc, [doc.id]: doc.data() }), {});
-                if (!socialFeedPanel.classList.contains('hidden')) {
-                    renderDailyPosts(currentProfileData, currentPostsData);
-                }
-             });
-             
-             UNSUBSCRIBE_DAILY_SLOTS_LISTENER = onSnapshot(userProfileRef, (profileSnap) => {
-                currentProfileData = profileSnap.data() || {};
-                if (!socialFeedPanel.classList.contains('hidden')) {
-                    renderDailyPosts(currentProfileData, currentPostsData);
-                }
-             });
-             
-             setupDailyPostsListener.unsubscribe = () => {
-                 unsubscribePostsCache();
-                 UNSUBSCRIBE_DAILY_SLOTS_LISTENER();
-             };
-        }
-        
     </script>
 </body>
 </html>
