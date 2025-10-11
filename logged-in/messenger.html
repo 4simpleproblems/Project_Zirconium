@@ -78,7 +78,7 @@
         ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
 
-        /* Smooth transitions (The base template already handles global body transitions, keeping the view-transition classes) */
+        /* Smooth transitions */
         .view-transition {
             transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
         }
@@ -88,8 +88,8 @@
             pointer-events: none;
         }
         
-        /* Override for the 'font-display' (Poppins) since base-template uses Geist */
-        #contacts-view h1 {
+        /* Ensure headers use Geist font */
+        #contacts-view h1, #contacts-view h2 {
             font-family: 'Geist', sans-serif !important;
             font-weight: 400 !important;
         }
@@ -113,9 +113,9 @@
         <div class="container mx-auto p-4">
             <header class="flex justify-between items-center mb-8 pt-4">
                 <h1 class="text-3xl font-bold text-white">Secure Messenger</h1>
-                </header>
+            </header>
             
-            <section class="p-0 bg-gray-900/50 border border-[#252525] rounded-xl shadow-lg h-[80vh] flex items-center justify-center">
+            <section class="p-0 bg-gray-900/50 border border-[#252525] rounded-xl shadow-lg h-[80vh] min-h-[500px] flex items-center justify-center">
                 <div id="app-container" class="max-w-4xl w-full h-full flex bg-[#111111] shadow-2xl rounded-xl overflow-hidden backdrop-blur-xl relative">
                     
                     <div id="contacts-view" class="w-full h-full flex flex-col view-transition">
@@ -128,7 +128,7 @@
                                         <span>|</span>
                                         <span id="local-time">--:--</span>
                                     </div>
-                                    </div>
+                                </div>
                             </div>
                             <div class="mt-4 bg-[#070707] p-3 rounded-lg flex items-center justify-between">
                                 <div class="flex items-center gap-2 overflow-hidden">
@@ -216,31 +216,9 @@
     
     <script type="module">
         // --- ADAPTED FIREBASE IMPORTS (Using compatibility SDK from base-template) ---
-        // The base-template has already loaded: firebase.app(), firebase.auth(), firebase.firestore()
         const app = firebase.app();
         const auth = firebase.auth();
         const db = firebase.firestore();
-
-        // Compatibility SDK does not use individual named imports, so we rely on the global firebase object
-        // and its .firestore() methods.
-
-        // --- FIREBASE CONFIGURATION (REPLACED/REMOVED due to base-template usage) ---
-        // Assuming firebase-config.js handles the initialization.
-        // We still need the old config's API key and project ID in case we need to re-initialize an app
-        // with the specific config, but the base-template assumes a global init.
-        // For the sake of the messenger logic, we will assume firebase.app() is initialized.
-
-        // Re-implementing named functions from firestore v9 modular API using v9 compatibility layer:
-        // doc -> db.collection('users').doc(uid)
-        // setDoc -> doc.set(data, { merge: true })
-        // updateDoc -> doc.update(data)
-        // deleteDoc -> doc.delete()
-        // onSnapshot -> doc.onSnapshot(callback) / query.onSnapshot(callback)
-        // collection -> db.collection(path)
-        // query -> db.collection(path).where(...) / .orderBy(...)
-        // where -> firebase.firestore.FieldPath.documentId() == '...' (or just simple string field)
-        // serverTimestamp -> firebase.firestore.FieldValue.serverTimestamp()
-        // arrayUnion/arrayRemove -> firebase.firestore.FieldValue.arrayUnion/arrayRemove
 
         // --- GLOBAL STATE & DOM ELEMENTS ---
         let currentUser = null;
@@ -267,13 +245,11 @@
             messageForm: document.getElementById('message-form'),
             messageInput: document.getElementById('message-input'),
             sendBtn: document.getElementById('send-btn'),
-            // Removed: darkModeToggle
             batteryStatusEl: document.getElementById('battery-status'),
             localTimeEl: document.getElementById('local-time'),
         };
 
         const icons = {
-            // Removed: sun, moon
             send: `<svg class="w-5 h-5 transform rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>`,
             check: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`,
         };
@@ -284,25 +260,23 @@
             main();
         }
         
-        // Old sign-in logic is removed, as base-template handles auth state and passes the user.
         function main() {
-            // initTheme() removed as base-template is always dark
             setupEventListeners();
-            // onAuthStateChanged/signInAnonymously removed as base-template handles auth
             handleAuthStateChange(currentUser); 
         }
 
+        // FIX FOR LOADING SCREEN: Function is ASYNC and calls contentReady() at the end.
         async function handleAuthStateChange(user) {
             if (user) {
-                // currentUser is already set by pageInit
                 await setupUserDocument();
                 listenForUserDocChanges();
                 listenForContacts();
                 startStatusUpdates();
-                // dom.appContainer.classList.remove('hidden'); // Removed: UI is visible via contentReady()
+                
+                // FINAL STEP: Show the content now that initial data is loaded
+                contentReady();
             } else {
                 stopStatusUpdates();
-                // If user is null, the base-template redirects, so this branch should be unreachable.
             }
         }
         
@@ -329,18 +303,13 @@
             });
         }
 
-        // --- UI & THEME (Simplified) ---
-
-        // initTheme/toggleTheme removed
-        
         function scrollToBottom() {
             setTimeout(() => {
                 dom.messagesContainerEl.scrollTo({ top: dom.messagesContainerEl.scrollHeight, behavior: 'smooth' });
             }, 50);
         }
 
-        // --- STATUS BAR (Kept) ---
-
+        // --- STATUS BAR ---
         function startStatusUpdates() {
             stopStatusUpdates();
             const update = async () => {
@@ -360,7 +329,7 @@
             if (statusInterval) clearInterval(statusInterval);
         }
 
-        // --- CONTACT MANAGEMENT (Adapted to compatibility SDK) ---
+        // --- CONTACT MANAGEMENT ---
 
         function listenForContacts() {
             unsubscribeContacts();
@@ -383,7 +352,6 @@
         function renderContact(uid, data) {
             const isBlocked = blockedUsers.includes(uid);
             const li = document.createElement('li');
-            // Class names adapted for base-template's dark theme
             li.className = 'px-4 py-3 flex items-center gap-4 hover:bg-[#1f1f1f] transition-colors'; 
             li.dataset.uid = uid;
             li.dataset.name = data.name || 'Unnamed';
@@ -393,12 +361,10 @@
 
             let indicatorHTML = '';
             if (data.unread) {
-                // Text colors adapted for base-template's dark theme
                 indicatorHTML = `
                     <p class="text-sm text-white font-semibold truncate max-w-[150px]">${data.lastMessage || ''}</p>
                     <span class="w-2.5 h-2.5 bg-indigo-500 rounded-full ml-auto"></span>`;
             } else if (data.lastMessage) {
-                // Text colors adapted for base-template's dark theme
                 indicatorHTML = `
                     <p class="text-sm text-gray-400 truncate max-w-[150px]">${data.lastMessage || ''}</p>
                     <p class="text-xs text-gray-500 ml-auto whitespace-nowrap">${formatTimestamp(data.timestamp)}</p>`;
@@ -431,7 +397,7 @@
             dom.contactsListEl.appendChild(li);
         }
 
-        // --- CHAT LOGIC (Adapted to compatibility SDK) ---
+        // --- CHAT LOGIC ---
 
         async function openChat(uid, name) {
             currentChatPartner = { uid, name };
@@ -462,13 +428,11 @@
             const chatDocRef = db.collection('chats').doc(chatId);
 
             unsubscribeMessages = chatDocRef.onSnapshot((doc) => {
-                // doc.metadata.hasPendingWrites is not directly available on v9 compat snapshot
                 if (!doc.exists) return;
                 
                 const messageData = doc.data();
                 if (messageData.senderId !== currentUser.uid && blockedUsers.includes(messageData.senderId)) return;
                 
-                // Firestore Timestamp.toDate() is the same across versions
                 const incomingTimestampISO = messageData.timestamp?.toDate()?.toISOString();
                 const chatCache = localMessagesCache[currentChatPartner.uid] || [];
                 const messageExists = chatCache.some(msg => msg.timestamp === incomingTimestampISO);
@@ -489,7 +453,6 @@
 
             const time = data.timestamp?.toDate()?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || '';
             
-            // Class names adapted for base-template's dark theme
             messageWrapper.innerHTML = `
                 <div class="max-w-xs md:max-w-md lg:max-w-lg">
                     <div class="px-4 py-2 rounded-2xl ${isSent ? 'bg-indigo-600 text-white rounded-br-lg' : 'bg-[#252525] text-white rounded-bl-lg'}">
@@ -501,13 +464,12 @@
             dom.messagesContainerEl.appendChild(messageWrapper);
         }
         
-        // --- LOCAL CACHE & UTILITIES (Kept) ---
+        // --- LOCAL CACHE & UTILITIES ---
 
         function loadLocalMessages(uid) {
             const messages = localMessagesCache[uid] || [];
             dom.messagesContainerEl.innerHTML = '';
             messages.forEach(msg => {
-                // Ensure cached ISO strings are converted back to an object with a toDate method for renderMessage
                 const renderableMsg = { ...msg, timestamp: { toDate: () => new Date(msg.timestamp) } };
                 renderMessage(renderableMsg);
             });
@@ -551,14 +513,13 @@
         async function generateUniqueId(length = 8) {
             while (true) {
                 const id = Math.random().toString(36).substring(2, 2 + length);
-                // Use compatibility collection() and where()
                 const q = db.collection('users').where('publicId', '==', id);
                 const snapshot = await q.get();
                 if (snapshot.empty) return id;
             }
         }
 
-        // --- EVENT HANDLERS (Adapted to compatibility SDK) ---
+        // --- EVENT HANDLERS ---
         
         async function handleSendMessage(e) {
             e.preventDefault();
@@ -570,7 +531,6 @@
 
             const recipientDoc = await db.collection('users').doc(currentChatPartner.uid).get();
             if (recipientDoc.data()?.blockedUsers?.includes(currentUser.uid)) {
-                // Using showCustomModal from base-template instead of native alert()
                 showCustomModal('Message Blocked', 'You cannot send a message to this user because they have blocked you.');
                 dom.sendBtn.disabled = false;
                 dom.sendBtn.innerHTML = icons.send;
@@ -582,7 +542,6 @@
             const chatId = [currentUser.uid, currentChatPartner.uid].sort().join('_');
 
             try {
-                // setDoc with merge = true
                 await db.collection('chats').doc(chatId).set(messageData, { merge: true });
                 
                 const recipientContactRef = db.collection(`users/${currentChatPartner.uid}/contacts`).doc(currentUser.uid);
@@ -615,10 +574,8 @@
             const contactUser = snapshot.docs[0].data();
             const name = prompt("Enter a name for this contact:", "New Contact");
             if (name) {
-                // Add contact for current user
                 await db.collection(`users/${currentUser.uid}/contacts`).doc(contactUser.uid).set({ name, unread: false, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
                 
-                // Add current user to contact's contact list
                 const myUserDoc = await db.collection('users').doc(currentUser.uid).get();
                 const myPublicId = myUserDoc.data().publicId;
                 const myPublicName = `User (${myPublicId})`;
@@ -662,10 +619,7 @@
             }
         }
         
-        // handleCopyId and setupEventListeners are unchanged
-
         function handleCopyId() {
-            // Using document.execCommand as a fallback for iframe environments
             const textArea = document.createElement("textarea");
             textArea.value = dom.myIdEl.textContent;
             document.body.appendChild(textArea);
@@ -682,14 +636,12 @@
         }
 
         function setupEventListeners() {
-            // dom.darkModeToggle.addEventListener('click', toggleTheme); // Removed
             dom.addContactBtn.addEventListener('click', handleAddContact);
             dom.contactsListEl.addEventListener('click', handleContactsListClick);
             dom.backToContactsBtn.addEventListener('click', closeChat);
             dom.messageForm.addEventListener('submit', handleSendMessage);
             dom.copyIdBtn.addEventListener('click', handleCopyId);
 
-            // Change send button icon on input
             dom.messageInput.addEventListener('input', () => {
                 if (dom.messageInput.value.trim() !== '') {
                     dom.sendBtn.innerHTML = icons.send;
@@ -698,17 +650,12 @@
         }
 
         // --- START THE APP ---
-        // The base-template handles auth and calls window.pageInit(user) which calls main().
     </script>
 
     <script type="module">
-        // This is the auth-check block from the base-template, ensuring the page runs correctly.
+        // Base-template authentication check
         const auth = firebase.auth();
         
-        /**
-         * The primary entry point for any authenticated page.
-         * Checks the user's sign-in status and handles redirection.
-         */
         auth.onAuthStateChanged(user => {
             if (!user) {
                 // User is NOT signed in. Redirect to the login page.
@@ -718,15 +665,13 @@
                 // User IS signed in.
                 console.log("User logged in:", user.uid);
 
-                // Check for page-specific initialization (which is our pageInit function).
                 if (typeof pageInit === 'function') {
-                    // Call the function that contains the page's unique data loading logic.
+                    // pageInit calls the messenger's main logic
                     pageInit(user); 
                 }
 
-                // Call contentReady() here, as the messenger app logic (pageInit)
-                // is synchronous until it starts listening to Firebase.
-                contentReady();
+                // NOTE: contentReady() is called inside the async pageInit function
+                // to ensure the UI only shows after Firebase user data is fetched.
             }
         });
     </script>
