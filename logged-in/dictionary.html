@@ -191,7 +191,7 @@
             searchInput.value = trimmedWord; // Set the input field to the word being searched
 
             try {
-                // *** UPDATED API ENDPOINT ***
+                // API ENDPOINT: The previous one was fine and should work for the new structure too.
                 const url = `https://api.freedictionaryapi.com/api/v1/entries/en/${trimmedWord}`;
                 const response = await fetch(url);
 
@@ -211,6 +211,17 @@
                 }
 
                 const data = await response.json();
+                
+                // The API can return an error object inside the data array if the structure doesn't match the expected.
+                if (Array.isArray(data) && data.length > 0 && data[0].hasOwnProperty('title')) {
+                     definitionOutput.innerHTML = `
+                        <p class="text-xl text-red-400 text-center">
+                            Sorry, we couldn't find a definition for <strong>"${trimmedWord}"</strong>. Please check the spelling.
+                        </p>
+                    `;
+                    return;
+                }
+
                 displayDefinition(trimmedWord, data);
 
             } catch (error) {
@@ -286,20 +297,23 @@
 
 
         /**
-         * Renders the definition data onto the page, with updated styling for definitions and synonyms.
+         * Renders the definition data onto the page, adapted for the entries/senses structure.
          * @param {string} word The word being displayed.
-         * @param {Array<Object>} data The array of definition objects from the API.
+         * @param {Object} data The definition object from the API.
          */
         function displayDefinition(word, data) {
-            if (!data || data.length === 0) {
-                definitionOutput.innerHTML = `<p class="text-xl text-red-400 text-center">No definition data available for "${word}".</p>`;
+            
+            // 1. Get the main entry object
+            const entry = data.entries?.[0]; // Access the first entry within the data object
+            
+            if (!entry || !entry.partOfSpeech || !entry.partOfSpeech.length) {
+                definitionOutput.innerHTML = `<p class="text-xl text-red-400 text-center">No detailed definition entries found for "${word}".</p>`;
                 return;
             }
 
-            const entry = data[0];
-            // *** ADJUSTED PHONETIC EXTRACTION FOR NEW API STRUCTURE ***
-            // The phonetic text is typically found in the first phonetics object.
-            const phoneticText = entry.phonetics?.find(p => p.text)?.text || 'N/A';
+            // 2. Extract Phonetic Text from the main entry (assuming the pronunciations array is at the entry level)
+            // Path: data[0].entries[0].pronunciations[i].text
+            const phoneticText = entry.pronunciations?.find(p => p.text)?.text || 'N/A';
             
             let htmlContent = `
                 <div class="space-y-6">
@@ -310,12 +324,15 @@
                     <hr class="border-zinc-700" />
             `;
             
-            // Iterate through all parts of speech (meanings)
-            entry.meanings.forEach(meaning => {
+            // 3. Iterate through all parts of speech (partOfSpeech is now an array in the new structure)
+            entry.partOfSpeech.forEach(posEntry => {
+                // Ensure the POS entry has senses
+                if (!posEntry.senses || posEntry.senses.length === 0) return;
+
                 htmlContent += `
                     <div class="space-y-4 mb-8">
                         <h3 class="text-2xl font-semibold text-indigo-300 border-l-4 border-indigo-500 pl-3">
-                            ${meaning.partOfSpeech.charAt(0).toUpperCase() + meaning.partOfSpeech.slice(1)}
+                            ${posEntry.partOfSpeech.charAt(0).toUpperCase() + posEntry.partOfSpeech.slice(1)}
                         </h3>
                         
                         <!-- Definitions Section Header and Numbered List -->
@@ -324,10 +341,16 @@
                             <ol class="list-decimal list-inside space-y-3 pl-4">
                 `;
 
-                // Display up to 3 definitions for brevity
-                meaning.definitions.slice(0, 3).forEach((def) => { 
-                    // Apply highlighting to the definition text
-                    const highlightedDefinition = highlightDefinitionText(def.definition);
+                // 4. Iterate through all senses for this part of speech
+                posEntry.senses.slice(0, 3).forEach((sense) => { 
+                    const definitionText = sense.definition || 'No definition provided.';
+                    const highlightedDefinition = highlightDefinitionText(definitionText);
+                    
+                    // The example is an array of strings in the new structure. Use the first one.
+                    const exampleText = sense.examples?.[0]; 
+
+                    // Synonyms are also an array of strings at the sense level
+                    const senseSynonyms = sense.synonyms || [];
                     
                     htmlContent += `
                         <li>
@@ -335,17 +358,17 @@
                                 <p class="text-gray-300">${highlightedDefinition}</p>
                     `;
                     
-                    // Conditionally add a separator line and use smaller text for the example
-                    if (def.example) {
+                    // Conditionally add example
+                    if (exampleText) {
                         htmlContent += `
                             <hr class="border-zinc-800 mt-2 mb-1 w-full" /> 
-                            <p class="text-sm text-gray-500 italic">e.g. "${def.example}"</p>
+                            <p class="text-sm text-gray-500 italic">e.g. "${exampleText}"</p>
                         `;
                     }
                     
-                    // The new API structure puts synonyms inside the definition object, which this code already handles.
-                    if (def.synonyms && def.synonyms.length > 0) {
-                         const synonymTags = def.synonyms.slice(0, 5).map(s => 
+                    // Conditionally add synonyms
+                    if (senseSynonyms.length > 0) {
+                         const synonymTags = senseSynonyms.slice(0, 5).map(s => 
                             `<span 
                                 class="px-3 py-1 bg-zinc-700 text-cyan-200 rounded-lg text-sm font-semibold cursor-pointer hover:bg-zinc-600 transition synonym-tag"
                                 data-word="${s}"
@@ -365,11 +388,7 @@
                 });
 
                 htmlContent += `</ol></div>`; // Close definitions ol and surrounding div
-                
-                // Note: The new API doesn't consistently put synonyms at the meaning root level, 
-                // but the logic above now extracts them if present within the definition objects.
-
-                htmlContent += `</div>`; // Close meaning div
+                htmlContent += `</div>`; // Close partOfSpeech div
             });
 
             htmlContent += `</div>`; // Close space-y-6 div
