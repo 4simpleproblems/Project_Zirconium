@@ -137,7 +137,7 @@ let db;
         let pages = {};
 
         // Load Icons CSS first for immediate visual display
-        await loadCSS("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.1.0/css/all.min.css");
+        await loadCSS("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css");
 
         // Fetch page configuration for the tabs
         try {
