@@ -191,7 +191,7 @@
             searchInput.value = trimmedWord; // Set the input field to the word being searched
 
             try {
-                // *** CORRECTED API ENDPOINT DOMAIN ***
+                // Corrected API ENDPOINT
                 const url = `https://api.dictionaryapi.dev/api/v2/entries/en/${trimmedWord}`;
                 const response = await fetch(url);
 
@@ -236,39 +236,40 @@
 
         /**
          * Replaces standalone words (4+ chars) in the definition text with clickable spans.
-         * Excludes an expanded list of common function words, focusing on conceptual words.
+         * Excludes an expanded list of common function words and non-conceptual words.
          * @param {string} text The definition text.
          * @returns {string} The text with clickable links.
          */
         function highlightDefinitionText(text) {
-            // List of common words to exclude from linking. This list is heavily optimized to filter out all 
-            // function words and common non-conceptual words, focusing only on nouns, core verbs, and descriptive adjectives.
+            // Expanded list of common words and parts of speech (function words) to EXCLUDE. 
+            // This ensures only high-value, conceptual words (nouns, key verbs, primary adjectives) are highlighted.
             const commonWords = [
                 // Articles, Conjunctions, Prepositions (short & common)
-                'the', 'and', 'but', 'not', 'for', 'with', 'from', 'into', 'upon', 'like', 
-                'than', 'only', 'much', 'about', 'just', 'over', 'under', 'also', 'some', 'such', 
-                'through', 'without', 'before', 'after', 'among', 'between', 'where', 'whether', 
-                'since', 'still', 'though', 'towards', 'unless', 'below', 'above', 'near', 'far',
-                'along', 'across', 'against', 'amongst', 'around', 'behind', 'beside', 'beyond',
-                'during', 'except', 'inside', 'outside', 'past', 'round', 'toward', 'until', 
-                'while', 'whereas', 'whilst', 'whereby', 'wherein', 'whereof', 'wherever', 'whichever',
-                'whenever', 'wherever', 'because', 'towards', 'amid', 'onto', 'per',
+                'the', 'and', 'but', 'not', 'for', 'with', 'from', 'into', 'upon', 'like', 'than', 
+                'only', 'much', 'about', 'just', 'over', 'under', 'also', 'some', 'such', 'through', 
+                'without', 'before', 'after', 'among', 'between', 'where', 'whether', 'since', 'still', 
+                'though', 'towards', 'unless', 'below', 'above', 'near', 'far', 'along', 'across', 
+                'against', 'amongst', 'around', 'behind', 'beside', 'beyond', 'during', 'except', 
+                'inside', 'outside', 'past', 'round', 'toward', 'until', 'while', 'whereas', 
+                'whilst', 'whereby', 'wherein', 'whereof', 'wherever', 'whichever', 'whenever', 
+                'wherever', 'because', 'amid', 'onto', 'per', 'off', 'up', 'down', 'out', 'in', 'at', 'by', 'of', 'to', 'a', 'an',
                 
                 // Pronouns & Demonstratives
                 'that', 'this', 'you', 'any', 'all', 'they', 'them', 'their', 'your', 'most',
                 'which', 'what', 'whose', 'whom', 'there', 'here', 'these', 'those', 'itself',
                 'herself', 'himself', 'myself', 'yourself', 'its', 'ours', 'yours', 'theirs', 'us',
                 'him', 'her', 'how', 'when', 'why', 'whose', 'something', 'anything', 'everything', 'none',
+                'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'zero',
 
-                // Auxiliary/Modal Verbs & Common Verbs
-                'have', 'will', 'was', 'are', 'can', 'use', 'make', 'take', 'look', 'find', 
-                'must', 'should', 'could', 'would', 'become', 'may', 'might', 'shall', 'been',
-                'being', 'does', 'doing', 'did', 'gets', 'give', 'went', 'come', 'said', 'say',
-                'says', 'keep', 'keeps', 'move', 'moves', 'used', 'using', 'makes', 'takes',
-                'looks', 'finds', 'given', 'taken', 'become', 'becomes', 'being', 'having',
-                'going', 'comes', 'seen', 'knew', 'know', 'knows', 'feel', 'felt', 'feelings',
-                'seem', 'seems', 'seemed', 'using', 'used', 'get', 'gives', 'gave', 'goes', 'went',
-
+                // Auxiliary/Modal Verbs & Common Verbs (past/present/ing forms)
+                'have', 'will', 'was', 'are', 'can', 'use', 'make', 'take', 'look', 'find', 'must', 
+                'should', 'could', 'would', 'become', 'may', 'might', 'shall', 'been', 'being', 
+                'does', 'doing', 'did', 'gets', 'give', 'went', 'come', 'said', 'say', 'says', 
+                'keep', 'keeps', 'move', 'moves', 'used', 'using', 'makes', 'takes', 'looks', 
+                'finds', 'given', 'taken', 'become', 'becomes', 'being', 'having', 'going', 'comes', 
+                'seen', 'knew', 'know', 'knows', 'feel', 'felt', 'feelings', 'seem', 'seems', 
+                'seemed', 'using', 'used', 'get', 'gives', 'gave', 'goes', 'went', 'am', 'is', 'be', 'was', 'were', 'has', 'had',
+                
                 // Common Adverbs & Adjectives (non-conceptual) & fillers
                 'very', 'even', 'only', 'always', 'often', 'never', 'ever', 'away', 'down', 'more',
                 'other', 'little', 'less', 'same', 'high', 'low', 'back', 'good', 'well', 'bad', 
@@ -279,16 +280,22 @@
                 'enough', 'where', 'when', 'how', 'why', 'further', 'several', 'various', 'various', 
                 'certain', 'specific', 'general', 'primary', 'secondary', 'tertiary', 'many', 'few',
                 'little', 'least', 'most', 'another', 'own', 'every', 'each', 'whole', 'entire',
-                'total', 'overall', 'ready', 'able', 'possible', 'impossible', 'likely', 'unlikely'
+                'total', 'overall', 'ready', 'able', 'possible', 'impossible', 'likely', 'unlikely',
+                'better', 'worse', 'best', 'worst', 'such', 'so', 'too', 'rather', 'quite', 'maybe',
+                'perhaps', 'indeed', 'sure', 'unless', 'since', 'ever', 'never', 'forever', 'together',
+                'apart', 'elsewhere', 'whenever', 'wherever', 'however', 'moreover', 'furthermore',
+                'likewise', 'otherwise', 'therefore', 'hence', 'thus', 'instead', 'consequently',
+                'accordingly', 'finally', 'lastly', 'firstly', 'secondly', 'thirdly'
             ];
             
-            // Regex continues to find standalone words that are 4 characters or more ({4,})
+            // Regex finds standalone words that are 4 characters or more ({4,})
             return text.replace(/\b([a-zA-Z]{4,})\b/g, (match) => {
+                // If the word is in the excluded list, return it as plain text.
                 if (commonWords.includes(match.toLowerCase())) {
                     return match;
                 }
 
-                // Wrap the word in a clickable span. Using `data-word` attribute for lookup.
+                // Otherwise, wrap the word in a clickable span.
                 return `<span 
                             class="highlighted-word text-cyan-400 hover:text-cyan-200 cursor-pointer font-medium" 
                             data-word="${match.toLowerCase()}">${match}</span>`;
@@ -297,10 +304,8 @@
 
 
         /**
-         * Renders the definition data onto the page, adapted for the entries/senses structure.
-         * Note: This function is written to be compatible with both freedictionaryapi.com (which uses 'meanings') 
-         * and the new generic API (which uses a similar structure in its response array).
-         * * @param {string} word The word being displayed.
+         * Renders the definition data onto the page.
+         * @param {string} word The word being displayed.
          * @param {Array<Object>} data The array of definition objects from the API.
          */
         function displayDefinition(word, data) {
@@ -343,15 +348,12 @@
                             <ol class="list-decimal list-inside space-y-3 pl-4">
                 `;
 
-                // Iterate through all definitions for this part of speech
+                // 4. Iterate through all definitions for this part of speech
                 meaning.definitions.slice(0, 3).forEach((def) => { 
                     const definitionText = def.definition || 'No definition provided.';
                     const highlightedDefinition = highlightDefinitionText(definitionText);
                     
                     const exampleText = def.example; 
-
-                    // Synonyms and antonyms are directly at the definition level for some APIs, or nested.
-                    // Use the most robust path.
                     const defSynonyms = def.synonyms || [];
                     
                     htmlContent += `
