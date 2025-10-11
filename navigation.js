@@ -16,19 +16,23 @@
  * - It fetches the page configuration JSON to build the scrollable navigation tabs.
  * - It creates a placeholder div and then renders the navbar inside it.
  * - It initializes Firebase, listens for auth state, and fetches user data.
+ *
+ * --- FIXES ---
+ * - **Font Awesome 7.1.0 Fix:** Updated the icon rendering logic to use the correct 'fa-solid' prefix for Font Awesome 7.x.
+ * - **Icon Loading Fix:** Implemented a utility function to correctly determine and apply the appropriate Font Awesome class from the page config.
  */
 
 // =========================================================================
 // >> ACTION REQUIRED: PASTE YOUR FIREBASE CONFIGURATION OBJECT HERE <<
 // =========================================================================
 const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro",
-  authDomain: "project-zirconium.firebaseapp.com",
-  projectId: "project-zirconium",
-  storageBucket: "project-zirconium.firebasestorage.app",
-  messagingSenderId: "1096564243475",
-  appId: "1:1096564243475:web:6d0956a70125eeea1ad3e6",
-  measurementId: "G-1D4F692C1Q"
+    apiKey: "AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro",
+    authDomain: "project-zirconium.firebaseapp.com",
+    projectId: "project-zirconium",
+    storageBucket: "project-zirconium.firebasestorage.app",
+    messagingSenderId: "1096564243475",
+    appId: "1:1096564243475:web:6d0956a70125eeea1ad3e6",
+    measurementId: "G-1D4F692C1Q"
 };
 // =========================================================================
 
@@ -44,7 +48,7 @@ const PAGE_CONFIG_URL = '../page-identification.json';
     }
 
     // --- 1. DYNAMICALLY LOAD EXTERNAL ASSETS (Optimized) ---
-    
+
     // Helper to load external JS files
     const loadScript = (src) => {
         return new Promise((resolve, reject) => {
@@ -65,11 +69,11 @@ const PAGE_CONFIG_URL = '../page-identification.json';
             link.href = href;
             // Resolve immediately and proceed, as icons are non-critical path for the script logic
             link.onload = resolve;
-            link.onerror = resolve; 
+            link.onerror = resolve;
             document.head.appendChild(link);
         });
     };
-    
+
     // Simple debounce utility for performance
     const debounce = (func, delay) => {
         let timeoutId;
@@ -79,14 +83,42 @@ const PAGE_CONFIG_URL = '../page-identification.json';
         };
     };
 
+    /**
+     * **NEW UTILITY FUNCTION: Fixes Font Awesome 7.x icon loading.**
+     * Determines the correct class prefix (fa-solid, fa-regular, fa-brands, etc.)
+     * or prepends 'fa-solid' if none is provided.
+     * @param {string} iconName The icon class name from page-identification.json (e.g., 'fa-home' or 'fa-brands fa-github').
+     * @returns {string} The complete, correctly prefixed Font Awesome class string.
+     */
+    const getIconClass = (iconName) => {
+        if (!iconName) return '';
+
+        // Check if a prefix is already present (e.g., fa-solid, fa-regular, fa-brands)
+        // Font Awesome 7.x requires the prefix for all icons.
+        if (iconName.startsWith('fa-solid') ||
+            iconName.startsWith('fa-regular') ||
+            iconName.startsWith('fa-light') ||
+            iconName.startsWith('fa-thin') ||
+            iconName.startsWith('fa-brands')) {
+            return iconName;
+        }
+
+        // Default to 'fa-solid' if no prefix is found.
+        return `fa-solid ${iconName}`;
+    };
+
     const run = async () => {
         let pages = {};
-        
-        // Load Icons CSS first for immediate visual display (Faster than JS file)
+
+        // Load Icons CSS first for immediate visual display
+        // Note: The 'fas' class prefix used in the old Font Awesome versions is replaced by 'fa-solid' in 6.x/7.x
+        // The CSS file for 7.1.0 is correct, but the HTML class references must be updated in renderNavbar.
         await loadCSS("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.1.0/css/all.min.css");
 
         // Fetch page configuration for the tabs
         try {
+            // Note: The PAGE_CONFIG_URL path may need to be adjusted based on where navigation.js and page-identification.json live.
+            // The existing `../page-identification.json` suggests one level up, which should be fine if it's correct.
             const response = await fetch(PAGE_CONFIG_URL);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             pages = await response.json();
@@ -252,11 +284,13 @@ const PAGE_CONFIG_URL = '../page-identification.json';
 
             // Helper to clean paths: remove trailing slash (unless it's root) and replace /index.html with /
             const cleanPath = (path) => {
+                // If it ends with /index.html, strip that part to treat it as the folder path
+                if (path.endsWith('/index.html')) {
+                    path = path.substring(0, path.lastIndexOf('/')) + '/';
+                }
+                // Remove trailing slash unless it's the root path '/'
                 if (path.length > 1 && path.endsWith('/')) {
                     path = path.slice(0, -1);
-                }
-                if (path.endsWith('/index.html')) {
-                    return path.substring(0, path.lastIndexOf('/')) + '/';
                 }
                 return path;
             };
@@ -271,7 +305,6 @@ const PAGE_CONFIG_URL = '../page-identification.json';
 
             // 2. GitHub Pages/Subdirectory match: Check if the current path ends with the tab path.
             // This handles cases like: current: /my-repo/about.html, tab: /about.html
-            // We compare 'my-repo/about.html' (suffix of current) with 'about.html' (suffix of tab).
             const tabPathSuffix = tabPathname.startsWith('/') ? tabPathname.substring(1) : tabPathname;
             
             if (currentPathname.endsWith(tabPathSuffix)) {
@@ -289,8 +322,9 @@ const PAGE_CONFIG_URL = '../page-identification.json';
 
             if (!container || !leftButton || !rightButton) return;
             
-            const isScrolledToLeft = container.scrollLeft < 5; // Tolerance for floating point math
-            const isScrolledToRight = container.scrollLeft + container.offsetWidth >= container.scrollWidth - 5; // Tolerance
+            // A threshold of 5px is used to account for minor rendering/subpixel discrepancies.
+            const isScrolledToLeft = container.scrollLeft < 5; 
+            const isScrolledToRight = container.scrollLeft + container.offsetWidth >= container.scrollWidth - 5; 
             const hasHorizontalOverflow = container.scrollWidth > container.offsetWidth;
 
             // Visibility logic
@@ -318,10 +352,13 @@ const PAGE_CONFIG_URL = '../page-identification.json';
                 // Use the new robust check for active state
                 const isActive = isTabActive(page.url);
                 const activeClass = isActive ? 'active' : '';
+                
+                // *** FIX: Use the new getIconClass function for Font Awesome 7.1.0 compatibility ***
+                const iconClasses = getIconClass(page.icon);
 
                 return `
                     <a href="${page.url}" class="nav-tab ${activeClass}">
-                        <i class="fas ${page.icon} mr-2"></i>
+                        <i class="${iconClasses} mr-2"></i>
                         ${page.name}
                     </a>
                 `;
@@ -372,24 +409,20 @@ const PAGE_CONFIG_URL = '../page-identification.json';
             container.innerHTML = `
                 <header class="auth-navbar">
                     <nav>
-                        <!-- 1. Logo (Left) -->
                         <a href="/" class="flex items-center space-x-2 flex-shrink-0">
                             <img src="${logoPath}" alt="4SP Logo" class="h-8 w-auto">
                         </a>
 
-                        <!-- 2. Scrollable Tabs (Center, takes up all remaining space) -->
                         <div class="tab-wrapper">
-                            <!-- Glide buttons are now slightly visible by default via CSS for instant load -->
-                            <button id="glide-left" class="scroll-glide-button hidden"><i class="fas fa-chevron-left"></i></button>
+                            <button id="glide-left" class="scroll-glide-button hidden"><i class="fa-solid fa-chevron-left"></i></button>
 
                             <div class="tab-scroll-container">
                                 ${tabsHtml}
                             </div>
                             
-                            <button id="glide-right" class="scroll-glide-button hidden"><i class="fas fa-chevron-right"></i></button>
+                            <button id="glide-right" class="scroll-glide-button hidden"><i class="fa-solid fa-chevron-right"></i></button>
                         </div>
 
-                        <!-- 3. Auth Menu (Right) -->
                         ${user ? loggedInView(user, userData) : loggedOutView}
                     </nav>
                 </header>
@@ -463,6 +496,7 @@ const PAGE_CONFIG_URL = '../page-identification.json';
             if (user) {
                 const logoutButton = document.getElementById('logout-button');
                 if (logoutButton) {
+                    const auth = firebase.auth();
                     logoutButton.addEventListener('click', () => {
                         auth.signOut().catch(err => console.error("Logout failed:", err));
                     });
