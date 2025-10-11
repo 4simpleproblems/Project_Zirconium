@@ -26,8 +26,6 @@
             100% { box-shadow: 0 0 5px #4f46e5, 0 0 10px #4f46e5; }
         }
         
-        /* NOTE: Marquee animation removed per user request */
-
         /* --- FONT & BASE STYLING (THICKENED FONT) --- */
         body { 
             font-family: 'Geist', sans-serif; 
@@ -52,13 +50,15 @@
             padding: 0 1rem;
         }
 
-        /* --- CONSISTENT PANEL STYLING (UPDATED: Slight Rounding) --- */
+        /* --- CONSISTENT PANEL STYLING (UPDATED: Increased Rounding) --- */
         .left-panel, .feed-panel { 
             background-color: #111111; 
             border: 1px solid #252525; 
             border-radius: 1rem; /* UPDATED: Increased rounding */
             padding: 1.5rem; 
-            height: fit-content;
+            min-height: 80vh; /* Set a minimum height for the panel */
+            display: flex; /* Make it a flex container */
+            flex-direction: column;
         }
         
         /* General input styling to use thin font */
@@ -110,7 +110,6 @@
             margin-bottom: 0.25rem; /* Spacing */
             padding: 0.5rem 0.5rem; 
             transition: background-color 0.2s;
-            /* Removed border-bottom for cleaner look with rounded cards */
             border-bottom: none;
         }
         .compact-list-item:hover {
@@ -123,7 +122,7 @@
         
         /* NEW: Daily Post specific styles to match the friend cards */
         .daily-post-card {
-            border-bottom: none; /* Ensure no border separation for rounded cards */
+            border-bottom: none; 
         }
         .daily-post-card:last-child {
              border-bottom: none;
@@ -132,7 +131,7 @@
         /* FIX: Ensure comments section can scroll (UPDATED: Increased max-height for activation) */
         #comments-section {
             overflow-y: auto;
-            max-height: 50vh; /* Set maximum height to enforce scrolling */
+            max-height: 50vh; 
             flex-grow: 1; 
         }
         
@@ -204,7 +203,6 @@
             max-width: 100%; 
             overflow: hidden; /* Ensure text is clipped */
             white-space: nowrap;
-            /* Marquee logic removed: text will clip naturally */
         }
         
         .title-text-span {
@@ -273,6 +271,33 @@
              transition: opacity 0.3s ease-in, width 0.3s ease-in;
         }
         /* --- END FEED STYLES --- */
+        
+        /* --- CHAT STYLES --- */
+        .message-bubble {
+            max-width: 70%;
+            padding: 0.75rem 1rem;
+            border-radius: 1.25rem;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        .message-bubble.mine {
+            align-self: flex-end;
+            background-color: #4f46e5; /* Indigo */
+            color: white;
+            border-bottom-right-radius: 0.5rem; /* Pointed corner */
+        }
+        .message-bubble.theirs {
+            align-self: flex-start;
+            background-color: #252525; /* Dark gray */
+            color: #c0c0c0;
+            border-bottom-left-radius: 0.5rem; /* Pointed corner */
+        }
+        #messages-container {
+            display: flex;
+            flex-direction: column;
+        }
+        /* --- END CHAT STYLES --- */
+
 
         .upload-drop-zone {
             background-color: #0a0a0a;
@@ -441,11 +466,30 @@
         </aside>
 
         <section class="feed-panel">
-            <h1 class="text-2xl font-bold mb-4">Today's Feed</h1>
+            <h1 class="text-2xl font-bold mb-4" id="feed-title">Today's Feed</h1>
+            
             <div id="photo-feed" class="photo-grid">
                 <p id="feed-placeholder">Add some friends to see their daily photos!</p>
             </div>
-        </section>
+
+            <div id="chat-panel" class="hidden h-full flex flex-col">
+                <div id="chat-header" class="border-b border-gray-700 pb-3 mb-3 flex justify-between items-center">
+                    <h2 class="text-2xl font-bold text-indigo-400">Chatting with <span id="chat-friend-name" class="text-white"></span></h2>
+                    <button id="close-chat-btn" class="text-gray-400 hover:text-white transition" title="Close Chat"><i class="fas fa-times"></i></button>
+                </div>
+
+                <div id="messages-container" class="flex-grow overflow-y-auto pr-2 mb-4 space-y-3">
+                    <p class="text-center text-gray-500 my-4">Select a friend to start chatting.</p>
+                </div>
+
+                <form id="chat-message-form" class="flex gap-2 flex-shrink-0">
+                    <input type="text" id="chat-message-input" placeholder="Type a message..." class="flex-grow p-3 bg-gray-900 border border-gray-700 rounded-md" maxlength="1000">
+                    <button type="submit" class="px-4 py-3 bg-indigo-600 rounded-md font-semibold hover:bg-indigo-700 transition" title="Send Message">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </form>
+            </div>
+            </section>
 
     </main>
 
@@ -458,7 +502,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { 
-            getFirestore, doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, serverTimestamp, orderBy, deleteDoc, onSnapshot, writeBatch, limit
+            getFirestore, doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, serverTimestamp, orderBy, deleteDoc, onSnapshot, writeBatch, limit, addDoc
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
         // --- CONFIGURATION IMPORT ---
@@ -482,16 +526,20 @@
         let CURRENT_FRIENDS = [];
         let CURRENT_USERNAME = 'DailyUser'; 
         let UNSUBSCRIBE_POSTS_LISTENER = () => {};
-        let UNSUBSCRIBE_DAILY_SLOTS_LISTENER = () => {}; // NEW: Separate listener for daily post slots
+        let UNSUBSCRIBE_DAILY_SLOTS_LISTENER = () => {}; 
         let MODAL_UNSUBSCRIBE_LISTENER = () => {}; 
+        let UNSUBSCRIBE_CHAT_LISTENER = () => {}; // NEW: Chat listener
+        let ACTIVE_CHAT_UID = null; // NEW: Active chat partner UID
         let LAST_COMMENT_TIMESTAMP = 0; 
-        let LAST_HEART_TIMESTAMP = 0; // NEW: Global state for heart debounce
+        let LAST_HEART_TIMESTAMP = 0; 
+        let LAST_CHAT_TIMESTAMP = 0; // NEW: Chat debounce timestamp
         let UNREAD_COMMENTS_COUNT = 0;
         let PENDING_UPLOAD_FILE = null; 
         const COMMENT_DELAY_MS = 3000;
+        const HEART_DELAY_MS = 500; 
+        const CHAT_DELAY_MS = 1000; // NEW: Chat message delay
         const POST_SLOTS_MAX = 5;
-        const MARQUEE_TRIGGER_LENGTH = 30; // Marquee logic removed, but keeping constant for title length checks if needed later
-        const HEART_DELAY_MS = 500; // NEW: Debounce hearting for 0.75 seconds
+        const MARQUEE_TRIGGER_LENGTH = 30; 
 
         // --- DOM Elements ---
         const loadingScreen = document.getElementById('loading-screen');
@@ -499,6 +547,7 @@
         const friendCodeDisplay = document.getElementById('friend-code-display');
         const addFriendForm = document.getElementById('add-friend-form');
         const addFriendMessage = document.getElementById('add-friend-message');
+        const feedTitle = document.getElementById('feed-title'); // NEW: For toggling between feed/chat title
         const photoFeed = document.getElementById('photo-feed');
         const friendsListItems = document.getElementById('friends-list-items'); 
         const dailyPostsContainer = document.getElementById('daily-posts-container');
@@ -517,17 +566,34 @@
         const imagePreview = document.getElementById('image-preview'); 
         const createPostForm = document.getElementById('create-post-form'); 
         const uploadDropArea = document.getElementById('upload-drop-area'); 
+        const chatPanel = document.getElementById('chat-panel'); // NEW
+        const chatFriendName = document.getElementById('chat-friend-name'); // NEW
+        const messagesContainer = document.getElementById('messages-container'); // NEW
+        const chatMessageForm = document.getElementById('chat-message-form'); // NEW
+        const chatMessageInput = document.getElementById('chat-message-input'); // NEW
+        const closeChatBtn = document.getElementById('close-chat-btn'); // NEW
 
 
         // --- Firestore Document References & Collections ---
         const getUserProfileDocRef = (userId) => doc(db, 'users', userId);
         const getFriendCodeDocRef = (code) => doc(db, 'artifacts', appId, 'public', 'data', 'friend_codes', code);
         const DAILY_PHOTO_COLLECTION = collection(db, 'daily_photos');
+        const CHAT_COLLECTION = collection(db, 'chats'); // NEW
 
         // =========================================================================
         // Helper Functions 
         // =========================================================================
         
+        /**
+         * @brief Creates a deterministic Chat ID by sorting the two UIDs.
+         * @param {string} uid1 
+         * @param {string} uid2 
+         * @returns {string} The combined, sorted chat ID.
+         */
+        function getChatId(uid1, uid2) {
+            return [uid1, uid2].sort().join('_');
+        }
+
         async function cleanText(text, type = 'text') {
             if (!text || !text.trim()) return text;
             const purgomalumUrl = `https://www.purgomalum.com/service/json?text=${encodeURIComponent(text)}`;
@@ -544,8 +610,6 @@
         
         /**
          * @brief Formats large numbers into abbreviated strings (K, M, B).
-         * @param {number} num The number to format.
-         * @returns {string} The formatted string (e.g., 1234 -> 1.2K). Capped at 999B.
          */
         function formatCount(num) {
             if (typeof num !== 'number' || isNaN(num)) return '0';
@@ -555,18 +619,15 @@
             let tier = 0;
             let currentNum = num;
             
-            // Calculate tier (1=K, 2=M, 3=B)
             while (currentNum >= 1000 && tier < suffixes.length - 1) {
                 currentNum /= 1000;
                 tier++;
             }
 
-            // Apply the user's specific cap for B (999B)
             if (tier === 3) {
                 if (currentNum >= 999.5) return '999B';
             }
 
-            // Format the number to one decimal place, removing .0 if it's a whole number
             const formatted = currentNum.toFixed(1).replace(/\.0$/, '');
             
             return formatted + suffixes[tier];
@@ -577,7 +638,6 @@
             MODAL_UNSUBSCRIBE_LISTENER();
             MODAL_UNSUBSCRIBE_LISTENER = () => {};
             document.getElementById('modal-content-container').innerHTML = '';
-            // Reset fullscreen state when closing
             document.getElementById('modal-content-container').classList.remove('fullscreen-image-mode'); 
         }
         
@@ -678,9 +738,6 @@
         
         /**
          * @brief Creates and returns a single photo thumbnail element.
-         * @param {string} photoId 
-         * @param {object} photoData 
-         * @returns {HTMLElement} The created thumbnail div.
          */
         function createPhotoThumbnailElement(photoId, photoData) {
             const titleText = photoData.title;
@@ -706,6 +763,122 @@
             return thumb;
         }
 
+        // =========================================================================
+        // Chat Functions (NEW)
+        // =========================================================================
+        
+        function closeChatPanel() {
+            UNSUBSCRIBE_CHAT_LISTENER();
+            ACTIVE_CHAT_UID = null;
+            chatPanel.classList.add('hidden');
+            photoFeed.classList.remove('hidden');
+            feedTitle.textContent = "Today's Feed";
+        }
+
+        function renderMessage(message, isMine) {
+            const time = new Date(message.timestamp?.toDate() || new Date()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            const bubbleWrapper = document.createElement('div');
+            bubbleWrapper.className = `flex ${isMine ? 'justify-end' : 'justify-start'}`;
+            
+            bubbleWrapper.innerHTML = `
+                <div class="message-bubble ${isMine ? 'mine' : 'theirs'}">
+                    <p class="text-xs font-semibold mb-1 ${isMine ? 'text-white/80' : 'text-indigo-400'}">${isMine ? 'You' : message.username}</p>
+                    <p>${message.text}</p>
+                    <p class="text-[0.6rem] mt-1 text-right ${isMine ? 'text-white/70' : 'text-gray-400'}">${time}</p>
+                </div>
+            `;
+            return bubbleWrapper;
+        }
+
+        function openChatPanel(friendUid, friendUsername) {
+            if (ACTIVE_CHAT_UID === friendUid) return;
+
+            // 1. Update UI state
+            ACTIVE_CHAT_UID = friendUid;
+            chatFriendName.textContent = friendUsername;
+            feedTitle.textContent = "Direct Message";
+            photoFeed.classList.add('hidden');
+            chatPanel.classList.remove('hidden');
+            messagesContainer.innerHTML = '<p class="text-center text-gray-500 my-4"><i class="fas fa-spinner fa-spin mr-2"></i> Loading messages...</p>';
+            chatMessageInput.focus();
+
+            // 2. Clear old listener
+            UNSUBSCRIBE_CHAT_LISTENER();
+
+            // 3. Set up new listener
+            const currentUser = auth.currentUser;
+            const chatId = getChatId(currentUser.uid, friendUid);
+            const chatRef = doc(CHAT_COLLECTION, chatId);
+            const messagesRef = collection(chatRef, 'messages');
+
+            const q = query(messagesRef, orderBy('timestamp', 'asc'), limit(50));
+
+            UNSUBSCRIBE_CHAT_LISTENER = onSnapshot(q, (snapshot) => {
+                messagesContainer.innerHTML = '';
+                if (snapshot.empty) {
+                    messagesContainer.innerHTML = '<p class="text-center text-gray-500 my-4">Say hello and start the conversation!</p>';
+                } else {
+                    const fragment = document.createDocumentFragment();
+                    snapshot.docs.forEach(doc => {
+                        const data = doc.data();
+                        const isMine = data.uid === currentUser.uid;
+                        fragment.appendChild(renderMessage(data, isMine));
+                    });
+                    messagesContainer.appendChild(fragment);
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
+            }, (error) => {
+                console.error("Chat Listener Error:", error);
+                messagesContainer.innerHTML = '<p class="text-center text-red-400 my-4">Error loading chat messages.</p>';
+            });
+        }
+
+        async function handleSendMessage(e) {
+            e.preventDefault();
+            const text = chatMessageInput.value.trim();
+            if (!text || !ACTIVE_CHAT_UID) return;
+
+            if (Date.now() - LAST_CHAT_TIMESTAMP < CHAT_DELAY_MS) {
+                return; 
+            }
+            
+            chatMessageInput.disabled = true;
+            const sendBtn = e.target.querySelector('button');
+            const originalIcon = sendBtn.innerHTML;
+            sendBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
+
+            try {
+                const cleanedText = await cleanText(text, 'chat message');
+                const currentUser = auth.currentUser;
+                const chatId = getChatId(currentUser.uid, ACTIVE_CHAT_UID);
+                const chatRef = doc(CHAT_COLLECTION, chatId);
+                const messagesRef = collection(chatRef, 'messages');
+
+                await addDoc(messagesRef, {
+                    uid: currentUser.uid,
+                    username: CURRENT_USERNAME,
+                    text: cleanedText,
+                    timestamp: serverTimestamp()
+                });
+                
+                await setDoc(chatRef, { 
+                    lastMessage: cleanedText, 
+                    lastSent: serverTimestamp(),
+                    participants: [currentUser.uid, ACTIVE_CHAT_UID].sort() 
+                }, { merge: true });
+
+                chatMessageInput.value = '';
+                LAST_CHAT_TIMESTAMP = Date.now();
+            } catch (error) {
+                console.error("Send message failed:", error);
+                showMessage(document.getElementById('add-friend-message'), 'Failed to send message.', 'error');
+            } finally {
+                chatMessageInput.disabled = false;
+                sendBtn.innerHTML = originalIcon;
+                chatMessageInput.focus();
+            }
+        }
         // =========================================================================
         // Core Logic - Authentication & Initialization 
         // =========================================================================
@@ -808,35 +981,28 @@
             
             const photosQuery = query(DAILY_PHOTO_COLLECTION, where('creatorUid', 'in', uidsToQuery), where('createdAt', '>=', startOfDay), orderBy('createdAt', 'desc'));
             
-            // REFACTOR: Use a full-snapshot processing approach to eliminate duplicate rendering issues.
             UNSUBSCRIBE_POSTS_LISTENER = onSnapshot(photosQuery, (snapshot) => {
                 const fragment = document.createDocumentFragment();
                 
-                // 1. Process the entire snapshot (in sorted order)
                 snapshot.docs.forEach(doc => {
                     const docId = doc.id;
                     const data = doc.data();
                     
-                    if (!data.title) return; // Skip posts without titles
+                    if (!data.title) return; 
                     
-                    // Try to reuse an existing element to minimize DOM thrashing
                     let thumb = document.querySelector(`.photo-thumbnail[data-photo-id="${docId}"]`);
                     
                     if (thumb) {
-                        // Update existing element properties
                         thumb.querySelector('.heart-count-display').innerHTML = formatCount(data.hearts?.length || 0);
                         thumb.querySelector('.comment-count-display').innerHTML = formatCount(data.comments?.length || 0);
                         thumb.querySelector('.title-text-span').textContent = data.title;
                     } else {
-                        // Create a new element
                         thumb = createPhotoThumbnailElement(docId, data);
                     }
                     
-                    // Append the element (new or reused) to the fragment, preserving sort order
                     fragment.appendChild(thumb);
                 });
 
-                // 2. Clear the existing feed and replace it with the new, correct one
                 photoFeed.innerHTML = '';
                 photoFeed.appendChild(fragment);
 
@@ -851,8 +1017,6 @@
         
         /**
          * @brief Renders the user's daily post slots based on profile data and post snapshots.
-         * @param {object} profileData The user's profile data from Firestore.
-         * @param {object} postsToday A map of postId -> postData for all user's posts today.
          */
         function renderDailyPosts(profileData, postsToday) {
             const currentUser = auth.currentUser;
@@ -868,7 +1032,6 @@
                     const postData = postsToday[postId];
                     const name = postData ? (postData.title || 'TITLE MISSING') : `Slot #${i + 1} Used & Deleted`;
                     
-                    // Check if the post exists and has a title to show the 'View' button
                     const isViewable = postData && postData.title; 
 
                     div.innerHTML = `
@@ -880,26 +1043,22 @@
                     if (isViewable) {
                         div.querySelector('.view-post-btn').addEventListener('click', () => openPhotoModal(postId));
                     } else if (postData && !postData.title) {
-                         // Allow editing if the slot is used but the post is missing a title
                          div.querySelector('span:last-child').textContent = 'Needs Title';
                          div.querySelector('span:last-child').className = 'text-yellow-500 text-sm cursor-pointer';
                          div.querySelector('span:last-child').addEventListener('click', () => openTitleModal(postId, postData.title));
                     }
                 } else if (i === dailySlotsUsed.length) {
-                    // Available slot is the one immediately after the last used slot
                     div.innerHTML = `
                         <span class="font-semibold text-gray-400">Post #${i + 1}</span>
                         <button data-slot-index="${i}" class="open-upload-menu-btn px-3 py-1 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold text-white" title="Upload Photo"><i class="fas fa-image"></i></button>`;
                     div.querySelector('.open-upload-menu-btn').addEventListener('click', e => openUploadMenu(parseInt(e.currentTarget.dataset.slotIndex)));
                 } else {
-                    // Locked slots (only slots after the next available slot are locked)
                     div.innerHTML = `<span class="font-semibold text-gray-600">Post #${i + 1}</span><span class="text-gray-600"><i class="fas fa-lock"></i> Locked</span>`;
                 }
                 dailyPostsContainer.appendChild(div);
             }
         }
 
-        // REFACTOR: The main listener function now coordinates two listeners: one for the profile/slots, one for the posts.
         function setupDailyPostsListener(user) {
              const userProfileRef = getUserProfileDocRef(user.uid);
              const startOfDay = new Date();
@@ -908,25 +1067,18 @@
              let currentProfileData = {};
              let currentPostsData = {};
 
-             // Listener 1: Real-time listener for the user's daily posts
              const postsQuery = query(DAILY_PHOTO_COLLECTION, where('creatorUid', '==', user.uid), where('createdAt', '>=', startOfDay), orderBy('createdAt', 'asc'));
              
-             // UNUSED: This listener is no longer strictly needed but serves as a way to cache post data changes
-             // and trigger a re-render based on the profile data.
              const unsubscribePostsCache = onSnapshot(postsQuery, (snapshot) => {
                 currentPostsData = snapshot.docs.reduce((acc, doc) => ({ ...acc, [doc.id]: doc.data() }), {});
-                // Re-render the slots view whenever the underlying post data changes
                 renderDailyPosts(currentProfileData, currentPostsData);
              });
              
-             // Listener 2: Real-time listener for the user's profile to track dailySlotsUsed
              UNSUBSCRIBE_DAILY_SLOTS_LISTENER = onSnapshot(userProfileRef, (profileSnap) => {
                 currentProfileData = profileSnap.data() || {};
-                // Re-render the slots view whenever the profile/slots change
                 renderDailyPosts(currentProfileData, currentPostsData);
              });
              
-             // Store the unsubscribe function for cleanup
              setupDailyPostsListener.unsubscribe = () => {
                  unsubscribePostsCache();
                  UNSUBSCRIBE_DAILY_SLOTS_LISTENER();
@@ -963,13 +1115,11 @@
 
             try {
                 const userProfileSnap = await getDoc(userProfileRef);
-                // REFACTOR: The check below is now only a sanity check, the UI handles slot selection
                 if ((userProfileSnap.data().dailySlotsUsed || []).length !== slotIndex) throw new Error("Slot index mismatch. Please refresh.");
                 
                 const imageBase64 = await compressImage(file);
                 const newPostRef = doc(DAILY_PHOTO_COLLECTION);
                 
-                // IMPORTANT: The post MUST have a title to be viewable on the feed
                 await setDoc(newPostRef, {
                     creatorUid: currentUser.uid, creatorUsername: CURRENT_USERNAME, createdAt: serverTimestamp(),
                     imageBase64, title: cleanedTitle, hearts: [], comments: []
@@ -1043,7 +1193,6 @@
                 }
                 
                 if (!isModalAlreadyOpen) {
-                    // UPDATED: Marquee classes removed from title
                     modalContentContainer.innerHTML = `
                         <div id="photo-view-main" class="flex flex-col md:flex-row gap-6 w-full h-full flex-grow">
                             <div id="photo-display-area" class="flex-grow flex justify-center items-center cursor-pointer relative" data-image-toggle>
@@ -1115,12 +1264,10 @@
             if (heartBtn) {
                 const photoId = heartBtn.dataset.postId;
                 
-                // --- NEW: Hearting/Unhearting Delay Logic ---
                 if (Date.now() - LAST_HEART_TIMESTAMP < HEART_DELAY_MS) {
-                    return; // Secretly ignore the click if within the delay period
+                    return; 
                 }
                 LAST_HEART_TIMESTAMP = Date.now();
-                // ---------------------------------------------
 
                 const isHearted = heartBtn.dataset.hearted === 'true';
                 updateDoc(doc(DAILY_PHOTO_COLLECTION, photoId), { 
@@ -1128,11 +1275,9 @@
                 });
             }
 
-            // NEW: Fullscreen Image Toggle Logic
             const imageToggle = e.target.closest('[data-image-toggle]');
             if (imageToggle) {
                 const modalContentContainer = document.getElementById('modal-content-container');
-                // Toggle the class on the modal content to trigger CSS transitions (Step 5)
                 modalContentContainer.classList.toggle('fullscreen-image-mode');
             }
 
@@ -1148,7 +1293,6 @@
             }
             const confirmDelete = e.target.closest('#confirm-delete-btn');
             if (confirmDelete) {
-                // IMPORTANT: Use the correct post ID lookup from the heart button dataset as it's reliable in the modal
                 const currentPostId = document.getElementById('heart-btn')?.dataset.postId;
                 if (currentPostId) {
                     deleteDoc(doc(DAILY_PHOTO_COLLECTION, currentPostId))
@@ -1178,7 +1322,6 @@
             btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
             try {
                 const cleanedText = await cleanText(text, 'comment');
-                // Use the data-post-id from the heart button to get the current post ID
                 const currentPostId = document.getElementById('heart-btn')?.dataset.postId;
                 if (!currentPostId) throw new Error("Could not find current post ID for comment.");
                 
@@ -1241,25 +1384,6 @@
             }
         });
 
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                try {
-                    await handleFriendCodeLogic(user); 
-                    await cleanupOldPosts(user); 
-                    setupFriendListListener(user); 
-                    setupDailyPostsListener(user); // Initial setup for both profile and post listeners
-                    loadingScreen.style.display = 'none';
-                    messengerUi.style.display = 'grid';
-                } catch (e) {
-                    console.error("Application Initialization Failed:", e);
-                    loadingScreen.style.display = 'none';
-                    showCustomModal("Startup Error", `The messenger failed to initialize. Error: ${e.message}.`);
-                }
-            } else {
-                await initializeAuth(); 
-            }
-        });
-
         const friendRequestLogic = async (friendUid, actionType, user) => {
             const batch = writeBatch(db);
             batch.update(getUserProfileDocRef(user.uid), { pending_requests: arrayRemove(friendUid) });
@@ -1280,7 +1404,6 @@
             onSnapshot(getUserProfileDocRef(user.uid), async (docSnap) => {
                 const profileData = docSnap.data() || {};
                 const friends = profileData.friends || [];
-                // Only re-run the feed listener if the actual friends list changes
                 if (friends.length !== CURRENT_FRIENDS.length || !friends.every((val, i) => val === CURRENT_FRIENDS[i])) {
                     CURRENT_FRIENDS = friends; 
                     setupFriendsFeedListener(user); 
@@ -1301,14 +1424,30 @@
                 if (friends.length > 0) {
                     const friendProfiles = await Promise.all(friends.map(uid => getDoc(getUserProfileDocRef(uid))));
                     friendProfiles.forEach((snap, i) => {
-                        combinedHtml += `<div class="compact-list-item flex justify-between items-center"><span class="font-semibold">${snap.data()?.username || 'Unknown'}</span><button data-uid="${friends[i]}" class="remove-friend-btn text-red-400 hover:text-red-500 px-2 py-1" title="Remove Friend"><i class="fas fa-user-minus"></i></button></div>`;
+                        const friendUsername = snap.data()?.username || 'Unknown';
+                        const friendUid = friends[i];
+                        
+                        // NEW: Added chat-friend-item class and data attributes to make it clickable
+                        combinedHtml += `<div data-uid="${friendUid}" data-username="${friendUsername}" class="chat-friend-item compact-list-item flex justify-between items-center cursor-pointer hover:bg-indigo-900/10"><span class="font-semibold">${friendUsername}</span><button data-uid="${friendUid}" class="remove-friend-btn text-red-400 hover:text-red-500 px-2 py-1" title="Remove Friend"><i class="fas fa-user-minus"></i></button></div>`;
                     });
                 }
                 
                 if (!combinedHtml) combinedHtml = '<p class="text-sm text-gray-500 p-2 text-center">No friends yet. Add one above!</p>';
                 friendsListItems.innerHTML = combinedHtml;
+
+                // NEW: Add chat open listener to new elements
+                friendsListItems.querySelectorAll('.chat-friend-item').forEach(item => {
+                    item.addEventListener('click', (e) => {
+                        // Prevent chat from opening if the remove button is clicked
+                        if (e.target.closest('.remove-friend-btn')) return;
+                        const uid = item.dataset.uid;
+                        const username = item.dataset.username;
+                        openChatPanel(uid, username);
+                    });
+                });
             });
 
+            // Existing click listener for remove/accept/reject buttons
             friendsListItems.addEventListener('click', async (e) => {
                 const acceptBtn = e.target.closest('.accept-request-btn');
                 const rejectBtn = e.target.closest('.reject-request-btn');
@@ -1324,6 +1463,30 @@
                 }
             });
         }
+        
+        // NEW: Chat Form and Close Listener
+        chatMessageForm.addEventListener('submit', handleSendMessage);
+        closeChatBtn.addEventListener('click', closeChatPanel);
+
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                try {
+                    await handleFriendCodeLogic(user); 
+                    await cleanupOldPosts(user); 
+                    setupFriendListListener(user); 
+                    setupDailyPostsListener(user); 
+                    loadingScreen.style.display = 'none';
+                    messengerUi.style.display = 'grid';
+                } catch (e) {
+                    console.error("Application Initialization Failed:", e);
+                    loadingScreen.style.display = 'none';
+                    showCustomModal("Startup Error", `The messenger failed to initialize. Error: ${e.message}.`);
+                }
+            } else {
+                await initializeAuth(); 
+            }
+        });
     </script>
 </body>
 </html>
