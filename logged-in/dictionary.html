@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>4SP - Interactive Dictionary</title>
-    <meta name="description" content="A simple interactive dictionary with search and definition display using dictionaryapi.dev.">
+    <meta name="description" content="A simple interactive dictionary with search and definition display using freedictionaryapi.com.">
 
     <!-- Fonts, Icons, and Tailwind CSS -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -175,7 +175,7 @@
         // --- DICTIONARY API LOGIC ---
         
         /**
-         * Fetches the definition for a given word using the dictionaryapi.dev API.
+         * Fetches the definition for a given word using the freedictionaryapi.com API.
          * @param {string} word The word to look up.
          */
         async function fetchDefinition(word) {
@@ -191,7 +191,8 @@
             searchInput.value = trimmedWord; // Set the input field to the word being searched
 
             try {
-                const url = `https://api.dictionaryapi.dev/api/v2/entries/en/${trimmedWord}`;
+                // *** UPDATED API ENDPOINT ***
+                const url = `https://api.freedictionaryapi.com/api/v1/entries/en/${trimmedWord}`;
                 const response = await fetch(url);
 
                 if (!response.ok) {
@@ -224,26 +225,50 @@
 
         /**
          * Replaces standalone words (4+ chars) in the definition text with clickable spans.
-         * Excludes an expanded list of common function words.
+         * Excludes an expanded list of common function words, focusing on conceptual words.
          * @param {string} text The definition text.
          * @returns {string} The text with clickable links.
          */
         function highlightDefinitionText(text) {
-            // List of common words to exclude from linking. This list is optimized to filter out function words 
-            // and focus linking on nouns, core verbs, and descriptive adjectives.
+            // List of common words to exclude from linking. This list is heavily optimized to filter out all 
+            // function words and common non-conceptual words, focusing only on nouns, core verbs, and descriptive adjectives.
             const commonWords = [
-                'the', 'and', 'but', 'not', 'for', 'with', 'from', 'that', 'this', 'have', 
-                'when', 'what', 'which', 'will', 'was', 'are', 'you', 'can', 'one', 'use', 
-                'any', 'all', 'out', 'into', 'upon', 'like', 'than', 'only', 'much', 'about', 
-                'just', 'over', 'under', 'also', 'some', 'they', 'them', 'their', 'your', 
-                'most', 'such', 'make', 'take', 'look', 'find', 'away', 'down', 'here', 'more',
-                'must', 'once', 'sure', 'into', 'then', 'than', 
-                // Newly added exclusions for better focus:
+                // Articles, Conjunctions, Prepositions (short & common)
+                'the', 'and', 'but', 'not', 'for', 'with', 'from', 'into', 'upon', 'like', 
+                'than', 'only', 'much', 'about', 'just', 'over', 'under', 'also', 'some', 'such', 
                 'through', 'without', 'before', 'after', 'among', 'between', 'where', 'whether', 
-                'should', 'could', 'would', 'become', 'very', 'even', 'until', 'since', 'only',
-                'because', 'always', 'often', 'never', 'ever', 'wherever', 'whichever', 'whenever',
-                'may', 'might', 'must', 'shall', 'should', 'since', 'still', 'though', 'towards',
-                'unless'
+                'since', 'still', 'though', 'towards', 'unless', 'below', 'above', 'near', 'far',
+                'along', 'across', 'against', 'amongst', 'around', 'behind', 'beside', 'beyond',
+                'during', 'except', 'inside', 'outside', 'past', 'round', 'toward', 'until', 
+                'while', 'whereas', 'whilst', 'whereby', 'wherein', 'whereof', 'wherever', 'whichever',
+                'whenever', 'wherever', 'because', 'towards', 'amid', 'onto', 'per',
+                
+                // Pronouns & Demonstratives
+                'that', 'this', 'you', 'any', 'all', 'they', 'them', 'their', 'your', 'most',
+                'which', 'what', 'whose', 'whom', 'there', 'here', 'these', 'those', 'itself',
+                'herself', 'himself', 'myself', 'yourself', 'its', 'ours', 'yours', 'theirs', 'us',
+                'him', 'her', 'how', 'when', 'why', 'whose', 'something', 'anything', 'everything', 'none',
+
+                // Auxiliary/Modal Verbs & Common Verbs
+                'have', 'will', 'was', 'are', 'can', 'use', 'make', 'take', 'look', 'find', 
+                'must', 'should', 'could', 'would', 'become', 'may', 'might', 'shall', 'been',
+                'being', 'does', 'doing', 'did', 'gets', 'give', 'went', 'come', 'said', 'say',
+                'says', 'keep', 'keeps', 'move', 'moves', 'used', 'using', 'makes', 'takes',
+                'looks', 'finds', 'given', 'taken', 'become', 'becomes', 'being', 'having',
+                'going', 'comes', 'seen', 'knew', 'know', 'knows', 'feel', 'felt', 'feelings',
+                'seem', 'seems', 'seemed', 'using', 'used', 'get', 'gives', 'gave', 'goes', 'went',
+
+                // Common Adverbs & Adjectives (non-conceptual) & fillers
+                'very', 'even', 'only', 'always', 'often', 'never', 'ever', 'away', 'down', 'more',
+                'other', 'little', 'less', 'same', 'high', 'low', 'back', 'good', 'well', 'bad', 
+                'full', 'empty', 'next', 'last', 'first', 'second', 'third', 'main', 'chief',
+                'great', 'small', 'large', 'tiny', 'huge', 'early', 'late', 'quick', 'slow',
+                'surely', 'truly', 'really', 'simply', 'mostly', 'mainly', 'simply', 'oftenly',
+                'nearly', 'hardly', 'merely', 'either', 'neither', 'else', 'still', 'alone',
+                'enough', 'where', 'when', 'how', 'why', 'further', 'several', 'various', 'various', 
+                'certain', 'specific', 'general', 'primary', 'secondary', 'tertiary', 'many', 'few',
+                'little', 'least', 'most', 'another', 'own', 'every', 'each', 'whole', 'entire',
+                'total', 'overall', 'ready', 'able', 'possible', 'impossible', 'likely', 'unlikely'
             ];
             
             // Regex continues to find standalone words that are 4 characters or more ({4,})
@@ -272,8 +297,9 @@
             }
 
             const entry = data[0];
-            // Find the best phonetic representation or default to 'N/A'
-            const phoneticText = entry.phonetic || entry.phonetics?.find(p => p.text)?.text || 'N/A';
+            // *** ADJUSTED PHONETIC EXTRACTION FOR NEW API STRUCTURE ***
+            // The phonetic text is typically found in the first phonetics object.
+            const phoneticText = entry.phonetics?.find(p => p.text)?.text || 'N/A';
             
             let htmlContent = `
                 <div class="space-y-6">
@@ -317,28 +343,31 @@
                         `;
                     }
                     
+                    // The new API structure puts synonyms inside the definition object, which this code already handles.
+                    if (def.synonyms && def.synonyms.length > 0) {
+                         const synonymTags = def.synonyms.slice(0, 5).map(s => 
+                            `<span 
+                                class="px-3 py-1 bg-zinc-700 text-cyan-200 rounded-lg text-sm font-semibold cursor-pointer hover:bg-zinc-600 transition synonym-tag"
+                                data-word="${s}"
+                            >${s}</span>`
+                        ).join(' ');
+
+                        htmlContent += `
+                            <div class="mt-2 text-sm">
+                                <span class="text-white font-semibold mr-2">Synonyms:</span>
+                                <span class="flex flex-wrap gap-1 mt-1">${synonymTags}</span>
+                            </div>
+                        `;
+                    }
+
+
                     htmlContent += `</div></li>`;
                 });
 
                 htmlContent += `</ol></div>`; // Close definitions ol and surrounding div
                 
-                // Display synonyms if available with special pill-shaped styling
-                if (meaning.synonyms && meaning.synonyms.length > 0) {
-                    // Mapping synonyms into less rounded, clickable pill-shaped span tags
-                    const synonymTags = meaning.synonyms.slice(0, 5).map(s => 
-                        `<span 
-                            class="px-3 py-1 bg-zinc-700 text-cyan-200 rounded-lg text-sm font-semibold cursor-pointer hover:bg-zinc-600 transition synonym-tag"
-                            data-word="${s}"
-                        >${s}</span>`
-                    ).join(' ');
-
-                    htmlContent += `
-                        <div class="ml-4 pt-4 p-3 bg-zinc-800 border border-cyan-700 rounded-lg shadow-inner">
-                            <p class="text-lg text-white font-bold mb-2">Synonyms:</p>
-                            <p class="flex flex-wrap gap-2">${synonymTags}</p>
-                        </div>
-                    `;
-                }
+                // Note: The new API doesn't consistently put synonyms at the meaning root level, 
+                // but the logic above now extracts them if present within the definition objects.
 
                 htmlContent += `</div>`; // Close meaning div
             });
