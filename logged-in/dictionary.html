@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>4SP - Interactive Dictionary</title>
-    <meta name="description" content="A simple interactive dictionary with search and definition display using freedictionaryapi.com.">
+    <meta name="description" content="A simple interactive dictionary with search and definition display using api.dictionaryapi.dev.">
 
     <!-- Fonts, Icons, and Tailwind CSS -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -131,7 +131,7 @@
             <!-- Definition Display -->
             <div id="definition-output" class="p-6 bg-zinc-900 border border-zinc-800 rounded-lg min-h-[30vh]">
                 <p class="text-lg text-gray-400 text-center">
-                    Enter a word above and hit **Search** or **Enter** to look up its definition, pronunciation, and synonyms using the dictionary API.
+                    Enter a word above and hit **Search** or **Enter** to look up its definition, pronunciation, and synonyms.
                 </p>
             </div>
             
@@ -175,7 +175,7 @@
         // --- DICTIONARY API LOGIC ---
         
         /**
-         * Fetches the definition for a given word using the freedictionaryapi.com API.
+         * Fetches the definition for a given word using the api.dictionaryapi.dev API.
          * @param {string} word The word to look up.
          */
         async function fetchDefinition(word) {
@@ -191,12 +191,12 @@
             searchInput.value = trimmedWord; // Set the input field to the word being searched
 
             try {
-                // API ENDPOINT: The previous one was fine and should work for the new structure too.
-                const url = `https://api.freedictionaryapi.com/api/v1/entries/en/${trimmedWord}`;
+                // *** CORRECTED API ENDPOINT DOMAIN ***
+                const url = `https://api.dictionaryapi.dev/api/v2/entries/en/${trimmedWord}`;
                 const response = await fetch(url);
 
                 if (!response.ok) {
-                    // API returns 404 for words not found
+                    // This API returns a JSON error object if the word is not found, but we handle the HTTP status first
                     if (response.status === 404) {
                         definitionOutput.innerHTML = `
                             <p class="text-xl text-red-400 text-center">
@@ -212,17 +212,17 @@
 
                 const data = await response.json();
                 
-                // The API can return an error object inside the data array if the structure doesn't match the expected.
-                if (Array.isArray(data) && data.length > 0 && data[0].hasOwnProperty('title')) {
-                     definitionOutput.innerHTML = `
+                // Check if the response is an array (success) or an object (error payload from the API)
+                if (Array.isArray(data) && data.length > 0) {
+                     displayDefinition(trimmedWord, data);
+                } else {
+                    // Handle API-specific error message if it's not a standard 404
+                    definitionOutput.innerHTML = `
                         <p class="text-xl text-red-400 text-center">
                             Sorry, we couldn't find a definition for <strong>"${trimmedWord}"</strong>. Please check the spelling.
                         </p>
                     `;
-                    return;
                 }
-
-                displayDefinition(trimmedWord, data);
 
             } catch (error) {
                 console.error("Fetch error:", error);
@@ -298,22 +298,24 @@
 
         /**
          * Renders the definition data onto the page, adapted for the entries/senses structure.
-         * @param {string} word The word being displayed.
-         * @param {Object} data The definition object from the API.
+         * Note: This function is written to be compatible with both freedictionaryapi.com (which uses 'meanings') 
+         * and the new generic API (which uses a similar structure in its response array).
+         * * @param {string} word The word being displayed.
+         * @param {Array<Object>} data The array of definition objects from the API.
          */
         function displayDefinition(word, data) {
             
-            // 1. Get the main entry object
-            const entry = data.entries?.[0]; // Access the first entry within the data object
+            // The API returns an array, use the first main entry object
+            const entry = data[0]; 
             
-            if (!entry || !entry.partOfSpeech || !entry.partOfSpeech.length) {
+            if (!entry || !entry.meanings || entry.meanings.length === 0) {
                 definitionOutput.innerHTML = `<p class="text-xl text-red-400 text-center">No detailed definition entries found for "${word}".</p>`;
                 return;
             }
 
-            // 2. Extract Phonetic Text from the main entry (assuming the pronunciations array is at the entry level)
-            // Path: data[0].entries[0].pronunciations[i].text
-            const phoneticText = entry.pronunciations?.find(p => p.text)?.text || 'N/A';
+            // Extract Phonetic Text (using the most common path for this API)
+            // Path: data[0].phonetic or data[0].phonetics[i].text
+            const phoneticText = entry.phonetic || entry.phonetics?.find(p => p.text)?.text || 'N/A';
             
             let htmlContent = `
                 <div class="space-y-6">
@@ -324,15 +326,15 @@
                     <hr class="border-zinc-700" />
             `;
             
-            // 3. Iterate through all parts of speech (partOfSpeech is now an array in the new structure)
-            entry.partOfSpeech.forEach(posEntry => {
-                // Ensure the POS entry has senses
-                if (!posEntry.senses || posEntry.senses.length === 0) return;
+            // Iterate through all parts of speech (meanings)
+            entry.meanings.forEach(meaning => {
+                // Ensure the POS entry has definitions
+                if (!meaning.definitions || meaning.definitions.length === 0) return;
 
                 htmlContent += `
                     <div class="space-y-4 mb-8">
                         <h3 class="text-2xl font-semibold text-indigo-300 border-l-4 border-indigo-500 pl-3">
-                            ${posEntry.partOfSpeech.charAt(0).toUpperCase() + posEntry.partOfSpeech.slice(1)}
+                            ${meaning.partOfSpeech.charAt(0).toUpperCase() + meaning.partOfSpeech.slice(1)}
                         </h3>
                         
                         <!-- Definitions Section Header and Numbered List -->
@@ -341,16 +343,16 @@
                             <ol class="list-decimal list-inside space-y-3 pl-4">
                 `;
 
-                // 4. Iterate through all senses for this part of speech
-                posEntry.senses.slice(0, 3).forEach((sense) => { 
-                    const definitionText = sense.definition || 'No definition provided.';
+                // Iterate through all definitions for this part of speech
+                meaning.definitions.slice(0, 3).forEach((def) => { 
+                    const definitionText = def.definition || 'No definition provided.';
                     const highlightedDefinition = highlightDefinitionText(definitionText);
                     
-                    // The example is an array of strings in the new structure. Use the first one.
-                    const exampleText = sense.examples?.[0]; 
+                    const exampleText = def.example; 
 
-                    // Synonyms are also an array of strings at the sense level
-                    const senseSynonyms = sense.synonyms || [];
+                    // Synonyms and antonyms are directly at the definition level for some APIs, or nested.
+                    // Use the most robust path.
+                    const defSynonyms = def.synonyms || [];
                     
                     htmlContent += `
                         <li>
@@ -367,8 +369,8 @@
                     }
                     
                     // Conditionally add synonyms
-                    if (senseSynonyms.length > 0) {
-                         const synonymTags = senseSynonyms.slice(0, 5).map(s => 
+                    if (defSynonyms.length > 0) {
+                         const synonymTags = defSynonyms.slice(0, 5).map(s => 
                             `<span 
                                 class="px-3 py-1 bg-zinc-700 text-cyan-200 rounded-lg text-sm font-semibold cursor-pointer hover:bg-zinc-600 transition synonym-tag"
                                 data-word="${s}"
@@ -388,7 +390,7 @@
                 });
 
                 htmlContent += `</ol></div>`; // Close definitions ol and surrounding div
-                htmlContent += `</div>`; // Close partOfSpeech div
+                htmlContent += `</div>`; // Close meaning div
             });
 
             htmlContent += `</div>`; // Close space-y-6 div
