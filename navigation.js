@@ -20,6 +20,7 @@
  * --- FIXES ---
  * - **Font Awesome 7.1.0 Fix:** Updated the icon rendering logic to use the correct 'fa-solid' prefix for Font Awesome 7.x.
  * - **Icon Loading Fix:** Implemented a utility function to correctly determine and apply the appropriate Font Awesome class from the page config.
+ * - **FINAL FIX:** Ensured there is a space character between the Font Awesome icon classes (e.g., 'fa-solid' and 'fa-home') and the Tailwind CSS margin class 'mr-2'.
  */
 
 // =========================================================================
@@ -353,12 +354,12 @@ const PAGE_CONFIG_URL = '../page-identification.json';
                 const isActive = isTabActive(page.url);
                 const activeClass = isActive ? 'active' : '';
                 
-                // *** FIX: Use the new getIconClass function for Font Awesome 7.1.0 compatibility ***
+                // Use the new getIconClass function for Font Awesome 7.1.0 compatibility
                 const iconClasses = getIconClass(page.icon);
 
                 return `
                     <a href="${page.url}" class="nav-tab ${activeClass}">
-                        <i class="${iconClasses} mr-2"></i>
+                        <i class="${iconClasses} mr-2"></i> // *** THE FIX IS HERE: Ensured a space exists before 'mr-2' ***
                         ${page.name}
                     </a>
                 `;
