@@ -18,10 +18,9 @@
  * - It initializes Firebase, listens for auth state, and fetches user data.
  *
  * --- FIXES ---
- * - **Font Awesome 7.1.0 Fix (Simplified):** The icon rendering logic in 'getIconClass' is simplified to strictly
- * ensure the 'fa-solid' prefix is always prepended to icon names from 'page-identification.json' 
- * (e.g., 'fa-house-user' becomes 'fa-solid fa-house-user'), which is required by the v7 CSS.
- * - **Icon Loading Fix:** The utility function is now more focused on ensuring v7 compatibility for the icons defined in the JSON.
+ * - **Font Awesome 7.1.0 Fix (Bulletproof):** The icon rendering logic in 'getIconClass' is overhauled to ensure 
+ * it always provides BOTH the style prefix (e.g., 'fa-solid') and the icon name prefix (e.g., 'fa-house-user') 
+ * regardless of the input format from 'page-identification.json'. This should guarantee the icons display.
  */
 
 // =========================================================================
@@ -90,26 +89,48 @@ let db;
     };
 
     /**
-     * **UPDATED UTILITY FUNCTION: Fixes Font Awesome 7.x icon loading for JSON.**
-     * Forces the 'fa-solid' prefix to ensure icons from page-identification.json display.
-     * @param {string} iconName The icon class name from page-identification.json (e.g., 'fa-home').
-     * @returns {string} The complete, correctly prefixed Font Awesome class string (e.g., 'fa-solid fa-home').
+     * **UPDATED UTILITY FUNCTION: Bulletproof Fix for Font Awesome 7.x icon loading for JSON.**
+     * Ensures both the style prefix (e.g., 'fa-solid') and the icon name prefix (e.g., 'fa-house-user') are present.
+     * @param {string} iconName The icon class name from page-identification.json (e.g., 'fa-house-user' or just 'house-user').
+     * @returns {string} The complete, correctly prefixed Font Awesome class string (e.g., 'fa-solid fa-house-user').
      */
     const getIconClass = (iconName) => {
         if (!iconName) return '';
 
-        // Check if a prefix is already present (fa-solid, fa-brands, etc.)
-        // If it has a prefix, return as is.
-        if (iconName.startsWith('fa-solid') ||
-            iconName.startsWith('fa-regular') ||
-            iconName.startsWith('fa-light') ||
-            iconName.startsWith('fa-thin') ||
-            iconName.startsWith('fa-brands')) {
-            return iconName;
+        const nameParts = iconName.trim().split(/\s+/).filter(p => p.length > 0);
+        let stylePrefix = 'fa-solid'; // Default style
+        let baseName = '';
+        const stylePrefixes = ['fa-solid', 'fa-regular', 'fa-light', 'fa-thin', 'fa-brands'];
+
+        // 1. Identify and extract the style prefix (if present)
+        const existingPrefix = nameParts.find(p => stylePrefixes.includes(p));
+        if (existingPrefix) {
+            stylePrefix = existingPrefix;
         }
 
-        // Otherwise, assume it's a solid icon (most common) and prepend 'fa-solid'.
-        return `fa-solid ${iconName}`;
+        // 2. Identify and sanitize the icon name
+        const nameCandidate = nameParts.find(p => p.startsWith('fa-') && !stylePrefixes.includes(p));
+
+        if (nameCandidate) {
+            // Case: Input is 'fa-volume-up' (or 'fa-solid fa-volume-up')
+            baseName = nameCandidate;
+        } else {
+            // Case: Input is 'volume-up' (less likely but covered) or missing 'fa-'
+            // We assume the non-style part is the base name and ensure it has the 'fa-' prefix.
+            baseName = nameParts.find(p => !stylePrefixes.includes(p));
+            if (baseName && !baseName.startsWith('fa-')) {
+                 baseName = `fa-${baseName}`;
+            }
+        }
+
+        // If after all checks we have a baseName, ensure it's not a duplicate class.
+        if (baseName) {
+            // Return the necessary style prefix and the icon name.
+            return `${stylePrefix} ${baseName}`;
+        }
+        
+        // Fallback for completely invalid/empty input
+        return '';
     };
 
     const run = async () => {
