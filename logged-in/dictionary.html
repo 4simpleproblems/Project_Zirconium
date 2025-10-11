@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - Interactive Dictionary</title>
-    <meta name="description" content="A simple interactive dictionary with search and definition display using dictionaryapi.dev.">
+    <title>4SP - DICTIONARY</title>
+    <meta name="description" content="A simple interactive dictionary with search and a definition display.">
 
     <!-- Fonts, Icons, and Tailwind CSS -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -89,28 +89,29 @@
     <!-- Main Page Content (Hidden until authenticated) -->
     <main id="page-content" class="page-container hidden">
         <div class="dictionary-card shadow-xl">
-            <h1 class="text-3xl font-bold text-white mb-6 text-center">Interactive Lexicon</h1>
+            <h1 class="text-3xl font-bold text-white mb-6 text-center">Dictionary</h1>
 
-            <!-- Search Bar -->
-            <div class="mb-8">
-                <div class="flex space-x-3">
-                    <div class="relative flex-grow">
-                        <input 
-                            type="text"
-                            id="search-input"
-                            placeholder="Type a word and press Enter or click Search..."
-                            class="w-full p-4 pl-12 rounded-lg bg-zinc-800 text-white border border-zinc-700 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-150"
-                            autocomplete="off"
-                        />
-                        <i class="fas fa-book absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                    </div>
-                    <button 
-                        id="search-button" 
-                        class="px-6 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-lg shadow-md transition duration-150 active:scale-[.98]">
-                        Search
-                    </button>
-                </div>
-                <!-- Suggestions Dropdown is removed as the API does not support real-time suggestions -->
+            <!-- Search Bar (Integrated, rounded-xl, button inside) -->
+            <div class="relative mb-8">
+                <!-- Input Field -->
+                <input 
+                    type="text"
+                    id="search-input"
+                    placeholder="Type a word and press Enter or click the Search icon..."
+                    class="w-full p-4 pl-12 pr-20 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-150"
+                    autocomplete="off"
+                />
+                <!-- Book Icon inside input -->
+                <i class="fas fa-book absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                
+                <!-- Search Button (Squircle, integrated, right side, using fa-paper-plane) -->
+                <button 
+                    id="search-button" 
+                    class="absolute right-2 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-[1rem] shadow-md transition duration-150 active:scale-[.98] flex items-center justify-center"
+                    title="Search Dictionary">
+                    <!-- Send Message Icon -->
+                    <i class="fas fa-paper-plane text-lg"></i>
+                </button>
             </div>
 
             <!-- Definition Display -->
@@ -207,7 +208,7 @@
         }
 
         /**
-         * Renders the definition data onto the page.
+         * Renders the definition data onto the page, with updated styling.
          * @param {string} word The word being displayed.
          * @param {Array<Object>} data The array of definition objects from the API.
          */
@@ -247,8 +248,12 @@
                             <p class="text-gray-300 ml-4">${def.definition}</p>
                     `;
                     
+                    // Conditionally add a separator line and use smaller text for the example
                     if (def.example) {
-                        htmlContent += `<p class="text-gray-500 italic ml-8">e.g. "${def.example}"</p>`;
+                        htmlContent += `
+                            <hr class="border-zinc-800 mt-2 mb-1 ml-4" /> 
+                            <p class="text-sm text-gray-500 italic ml-8">e.g. "${def.example}"</p>
+                        `;
                     }
                     
                     htmlContent += `</div>`;
@@ -276,12 +281,7 @@
         /** Handler for Enter key press in the search box */
         function handleInputKeyDown(event) {
             if (event.key === 'Enter') {
-                const query = searchInput.value.trim().toLowerCase();
-                if (query) {
-                    fetchDefinition(query);
-                } else {
-                    definitionOutput.innerHTML = `<p class="text-lg text-gray-400 text-center">Please enter a word to search.</p>`;
-                }
+                handleSearchClick();
             }
         }
         
