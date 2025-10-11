@@ -21,7 +21,7 @@
     <script src="../injector.js"></script>
 
     <style>
-        /* --- FONT & BASE STYLING (Derived from both files) --- */
+        /* --- FONT & BASE STYLING --- */
         body { 
             font-family: 'Geist', sans-serif; 
             background-color: #070707; 
@@ -92,18 +92,18 @@
 
     <main id="page-content" class="hidden">
         <div class="container mx-auto p-4">
-            <header class="flex justify-between items-center mb-4">
-                <h1 class="text-2xl font-bold text-white">PAGE_TITLE</h1>
+            <header class="flex justify-between items-center mb-8 pt-4">
+                <h1 class="text-3xl font-bold text-white">PAGE_TITLE CONTENT</h1>
             </header>
             
-            <div class="text-gray-400">
-                This is the main area for your new page content.
-            </div>
+            <section class="p-6 bg-[#111111] border border-[#252525] rounded-xl shadow-lg">
+                <p class="text-gray-300">This section is a placeholder for the unique content of your specific page. You should replace this entire section with the logic and design for your chosen topic (e.g., Daily Photos, Notes, Friends List, etc.).</p>
+            </section>
         </div>
     </main>
 
     <script>
-        // --- Core Template Logic ---
+        // --- Core Template Functions (contentReady and showCustomModal) ---
         const loadingScreen = document.getElementById('loading-screen');
         const pageContent = document.getElementById('page-content');
         
@@ -116,7 +116,6 @@
             }, 300); // Allow time for the opacity transition
         }
 
-        // --- Generic Message Modal Functions ---
         const messageModal = document.getElementById('message-modal');
         const messageModalTitle = document.getElementById('message-modal-title');
         const messageModalBody = document.getElementById('message-modal-body');
@@ -140,47 +139,51 @@
                 messageModalCloseBtn.addEventListener('click', handler);
             });
         }
-
     </script>
     
     <script type="module">
-        // Ensure Firebase is initialized (done via ../firebase-config.js)
+        // Ensure Firebase Auth is available
         const auth = firebase.auth();
         
         /**
-         * @brief Core Authentication Check and Redirection Logic.
-         * * The `onAuthStateChanged` listener is the primary entry point for any authenticated page.
-         * It fires when the user's sign-in state changes.
+         * The primary entry point for any authenticated page.
+         * Checks the user's sign-in status and handles redirection.
          */
         auth.onAuthStateChanged(user => {
             if (!user) {
-                // User is NOT signed in, immediately redirect to the login page.
+                // User is NOT signed in. Redirect to the login page.
                 console.log("User not logged in. Redirecting to ../index.html");
                 window.location.href = '../index.html'; 
             } else {
-                // User is signed in.
+                // User IS signed in.
                 console.log("User logged in:", user.uid);
 
-                // 1. Call the page-specific initialization function, if it exists.
-                //    This function should contain the unique logic for the page (e.g., loading daily photos, notes data).
+                // Check for page-specific initialization.
                 if (typeof pageInit === 'function') {
-                    // Pass the user object to the page's logic.
+                    // Call the function that contains the page's unique data loading logic.
                     pageInit(user); 
                 }
 
-                // 2. Finally, hide the loading screen and show the content.
+                // If content is loaded or initialization is instant, show the content.
+                // NOTE: If pageInit contains async data fetching, move contentReady()
+                // into the pageInit function itself to ensure content is shown only 
+                // after data is ready.
                 contentReady();
             }
         });
 
-        /* * NOTE: Pages using this template MUST define a 'pageInit(user)' function
-         * in their own <script> block for the page-specific logic to run after
+        /* * IMPORTANT: Pages using this template must define a 'pageInit(user)' function
+         * in their own separate <script> block for the page-specific logic to run after
          * successful authentication.
-         * * Example for a consuming page:
+         * * Example usage in a consuming HTML file (after the <body> tag):
+         * <script type="module">
          * function pageInit(user) {
-         * // Your custom code to load data for this specific page
-         * console.log('Page specific logic starting for user:', user.uid);
+         * console.log('Starting page logic for:', user.email);
+         * // e.g., loadFirestoreData(user.uid);
+         * // If you have long loading content, call contentReady() here:
+         * // contentReady(); 
          * }
+         * </script>
          */
     </script>
 
