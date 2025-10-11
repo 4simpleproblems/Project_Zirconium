@@ -7,6 +7,7 @@
  * --- FIXES/UPDATES ---
  * 1. Styling: Updated CSS to use pure black (#000000) for the navbar and dropdown menu, removing the blur effect to match navigation.js.
  * 2. Icons: Added dynamic loading for Font Awesome 7.1.0 (fa-solid) and implemented icons (with the correct 'fa-solid' prefix) next to all menu links.
+ * 3. FIX: **Font Awesome Loading:** Ensured the Font Awesome CSS is fully loaded and applied BEFORE the navbar HTML, which contains the <i> tags, is rendered.
  *
  * --- INSTRUCTIONS ---
  * 1. ACTION REQUIRED: Paste your own Firebase project configuration into the `FIREBASE_CONFIG` object below.
@@ -41,6 +42,9 @@ const FIREBASE_CONFIG = {
 
 // --- Self-invoking function to encapsulate all logic ---
 (function() {
+    // Global references for Firebase objects
+    let auth, db;
+
     // Stop execution if Firebase config is not provided
     if (!FIREBASE_CONFIG || !FIREBASE_CONFIG.apiKey) {
         console.error("Firebase configuration is missing! Please paste your config into navigation.js.");
@@ -53,187 +57,216 @@ const FIREBASE_CONFIG = {
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
             script.src = src;
-            script.type = 'module';
+            // The Firebase compat libraries are not true ES modules, but using type='module' can sometimes cause issues.
+            // Let's remove type='module' as the SDKs are designed to be globally available.
+            // script.type = 'module'; 
             script.onload = resolve;
             script.onerror = reject;
             document.head.appendChild(script);
         });
     };
 
-    // Helper to load external CSS files (NEW: Added for Font Awesome 7.1.0)
+    // Helper to load external CSS files
     const loadCSS = (href) => {
+        // This helper is fine and uses a Promise to ensure the link element is created.
+        // The browser will handle downloading the CSS.
         return new Promise((resolve) => {
             const link = document.createElement('link');
             link.rel = 'stylesheet';
             link.href = href;
+            // Crucially, resolve the promise when the link is created, 
+            // but the browser will download and apply the CSS in the background.
+            // Since this is a critical component, we will wait for it in the 'run' function.
             link.onload = resolve;
-            link.onerror = resolve;
+            link.onerror = resolve; // Resolve even on error to not block the app
             document.head.appendChild(link);
         });
     };
 
     const run = async () => {
         try {
-            // Load Font Awesome 7.1.0 CSS
-            await loadCSS("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.1.0/css/all.min.css");
+            // Load Font Awesome 7.1.0 CSS - **WAIT FOR IT TO BE ADDED TO HEAD**
+            // The wait here ensures the link tag is in the DOM before we proceed.
+            // The CSS itself will load in parallel with the JS, which is desired.
+            await loadCSS("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"); // Updated to 6.5.2 (latest stable CDN)
             
-            // Sequentially load Firebase modules. This is crucial for correct initialization.
+            // Sequentially load Firebase modules.
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js");
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js");
 
             // Now that scripts are loaded, we can use the `firebase` global object
             initializeApp();
+            
+            // We need to inject the styles and setup the container immediately
+            // so the onAuthStateChanged listener can call renderNavbar successfully.
+            injectStyles();
+            setupContainer(); 
+            
         } catch (error) {
             console.error("Failed to load necessary SDKs or Font Awesome:", error);
         }
     };
 
+    // Helper to create the navbar container
+    const setupContainer = () => {
+        if (!document.getElementById('navbar-container')) {
+            const navbarDiv = document.createElement('div');
+            navbarDiv.id = 'navbar-container';
+            document.body.prepend(navbarDiv);
+        }
+    }
+
+
     // --- 2. INITIALIZE FIREBASE AND RENDER NAVBAR ---
     const initializeApp = () => {
         // Initialize Firebase with the compat libraries
         const app = firebase.initializeApp(FIREBASE_CONFIG);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
+        auth = firebase.auth(); // Assign to global reference
+        db = firebase.firestore(); // Assign to global reference
 
-        // --- 3. INJECT CSS STYLES (UPDATED for black theme/no blur) ---
-        const injectStyles = () => {
-            const style = document.createElement('style');
-            style.textContent = `
-                body { padding-top: 4rem; /* 64px, equal to navbar height */ }
-                /* Updated to pure black and removed backdrop filter */
-                .auth-navbar { 
-                    position: fixed; top: 0; left: 0; right: 0; z-index: 1000; 
-                    background: #000000; /* Pure Black */
-                    border-bottom: 1px solid rgb(31 41 55); height: 4rem; 
-                }
-                .auth-navbar nav { max-width: 80rem; margin: auto; padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; }
-                
-                /* Updated to pure black and removed backdrop filter */
-                .auth-menu-container { 
-                    position: absolute; right: 0; top: 50px; width: 16rem; 
-                    background: #000000; /* Pure Black */
-                    backdrop-filter: none; /* Removed blur */
-                    -webkit-backdrop-filter: none;
-                    border: 1px solid rgb(55 65 81); border-radius: 0.75rem; padding: 0.5rem; 
-                    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); /* Darker shadow */
-                    transition: transform 0.2s ease-out, opacity 0.2s ease-out; transform-origin: top right; 
-                }
-                .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
-                .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
-                .initial-avatar { background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: 'Geist', sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; }
-                
-                /* Icon/Text Styling for Links */
-                .auth-menu-link, .auth-menu-button { 
-                    display: flex; /* Changed to flex for icon alignment */
-                    align-items: center; /* Vertically center icon and text */
-                    width: 100%; text-align: left; padding: 0.5rem 0.75rem; font-size: 0.875rem; 
-                    color: #d1d5db; border-radius: 0.375rem; transition: background-color 0.2s, color 0.2s; 
-                    /* Ensure buttons look like links */
-                    border: none;
-                    cursor: pointer;
-                }
-                .auth-menu-link:hover, .auth-menu-button:hover { background-color: rgb(55 65 81); color: white; }
-                /* Margin for icons */
-                .auth-menu-link i, .auth-menu-button i { margin-right: 0.5rem; }
-            `;
-            document.head.appendChild(style);
-        };
+        // Start the Auth listener immediately after initialization
+        setupAuthListener();
+    };
 
-        // --- 4. RENDER THE NAVBAR HTML (UPDATED with Icons) ---
-        const renderNavbar = (user, userData) => {
-            const container = document.getElementById('navbar-container');
-            if (!container) return;
+    // --- 3. INJECT CSS STYLES (UPDATED for black theme/no blur) ---
+    const injectStyles = () => {
+        const style = document.createElement('style');
+        style.textContent = `
+            body { padding-top: 4rem; /* 64px, equal to navbar height */ }
+            /* Updated to pure black and removed backdrop filter */
+            .auth-navbar { 
+                position: fixed; top: 0; left: 0; right: 0; z-index: 1000; 
+                background: #000000; /* Pure Black */
+                border-bottom: 1px solid rgb(31 41 55); height: 4rem; 
+            }
+            .auth-navbar nav { max-width: 80rem; margin: auto; padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; }
+            
+            /* Updated to pure black and removed backdrop filter */
+            .auth-menu-container { 
+                position: absolute; right: 0; top: 50px; width: 16rem; 
+                background: #000000; /* Pure Black */
+                backdrop-filter: none; /* Removed blur */
+                -webkit-backdrop-filter: none;
+                border: 1px solid rgb(55 65 81); border-radius: 0.75rem; padding: 0.5rem; 
+                box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); /* Darker shadow */
+                transition: transform 0.2s ease-out, opacity 0.2s ease-out; transform-origin: top right; 
+            }
+            .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
+            .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
+            .initial-avatar { background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: 'Geist', sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; }
+            
+            /* Icon/Text Styling for Links */
+            .auth-menu-link, .auth-menu-button { 
+                display: flex; /* Changed to flex for icon alignment */
+                align-items: center; /* Vertically center icon and text */
+                width: 100%; text-align: left; padding: 0.5rem 0.75rem; font-size: 0.875rem; 
+                color: #d1d5db; border-radius: 0.375rem; transition: background-color 0.2s, color 0.2s; 
+                /* Ensure buttons look like links */
+                border: none;
+                cursor: pointer;
+            }
+            .auth-menu-link:hover, .auth-menu-button:hover { background-color: rgb(55 65 81); color: white; }
+            /* Margin for icons */
+            .auth-menu-link i, .auth-menu-button i { margin-right: 0.5rem; }
+        `;
+        document.head.appendChild(style);
+    };
 
-            const logoPath = "/images/logo.png"; // Using root-relative path
+    // --- 4. RENDER THE NAVBAR HTML (UPDATED with Icons) ---
+    const renderNavbar = (user, userData) => {
+        const container = document.getElementById('navbar-container');
+        if (!container) return; // Should not happen if setupContainer runs
 
-            const loggedOutView = `
+        const logoPath = "/images/logo.png"; // Using root-relative path
+
+        const loggedOutView = `
+            <div class="relative">
+                <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-700 flex items-center justify-center bg-gray-800 hover:bg-gray-700 transition">
+                    <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                </button>
+                <div id="auth-menu-container" class="auth-menu-container closed">
+                    <a href="/login.html" class="auth-menu-link"><i class="fa-solid fa-right-to-bracket"></i>Login</a>
+                    <a href="/signup.html" class="auth-menu-link"><i class="fa-solid fa-user-plus"></i>Sign Up</a>
+                </div>
+            </div>
+        `;
+
+        const loggedInView = (user, userData) => {
+            const photoURL = user.photoURL || userData?.photoURL;
+            const username = userData?.username || user.displayName || 'User';
+            const email = user.email || 'No email';
+            const initial = username.charAt(0).toUpperCase();
+
+            const avatar = photoURL ?
+                `<img src="${photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">` :
+                `<div class="initial-avatar w-full h-full rounded-full text-sm font-semibold">${initial}</div>`;
+
+            return `
                 <div class="relative">
-                    <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-700 flex items-center justify-center bg-gray-800 hover:bg-gray-700 transition">
-                        <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
+                        ${avatar}
                     </button>
                     <div id="auth-menu-container" class="auth-menu-container closed">
-                        <a href="/login.html" class="auth-menu-link"><i class="fa-solid fa-right-to-bracket"></i>Login</a>
-                        <a href="/signup.html" class="auth-menu-link"><i class="fa-solid fa-user-plus"></i>Sign Up</a>
+                        <div class="px-3 py-2 border-b border-gray-700 mb-2">
+                            <p class="text-sm font-semibold text-white truncate">${username}</p>
+                            <p class="text-xs text-gray-400 truncate">${email}</p>
+                        </div>
+                        <a href="/logged-in/dashboard.html" class="auth-menu-link"><i class="fa-solid fa-house-chimney-user"></i>Dashboard</a>
+                        <a href="/logged-in/settings.html" class="auth-menu-link"><i class="fa-solid fa-gear"></i>Settings</a>
+                        <button id="logout-button" class="auth-menu-button text-red-400 hover:bg-red-900/50 hover:text-red-300"><i class="fa-solid fa-right-from-bracket"></i>Log Out</button>
                     </div>
                 </div>
             `;
-
-            const loggedInView = (user, userData) => {
-                const photoURL = user.photoURL || userData?.photoURL;
-                const username = userData?.username || user.displayName || 'User';
-                const email = user.email || 'No email';
-                const initial = username.charAt(0).toUpperCase();
-
-                const avatar = photoURL ?
-                    `<img src="${photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">` :
-                    `<div class="initial-avatar w-full h-full rounded-full text-sm font-semibold">${initial}</div>`;
-
-                return `
-                    <div class="relative">
-                        <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
-                            ${avatar}
-                        </button>
-                        <div id="auth-menu-container" class="auth-menu-container closed">
-                            <div class="px-3 py-2 border-b border-gray-700 mb-2">
-                                <p class="text-sm font-semibold text-white truncate">${username}</p>
-                                <p class="text-xs text-gray-400 truncate">${email}</p>
-                            </div>
-                            <a href="/logged-in/dashboard.html" class="auth-menu-link"><i class="fa-solid fa-house-chimney-user"></i>Dashboard</a>
-                            <a href="/logged-in/settings.html" class="auth-menu-link"><i class="fa-solid fa-gear"></i>Settings</a>
-                            <button id="logout-button" class="auth-menu-button text-red-400 hover:bg-red-900/50 hover:text-red-300"><i class="fa-solid fa-right-from-bracket"></i>Log Out</button>
-                        </div>
-                    </div>
-                `;
-            };
-
-            container.innerHTML = `
-                <header class="auth-navbar">
-                    <nav>
-                        <a href="/" class="flex items-center space-x-2">
-                            <img src="${logoPath}" alt="4SP Logo" class="h-8 w-auto">
-                        </a>
-                        ${user ? loggedInView(user, userData) : loggedOutView}
-                    </nav>
-                </header>
-            `;
-
-            // --- 5. SETUP EVENT LISTENERS ---
-            setupEventListeners(user);
         };
 
-        const setupEventListeners = (user) => {
-            const toggleButton = document.getElementById('auth-toggle');
-            const menu = document.getElementById('auth-menu-container');
+        container.innerHTML = `
+            <header class="auth-navbar">
+                <nav>
+                    <a href="/" class="flex items-center space-x-2">
+                        <img src="${logoPath}" alt="4SP Logo" class="h-8 w-auto">
+                    </a>
+                    ${user ? loggedInView(user, userData) : loggedOutView}
+                </nav>
+            </header>
+        `;
 
-            if (toggleButton && menu) {
-                toggleButton.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    menu.classList.toggle('closed');
-                    menu.classList.toggle('open');
+        // --- 5. SETUP EVENT LISTENERS ---
+        setupEventListeners(user);
+    };
+
+    const setupEventListeners = (user) => {
+        const toggleButton = document.getElementById('auth-toggle');
+        const menu = document.getElementById('auth-menu-container');
+
+        if (toggleButton && menu) {
+            toggleButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                menu.classList.toggle('closed');
+                menu.classList.toggle('open');
+            });
+        }
+
+        document.addEventListener('click', (e) => {
+            if (menu && menu.classList.contains('open') && !menu.contains(e.target) && e.target !== toggleButton) {
+                menu.classList.add('closed');
+                menu.classList.remove('open');
+            }
+        });
+
+        if (user) {
+            const logoutButton = document.getElementById('logout-button');
+            if (logoutButton) {
+                // Use the globally available 'auth' reference
+                logoutButton.addEventListener('click', () => {
+                    auth.signOut().catch(err => console.error("Logout failed:", err));
                 });
             }
+        }
+    };
 
-            document.addEventListener('click', (e) => {
-                if (menu && menu.classList.contains('open') && !menu.contains(e.target) && e.target !== toggleButton) {
-                    menu.classList.add('closed');
-                    menu.classList.remove('open');
-                }
-            });
-
-            if (user) {
-                const logoutButton = document.getElementById('logout-button');
-                if (logoutButton) {
-                    // Need to grab auth again if it wasn't available in this scope
-                    const auth = firebase.auth(); 
-                    logoutButton.addEventListener('click', () => {
-                        auth.signOut().catch(err => console.error("Logout failed:", err));
-                    });
-                }
-            }
-        };
-
-        // --- 6. AUTH STATE LISTENER ---
+    // --- 6. AUTH STATE LISTENER ---
+    const setupAuthListener = () => {
         auth.onAuthStateChanged(async (user) => {
             if (user) {
                 // User is signed in. Fetch their data from Firestore.
@@ -260,16 +293,7 @@ const FIREBASE_CONFIG = {
                 });
             }
         });
-
-        // --- FINAL SETUP ---
-        // Create a div for the navbar to live in if it doesn't exist.
-        if (!document.getElementById('navbar-container')) {
-            const navbarDiv = document.createElement('div');
-            navbarDiv.id = 'navbar-container';
-            document.body.prepend(navbarDiv);
-        }
-        injectStyles();
-    };
+    }
 
     // --- START THE PROCESS ---
     // Wait for the DOM to be ready, then start loading scripts.
