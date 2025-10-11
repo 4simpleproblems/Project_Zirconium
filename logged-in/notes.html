@@ -90,47 +90,8 @@
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
             z-index: 10;
             min-width: 200px;
-            /* Scrollable for Local Saves */
-            max-height: 400px; 
-            overflow-y: auto;
         }
         
-        /* Files button pointy style */
-        /* Applied to both dropdown buttons for consistent look */
-        #file-menu-btn, #local-saves-btn {
-            border-bottom-left-radius: 0;
-            border-bottom-right-radius: 0;
-        }
-
-        /* Local Saves Item Styling */
-        .save-slot-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 15px;
-            cursor: pointer;
-            transition: background-color 0.15s;
-        }
-        .save-slot-item:hover {
-            background-color: #2a2a2a;
-        }
-        .save-slot-item:not(:last-child) {
-            border-bottom: 1px solid #333;
-        }
-
-        /* Marquee setup for long titles */
-        .slot-title {
-            flex-grow: 1;
-            overflow: hidden;
-            white-space: nowrap;
-            margin-right: 10px;
-            max-width: 130px; /* Constrain width for marquee */
-        }
-        .slot-title marquee {
-            display: inline-block;
-            width: max-content;
-        }
-
         .dropdown-item {
             padding: 10px 15px;
             cursor: pointer;
@@ -143,7 +104,7 @@
             background-color: #2a2a2a;
         }
 
-        /* Tailwind classes for buttons */
+        /* Tailwind classes for buttons (Only keeping the primary style for reference) */
         .btn-primary {
             padding: 8px 16px;
             border-radius: 6px;
@@ -156,18 +117,6 @@
         .btn-primary:hover {
             background-color: #4338ca;
         }
-        .btn-secondary {
-            background-color: #374151; /* gray-600 */
-        }
-        .btn-secondary:hover {
-            background-color: #4b5563; /* gray-700 */
-        }
-        .slot-action-btn {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            margin-left: 5px;
-        }
     </style>
 </head>
 <body class="min-h-screen">
@@ -179,39 +128,25 @@
         <header class="flex justify-between items-center mb-4">
             <h1 class="text-2xl font-bold text-white">4SP Notes</h1>
             
-            <div class="flex space-x-2">
+            <div id="file-menu-container" class="relative">
+                <button id="file-menu-btn" class="p-2 text-white hover:bg-[#2a2a2a] rounded-md transition-colors duration-150">
+                    <i class="fa-solid fa-file"></i> Files
+                </button>
 
-                <div id="local-saves-container" class="relative">
-                    <button id="local-saves-btn" class="btn-primary bg-gray-700 hover:bg-gray-600">
-                        <i class="fa-solid fa-floppy-disk"></i> Local Saves
-                    </button>
-
-                    <div id="local-saves-dropdown" class="dropdown-menu hidden">
-                        </div>
-                </div>
-
-
-                <div id="file-menu-container" class="relative">
-                    <button id="file-menu-btn" class="btn-primary bg-gray-700 hover:bg-gray-600">
-                        <i class="fa-solid fa-file"></i> Files
-                    </button>
-
-                    <div id="file-dropdown" class="dropdown-menu hidden">
-                        <div class="p-2 border-b border-gray-700 text-gray-400 text-xs uppercase">Export</div>
-                        <div id="save-text-btn" class="dropdown-item">
-                            <i class="fa-solid fa-file-export"></i> Save Standard Text
-                        </div>
-                        <div id="save-encrypted-btn" class="dropdown-item">
-                            <i class="fa-solid fa-lock"></i> Save Encrypted (.4spnote)
-                        </div>
-                        
-                        <div class="p-2 border-y border-gray-700 text-gray-400 text-xs uppercase">Import</div>
-                        <div id="load-file-btn" class="dropdown-item">
-                            <i class="fa-solid fa-file-import"></i> Load File
-                        </div>
+                <div id="file-dropdown" class="dropdown-menu hidden">
+                    <div class="p-2 border-b border-gray-700 text-gray-400 text-xs uppercase">Export</div>
+                    <div id="save-text-btn" class="dropdown-item">
+                        <i class="fa-solid fa-file-export"></i> Save Standard Text
+                    </div>
+                    <div id="save-encrypted-btn" class="dropdown-item">
+                        <i class="fa-solid fa-lock"></i> Save Encrypted (.4spnote)
+                    </div>
+                    
+                    <div class="p-2 border-y border-gray-700 text-gray-400 text-xs uppercase">Import</div>
+                    <div id="load-file-btn" class="dropdown-item">
+                        <i class="fa-solid fa-file-import"></i> Load File
                     </div>
                 </div>
-
             </div>
         </header>
 
@@ -250,12 +185,6 @@
         const loadFileBtn = document.getElementById('load-file-btn');
         const fileInput = document.getElementById('file-input');
         
-        // New Local Saves element references
-        const localSavesBtn = document.getElementById('local-saves-btn');
-        const localSavesDropdown = document.getElementById('local-saves-dropdown');
-        const LOCAL_STORAGE_KEY = '4sp-note-slots';
-        const MAX_SLOTS = 50;
-
 
         // --- Utility Functions ---
 
@@ -295,174 +224,21 @@
             URL.revokeObjectURL(url); // Clean up the object URL
         }
 
-        // --- Local Storage Functions ---
-
-        /**
-         * Retrieves all note slots from local storage.
-         * @returns {Array<{title: string, content: string, date: string}>}
-         */
-        function getLocalNotes() {
-            try {
-                const data = localStorage.getItem(LOCAL_STORAGE_KEY);
-                // Initialize array with MAX_SLOTS null entries if no data exists
-                return data ? JSON.parse(data) : Array(MAX_SLOTS).fill(null);
-            } catch (e) {
-                console.error("Error reading local storage:", e);
-                return Array(MAX_SLOTS).fill(null);
-            }
-        }
-
-        /**
-         * Updates a specific note slot in local storage.
-         * @param {number} slotIndex 
-         * @param {string} content - The note content to save.
-         * @param {string} title - The display title.
-         */
-        function saveLocalNote(slotIndex, content, title) {
-            const notes = getLocalNotes();
-            notes[slotIndex] = {
-                title: title,
-                content: content,
-                date: new Date().toLocaleDateString()
-            };
-            try {
-                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(notes));
-                renderLocalSavesDropdown(); // Re-render to show update
-                alert(`Note saved to Slot ${slotIndex + 1} as '${title}'!`);
-            } catch (e) {
-                alert("Failed to save to local storage. Storage limit may be reached.");
-                console.error("Error saving to local storage:", e);
-            }
-        }
-
-        /**
-         * Clears a specific note slot.
-         * @param {number} slotIndex 
-         */
-        function clearLocalNote(slotIndex) {
-            if (!confirm(`Are you sure you want to clear Slot ${slotIndex + 1}? This action cannot be undone.`)) {
-                return;
-            }
-            const notes = getLocalNotes();
-            notes[slotIndex] = null;
-            try {
-                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(notes));
-                renderLocalSavesDropdown();
-                alert(`Slot ${slotIndex + 1} cleared!`);
-            } catch (e) {
-                console.error("Error clearing local storage:", e);
-            }
-        }
-
-        /**
-         * Populates the local saves dropdown with 50 slots.
-         */
-        function renderLocalSavesDropdown() {
-            const notes = getLocalNotes();
-            localSavesDropdown.innerHTML = ''; // Clear existing list
-            
-            for (let i = 0; i < MAX_SLOTS; i++) {
-                const slot = notes[i];
-                const slotDiv = document.createElement('div');
-                slotDiv.classList.add('save-slot-item');
-                slotDiv.dataset.slotIndex = i;
-
-                let titleHtml;
-                if (slot) {
-                    const titleText = `${slot.title} (${slot.date})`;
-                    // Marquee for long titles (if title + date is too long)
-                    if (titleText.length > 20) { 
-                        titleHtml = `<div class="slot-title"><marquee behavior="scroll" direction="left" scrollamount="3">${titleText}</marquee></div>`;
-                    } else {
-                        titleHtml = `<div class="slot-title">${titleText}</div>`;
-                    }
-                } else {
-                    titleHtml = `<div class="slot-title text-gray-500">Slot ${i + 1}: Empty</div>`;
-                }
-
-                slotDiv.innerHTML = `
-                    ${titleHtml}
-                    <div>
-                        <button class="slot-action-btn btn-primary ${slot ? 'btn-secondary' : ''}" data-action="${slot ? 'load' : 'save'}">
-                            <i class="fa-solid fa-${slot ? 'arrow-right-to-bracket' : 'floppy-disk'}"></i> ${slot ? 'Load' : 'Save'}
-                        </button>
-                        ${slot ? `<button class="slot-action-btn bg-red-700 hover:bg-red-600 text-white" data-action="clear"><i class="fa-solid fa-trash"></i> Clear</button>` : ''}
-                    </div>
-                `;
-
-                localSavesDropdown.appendChild(slotDiv);
-            }
-        }
-
         // --- Event Listeners and Handlers ---
-
-        // Toggle the Local Saves Dropdown
-        localSavesBtn.addEventListener('click', (event) => {
-            event.stopPropagation(); 
-            // Close other dropdown
-            fileDropdown.classList.add('hidden');
-            // Toggle this one
-            localSavesDropdown.classList.toggle('hidden');
-            if (!localSavesDropdown.classList.contains('hidden')) {
-                renderLocalSavesDropdown();
-            }
-        });
 
         // Toggle the File Menu Dropdown
         fileMenuBtn.addEventListener('click', (event) => {
             // Stop propagation to prevent immediate closing by document click
             event.stopPropagation(); 
-            // Close other dropdown
-            localSavesDropdown.classList.add('hidden');
-            // Toggle this one
             fileDropdown.classList.toggle('hidden');
         });
 
-        // Handle actions within the Local Saves Dropdown
-        localSavesDropdown.addEventListener('click', (event) => {
-            const button = event.target.closest('button');
-            if (!button) return;
-
-            const slotItem = button.closest('.save-slot-item');
-            const slotIndex = parseInt(slotItem.dataset.slotIndex);
-            const action = button.dataset.action;
-            const notes = getLocalNotes();
-            const slot = notes[slotIndex];
-
-            localSavesDropdown.classList.add('hidden'); // Close menu after action
-
-            if (action === 'save') {
-                let title = prompt(`Enter a title for Slot ${slotIndex + 1}:`, `Note ${slotIndex + 1}`);
-                if (title !== null) {
-                    const content = textarea.value;
-                    saveLocalNote(slotIndex, content, title.trim() || `Untitled Note ${slotIndex + 1}`);
-                }
-            } else if (action === 'load' && slot) {
-                if (textarea.value && textarea.value.trim() !== "" && !confirm("Loading this note will overwrite your current text. Continue?")) {
-                    return;
-                }
-                textarea.value = slot.content;
-                updateCounts();
-                alert(`'${slot.title}' loaded from Slot ${slotIndex + 1}!`);
-            } else if (action === 'clear') {
-                clearLocalNote(slotIndex);
-            }
-        });
-
-
-        // Close both dropdowns when clicking outside
+        // Close the dropdown when clicking outside
         document.addEventListener('click', (event) => {
-            // Check Files dropdown
             if (!fileDropdown.classList.contains('hidden') && 
                 !fileMenuBtn.contains(event.target) && 
                 !fileDropdown.contains(event.target)) {
                 fileDropdown.classList.add('hidden');
-            }
-            // Check Local Saves dropdown
-            if (!localSavesDropdown.classList.contains('hidden') && 
-                !localSavesBtn.contains(event.target) && 
-                !localSavesDropdown.contains(event.target)) {
-                localSavesDropdown.classList.add('hidden');
             }
         });
 
@@ -568,26 +344,21 @@
         textarea.addEventListener('input', updateCounts);
 
         // Call once on load to initialize counts
-        window.addEventListener('load', () => {
-            updateCounts();
-            renderLocalSavesDropdown(); // Initial rendering of local saves
-        });
+        window.addEventListener('load', updateCounts);
 
         
-        // --- AUTHENTICATION/TEMPLATE LOGIC (Modified to fix 'auth' conflict) ---
+        // --- AUTHENTICATION/REDIRECT LOGIC ---
 
-        // Mocking auth for a simple page based on the previous context
-        // RENAMED 'auth' to 'mockAuth' to resolve "Identifier 'auth' has already been declared" error
+        // Mocking auth for a simple page (Fixed previously by renaming 'auth' to 'mockAuth')
         const mockAuth = { onAuthStateChanged: (cb) => cb(true) }; 
         const initialAuthToken = null; 
         
         const loadingScreen = document.getElementById('loading-screen');
         const pageContent = document.getElementById('page-content');
         
-        // --- Core Authentication and Redirection Logic ---
+        // --- Core Authentication and Redirection Logic (Kicks to ../index.html if logged out) ---
         async function initializeAuth() {
             // Simulate an authentication check
-            // Use mockAuth here instead of the globally conflicting 'auth'
             mockAuth.onAuthStateChanged((user) => {
                 if (!user) {
                     // KICK TO INDEX.HTML if not logged in
@@ -600,7 +371,7 @@
             });
         }
 
-        // Wait a small moment before running the auth check to allow the page to start rendering
+        // Run the auth check shortly after the page starts loading
         setTimeout(() => {
             initializeAuth();
         }, 100); 
