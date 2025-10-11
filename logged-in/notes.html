@@ -94,8 +94,9 @@
             max-height: 400px; 
             overflow-y: auto;
         }
-
+        
         /* Files button pointy style */
+        /* Applied to both dropdown buttons for consistent look */
         #file-menu-btn, #local-saves-btn {
             border-bottom-left-radius: 0;
             border-bottom-right-radius: 0;
@@ -303,6 +304,7 @@
         function getLocalNotes() {
             try {
                 const data = localStorage.getItem(LOCAL_STORAGE_KEY);
+                // Initialize array with MAX_SLOTS null entries if no data exists
                 return data ? JSON.parse(data) : Array(MAX_SLOTS).fill(null);
             } catch (e) {
                 console.error("Error reading local storage:", e);
@@ -368,7 +370,7 @@
                 let titleHtml;
                 if (slot) {
                     const titleText = `${slot.title} (${slot.date})`;
-                    // Marquee for long titles
+                    // Marquee for long titles (if title + date is too long)
                     if (titleText.length > 20) { 
                         titleHtml = `<div class="slot-title"><marquee behavior="scroll" direction="left" scrollamount="3">${titleText}</marquee></div>`;
                     } else {
@@ -572,12 +574,11 @@
         });
 
         
-        // --- AUTHENTICATION/TEMPLATE LOGIC (Modified) ---
+        // --- AUTHENTICATION/TEMPLATE LOGIC (Modified to fix 'auth' conflict) ---
 
         // Mocking auth for a simple page based on the previous context
-        // NOTE: The user requested to be kicked to ../index.html if logged out.
-        // We simulate a check here, where 'false' means logged out.
-        const auth = { onAuthStateChanged: (cb) => cb(true) }; // Changed to simulate success for the page to load by default.
+        // RENAMED 'auth' to 'mockAuth' to resolve "Identifier 'auth' has already been declared" error
+        const mockAuth = { onAuthStateChanged: (cb) => cb(true) }; 
         const initialAuthToken = null; 
         
         const loadingScreen = document.getElementById('loading-screen');
@@ -586,7 +587,8 @@
         // --- Core Authentication and Redirection Logic ---
         async function initializeAuth() {
             // Simulate an authentication check
-            auth.onAuthStateChanged((user) => {
+            // Use mockAuth here instead of the globally conflicting 'auth'
+            mockAuth.onAuthStateChanged((user) => {
                 if (!user) {
                     // KICK TO INDEX.HTML if not logged in
                     window.location.href = '../index.html'; 
