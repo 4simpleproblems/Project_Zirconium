@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - DICTIONARY</title>
+    <title>4SP - Interactive Dictionary</title>
     <meta name="description" content="A simple interactive dictionary with search and definition display using dictionaryapi.dev.">
 
     <!-- Fonts, Icons, and Tailwind CSS -->
@@ -229,17 +229,24 @@
          * @returns {string} The text with clickable links.
          */
         function highlightDefinitionText(text) {
-            // List of common words to exclude from linking. Increased for more selective highlighting.
+            // List of common words to exclude from linking. This list is optimized to filter out function words 
+            // and focus linking on nouns, core verbs, and descriptive adjectives.
             const commonWords = [
                 'the', 'and', 'but', 'not', 'for', 'with', 'from', 'that', 'this', 'have', 
                 'when', 'what', 'which', 'will', 'was', 'are', 'you', 'can', 'one', 'use', 
                 'any', 'all', 'out', 'into', 'upon', 'like', 'than', 'only', 'much', 'about', 
                 'just', 'over', 'under', 'also', 'some', 'they', 'them', 'their', 'your', 
                 'most', 'such', 'make', 'take', 'look', 'find', 'away', 'down', 'here', 'more',
-                'must', 'once', 'sure', 'into', 'then', 'than'
+                'must', 'once', 'sure', 'into', 'then', 'than', 
+                // Newly added exclusions for better focus:
+                'through', 'without', 'before', 'after', 'among', 'between', 'where', 'whether', 
+                'should', 'could', 'would', 'become', 'very', 'even', 'until', 'since', 'only',
+                'because', 'always', 'often', 'never', 'ever', 'wherever', 'whichever', 'whenever',
+                'may', 'might', 'must', 'shall', 'should', 'since', 'still', 'though', 'towards',
+                'unless'
             ];
             
-            // Regex changed to find standalone words that are 4 characters or more ({4,})
+            // Regex continues to find standalone words that are 4 characters or more ({4,})
             return text.replace(/\b([a-zA-Z]{4,})\b/g, (match) => {
                 if (commonWords.includes(match.toLowerCase())) {
                     return match;
