@@ -1,52 +1,52 @@
 {
     "dashboard": {
         "name": "Dashboard",
-        "icon": "fa-house-user",
+        "icon": "fa-solid fa-house-user", // ADDED 'fa-solid'
         "url": "../logged-in/dashboard.html"
     },
     "soundboard": {
         "name": "Soundboard",
-        "icon": "fa-volume-up",
+        "icon": "fa-solid fa-volume-up", // ADDED 'fa-solid'
         "url": "../logged-in/soundboard.html"
     },
     "notes": {
         "name": "Notes",
-        "icon": "fa-sticky-note",
+        "icon": "fa-solid fa-sticky-note", // ADDED 'fa-solid'
         "url": "../logged-in/notes.html"
     },
      "notes-again": {
         "name": "Dailyphoto",
-        "icon": "fa-image",
+        "icon": "fa-solid fa-image", // ADDED 'fa-solid'
         "url": "../logged-in/dailyphoto.html"
     },
     "countdowns": {
         "name": "Countdowns",
-        "icon": "fa-clock",
+        "icon": "fa-solid fa-clock", // ADDED 'fa-solid'
         "url": "../logged-in/countdowns.html"
     },
     "soundboard-playlists": {
         "name": "Playlists",
-        "icon": "fa-list-ul",
+        "icon": "fa-solid fa-list-ul", // ADDED 'fa-solid'
         "url": "../logged-in/soundboard-playlists.html"
     },
     "weather": {
         "name": "Weather",
-        "icon": "fa-cloud-sun",
+        "icon": "fa-solid fa-cloud-sun", // ADDED 'fa-solid'
         "url": "../logged-in/weather.html"
     },
     "dictionary": {
         "name": "Dictionary",
-        "icon": "fa-book",
+        "icon": "fa-solid fa-book", // ADDED 'fa-solid'
         "url": "../logged-in/dictionary.html"
     },
     "messenger-v2": {
         "name": "Messenger",
-        "icon": "fa-comments",
+        "icon": "fa-solid fa-comments", // ADDED 'fa-solid'
         "url": "../logged-in/messenger-v2.html"
     },
     "games": {
         "name": "Games",
-        "icon": "fa-gamepad",
+        "icon": "fa-solid fa-gamepad", // ADDED 'fa-solid'
         "url": "../GAMES/index.html"
     }
 }
