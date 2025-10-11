@@ -3,163 +3,186 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- TODO: Change the title and description for this specific page -->
-    <title>4SP - Base Page Template</title>
-    <meta name="description" content="This is the base template for a new page on the 4SP website.">
+    <title>4SP - PAGE_TITLE</title>
+    <meta name="description" content="PAGE_DESCRIPTION">
 
-    <!-- Fonts, Icons, and Tailwind CSS -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Assuming ../navigation.js is necessary for your header/navigation -->
-    <script src="../navigation.js"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+    
+    <script src="../firebase-config.js"></script> <script src="../navigation.js"></script>
     <script src="../injector.js"></script>
 
     <style>
-        /* --- FONT & BASE STYLING (MATCHING test.html) --- */
+        /* --- FONT & BASE STYLING (Derived from both files) --- */
         body { 
             font-family: 'Geist', sans-serif; 
             background-color: #070707; 
             color: #c0c0c0; 
             transition: all 0.3s ease;
             font-weight: 300; 
-            min-height: 100vh; /* Ensure full viewport height */
+            font-size: 16px; 
         }
         
+        /* Ensure headings and strong text are slightly thicker but still thin */
         h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
-            font-weight: 400 !important;
+            font-weight: 400 !important; 
         }
 
-        /* Styling for the main content container */
-        .page-container {
-            padding: 2rem 1rem;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        /* Styling for the placeholder content box */
-        .content-box {
-            background-color: #111111; 
-            border: 1px solid #252525; 
-            border-radius: 0.75rem; 
-            padding: 2rem; 
-            min-height: 50vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-        }
-
-        /* Standard loading screen style */
-        #loading-screen {
+        /* --- REUSABLE MODAL STYLING --- */
+        .modal-backdrop {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: #070707;
+            background-color: rgba(0, 0, 0, 0.85);
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 100;
+            z-index: 50;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-content {
+            background-color: #111111;
+            border: 1px solid #252525; 
+            border-radius: 1rem;
+            padding: 2rem;
+        }
+        
+        /* --- REUSABLE BUTTON STYLING --- */
+        .btn-primary {
+            padding: 8px 16px;
+            border-radius: 6px;
+            background-color: #4f46e5;
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn-primary:hover {
+            background-color: #4338ca;
         }
     </style>
+    <style>
+        /* PAGE-SPECIFIC STYLES */
+    </style>
 </head>
-<body>
-
-    <!-- Loading Screen (Shown until authentication check is complete) -->
-    <div id="loading-screen">
-        <p class="text-xl text-gray-400">Verifying authentication...</p>
+<body class="min-h-screen">
+    
+    <div id="message-modal" class="modal-backdrop hidden opacity-0">
+        <div class="modal-content w-full max-w-sm p-6 text-center">
+            <h3 id="message-modal-title" class="text-xl font-bold mb-4 text-white"></h3>
+            <p id="message-modal-body" class="mb-6 text-gray-300"></p>
+            <button id="message-modal-close-btn" class="px-4 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold w-full">Close</button>
+        </div>
+    </div>
+    
+    <div id="loading-screen" class="fixed inset-0 bg-[#070707] flex items-center justify-center z-50">
+        <p class="text-xl text-white"><i class="fa-solid fa-spinner fa-spin fa-2x mr-3"></i> Loading...</p>
     </div>
 
-    <!-- Main Page Content (Hidden until authenticated) -->
-    <main id="page-content" class="page-container hidden">
-        <div class="content-box">
-            <h1 class="text-3xl font-bold text-white mb-4">Welcome to the New Page!</h1>
-            <p class="text-lg text-indigo-300">
-                This is the content container for this specific page. Replace this text with your unique page functionality.
-            </p>
-            <p class="text-sm text-gray-500 mt-4">
-                Authentication check passed. User is logged in.
-            </p>
-            <!-- All page-specific features (forms, data, etc.) will go here -->
+    <main id="page-content" class="hidden">
+        <div class="container mx-auto p-4">
+            <header class="flex justify-between items-center mb-4">
+                <h1 class="text-2xl font-bold text-white">PAGE_TITLE</h1>
+            </header>
+            
+            <div class="text-gray-400">
+                This is the main area for your new page content.
+            </div>
         </div>
     </main>
 
-    <script type="module">
-        // --- Firebase Core Imports ---
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        // Import only what you need for this specific page (e.g., getFirestore, doc, etc.)
-        // import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"; 
-        
-        // --- CONFIGURATION IMPORT ---
-        // NOTE: This assumes you have a firebase-config.js file one level up (../)
-        import { firebaseConfig } from "../firebase-config.js"; 
-        
-        // --- Canvas Global Variables (MANDATORY USE) ---
-        // These are provided by the canvas environment. Do not change them.
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const rawFirebaseConfig = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        
-        let config = firebaseConfig;
-        if (rawFirebaseConfig) {
-            try {
-                config = JSON.parse(rawFirebaseConfig);
-            } catch (e) {
-                console.error("Failed to parse __firebase_config:", e);
-            }
-        }
-
-        // --- Initialize Firebase ---
-        const app = initializeApp(config);
-        const auth = getAuth(app);
-        // const db = getFirestore(app); // Uncomment and use if Firestore is needed
-
-        // --- DOM Elements ---
+    <script>
+        // --- Core Template Logic ---
         const loadingScreen = document.getElementById('loading-screen');
         const pageContent = document.getElementById('page-content');
         
-        // --- Core Authentication and Redirection Logic ---
-        async function initializeAuth() {
-            try {
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (error) {
-                console.error("Initial Firebase authentication failed:", error);
-                // Allow onAuthStateChanged to handle the redirect based on the failure
-            }
+        /** @brief Hides the loading screen and shows the main content. */
+        function contentReady() {
+            loadingScreen.style.opacity = 0;
+            setTimeout(() => {
+                loadingScreen.classList.add('hidden');
+                pageContent.classList.remove('hidden');
+            }, 300); // Allow time for the opacity transition
         }
 
-        // 1. Listen for the authentication state change
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                // User is authenticated
-                console.log("User authenticated. UID:", user.uid);
+        // --- Generic Message Modal Functions ---
+        const messageModal = document.getElementById('message-modal');
+        const messageModalTitle = document.getElementById('message-modal-title');
+        const messageModalBody = document.getElementById('message-modal-body');
+        const messageModalCloseBtn = document.getElementById('message-modal-close-btn');
+
+        /** @brief Displays a general-purpose modal alert to the user. */
+        function showCustomModal(title, body) {
+            return new Promise(resolve => {
+                messageModalTitle.textContent = title;
+                messageModalBody.textContent = body;
+                messageModal.classList.remove('hidden', 'opacity-0');
+                messageModal.classList.add('opacity-100');
                 
-                // Hide loading screen and show content
-                loadingScreen.style.display = 'none';
-                pageContent.classList.remove('hidden');
+                const handler = () => {
+                    messageModal.classList.remove('opacity-100');
+                    messageModal.classList.add('opacity-0');
+                    setTimeout(() => messageModal.classList.add('hidden'), 300);
+                    messageModalCloseBtn.removeEventListener('click', handler);
+                    resolve(true); 
+                };
+                messageModalCloseBtn.addEventListener('click', handler);
+            });
+        }
 
-                // TODO: Start page-specific data listeners and logic here
-
-            } else {
-                // User is NOT authenticated. Redirect to login/index page.
-                console.log("User not authenticated. Redirecting to ../index.html...");
+    </script>
+    
+    <script type="module">
+        // Ensure Firebase is initialized (done via ../firebase-config.js)
+        const auth = firebase.auth();
+        
+        /**
+         * @brief Core Authentication Check and Redirection Logic.
+         * * The `onAuthStateChanged` listener is the primary entry point for any authenticated page.
+         * It fires when the user's sign-in state changes.
+         */
+        auth.onAuthStateChanged(user => {
+            if (!user) {
+                // User is NOT signed in, immediately redirect to the login page.
+                console.log("User not logged in. Redirecting to ../index.html");
                 window.location.href = '../index.html'; 
+            } else {
+                // User is signed in.
+                console.log("User logged in:", user.uid);
+
+                // 1. Call the page-specific initialization function, if it exists.
+                //    This function should contain the unique logic for the page (e.g., loading daily photos, notes data).
+                if (typeof pageInit === 'function') {
+                    // Pass the user object to the page's logic.
+                    pageInit(user); 
+                }
+
+                // 2. Finally, hide the loading screen and show the content.
+                contentReady();
             }
         });
 
-        // 2. Start the authentication process on load
-        initializeAuth();
-        
+        /* * NOTE: Pages using this template MUST define a 'pageInit(user)' function
+         * in their own <script> block for the page-specific logic to run after
+         * successful authentication.
+         * * Example for a consuming page:
+         * function pageInit(user) {
+         * // Your custom code to load data for this specific page
+         * console.log('Page specific logic starting for user:', user.uid);
+         * }
+         */
     </script>
+
 </body>
 </html>
