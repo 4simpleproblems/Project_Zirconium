@@ -1,8 +1,12 @@
 /**
- * navigation.js
+ * navigation-mini.js
  * * This is a fully self-contained script to create a dynamic, authentication-aware
  * navigation bar for your website. It handles everything from Firebase initialization
  * to rendering user-specific information.
+ *
+ * --- FIXES/UPDATES ---
+ * 1. Styling: Updated CSS to use pure black (#000000) for the navbar and dropdown menu, removing the blur effect to match navigation.js.
+ * 2. Icons: Added dynamic loading for Font Awesome 7.1.0 (fa-solid) and implemented icons (with the correct 'fa-solid' prefix) next to all menu links.
  *
  * --- INSTRUCTIONS ---
  * 1. ACTION REQUIRED: Paste your own Firebase project configuration into the `FIREBASE_CONFIG` object below.
@@ -24,13 +28,13 @@
 // >> ACTION REQUIRED: PASTE YOUR FIREBASE CONFIGURATION OBJECT HERE <<
 // =========================================================================
 const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro",
-  authDomain: "project-zirconium.firebaseapp.com",
-  projectId: "project-zirconium",
-  storageBucket: "project-zirconium.firebasestorage.app",
-  messagingSenderId: "1096564243475",
-  appId: "1:1096564243475:web:6d0956a70125eeea1ad3e6",
-  measurementId: "G-1D4F692C1Q"
+    apiKey: "AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro",
+    authDomain: "project-zirconium.firebaseapp.com",
+    projectId: "project-zirconium",
+    storageBucket: "project-zirconium.firebasestorage.app",
+    messagingSenderId: "1096564243475",
+    appId: "1:1096564243475:web:6d0956a70125eeea1ad3e6",
+    measurementId: "G-1D4F692C1Q"
 };
 // =========================================================================
 
@@ -43,8 +47,8 @@ const FIREBASE_CONFIG = {
         return;
     }
 
-    // --- 1. DYNAMICALLY LOAD FIREBASE SDKs ---
-    // This ensures Firebase is loaded before our code runs.
+    // --- 1. DYNAMICALLY LOAD EXTERNAL ASSETS ---
+    // Helper to load external JS files
     const loadScript = (src) => {
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
@@ -56,8 +60,23 @@ const FIREBASE_CONFIG = {
         });
     };
 
+    // Helper to load external CSS files (NEW: Added for Font Awesome 7.1.0)
+    const loadCSS = (href) => {
+        return new Promise((resolve) => {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = href;
+            link.onload = resolve;
+            link.onerror = resolve;
+            document.head.appendChild(link);
+        });
+    };
+
     const run = async () => {
         try {
+            // Load Font Awesome 7.1.0 CSS
+            await loadCSS("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.1.0/css/all.min.css");
+            
             // Sequentially load Firebase modules. This is crucial for correct initialization.
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js");
@@ -66,7 +85,7 @@ const FIREBASE_CONFIG = {
             // Now that scripts are loaded, we can use the `firebase` global object
             initializeApp();
         } catch (error) {
-            console.error("Failed to load Firebase SDKs:", error);
+            console.error("Failed to load necessary SDKs or Font Awesome:", error);
         }
     };
 
@@ -77,24 +96,51 @@ const FIREBASE_CONFIG = {
         const auth = firebase.auth();
         const db = firebase.firestore();
 
-        // --- 3. INJECT CSS STYLES ---
+        // --- 3. INJECT CSS STYLES (UPDATED for black theme/no blur) ---
         const injectStyles = () => {
             const style = document.createElement('style');
             style.textContent = `
                 body { padding-top: 4rem; /* 64px, equal to navbar height */ }
-                .auth-navbar { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: rgba(0,0,0,0.8); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid rgb(31 41 55); height: 4rem; }
+                /* Updated to pure black and removed backdrop filter */
+                .auth-navbar { 
+                    position: fixed; top: 0; left: 0; right: 0; z-index: 1000; 
+                    background: #000000; /* Pure Black */
+                    border-bottom: 1px solid rgb(31 41 55); height: 4rem; 
+                }
                 .auth-navbar nav { max-width: 80rem; margin: auto; padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; }
-                .auth-menu-container { position: absolute; right: 0; top: 50px; width: 16rem; background: rgba(17, 24, 39, 0.9); border: 1px solid rgb(55 65 81); border-radius: 0.75rem; padding: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); transition: transform 0.2s ease-out, opacity 0.2s ease-out; transform-origin: top right; }
+                
+                /* Updated to pure black and removed backdrop filter */
+                .auth-menu-container { 
+                    position: absolute; right: 0; top: 50px; width: 16rem; 
+                    background: #000000; /* Pure Black */
+                    backdrop-filter: none; /* Removed blur */
+                    -webkit-backdrop-filter: none;
+                    border: 1px solid rgb(55 65 81); border-radius: 0.75rem; padding: 0.5rem; 
+                    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); /* Darker shadow */
+                    transition: transform 0.2s ease-out, opacity 0.2s ease-out; transform-origin: top right; 
+                }
                 .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
                 .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
                 .initial-avatar { background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: 'Geist', sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; }
-                .auth-menu-link, .auth-menu-button { display: block; width: 100%; text-align: left; padding: 0.5rem 0.75rem; font-size: 0.875rem; color: #d1d5db; border-radius: 0.375rem; transition: background-color 0.2s, color 0.2s; }
+                
+                /* Icon/Text Styling for Links */
+                .auth-menu-link, .auth-menu-button { 
+                    display: flex; /* Changed to flex for icon alignment */
+                    align-items: center; /* Vertically center icon and text */
+                    width: 100%; text-align: left; padding: 0.5rem 0.75rem; font-size: 0.875rem; 
+                    color: #d1d5db; border-radius: 0.375rem; transition: background-color 0.2s, color 0.2s; 
+                    /* Ensure buttons look like links */
+                    border: none;
+                    cursor: pointer;
+                }
                 .auth-menu-link:hover, .auth-menu-button:hover { background-color: rgb(55 65 81); color: white; }
+                /* Margin for icons */
+                .auth-menu-link i, .auth-menu-button i { margin-right: 0.5rem; }
             `;
             document.head.appendChild(style);
         };
 
-        // --- 4. RENDER THE NAVBAR HTML ---
+        // --- 4. RENDER THE NAVBAR HTML (UPDATED with Icons) ---
         const renderNavbar = (user, userData) => {
             const container = document.getElementById('navbar-container');
             if (!container) return;
@@ -107,8 +153,8 @@ const FIREBASE_CONFIG = {
                         <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                     </button>
                     <div id="auth-menu-container" class="auth-menu-container closed">
-                        <a href="/login.html" class="auth-menu-link">Login</a>
-                        <a href="/signup.html" class="auth-menu-link">Sign Up</a>
+                        <a href="/login.html" class="auth-menu-link"><i class="fa-solid fa-right-to-bracket"></i>Login</a>
+                        <a href="/signup.html" class="auth-menu-link"><i class="fa-solid fa-user-plus"></i>Sign Up</a>
                     </div>
                 </div>
             `;
@@ -133,9 +179,9 @@ const FIREBASE_CONFIG = {
                                 <p class="text-sm font-semibold text-white truncate">${username}</p>
                                 <p class="text-xs text-gray-400 truncate">${email}</p>
                             </div>
-                            <a href="/logged-in/dashboard.html" class="auth-menu-link">Dashboard</a>
-                            <a href="/logged-in/settings.html" class="auth-menu-link">Settings</a>
-                            <button id="logout-button" class="auth-menu-button text-red-400 hover:bg-red-900/50 hover:text-red-300">Log Out</button>
+                            <a href="/logged-in/dashboard.html" class="auth-menu-link"><i class="fa-solid fa-house-chimney-user"></i>Dashboard</a>
+                            <a href="/logged-in/settings.html" class="auth-menu-link"><i class="fa-solid fa-gear"></i>Settings</a>
+                            <button id="logout-button" class="auth-menu-button text-red-400 hover:bg-red-900/50 hover:text-red-300"><i class="fa-solid fa-right-from-bracket"></i>Log Out</button>
                         </div>
                     </div>
                 `;
@@ -178,6 +224,8 @@ const FIREBASE_CONFIG = {
             if (user) {
                 const logoutButton = document.getElementById('logout-button');
                 if (logoutButton) {
+                    // Need to grab auth again if it wasn't available in this scope
+                    const auth = firebase.auth(); 
                     logoutButton.addEventListener('click', () => {
                         auth.signOut().catch(err => console.error("Logout failed:", err));
                     });
