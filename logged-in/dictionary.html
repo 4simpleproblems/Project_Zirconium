@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4SP - Interactive Dictionary</title>
+    <meta name="description" content="A simple interactive dictionary with search and definition display using dictionaryapi.dev.">
+
+    <!-- Fonts, Icons, and Tailwind CSS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Geist Font (Main text) -->
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    <!-- Playfair Display Italic (Special text: Pronunciation) -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,400..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../navigation.js"></script>
+    <script src="../injector.js"></script>
+
+    <style>
+        /* --- FONT & BASE STYLING (MATCHING base-template.html) --- */
+        body { 
+            font-family: 'Geist', sans-serif; 
+            background-color: #070707; 
+            color: #c0c0c0; 
+            transition: all 0.3s ease;
+            font-weight: 300; 
+            min-height: 100vh;
+        }
+        
+        h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
+            font-weight: 400 !important;
+        }
+
+        /* Styling for the main content container */
+        .page-container {
+            padding: 2rem 1rem;
+            max-width: 900px; /* Narrower for focus */
+            margin: 0 auto;
+        }
+
+        /* Placeholder content box replaced with a general dictionary card */
+        .dictionary-card {
+            background-color: #111111; 
+            border: 1px solid #252525; 
+            border-radius: 0.75rem; 
+            padding: 2rem; 
+            min-height: 70vh;
+        }
+
+        /* Standard loading screen style */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #070707;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        /* --- CUSTOM DICTIONARY STYLING --- */
+        .pronunciation-text {
+            /* Special font for pronunciation */
+            font-family: 'Playfair Display', serif;
+            font-style: italic;
+            color: #9ca3af; /* Initial muted gray for visibility */
+            transition: color 0.2s ease;
+            cursor: help; 
+        }
+
+        .pronunciation-text:hover {
+            /* Cyan color on hover */
+            color: #06b6d4; /* Tailwind cyan-500 equivalent */
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Loading Screen (Shown until authentication check is complete) -->
+    <div id="loading-screen">
+        <p class="text-xl text-gray-400">Verifying authentication...</p>
+    </div>
+
+    <!-- Main Page Content (Hidden until authenticated) -->
+    <main id="page-content" class="page-container hidden">
+        <div class="dictionary-card shadow-xl">
+            <h1 class="text-3xl font-bold text-white mb-6 text-center">Interactive Lexicon</h1>
+
+            <!-- Search Bar -->
+            <div class="mb-8">
+                <div class="flex space-x-3">
+                    <div class="relative flex-grow">
+                        <input 
+                            type="text"
+                            id="search-input"
+                            placeholder="Type a word and press Enter or click Search..."
+                            class="w-full p-4 pl-12 rounded-lg bg-zinc-800 text-white border border-zinc-700 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-150"
+                            autocomplete="off"
+                        />
+                        <i class="fas fa-book absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    </div>
+                    <button 
+                        id="search-button" 
+                        class="px-6 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-lg shadow-md transition duration-150 active:scale-[.98]">
+                        Search
+                    </button>
+                </div>
+                <!-- Suggestions Dropdown is removed as the API does not support real-time suggestions -->
+            </div>
+
+            <!-- Definition Display -->
+            <div id="definition-output" class="p-6 bg-zinc-900 border border-zinc-800 rounded-lg min-h-[30vh]">
+                <p class="text-lg text-gray-400 text-center">
+                    Enter a word above and hit **Search** or **Enter** to look up its definition, pronunciation, and synonyms using the dictionary API.
+                </p>
+            </div>
+            
+        </div>
+    </main>
+
+    <script type="module">
+        // --- Firebase Core Imports ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        
+        // --- CONFIGURATION IMPORT ---
+        // NOTE: This assumes you have a firebase-config.js file one level up (../)
+        import { firebaseConfig } from "../firebase-config.js"; 
+        
+        // --- Canvas Global Variables (MANDATORY USE) ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const rawFirebaseConfig = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        let config = firebaseConfig;
+        if (rawFirebaseConfig) {
+            try {
+                config = JSON.parse(rawFirebaseConfig);
+            } catch (e) {
+                console.error("Failed to parse __firebase_config:", e);
+            }
+        }
+
+        // --- Initialize Firebase ---
+        const app = initializeApp(config);
+        const auth = getAuth(app);
+
+        // --- DOM Elements ---
+        const loadingScreen = document.getElementById('loading-screen');
+        const pageContent = document.getElementById('page-content');
+        const searchInput = document.getElementById('search-input');
+        const searchButton = document.getElementById('search-button');
+        const definitionOutput = document.getElementById('definition-output');
+        
+        // --- DICTIONARY API LOGIC ---
+        
+        /**
+         * Fetches the definition for a given word using the dictionaryapi.dev API.
+         * @param {string} word The word to look up.
+         */
+        async function fetchDefinition(word) {
+            const trimmedWord = word.trim().toLowerCase();
+            if (!trimmedWord) return;
+
+            // 1. Set loading state
+            definitionOutput.innerHTML = `
+                <p class="text-xl text-cyan-400 text-center flex items-center justify-center space-x-2">
+                    <i class="fas fa-spinner fa-spin mr-2"></i><span>Searching for '${trimmedWord}'...</span>
+                </p>
+            `;
+
+            try {
+                const url = `https://api.dictionaryapi.dev/api/v2/entries/en/${trimmedWord}`;
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    // API returns 404 for words not found
+                    if (response.status === 404) {
+                        definitionOutput.innerHTML = `
+                            <p class="text-xl text-red-400 text-center">
+                                Sorry, we couldn't find a definition for <strong>"${trimmedWord}"</strong>. Please check the spelling.
+                            </p>
+                        `;
+                    } else {
+                        // Handle other HTTP errors
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return;
+                }
+
+                const data = await response.json();
+                displayDefinition(trimmedWord, data);
+
+            } catch (error) {
+                console.error("Fetch error:", error);
+                definitionOutput.innerHTML = `
+                    <p class="text-xl text-red-400 text-center">
+                        An unexpected error occurred while fetching the definition. Please try again later.
+                    </p>
+                `;
+            }
+        }
+
+        /**
+         * Renders the definition data onto the page.
+         * @param {string} word The word being displayed.
+         * @param {Array<Object>} data The array of definition objects from the API.
+         */
+        function displayDefinition(word, data) {
+            if (!data || data.length === 0) {
+                definitionOutput.innerHTML = `<p class="text-xl text-red-400 text-center">No definition data available for "${word}".</p>`;
+                return;
+            }
+
+            const entry = data[0];
+            // Find the best phonetic representation or default to 'N/A'
+            const phoneticText = entry.phonetic || entry.phonetics?.find(p => p.text)?.text || 'N/A';
+            
+            let htmlContent = `
+                <div class="space-y-6">
+                    <h2 class="text-4xl font-semibold text-cyan-400 capitalize mb-1">${word}</h2>
+                    <p class="text-xl text-gray-400">
+                        <span class="pronunciation-text" title="Pronunciation">${phoneticText}</span>
+                    </p>
+                    <hr class="border-zinc-700" />
+            `;
+            
+            // Iterate through all parts of speech (meanings)
+            entry.meanings.forEach(meaning => {
+                htmlContent += `
+                    <div class="space-y-3">
+                        <h3 class="text-2xl font-semibold text-indigo-300 border-l-4 border-indigo-500 pl-3">
+                            ${meaning.partOfSpeech.charAt(0).toUpperCase() + meaning.partOfSpeech.slice(1)}
+                        </h3>
+                `;
+
+                // Display up to 3 definitions for brevity
+                meaning.definitions.slice(0, 3).forEach((def, index) => { 
+                    htmlContent += `
+                        <div class="ml-4 space-y-1">
+                            <p class="text-lg text-white font-medium">Definition ${index + 1}:</p>
+                            <p class="text-gray-300 ml-4">${def.definition}</p>
+                    `;
+                    
+                    if (def.example) {
+                        htmlContent += `<p class="text-gray-500 italic ml-8">e.g. "${def.example}"</p>`;
+                    }
+                    
+                    htmlContent += `</div>`;
+                });
+                
+                // Display synonyms if available
+                if (meaning.synonyms && meaning.synonyms.length > 0) {
+                    htmlContent += `
+                        <div class="ml-4 pt-2">
+                            <p class="text-lg text-white font-medium">Synonyms:</p>
+                            <p class="text-gray-400 ml-4">${meaning.synonyms.slice(0, 5).join(', ')}</p>
+                        </div>
+                    `;
+                }
+
+                htmlContent += `</div>`; // Close meaning div
+            });
+
+            htmlContent += `</div>`; // Close space-y-6 div
+            definitionOutput.innerHTML = htmlContent;
+        }
+
+        // --- EVENT HANDLERS ---
+        
+        /** Handler for Enter key press in the search box */
+        function handleInputKeyDown(event) {
+            if (event.key === 'Enter') {
+                const query = searchInput.value.trim().toLowerCase();
+                if (query) {
+                    fetchDefinition(query);
+                } else {
+                    definitionOutput.innerHTML = `<p class="text-lg text-gray-400 text-center">Please enter a word to search.</p>`;
+                }
+            }
+        }
+        
+        /** Handler for Search button click */
+        function handleSearchClick() {
+            const query = searchInput.value.trim().toLowerCase();
+            if (query) {
+                fetchDefinition(query);
+            } else {
+                definitionOutput.innerHTML = `<p class="text-lg text-gray-400 text-center">Please enter a word to search.</p>`;
+            }
+        }
+
+
+        // --- EVENT LISTENERS ---
+        searchInput.addEventListener('keydown', handleInputKeyDown);
+        searchButton.addEventListener('click', handleSearchClick);
+
+
+        // --- Core Authentication and Redirection Logic (Copied from base-template.html) ---
+        async function initializeAuth() {
+            try {
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Initial Firebase authentication failed:", error);
+            }
+        }
+
+        // 1. Listen for the authentication state change
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is authenticated
+                console.log("User authenticated. UID:", user.uid);
+                
+                // Hide loading screen and show content
+                loadingScreen.style.display = 'none';
+                pageContent.classList.remove('hidden');
+
+            } else {
+                // User is NOT authenticated. Redirect to login/index page.
+                console.log("User not authenticated. Redirecting to ../index.html...");
+                window.location.href = '../index.html'; 
+            }
+        });
+
+        // 2. Start the authentication process on load
+        initializeAuth();
+        
+    </script>
+</body>
+</html>
