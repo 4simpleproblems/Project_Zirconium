@@ -190,8 +190,6 @@
         }
 
         // --- URL Changer Logic (from url-tab-title-changer.js) ---
-        // Simplified the urlChanger since the full version is complex.
-        // This includes just the core functions needed for the settings page.
         const urlChanger = {
             CUSTOM_TITLE_KEY: 'customTabTitle',
             CUSTOM_FAVICON_KEY: 'customTabFavicon',
@@ -235,15 +233,14 @@
                     this.applyPreset(preset);
                 } else if (customTitle || customFavicon) {
                     this.applyPreset({
-                        title: customTitle || document.title, // Fallback to current title
-                        favicon: customFavicon || '/favicon.ico' // Fallback to default favicon
+                        title: customTitle || document.title, 
+                        favicon: customFavicon || '/favicon.ico' 
                     });
                 }
             }
         };
         
         // --- Navigation Script Logic (from navigation.js) ---
-        // Simplified version just for the rendering/signing out part.
         const renderNavbar = (user, profile, pages) => {
             const isGuest = user && user.isAnonymous;
             const displayName = profile?.username || user?.displayName || 'Guest';
@@ -298,7 +295,6 @@
         };
 
         const pageConfig = {
-            // Simplified page list for navbar rendering
             pages: [
                 { title: 'Dashboard', path: '/dashboard.html' },
                 { title: 'Daily Photo', path: '/dailyphoto.html' },
@@ -333,6 +329,7 @@
 
 
             // 1. Initial Auth Check and Data Load
+            // FIX: This uses the real 'auth' object now
             onAuthStateChanged(auth, async (user) => {
                 loadingMessage.style.display = 'none';
 
@@ -359,9 +356,9 @@
                     
                     // Populate Security Fields
                     emailInput.value = user.email || 'N/A (Social Login)';
-                    // Hide password section for social logins (or if email is missing)
+                    // Ensure password section is shown for email/password users
                     if (!user.email || user.providerData.some(p => p.providerId !== 'password')) {
-                         passwordSection.style.display = 'block'; // Always show but warn or check later
+                         passwordSection.style.display = 'block'; 
                     } else {
                          passwordSection.style.display = 'block';
                     }
@@ -437,14 +434,12 @@
                     return;
                 }
 
-                // IMPORTANT: Firebase requires re-authentication for sensitive actions
                 const email = user.email;
                 if (!email) {
                     showMessage(securityMessage, "Cannot change password for social/anonymous accounts.", 'warning');
                     return;
                 }
                 
-                // Prompt user for current password to re-authenticate (required by Firebase)
                 const currentPassword = prompt("Please enter your CURRENT password to confirm the change:");
                 if (!currentPassword) {
                     showMessage(securityMessage, "Password change cancelled.", 'warning');
@@ -484,7 +479,6 @@
                     return;
                 }
                 
-                // IMPORTANT: Requires re-authentication before deletion
                 const email = user.email;
                 if (!email) {
                     showMessage(securityMessage, "Cannot delete social/anonymous accounts without password re-authentication.", 'warning');
@@ -498,11 +492,7 @@
                     const credential = EmailAuthProvider.credential(email, currentPassword);
                     await reauthenticateWithCredential(user, credential);
                     
-                    // 1. Delete Firestore Document
-                    // Note: Firebase deleteDoc is imported but not used here for simplicity. 
-                    // This is usually handled by a secure server-side function. For now, rely on auth deletion.
-                    
-                    // 2. Delete Auth User
+                    // 1. Delete Auth User (This triggers cleanup)
                     await deleteUser(user);
                     showMessage(securityMessage, "Account permanently deleted. Redirecting...", 'success');
                     // onAuthStateChanged will redirect
@@ -546,7 +536,7 @@
 
             customTabForm.addEventListener('submit', (e) => {
                 e.preventDefault();
-                const title = customTitleInput.value.trim() || '4SP - Toolkit';
+                const title = customTitleInput.value.trim() || '4SP - Settings';
                 const favicon = customFaviconInput.value.trim() || '/favicon.ico';
                 
                 urlChanger.saveCustom(title, favicon);
