@@ -8,6 +8,8 @@
  * 1. Styling: Updated CSS to use pure black (#000000) for the navbar and dropdown menu, removing the blur effect to match navigation.js.
  * 2. Icons: Added dynamic loading for Font Awesome 7.1.0 (fa-solid) and implemented icons (with the correct 'fa-solid' prefix) next to all menu links.
  * 3. FIX: **Font Awesome Loading:** Ensured the Font Awesome CSS is fully loaded and applied BEFORE the navbar HTML, which contains the <i> tags, is rendered.
+ * 4. USER REQUEST: Replaced Login/Signup links with a single "Authenticate" link pointing to /authentication.html.
+ * 5. USER REQUEST: Updated logged-out button background to #010101 and icon color to #DADADA, using 'fa-solid fa-user'.
  *
  * --- INSTRUCTIONS ---
  * 1. ACTION REQUIRED: Paste your own Firebase project configuration into the `FIREBASE_CONFIG` object below.
@@ -169,25 +171,34 @@ const FIREBASE_CONFIG = {
             .auth-menu-link:hover, .auth-menu-button:hover { background-color: rgb(55 65 81); color: white; }
             /* Margin for icons */
             .auth-menu-link i, .auth-menu-button i { margin-right: 0.5rem; }
+
+            /* New custom style for the logged out button's icon and background */
+            .logged-out-auth-toggle {
+                background: #010101; /* Requested dark background */
+                border: 1px solid #374151; /* Keep a subtle border */
+            }
+            .logged-out-auth-toggle i {
+                color: #DADADA; /* Requested icon color */
+            }
         `;
         document.head.appendChild(style);
     };
 
-    // --- 4. RENDER THE NAVBAR HTML (UPDATED with Icons) ---
+    // --- 4. RENDER THE NAVBAR HTML (UPDATED with Icons and Authenticate link) ---
     const renderNavbar = (user, userData) => {
         const container = document.getElementById('navbar-container');
         if (!container) return; // Should not happen if setupContainer runs
 
         const logoPath = "/images/logo.png"; // Using root-relative path
 
+        // UPDATED: Use fa-user icon, #010101 background via class, and single "Authenticate" link
         const loggedOutView = `
             <div class="relative">
-                <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-700 flex items-center justify-center bg-gray-800 hover:bg-gray-700 transition">
-                    <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                <button id="auth-toggle" class="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-700 transition logged-out-auth-toggle">
+                    <i class="fa-solid fa-user"></i>
                 </button>
                 <div id="auth-menu-container" class="auth-menu-container closed">
-                    <a href="/login.html" class="auth-menu-link"><i class="fa-solid fa-right-to-bracket"></i>Login</a>
-                    <a href="/signup.html" class="auth-menu-link"><i class="fa-solid fa-user-plus"></i>Sign Up</a>
+                    <a href="/authentication.html" class="auth-menu-link"><i class="fa-solid fa-lock"></i>Authenticate</a>
                 </div>
             </div>
         `;
@@ -200,7 +211,7 @@ const FIREBASE_CONFIG = {
 
             const avatar = photoURL ?
                 `<img src="${photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">` :
-                `<div class="initial-avatar w-full h-full rounded-full text-sm font-semibold">${initial}</div>`;
+                `<div class="initial-avatar w-full h-8 rounded-full text-sm font-semibold">${initial}</div>`; // Note: w-8 h-8 is defined by the button, but added w-full h-full to inner div
 
             return `
                 <div class="relative">
