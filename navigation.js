@@ -44,7 +44,7 @@ let generativeModel; // For Firebase AI
         return;
     }
 
-    const loadScript = (src, type = 'module') => {
+    const loadScript = (src, type = 'text/javascript') => {
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
             script.src = src;
@@ -109,24 +109,24 @@ let generativeModel; // For Firebase AI
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js");
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js");
+            // CORRECTED: Load the compat version of the Vertex AI SDK
+            await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-vertexai-compat.js");
             
-            // AI SDK will be loaded dynamically inside initializeApp
-            await initializeApp(pages);
+            initializeApp(pages);
         } catch (error) {
             console.error("Failed to load necessary SDKs or initialize app:", error);
         }
     };
 
-    const initializeApp = async (pages) => {
+    const initializeApp = (pages) => {
         const app = firebase.initializeApp(FIREBASE_CONFIG);
         auth = firebase.auth();
         db = firebase.firestore();
         
-        // NEW: Dynamically import and initialize the Vertex AI service (modular)
+        // NEW: Initialize the Vertex AI service using the compat library
         try {
-            const firebaseVertexAI = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-vertexai.js');
-            const vertex = firebaseVertexAI.getVertexAI(app);
-            generativeModel = firebaseVertexAI.getGenerativeModel(vertex, { model: "gemini-pro" });
+            const vertex = firebase.vertexAI();
+            generativeModel = vertex.getGenerativeModel({ model: "gemini-pro" });
             console.log("Firebase Vertex AI initialized successfully.");
         } catch (error) {
             console.error("Could not initialize Firebase Vertex AI. AI Agent will not be available.", error);
