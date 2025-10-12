@@ -17,9 +17,9 @@
  * - It creates a placeholder div and then renders the navbar inside it.
  * - It initializes Firebase, listens for auth state, and fetches user data.
  *
- * --- FIXES ---
- * - **NEW: Dynamic Scroll Arrows:** Glide buttons are now checked and loaded immediately after rendering to ensure the correct state without user interaction.
- * - **UPDATED: Glide Button Style:** Removed border-radius and adjusted gradients for full opacity at the edge.
+ * --- FIXES / UPDATES ---
+ * - **Glide Button Style:** Removed border-radius and adjusted gradients for full opacity at the edge.
+ * - **Mini-Menu Icons:** Added icons to the Dashboard, Settings, and Logout links in the authenticated user's dropdown menu.
  */
 
 // =========================================================================
@@ -170,7 +170,7 @@ let db;
         auth = firebase.auth();
         db = firebase.firestore();
 
-        // --- 3. INJECT CSS STYLES (UPDATED for Glide Button Look) ---
+        // --- 3. INJECT CSS STYLES ---
         const injectStyles = () => {
             const style = document.createElement('style');
             style.textContent = `
@@ -193,7 +193,19 @@ let db;
                 }
                 .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
                 .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
-                .auth-menu-link, .auth-menu-button { display: block; width: 100%; text-align: left; padding: 0.5rem 0.75rem; font-size: 0.875rem; color: #d1d5db; border-radius: 0.375rem; transition: background-color 0.2s, color 0.2s; }
+                /* ADDED: flex and gap for icon alignment */
+                .auth-menu-link, .auth-menu-button { 
+                    display: flex; /* Changed from block to flex */
+                    align-items: center; /* Vertically align icon and text */
+                    gap: 0.75rem; /* Space between icon and text */
+                    width: 100%; 
+                    text-align: left; 
+                    padding: 0.5rem 0.75rem; 
+                    font-size: 0.875rem; 
+                    color: #d1d5db; 
+                    border-radius: 0.375rem; 
+                    transition: background-color 0.2s, color 0.2s; 
+                }
                 .auth-menu-link:hover, .auth-menu-button:hover { background-color: rgb(55 65 81); color: white; }
 
                 /* Scrollable Tab Wrapper (NEW) */
@@ -381,7 +393,7 @@ let db;
             }
         };
 
-        // --- 4. RENDER THE NAVBAR HTML ---
+        // --- 4. RENDER THE NAVBAR HTML (UPDATED: Added icons to loggedInView) ---
         const renderNavbar = (user, userData, pages) => {
             const container = document.getElementById('navbar-container');
             if (!container) return;
@@ -405,15 +417,21 @@ let db;
                 `;
             }).join('');
 
-            // --- Auth Views (Unchanged) ---
+            // --- Auth Views (Unchanged login/signup view) ---
             const loggedOutView = `
                 <div class="relative flex-shrink-0">
                     <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-700 flex items-center justify-center bg-gray-800 hover:bg-gray-700 transition">
                         <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                     </button>
                     <div id="auth-menu-container" class="auth-menu-container closed">
-                        <a href="/login.html" class="auth-menu-link">Login</a>
-                        <a href="/signup.html" class="auth-menu-link">Sign Up</a>
+                        <a href="/login.html" class="auth-menu-link">
+                            <i class="fa-solid fa-right-to-bracket"></i>
+                            Login
+                        </a>
+                        <a href="/signup.html" class="auth-menu-link">
+                            <i class="fa-solid fa-user-plus"></i>
+                            Sign Up
+                        </a>
                     </div>
                 </div>
             `;
@@ -428,6 +446,7 @@ let db;
                     `<img src="${photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">` :
                     `<div class="initial-avatar w-8 h-8 rounded-full text-sm font-semibold">${initial}</div>`;
 
+                // --- ADDED ICONS TO LINKS ---
                 return `
                     <div class="relative flex-shrink-0">
                         <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
@@ -438,9 +457,18 @@ let db;
                                 <p class="text-sm font-semibold text-white truncate">${username}</p>
                                 <p class="text-xs text-gray-400 truncate">${email}</p>
                             </div>
-                            <a href="/logged-in/dashboard.html" class="auth-menu-link">Dashboard</a>
-                            <a href="/logged-in/settings.html" class="auth-menu-link">Settings</a>
-                            <button id="logout-button" class="auth-menu-button text-red-400 hover:bg-red-900/50 hover:text-red-300">Log Out</button>
+                            <a href="/logged-in/dashboard.html" class="auth-menu-link">
+                                <i class="fa-solid fa-chart-line"></i>
+                                Dashboard
+                            </a>
+                            <a href="/logged-in/settings.html" class="auth-menu-link">
+                                <i class="fa-solid fa-gear"></i>
+                                Settings
+                            </a>
+                            <button id="logout-button" class="auth-menu-button text-red-400 hover:bg-red-900/50 hover:text-red-300">
+                                <i class="fa-solid fa-right-from-bracket"></i>
+                                Log Out
+                            </button>
                         </div>
                     </div>
                 `;
