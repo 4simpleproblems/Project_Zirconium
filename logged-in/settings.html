@@ -12,6 +12,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="../injector.js"></script>
+    
     <script>
         // Custom Tailwind Config for consistent dark palette
         tailwind.config = {
@@ -150,20 +153,13 @@
         // --- Firebase SDK Imports ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, updateProfile, updatePassword, signOut, deleteUser, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // ACTION REQUIRED: Replace this placeholder with your actual Firebase config object.
-        const FIREBASE_CONFIG = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_AUTH_DOMAIN",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_STORAGE_BUCKET",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
+        import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
+        // FIX: Import the Firebase configuration from the shared file
+        import { firebaseConfig } from '../firebase-config.js';
+
         // --- Firebase Initialization ---
-        const app = initializeApp(FIREBASE_CONFIG);
+        const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
@@ -195,6 +191,8 @@
             CUSTOM_FAVICON_KEY: 'customTabFavicon',
             SELECTED_PRESET_KEY: 'selectedUrlPreset',
             
+            // NOTE: Using local placeholders. If you use '../url-tab-title-changer.js', 
+            // ensure the presets here match the external file for consistency.
             presets: [
                 { id: 'hac', name: 'HAC', title: 'Login', favicon: 'https://i.imgur.com/v8tT9Tz.png', category: 'websites' },
                 { id: 'g_docs', name: 'Google Docs', title: 'Google Docs', favicon: 'https://i.imgur.com/eQp4w0U.png', category: 'websites' },
@@ -329,12 +327,11 @@
 
 
             // 1. Initial Auth Check and Data Load
-            // FIX: This uses the real 'auth' object now
             onAuthStateChanged(auth, async (user) => {
                 loadingMessage.style.display = 'none';
 
                 if (!user || user.isAnonymous) {
-                    // Redirect to login if not a real user
+                    // FIX: Ensure this is pointing to the correct login path
                     window.location.replace('/login.html?redirect=/settings.html');
                     return;
                 }
@@ -356,12 +353,11 @@
                     
                     // Populate Security Fields
                     emailInput.value = user.email || 'N/A (Social Login)';
-                    // Ensure password section is shown for email/password users
-                    if (!user.email || user.providerData.some(p => p.providerId !== 'password')) {
-                         passwordSection.style.display = 'block'; 
-                    } else {
-                         passwordSection.style.display = 'block';
-                    }
+                    
+                    // Logic check for password section visibility (simplified)
+                    const isEmailPasswordUser = user.providerData.some(p => p.providerId === 'password');
+                    passwordSection.style.display = isEmailPasswordUser ? 'block' : 'none';
+
 
                 } catch (error) {
                     console.error("Error loading user data:", error);
@@ -492,7 +488,6 @@
                     const credential = EmailAuthProvider.credential(email, currentPassword);
                     await reauthenticateWithCredential(user, credential);
                     
-                    // 1. Delete Auth User (This triggers cleanup)
                     await deleteUser(user);
                     showMessage(securityMessage, "Account permanently deleted. Redirecting...", 'success');
                     // onAuthStateChanged will redirect
