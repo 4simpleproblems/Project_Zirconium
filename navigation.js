@@ -6,22 +6,17 @@
  * tab menu loaded from page-identification.json.
  *
  * --- IMPORTANT FIXES ---
- * 1. CRITICAL CDN FIX (COMPLETE): Ensures the navigation bar renders by using stable Firebase Compat SDKs.
- * 2. API KEY FIX: The AI Agent now correctly accesses the API key from the environment variable (__api_key) to resolve the "403 Forbidden" error.
+ * 1. API KEY FIX: The AI Agent now uses the apiKey stored explicitly in the FIREBASE_CONFIG object
+ * for all Gemini API calls, as requested.
+ * 2. CRITICAL CDN FIX (COMPLETE): Ensures the navigation bar renders by using stable Firebase Compat SDKs.
  * 3. RENDER PRIORITY: Ensures the navigation bar is rendered immediately after CSS injection, preventing the AI logic failure from blocking the UI.
- *
- * --- AI AGENT FEATURE ---
- * - Activated by Control + A (when not in a text box).
- * - Only available to user: 4simpleproblems@gmail.com.
- * - Uses the standard Gemini API (gemini-2.5-flash) for chat.
- * - Provides 8 selectable agent personas.
- * - Automatically injects current time, timezone, and general location (if available) into the system prompt.
  */
 
 // =========================================================================
 // >> ACTION REQUIRED: PASTE YOUR FIREBASE CONFIGURATION OBJECT HERE <<
 // =========================================================================
 const FIREBASE_CONFIG = {
+    // This apiKey is now used for both Firebase Auth and the Gemini API calls.
     apiKey: "AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro",
     authDomain: "project-zirconium.firebaseapp.com",
     projectId: "project-zirconium",
@@ -36,7 +31,6 @@ const FIREBASE_CONFIG = {
 const PAGE_CONFIG_URL = '../page-identification.json';
 
 // --- AI Agent Configuration ---
-// FIX: We will now use the globally available API key variable provided by the environment.
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=";
 const PRIVILEGED_EMAIL = '4simpleproblems@gmail.com';
 const AGENT_CATEGORIES = {
@@ -65,7 +59,7 @@ let currentAgent = 'Standard'; // Default agent
 
     // --- 1. DYNAMICALLY LOAD EXTERNAL ASSETS (Optimized) ---
 
-    // Helper to load external JS files (No longer using type='module' for AI SDK due to 404)
+    // Helper to load external JS files
     const loadScript = (src) => {
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
@@ -646,10 +640,10 @@ let currentAgent = 'Standard'; // Default agent
                     systemInstruction: { parts: [{ text: systemPrompt }] },
                 };
                 
-                // FIX: Get API key from the environment variable (Canvas provided)
-                const apiKey = typeof __api_key !== 'undefined' ? __api_key : '';
-                if (!apiKey) {
-                    throw new Error("API Key is missing or not provided by the environment.");
+                // FIX: Use the API key directly from the FIREBASE_CONFIG object
+                const apiKey = FIREBASE_CONFIG.apiKey;
+                if (!apiKey || apiKey.length < 5) {
+                    throw new Error("API Key is missing or invalid in FIREBASE_CONFIG.");
                 }
 
                 // 4. Call the Generative Model API (with retry logic)
@@ -661,7 +655,7 @@ let currentAgent = 'Standard'; // Default agent
                 });
                 
                 const result = await response.json();
-                const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "I apologize, I could not process that request.";
+                const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "I apologize, I could not process that request. The response was empty.";
 
                 // 5. Display agent response
                 const agentMessageDiv = document.createElement('p');
