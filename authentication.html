@@ -444,7 +444,7 @@
             loginMessageDiv.innerHTML = '';
             signupMessageDiv.innerHTML = '';
             resetMessageDiv.innerHTML = '';
-            isExistingAccount = false; // Reset the security flag
+            // isExistingAccount is managed in the email submission flow now
         };
 
         const showEmailInput = () => {
@@ -461,7 +461,6 @@
             loginEmailDisplay.textContent = email;
             document.getElementById('loginPassword').value = '';
             document.getElementById('loginPassword').focus();
-            isExistingAccount = true; // Set the security flag for existing account
         };
 
         const showSignup = (email) => {
@@ -479,7 +478,6 @@
             document.getElementById('signupUsername').value = '';
             document.getElementById('signupPassword').value = '';
             document.getElementById('signupUsername').focus();
-            isExistingAccount = false; // Set the security flag for new account
         };
 
         const showResetPassword = () => {
@@ -503,6 +501,9 @@
             if (!email) { showMessage(emailMessageDiv, 'Please enter an email address.'); return; }
             
             showMessage(emailMessageDiv, 'Checking account status...', 'warning');
+            
+            // --- UPDATED: Resetting the security flag at the start of the flow ---
+            isExistingAccount = false; 
 
             try {
                 const methods = await fetchSignInMethodsForEmail(auth, email);
@@ -512,12 +513,14 @@
                     showSignup(email);
                 } else if (methods.includes('password')) {
                     // **LOGIN** (Email/Password account)
+                    // We must set the security flag and then show the login screen.
+                    isExistingAccount = true; 
                     showLogin(email);
                 } else {
                     // **SOCIAL LOGIN REQUIRED**
+                    isExistingAccount = true; // Mark as existing to block any attempt to force sign up
                     const providers = methods.map(method => method.split('.')[0].charAt(0).toUpperCase() + method.split('.')[0].slice(1)).join(', ');
                     showMessage(emailMessageDiv, `This email is registered. Please use **${providers}** to log in.`, 'warning');
-                    isExistingAccount = true; // Mark as existing to block any attempt to force sign up
                     // Keep user on the email screen to retry/use social buttons
                 }
             } catch (error) {
