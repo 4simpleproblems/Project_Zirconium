@@ -488,6 +488,19 @@
         // LOCAL STORAGE, TIME, UI UTILITIES
         // =========================================================================
 
+        /**
+         * NEW: Escapes HTML to prevent injection attacks and rendering issues.
+         * This is the core fix for the message loading problem.
+         */
+        function escapeHtml(str) {
+            if (typeof str !== 'string') return '';
+            return str.replace(/&/g, "&amp;")
+                      .replace(/</g, "&lt;")
+                      .replace(/>/g, "&gt;")
+                      .replace(/"/g, "&quot;")
+                      .replace(/'/g, "&#039;");
+        }
+
         function getFriendNicknames() {
             try {
                 const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -674,7 +687,7 @@
                     break;
                 }
                 if (file.size > 5 * 1024 * 1024) { // 5MB limit
-                    showMessage(dom.cooldownTimer, `File "${file.name}" exceeds the 5MB limit.`, 'error');
+                    showMessage(dom.cooldownTimer, `File "${escapeHtml(file.name)}" exceeds the 5MB limit.`, 'error');
                     continue;
                 }
 
@@ -686,11 +699,11 @@
                         const dataUrl = await readFileAsBase64(file);
                         attachedFiles.push({ name: file.name, type: 'document', dataURL: dataUrl });
                     } else {
-                        showMessage(dom.cooldownTimer, `File type "${file.type}" is not supported.`, 'error');
+                        showMessage(dom.cooldownTimer, `File type "${escapeHtml(file.type)}" is not supported.`, 'error');
                     }
                 } catch (error) {
                     console.error("Error processing file:", error);
-                    showMessage(dom.cooldownTimer, `Failed to process file "${file.name}".`, 'error');
+                    showMessage(dom.cooldownTimer, `Failed to process file "${escapeHtml(file.name)}".`, 'error');
                 }
             }
             dom.fileUploadInput.value = ''; 
@@ -710,11 +723,11 @@
                 
                 let content;
                 if (file.type === 'image') {
-                    content = `<img src="${file.dataURL}" alt="Image Preview">`;
+                    content = `<img src="${escapeHtml(file.dataURL)}" alt="Image Preview">`;
                 } else if (file.type === 'document') {
                     content = `<div class="p-2 pt-4 text-sm text-gray-400">
                                 <i class="fas fa-file-alt text-2xl text-indigo-400 mb-1"></i>
-                                <div class="truncate text-xs">${file.name}</div>
+                                <div class="truncate text-xs">${escapeHtml(file.name)}</div>
                             </div>`;
                 } else {
                     content = `<div class="p-2 pt-4 text-sm text-gray-400">
@@ -766,14 +779,16 @@
             let filesHtml = '';
             if (message.files && message.files.length > 0) {
                 filesHtml = message.files.map(file => {
+                    const safeDataURL = escapeHtml(file.dataURL);
+                    const safeName = escapeHtml(file.name);
                     if (file.type === 'image') {
                         return `<div class="p-1 bg-gray-900 rounded-lg max-w-full overflow-hidden mb-2">
-                                    <img src="${file.dataURL}" alt="Attached Image" class="max-h-60 object-contain rounded-md cursor-pointer" onclick="window.open('${file.dataURL}', '_blank')">
+                                    <img src="${safeDataURL}" alt="Attached Image" class="max-h-60 object-contain rounded-md cursor-pointer" onclick="window.open('${safeDataURL}', '_blank')">
                                 </div>`;
                     } else if (file.type === 'document') {
                         return `<div class="p-2 bg-gray-900 rounded-lg flex items-center gap-2 mb-2 border border-gray-700">
                                     <i class="fas fa-file-alt text-lg text-indigo-400"></i>
-                                    <a href="${file.dataURL}" download="${file.name}" class="text-sm text-gray-300 hover:text-white truncate" title="Download ${file.name}">${file.name}</a>
+                                    <a href="${safeDataURL}" download="${safeName}" class="text-sm text-gray-300 hover:text-white truncate" title="Download ${safeName}">${safeName}</a>
                                 </div>`;
                     }
                     return '';
@@ -782,10 +797,10 @@
 
             messageElement.innerHTML = `
                 <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'}">
-                    <span class="text-xs ${isMe ? 'text-gray-500' : (message.senderId === 'system' ? 'text-yellow-400' : 'text-indigo-400')} mb-1 font-semibold">${senderName}</span>
+                    <span class="text-xs ${isMe ? 'text-gray-500' : (message.senderId === 'system' ? 'text-yellow-400' : 'text-indigo-400')} mb-1 font-semibold">${escapeHtml(senderName)}</span>
                     <div class="p-3 rounded-xl ${isMe ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-gray-800 text-gray-200 rounded-tl-none'} shadow-lg break-words max-w-full">
                         ${filesHtml}
-                        ${message.text ? `<p class="whitespace-pre-wrap">${message.text}</p>` : ''}
+                        ${message.text ? `<p class="whitespace-pre-wrap">${escapeHtml(message.text)}</p>` : ''}
                     </div>
                     <span class="text-xs text-gray-600 mt-1">${timeString}</span>
                 </div>
@@ -892,7 +907,7 @@
                 const filePreview = messageFiles.length > 0 ? `[${messageFiles.length} files]` : '';
                 const lastMessageText = filePreview 
                     ? (textPreview ? `${filePreview} ${textPreview}...` : filePreview)
-                    : (textPreview || filePreview); // Ensure we have some text if only files
+                    : (textPreview || filePreview); 
 
                 batch.update(chatRef, {
                     lastMessage: {
@@ -999,7 +1014,7 @@
                     pending_requests: arrayUnion(currentUser.uid)
                 });
                 
-                showMessage(dom.addFriendMessage, `Request sent to ${friendPublicId}.`, 'success');
+                showMessage(dom.addFriendMessage, `Request sent to ${escapeHtml(friendPublicId)}.`, 'success');
 
             } catch (error) {
                 console.error("Error sending friend request:", error);
@@ -1025,7 +1040,7 @@
                 const requestItem = document.createElement('div');
                 requestItem.className = 'flex justify-between items-center text-sm p-2 bg-gray-900 rounded-md';
                 requestItem.innerHTML = `
-                    <span class="text-gray-300">Request from <span class="font-mono text-white">${publicId}</span></span>
+                    <span class="text-gray-300">Request from <span class="font-mono text-white">${escapeHtml(publicId)}</span></span>
                     <div class="space-x-2 flex items-center" data-uid="${uid}">
                         <button class="accept-request-btn text-green-400 hover:text-green-300 transition" data-uid="${uid}">
                             <i class="fas fa-check"></i> Accept
@@ -1164,7 +1179,7 @@
                     closeChat();
                 }
                 
-                showMessage(dom.cooldownTimer, `${friendName} has been unfriended and the chat deleted.`, 'success');
+                showMessage(dom.cooldownTimer, `${escapeHtml(friendName)} has been unfriended and the chat deleted.`, 'success');
 
             } catch (error) {
                  console.error("Error unfriending user:", error);
@@ -1177,7 +1192,7 @@
          */
         async function handleBlockUser(friendUid, friendName) {
             showConfirmModal({
-                title: `Block ${friendName}?`,
+                title: `Block ${escapeHtml(friendName)}?`,
                 body: "This will remove them from your friends list, block new communication, and delete the DM chat history. They will not be notified.",
                 onConfirm: async () => {
                     try {
@@ -1203,7 +1218,7 @@
                             closeChat();
                         }
 
-                        showMessage(dom.cooldownTimer, `${friendName} has been blocked.`, 'success');
+                        showMessage(dom.cooldownTimer, `${escapeHtml(friendName)} has been blocked.`, 'success');
 
                     } catch (error) {
                          console.error("Error blocking user:", error);
@@ -1221,7 +1236,7 @@
                 await updateDoc(doc(db, 'users', currentUser.uid), {
                     blocked: arrayRemove(blockedUid)
                 });
-                showMessage(dom.cooldownTimer, `${blockedName} has been unblocked.`, 'success');
+                showMessage(dom.cooldownTimer, `${escapeHtml(blockedName)} has been unblocked.`, 'success');
                 // The settings modal listener will trigger a re-render.
             } catch (error) {
                 console.error("Error unblocking user:", error);
@@ -1255,12 +1270,13 @@
 
                  blockedUserData.forEach(({ uid, publicId }) => {
                      const name = getFriendNickname(uid, publicId);
+                     const safeName = escapeHtml(name);
                      
                      const item = document.createElement('div');
                      item.className = 'flex justify-between items-center p-2 rounded-md bg-gray-900 border border-gray-800';
                      item.innerHTML = `
-                        <span class="text-sm">${name} (${publicId})</span>
-                        <button class="unblock-btn text-green-400 hover:text-green-300 transition p-1" data-uid="${uid}" data-name="${name}" title="Unblock User">
+                        <span class="text-sm">${safeName} (${escapeHtml(publicId)})</span>
+                        <button class="unblock-btn text-green-400 hover:text-green-300 transition p-1" data-uid="${uid}" data-name="${safeName}" title="Unblock User">
                             <i class="fas fa-unlock"></i> Unblock
                         </button>
                      `;
@@ -1309,8 +1325,8 @@
                  const partnerName = currentChat.name;
                  
                  showConfirmModal({
-                     title: `Delete Chat with ${partnerName}?`,
-                     body: `This will delete the chat history and unfriend ${partnerName}. This action cannot be reversed.`,
+                     title: `Delete Chat with ${escapeHtml(partnerName)}?`,
+                     body: `This will delete the chat history and unfriend ${escapeHtml(partnerName)}. This action cannot be reversed.`,
                      onConfirm: async () => {
                          await handleUnfriend(partnerId, partnerName);
                      }
@@ -1343,8 +1359,8 @@
                 item.className = 'flex items-center space-x-3 p-2 rounded-md cursor-pointer hover:bg-gray-800 transition';
                 item.innerHTML = `
                     <input type="checkbox" name="group-member" value="${friendUid}" class="text-indigo-600 bg-gray-700 border-gray-600 rounded">
-                    <span class="text-gray-300">${displayLabel}</span>
-                    <span class="text-xs text-gray-500 font-mono">(${publicId})</span>
+                    <span class="text-gray-300">${escapeHtml(displayLabel)}</span>
+                    <span class="text-xs text-gray-500 font-mono">(${escapeHtml(publicId)})</span>
                 `;
                 dom.groupMembersList.appendChild(item);
             });
@@ -1404,7 +1420,7 @@
                  });
                  
                  closeGroupModal();
-                 showMessage(dom.cooldownTimer, `Group "${groupName}" created successfully.`, 'success');
+                 showMessage(dom.cooldownTimer, `Group "${escapeHtml(groupName)}" created successfully.`, 'success');
                  openChat(chatRef.id, 'group', groupName);
 
              } catch (error) {
@@ -1420,15 +1436,18 @@
         function renderChatItemHtml(chatDoc, chatName, iconClass, partnerId) {
             const chatId = chatDoc.id;
             const chatData = chatDoc.data();
-            // A DM chat ID is created by sorting UIDs: uid1_uid2. We use this to check if it's a DM.
             const isMyDm = partnerId ? (getDmChatId(currentUser.uid, partnerId) === chatId) : false; 
             
-            const chatOpenArea = `<div data-action="open-chat" data-chat-id="${chatId}" data-chat-type="${chatData.isGroup ? 'group' : 'dm'}" data-chat-name="${chatName}" data-partner-id="${partnerId}" 
+            // Use the new escapeHtml function to prevent HTML injection and attribute breaking
+            const safeChatName = escapeHtml(chatName);
+            const safeLastMessage = escapeHtml(chatData.lastMessage?.text || 'No messages yet');
+
+            const chatOpenArea = `<div data-action="open-chat" data-chat-id="${chatId}" data-chat-type="${chatData.isGroup ? 'group' : 'dm'}" data-chat-name="${safeChatName}" data-partner-id="${partnerId || ''}" 
                                 class="flex items-center gap-3 overflow-hidden flex-grow cursor-pointer py-1">
                                     <i class="${iconClass} text-lg w-6 text-center flex-shrink-0"></i>
                                     <div class="flex flex-col overflow-hidden flex-grow">
-                                        <span class="font-semibold whitespace-nowrap">${chatName}</span>
-                                        <p class="text-sm text-gray-500 truncate">${chatData.lastMessage?.text || 'No messages yet'}</p>
+                                        <span class="font-semibold whitespace-nowrap">${safeChatName}</span>
+                                        <p class="text-sm text-gray-500 truncate">${safeLastMessage}</p>
                                     </div>
                                 </div>`;
 
@@ -1436,34 +1455,40 @@
             if (chatData.isGroup) {
                 actionButton = `<button class="delete-chat-btn text-red-500 hover:text-red-400 transition p-1" data-id="${chatId}" data-is-group="true" title="Leave Group"><i class="fas fa-sign-out-alt"></i></button>`;
             } else if (isMyDm) {
-                // For DMs, we provide a button to delete the chat (which performs unfriend/delete)
                 actionButton = `<button class="delete-chat-btn text-red-500 hover:text-red-400 transition p-1" data-id="${chatId}" data-is-group="false" title="Delete Chat & Unfriend"><i class="fas fa-trash"></i></button>`;
             } else {
                 actionButton = '';
             }
 
-            return `<div class="compact-list-item flex items-center justify-between gap-4 ${chatId === currentChat.id ? 'active' : ''}" data-list-chat-id="${chatId}">
+            return `<div class="compact-list-item flex items-center justify-between gap-4" data-list-chat-id="${chatId}">
                         ${chatOpenArea}
                         <div class="flex-shrink-0 ml-2">${actionButton}</div>
                     </div>`;
         }
 
-
+        /**
+         * REVISED: This function is now simpler and sorts chats by recent activity.
+         */
         function listenToChats(uid) {
             unsubscribeChats();
-            const q = query(collection(db, 'chats'), where('members', 'array-contains', uid));
+            // IMPROVEMENT: Query is now ordered by the last message timestamp.
+            const q = query(collection(db, 'chats'), where('members', 'array-contains', uid), orderBy('lastMessage.timestamp', 'desc'));
             
-            const friendUIDs = Object.keys(currentUserData.friends || {});
-            const friendDataPromises = friendUIDs.map(id => getDoc(doc(db, 'users', id)));
-
             unsubscribeChats = onSnapshot(q, async (snapshot) => {
                 if (currentTab !== 'chats') return; 
                 
-                const friendDocs = await Promise.all(friendDataPromises);
+                if (snapshot.empty) {
+                    dom.activeListItems.innerHTML = '<p class="p-4 text-center text-gray-500">No active chats. Start a DM or group!</p>';
+                    return;
+                }
+
+                // Pre-fetch friend data once to be more efficient
+                const friendUIDs = Object.keys(currentUserData.friends || {});
+                const friendDocs = await Promise.all(friendUIDs.map(id => getDoc(doc(db, 'users', id))));
                 const friendDataMap = new Map(friendDocs.map(d => [d.id, d.data()]));
                 
-                snapshot.docChanges().forEach(change => {
-                    const chatDoc = change.doc;
+                let chatsHtml = '';
+                snapshot.docs.forEach(chatDoc => {
                     const chatData = chatDoc.data();
                     let chatName, iconClass, partnerId = null;
                     
@@ -1472,44 +1497,22 @@
                         iconClass = 'fas fa-users text-indigo-400';
                     } else {
                         partnerId = chatData.members.find(id => id !== uid);
-                        // Fallback to friend ID from user doc if available, otherwise 'Unknown'
+                        if (!partnerId) return; // Guard clause for incomplete data
+
                         const storedPublicId = currentUserData.friends[partnerId] || friendDataMap.get(partnerId)?.publicId || 'Unknown Friend';
                         chatName = getFriendNickname(partnerId, storedPublicId);
                         iconClass = 'fas fa-user text-green-400';
                     }
                     
-                    const existingEl = dom.activeListItems.querySelector(`[data-list-chat-id="${chatDoc.id}"]`);
-                    const newHtml = renderChatItemHtml(chatDoc, chatName, iconClass, partnerId);
-                    
-                    if (change.type === 'added' || change.type === 'modified') {
-                        const tempEl = document.createElement('div');
-                        tempEl.innerHTML = newHtml;
-                        
-                        if (existingEl) {
-                            existingEl.replaceWith(tempEl.firstChild);
-                        } else {
-                            dom.activeListItems.prepend(tempEl.firstChild);
-                        }
-                        
-                    } else if (change.type === 'removed') {
-                        if (existingEl) {
-                            existingEl.remove();
-                        }
-                    }
+                    chatsHtml += renderChatItemHtml(chatDoc, chatName, iconClass, partnerId);
                 });
                 
-                const listItems = dom.activeListItems.querySelectorAll('.compact-list-item');
-                if (listItems.length === 0) {
-                    dom.activeListItems.innerHTML = '<p class="p-4 text-center text-gray-500">No active chats. Start a DM or group!</p>';
-                } else {
-                     const placeholder = dom.activeListItems.querySelector('p');
-                     if (placeholder && placeholder.textContent.includes('No active chats')) {
-                          placeholder.remove();
-                     }
-                }
+                dom.activeListItems.innerHTML = chatsHtml;
                 
+                // After re-rendering the whole list, re-apply the .active class if a chat is open
                 if (currentChat.id) {
-                     dom.activeListItems.querySelector(`[data-list-chat-id="${currentChat.id}"]`)?.classList.add('active');
+                     const activeEl = dom.activeListItems.querySelector(`[data-list-chat-id="${currentChat.id}"]`);
+                     if(activeEl) activeEl.classList.add('active');
                 }
 
             }, (error) => {
@@ -1520,7 +1523,7 @@
         
         async function renderFriends() {
             if (currentTab !== 'friends') return;
-            dom.activeListItems.innerHTML = '';
+            dom.activeListItems.innerHTML = '<p class="p-4 text-center text-gray-500">Loading...</p>';
             
             const friendUIDs = Object.keys(currentUserData.friends || {});
             
@@ -1530,7 +1533,8 @@
             }
             
             const friendDocs = await Promise.all(friendUIDs.map(id => getDoc(doc(db, 'users', id))));
-            
+            let friendsHtml = '';
+
             friendDocs.forEach(docSnap => {
                 if (!docSnap.exists()) return;
                 const friendUid = docSnap.id;
@@ -1538,31 +1542,34 @@
                 
                 const storedLabel = currentUserData.friends[friendUid] || publicId;
                 const displayLabel = getFriendNickname(friendUid, storedLabel);
+                const safeDisplayLabel = escapeHtml(displayLabel);
+                const safePublicId = escapeHtml(publicId);
 
-                const li = document.createElement('div');
-                li.className = `compact-list-item flex items-center justify-between gap-4`;
-                li.innerHTML = `
-                    <div class="flex items-center gap-3 overflow-hidden flex-grow">
-                        <i class="fas fa-user-circle text-2xl text-green-400 flex-shrink-0"></i>
-                        <div class="flex flex-col overflow-hidden">
-                            <span class="font-semibold whitespace-nowrap">${displayLabel}</span>
-                            <span class="text-xs text-gray-500 font-mono">Code: ${publicId}</span>
+                friendsHtml += `
+                    <div class="compact-list-item flex items-center justify-between gap-4">
+                        <div class="flex items-center gap-3 overflow-hidden flex-grow">
+                            <i class="fas fa-user-circle text-2xl text-green-400 flex-shrink-0"></i>
+                            <div class="flex flex-col overflow-hidden">
+                                <span class="font-semibold whitespace-nowrap">${safeDisplayLabel}</span>
+                                <span class="text-xs text-gray-500 font-mono">Code: ${safePublicId}</span>
+                            </div>
+                        </div>
+                        <div class="flex flex-shrink-0 space-x-2 ml-2">
+                            <button class="edit-friend-nickname-btn text-gray-500 hover:text-indigo-400 transition p-1" data-uid="${friendUid}" data-current-label="${safeDisplayLabel}" title="Edit Local Nickname">
+                                <i class="fas fa-tag"></i>
+                            </button>
+                            <button class="unfriend-btn text-yellow-500 hover:text-yellow-400 transition p-1" data-uid="${friendUid}" data-name="${safeDisplayLabel}" title="Unfriend">
+                                <i class="fas fa-user-minus"></i>
+                            </button>
+                            <button class="block-friend-btn text-red-500 hover:text-red-400 transition p-1" data-uid="${friendUid}" data-name="${safeDisplayLabel}" title="Block User">
+                                <i class="fas fa-user-slash"></i>
+                            </button>
                         </div>
                     </div>
-                    <div class="flex flex-shrink-0 space-x-2 ml-2">
-                        <button class="edit-friend-nickname-btn text-gray-500 hover:text-indigo-400 transition p-1" data-uid="${friendUid}" data-current-label="${displayLabel}" title="Edit Local Nickname">
-                            <i class="fas fa-tag"></i>
-                        </button>
-                        <button class="unfriend-btn text-yellow-500 hover:text-yellow-400 transition p-1" data-uid="${friendUid}" data-name="${displayLabel}" title="Unfriend">
-                            <i class="fas fa-user-minus"></i>
-                        </button>
-                        <button class="block-friend-btn text-red-500 hover:text-red-400 transition p-1" data-uid="${friendUid}" data-name="${displayLabel}" title="Block User">
-                            <i class="fas fa-user-slash"></i>
-                        </button>
-                    </div>
                 `;
-                dom.activeListItems.appendChild(li);
             });
+
+            dom.activeListItems.innerHTML = friendsHtml;
         }
 
         // =========================================================================
@@ -1573,7 +1580,7 @@
             currentChat = { id: chatId, type, name, partnerId };
             
             dom.chatView.classList.remove('hidden');
-            dom.chatHeader.textContent = name;
+            dom.chatHeader.textContent = name; // Name is already escaped when passed, but textContent is safe anyway
             dom.editLabelBtn.classList.toggle('hidden', type !== 'dm');
             dom.blockUserBtn.classList.toggle('hidden', type !== 'dm');
             dom.editGroupNameBtn.classList.toggle('hidden', type !== 'group');
@@ -1624,7 +1631,6 @@
 
         function handleListActions(e) {
             const openChatEl = e.target.closest('[data-action="open-chat"]');
-            const editBtn = e.target.closest('.edit-chat-name-btn');
             const deleteBtn = e.target.closest('.delete-chat-btn');
             const unfriendBtn = e.target.closest('.unfriend-btn');
             const blockBtn = e.target.closest('.block-friend-btn');
@@ -1632,14 +1638,14 @@
 
             if (openChatEl) {
                 const { chatId, chatType, chatName, partnerId } = openChatEl.dataset;
-                openChat(chatId, chatType, chatName, partnerId);
-            } else if (editBtn || editFriendNickBtn) {
-                const partnerUid = editBtn?.dataset.partnerUid || editFriendNickBtn?.dataset.uid;
-                const currentLabel = editBtn?.dataset.currentLabel || editFriendNickBtn?.dataset.currentLabel;
+                openChat(chatId, chatType, chatName, partnerId || null);
+            } else if (editFriendNickBtn) {
+                const partnerUid = editFriendNickBtn?.dataset.uid;
+                const currentLabel = editFriendNickBtn?.dataset.currentLabel;
                 handleEditNickname(partnerUid, currentLabel);
             } else if (deleteBtn) {
                 const { id, isGroup } = deleteBtn.dataset;
-                handleDeleteChat(id, isGroup === 'true'); // Calls the new logic
+                handleDeleteChat(id, isGroup === 'true'); 
             } else if (unfriendBtn) {
                  const { uid, name } = unfriendBtn.dataset;
                  showConfirmModal({
@@ -1649,7 +1655,7 @@
                  });
             } else if (blockBtn) {
                  const { uid, name } = blockBtn.dataset;
-                 handleBlockUser(uid, name); // Calls the new logic
+                 handleBlockUser(uid, name); 
             }
         }
 
@@ -1693,7 +1699,7 @@
                 await setDoc(userRef, { 
                     uid: user.uid, 
                     publicId, 
-                    friends: {}, // Use a map {uid: publicId}
+                    friends: {}, 
                     pending_requests: [],
                     blocked: [],
                 });
@@ -1705,15 +1711,19 @@
             unsubscribeUser = onSnapshot(doc(db, 'users', uid), (doc) => {
                 const data = doc.data();
                 if (!data) return;
+                const wasFirstLoad = !currentUserData.publicId;
                 currentUserData = data;
                 dom.myIdDisplay.textContent = data.publicId || '...';
                 renderFriendRequests(data.pending_requests || []);
                 
-                // Re-render lists/modal if data changes
+                // On the very first load of user data, trigger the chat listener.
+                // Subsequent updates will be handled by the chat listener itself.
+                if(wasFirstLoad){
+                    listenToChats(uid);
+                }
+
                 if (currentTab === 'friends') {
                     renderFriends();
-                } else {
-                    listenToChats(uid);
                 }
                 if (!dom.settingsModal.classList.contains('hidden')) {
                     renderBlockedUsers();
@@ -1772,17 +1782,17 @@
         function setupEventListeners() {
             dom.backToChatsBtn.addEventListener('click', closeChat);
             dom.messageForm.addEventListener('submit', handleMessageSubmit); 
-            dom.addFriendForm.addEventListener('submit', handleAddFriend); // FULLY IMPLEMENTED
-            dom.friendRequestsSection.addEventListener('click', handleFriendRequestAction); // FULLY IMPLEMENTED
+            dom.addFriendForm.addEventListener('submit', handleAddFriend); 
+            dom.friendRequestsSection.addEventListener('click', handleFriendRequestAction); 
 
             dom.blockUserBtn.addEventListener('click', () => {
-                if (currentChat.type === 'dm') {
+                if (currentChat.type === 'dm' && currentChat.partnerId) {
                     handleBlockUser(currentChat.partnerId, currentChat.name);
                 }
             });
 
             dom.editLabelBtn.addEventListener('click', () => {
-                if (currentChat.type === 'dm') {
+                if (currentChat.type === 'dm' && currentChat.partnerId) {
                     const storedLabel = currentUserData.friends[currentChat.partnerId] || currentChat.partnerId;
                     handleEditNickname(currentChat.partnerId, storedLabel);
                 }
@@ -1790,22 +1800,22 @@
 
             dom.createGroupBtn.addEventListener('click', openGroupModal);
             dom.createGroupModalCloseBtn.addEventListener('click', closeGroupModal); 
-            dom.createGroupForm.addEventListener('submit', handleCreateGroup); // FULLY IMPLEMENTED
+            dom.createGroupForm.addEventListener('submit', handleCreateGroup); 
             
             dom.chatsTabBtn.addEventListener('click', () => switchTab('chats'));
             dom.friendsTabBtn.addEventListener('click', () => switchTab('friends'));
             
-            dom.activeListItems.addEventListener('click', handleListActions); // DELEGATED TO FULL HELPERS
+            dom.activeListItems.addEventListener('click', handleListActions); 
             
             dom.messagesContainer.addEventListener('scroll', updateScrollButtonVisibility);
             dom.scrollToBottomBtn.addEventListener('click', () => scrollToBottom(true));
 
-            dom.fileUploadInput.addEventListener('change', handleFileSelect); // FULLY IMPLEMENTED
+            dom.fileUploadInput.addEventListener('change', handleFileSelect); 
 
             dom.openSettingsBtn.addEventListener('click', () => {
                 dom.settingsModal.classList.remove('hidden');
                 setTimeout(() => dom.settingsModal.classList.remove('opacity-0'), 10);
-                renderBlockedUsers(); // FULLY IMPLEMENTED
+                renderBlockedUsers(); 
             });
 
             dom.settingsModalCloseBtn.addEventListener('click', () => {
@@ -1813,7 +1823,6 @@
                 setTimeout(() => dom.settingsModal.classList.add('hidden'), 300);
             });
             
-             // NEW: Listener for unblocking users in the settings modal
              dom.blockedUsersList.addEventListener('click', async (e) => {
                  const unblockBtn = e.target.closest('.unblock-btn');
                  if (unblockBtn) {
@@ -1823,7 +1832,6 @@
                          body: "They will be able to contact you and send friend requests again.",
                          onConfirm: async () => {
                              await handleUnblockUser(uid, name);
-                             // Rerender the settings list after action
                              renderBlockedUsers();
                              hideConfirmModal();
                          }
