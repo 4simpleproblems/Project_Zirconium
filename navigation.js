@@ -20,6 +20,7 @@
  * --- FIXES / UPDATES ---
  * - **Glide Button Style:** Removed border-radius and adjusted gradients for full opacity at the edge.
  * - **Mini-Menu Icons:** Added icons to the Dashboard, Settings, and Logout links in the authenticated user's dropdown menu.
+ * - **Dashboard Icon Updated:** Changed Dashboard icon from 'fa-chart-line' to 'fa-house-user'.
  */
 
 // =========================================================================
@@ -393,7 +394,7 @@ let db;
             }
         };
 
-        // --- 4. RENDER THE NAVBAR HTML (UPDATED: Added icons to loggedInView) ---
+        // --- 4. RENDER THE NAVBAR HTML (UPDATED: Dashboard icon changed) ---
         const renderNavbar = (user, userData, pages) => {
             const container = document.getElementById('navbar-container');
             if (!container) return;
@@ -446,7 +447,7 @@ let db;
                     `<img src="${photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">` :
                     `<div class="initial-avatar w-8 h-8 rounded-full text-sm font-semibold">${initial}</div>`;
 
-                // --- ADDED ICONS TO LINKS ---
+                // --- UPDATED: Dashboard icon is now fa-house-user ---
                 return `
                     <div class="relative flex-shrink-0">
                         <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
@@ -458,7 +459,7 @@ let db;
                                 <p class="text-xs text-gray-400 truncate">${email}</p>
                             </div>
                             <a href="/logged-in/dashboard.html" class="auth-menu-link">
-                                <i class="fa-solid fa-chart-line"></i>
+                                <i class="fa-solid fa-house-user"></i>
                                 Dashboard
                             </a>
                             <a href="/logged-in/settings.html" class="auth-menu-link">
