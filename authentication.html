@@ -257,6 +257,7 @@
         // --- Global State ---
         let currentEmail = null;
         let selectedUsername = null; 
+        let isExistingAccount = false; // NEW FLAG
 
         // --- DOM Elements ---
         const emailContainer = document.getElementById('emailContainer');
@@ -295,8 +296,6 @@
         
         const getUserProfileDocRef = (userId) => {
             // Firestore Path: users/{userId} (Simplified from login.html's complex path to match signup.html's collection 'users' logic)
-            // NOTE: If you must use the login.html path: 
-            // return doc(db, 'artifacts', appId, 'users', userId, 'metadata', 'user_profile');
             return doc(db, 'users', userId); // Using simpler path from signup.html
         };
 
@@ -372,7 +371,7 @@
             const interval = setInterval(() => {
                 if (countdown < 0) {
                     clearInterval(interval);
-                    window.location.reload(); // Reloads to the initial email screen
+                    showEmailInput(); // Reloads to the initial email screen
                 } else {
                     message();
                 }
@@ -446,6 +445,7 @@
             loginMessageDiv.innerHTML = '';
             signupMessageDiv.innerHTML = '';
             resetMessageDiv.innerHTML = '';
+            isExistingAccount = false; // Reset the security flag
         };
 
         const showEmailInput = () => {
@@ -462,6 +462,7 @@
             loginEmailDisplay.textContent = email;
             document.getElementById('loginPassword').value = '';
             document.getElementById('loginPassword').focus();
+            isExistingAccount = true; // Set the security flag for existing account
         };
 
         const showSignup = (email) => {
@@ -472,6 +473,7 @@
             document.getElementById('signupUsername').value = '';
             document.getElementById('signupPassword').value = '';
             document.getElementById('signupUsername').focus();
+            isExistingAccount = false; // Set the security flag for new account
         };
 
         const showResetPassword = () => {
@@ -509,10 +511,12 @@
                     // **SOCIAL LOGIN REQUIRED**
                     const providers = methods.map(method => method.split('.')[0].charAt(0).toUpperCase() + method.split('.')[0].slice(1)).join(', ');
                     showMessage(emailMessageDiv, `This email is registered. Please use ${providers} to log in.`);
+                    isExistingAccount = true; // Important: Block email sign up if a social account exists
                 }
             } catch (error) {
                 console.error('Email check error:', error);
                 showMessage(emailMessageDiv, 'An error occurred. Please try again or check the email format.');
+                isExistingAccount = true; // Assume existing to be safe
             }
         });
         
@@ -520,6 +524,14 @@
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             loginMessageDiv.innerHTML = '';
+            // Security check: Ensure we are on a login flow for an existing user
+            if (!isExistingAccount) {
+                 showMessage(loginMessageDiv, 'Security violation: Account status mismatch. Please start over.');
+                 await signOut(auth); // Force sign out if somehow authenticated
+                 showEmailInput();
+                 return;
+            }
+            
             const password = document.getElementById('loginPassword').value;
 
             try {
@@ -545,6 +557,12 @@
             e.preventDefault();
             signupMessageDiv.innerHTML = '';
 
+            // CRITICAL SECURITY CHECK: Prevent account creation if the flow identified an existing account
+            if (isExistingAccount) {
+                 showMessage(signupMessageDiv, 'Error: An account already exists for this email. Please use the login or social sign-in options.');
+                 return;
+            }
+            
             const usernameInput = document.getElementById('signupUsername').value.trim();
             const password = document.getElementById('signupPassword').value;
             const email = currentEmail;
@@ -555,7 +573,7 @@
                 showMessage(signupMessageDiv, passwordError);
                 return;
             }
-
+            // ... (rest of the username validation logic remains the same)
             // 2. Validate Username
             if (usernameInput.length < 4 || usernameInput.length > 24) {
                 showMessage(signupMessageDiv, 'Username must be between 4 and 24 characters.');
@@ -604,8 +622,8 @@
                 console.error("Signup Error:", error);
                 let message = 'An unknown sign up error occurred. Please try again.';
                 if (error.code === 'auth/email-already-in-use') {
-                    // This should have been caught in the initial email check, but good to have as a fallback
-                    showMessage(signupMessageDiv, `This email is already in use! Please use the Login form.`);
+                    // CRITICAL FALLBACK: If Firebase still reports this, stop and warn the user.
+                    showMessage(signupMessageDiv, `This email is already in use! Please go back and use the Login form.`);
                 } else if (error.code === 'auth/invalid-email') {
                     message = 'The email address is not valid.'; 
                 } else if (error.code === 'auth/weak-password') {
@@ -690,7 +708,7 @@
                 
                 if (error.code === 'auth/account-exists-with-different-credential') {
                     let fetchEmail = error.customData?.email || 'this email';
-                    message = `An account with ${fetchEmail} already exists using a different sign-in method. Please use the email and password option.`;
+                    message = `An account with ${fetchEmail} already exists using a different sign-in method. Please use the email and password option or the correct social provider.`;
                 } else if (error.code === 'auth/popup-closed-by-user') { 
                     return; 
                 }
