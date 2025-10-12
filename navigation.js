@@ -6,9 +6,10 @@
  * tab menu loaded from page-identification.json.
  *
  * --- FIXES / UPDATES ---
- * 1. NAVBAR LOADING FIX: Ensured the navbar container is created and styles are injected before Firebase initialization.
- * 2. KEYBINDING CHANGE: Toggles AI chat modal with Control+C (or Meta+C on Mac) outside of input fields.
- * 3. AI SDK LOADING REFINED: Ensured modular SDKs are correctly loaded to expose `firebase.getAI`, etc.
+ * 1. FIXED SCOPING ERROR: Moved the `injectStyles` function definition outside of `initializeApp` to the main closure scope, fixing the 'injectStyles is not defined' ReferenceError.
+ * 2. NAVBAR LOADING FIX: The navbar container is created and styles are injected before Firebase initialization in the `run` function.
+ * 3. KEYBINDING CHANGE: Toggles AI chat modal with Control+C (or Meta+C on Mac) outside of input fields.
+ * 4. AI SDK Loading: Ensured modular SDKs are correctly loaded for AI services.
  *
  * --- INSTRUCTIONS ---
  * 1. ACTION REQUIRED: Paste your own Firebase project configuration into the `FIREBASE_CONFIG` object below.
@@ -172,6 +173,162 @@ const AGENT_CATEGORIES = {
         }
         
         return '';
+    };
+
+    /**
+     * **FIX: MOVED SCOPE** Injects CSS styles directly into the document head.
+     * This function is now in the main closure scope, resolving the ReferenceError.
+     */
+    const injectStyles = () => {
+        const style = document.createElement('style');
+        style.textContent = `
+            /* Base Styles (Existing CSS retained) */
+            body { padding-top: 4rem; }
+            .auth-navbar { 
+                position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: #000000; 
+                border-bottom: 1px solid rgb(31 41 55); height: 4rem; 
+            }
+            .auth-navbar nav { 
+                max-width: 80rem; margin: auto; padding: 0 1rem; height: 100%; display: flex; 
+                align-items: center; justify-content: space-between; gap: 1rem; position: relative; 
+            }
+            .initial-avatar { 
+                background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: 'Geist', sans-serif; 
+                text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; 
+            }
+            
+            .auth-menu-container { 
+                position: absolute; right: 0; top: 50px; width: 16rem; 
+                background: #000000; 
+                backdrop-filter: none; 
+                -webkit-backdrop-filter: none;
+                border: 1px solid rgb(55 65 81); border-radius: 0.75rem; padding: 0.5rem; 
+                box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
+                transition: transform 0.2s ease-out, opacity 0.2s ease-out; transform-origin: top right; 
+            }
+            .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
+            .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
+            .auth-menu-link, .auth-menu-button { 
+                display: flex; 
+                align-items: center; 
+                gap: 0.75rem; 
+                width: 100%; 
+                text-align: left; 
+                padding: 0.5rem 0.75rem; 
+                font-size: 0.875rem; 
+                color: #d1d5db; 
+                border-radius: 0.375rem; 
+                transition: background-color 0.2s, color 0.2s; 
+                border: none;
+                cursor: pointer;
+            }
+            .auth-menu-link:hover, .auth-menu-button:hover { background-color: rgb(55 65 81); color: white; }
+
+            .logged-out-auth-toggle {
+                background: #010101; 
+                border: 1px solid #374151; 
+            }
+            .logged-out-auth-toggle i {
+                color: #DADADA; 
+            }
+
+            .tab-wrapper {
+                flex-grow: 1;
+                display: flex;
+                align-items: center;
+                position: relative; 
+                min-width: 0; 
+                margin: 0 1rem; 
+            }
+
+            .tab-scroll-container {
+                flex-grow: 1; 
+                display: flex;
+                align-items: center;
+                overflow-x: auto; 
+                -webkit-overflow-scrolling: touch; 
+                scrollbar-width: none; 
+                -ms-overflow-style: none; 
+                padding-bottom: 5px; 
+                margin-bottom: -5px; 
+                scroll-behavior: smooth; 
+            }
+            .tab-scroll-container::-webkit-scrollbar { display: none; }
+
+            .scroll-glide-button {
+                position: absolute;
+                top: 0;
+                height: 100%;
+                width: 4rem; 
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: #000000; 
+                color: white;
+                font-size: 1.2rem;
+                cursor: pointer;
+                opacity: 0.8; 
+                transition: opacity 0.3s, background 0.3s;
+                z-index: 10;
+                pointer-events: auto; 
+            }
+            .scroll-glide-button:hover {
+                opacity: 1;
+            }
+            
+            #glide-left {
+                left: 0;
+                background: linear-gradient(to right, #000000 50%, transparent); 
+                justify-content: flex-start; 
+                padding-left: 0.5rem;
+            }
+
+            #glide-right {
+                right: 0;
+                background: linear-gradient(to left, #000000 50%, transparent); 
+                justify-content: flex-end; 
+                padding-right: 0.5rem;
+            }
+            
+            .scroll-glide-button.hidden {
+                opacity: 0 !important;
+                pointer-events: none !important;
+            }
+
+            .nav-tab {
+                flex-shrink: 0; 
+                padding: 0.5rem 1rem;
+                color: #9ca3af; 
+                font-size: 0.875rem;
+                font-weight: 500;
+                border-radius: 0.5rem;
+                transition: all 0.2s;
+                text-decoration: none;
+                line-height: 1.5;
+                display: flex;
+                align-items: center;
+                margin-right: 0.5rem; 
+                border: 1px solid transparent;
+            }
+            
+            .nav-tab:not(.active):hover {
+                color: white; 
+                border-color: #d1d5db; 
+                background-color: rgba(79, 70, 229, 0.05); 
+            }
+
+            .nav-tab.active {
+                color: #4f46e5; 
+                border-color: #4f46e5;
+                background-color: rgba(79, 70, 229, 0.1); 
+            }
+            .nav-tab.active:hover {
+                color: #6366f1; 
+                border-color: #6366f1;
+                background-color: rgba(79, 70, 229, 0.15);
+            }
+        `;
+        document.head.appendChild(style);
     };
 
     // --- NEW: AI AGENT LOGIC FUNCTIONS ---
@@ -420,6 +577,7 @@ const AGENT_CATEGORIES = {
             // Prepend the container immediately so the rest of the script can target it
             document.body.prepend(navbarDiv); 
         }
+        // Call the globally scoped injectStyles function immediately
         injectStyles();
         
         // 2. Load Icons CSS first for immediate visual display
@@ -442,16 +600,8 @@ const AGENT_CATEGORIES = {
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js");
 
             // Load MODULAR versions for AI SDK, which requires modern imports.
-            // These scripts expose the modular functions globally under the `firebase` object.
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
-            // The AI SDK is often included in the modular app bundle for certain runtime environments
-            // However, to ensure maximum compatibility, we assume the necessary AI functions are made available 
-            // on the global `firebase` object or loaded separately if not available via the core app.
             
-            // To ensure the AI functions are available, we must ensure the core modular app is initialized 
-            // and the specific AI functions (getAI, GoogleAIBackend, etc.) are exposed.
-            // Since we can't directly use 'import' here, we proceed assuming the global object setup is correct.
-
             // 5. Proceed with initialization and auth listener
             initializeApp(pages);
             
@@ -469,159 +619,6 @@ const AGENT_CATEGORIES = {
         // Assign auth and db to module-scope variables
         auth = firebase.auth();
         db = firebase.firestore();
-
-        // --- 3. INJECT CSS STYLES ---
-        const injectStyles = () => {
-            const style = document.createElement('style');
-            style.textContent = `
-                /* Base Styles (Existing CSS retained) */
-                body { padding-top: 4rem; }
-                .auth-navbar { 
-                    position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: #000000; 
-                    border-bottom: 1px solid rgb(31 41 55); height: 4rem; 
-                }
-                .auth-navbar nav { 
-                    max-width: 80rem; margin: auto; padding: 0 1rem; height: 100%; display: flex; 
-                    align-items: center; justify-content: space-between; gap: 1rem; position: relative; 
-                }
-                .initial-avatar { 
-                    background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: 'Geist', sans-serif; 
-                    text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; 
-                }
-                
-                .auth-menu-container { 
-                    position: absolute; right: 0; top: 50px; width: 16rem; 
-                    background: #000000; 
-                    backdrop-filter: none; 
-                    -webkit-backdrop-filter: none;
-                    border: 1px solid rgb(55 65 81); border-radius: 0.75rem; padding: 0.5rem; 
-                    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
-                    transition: transform 0.2s ease-out, opacity 0.2s ease-out; transform-origin: top right; 
-                }
-                .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
-                .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
-                .auth-menu-link, .auth-menu-button { 
-                    display: flex; 
-                    align-items: center; 
-                    gap: 0.75rem; 
-                    width: 100%; 
-                    text-align: left; 
-                    padding: 0.5rem 0.75rem; 
-                    font-size: 0.875rem; 
-                    color: #d1d5db; 
-                    border-radius: 0.375rem; 
-                    transition: background-color 0.2s, color 0.2s; 
-                    border: none;
-                    cursor: pointer;
-                }
-                .auth-menu-link:hover, .auth-menu-button:hover { background-color: rgb(55 65 81); color: white; }
-
-                .logged-out-auth-toggle {
-                    background: #010101; 
-                    border: 1px solid #374151; 
-                }
-                .logged-out-auth-toggle i {
-                    color: #DADADA; 
-                }
-
-                .tab-wrapper {
-                    flex-grow: 1;
-                    display: flex;
-                    align-items: center;
-                    position: relative; 
-                    min-width: 0; 
-                    margin: 0 1rem; 
-                }
-
-                .tab-scroll-container {
-                    flex-grow: 1; 
-                    display: flex;
-                    align-items: center;
-                    overflow-x: auto; 
-                    -webkit-overflow-scrolling: touch; 
-                    scrollbar-width: none; 
-                    -ms-overflow-style: none; 
-                    padding-bottom: 5px; 
-                    margin-bottom: -5px; 
-                    scroll-behavior: smooth; 
-                }
-                .tab-scroll-container::-webkit-scrollbar { display: none; }
-
-                .scroll-glide-button {
-                    position: absolute;
-                    top: 0;
-                    height: 100%;
-                    width: 4rem; 
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    background: #000000; 
-                    color: white;
-                    font-size: 1.2rem;
-                    cursor: pointer;
-                    opacity: 0.8; 
-                    transition: opacity 0.3s, background 0.3s;
-                    z-index: 10;
-                    pointer-events: auto; 
-                }
-                .scroll-glide-button:hover {
-                    opacity: 1;
-                }
-                
-                #glide-left {
-                    left: 0;
-                    background: linear-gradient(to right, #000000 50%, transparent); 
-                    justify-content: flex-start; 
-                    padding-left: 0.5rem;
-                }
-
-                #glide-right {
-                    right: 0;
-                    background: linear-gradient(to left, #000000 50%, transparent); 
-                    justify-content: flex-end; 
-                    padding-right: 0.5rem;
-                }
-                
-                .scroll-glide-button.hidden {
-                    opacity: 0 !important;
-                    pointer-events: none !important;
-                }
-
-                .nav-tab {
-                    flex-shrink: 0; 
-                    padding: 0.5rem 1rem;
-                    color: #9ca3af; 
-                    font-size: 0.875rem;
-                    font-weight: 500;
-                    border-radius: 0.5rem;
-                    transition: all 0.2s;
-                    text-decoration: none;
-                    line-height: 1.5;
-                    display: flex;
-                    align-items: center;
-                    margin-right: 0.5rem; 
-                    border: 1px solid transparent;
-                }
-                
-                .nav-tab:not(.active):hover {
-                    color: white; 
-                    border-color: #d1d5db; 
-                    background-color: rgba(79, 70, 229, 0.05); 
-                }
-
-                .nav-tab.active {
-                    color: #4f46e5; 
-                    border-color: #4f46e5;
-                    background-color: rgba(79, 70, 229, 0.1); 
-                }
-                .nav-tab.active:hover {
-                    color: #6366f1; 
-                    border-color: #6366f1;
-                    background-color: rgba(79, 70, 229, 0.15);
-                }
-            `;
-            document.head.appendChild(style);
-        };
 
         // --- NEW: Function to robustly determine active tab (GitHub Pages fix) ---
         const isTabActive = (tabUrl) => {
