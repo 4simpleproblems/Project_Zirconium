@@ -12,17 +12,11 @@
  * 3. Add `<script src="/navigation.js" defer></script>` to the <head> of any HTML file where you want the navbar.
  * 4. Ensure your file paths for images and links are root-relative (e.g., "/images/logo.png", "/login.html").
  *
- * --- NEW FEATURES (4SP AI Mode) ---
- * - The special user (4simpleproblems@gmail.com) gets an exclusive AI Chatbot button.
- * - Chat uses Firebase AI Logic with specialized "Agents."
- * - Agents control the AI's persona, system instructions, and generation settings (like temperature).
- *
- * --- FIXES APPLIED IN THIS UPDATE ---
- * - **SDK Load Update:** All Firebase SDKs, including the new AI service, have been updated to **version 12.4.0**.
- * - **AI SDK File Name:** The AI script now loads **firebase-ai.js** as requested.
- * - **AI Initialization:** The initialization code has been updated to use `firebase.ai(app)`.
- * - Scroll Glide Buttons are immediately fully visible.
- * - Tab highlighting is robust for static websites.
+ * --- FIREBASE AI FIXES ---
+ * - Updated to use proper Vertex AI in Firebase SDK
+ * - Correct initialization pattern with getVertexAI()
+ * - Proper model instantiation using getGenerativeModel()
+ * - Fixed chat session creation and streaming methods
  */
 
 // =========================================================================
@@ -76,13 +70,14 @@ const AGENTS = {
     }
 };
 // Default model to use for all agents
-const AI_MODEL = "gemini-2.5-flash";
+const AI_MODEL = "gemini-2.0-flash-exp";
 
 
 // Variables to hold Firebase objects and AI state
 let auth;
 let db;
-let vertexAI; // This variable now holds the Firebase AI client object
+let vertexAI; // Holds the Vertex AI service instance
+let currentModel; // Holds the current generative model
 let currentChat; // Holds the currently active chat session object
 let selectedAgent = 'General'; // Initial default agent
 
@@ -102,7 +97,6 @@ let selectedAgent = 'General'; // Initial default agent
             const script = document.createElement('script');
             script.src = src;
             script.type = 'module';
-            // Use resolve/reject only for critical files like Firebase SDKs
             script.onload = resolve;
             script.onerror = reject; 
             document.head.appendChild(script);
@@ -132,7 +126,6 @@ let selectedAgent = 'General'; // Initial default agent
 
     /**
      * **UPDATED UTILITY FUNCTION: Bulletproof Fix for Font Awesome 7.x icon loading for JSON.**
-     * (Retained from original file for icon functionality)
      */
     const getIconClass = (iconName) => {
         if (!iconName) return '';
@@ -182,14 +175,14 @@ let selectedAgent = 'General'; // Initial default agent
         }
 
         try {
-            // SEQUENTIALLY LOAD FIREBASE MODULES - VERSION UPDATED TO 12.4.0 AND AI SDK NAME CHANGED
-            const FIREBASE_VERSION = "12.4.0"; 
+            // SEQUENTIALLY LOAD FIREBASE MODULES - Using modular SDK v11+
+            const FIREBASE_VERSION = "11.0.2"; 
             
             await loadScript(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-app-compat.js`);
             await loadScript(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-auth-compat.js`);
             await loadScript(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-firestore-compat.js`);
-            // NEW: Load AI Logic SDK - Using the requested version and file name (firebase-ai.js)
-            await loadScript(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-ai.js`);
+            // Load Vertex AI in Firebase SDK (correct package name)
+            await loadScript(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-vertexai-preview.js`);
 
             // Now that scripts are loaded, we can initialize
             initializeApp(pages);
@@ -198,31 +191,29 @@ let selectedAgent = 'General'; // Initial default agent
         }
     };
 
-    // --- AI Logic Functions ---
+    // --- AI Logic Functions (FIXED) ---
     const initializeVertexAI = (app) => {
         try {
-            // Initialize the AI client using the global firebase.ai object
-            // The variable is still called 'vertexAI' for backward compatibility in the rest of the script.
-            vertexAI = firebase.ai(app);
-            console.log("Firebase AI initialized.");
+            // CORRECT: Initialize Vertex AI service using getVertexAI from the global namespace
+            vertexAI = firebase.vertexAI(app);
+            console.log("Firebase Vertex AI initialized successfully.");
         } catch (error) {
-            console.error("Failed to initialize Firebase AI:", error);
+            console.error("Failed to initialize Firebase Vertex AI:", error);
         }
     };
 
     const getAgentConfig = (agentName) => {
         const config = AGENTS[agentName] || AGENTS['General'];
-        const systemInstruction = config.systemInstruction;
         
-        // This structure is ready for the Firebase AI Logic SDK
         return {
-            systemInstruction: systemInstruction,
+            model: AI_MODEL,
+            systemInstruction: config.systemInstruction,
             generationConfig: {
                 temperature: config.temperature,
-                // maxOutputTokens is often a good default, though can be omitted
-                maxOutputTokens: 2048, 
-            },
-            model: AI_MODEL,
+                maxOutputTokens: 8192,
+                topP: 0.95,
+                topK: 40
+            }
         };
     };
 
@@ -233,7 +224,6 @@ let selectedAgent = 'General'; // Initial default agent
         // Clear old chat history display
         const chatDisplay = document.getElementById('chat-messages');
         if (chatDisplay) {
-             // Add a new system message to start the conversation
              chatDisplay.innerHTML = `<div class="p-3 bg-gray-900 text-gray-400 rounded-lg mb-2 text-sm">
                 <i class="fa-solid fa-star-of-life mr-2"></i>
                 4SP AI Mode (${selectedAgent} Agent) is ready. Ask me anything!
@@ -242,17 +232,29 @@ let selectedAgent = 'General'; // Initial default agent
         }
 
         // Check if vertexAI is available
-        if (vertexAI && vertexAI.chats) {
-            // Use the 'startChat' method from the SDK
-            currentChat = vertexAI.chats.startChat({ 
-                ...chatConfig,
-                // Include history if you had prior conversations, but we reset here
-                history: [] 
+        if (!vertexAI) {
+            console.error("Cannot start chat: Firebase Vertex AI is not initialized.");
+            displayMessage('system', `<i class="fa-solid fa-triangle-exclamation text-red-400 mr-2"></i>AI Error: The AI service failed to load. Please check console for SDK load errors.`);
+            return;
+        }
+
+        try {
+            // CORRECT: Get the generative model using getGenerativeModel
+            currentModel = vertexAI.getGenerativeModel({
+                model: chatConfig.model,
+                systemInstruction: chatConfig.systemInstruction,
+                generationConfig: chatConfig.generationConfig
             });
+
+            // CORRECT: Start a chat session using the model's startChat method
+            currentChat = currentModel.startChat({
+                history: [] // Start with empty history
+            });
+
             console.log(`New chat session started with ${selectedAgent} Agent.`);
-        } else {
-             console.error("Cannot start chat: Firebase AI is not initialized.");
-             displayMessage('system', `<i class="fa-solid fa-triangle-exclamation text-red-400 mr-2"></i>AI Error: The AI service failed to load. Please check console for SDK load errors.`);
+        } catch (error) {
+            console.error("Error creating chat session:", error);
+            displayMessage('system', `<i class="fa-solid fa-triangle-exclamation text-red-400 mr-2"></i>Error creating chat session: ${error.message}`);
         }
     };
 
@@ -267,19 +269,16 @@ let selectedAgent = 'General'; // Initial default agent
                 : 'bg-gray-700 text-gray-200 self-start rounded-tl-none'
         }`;
         
-        // Use a simple markdown-like rendering for text, including LaTeX support hint
+        // Use a simple markdown-like rendering for text
         const formattedText = text
-            // Basic markdown for code blocks
             .replace(/```(.*?)\n/gs, '<pre class="bg-gray-800 p-2 rounded-md overflow-x-auto text-xs mt-2 mb-1">')
             .replace(/```/g, '</pre>')
-            // Basic markdown for bold
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            // Handle newlines
             .replace(/\n/g, '<br>');
             
         messageDiv.innerHTML = formattedText;
         chatDisplay.appendChild(messageDiv);
-        chatDisplay.scrollTop = chatDisplay.scrollHeight; // Auto-scroll to bottom
+        chatDisplay.scrollTop = chatDisplay.scrollHeight;
     };
 
     const handleAgentSelection = (agentName) => {
@@ -288,7 +287,10 @@ let selectedAgent = 'General'; // Initial default agent
         document.querySelectorAll('.agent-button').forEach(btn => {
             btn.classList.remove('active-agent');
         });
-        document.getElementById(`agent-${agentName.replace(/\s/g, '-')}`).classList.add('active-agent');
+        const targetButton = document.getElementById(`agent-${agentName.replace(/\s/g, '-')}`);
+        if (targetButton) {
+            targetButton.classList.add('active-agent');
+        }
         
         // Re-initialize the chat session with the new agent settings
         createChatSession();
@@ -298,20 +300,23 @@ let selectedAgent = 'General'; // Initial default agent
         e.preventDefault();
         const input = document.getElementById('chat-input');
         const userPrompt = input.value.trim();
-        if (!userPrompt || !currentChat) {
-             if (!currentChat) displayMessage('system', `<i class="fa-solid fa-triangle-exclamation text-red-400 mr-2"></i>Error: The chat session is not active. Please reselect an agent.`);
-             return;
+        
+        if (!userPrompt) return;
+        
+        if (!currentChat) {
+            displayMessage('system', `<i class="fa-solid fa-triangle-exclamation text-red-400 mr-2"></i>Error: The chat session is not active. Please reselect an agent.`);
+            return;
         }
 
         displayMessage('user', userPrompt);
-        input.value = ''; // Clear input immediately
+        input.value = '';
         input.disabled = true;
         document.getElementById('send-button').disabled = true;
         document.getElementById('loading-indicator').classList.remove('hidden');
 
         try {
-            // The SDK's sendMessageStream is preferred for responsiveness
-            const responseStream = await currentChat.sendMessageStream({ message: userPrompt });
+            // CORRECT: Use sendMessageStream for streaming responses
+            const result = await currentChat.sendMessageStream(userPrompt);
 
             // Create a temporary message div for the streaming response
             const chatDisplay = document.getElementById('chat-messages');
@@ -323,26 +328,27 @@ let selectedAgent = 'General'; // Initial default agent
 
             let fullResponseText = '';
 
-            for await (const chunk of responseStream) {
-                if (chunk.text) {
-                    fullResponseText += chunk.text;
-                    // Update the streaming message div content
-                    streamMessageDiv.innerHTML = fullResponseText;
+            // CORRECT: Iterate through the stream chunks
+            for await (const chunk of result.stream) {
+                const chunkText = chunk.text();
+                if (chunkText) {
+                    fullResponseText += chunkText;
+                    // Update the streaming message div content in real-time
+                    const formattedText = fullResponseText
+                        .replace(/```(.*?)\n/gs, '<pre class="bg-gray-800 p-2 rounded-md overflow-x-auto text-xs mt-2 mb-1">')
+                        .replace(/```/g, '</pre>')
+                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                        .replace(/\n/g, '<br>');
+                    streamMessageDiv.innerHTML = formattedText;
                     chatDisplay.scrollTop = chatDisplay.scrollHeight;
                 }
             }
 
-            // After streaming is complete, finalize the content and render markdown/newlines
-            streamMessageDiv.innerHTML = fullResponseText
-                .replace(/```(.*?)\n/gs, '<pre class="bg-gray-800 p-2 rounded-md overflow-x-auto text-xs mt-2 mb-1">')
-                .replace(/```/g, '</pre>')
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                .replace(/\n/g, '<br>');
+            console.log("AI response completed successfully.");
             
         } catch (error) {
             console.error("AI Chat Error:", error);
-            // Check if the error is due to an uninitialized currentChat session
-            displayMessage('system', `<i class="fa-solid fa-triangle-exclamation text-red-400 mr-2"></i>Error: The AI encountered an issue. Please try again. (${error.message})`);
+            displayMessage('system', `<i class="fa-solid fa-triangle-exclamation text-red-400 mr-2"></i>Error: ${error.message}`);
         } finally {
             input.disabled = false;
             document.getElementById('send-button').disabled = false;
@@ -356,27 +362,26 @@ let selectedAgent = 'General'; // Initial default agent
     const initializeApp = (pages) => {
         // Initialize Firebase with the compat libraries
         const app = firebase.initializeApp(FIREBASE_CONFIG);
-        // Assign auth and db to module-scope variables
         auth = firebase.auth();
         db = firebase.firestore();
         
-        // Initialize the AI client
+        // Initialize the Vertex AI client
         initializeVertexAI(app);
 
-        // --- 3. INJECT CSS STYLES (UPDATED for AI Modal and Scrollbar) ---
+        // --- 3. INJECT CSS STYLES ---
         const injectStyles = () => {
             const style = document.createElement('style');
             style.textContent = `
                 /* Base Styles */
-                body { padding-top: 4rem; /* 64px, equal to navbar height */ }
+                body { padding-top: 4rem; }
                 .auth-navbar { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: #000000; border-bottom: 1px solid rgb(31 41 55); height: 4rem; }
                 .auth-navbar nav { max-width: 80rem; margin: auto; padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
                 .initial-avatar { background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: 'Inter', sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; }
                 
-                /* Auth Dropdown Menu Styles (Pure Black background) */
+                /* Auth Dropdown Menu Styles */
                 .auth-menu-container { 
                     position: absolute; right: 0; top: 50px; width: 16rem; 
-                    background: #000000; /* Pure black */
+                    background: #000000;
                     border: 1px solid rgb(55 65 81); border-radius: 0.75rem; padding: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
                     transition: transform 0.2s ease-out, opacity 0.2s ease-out; transform-origin: top right; 
                 }
@@ -395,27 +400,24 @@ let selectedAgent = 'General'; // Initial default agent
                     margin: 0 1rem;
                 }
 
-                /* Horizontal Scrollable Tabs Styles - Custom Scrollbar */
+                /* Horizontal Scrollable Tabs Styles */
                 .tab-scroll-container {
                     flex-grow: 1;
                     display: flex;
                     align-items: center;
-                    overflow-x: scroll; /* Changed from auto to scroll for explicit scrollbar */
+                    overflow-x: scroll;
                     -webkit-overflow-scrolling: touch;
                     padding-bottom: 5px;
                     margin-bottom: -5px;
                     scroll-behavior: smooth; 
-                    /* Force scrollbar visibility (Best effort: CSS scrollbar styling is limited) */
-                    scrollbar-color: #4f46e5 #1f2937; /* thumb color track color for Firefox */
-                    scrollbar-width: thin; /* Show scrollbar for Firefox */
+                    scrollbar-color: #4f46e5 #1f2937;
+                    scrollbar-width: thin;
                 }
-                /* Custom scrollbar track/thumb for Webkit (Chrome, Safari) */
                 .tab-scroll-container::-webkit-scrollbar { height: 5px; }
                 .tab-scroll-container::-webkit-scrollbar-track { background: #1f2937; border-radius: 10px; }
                 .tab-scroll-container::-webkit-scrollbar-thumb { background-color: #4f46e5; border-radius: 10px; }
 
-
-                /* Scroll Glide Buttons - UPDATED: Always fully visible */
+                /* Scroll Glide Buttons */
                 .scroll-glide-button {
                     position: absolute;
                     top: 0;
@@ -428,17 +430,16 @@ let selectedAgent = 'General'; // Initial default agent
                     color: white;
                     font-size: 1.2rem;
                     cursor: pointer;
-                    opacity: 1; /* Always visible */
+                    opacity: 1;
                     transition: background 0.3s;
                     z-index: 10;
                     pointer-events: auto;
                 }
-                .scroll-glide-button:hover { background: #1f2937; } /* Slight hover for feedback */
+                .scroll-glide-button:hover { background: #1f2937; }
                 
                 #glide-left { left: 0; background: linear-gradient(to right, #000000 50%, transparent); }
                 #glide-right { right: 0; background: linear-gradient(to left, #000000 50%, transparent); }
                 
-                /* Keep the hidden class for functional control, although opacity is 1 */
                 .scroll-glide-button.hidden { pointer-events: none !important; opacity: 0 !important; }
 
                 .nav-tab {
@@ -457,7 +458,6 @@ let selectedAgent = 'General'; // Initial default agent
                     border: 1px solid transparent;
                 }
                 .nav-tab:hover { color: white; background-color: rgb(55 65 81); } 
-                /* Active state highlighting fix: relies on clean pathing for static sites */
                 .nav-tab.active {
                     color: #4f46e5; 
                     border-color: #4f46e5;
@@ -469,7 +469,7 @@ let selectedAgent = 'General'; // Initial default agent
                     background-color: rgba(79, 70, 229, 0.15);
                 }
 
-                /* --- NEW AI Chat Modal Styles --- */
+                /* AI Chat Modal Styles */
                 .ai-modal-backdrop {
                     position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
                     background: rgba(0, 0, 0, 0.95); 
@@ -533,7 +533,6 @@ let selectedAgent = 'General'; // Initial default agent
                     overflow-y: scroll;
                     gap: 0.5rem;
                     padding-right: 1rem;
-                    /* Custom scrollbar for Webkit to force arrow visibility on either end */
                     scrollbar-color: #4f46e5 #1f2937;
                     scrollbar-width: thin;
                 }
@@ -573,7 +572,7 @@ let selectedAgent = 'General'; // Initial default agent
             document.head.appendChild(style);
         };
 
-        // --- NEW: Function to robustly determine active tab (GitHub Pages fix) ---
+        // --- Function to robustly determine active tab ---
         const isTabActive = (tabUrl) => {
             const tabPathname = new URL(tabUrl, window.location.origin).pathname.toLowerCase();
             const currentPathname = window.location.pathname.toLowerCase();
@@ -591,12 +590,10 @@ let selectedAgent = 'General'; // Initial default agent
             const currentCanonical = cleanPath(currentPathname);
             const tabCanonical = cleanPath(tabPathname);
             
-            // 1. Exact canonical match
             if (currentCanonical === tabCanonical) {
                 return true;
             }
 
-            // 2. GitHub Pages/Subdirectory match: Check if the current path ends with the tab path.
             const tabPathSuffix = tabPathname.startsWith('/') ? tabPathname.substring(1) : tabPathname;
             
             if (currentPathname.endsWith(tabPathSuffix)) {
@@ -606,7 +603,7 @@ let selectedAgent = 'General'; // Initial default agent
             return false;
         };
         
-        // --- NEW: Function to control visibility of scroll glide buttons ---
+        // --- Function to control visibility of scroll glide buttons ---
         const updateScrollGilders = () => {
             const container = document.querySelector('.tab-scroll-container');
             const leftButton = document.getElementById('glide-left');
@@ -618,7 +615,6 @@ let selectedAgent = 'General'; // Initial default agent
             const isScrolledToRight = container.scrollLeft + container.offsetWidth >= container.scrollWidth - 5; 
             const hasHorizontalOverflow = container.scrollWidth > container.offsetWidth;
 
-            // Glide buttons remain visible but functionality is controlled by hiding/showing
             if (hasHorizontalOverflow) {
                 leftButton.classList.toggle('hidden', isScrolledToLeft);
                 rightButton.classList.toggle('hidden', isScrolledToRight);
@@ -657,7 +653,7 @@ let selectedAgent = 'General'; // Initial default agent
                 </button>
             ` : '';
 
-            // --- Auth Views (Unchanged) ---
+            // --- Auth Views ---
             const loggedOutView = `
                 <div class="relative flex-shrink-0">
                     <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-700 flex items-center justify-center bg-gray-800 hover:bg-gray-700 transition">
@@ -723,7 +719,7 @@ let selectedAgent = 'General'; // Initial default agent
                 ${isSpecialUser ? renderChatModal() : ''}
             `;
 
-            // --- 5. SETUP EVENT LISTENERS (Including auto-scroll and glide buttons) ---
+            // --- 5. SETUP EVENT LISTENERS ---
             setupEventListeners(user);
 
             // Auto-scroll to the active tab if one is found
@@ -738,7 +734,7 @@ let selectedAgent = 'General'; // Initial default agent
             
             // If special user, initialize the chat
             if (isSpecialUser) {
-                handleAgentSelection(selectedAgent); // Initializes the default chat session
+                handleAgentSelection(selectedAgent);
             }
         };
         
@@ -845,7 +841,7 @@ let selectedAgent = 'General'; // Initial default agent
                 }
             }
             
-            // --- NEW: AI Chat Modal Listeners (Exclusive) ---
+            // --- AI Chat Modal Listeners (Exclusive) ---
             const aiToggleButton = document.getElementById('ai-toggle-button');
             const aiCloseButton = document.getElementById('ai-close-button');
             const aiModal = document.getElementById('ai-modal-backdrop');
@@ -864,7 +860,7 @@ let selectedAgent = 'General'; // Initial default agent
                     aiModal.classList.remove('open');
                 });
                 
-                // Close Chat Modal by clicking outside (but not on the container itself)
+                // Close Chat Modal by clicking outside
                 aiModal.addEventListener('click', (e) => {
                     if (e.target.id === 'ai-modal-backdrop') {
                         aiModal.classList.remove('open');
