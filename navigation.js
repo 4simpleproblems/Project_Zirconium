@@ -10,6 +10,8 @@
  * 2. USER REQUEST: Updated logged-out button background to #010101 and icon color to #DADADA, using 'fa-solid fa-user'. (As per navigation-mini.js)
  * 3. Dashboard Icon Updated: Changed Dashboard icon from 'fa-chart-line' to 'fa-house-user'. (Original fix retained)
  * 4. Glide Button Style: Removed border-radius and adjusted gradients for full opacity at the edge. (Original fix retained)
+ * 5. NEW FEATURE: Integrated exclusive AI Agent Chat Modal, accessible only by '4simpleproblems@gmail.com'
+ * and activated via Control + A (when no text input is focused). Uses Gemini API logic.
  *
  * --- INSTRUCTIONS ---
  * 1. ACTION REQUIRED: Paste your own Firebase project configuration into the `FIREBASE_CONFIG` object below.
@@ -40,6 +42,20 @@ const FIREBASE_CONFIG = {
 
 // --- Configuration for the navigation tabs ---
 const PAGE_CONFIG_URL = '../page-identification.json';
+// --- Exclusive AI Agent Configuration ---
+const EXCLUSIVE_AI_USER_EMAIL = '4simpleproblems@gmail.com';
+const GEMINI_API_KEY = ""; // Use the provided canvas API key placeholder.
+
+const AI_AGENT_CATEGORIES = [
+    { name: 'Quick', icon: 'fa-gauge-high', instruction: 'Act as a swift and concise assistant. Your goal is to provide the shortest, most direct answer possible. Never elaborate or use lists.' },
+    { name: 'Standard', icon: 'fa-robot', instruction: 'Act as a professional and balanced general-purpose assistant. Respond clearly and provide relevant details where necessary.' },
+    { name: 'Deep Thinking', icon: 'fa-brain', instruction: 'Act as a meticulous researcher. Before answering, consider all aspects of the query, verify details, and provide a well-structured, thoroughly researched, and correct response. Use the provided context to inform your answer.' },
+    { name: 'Creative Muse', icon: 'fa-lightbulb', instruction: 'Act as an imaginative and inspiring writer. Focus on generating ideas, stories, poems, or creative marketing copy. Prioritize originality and style.' },
+    { name: 'Technical Dev', icon: 'fa-code', instruction: 'Act as an expert software developer. Provide solutions with clean, modern code, explain algorithms, and focus on technical accuracy and best practices. Respond in markdown code blocks when applicable.' },
+    { name: 'Historical Expert', icon: 'fa-landmark', instruction: 'Act as a professional historian. Ground all answers in historical fact, providing dates, names, and context. Maintain a formal academic tone.' },
+    { name: 'Casual Friend', icon: 'fa-face-smile', instruction: 'Act as a relaxed, friendly, and conversational peer. Use emojis and informal language, keeping the chat light and engaging.' },
+    { name: 'Critical Reviewer', icon: 'fa-clipboard-check', instruction: 'Act as a demanding editor or critic. Analyze the user\'s input for flaws, suggest improvements, and provide constructive, critical feedback.' }
+];
 
 // Variables to hold Firebase objects, which must be globally accessible after loading scripts
 let auth;
@@ -174,7 +190,7 @@ let db;
         auth = firebase.auth();
         db = firebase.firestore();
 
-        // --- 3. INJECT CSS STYLES ---
+        // --- 3. INJECT CSS STYLES (UPDATED with AI Agent styles) ---
         const injectStyles = () => {
             const style = document.createElement('style');
             style.textContent = `
@@ -332,6 +348,128 @@ let db;
                     border-color: #6366f1;
                     background-color: rgba(79, 70, 229, 0.15);
                 }
+
+                /* --- NEW: AI AGENT CHAT MODAL STYLES --- */
+                #ai-agent-modal {
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                    width: min(100%, 350px);
+                    height: min(80vh, 550px);
+                    z-index: 10000;
+                    background: #111827; /* Dark background */
+                    border: 1px solid #374151;
+                    border-radius: 1rem;
+                    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+                    display: flex;
+                    flex-direction: column;
+                    transform: translateX(400px); /* Initially hidden off-screen */
+                    transition: transform 0.3s ease-out;
+                }
+
+                #ai-agent-modal.open {
+                    transform: translateX(0);
+                }
+
+                #ai-chat-header {
+                    padding: 0.75rem 1rem;
+                    background: #1f2937;
+                    border-bottom: 1px solid #374151;
+                    color: white;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    border-radius: 1rem 1rem 0 0;
+                }
+                
+                #ai-chat-messages {
+                    flex-grow: 1;
+                    overflow-y: auto;
+                    padding: 1rem;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 1rem;
+                }
+                
+                .ai-message-bubble, .user-message-bubble {
+                    max-width: 85%;
+                    padding: 0.6rem 0.8rem;
+                    border-radius: 0.75rem;
+                    font-size: 0.9rem;
+                    line-height: 1.4;
+                }
+
+                .user-message-bubble {
+                    align-self: flex-end;
+                    background-color: #4f46e5; /* indigo-600 */
+                    color: white;
+                    border-bottom-right-radius: 0.1rem;
+                }
+
+                .ai-message-bubble {
+                    align-self: flex-start;
+                    background-color: #374151; /* gray-700 */
+                    color: #d1d5db;
+                    border-bottom-left-radius: 0.1rem;
+                    white-space: pre-wrap;
+                }
+
+                #ai-chat-input-area {
+                    padding: 0.5rem 1rem 1rem 1rem;
+                    border-top: 1px solid #374151;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.5rem;
+                }
+
+                #ai-prompt-input {
+                    width: 100%;
+                    padding: 0.5rem;
+                    border: 1px solid #4b5563;
+                    border-radius: 0.5rem;
+                    background: #000000;
+                    color: white;
+                    outline: none;
+                    resize: none;
+                    min-height: 40px;
+                    max-height: 150px;
+                }
+
+                #ai-prompt-send-button {
+                    background-color: #4f46e5;
+                    color: white;
+                    padding: 0.5rem 1rem;
+                    border-radius: 0.5rem;
+                    font-weight: 600;
+                    transition: background-color 0.2s;
+                }
+                #ai-prompt-send-button:hover {
+                    background-color: #6366f1;
+                }
+                
+                #ai-agent-selector {
+                    padding: 0.4rem 0.7rem;
+                    background: #374151;
+                    border: 1px solid #4b5563;
+                    color: white;
+                    border-radius: 0.5rem;
+                    font-size: 0.85rem;
+                    appearance: none; /* Hide default dropdown arrow */
+                    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23d1d5db'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z' clip-rule='evenodd' /%3E%3C/svg%3E");
+                    background-repeat: no-repeat;
+                    background-position: right 0.5rem center;
+                    background-size: 1.25em;
+                    cursor: pointer;
+                    width: 100%;
+                }
+                /* End AI AGENT CHAT MODAL STYLES */
+
+                /* Active Tab Styles (Unchanged) */
+                .nav-tab.active {
+                    color: #4f46e5; /* indigo-600 - Highlight color */
+                    border-color: #4f46e5;
+                    background-color: rgba(79, 70, 229, 0.1); /* indigo-600 with opacity */
+                }
             `;
             document.head.appendChild(style);
         };
@@ -477,6 +615,12 @@ let db;
                                 <i class="fa-solid fa-gear"></i>
                                 Settings
                             </a>
+                            ${user.email === EXCLUSIVE_AI_USER_EMAIL ? 
+                                // NEW: Add AI Agent activation link for the exclusive user
+                                `<button id="ai-agent-toggle-button" class="auth-menu-button text-indigo-400 hover:bg-indigo-900/50 hover:text-indigo-300">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                    AI Agent (Ctrl+A)
+                                </button>` : ''}
                             <button id="logout-button" class="auth-menu-button text-red-400 hover:bg-red-900/50 hover:text-red-300">
                                 <i class="fa-solid fa-right-from-bracket"></i>
                                 Log Out
@@ -583,8 +727,203 @@ let db;
                         auth.signOut().catch(err => console.error("Logout failed:", err));
                     });
                 }
+
+                // NEW: Setup AI Agent toggle button click listener
+                const aiAgentButton = document.getElementById('ai-agent-toggle-button');
+                const aiModal = document.getElementById('ai-agent-modal');
+                if (aiAgentButton && aiModal) {
+                    aiAgentButton.addEventListener('click', () => {
+                        aiModal.classList.toggle('open');
+                        menu.classList.add('closed'); // Close the auth menu when opening modal
+                        menu.classList.remove('open');
+                        // Ensure input is focused when opening
+                        if(aiModal.classList.contains('open')) {
+                            document.getElementById('ai-prompt-input')?.focus();
+                        }
+                    });
+                }
             }
         };
+
+        // --- NEW: AI Agent Logic Implementation ---
+        const getSystemContext = () => {
+            const date = new Date();
+            const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const localTime = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+            // Attempt a rough location approximation from timezone, or default
+            const locationParts = timeZone.split('/');
+            const generalLocation = locationParts.length > 1 ? locationParts[locationParts.length - 1].replace(/_/g, ' ') : 'Unknown Region';
+        
+            return `
+[System Context Provided by Client]:
+- Current Local Time: ${localTime}
+- Current Time Zone: ${timeZone}
+- General Location (Approximate): ${generalLocation}
+- Browser/OS: ${navigator.userAgent.substring(0, 100)}...
+`;
+        };
+
+        const setupAIAgentLogic = (user) => {
+            const modal = document.createElement('div');
+            modal.id = 'ai-agent-modal';
+            modal.innerHTML = `
+                <div id="ai-chat-header">
+                    <span class="font-bold text-sm">Gemini AI Agent Console</span>
+                    <i id="ai-chat-close" class="fa-solid fa-xmark text-gray-400 hover:text-white cursor-pointer transition"></i>
+                </div>
+                <div id="ai-chat-messages">
+                    <div class="ai-message-bubble">
+                        Welcome, ${user.displayName || 'Master'}! Select an agent below, then press Ctrl+A to toggle this console.
+                    </div>
+                </div>
+                <div id="ai-chat-input-area">
+                    <select id="ai-agent-selector">
+                        ${AI_AGENT_CATEGORIES.map((agent, index) => 
+                            `<option value="${index}" data-instruction="${agent.instruction}">
+                                ${agent.name} - ${agent.instruction.split('.')[0]}
+                            </option>`).join('')}
+                    </select>
+                    <div class="flex items-center gap-2">
+                        <textarea id="ai-prompt-input" placeholder="Ask your agent a question..." rows="1"></textarea>
+                        <button id="ai-prompt-send-button" title="Send (or Shift+Enter)">
+                            <i class="fa-solid fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            const messagesContainer = document.getElementById('ai-chat-messages');
+            const input = document.getElementById('ai-prompt-input');
+            const sendButton = document.getElementById('ai-prompt-send-button');
+            const selector = document.getElementById('ai-agent-selector');
+            const closeButton = document.getElementById('ai-chat-close');
+
+            let chatHistory = [];
+            let isSending = false;
+
+            // Chat Toggle Logic (Ctrl + A)
+            document.addEventListener('keydown', (e) => {
+                const isInputActive = document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.isContentEditable;
+                if (e.ctrlKey && e.key === 'a' && !isInputActive) {
+                    e.preventDefault();
+                    modal.classList.toggle('open');
+                    if (modal.classList.contains('open')) {
+                        input?.focus();
+                    }
+                }
+            });
+
+            // Close Button Logic
+            closeButton?.addEventListener('click', () => {
+                modal.classList.remove('open');
+            });
+            
+            // Auto-resize textarea
+            const autoResize = () => {
+                if (input) {
+                    input.style.height = 'auto';
+                    input.style.height = input.scrollHeight + 'px';
+                }
+            };
+            input?.addEventListener('input', autoResize);
+            
+            // Send on click or Shift + Enter
+            const handleSend = () => {
+                if (isSending) return;
+                const prompt = input?.value.trim();
+                if (!prompt) return;
+
+                // Disable UI and show loading
+                isSending = true;
+                sendButton.disabled = true;
+                sendButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                input.disabled = true;
+
+                // Add user message to UI and history
+                addMessage(prompt, 'user');
+                chatHistory.push({ role: 'user', parts: [{ text: prompt }] });
+                input.value = '';
+                autoResize();
+                
+                // Determine current system instruction
+                const selectedOption = selector.options[selector.selectedIndex];
+                const systemInstruction = selectedOption.getAttribute('data-instruction');
+                
+                // Add system context to the user's prompt
+                const fullPrompt = `${getSystemContext()}\n---\nUser Query: ${prompt}`;
+
+                // Call the Gemini API with exponential backoff
+                const callApi = async (attempt = 1) => {
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
+                    
+                    const historyWithContext = [...chatHistory.slice(0, -1), { role: 'user', parts: [{ text: fullPrompt }] }];
+                    
+                    const payload = {
+                        contents: historyWithContext,
+                        tools: [{ "google_search": {} }],
+                        systemInstruction: {
+                            parts: [{ text: systemInstruction }]
+                        },
+                    };
+
+                    try {
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (!response.ok) {
+                            if (response.status === 429 && attempt < 5) { // Retry on rate limit
+                                const delay = Math.pow(2, attempt) * 1000;
+                                await new Promise(resolve => setTimeout(resolve, delay));
+                                return callApi(attempt + 1); // Exponential backoff retry
+                            }
+                            throw new Error(`API error: ${response.statusText}`);
+                        }
+
+                        const result = await response.json();
+                        const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "Error: Could not retrieve a valid response.";
+                        
+                        // Add AI message to UI and history
+                        addMessage(text, 'ai');
+                        chatHistory.push({ role: 'model', parts: [{ text: text }] });
+                        
+                    } catch (error) {
+                        console.error('Gemini API request failed:', error);
+                        addMessage(`[ERROR] AI Agent failed to respond: ${error.message}`, 'ai');
+                    } finally {
+                        // Re-enable UI
+                        isSending = false;
+                        sendButton.disabled = false;
+                        sendButton.innerHTML = '<i class="fa-solid fa-paper-plane"></i>';
+                        input.disabled = false;
+                        input.focus();
+                    }
+                };
+
+                callApi();
+            };
+
+            sendButton?.addEventListener('click', handleSend);
+            
+            input?.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                }
+            });
+
+            const addMessage = (text, sender) => {
+                const bubble = document.createElement('div');
+                bubble.className = sender === 'user' ? 'user-message-bubble' : 'ai-message-bubble';
+                bubble.textContent = text;
+                messagesContainer.appendChild(bubble);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight; // Scroll to bottom
+            };
+        };
+
 
         // --- 6. AUTH STATE LISTENER ---
         auth.onAuthStateChanged(async (user) => {
@@ -595,6 +934,11 @@ let db;
                     const userDoc = await db.collection('users').doc(user.uid).get();
                     const userData = userDoc.exists ? userDoc.data() : null;
                     renderNavbar(user, userData, pages);
+                    
+                    // NEW: Setup AI Agent only for the exclusive user
+                    if (user.email === EXCLUSIVE_AI_USER_EMAIL) {
+                        setupAIAgentLogic(user);
+                    }
                 } catch (error) {
                     console.error("Error fetching user data:", error);
                     renderNavbar(user, null, pages); // Render even if Firestore fails
