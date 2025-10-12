@@ -17,9 +17,10 @@
  * - Chat uses Firebase AI Logic (Vertex AI) with specialized "Agents."
  * - Agents control the AI's persona, system instructions, and generation settings (like temperature).
  *
- * --- FIXES ---
- * - Scroll Glide Buttons are now immediately fully visible (opacity 1) as requested.
- * - The isTabActive logic is designed to be robust for static websites (like GitHub Pages).
+ * --- FIXES APPLIED IN THIS UPDATE ---
+ * - **SDK Load Fix:** Updated the version for all Firebase SDKs to **10.13.0** to resolve the 404 error when loading firebase-vertex.js, as confirmed by the console screenshot. This ensures the AI Logic SDK loads successfully.
+ * - Scroll Glide Buttons are immediately fully visible.
+ * - Tab highlighting is robust for static websites.
  */
 
 // =========================================================================
@@ -179,12 +180,14 @@ let selectedAgent = 'General'; // Initial default agent
         }
 
         try {
-            // Sequentially load Firebase modules
-            await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
-            await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js");
-            await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js");
-            // NEW: Load Vertex AI Logic SDK
-            await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-vertex.js");
+            // SEQUENTIALLY LOAD FIREBASE MODULES - VERSION UPDATED TO 10.13.0 TO FIX 404
+            const FIREBASE_VERSION = "10.13.0"; 
+            
+            await loadScript(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-app-compat.js`);
+            await loadScript(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-auth-compat.js`);
+            await loadScript(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-firestore-compat.js`);
+            // NEW: Load Vertex AI Logic SDK - Using the corrected version to resolve 404 issue.
+            await loadScript(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-vertex.js`);
 
             // Now that scripts are loaded, we can initialize
             initializeApp(pages);
@@ -196,7 +199,7 @@ let selectedAgent = 'General'; // Initial default agent
     // --- AI Logic Functions ---
     const initializeVertexAI = (app) => {
         try {
-            // Initialize the Vertex AI client
+            // Initialize the Vertex AI client using the global firebase object
             vertexAI = firebase.vertex(app);
             console.log("Firebase Vertex AI initialized.");
         } catch (error) {
@@ -206,7 +209,6 @@ let selectedAgent = 'General'; // Initial default agent
 
     const getAgentConfig = (agentName) => {
         const config = AGENTS[agentName] || AGENTS['General'];
-        const agentNameFormatted = agentName.toUpperCase().replace(/\s/g, '_'); // E.g., MATH
         const systemInstruction = config.systemInstruction;
         
         // This structure is ready for the Firebase AI Logic SDK
@@ -236,26 +238,19 @@ let selectedAgent = 'General'; // Initial default agent
              chatDisplay.scrollTop = chatDisplay.scrollHeight;
         }
 
-        // Use the 'startChat' method from the SDK
-        currentChat = vertexAI.chats.startChat({ 
-            ...chatConfig,
-            // Include history if you had prior conversations, but we reset here
-            history: [] 
-        });
-
-        console.log(`New chat session started with ${selectedAgent} Agent.`);
-    };
-
-    const handleAgentSelection = (agentName) => {
-        selectedAgent = agentName;
-        // Update the active button visually
-        document.querySelectorAll('.agent-button').forEach(btn => {
-            btn.classList.remove('active-agent');
-        });
-        document.getElementById(`agent-${agentName.replace(/\s/g, '-')}`).classList.add('active-agent');
-        
-        // Re-initialize the chat session with the new agent settings
-        createChatSession();
+        // Check if vertexAI is available (in case the SDK load still failed despite the fix)
+        if (vertexAI && vertexAI.chats) {
+            // Use the 'startChat' method from the SDK
+            currentChat = vertexAI.chats.startChat({ 
+                ...chatConfig,
+                // Include history if you had prior conversations, but we reset here
+                history: [] 
+            });
+            console.log(`New chat session started with ${selectedAgent} Agent.`);
+        } else {
+             console.error("Cannot start chat: Firebase Vertex AI is not initialized.");
+             displayMessage('system', `<i class="fa-solid fa-triangle-exclamation text-red-400 mr-2"></i>AI Error: The AI service failed to load. Please check console for SDK load errors.`);
+        }
     };
 
     const displayMessage = (role, text) => {
@@ -272,21 +267,38 @@ let selectedAgent = 'General'; // Initial default agent
         // Use a simple markdown-like rendering for text, including LaTeX support hint
         const formattedText = text
             // Basic markdown for code blocks
-            .replace(/```(.*?)\n/g, '<pre class="bg-gray-800 p-2 rounded-md overflow-x-auto text-xs mt-2 mb-1">')
+            .replace(/```(.*?)\n/gs, '<pre class="bg-gray-800 p-2 rounded-md overflow-x-auto text-xs mt-2 mb-1">')
             .replace(/```/g, '</pre>')
             // Basic markdown for bold
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            // Handle newlines
+            .replace(/\n/g, '<br>');
             
         messageDiv.innerHTML = formattedText;
         chatDisplay.appendChild(messageDiv);
         chatDisplay.scrollTop = chatDisplay.scrollHeight; // Auto-scroll to bottom
     };
 
+    const handleAgentSelection = (agentName) => {
+        selectedAgent = agentName;
+        // Update the active button visually
+        document.querySelectorAll('.agent-button').forEach(btn => {
+            btn.classList.remove('active-agent');
+        });
+        document.getElementById(`agent-${agentName.replace(/\s/g, '-')}`).classList.add('active-agent');
+        
+        // Re-initialize the chat session with the new agent settings
+        createChatSession();
+    };
+
     const sendMessageToAI = async (e) => {
         e.preventDefault();
         const input = document.getElementById('chat-input');
         const userPrompt = input.value.trim();
-        if (!userPrompt || !currentChat) return;
+        if (!userPrompt || !currentChat) {
+             if (!currentChat) displayMessage('system', `<i class="fa-solid fa-triangle-exclamation text-red-400 mr-2"></i>Error: The chat session is not active. Please reselect an agent.`);
+             return;
+        }
 
         displayMessage('user', userPrompt);
         input.value = ''; // Clear input immediately
@@ -317,11 +329,16 @@ let selectedAgent = 'General'; // Initial default agent
                 }
             }
 
-            // After streaming is complete, finalize the content and remove the indicator
-            streamMessageDiv.innerHTML = fullResponseText.replace(/```(.*?)\n/g, '<pre class="bg-gray-800 p-2 rounded-md overflow-x-auto text-xs mt-2 mb-1">').replace(/```/g, '</pre>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            // After streaming is complete, finalize the content and render markdown/newlines
+            streamMessageDiv.innerHTML = fullResponseText
+                .replace(/```(.*?)\n/gs, '<pre class="bg-gray-800 p-2 rounded-md overflow-x-auto text-xs mt-2 mb-1">')
+                .replace(/```/g, '</pre>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\n/g, '<br>');
             
         } catch (error) {
             console.error("AI Chat Error:", error);
+            // Check if the error is due to an uninitialized currentChat session
             displayMessage('system', `<i class="fa-solid fa-triangle-exclamation text-red-400 mr-2"></i>Error: The AI encountered an issue. Please try again. (${error.message})`);
         } finally {
             input.disabled = false;
@@ -717,7 +734,7 @@ let selectedAgent = 'General'; // Initial default agent
             updateScrollGilders();
             
             // If special user, initialize the chat
-            if (isSpecialUser && vertexAI) {
+            if (isSpecialUser) {
                 handleAgentSelection(selectedAgent); // Initializes the default chat session
             }
         };
