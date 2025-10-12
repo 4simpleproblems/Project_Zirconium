@@ -18,11 +18,8 @@
  * - It initializes Firebase, listens for auth state, and fetches user data.
  *
  * --- FIXES ---
- * - **Font Awesome 7.1.0 Fix (Bulletproof):** The icon rendering logic in 'getIconClass' is overhauled to ensure 
- * it always provides BOTH the style prefix (e.g., 'fa-solid') and the icon name prefix (e.g., 'fa-house-user') 
- * regardless of the input format from 'page-identification.json'. This should guarantee the icons display.
- * - **NEW: Inactive Tab Hover Style:** Inactive tabs now show a light outline and a slightly lighter background on hover.
  * - **NEW: Dynamic Scroll Arrows:** Glide buttons are now checked and loaded immediately after rendering to ensure the correct state without user interaction.
+ * - **UPDATED: Glide Button Style:** Removed border-radius and adjusted gradients for full opacity at the edge.
  */
 
 // =========================================================================
@@ -173,7 +170,7 @@ let db;
         auth = firebase.auth();
         db = firebase.firestore();
 
-        // --- 3. INJECT CSS STYLES (UPDATED for Inactive Tab Hover) ---
+        // --- 3. INJECT CSS STYLES (UPDATED for Glide Button Look) ---
         const injectStyles = () => {
             const style = document.createElement('style');
             style.textContent = `
@@ -225,12 +222,12 @@ let db;
                 /* Hide scrollbar for Chrome, Safari, and Opera */
                 .tab-scroll-container::-webkit-scrollbar { display: none; }
 
-                /* Scroll Glide Buttons (UPDATED: opacity is 0.8 by default for instant load) */
+                /* Scroll Glide Buttons (UPDATED: Removed border-radius, adjusted gradients) */
                 .scroll-glide-button {
                     position: absolute;
                     top: 0;
                     height: 100%;
-                    width: 2rem; 
+                    width: 4rem; /* Increased width to accommodate the gradient stop change */
                     display: flex;
                     align-items: center;
                     justify-content: center;
@@ -242,6 +239,7 @@ let db;
                     transition: opacity 0.3s, background 0.3s;
                     z-index: 10;
                     pointer-events: auto; /* Allow interaction */
+                    /* Removed border-radius for no roundness */
                 }
                 .scroll-glide-button:hover {
                     opacity: 1;
@@ -250,17 +248,19 @@ let db;
                 /* Position and gradient for left button */
                 #glide-left {
                     left: 0;
-                    border-top-right-radius: 0.5rem;
-                    border-bottom-right-radius: 0.5rem;
-                    background: linear-gradient(to right, #000000 50%, transparent); /* Opaque fade */
+                    /* Gradient updated to go to 100% opaque at the edge (50% stop) */
+                    background: linear-gradient(to right, #000000 50%, transparent); 
+                    justify-content: flex-start; /* Align icon to the inner side of the gradient */
+                    padding-left: 0.5rem;
                 }
 
                 /* Position and gradient for right button */
                 #glide-right {
                     right: 0;
-                    border-top-left-radius: 0.5rem;
-                    border-bottom-left-radius: 0.5rem;
-                    background: linear-gradient(to left, #000000 50%, transparent); /* Opaque fade */
+                    /* Gradient updated to go to 100% opaque at the edge (50% stop) */
+                    background: linear-gradient(to left, #000000 50%, transparent); 
+                    justify-content: flex-end; /* Align icon to the inner side of the gradient */
+                    padding-right: 0.5rem;
                 }
                 
                 /* Visibility class controlled by JS to hide when not needed */
