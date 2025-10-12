@@ -14,11 +14,13 @@
  *
  * --- NEW FEATURES (4SP AI Mode) ---
  * - The special user (4simpleproblems@gmail.com) gets an exclusive AI Chatbot button.
- * - Chat uses Firebase AI Logic (Vertex AI) with specialized "Agents."
+ * - Chat uses Firebase AI Logic with specialized "Agents."
  * - Agents control the AI's persona, system instructions, and generation settings (like temperature).
  *
  * --- FIXES APPLIED IN THIS UPDATE ---
- * - **SDK Load Fix:** Updated the version for all Firebase SDKs to **10.13.0** to resolve the 404 error when loading firebase-vertex.js, as confirmed by the console screenshot. This ensures the AI Logic SDK loads successfully.
+ * - **SDK Load Update:** All Firebase SDKs, including the new AI service, have been updated to **version 12.4.0**.
+ * - **AI SDK File Name:** The AI script now loads **firebase-ai.js** as requested.
+ * - **AI Initialization:** The initialization code has been updated to use `firebase.ai(app)`.
  * - Scroll Glide Buttons are immediately fully visible.
  * - Tab highlighting is robust for static websites.
  */
@@ -80,7 +82,7 @@ const AI_MODEL = "gemini-2.5-flash";
 // Variables to hold Firebase objects and AI state
 let auth;
 let db;
-let vertexAI;
+let vertexAI; // This variable now holds the Firebase AI client object
 let currentChat; // Holds the currently active chat session object
 let selectedAgent = 'General'; // Initial default agent
 
@@ -180,14 +182,14 @@ let selectedAgent = 'General'; // Initial default agent
         }
 
         try {
-            // SEQUENTIALLY LOAD FIREBASE MODULES - VERSION UPDATED TO 10.13.0 TO FIX 404
-            const FIREBASE_VERSION = "10.13.0"; 
+            // SEQUENTIALLY LOAD FIREBASE MODULES - VERSION UPDATED TO 12.4.0 AND AI SDK NAME CHANGED
+            const FIREBASE_VERSION = "12.4.0"; 
             
             await loadScript(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-app-compat.js`);
             await loadScript(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-auth-compat.js`);
             await loadScript(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-firestore-compat.js`);
-            // NEW: Load Vertex AI Logic SDK - Using the corrected version to resolve 404 issue.
-            await loadScript(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-vertex.js`);
+            // NEW: Load AI Logic SDK - Using the requested version and file name (firebase-ai.js)
+            await loadScript(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-ai.js`);
 
             // Now that scripts are loaded, we can initialize
             initializeApp(pages);
@@ -199,11 +201,12 @@ let selectedAgent = 'General'; // Initial default agent
     // --- AI Logic Functions ---
     const initializeVertexAI = (app) => {
         try {
-            // Initialize the Vertex AI client using the global firebase object
-            vertexAI = firebase.vertex(app);
-            console.log("Firebase Vertex AI initialized.");
+            // Initialize the AI client using the global firebase.ai object
+            // The variable is still called 'vertexAI' for backward compatibility in the rest of the script.
+            vertexAI = firebase.ai(app);
+            console.log("Firebase AI initialized.");
         } catch (error) {
-            console.error("Failed to initialize Firebase Vertex AI:", error);
+            console.error("Failed to initialize Firebase AI:", error);
         }
     };
 
@@ -238,7 +241,7 @@ let selectedAgent = 'General'; // Initial default agent
              chatDisplay.scrollTop = chatDisplay.scrollHeight;
         }
 
-        // Check if vertexAI is available (in case the SDK load still failed despite the fix)
+        // Check if vertexAI is available
         if (vertexAI && vertexAI.chats) {
             // Use the 'startChat' method from the SDK
             currentChat = vertexAI.chats.startChat({ 
@@ -248,7 +251,7 @@ let selectedAgent = 'General'; // Initial default agent
             });
             console.log(`New chat session started with ${selectedAgent} Agent.`);
         } else {
-             console.error("Cannot start chat: Firebase Vertex AI is not initialized.");
+             console.error("Cannot start chat: Firebase AI is not initialized.");
              displayMessage('system', `<i class="fa-solid fa-triangle-exclamation text-red-400 mr-2"></i>AI Error: The AI service failed to load. Please check console for SDK load errors.`);
         }
     };
@@ -357,7 +360,7 @@ let selectedAgent = 'General'; // Initial default agent
         auth = firebase.auth();
         db = firebase.firestore();
         
-        // Initialize the Vertex AI client
+        // Initialize the AI client
         initializeVertexAI(app);
 
         // --- 3. INJECT CSS STYLES (UPDATED for AI Modal and Scrollbar) ---
