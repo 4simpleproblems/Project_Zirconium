@@ -6,8 +6,8 @@
  * tab menu loaded from page-identification.json.
  *
  * --- IMPORTANT FIXES ---
- * 1. CRITICAL CDN FIX: Removed modular Firebase AI SDK loading which was causing a 404 error and crashing the entire script before rendering the navbar.
- * 2. STABILITY FIX: AI logic now uses the standard Google Gemini API endpoint (fetch) for stability in CDN/single-file environments, instead of relying on the problematic 'firebase-ai.js' module.
+ * 1. CRITICAL CDN FIX (COMPLETE): Ensures the navigation bar renders by using stable Firebase Compat SDKs.
+ * 2. API KEY FIX: The AI Agent now correctly accesses the API key from the environment variable (__api_key) to resolve the "403 Forbidden" error.
  * 3. RENDER PRIORITY: Ensures the navigation bar is rendered immediately after CSS injection, preventing the AI logic failure from blocking the UI.
  *
  * --- AI AGENT FEATURE ---
@@ -36,7 +36,7 @@ const FIREBASE_CONFIG = {
 const PAGE_CONFIG_URL = '../page-identification.json';
 
 // --- AI Agent Configuration ---
-const API_KEY = ""; // Leave as "" for Canvas to automatically provide the API key
+// FIX: We will now use the globally available API key variable provided by the environment.
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=";
 const PRIVILEGED_EMAIL = '4simpleproblems@gmail.com';
 const AGENT_CATEGORIES = {
@@ -599,6 +599,7 @@ let currentAgent = 'Standard'; // Default agent
                 } catch (error) {
                     if (i < retries - 1) {
                         const delay = Math.pow(2, i) * 1000; // 1s, 2s, 4s delay
+                        // console.warn(`Retrying fetch (attempt ${i + 2}) in ${delay / 1000}s...`); // Removed console log
                         await new Promise(res => setTimeout(res, delay));
                     } else {
                         throw error;
@@ -644,9 +645,15 @@ let currentAgent = 'Standard'; // Default agent
                     tools: [{ "googleSearch": {} }],
                     systemInstruction: { parts: [{ text: systemPrompt }] },
                 };
+                
+                // FIX: Get API key from the environment variable (Canvas provided)
+                const apiKey = typeof __api_key !== 'undefined' ? __api_key : '';
+                if (!apiKey) {
+                    throw new Error("API Key is missing or not provided by the environment.");
+                }
 
                 // 4. Call the Generative Model API (with retry logic)
-                const apiUrl = `${GEMINI_API_URL}${API_KEY}`;
+                const apiUrl = `${GEMINI_API_URL}${apiKey}`;
                 const response = await fetchWithRetry(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -800,6 +807,7 @@ let currentAgent = 'Standard'; // Default agent
             let isPrivilegedUser = false;
             
             if (user) {
+                // Check for the privileged user email
                 isPrivilegedUser = user.email === PRIVILEGED_EMAIL;
 
                 // User is signed in. Fetch their data from Firestore.
