@@ -5,24 +5,17 @@
  * to rendering user-specific information. It now includes a horizontally scrollable
  * tab menu loaded from page-identification.json.
  *
- * --- NEW AI AGENT FEATURE ---
+ * --- IMPORTANT FIXES ---
+ * 1. CRITICAL CDN FIX: Removed modular Firebase AI SDK loading which was causing a 404 error and crashing the entire script before rendering the navbar.
+ * 2. STABILITY FIX: AI logic now uses the standard Google Gemini API endpoint (fetch) for stability in CDN/single-file environments, instead of relying on the problematic 'firebase-ai.js' module.
+ * 3. RENDER PRIORITY: Ensures the navigation bar is rendered immediately after CSS injection, preventing the AI logic failure from blocking the UI.
+ *
+ * --- AI AGENT FEATURE ---
  * - Activated by Control + A (when not in a text box).
  * - Only available to user: 4simpleproblems@gmail.com.
- * - Uses the new Firebase AI SDK (gemini-2.5-flash) for chat.
+ * - Uses the standard Gemini API (gemini-2.5-flash) for chat.
  * - Provides 8 selectable agent personas.
  * - Automatically injects current time, timezone, and general location (if available) into the system prompt.
- *
- * --- INSTRUCTIONS ---
- * 1. ACTION REQUIRED: Paste your own Firebase project configuration into the `FIREBASE_CONFIG` object below.
- * 2. Place this script in the root directory of your website.
- * 3. Add `<script src="/navigation.js" defer></script>` to the <head> of any HTML file where you want the navbar.
- * 4. Ensure your file paths for images and links are root-relative (e.g., "/images/logo.png", "/login.html").
- * * --- HOW IT WORKS ---
- * - It runs automatically once the HTML document is loaded.
- * - It injects its own CSS for styling the navbar, dropdown menu, tab bar, and the new AI Chat Modal.
- * - It fetches the page configuration JSON to build the scrollable navigation tabs.
- * - It creates a placeholder div and then renders the navbar inside it.
- * - It initializes Firebase, listens for auth state, and fetches user data.
  */
 
 // =========================================================================
@@ -43,6 +36,8 @@ const FIREBASE_CONFIG = {
 const PAGE_CONFIG_URL = '../page-identification.json';
 
 // --- AI Agent Configuration ---
+const API_KEY = ""; // Leave as "" for Canvas to automatically provide the API key
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=";
 const PRIVILEGED_EMAIL = '4simpleproblems@gmail.com';
 const AGENT_CATEGORIES = {
     'Quick': "You are a Quick Agent. Respond in a single, concise paragraph (max 3 sentences). Prioritize speed and direct answers.",
@@ -55,11 +50,9 @@ const AGENT_CATEGORIES = {
     'Philosopher': "You are a Philosopher Agent. Respond with open-ended questions and critical inquiry, encouraging the user to think deeper about the topic."
 };
 
-// Variables to hold Firebase objects, which must be globally accessible after loading scripts
+// Variables to hold Firebase objects
 let auth;
 let db;
-let ai;
-let model; // The GenerativeModel instance
 let currentAgent = 'Standard'; // Default agent
 
 // --- Self-invoking function to encapsulate all logic ---
@@ -72,18 +65,11 @@ let currentAgent = 'Standard'; // Default agent
 
     // --- 1. DYNAMICALLY LOAD EXTERNAL ASSETS (Optimized) ---
 
-    // Helper to load external JS files
-    const loadScript = (src, isModule = false) => {
+    // Helper to load external JS files (No longer using type='module' for AI SDK due to 404)
+    const loadScript = (src) => {
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
             script.src = src;
-            // Use type='module' for modern SDKs like AI
-            if (isModule) {
-                script.type = 'module';
-                // For modern modules, we need to ensure the correct export is handled,
-                // but since these are from gstatic, they are often side-effect imports
-                // that make the function available globally or via a specific pattern.
-            }
             script.onload = resolve;
             script.onerror = reject;
             document.head.appendChild(script);
@@ -96,7 +82,6 @@ let currentAgent = 'Standard'; // Default agent
             const link = document.createElement('link');
             link.rel = 'stylesheet';
             link.href = href;
-            // Resolve immediately and proceed, as icons are non-critical path for the script logic
             link.onload = resolve;
             link.onerror = resolve;
             document.head.appendChild(link);
@@ -112,12 +97,11 @@ let currentAgent = 'Standard'; // Default agent
         };
     };
     
-    // ... [getIconClass remains the same] ...
+    // Icon class utility remains the same
     const getIconClass = (iconName) => {
         if (!iconName) return '';
-
         const nameParts = iconName.trim().split(/\s+/).filter(p => p.length > 0);
-        let stylePrefix = 'fa-solid'; // Default style
+        let stylePrefix = 'fa-solid'; 
         let baseName = '';
         const stylePrefixes = ['fa-solid', 'fa-regular', 'fa-light', 'fa-thin', 'fa-brands'];
 
@@ -143,11 +127,10 @@ let currentAgent = 'Standard'; // Default agent
         
         return '';
     };
-    // ... [end getIconClass] ...
 
     /**
      * Attempts to get general location and time data for the system prompt.
-     * @returns {Promise<{ location: string, time: string }>}
+     * @returns {Promise<{ location: string, time: string, timezone: string }>}
      */
     const getSystemInfo = async () => {
         const date = new Date();
@@ -157,11 +140,7 @@ let currentAgent = 'Standard'; // Default agent
         let generalLocation = 'Unknown (Location permission denied or not supported)';
 
         try {
-            // Attempt to get city/state using a reverse geocoding service based on IP (Fallback: not implemented here)
-            // For security and simplicity within the sandbox, we will use the local time and timezone and *try* to get a generic city/state from the browser.
-            // Using navigator.geolocation is the most reliable *local* method.
             const position = await new Promise((resolve, reject) => {
-                // Set a timeout for location acquisition
                 const timeoutId = setTimeout(() => reject(new Error('Location timeout')), 500);
                 if (navigator.geolocation) {
                     navigator.geolocation.getCurrentPosition(
@@ -173,21 +152,16 @@ let currentAgent = 'Standard'; // Default agent
                             clearTimeout(timeoutId);
                             reject(err);
                         },
-                        { timeout: 500, enableHighAccuracy: false } // Low accuracy, fast response
+                        { timeout: 500, enableHighAccuracy: false }
                     );
                 } else {
                     clearTimeout(timeoutId);
                     reject(new Error('Geolocation not supported'));
                 }
             });
-
-            // Since we cannot reliably reverse geocode in the browser without an external API key,
-            // we will use the coordinates as a proxy for the location context.
             generalLocation = `Coordinates: Lat ${position.coords.latitude.toFixed(2)}, Lon ${position.coords.longitude.toFixed(2)}`;
-
         } catch (error) {
             // Error, or user denied location, keep the default genericLocation message
-            // console.warn('Could not retrieve general location:', error.message);
         }
 
         return {
@@ -200,7 +174,7 @@ let currentAgent = 'Standard'; // Default agent
     const run = async () => {
         let pages = {};
 
-        // Load Icons CSS first for immediate visual display
+        // Load Icons CSS first
         await loadCSS("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css");
         
         // Fetch page configuration for the tabs
@@ -208,32 +182,23 @@ let currentAgent = 'Standard'; // Default agent
             const response = await fetch(PAGE_CONFIG_URL);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             pages = await response.json();
-            console.log("Page configuration loaded successfully.");
         } catch (error) {
             console.error("Failed to load page identification config:", error);
-            // Continue execution even if pages fail to load, just without tabs
+            // Continue execution
         }
 
         try {
-            // Sequentially load Firebase modules (compat versions for simplicity).
-            // NOTE: The Firebase AI SDK is *only* available in the modular format,
-            // so we rely on the side-effect imports creating the necessary global functions.
+            // ONLY load the stable Firebase Compat modules
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js");
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js");
             
-            // NEW: Load Firebase AI SDK (Modular, required for getAI)
-            // We use the common cdn path for the modular version 
-            await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js", true);
-            await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-ai.js", true);
-
-
-            // Now that scripts are loaded, we can use the `firebase` global object (for compat) 
-            // and assume the modular functions (initializeApp, getAI, GoogleAIBackend) are now accessible.
+            // Initialize Firebase and start the rendering/auth process
             initializeApp(pages);
 
         } catch (error) {
-            console.error("Failed to load necessary SDKs:", error);
+            // This error now only captures issues with the core Firebase SDKs, not the AI SDK
+            console.error("Failed to load core Firebase SDKs:", error);
         }
     };
 
@@ -241,7 +206,6 @@ let currentAgent = 'Standard'; // Default agent
     const initializeApp = (pages) => {
         // Initialize Firebase with the compat libraries
         const app = firebase.initializeApp(FIREBASE_CONFIG);
-        // Assign auth and db to module-scope variables
         auth = firebase.auth();
         db = firebase.firestore();
 
@@ -250,12 +214,12 @@ let currentAgent = 'Standard'; // Default agent
             const style = document.createElement('style');
             style.textContent = `
                 /* Base Styles */
-                body { padding-top: 4rem; /* 64px, equal to navbar height */ }
+                body { padding-top: 4rem; }
                 .auth-navbar { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: #000000; border-bottom: 1px solid rgb(31 41 55); height: 4rem; }
                 .auth-navbar nav { max-width: 80rem; margin: auto; padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
-                .initial-avatar { background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: 'Geist', sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; }
+                .initial-avatar { background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; }
                 
-                /* Auth Dropdown Menu Styles (UPDATED: Pure Black background) */
+                /* Auth Dropdown Menu Styles */
                 .auth-menu-container { 
                     position: absolute; right: 0; top: 50px; width: 16rem; 
                     background: #000000;
@@ -270,17 +234,13 @@ let currentAgent = 'Standard'; // Default agent
                     transition: background-color 0.2s, color 0.2s; border: none; cursor: pointer;
                 }
                 .auth-menu-link:hover, .auth-menu-button:hover { background-color: rgb(55 65 81); color: white; }
-
-                /* Custom style for the logged out button's icon and background */
                 .logged-out-auth-toggle { background: #010101; border: 1px solid #374151; }
                 .logged-out-auth-toggle i { color: #DADADA; }
 
-                /* Scrollable Tab Wrapper */
+                /* Tab Wrapper and Glide Buttons */
                 .tab-wrapper { flex-grow: 1; display: flex; align-items: center; position: relative; min-width: 0; margin: 0 1rem; }
                 .tab-scroll-container { flex-grow: 1; display: flex; align-items: center; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; -ms-overflow-style: none; padding-bottom: 5px; margin-bottom: -5px; scroll-behavior: smooth; }
                 .tab-scroll-container::-webkit-scrollbar { display: none; }
-
-                /* Scroll Glide Buttons */
                 .scroll-glide-button {
                     position: absolute; top: 0; height: 100%; width: 4rem; display: flex; align-items: center; justify-content: center; background: #000000; 
                     color: white; font-size: 1.2rem; cursor: pointer; opacity: 0.8; transition: opacity 0.3s, background 0.3s; z-index: 10; pointer-events: auto;
@@ -289,20 +249,18 @@ let currentAgent = 'Standard'; // Default agent
                 #glide-left { left: 0; background: linear-gradient(to right, #000000 50%, transparent); justify-content: flex-start; padding-left: 0.5rem; }
                 #glide-right { right: 0; background: linear-gradient(to left, #000000 50%, transparent); justify-content: flex-end; padding-right: 0.5rem; }
                 .scroll-glide-button.hidden { opacity: 0 !important; pointer-events: none !important; }
-
-                /* Tab Base Styles */
                 .nav-tab { flex-shrink: 0; padding: 0.5rem 1rem; color: #9ca3af; font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; transition: all 0.2s; text-decoration: none; line-height: 1.5; display: flex; align-items: center; margin-right: 0.5rem; border: 1px solid transparent; }
                 .nav-tab:not(.active):hover { color: white; border-color: #d1d5db; background-color: rgba(79, 70, 229, 0.05); }
                 .nav-tab.active { color: #4f46e5; border-color: #4f46e5; background-color: rgba(79, 70, 229, 0.1); }
                 .nav-tab.active:hover { color: #6366f1; border-color: #6366f1; background-color: rgba(79, 70, 229, 0.15); }
                 
-                /* --- AI Agent Modal Styles (NEW) --- */
+                /* --- AI Agent Modal Styles --- */
                 .ai-modal {
                     position: fixed;
                     bottom: 2rem; right: 2rem;
                     width: min(90vw, 24rem);
                     height: min(80vh, 32rem);
-                    background: #111827; /* dark slate */
+                    background: #111827;
                     border: 1px solid #374151;
                     border-radius: 0.75rem;
                     box-shadow: 0 10px 25px rgba(0,0,0,0.5);
@@ -345,13 +303,13 @@ let currentAgent = 'Standard'; // Default agent
                 }
                 .ai-user-message {
                     align-self: flex-end;
-                    background: #4f46e5; /* indigo-600 */
+                    background: #4f46e5;
                     color: white;
                 }
                 .ai-agent-message {
                     align-self: flex-start;
-                    background: #374151; /* gray-700 */
-                    color: #e5e7eb; /* gray-200 */
+                    background: #374151;
+                    color: #e5e7eb;
                 }
                 .ai-input-area {
                     padding: 0.75rem 1rem;
@@ -369,7 +327,7 @@ let currentAgent = 'Standard'; // Default agent
                     padding: 0.5rem;
                     border-radius: 0.5rem;
                     resize: none;
-                    height: 2.5rem; /* Single line height */
+                    height: 2.5rem;
                     overflow-y: hidden;
                 }
                 .ai-input-area button {
@@ -398,7 +356,7 @@ let currentAgent = 'Standard'; // Default agent
                     font-size: 0.8rem;
                     cursor: pointer;
                     margin-right: 0.5rem;
-                    appearance: none; /* Hide default dropdown arrow */
+                    appearance: none; 
                     background-image: url('data:image/svg+xml;utf8,<svg fill="white" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>');
                     background-repeat: no-repeat;
                     background-position: right 0.5rem center;
@@ -409,7 +367,6 @@ let currentAgent = 'Standard'; // Default agent
             document.head.appendChild(style);
         };
 
-        // --- NEW: Function to check if focused element is an input/textarea ---
         const isFocusableElement = () => {
             const activeElement = document.activeElement;
             if (!activeElement) return false;
@@ -421,7 +378,6 @@ let currentAgent = 'Standard'; // Default agent
             );
         };
 
-        // ... [isTabActive and updateScrollGilders remain the same] ...
         const isTabActive = (tabUrl) => {
             const tabPathname = new URL(tabUrl, window.location.origin).pathname.toLowerCase();
             const currentPathname = window.location.pathname.toLowerCase();
@@ -479,40 +435,18 @@ let currentAgent = 'Standard'; // Default agent
                 rightButton.classList.add('hidden');
             }
         };
-        // ... [end isTabActive and updateScrollGilders] ...
 
-        // --- NEW: AI GENERATIVE MODEL INITIALIZATION ---
-        // This is where we use the modular SDK functions. We assume they are now available
-        // in the global scope due to the side-effect imports of the CDN scripts.
-        try {
-            // Note: We use the global `app` variable for the FirebaseApp instance.
-            ai = getAI(app, { backend: new GoogleAIBackend() });
-            model = getGenerativeModel(ai, { model: "gemini-2.5-flash" });
-            console.log("Firebase AI Generative Model initialized successfully.");
-        } catch (e) {
-            console.error("Failed to initialize Firebase AI SDK. Ensure all dependencies are loaded.", e);
-        }
-
-
-        // --- 4. RENDER THE NAVBAR HTML (UPDATED: Auth views match navigation-mini.js changes) ---
+        // --- 4. RENDER THE NAVBAR HTML ---
         const renderNavbar = (user, userData, pages, isPrivilegedUser) => {
             const container = document.getElementById('navbar-container');
-            if (!container) return;
+            if (!container) return; // Should not happen, but safe check
 
-            const logoPath = "/images/logo.png"; // Using root-relative path
-
-            // --- Tab Generation ---
+            const logoPath = "/images/logo.png"; 
             const tabsHtml = Object.values(pages || {}).map(page => {
                 const isActive = isTabActive(page.url);
                 const activeClass = isActive ? 'active' : '';
                 const iconClasses = getIconClass(page.icon);
-
-                return `
-                    <a href="${page.url}" class="nav-tab ${activeClass}">
-                        <i class="${iconClasses} mr-2"></i>
-                        ${page.name}
-                    </a>
-                `;
+                return `<a href="${page.url}" class="nav-tab ${activeClass}"><i class="${iconClasses} mr-2"></i>${page.name}</a>`;
             }).join('');
 
             // --- AI Agent Selector HTML (Only for Privileged User) ---
@@ -611,7 +545,6 @@ let currentAgent = 'Standard'; // Default agent
                     aiModal = document.createElement('div');
                     aiModal.id = 'ai-modal';
                     aiModal.classList.add('ai-modal');
-                    // Add the structure for the modal
                     aiModal.innerHTML = `
                         <div class="ai-header">
                             <div class="text-sm font-bold">
@@ -636,22 +569,44 @@ let currentAgent = 'Standard'; // Default agent
                 }
             }
 
-
-            // --- 5. SETUP EVENT LISTENERS (Including auto-scroll and glide buttons) ---
+            // --- 5. SETUP EVENT LISTENERS ---
             setupEventListeners(user, isPrivilegedUser);
 
-            // Auto-scroll to the active tab if one is found
+            // Auto-scroll to the active tab
             const activeTab = document.querySelector('.nav-tab.active');
             const tabContainer = document.querySelector('.tab-scroll-container');
             if (activeTab && tabContainer) {
                 tabContainer.scrollLeft = activeTab.offsetLeft - (tabContainer.offsetWidth / 2) + (activeTab.offsetWidth / 2);
             }
             
-            // INITIAL CHECK: After rendering and auto-scrolling, update glide button visibility
             updateScrollGilders();
         };
 
-        // --- NEW: AI CHAT LOGIC ---
+        // --- NEW: AI GENERATIVE MODEL API CALL LOGIC (Using standard fetch/retry) ---
+        
+        /**
+         * Exponential backoff retry logic for the API call.
+         */
+        const fetchWithRetry = async (url, options, retries = 3) => {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) {
+                        const errorBody = await response.text();
+                        throw new Error(`API Error ${response.status}: ${errorBody}`);
+                    }
+                    return response;
+                } catch (error) {
+                    if (i < retries - 1) {
+                        const delay = Math.pow(2, i) * 1000; // 1s, 2s, 4s delay
+                        await new Promise(res => setTimeout(res, delay));
+                    } else {
+                        throw error;
+                    }
+                }
+            }
+        };
+
         const handleChatSubmit = async (e) => {
             e.preventDefault();
             const input = document.getElementById('ai-input');
@@ -683,29 +638,36 @@ let currentAgent = 'Standard'; // Default agent
                 const systemInfo = await getSystemInfo();
                 const baseInstruction = AGENT_CATEGORIES[currentAgent];
                 const systemPrompt = `You are acting as the '${currentAgent}' agent with the following persona: ${baseInstruction}. You MUST tailor your response to this persona.\n\n[SYSTEM CONTEXT]\n${systemInfo.time}\n${systemInfo.timezone}\nGeneral Location: ${systemInfo.location}\n[END CONTEXT]`;
+                
+                const payload = {
+                    contents: [{ parts: [{ text: userQuery }] }],
+                    tools: [{ "googleSearch": {} }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                };
 
-                // 4. Call the Generative Model
-                const response = await model.generateContent({
-                    contents: [
-                        { role: 'user', parts: [{ text: userQuery }] }
-                    ],
-                    config: {
-                        systemInstruction: systemPrompt,
-                        // Enable Google Search for grounded responses for Standard/Deep Thinking agents
-                        tools: [{ googleSearch: {} }]
-                    }
+                // 4. Call the Generative Model API (with retry logic)
+                const apiUrl = `${GEMINI_API_URL}${API_KEY}`;
+                const response = await fetchWithRetry(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
                 });
+                
+                const result = await response.json();
+                const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "I apologize, I could not process that request.";
 
                 // 5. Display agent response
                 const agentMessageDiv = document.createElement('p');
                 agentMessageDiv.classList.add('ai-chat-message', 'ai-agent-message');
-                agentMessageDiv.innerHTML = response.text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); // Basic markdown conversion
+                // Use a simple replacement for bold markdown for better display
+                agentMessageDiv.innerHTML = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); 
+                
                 chatArea.removeChild(loadingDiv);
                 chatArea.appendChild(agentMessageDiv);
 
             } catch (error) {
                 console.error("AI Agent Error:", error);
-                loadingDiv.textContent = 'Error: Failed to get response.';
+                loadingDiv.textContent = 'Error: Failed to get response. Check the console.';
                 loadingDiv.style.color = 'red';
             } finally {
                 chatArea.scrollTop = chatArea.scrollHeight;
@@ -768,7 +730,7 @@ let currentAgent = 'Standard'; // Default agent
                 }
             }
 
-            // --- NEW: AI Agent Listeners (Only for privileged user) ---
+            // --- AI Agent Listeners (Only for privileged user) ---
             if (isPrivilegedUser) {
                 const aiModal = document.getElementById('ai-modal');
                 const aiToggleButton = document.getElementById('ai-toggle');
@@ -822,9 +784,8 @@ let currentAgent = 'Standard'; // Default agent
 
                 // Control + A Activation
                 document.addEventListener('keydown', (e) => {
-                    // Check for Control (or Command on Mac) and A
-                    if ((e.ctrlKey || e.metaKey) && e.key === 'a' && !isFocusableElement()) {
-                        e.preventDefault(); // Prevent text selection/browser shortcuts
+                    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a' && !isFocusableElement()) {
+                        e.preventDefault();
                         aiModal.classList.toggle('active');
                         if (aiModal.classList.contains('active')) {
                             aiInput.focus();
@@ -855,11 +816,7 @@ let currentAgent = 'Standard'; // Default agent
                 renderNavbar(null, null, pages, false);
                 // Attempt to sign in anonymously for a seamless guest experience.
                 auth.signInAnonymously().catch((error) => {
-                    if (error.code === 'auth/operation-not-allowed' || error.code === 'auth/admin-restricted-operation') {
-                        console.warn(
-                            "Anonymous sign-in is disabled. Enable it in the Firebase Console (Authentication > Sign-in method) for guest features."
-                        );
-                    } else {
+                    if (error.code !== 'auth/operation-not-allowed') {
                         console.error("Anonymous sign-in error:", error);
                     }
                 });
@@ -873,11 +830,11 @@ let currentAgent = 'Standard'; // Default agent
             navbarDiv.id = 'navbar-container';
             document.body.prepend(navbarDiv);
         }
+        // Inject styles before anything else is rendered for best stability
         injectStyles();
     };
 
     // --- START THE PROCESS ---
-    // Wait for the DOM to be ready, then start loading scripts.
     document.addEventListener('DOMContentLoaded', run);
 
 })();
