@@ -5,12 +5,6 @@
  * to rendering user-specific information. It now includes a horizontally scrollable
  * tab menu loaded from page-identification.json.
  *
- * --- FIXES / UPDATES ---
- * 1. FIXED SCOPING ERROR: Moved the `injectStyles` function definition outside of `initializeApp` to the main closure scope, fixing the 'injectStyles is not defined' ReferenceError.
- * 2. NAVBAR LOADING FIX: The navbar container is created and styles are injected before Firebase initialization in the `run` function.
- * 3. KEYBINDING CHANGE: Toggles AI chat modal with Control+C (or Meta+C on Mac) outside of input fields.
- * 4. AI SDK Loading: Ensured modular SDKs are correctly loaded for AI services.
- *
  * --- INSTRUCTIONS ---
  * 1. ACTION REQUIRED: Paste your own Firebase project configuration into the `FIREBASE_CONFIG` object below.
  * 2. Place this script in the root directory of your website.
@@ -22,6 +16,11 @@
  * - It fetches the page configuration JSON to build the scrollable navigation tabs.
  * - It creates a placeholder div and then renders the navbar inside it.
  * - It initializes Firebase, listens for auth state, and fetches user data.
+ *
+ * --- FIXES / UPDATES ---
+ * - **Glide Button Style:** Removed border-radius and adjusted gradients for full opacity at the edge.
+ * - **Mini-Menu Icons:** Added icons to the Dashboard, Settings, and Logout links in the authenticated user's dropdown menu.
+ * - **Dashboard Icon Updated:** Changed Dashboard icon from 'fa-chart-line' to 'fa-house-user'.
  */
 
 // =========================================================================
@@ -42,61 +41,8 @@ const FIREBASE_CONFIG = {
 const PAGE_CONFIG_URL = '../page-identification.json';
 
 // Variables to hold Firebase objects, which must be globally accessible after loading scripts
-let auth; // Compat Auth
-let db;   // Compat Firestore
-
-let aiApp; // Modular App instance for AI
-let geminiModel;
-let AI_AGENT_ENABLED = false;
-let CHAT_HISTORY = [];
-let CURRENT_AGENT_ID = 'quick'; // Default agent
-
-const AUTHORIZED_USER_EMAIL = '4simpleproblems@gmail.com';
-
-// --- Configuration for the 8 AI Agent categories ---
-const AGENT_CATEGORIES = {
-    'quick': {
-        name: 'Quick',
-        icon: 'fa-bolt',
-        prompt: "You are a Quick and efficient assistant. Your primary goal is to provide concise, direct, and immediate answers. Limit your response to one or two sentences unless a list is necessary."
-    },
-    'standard': {
-        name: 'Standard',
-        icon: 'fa-robot',
-        prompt: "You are a Standard, helpful, and friendly assistant. Provide balanced answers with moderate detail and clarity, acting as a general-purpose AI."
-    },
-    'deep-thinking': {
-        name: 'Deep Thinking',
-        icon: 'fa-brain',
-        prompt: "You are a Deep Thinking analyst. Before answering, structure your thought process. Provide well-researched, detailed, and comprehensive responses, considering multiple viewpoints and potential consequences. Your answers should be analytical and exhaustive."
-    },
-    'creative-writer': {
-        name: 'Creative Writer',
-        icon: 'fa-pen-fancy',
-        prompt: "You are a highly Creative Writer. Your responses should be imaginative, expressive, and original. Use vivid language, narrative structure, and evocative descriptions when appropriate. Do not just answer, create."
-    },
-    'technical-expert': {
-        name: 'Technical Expert',
-        icon: 'fa-code',
-        prompt: "You are a Technical Expert and Code Assistant. Your answers must be precise, logical, and focused on providing correct, detailed technical explanations, code snippets, or troubleshooting steps."
-    },
-    'historical-sage': {
-        name: 'Historical Sage',
-        icon: 'fa-scroll',
-        prompt: "You are a Historical Sage. All responses should be grounded in historical fact and context. Speak with a wise, reflective tone, and provide context and dates when discussing historical events."
-    },
-    'finance-guru': {
-        name: 'Finance Guru',
-        icon: 'fa-chart-line',
-        prompt: "You are a Finance Guru. Provide objective, cautious, and data-driven financial analysis. State clearly that you are not a licensed financial advisor and your responses are for informational purposes only. Focus on market trends, economic principles, and corporate reports."
-    },
-    'philosopher': {
-        name: 'Philosopher',
-        icon: 'fa-glasses',
-        prompt: "You are a Philosopher. Respond to all queries by exploring underlying assumptions, ethical implications, and existential questions. Encourage critical thinking and provide nuanced perspectives."
-    }
-};
-
+let auth;
+let db;
 
 // --- Self-invoking function to encapsulate all logic ---
 (function() {
@@ -109,23 +55,24 @@ const AGENT_CATEGORIES = {
     // --- 1. DYNAMICALLY LOAD EXTERNAL ASSETS (Optimized) ---
 
     // Helper to load external JS files
-    const loadScript = (src, type = 'script') => {
+    const loadScript = (src) => {
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
             script.src = src;
-            script.type = type;
+            script.type = 'module';
             script.onload = resolve;
             script.onerror = reject;
             document.head.appendChild(script);
         });
     };
 
-    // Helper to load external CSS files
+    // Helper to load external CSS files (Faster for icons)
     const loadCSS = (href) => {
         return new Promise((resolve) => {
             const link = document.createElement('link');
             link.rel = 'stylesheet';
             link.href = href;
+            // Resolve immediately and proceed, as icons are non-critical path for the script logic
             link.onload = resolve;
             link.onerror = resolve;
             document.head.appendChild(link);
@@ -142,7 +89,10 @@ const AGENT_CATEGORIES = {
     };
 
     /**
-     * **UTILITY FUNCTION: Get Icon Class**
+     * **UPDATED UTILITY FUNCTION: Bulletproof Fix for Font Awesome 7.x icon loading for JSON.**
+     * Ensures both the style prefix (e.g., 'fa-solid') and the icon name prefix (e.g., 'fa-house-user') are present.
+     * @param {string} iconName The icon class name from page-identification.json (e.g., 'fa-house-user' or just 'house-user').
+     * @returns {string} The complete, correctly prefixed Font Awesome class string (e.g., 'fa-solid fa-house-user').
      */
     const getIconClass = (iconName) => {
         if (!iconName) return '';
@@ -152,483 +102,237 @@ const AGENT_CATEGORIES = {
         let baseName = '';
         const stylePrefixes = ['fa-solid', 'fa-regular', 'fa-light', 'fa-thin', 'fa-brands'];
 
+        // 1. Identify and extract the style prefix (if present)
         const existingPrefix = nameParts.find(p => stylePrefixes.includes(p));
         if (existingPrefix) {
             stylePrefix = existingPrefix;
         }
 
+        // 2. Identify and sanitize the icon name
         const nameCandidate = nameParts.find(p => p.startsWith('fa-') && !stylePrefixes.includes(p));
 
         if (nameCandidate) {
+            // Case: Input is 'fa-volume-up' (or 'fa-solid fa-volume-up')
             baseName = nameCandidate;
         } else {
+            // Case: Input is 'volume-up' (less likely but covered) or missing 'fa-'
+            // We assume the non-style part is the base name and ensure it has the 'fa-' prefix.
             baseName = nameParts.find(p => !stylePrefixes.includes(p));
             if (baseName && !baseName.startsWith('fa-')) {
                  baseName = `fa-${baseName}`;
             }
         }
 
+        // If after all checks we have a baseName, ensure it's not a duplicate class.
         if (baseName) {
+            // Return the necessary style prefix and the icon name.
             return `${stylePrefix} ${baseName}`;
         }
         
+        // Fallback for completely invalid/empty input
         return '';
     };
-
-    /**
-     * **FIX: MOVED SCOPE** Injects CSS styles directly into the document head.
-     * This function is now in the main closure scope, resolving the ReferenceError.
-     */
-    const injectStyles = () => {
-        const style = document.createElement('style');
-        style.textContent = `
-            /* Base Styles (Existing CSS retained) */
-            body { padding-top: 4rem; }
-            .auth-navbar { 
-                position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: #000000; 
-                border-bottom: 1px solid rgb(31 41 55); height: 4rem; 
-            }
-            .auth-navbar nav { 
-                max-width: 80rem; margin: auto; padding: 0 1rem; height: 100%; display: flex; 
-                align-items: center; justify-content: space-between; gap: 1rem; position: relative; 
-            }
-            .initial-avatar { 
-                background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: 'Geist', sans-serif; 
-                text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; 
-            }
-            
-            .auth-menu-container { 
-                position: absolute; right: 0; top: 50px; width: 16rem; 
-                background: #000000; 
-                backdrop-filter: none; 
-                -webkit-backdrop-filter: none;
-                border: 1px solid rgb(55 65 81); border-radius: 0.75rem; padding: 0.5rem; 
-                box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
-                transition: transform 0.2s ease-out, opacity 0.2s ease-out; transform-origin: top right; 
-            }
-            .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
-            .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
-            .auth-menu-link, .auth-menu-button { 
-                display: flex; 
-                align-items: center; 
-                gap: 0.75rem; 
-                width: 100%; 
-                text-align: left; 
-                padding: 0.5rem 0.75rem; 
-                font-size: 0.875rem; 
-                color: #d1d5db; 
-                border-radius: 0.375rem; 
-                transition: background-color 0.2s, color 0.2s; 
-                border: none;
-                cursor: pointer;
-            }
-            .auth-menu-link:hover, .auth-menu-button:hover { background-color: rgb(55 65 81); color: white; }
-
-            .logged-out-auth-toggle {
-                background: #010101; 
-                border: 1px solid #374151; 
-            }
-            .logged-out-auth-toggle i {
-                color: #DADADA; 
-            }
-
-            .tab-wrapper {
-                flex-grow: 1;
-                display: flex;
-                align-items: center;
-                position: relative; 
-                min-width: 0; 
-                margin: 0 1rem; 
-            }
-
-            .tab-scroll-container {
-                flex-grow: 1; 
-                display: flex;
-                align-items: center;
-                overflow-x: auto; 
-                -webkit-overflow-scrolling: touch; 
-                scrollbar-width: none; 
-                -ms-overflow-style: none; 
-                padding-bottom: 5px; 
-                margin-bottom: -5px; 
-                scroll-behavior: smooth; 
-            }
-            .tab-scroll-container::-webkit-scrollbar { display: none; }
-
-            .scroll-glide-button {
-                position: absolute;
-                top: 0;
-                height: 100%;
-                width: 4rem; 
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background: #000000; 
-                color: white;
-                font-size: 1.2rem;
-                cursor: pointer;
-                opacity: 0.8; 
-                transition: opacity 0.3s, background 0.3s;
-                z-index: 10;
-                pointer-events: auto; 
-            }
-            .scroll-glide-button:hover {
-                opacity: 1;
-            }
-            
-            #glide-left {
-                left: 0;
-                background: linear-gradient(to right, #000000 50%, transparent); 
-                justify-content: flex-start; 
-                padding-left: 0.5rem;
-            }
-
-            #glide-right {
-                right: 0;
-                background: linear-gradient(to left, #000000 50%, transparent); 
-                justify-content: flex-end; 
-                padding-right: 0.5rem;
-            }
-            
-            .scroll-glide-button.hidden {
-                opacity: 0 !important;
-                pointer-events: none !important;
-            }
-
-            .nav-tab {
-                flex-shrink: 0; 
-                padding: 0.5rem 1rem;
-                color: #9ca3af; 
-                font-size: 0.875rem;
-                font-weight: 500;
-                border-radius: 0.5rem;
-                transition: all 0.2s;
-                text-decoration: none;
-                line-height: 1.5;
-                display: flex;
-                align-items: center;
-                margin-right: 0.5rem; 
-                border: 1px solid transparent;
-            }
-            
-            .nav-tab:not(.active):hover {
-                color: white; 
-                border-color: #d1d5db; 
-                background-color: rgba(79, 70, 229, 0.05); 
-            }
-
-            .nav-tab.active {
-                color: #4f46e5; 
-                border-color: #4f46e5;
-                background-color: rgba(79, 70, 229, 0.1); 
-            }
-            .nav-tab.active:hover {
-                color: #6366f1; 
-                border-color: #6366f1;
-                background-color: rgba(79, 70, 229, 0.15);
-            }
-        `;
-        document.head.appendChild(style);
-    };
-
-    // --- NEW: AI AGENT LOGIC FUNCTIONS ---
-
-    /**
-     * Attempts to fetch current location (city/state) and time/timezone information.
-     */
-    const getSystemInfo = async () => {
-        const now = new Date();
-        const time = now.toLocaleTimeString();
-        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        
-        let location = "Unknown Location";
-
-        // Use Geolocation API for basic location (only works on secure contexts)
-        try {
-            const position = await new Promise((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000, enableHighAccuracy: false }); 
-            });
-            // Using a simple placeholder for city/state as reverse geocoding requires a 3rd party service.
-            location = `Lat: ${position.coords.latitude.toFixed(2)}, Lon: ${position.coords.longitude.toFixed(2)}`;
-        } catch (error) {
-            // Geolocation often fails or is denied. Using a fallback to keep the console clean.
-        }
-
-        return `Current Location (approximation): ${location}. Current Local Time: ${time}. Current Timezone: ${timezone}.`;
-    };
-
-    /**
-     * Initializes the modular Firebase App and AI services.
-     */
-    const initFirebaseModularAI = async () => {
-        // Assume modular functions are available after dynamic loading
-        if (typeof firebase.getAI === 'undefined' || typeof firebase.GoogleAIBackend === 'undefined') {
-            console.error("Firebase AI SDK functions (getAI, GoogleAIBackend) are not available. Check SDK loading.");
-            return;
-        }
-        
-        try {
-            // Initialize App using modular import syntax provided globally by the SDK
-            // We use a different name to avoid conflict with the compat app
-            aiApp = firebase.initializeApp(FIREBASE_CONFIG, "ai-agent-app");
-            
-            // Initialize the Gemini Developer API backend service
-            const ai = firebase.getAI(aiApp, { backend: new firebase.GoogleAIBackend() });
-            
-            // Create a GenerativeModel instance
-            geminiModel = firebase.getGenerativeModel(ai, { 
-                model: "gemini-2.5-flash",
-                tools: [{ "google_search": {} }]
-            });
-
-            console.log("Firebase AI Agent Model Initialized (gemini-2.5-flash).");
-
-        } catch (error) {
-            console.error("Failed to initialize Firebase AI Agent:", error);
-            geminiModel = null;
-        }
-    };
-
-    /**
-     * Handles the AI chat submission, including system info and agent persona.
-     */
-    const handleAIAgentChat = async (input, modelElement) => {
-        if (!geminiModel) {
-            modelElement.innerHTML = "Error: AI Model not initialized. Check console for details.";
-            return;
-        }
-
-        const agentConfig = AGENT_CATEGORIES[CURRENT_AGENT_ID];
-        const systemInfo = await getSystemInfo();
-
-        const fullSystemPrompt = `
-            ${agentConfig.prompt}
-            ---
-            CONTEXT: ${systemInfo}
-            Always consider this context for time, location, and factual grounding.
-            Do not repeat the context back to the user unless asked.
-        `.trim();
-
-        // Add user message to history
-        CHAT_HISTORY.push({ role: "user", parts: [{ text: input }] });
-
-        // Update UI to show loading
-        const chatWindow = document.getElementById('ai-chat-window');
-        // Find the user message just added (last element) and append a loading indicator
-        const loadingIndicatorHtml = '<div id="ai-agent-loading" class="flex items-center space-x-2 mt-2"><div class="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-400"></div><span class="text-xs text-indigo-400">Agent is thinking...</span></div>';
-        
-        // Find the *last* user message to append the spinner to its container
-        const lastUserMessage = Array.from(chatWindow.children).pop();
-        if (lastUserMessage) {
-             lastUserMessage.querySelector('div:last-child').innerHTML += loadingIndicatorHtml;
-        }
-
-        try {
-            const response = await geminiModel.generateContent({
-                contents: CHAT_HISTORY,
-                systemInstruction: { parts: [{ text: fullSystemPrompt }] }
-            });
-            
-            const generatedText = response.text || "I was unable to generate a response.";
-
-            // Remove loading indicator
-            document.getElementById('ai-agent-loading')?.remove();
-
-            // Add model response to history
-            CHAT_HISTORY.push({ role: "model", parts: [{ text: generatedText }] });
-
-            // Render the new model message
-            renderAgentMessage('model', generatedText);
-            
-            // Handle citations
-            const groundingMetadata = response.candidates?.[0]?.groundingMetadata;
-            if (groundingMetadata && groundingMetadata.groundingAttributions) {
-                const sources = groundingMetadata.groundingAttributions
-                    .map(attr => attr.web?.title || attr.web?.uri)
-                    .filter(s => s)
-                    .slice(0, 3); // Limit to top 3 sources
-
-                if (sources.length > 0) {
-                    renderAgentMessage('system-info', `Grounded by Google Search. Sources: ${sources.join(', ')}`);
-                }
-            }
-
-
-        } catch (error) {
-            console.error("Gemini API call failed:", error);
-            document.getElementById('ai-agent-loading')?.remove();
-            renderAgentMessage('model', "Sorry, I encountered an error while processing your request.");
-            // Remove the user message from history if the API call failed, to allow retry
-            CHAT_HISTORY.pop(); 
-        }
-    };
-
-    /**
-     * Renders a message bubble in the chat window.
-     */
-    const renderAgentMessage = (role, text) => {
-        const chatWindow = document.getElementById('ai-chat-window');
-        if (!chatWindow) return;
-
-        const isUser = role === 'user';
-        const isSystem = role === 'system-info';
-        // const isModel = role === 'model';
-
-        // Sanitizing text for display
-        const safeText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, '<br>');
-
-        if (isSystem) {
-             const systemDiv = document.createElement('div');
-             systemDiv.className = "text-center text-xs text-gray-500 my-2 pt-2 border-t border-gray-800 italic";
-             systemDiv.innerHTML = safeText;
-             chatWindow.appendChild(systemDiv);
-             chatWindow.scrollTop = chatWindow.scrollHeight;
-             return;
-        }
-
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `flex mb-4 ${isUser ? 'justify-end' : 'justify-start'}`;
-        
-        const contentDiv = document.createElement('div');
-        contentDiv.className = `max-w-xs lg:max-w-lg px-4 py-2 rounded-xl ${isUser 
-            ? 'bg-indigo-600 text-white rounded-br-none' 
-            : 'bg-gray-700 text-gray-100 rounded-tl-none'}`;
-        
-        contentDiv.innerHTML = safeText;
-        messageDiv.appendChild(contentDiv);
-        chatWindow.appendChild(messageDiv);
-
-        // Scroll to the bottom
-        chatWindow.scrollTop = chatWindow.scrollHeight;
-    };
-
-    /**
-     * Renders the AI Agent chat modal UI.
-     */
-    const renderAIAgentModal = () => {
-        // Prevent double rendering
-        if (document.getElementById('ai-agent-modal')) return;
-
-        const agentModal = document.createElement('div');
-        agentModal.id = 'ai-agent-modal';
-        agentModal.className = 'fixed inset-0 bg-black bg-opacity-70 z-[1100] hidden'; // hidden by default
-        agentModal.innerHTML = `
-            <div class="absolute right-4 top-16 w-full max-w-sm h-[85%] sm:max-w-md bg-gray-900 border border-gray-700 rounded-xl shadow-2xl flex flex-col overflow-hidden">
-                <!-- Header -->
-                <div class="p-3 border-b border-gray-800 flex justify-between items-center">
-                    <h3 class="text-white text-lg font-bold flex items-center">
-                        <i class="fa-solid ${AGENT_CATEGORIES[CURRENT_AGENT_ID].icon} mr-2 text-indigo-400"></i>
-                        AI Agent: <span id="current-agent-name" class="ml-1 text-indigo-300">${AGENT_CATEGORIES[CURRENT_AGENT_ID].name}</span>
-                    </h3>
-                    <button id="close-ai-agent" class="text-gray-400 hover:text-white transition">
-                        <i class="fa-solid fa-xmark text-xl"></i>
-                    </button>
-                </div>
-
-                <!-- Agent Selector -->
-                <div class="p-3 border-b border-gray-800 overflow-x-auto whitespace-nowrap space-x-2 flex items-center">
-                    ${Object.entries(AGENT_CATEGORIES).map(([id, config]) => `
-                        <button data-agent-id="${id}" class="agent-selector px-3 py-1 text-xs rounded-full border transition whitespace-nowrap 
-                            ${id === CURRENT_AGENT_ID ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-700 hover:text-white'}">
-                            <i class="fa-solid ${config.icon} mr-1"></i> ${config.name}
-                        </button>
-                    `).join('')}
-                </div>
-
-                <!-- Chat Window -->
-                <div id="ai-chat-window" class="flex-grow p-4 overflow-y-auto custom-scrollbar">
-                    <div class="text-center text-gray-400 my-4 text-sm">
-                        Welcome! I am the <span class="text-indigo-400">${AGENT_CATEGORIES[CURRENT_AGENT_ID].name}</span> Agent. Select a persona above to begin.
-                    </div>
-                </div>
-
-                <!-- Input Field -->
-                <div class="p-3 border-t border-gray-800 flex items-center">
-                    <input type="text" id="ai-chat-input" placeholder="Ask the AI Agent anything..." 
-                           class="flex-grow bg-gray-700 text-white placeholder-gray-400 rounded-lg p-2 mr-2 focus:ring-indigo-500 focus:border-indigo-500 border-gray-600 outline-none">
-                    <button id="ai-chat-send" class="bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-lg transition disabled:opacity-50" disabled>
-                        <i class="fa-solid fa-paper-plane"></i>
-                    </button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(agentModal);
-        
-        // Add Chat CSS
-        const style = document.createElement('style');
-        style.textContent += `
-            .custom-scrollbar::-webkit-scrollbar { width: 8px; }
-            .custom-scrollbar::-webkit-scrollbar-track { background: #1f2937; /* gray-800 */ }
-            .custom-scrollbar::-webkit-scrollbar-thumb { background: #4f46e5; /* indigo-600 */ border-radius: 4px; }
-            .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #6366f1; /* indigo-500 */ }
-            .agent-selector { flex-shrink: 0; }
-        `;
-        document.head.appendChild(style);
-    };
-
 
     const run = async () => {
         let pages = {};
 
-        // 1. --- FINAL SETUP (Ensure Container and Styles are ready) ---
-        if (!document.getElementById('navbar-container')) {
-            const navbarDiv = document.createElement('div');
-            navbarDiv.id = 'navbar-container';
-            // Prepend the container immediately so the rest of the script can target it
-            document.body.prepend(navbarDiv); 
-        }
-        // Call the globally scoped injectStyles function immediately
-        injectStyles();
-        
-        // 2. Load Icons CSS first for immediate visual display
+        // Load Icons CSS first for immediate visual display
         await loadCSS("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css");
 
-        // 3. Fetch page configuration for the tabs
+        // Fetch page configuration for the tabs
         try {
             const response = await fetch(PAGE_CONFIG_URL);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             pages = await response.json();
+            console.log("Page configuration loaded successfully.");
         } catch (error) {
-            console.error("Failed to load page identification config, proceeding without tabs:", error);
+            console.error("Failed to load page identification config:", error);
+            // Continue execution even if pages fail to load, just without tabs
         }
 
         try {
-            // 4. --- FIREBASE SDK LOADING (HYBRID) ---
-            // Load COMPAT versions for existing Auth/DB logic
+            // Sequentially load Firebase modules (compat versions for simplicity).
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js");
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js");
 
-            // Load MODULAR versions for AI SDK, which requires modern imports.
-            await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
-            
-            // 5. Proceed with initialization and auth listener
+            // Now that scripts are loaded, we can use the `firebase` global object
             initializeApp(pages);
-            
         } catch (error) {
-            console.error("Failed to load necessary Firebase SDKs:", error);
-            // Render the navbar even if Firebase fails, but without auth features
-            renderNavbar(null, null, pages); 
+            console.error("Failed to load necessary SDKs:", error);
         }
     };
 
     // --- 2. INITIALIZE FIREBASE AND RENDER NAVBAR ---
     const initializeApp = (pages) => {
         // Initialize Firebase with the compat libraries
-        const compatApp = firebase.initializeApp(FIREBASE_CONFIG);
+        const app = firebase.initializeApp(FIREBASE_CONFIG);
         // Assign auth and db to module-scope variables
         auth = firebase.auth();
         db = firebase.firestore();
+
+        // --- 3. INJECT CSS STYLES ---
+        const injectStyles = () => {
+            const style = document.createElement('style');
+            style.textContent = `
+                /* Base Styles */
+                body { padding-top: 4rem; /* 64px, equal to navbar height */ }
+                /* Nav bar is now fully opaque (#000000 - pure black) */
+                .auth-navbar { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: #000000; border-bottom: 1px solid rgb(31 41 55); height: 4rem; }
+                /* Nav now needs relative positioning for glide buttons */
+                .auth-navbar nav { max-width: 80rem; margin: auto; padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
+                .initial-avatar { background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: 'Geist', sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; }
+                
+                /* Auth Dropdown Menu Styles (UPDATED: Pure Black background) */
+                .auth-menu-container { 
+                    position: absolute; right: 0; top: 50px; width: 16rem; 
+                    background: #000000; /* Pure black */
+                    backdrop-filter: none; /* Removed backdrop filter for pure black */
+                    -webkit-backdrop-filter: none;
+                    border: 1px solid rgb(55 65 81); border-radius: 0.75rem; padding: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
+                    transition: transform 0.2s ease-out, opacity 0.2s ease-out; transform-origin: top right; 
+                }
+                .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
+                .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
+                /* ADDED: flex and gap for icon alignment */
+                .auth-menu-link, .auth-menu-button { 
+                    display: flex; /* Changed from block to flex */
+                    align-items: center; /* Vertically align icon and text */
+                    gap: 0.75rem; /* Space between icon and text */
+                    width: 100%; 
+                    text-align: left; 
+                    padding: 0.5rem 0.75rem; 
+                    font-size: 0.875rem; 
+                    color: #d1d5db; 
+                    border-radius: 0.375rem; 
+                    transition: background-color 0.2s, color 0.2s; 
+                }
+                .auth-menu-link:hover, .auth-menu-button:hover { background-color: rgb(55 65 81); color: white; }
+
+                /* Scrollable Tab Wrapper (NEW) */
+                .tab-wrapper {
+                    flex-grow: 1;
+                    display: flex;
+                    align-items: center;
+                    position: relative; /* Context for absolute buttons */
+                    min-width: 0; /* Needed for flex item to shrink properly */
+                    margin: 0 1rem; /* Added margin for visual spacing */
+                }
+
+                /* Horizontal Scrollable Tabs Styles */
+                .tab-scroll-container {
+                    flex-grow: 1; /* Allows the tab container to take up available space */
+                    display: flex;
+                    align-items: center;
+                    overflow-x: auto; /* Enable horizontal scrolling */
+                    -webkit-overflow-scrolling: touch; /* Smoother scrolling on iOS */
+                    scrollbar-width: none; /* Hide scrollbar for Firefox */
+                    -ms-overflow-style: none; /* Hide scrollbar for IE and Edge */
+                    padding-bottom: 5px; /* Add padding for scroll visibility */
+                    margin-bottom: -5px; /* Counteract padding-bottom for visual alignment */
+                    scroll-behavior: smooth; 
+                }
+                /* Hide scrollbar for Chrome, Safari, and Opera */
+                .tab-scroll-container::-webkit-scrollbar { display: none; }
+
+                /* Scroll Glide Buttons (UPDATED: Removed border-radius, adjusted gradients) */
+                .scroll-glide-button {
+                    position: absolute;
+                    top: 0;
+                    height: 100%;
+                    width: 4rem; /* Increased width to accommodate the gradient stop change */
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: #000000; /* Solid color matching navbar */
+                    color: white;
+                    font-size: 1.2rem;
+                    cursor: pointer;
+                    opacity: 0.8; /* Always visible slightly so they don't 'wake up' */
+                    transition: opacity 0.3s, background 0.3s;
+                    z-index: 10;
+                    pointer-events: auto; /* Allow interaction */
+                    /* Removed border-radius for no roundness */
+                }
+                .scroll-glide-button:hover {
+                    opacity: 1;
+                }
+                
+                /* Position and gradient for left button */
+                #glide-left {
+                    left: 0;
+                    /* Gradient updated to go to 100% opaque at the edge (50% stop) */
+                    background: linear-gradient(to right, #000000 50%, transparent); 
+                    justify-content: flex-start; /* Align icon to the inner side of the gradient */
+                    padding-left: 0.5rem;
+                }
+
+                /* Position and gradient for right button */
+                #glide-right {
+                    right: 0;
+                    /* Gradient updated to go to 100% opaque at the edge (50% stop) */
+                    background: linear-gradient(to left, #000000 50%, transparent); 
+                    justify-content: flex-end; /* Align icon to the inner side of the gradient */
+                    padding-right: 0.5rem;
+                }
+                
+                /* Visibility class controlled by JS to hide when not needed */
+                .scroll-glide-button.hidden {
+                    opacity: 0 !important;
+                    pointer-events: none !important;
+                }
+
+                /* Tab Base Styles */
+                .nav-tab {
+                    flex-shrink: 0; /* Prevents tabs from shrinking */
+                    padding: 0.5rem 1rem;
+                    color: #9ca3af; /* gray-400 */
+                    font-size: 0.875rem;
+                    font-weight: 500;
+                    border-radius: 0.5rem;
+                    transition: all 0.2s;
+                    text-decoration: none;
+                    line-height: 1.5;
+                    display: flex;
+                    align-items: center;
+                    margin-right: 0.5rem; /* Spacing between tabs */
+                    border: 1px solid transparent;
+                }
+                
+                /* INACTIVE Tab Hover Styles (NEW) */
+                .nav-tab:not(.active):hover {
+                    color: white; /* Text color remains white */
+                    border-color: #d1d5db; /* light color for outline: gray-300 */
+                    background-color: rgba(79, 70, 229, 0.05); /* very slight indigo-600 tint for lighter background */
+                }
+
+                /* Active Tab Styles (Unchanged) */
+                .nav-tab.active {
+                    color: #4f46e5; /* indigo-600 - Highlight color */
+                    border-color: #4f46e5;
+                    background-color: rgba(79, 70, 229, 0.1); /* indigo-600 with opacity */
+                }
+                .nav-tab.active:hover {
+                    color: #6366f1; /* indigo-500 */
+                    border-color: #6366f1;
+                    background-color: rgba(79, 70, 229, 0.15);
+                }
+            `;
+            document.head.appendChild(style);
+        };
 
         // --- NEW: Function to robustly determine active tab (GitHub Pages fix) ---
         const isTabActive = (tabUrl) => {
             const tabPathname = new URL(tabUrl, window.location.origin).pathname.toLowerCase();
             const currentPathname = window.location.pathname.toLowerCase();
 
+            // Helper to clean paths: remove trailing slash (unless it's root) and replace /index.html with /
             const cleanPath = (path) => {
+                // If it ends with /index.html, strip that part to treat it as the folder path
                 if (path.endsWith('/index.html')) {
                     path = path.substring(0, path.lastIndexOf('/')) + '/';
                 }
+                // Remove trailing slash unless it's the root path '/'
                 if (path.length > 1 && path.endsWith('/')) {
                     path = path.slice(0, -1);
                 }
@@ -638,10 +342,13 @@ const AGENT_CATEGORIES = {
             const currentCanonical = cleanPath(currentPathname);
             const tabCanonical = cleanPath(tabPathname);
             
+            // 1. Exact canonical match (e.g., /dashboard === /dashboard)
             if (currentCanonical === tabCanonical) {
                 return true;
             }
 
+            // 2. GitHub Pages/Subdirectory match: Check if the current path ends with the tab path.
+            // This handles cases like: current: /my-repo/about.html, tab: /about.html
             const tabPathSuffix = tabPathname.startsWith('/') ? tabPathname.substring(1) : tabPathname;
             
             if (currentPathname.endsWith(tabPathSuffix)) {
@@ -659,50 +366,48 @@ const AGENT_CATEGORIES = {
 
             if (!container || !leftButton || !rightButton) return;
             
+            // Check if there is any content overflow
             const hasHorizontalOverflow = container.scrollWidth > container.offsetWidth;
 
             if (hasHorizontalOverflow) {
+                // A threshold of 5px is used to account for minor rendering/subpixel discrepancies.
                 const isScrolledToLeft = container.scrollLeft < 5; 
+                // Check if scrolled to right end (within a 5px threshold)
                 const isScrolledToRight = container.scrollLeft + container.offsetWidth >= container.scrollWidth - 5; 
 
+                // Show buttons if there is overflow
                 leftButton.classList.remove('hidden');
                 rightButton.classList.remove('hidden');
 
+                // Hide left button if at the start
                 if (isScrolledToLeft) {
                     leftButton.classList.add('hidden');
                 }
+                // Hide right button if at the end
                 if (isScrolledToRight) {
                     rightButton.classList.add('hidden');
                 }
             } else {
+                // Hide both buttons if there is no content overflow (most common case)
                 leftButton.classList.add('hidden');
                 rightButton.classList.add('hidden');
             }
         };
 
-        // --- 4. RENDER THE NAVBAR HTML (UPDATED: Added AI Agent Button if authorized) ---
+        // --- 4. RENDER THE NAVBAR HTML (UPDATED: Dashboard icon changed) ---
         const renderNavbar = (user, userData, pages) => {
             const container = document.getElementById('navbar-container');
-            if (!container) {
-                console.error("Navbar container not found. Cannot render.");
-                return;
-            }
-
-            // Only show AI button if authorized AND model is initialized
-            const aiAgentButton = AI_AGENT_ENABLED && geminiModel ? `
-                <button id="ai-agent-toggle-button" title="AI Agent (Ctrl+C)" 
-                        class="w-8 h-8 rounded-full flex items-center justify-center text-indigo-400 border border-indigo-700 bg-gray-900 ml-2 hover:bg-gray-800 transition flex-shrink-0">
-                    <i class="fa-solid fa-brain"></i>
-                </button>
-            ` : '';
-
+            if (!container) return;
 
             const logoPath = "/images/logo.png"; // Using root-relative path
 
             // --- Tab Generation ---
             const tabsHtml = Object.values(pages || {}).map(page => {
+                // Use the new robust check for active state
                 const isActive = isTabActive(page.url);
                 const activeClass = isActive ? 'active' : '';
+                
+                // Use the simplified and now robust getIconClass
                 const iconClasses = getIconClass(page.icon);
 
                 return `
@@ -713,17 +418,20 @@ const AGENT_CATEGORIES = {
                 `;
             }).join('');
 
-            // --- Auth Views (Unchanged) ---
+            // --- Auth Views (Unchanged login/signup view) ---
             const loggedOutView = `
-                <div class="relative flex-shrink-0 flex items-center">
-                    ${aiAgentButton}
-                    <button id="auth-toggle" class="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-700 transition logged-out-auth-toggle ml-2">
-                        <i class="fa-solid fa-user"></i>
+                <div class="relative flex-shrink-0">
+                    <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-700 flex items-center justify-center bg-gray-800 hover:bg-gray-700 transition">
+                        <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                     </button>
                     <div id="auth-menu-container" class="auth-menu-container closed">
-                        <a href="/authentication.html" class="auth-menu-link">
-                            <i class="fa-solid fa-lock"></i>
-                            Authenticate
+                        <a href="/login.html" class="auth-menu-link">
+                            <i class="fa-solid fa-right-to-bracket"></i>
+                            Login
+                        </a>
+                        <a href="/signup.html" class="auth-menu-link">
+                            <i class="fa-solid fa-user-plus"></i>
+                            Sign Up
                         </a>
                     </div>
                 </div>
@@ -739,10 +447,10 @@ const AGENT_CATEGORIES = {
                     `<img src="${photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">` :
                     `<div class="initial-avatar w-8 h-8 rounded-full text-sm font-semibold">${initial}</div>`;
 
+                // --- UPDATED: Dashboard icon is now fa-house-user ---
                 return `
-                    <div class="relative flex-shrink-0 flex items-center">
-                        ${aiAgentButton}
-                        <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500 ml-2">
+                    <div class="relative flex-shrink-0">
+                        <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
                             ${avatar}
                         </button>
                         <div id="auth-menu-container" class="auth-menu-container closed">
@@ -789,11 +497,6 @@ const AGENT_CATEGORIES = {
                     </nav>
                 </header>
             `;
-            
-            // Only render the modal once the user is authorized
-            if (AI_AGENT_ENABLED && geminiModel && !document.getElementById('ai-agent-modal')) {
-                renderAIAgentModal();
-            }
 
             // --- 5. SETUP EVENT LISTENERS (Including auto-scroll and glide buttons) ---
             setupEventListeners(user);
@@ -802,9 +505,12 @@ const AGENT_CATEGORIES = {
             const activeTab = document.querySelector('.nav-tab.active');
             const tabContainer = document.querySelector('.tab-scroll-container');
             if (activeTab && tabContainer) {
+                // Scroll the container so the active tab is centered
                 tabContainer.scrollLeft = activeTab.offsetLeft - (tabContainer.offsetWidth / 2) + (activeTab.offsetWidth / 2);
             }
             
+            // INITIAL CHECK: After rendering and auto-scrolling, update glide button visibility
+            // This is the key change to make the arrows dynamic upon load.
             updateScrollGilders();
         };
 
@@ -812,18 +518,25 @@ const AGENT_CATEGORIES = {
             const toggleButton = document.getElementById('auth-toggle');
             const menu = document.getElementById('auth-menu-container');
 
-            // --- Navigation Scroll Listeners ---
+            // Scroll Glide Button setup
             const tabContainer = document.querySelector('.tab-scroll-container');
             const leftButton = document.getElementById('glide-left');
             const rightButton = document.getElementById('glide-right');
 
+            // Use debounced function for scroll and resize updates (Performance fix)
             const debouncedUpdateGilders = debounce(updateScrollGilders, 50);
 
             if (tabContainer) {
+                // Calculate dynamic scroll amount based on container width
                 const scrollAmount = tabContainer.offsetWidth * 0.8; 
+
+                // Update visibility on scroll
                 tabContainer.addEventListener('scroll', debouncedUpdateGilders);
+                
+                // Update visibility on window resize
                 window.addEventListener('resize', debouncedUpdateGilders);
                 
+                // Add click behavior for glide buttons
                 if (leftButton) {
                     leftButton.addEventListener('click', () => {
                         tabContainer.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
@@ -836,7 +549,6 @@ const AGENT_CATEGORIES = {
                 }
             }
 
-            // --- Auth Menu Listeners ---
             if (toggleButton && menu) {
                 toggleButton.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -855,143 +567,55 @@ const AGENT_CATEGORIES = {
             if (user) {
                 const logoutButton = document.getElementById('logout-button');
                 if (logoutButton) {
+                    // Use the module-scope 'auth' variable
                     logoutButton.addEventListener('click', () => {
                         auth.signOut().catch(err => console.error("Logout failed:", err));
                     });
                 }
             }
-            
-            // --- NEW: AI Agent Event Listeners ---
-            const agentModal = document.getElementById('ai-agent-modal');
-            const agentToggleButton = document.getElementById('ai-agent-toggle-button');
-            const agentCloseButton = document.getElementById('close-ai-agent');
-            const chatInput = document.getElementById('ai-chat-input');
-            const chatSendButton = document.getElementById('ai-chat-send');
-            const chatWindow = document.getElementById('ai-chat-window');
-            
-            const toggleAgentModal = () => {
-                if (agentModal) {
-                    agentModal.classList.toggle('hidden');
-                    // Focus input when opening
-                    if (!agentModal.classList.contains('hidden')) {
-                        chatInput?.focus();
-                    }
-                }
-            };
-            
-            if (AI_AGENT_ENABLED) {
-                // 1. Navbar Button Toggle
-                agentToggleButton?.addEventListener('click', toggleAgentModal);
-                agentCloseButton?.addEventListener('click', toggleAgentModal);
-
-                // 2. Control + C Keybind Activation
-                document.addEventListener('keydown', (e) => {
-                    // Check if focus is on a text input, textarea, or content-editable element
-                    const isInputFocused = document.activeElement.tagName === 'INPUT' || 
-                                           document.activeElement.tagName === 'TEXTAREA' ||
-                                           document.activeElement.contentEditable === 'true';
-
-                    const isControlOrMeta = e.ctrlKey || e.metaKey; // Ctrl on Windows/Linux, Cmd on Mac
-                    
-                    // Check for Ctrl/Cmd + C press
-                    if (isControlOrMeta && e.key === 'c' && !isInputFocused) {
-                        e.preventDefault(); // Prevent copying content
-                        toggleAgentModal();
-                    }
-                });
-
-                // 3. Chat Input/Send Logic
-                const handleSend = () => {
-                    const input = chatInput.value.trim();
-                    if (input) {
-                        renderAgentMessage('user', input);
-                        chatInput.value = ''; // Clear input
-                        chatSendButton.disabled = true;
-                        handleAIAgentChat(input, chatWindow);
-                    }
-                };
-
-                chatInput?.addEventListener('input', () => {
-                    chatSendButton.disabled = chatInput.value.trim() === '';
-                });
-
-                chatInput?.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter' && !chatSendButton.disabled) {
-                        handleSend();
-                    }
-                });
-                
-                chatSendButton?.addEventListener('click', handleSend);
-                
-                // 4. Agent Selector Logic
-                document.querySelectorAll('.agent-selector').forEach(button => {
-                    button.addEventListener('click', (e) => {
-                        const newAgentId = e.currentTarget.dataset.agentId;
-                        if (newAgentId === CURRENT_AGENT_ID) return;
-
-                        // Reset button styles
-                        document.querySelectorAll('.agent-selector').forEach(btn => {
-                            btn.classList.remove('bg-indigo-600', 'border-indigo-500', 'text-white');
-                            btn.classList.add('bg-gray-800', 'border-gray-700', 'text-gray-400', 'hover:bg-gray-700', 'hover:text-white');
-                        });
-
-                        // Apply new active style
-                        e.currentTarget.classList.remove('bg-gray-800', 'border-gray-700', 'text-gray-400', 'hover:bg-gray-700', 'hover:text-white');
-                        e.currentTarget.classList.add('bg-indigo-600', 'border-indigo-500', 'text-white');
-                        
-                        // Update state and UI
-                        CURRENT_AGENT_ID = newAgentId;
-                        CHAT_HISTORY = []; // Clear chat history when agent changes
-                        
-                        document.getElementById('current-agent-name').textContent = AGENT_CATEGORIES[newAgentId].name;
-                        document.getElementById('ai-chat-window').innerHTML = `
-                             <div class="text-center text-gray-400 my-4 text-sm">
-                                Chat history cleared. You are now speaking to the 
-                                <span class="text-indigo-400">${AGENT_CATEGORIES[newAgentId].name}</span> Agent.
-                            </div>
-                        `;
-                    });
-                });
-            }
-
         };
 
-        // --- 6. AUTH STATE LISTENER (UPDATED for AI Access Control) ---
+        // --- 6. AUTH STATE LISTENER ---
         auth.onAuthStateChanged(async (user) => {
             if (user) {
-                // Set AI access flag based on email
-                AI_AGENT_ENABLED = user.email === AUTHORIZED_USER_EMAIL;
-                
-                // If authorized, initialize the modular AI model
-                if (AI_AGENT_ENABLED && !geminiModel) {
-                    // We must wait for this model to be ready before rendering the navbar with the button
-                    await initFirebaseModularAI();
-                }
-
+                // User is signed in. Fetch their data from Firestore.
                 try {
+                    // Use the module-scope 'db' variable
                     const userDoc = await db.collection('users').doc(user.uid).get();
                     const userData = userDoc.exists ? userDoc.data() : null;
                     renderNavbar(user, userData, pages);
                 } catch (error) {
                     console.error("Error fetching user data:", error);
-                    renderNavbar(user, null, pages); 
+                    renderNavbar(user, null, pages); // Render even if Firestore fails
                 }
             } else {
                 // User is signed out.
-                AI_AGENT_ENABLED = false; // Disable AI for non-logged-in users
                 renderNavbar(null, null, pages);
-                
-                // Attempt to sign in anonymously
+                // Attempt to sign in anonymously for a seamless guest experience.
                 auth.signInAnonymously().catch((error) => {
-                    if (error.code !== 'auth/operation-not-allowed' && error.code !== 'auth/admin-restricted-operation') {
+                    if (error.code === 'auth/operation-not-allowed' || error.code === 'auth/admin-restricted-operation') {
+                        console.warn(
+                            "Anonymous sign-in is disabled. Enable it in the Firebase Console (Authentication > Sign-in method) for guest features."
+                        );
+                    } else {
                         console.error("Anonymous sign-in error:", error);
                     }
                 });
             }
         });
+
+        // --- FINAL SETUP ---
+        // Create a div for the navbar to live in if it doesn't exist.
+        if (!document.getElementById('navbar-container')) {
+            const navbarDiv = document.createElement('div');
+            navbarDiv.id = 'navbar-container';
+            document.body.prepend(navbarDiv);
+        }
+        injectStyles();
     };
 
     // --- START THE PROCESS ---
+    // Wait for the DOM to be ready, then start loading scripts.
     document.addEventListener('DOMContentLoaded', run);
 
 })();
