@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - ACCESS ACCOUNT</title>
+    <title>4SP - Access Account</title>
     <meta name="description" content="Log in or create your 4SP account to access the student toolkit.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -257,7 +257,7 @@
         // --- Global State ---
         let currentEmail = null;
         let selectedUsername = null; 
-        let isExistingAccount = false; // NEW FLAG
+        let isExistingAccount = false; 
 
         // --- DOM Elements ---
         const emailContainer = document.getElementById('emailContainer');
@@ -283,7 +283,7 @@
         const githubLoginBtn = document.getElementById('githubLoginBtn');
         const microsoftLoginBtn = document.getElementById('microsoftLoginBtn');
 
-        // --- Helper Functions (From original files) ---
+        // --- Helper Functions (From previous code) ---
 
         const showMessage = (element, text, type = 'error') => {
             element.innerHTML = text;
@@ -295,8 +295,8 @@
         };
         
         const getUserProfileDocRef = (userId) => {
-            // Firestore Path: users/{userId} (Simplified from login.html's complex path to match signup.html's collection 'users' logic)
-            return doc(db, 'users', userId); // Using simpler path from signup.html
+            // Firestore Path: users/{userId}
+            return doc(db, 'users', userId);
         };
 
         const isUsernameTaken = async (username) => {
@@ -343,7 +343,6 @@
             const emailToStore = explicitEmail || (user && user.email) || null;
             const isVerified = (authMethod !== 'email') ? true : !!(user && user.emailVerified);
             try {
-                // Use the path that matches signup.html
                 await setDoc(doc(db, 'users', user.uid), {
                     email: emailToStore, 
                     authMethod: authMethod, 
@@ -466,6 +465,13 @@
         };
 
         const showSignup = (email) => {
+            // CRITICAL SECURITY CHECK: If the flag indicates an existing account, do NOT proceed.
+            if (isExistingAccount) {
+                 showMessage(emailMessageDiv, 'An account already exists for this email. Please log in or use a social provider.', 'warning');
+                 showEmailInput(); // Show the email input again with the message
+                 return;
+            }
+
             resetAllViews();
             signupContainer.style.display = 'flex';
             signupContainer.style.flexDirection = 'column';
@@ -510,13 +516,14 @@
                 } else {
                     // **SOCIAL LOGIN REQUIRED**
                     const providers = methods.map(method => method.split('.')[0].charAt(0).toUpperCase() + method.split('.')[0].slice(1)).join(', ');
-                    showMessage(emailMessageDiv, `This email is registered. Please use ${providers} to log in.`);
-                    isExistingAccount = true; // Important: Block email sign up if a social account exists
+                    showMessage(emailMessageDiv, `This email is registered. Please use **${providers}** to log in.`, 'warning');
+                    isExistingAccount = true; // Mark as existing to block any attempt to force sign up
+                    // Keep user on the email screen to retry/use social buttons
                 }
             } catch (error) {
                 console.error('Email check error:', error);
                 showMessage(emailMessageDiv, 'An error occurred. Please try again or check the email format.');
-                isExistingAccount = true; // Assume existing to be safe
+                // In case of an error checking the email, it's safest to keep the user on the email input screen.
             }
         });
         
@@ -526,8 +533,8 @@
             loginMessageDiv.innerHTML = '';
             // Security check: Ensure we are on a login flow for an existing user
             if (!isExistingAccount) {
-                 showMessage(loginMessageDiv, 'Security violation: Account status mismatch. Please start over.');
-                 await signOut(auth); // Force sign out if somehow authenticated
+                 showMessage(loginMessageDiv, 'Security violation: Account status mismatch. Please start over.', 'error');
+                 await signOut(auth);
                  showEmailInput();
                  return;
             }
@@ -548,7 +555,7 @@
                 } else if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
                      message = 'Invalid email or password.'; 
                 }
-                showMessage(loginMessageDiv, message);
+                showMessage(loginMessageDiv, message, 'error');
             }
         });
 
@@ -559,7 +566,7 @@
 
             // CRITICAL SECURITY CHECK: Prevent account creation if the flow identified an existing account
             if (isExistingAccount) {
-                 showMessage(signupMessageDiv, 'Error: An account already exists for this email. Please use the login or social sign-in options.');
+                 showMessage(signupMessageDiv, 'Error: An account already exists for this email. Please click "Change Email" and use the login or social sign-in options.', 'error');
                  return;
             }
             
@@ -570,18 +577,18 @@
             // 1. Validate Password
             const passwordError = validatePassword(password);
             if (passwordError) {
-                showMessage(signupMessageDiv, passwordError);
+                showMessage(signupMessageDiv, passwordError, 'error');
                 return;
             }
-            // ... (rest of the username validation logic remains the same)
+
             // 2. Validate Username
             if (usernameInput.length < 4 || usernameInput.length > 24) {
-                showMessage(signupMessageDiv, 'Username must be between 4 and 24 characters.');
+                showMessage(signupMessageDiv, 'Username must be between 4 and 24 characters.', 'error');
                 return;
             }
             const allowedCharsRegex = /^[a-zA-Z0-9.,\-+_\!\?\$\\]+$/;
             if (!allowedCharsRegex.test(usernameInput)) {
-                showMessage(signupMessageDiv, 'Username contains unallowed characters. Only letters, numbers, and .,-+_!?$ are permitted.');
+                showMessage(signupMessageDiv, 'Username contains unallowed characters. Only letters, numbers, and .,-+_!?$ are permitted.', 'error');
                 return;
             }
             
@@ -590,14 +597,14 @@
             // 3. Check for profanity
             const isProfane = await checkProfanity(usernameInput);
             if (isProfane) {
-                showMessage(signupMessageDiv, 'Please choose a different username. That one is not allowed.');
+                showMessage(signupMessageDiv, 'Please choose a different username. That one is not allowed.', 'error');
                 return;
             }
 
             // 4. Check if username is already taken
             const isTaken = await isUsernameTaken(usernameInput);
             if (isTaken) {
-                showMessage(signupMessageDiv, 'This username is already taken. Please choose another.');
+                showMessage(signupMessageDiv, 'This username is already taken. Please choose another.', 'error');
                 return;
             }
             
@@ -616,20 +623,24 @@
                     await handleSuccessfulEmailSignup(user, selectedUsername);
                 } else {
                     await user.delete(); // Crucial fallback
-                    showMessage(signupMessageDiv, 'An internal error occurred (failed to create user record). Please try again or contact support.');
+                    showMessage(signupMessageDiv, 'An internal error occurred (failed to create user record). Please try again or contact support.', 'error');
                 }
             } catch (error) {
                 console.error("Signup Error:", error);
                 let message = 'An unknown sign up error occurred. Please try again.';
+                
+                // CRITICAL FALLBACK for 'auth/email-already-in-use' if it wasn't caught in the email check
                 if (error.code === 'auth/email-already-in-use') {
-                    // CRITICAL FALLBACK: If Firebase still reports this, stop and warn the user.
-                    showMessage(signupMessageDiv, `This email is already in use! Please go back and use the Login form.`);
+                    showMessage(signupMessageDiv, `This email is already in use! Please click "Change Email" and use the Login form.`, 'error');
                 } else if (error.code === 'auth/invalid-email') {
                     message = 'The email address is not valid.'; 
+                    showMessage(signupMessageDiv, message, 'error');
                 } else if (error.code === 'auth/weak-password') {
                     message = 'Password is too weak. Please choose a stronger one.'; 
+                    showMessage(signupMessageDiv, message, 'error');
+                } else {
+                    showMessage(signupMessageDiv, message, 'error');
                 }
-                showMessage(signupMessageDiv, message);
             }
         });
 
@@ -639,15 +650,15 @@
             e.preventDefault();
             resetMessageDiv.innerHTML = '';
             const email = document.getElementById('resetEmail').value.trim();
-            if (!email) { showMessage(resetMessageDiv, 'Please enter your email.'); return; }
+            if (!email) { showMessage(resetMessageDiv, 'Please enter your email.', 'error'); return; }
 
             try {
                 const methods = await fetchSignInMethodsForEmail(auth, email);
                 if (methods.length === 0) { 
-                    showMessage(resetMessageDiv, 'No account found with this email.'); 
+                    showMessage(resetMessageDiv, 'No account found with this email.', 'warning'); 
                 } 
                 else if (methods.some(method => ['google.com', 'github.com', 'microsoft.com'].includes(method))) { 
-                    showMessage(resetMessageDiv, 'This account uses a social provider and does not have a password to reset.'); 
+                    showMessage(resetMessageDiv, 'This account uses a social provider and does not have a password to reset.', 'warning'); 
                 } 
                 else { 
                     await sendPasswordResetEmail(auth, email); 
@@ -655,7 +666,7 @@
                 }
             } catch (error) { 
                 console.error('Password Reset Error:', error);
-                showMessage(resetMessageDiv, 'An error occurred during password reset. Please check the email and try again.'); 
+                showMessage(resetMessageDiv, 'An error occurred during password reset. Please check the email and try again.', 'error'); 
             }
         });
         
@@ -666,7 +677,6 @@
                 const result = await signInWithPopup(auth, provider);
                 const user = result.user;
                 
-                // Use the user document check logic from signup.html's 'users' collection
                 const userDocSnap = await getDoc(doc(db, 'users', user.uid));
                 const providerName = provider.providerId.split('.')[0].charAt(0).toUpperCase() + provider.providerId.split('.')[0].slice(1);
                 let finalUsername = '';
@@ -695,7 +705,7 @@
                     const documentCreated = await createUserDocument(user, provider.providerId.split('.')[0], finalUsername, userEmail);
                     
                     if (!documentCreated) {
-                        throw new Error('Failed to create user document during social access.');
+                        throw new new Error('Failed to create user document during social access.');
                     }
                 }
                 
@@ -709,11 +719,13 @@
                 if (error.code === 'auth/account-exists-with-different-credential') {
                     let fetchEmail = error.customData?.email || 'this email';
                     message = `An account with ${fetchEmail} already exists using a different sign-in method. Please use the email and password option or the correct social provider.`;
+                    showMessage(emailMessageDiv, message, 'warning'); // Use warning for this common case
+                    return;
                 } else if (error.code === 'auth/popup-closed-by-user') { 
                     return; 
                 }
 
-                showMessage(emailMessageDiv, message);
+                showMessage(emailMessageDiv, message, 'error');
             }
         };
 
