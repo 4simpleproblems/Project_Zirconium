@@ -109,24 +109,28 @@ let generativeModel; // For Firebase AI
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js");
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js");
-            // NEW: Load the Firebase AI/Vertex SDK
-            await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-vertexai-compat.js");
-
-            initializeApp(pages);
+            
+            // AI SDK will be loaded dynamically inside initializeApp
+            await initializeApp(pages);
         } catch (error) {
-            console.error("Failed to load necessary SDKs:", error);
+            console.error("Failed to load necessary SDKs or initialize app:", error);
         }
     };
 
-    const initializeApp = (pages) => {
+    const initializeApp = async (pages) => {
         const app = firebase.initializeApp(FIREBASE_CONFIG);
         auth = firebase.auth();
         db = firebase.firestore();
-        // NEW: Initialize the Vertex AI service
-        const vertex = firebase.vertexAI();
-        // NEW: Get the generative model
-        generativeModel = vertex.getGenerativeModel({ model: "gemini-pro" });
-
+        
+        // NEW: Dynamically import and initialize the Vertex AI service (modular)
+        try {
+            const firebaseVertexAI = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-vertexai.js');
+            const vertex = firebaseVertexAI.getVertexAI(app);
+            generativeModel = firebaseVertexAI.getGenerativeModel(vertex, { model: "gemini-pro" });
+            console.log("Firebase Vertex AI initialized successfully.");
+        } catch (error) {
+            console.error("Could not initialize Firebase Vertex AI. AI Agent will not be available.", error);
+        }
 
         const injectStyles = () => {
             const style = document.createElement('style');
@@ -172,7 +176,7 @@ let generativeModel; // For Firebase AI
                 .ai-agent-category.selected { background-color: #4f46e5; border-color: #4f46e5; color: white; font-weight: 600; }
                 .ai-agent-chat-area { flex-grow: 1; display: flex; flex-direction: column; }
                 .ai-chat-history { flex-grow: 1; padding: 1rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; }
-                .chat-message { max-width: 80%; padding: 0.75rem 1rem; border-radius: 1rem; line-height: 1.5; }
+                .chat-message { max-width: 80%; padding: 0.75rem 1rem; border-radius: 1rem; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; }
                 .chat-message.user { background: #4f46e5; color: white; align-self: flex-end; border-bottom-right-radius: 0; }
                 .chat-message.agent { background: #27272a; color: #d4d4d8; align-self: flex-start; border-bottom-left-radius: 0; }
                 .chat-message.system { font-size: 0.75rem; text-align: center; color: #71717a; background: none; padding: 0.5rem; width: 100%; align-self: center; }
@@ -224,8 +228,56 @@ let generativeModel; // For Firebase AI
                 return `<a href="${page.url}" class="nav-tab ${isActive ? 'active' : ''}"><i class="${getIconClass(page.icon)} mr-2"></i>${page.name}</a>`;
             }).join('');
 
-            const loggedOutView = `...`; // Original logged out view
-            const loggedInView = (user, userData) => { /* ... */ }; // Original logged in view
+            const loggedOutView = `
+                <div class="relative flex-shrink-0">
+                    <button id="auth-toggle" class="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-700 transition logged-out-auth-toggle">
+                        <i class="fa-solid fa-user"></i>
+                    </button>
+                    <div id="auth-menu-container" class="auth-menu-container closed">
+                        <a href="/authentication.html" class="auth-menu-link">
+                            <i class="fa-solid fa-lock"></i>
+                            Authenticate
+                        </a>
+                    </div>
+                </div>
+            `;
+
+            const loggedInView = (user, userData) => {
+                const photoURL = user.photoURL || userData?.photoURL;
+                const username = userData?.username || user.displayName || 'User';
+                const email = user.email || 'No email';
+                const initial = username.charAt(0).toUpperCase();
+
+                const avatar = photoURL ?
+                    `<img src="${photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">` :
+                    `<div class="initial-avatar w-8 h-8 rounded-full text-sm font-semibold">${initial}</div>`;
+
+                return `
+                    <div class="relative flex-shrink-0">
+                        <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
+                            ${avatar}
+                        </button>
+                        <div id="auth-menu-container" class="auth-menu-container closed">
+                            <div class="px-3 py-2 border-b border-gray-700 mb-2">
+                                <p class="text-sm font-semibold text-white truncate">${username}</p>
+                                <p class="text-xs text-gray-400 truncate">${email}</p>
+                            </div>
+                            <a href="/logged-in/dashboard.html" class="auth-menu-link">
+                                <i class="fa-solid fa-house-user"></i>
+                                Dashboard
+                            </a>
+                            <a href="/logged-in/settings.html" class="auth-menu-link">
+                                <i class="fa-solid fa-gear"></i>
+                                Settings
+                            </a>
+                            <button id="logout-button" class="auth-menu-button text-red-400 hover:bg-red-900/50 hover:text-red-300">
+                                <i class="fa-solid fa-right-from-bracket"></i>
+                                Log Out
+                            </button>
+                        </div>
+                    </div>
+                `;
+            };
 
             container.innerHTML = `
                 <header class="auth-navbar">
@@ -240,8 +292,8 @@ let generativeModel; // For Firebase AI
                     </nav>
                 </header>`;
             
-            // AI Agent Modal is rendered for the specific user
-            if (user && user.email === '4simpleproblems@gmail.com') {
+            // AI Agent Modal is rendered for the specific user only if AI SDK is loaded
+            if (user && user.email === '4simpleproblems@gmail.com' && generativeModel) {
                 renderAIAgentModal();
             }
 
@@ -277,9 +329,7 @@ let generativeModel; // For Firebase AI
                             <button class="ai-agent-category" data-agent="Friendly">Friendly</button>
                         </div>
                         <div class="ai-agent-chat-area">
-                            <div class="ai-chat-history" id="ai-chat-history">
-                                <!-- System message will be injected here -->
-                            </div>
+                            <div class="ai-chat-history" id="ai-chat-history"></div>
                             <div class="ai-chat-input-area">
                                 <input type="text" id="ai-chat-input" placeholder="Ask anything...">
                                 <button id="ai-chat-send"><i class="fa-solid fa-paper-plane"></i></button>
@@ -291,7 +341,46 @@ let generativeModel; // For Firebase AI
             setupAIAgentListeners();
         };
 
-        const setupEventListeners = (user) => { /* ... original listeners ... */ };
+        const setupEventListeners = (user) => {
+            const toggleButton = document.getElementById('auth-toggle');
+            const menu = document.getElementById('auth-menu-container');
+            const tabContainer = document.querySelector('.tab-scroll-container');
+            const leftButton = document.getElementById('glide-left');
+            const rightButton = document.getElementById('glide-right');
+            const debouncedUpdateGilders = debounce(updateScrollGilders, 50);
+
+            if (tabContainer) {
+                const scrollAmount = tabContainer.offsetWidth * 0.8;
+                tabContainer.addEventListener('scroll', debouncedUpdateGilders);
+                window.addEventListener('resize', debouncedUpdateGilders);
+                if (leftButton) leftButton.addEventListener('click', () => tabContainer.scrollBy({ left: -scrollAmount, behavior: 'smooth' }));
+                if (rightButton) rightButton.addEventListener('click', () => tabContainer.scrollBy({ left: scrollAmount, behavior: 'smooth' }));
+            }
+
+            if (toggleButton && menu) {
+                toggleButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    menu.classList.toggle('closed');
+                    menu.classList.toggle('open');
+                });
+            }
+
+            document.addEventListener('click', (e) => {
+                if (menu && menu.classList.contains('open') && !menu.contains(e.target) && e.target !== toggleButton) {
+                    menu.classList.add('closed');
+                    menu.classList.remove('open');
+                }
+            });
+
+            if (user) {
+                const logoutButton = document.getElementById('logout-button');
+                if (logoutButton) {
+                    logoutButton.addEventListener('click', () => {
+                        auth.signOut().catch(err => console.error("Logout failed:", err));
+                    });
+                }
+            }
+        };
         
         const setupAIAgentListeners = () => {
             const modal = document.getElementById('ai-agent-modal');
@@ -309,11 +398,9 @@ let generativeModel; // For Firebase AI
 
             document.addEventListener('keydown', (e) => {
                 if (e.ctrlKey && e.key.toLowerCase() === 'a') {
-                     // Prevent default browser action (select all)
                     e.preventDefault();
-                    // Check if the event target is an input, textarea, or contenteditable element
                     if (!['INPUT', 'TEXTAREA'].includes(e.target.tagName) && !e.target.isContentEditable) {
-                         if(auth.currentUser && auth.currentUser.email === '4simpleproblems@gmail.com') {
+                         if(auth.currentUser && auth.currentUser.email === '4simpleproblems@gmail.com' && generativeModel) {
                             toggleModal(!modal.classList.contains('visible'));
                          }
                     }
@@ -337,8 +424,6 @@ let generativeModel; // For Firebase AI
             const now = new Date();
             const time = now.toLocaleTimeString();
             const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            // A fetch call to a geo IP service would be needed for accurate location.
-            // For this example, we'll use a placeholder.
             const location = "User's approximate location (e.g., State/City)"; 
             return { time, timeZone, location };
         };
@@ -346,11 +431,12 @@ let generativeModel; // For Firebase AI
         const handleAIChat = async () => {
             const input = document.getElementById('ai-chat-input');
             const history = document.getElementById('ai-chat-history');
+            if (!input || !history || !generativeModel) return;
+
             const selectedAgent = document.querySelector('.ai-agent-category.selected').dataset.agent;
             const prompt = input.value.trim();
             if (!prompt) return;
 
-            // Add user message to history
             history.innerHTML += `<div class="chat-message user">${prompt}</div>`;
             input.value = '';
             history.scrollTop = history.scrollHeight;
@@ -367,22 +453,13 @@ let generativeModel; // For Firebase AI
                 "Friendly": "You are a friendly and conversational assistant."
             };
             
-            const fullPrompt = `
-                System Information:
-                - Current Time: ${systemInfo.time}
-                - Time Zone: ${systemInfo.timeZone}
-                - Location: ${systemInfo.location}
-
-                Agent Persona: ${agentPrompts[selectedAgent]}
-
-                User Query: ${prompt}
-            `;
+            const fullPrompt = `System Information:\n- Current Time: ${systemInfo.time}\n- Time Zone: ${systemInfo.timeZone}\n- Location: ${systemInfo.location}\n\nAgent Persona: ${agentPrompts[selectedAgent]}\n\nUser Query: ${prompt}`;
 
             try {
                 const result = await generativeModel.generateContent(fullPrompt);
                 const response = await result.response;
                 const text = response.text();
-                history.innerHTML += `<div class="chat-message agent">${text}</div>`;
+                history.innerHTML += `<div class="chat-message agent">${text.replace(/\n/g, '<br>')}</div>`;
             } catch (error) {
                 console.error("AI Generation Error:", error);
                 history.innerHTML += `<div class="chat-message agent">Sorry, I encountered an error.</div>`;
@@ -390,7 +467,6 @@ let generativeModel; // For Firebase AI
                 history.scrollTop = history.scrollHeight;
             }
         };
-
 
         auth.onAuthStateChanged(async (user) => {
             if (user) {
@@ -421,3 +497,4 @@ let generativeModel; // For Firebase AI
     document.addEventListener('DOMContentLoaded', run);
 
 })();
+
