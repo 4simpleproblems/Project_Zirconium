@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4SP - SETTINGS</title>
+    <meta name="description" content="Manage your account profile, security, and website settings.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Custom Tailwind Config for consistent dark palette
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'custom-darkest-gray': '#070707', // Very Dark Background (Body)
+                        'custom-dark-gray': '#1c1c1c',    // Container Background
+                        'custom-medium-gray': '#252525', // Input/Border
+                        'custom-light-gray': '#505050',
+                        'custom-accent': '#6d28d9',      // Purple-700 for main actions
+                    },
+                    boxShadow: {
+                        '3xl': '0 35px 60px -15px rgba(0, 0, 0, 0.3)',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-custom-darkest-gray min-h-screen text-white flex flex-col items-center pt-24 pb-12 font-['Geist']">
+    <div id="navbar-container"></div>
+    
+    <main class="w-full max-w-4xl px-4">
+        <h1 class="text-4xl font-extrabold text-center mb-10 tracking-tight">
+            Account Settings
+        </h1>
+
+        <div id="settings-container" class="bg-custom-dark-gray rounded-3xl p-6 md:p-10 shadow-3xl border border-custom-medium-gray/50">
+            
+            <div id="loading-message" class="text-center py-12">
+                <i class="fas fa-spinner fa-spin text-custom-accent text-3xl"></i>
+                <p class="mt-4 text-gray-400">Loading user profile...</p>
+            </div>
+
+            <div id="settings-content" class="space-y-12" style="display:none;">
+
+                <section class="border-b border-custom-medium-gray pb-8">
+                    <h2 class="text-2xl font-semibold mb-4 flex items-center"><i class="fas fa-user-circle mr-3 text-custom-accent"></i> Profile Information</h2>
+                    <div id="profile-message" class="text-sm p-3 rounded mb-4" style="display:none;"></div>
+                    
+                    <form id="profile-form" class="space-y-4">
+                        <div>
+                            <label for="username" class="block text-sm font-medium text-gray-400 mb-1">Username</label>
+                            <input type="text" id="username" class="w-full p-3 rounded-lg bg-custom-medium-gray border border-custom-medium-gray focus:border-custom-accent focus:ring-1 focus:ring-custom-accent transition" placeholder="Your current username" required>
+                        </div>
+
+                        <div>
+                            <label for="photoUrl" class="block text-sm font-medium text-gray-400 mb-1">Profile Photo URL</label>
+                            <div class="flex space-x-3 items-center">
+                                <input type="url" id="photoUrl" class="flex-grow p-3 rounded-lg bg-custom-medium-gray border border-custom-medium-gray focus:border-custom-accent focus:ring-1 focus:ring-custom-accent transition" placeholder="Link to your profile picture">
+                                <img id="current-photo" src="" alt="Current Avatar" class="w-12 h-12 rounded-full object-cover border-2 border-custom-accent flex-shrink-0">
+                            </div>
+                        </div>
+
+                        <button type="submit" id="update-profile-btn" class="w-full md:w-auto px-6 py-3 bg-custom-accent hover:bg-purple-800 text-white font-medium rounded-lg transition shadow-md">
+                            Save Profile Changes
+                        </button>
+                    </form>
+                </section>
+
+                <section class="border-b border-custom-medium-gray pb-8">
+                    <h2 class="text-2xl font-semibold mb-4 flex items-center"><i class="fas fa-shield-alt mr-3 text-custom-accent"></i> Security & Account</h2>
+                    <div id="security-message" class="text-sm p-3 rounded mb-4" style="display:none;"></div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-400 mb-1">Email Address</label>
+                            <input type="email" id="email" class="w-full p-3 rounded-lg bg-custom-medium-gray border border-custom-medium-gray text-gray-400" placeholder="Your current email" readonly>
+                        </div>
+
+                        <div id="password-section">
+                            <label for="password-new" class="block text-sm font-medium text-gray-400 mb-1">New Password (Min 6 characters)</label>
+                            <input type="password" id="password-new" class="w-full p-3 rounded-lg bg-custom-medium-gray border border-custom-medium-gray focus:border-custom-accent focus:ring-1 focus:ring-custom-accent transition" placeholder="********">
+                            <button id="update-password-btn" class="mt-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition">
+                                Update Password
+                            </button>
+                        </div>
+                        
+                        <div class="flex flex-col md:flex-row space-y-3 md:space-y-0 md:space-x-4 pt-4">
+                            <button id="signout-btn" class="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition">
+                                <i class="fas fa-sign-out-alt mr-2"></i> Sign Out
+                            </button>
+                            <button id="delete-account-btn" class="flex-1 px-6 py-3 border border-red-600 text-red-400 hover:bg-red-900/30 font-medium rounded-lg transition">
+                                <i class="fas fa-trash-alt mr-2"></i> Delete Account
+                            </button>
+                        </div>
+                    </div>
+                </section>
+                
+                <section>
+                    <h2 class="text-2xl font-semibold mb-4 flex items-center"><i class="fas fa-mask mr-3 text-custom-accent"></i> Discretion & Tab Settings</h2>
+                    <p class="text-gray-400 text-sm mb-4">Change the website's title and favicon to mask your activity.</p>
+                    
+                    <div id="tab-settings-message" class="text-sm p-3 rounded mb-4" style="display:none;"></div>
+
+                    <div class="space-y-4">
+                        <div id="preset-selector-container" class="space-y-2">
+                             <label class="block text-sm font-medium text-gray-400">Select a Preset Disguise</label>
+                             <div class="grid grid-cols-2 sm:grid-cols-3 gap-3" id="presets-grid">
+                                 </div>
+                        </div>
+
+                        <div class="border-t border-custom-medium-gray pt-4">
+                            <h3 class="text-lg font-medium text-gray-300 mb-2">Custom Disguise</h3>
+                            <form id="custom-tab-form" class="space-y-3">
+                                <div>
+                                    <label for="custom-title" class="block text-sm font-medium text-gray-400 mb-1">Custom Tab Title</label>
+                                    <input type="text" id="custom-title" class="w-full p-3 rounded-lg bg-custom-medium-gray border border-custom-medium-gray focus:border-custom-accent focus:ring-1 focus:ring-custom-accent transition" placeholder="e.g., Geometry Homework">
+                                </div>
+                                <div>
+                                    <label for="custom-favicon" class="block text-sm font-medium text-gray-400 mb-1">Custom Favicon URL</label>
+                                    <input type="url" id="custom-favicon" class="w-full p-3 rounded-lg bg-custom-medium-gray border border-custom-medium-gray focus:border-custom-accent focus:ring-1 focus:ring-custom-accent transition" placeholder="e.g., https://mysite.com/icon.png">
+                                </div>
+                                <button type="submit" id="apply-custom-btn" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition">
+                                    Apply Custom Disguise
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </section>
+                
+                <section>
+                    <h2 class="text-2xl font-semibold mb-4 flex items-center"><i class="fas fa-users mr-3 text-custom-accent"></i> Social & Friends</h2>
+                    <p class="text-gray-400 text-sm mb-4">Manage your friend list, requests, and privacy settings related to the DailyPhoto tool.</p>
+                    <a href="/dailyphoto.html" class="inline-block px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition shadow-md">
+                        <i class="fas fa-user-friends mr-2"></i> Go to Friends Management
+                    </a>
+                </section>
+                
+            </div>
+        </div>
+    </main>
+    
+    <script type="module">
+        // --- Firebase SDK Imports ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, updateProfile, updatePassword, signOut, deleteUser, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // ACTION REQUIRED: Replace this placeholder with your actual Firebase config object.
+        const FIREBASE_CONFIG = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        
+        // --- Firebase Initialization ---
+        const app = initializeApp(FIREBASE_CONFIG);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const getUserProfileDocRef = (uid) => doc(db, "users", uid);
+
+        // --- Utility Functions ---
+        function showMessage(element, message, type = 'error') {
+            element.textContent = message;
+            element.style.display = 'block';
+            element.className = 'text-sm p-3 rounded mb-4 transition duration-300';
+
+            if (type === 'success') {
+                element.classList.add('bg-green-900/40', 'text-green-300', 'border', 'border-green-700');
+            } else if (type === 'error') {
+                element.classList.add('bg-red-900/40', 'text-red-300', 'border', 'border-red-700');
+            } else if (type === 'warning') {
+                element.classList.add('bg-yellow-900/40', 'text-yellow-300', 'border', 'border-yellow-700');
+            }
+        }
+        
+        function hideMessage(element) {
+            element.style.display = 'none';
+            element.textContent = '';
+        }
+
+        // --- URL Changer Logic (from url-tab-title-changer.js) ---
+        // Simplified the urlChanger since the full version is complex.
+        // This includes just the core functions needed for the settings page.
+        const urlChanger = {
+            CUSTOM_TITLE_KEY: 'customTabTitle',
+            CUSTOM_FAVICON_KEY: 'customTabFavicon',
+            SELECTED_PRESET_KEY: 'selectedUrlPreset',
+            
+            presets: [
+                { id: 'hac', name: 'HAC', title: 'Login', favicon: 'https://i.imgur.com/v8tT9Tz.png', category: 'websites' },
+                { id: 'g_docs', name: 'Google Docs', title: 'Google Docs', favicon: 'https://i.imgur.com/eQp4w0U.png', category: 'websites' },
+                { id: 'g_classroom', name: 'Google Classroom', title: 'Home', favicon: 'https://i.imgur.com/n1J8U9P.png', category: 'websites' },
+                { id: 'wikipedia', name: 'Wikipedia', title: 'Wikipedia', favicon: 'https://i.imgur.com/s4jT6H6.png', category: 'websites' },
+                { id: 'calc', name: 'Calculator', title: 'Calculator', favicon: 'https://i.imgur.com/5V3X7gD.png', category: 'utilities' }
+            ],
+
+            applyPreset: function(settings) {
+                document.title = settings.title;
+                const link = document.querySelector("link[rel~='icon']");
+                if (link) link.href = settings.favicon;
+            },
+            
+            savePreset: function(settings) {
+                localStorage.setItem(this.SELECTED_PRESET_KEY, JSON.stringify(settings));
+                localStorage.removeItem(this.CUSTOM_TITLE_KEY);
+                localStorage.removeItem(this.CUSTOM_FAVICON_KEY);
+                this.applyPreset(settings);
+            },
+            
+            saveCustom: function(title, favicon) {
+                const settings = { title, favicon };
+                localStorage.setItem(this.CUSTOM_TITLE_KEY, title);
+                localStorage.setItem(this.CUSTOM_FAVICON_KEY, favicon);
+                localStorage.removeItem(this.SELECTED_PRESET_KEY);
+                this.applyPreset(settings);
+            },
+            
+            loadAndApply: function() {
+                const preset = JSON.parse(localStorage.getItem(this.SELECTED_PRESET_KEY));
+                const customTitle = localStorage.getItem(this.CUSTOM_TITLE_KEY);
+                const customFavicon = localStorage.getItem(this.CUSTOM_FAVICON_KEY);
+
+                if (preset) {
+                    this.applyPreset(preset);
+                } else if (customTitle || customFavicon) {
+                    this.applyPreset({
+                        title: customTitle || document.title, // Fallback to current title
+                        favicon: customFavicon || '/favicon.ico' // Fallback to default favicon
+                    });
+                }
+            }
+        };
+        
+        // --- Navigation Script Logic (from navigation.js) ---
+        // Simplified version just for the rendering/signing out part.
+        const renderNavbar = (user, profile, pages) => {
+            const isGuest = user && user.isAnonymous;
+            const displayName = profile?.username || user?.displayName || 'Guest';
+            const profilePicture = profile?.photoURL || user?.photoURL || 'https://i.imgur.com/2s3k7PZ.png';
+
+            const loginOrProfile = user && !isGuest
+                ? `<a href="/settings.html" class="flex items-center space-x-2 text-white hover:text-custom-accent transition">
+                       <img src="${profilePicture}" alt="Avatar" class="w-8 h-8 rounded-full object-cover border-2 border-custom-accent">
+                       <span class="font-medium">${displayName}</span>
+                   </a>`
+                : `<a href="/login.html" class="px-4 py-2 bg-custom-accent hover:bg-purple-800 text-white font-medium rounded-lg transition shadow-md">
+                       <i class="fas fa-sign-in-alt mr-1"></i> Log In
+                   </a>`;
+
+            const html = `
+                <nav class="fixed top-0 left-0 right-0 z-50 bg-custom-darkest-gray/95 backdrop-blur-sm border-b border-custom-medium-gray/50 shadow-lg">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div class="flex justify-between items-center h-16">
+                            <div class="flex items-center">
+                                <a href="/index.html" class="text-2xl font-black tracking-widest text-white hover:text-custom-accent transition">4SP</a>
+                            </div>
+                            <div class="hidden md:block">
+                                ${loginOrProfile}
+                            </div>
+                            <div class="md:hidden">
+                                <button id="mobile-menu-button" class="text-white hover:text-custom-accent focus:outline-none">
+                                    <i class="fas fa-bars text-xl"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="mobile-menu" class="hidden md:hidden absolute w-full bg-custom-darkest-gray/95 backdrop-blur-sm border-b border-custom-medium-gray shadow-xl">
+                        <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                            ${user && !isGuest ? `<a href="/settings.html" class="block px-3 py-2 text-base font-medium text-custom-accent border-b border-custom-medium-gray/50">
+                                <i class="fas fa-user-circle mr-2"></i> ${displayName}
+                            </a>` : ''}
+                            ${!user || isGuest ? `<a href="/login.html" class="block px-3 py-2 text-base font-medium text-white hover:bg-custom-medium-gray rounded-md">Log In</a>` : ''}
+                            ${pages.map(p => 
+                                `<a href="${p.path}" class="block px-3 py-2 text-base font-medium text-white hover:bg-custom-medium-gray rounded-md">${p.title}</a>`
+                            ).join('')}
+                        </div>
+                    </div>
+                </nav>
+            `;
+            document.getElementById('navbar-container').innerHTML = html;
+            
+            // Mobile menu toggle
+            document.getElementById('mobile-menu-button')?.addEventListener('click', () => {
+                document.getElementById('mobile-menu').classList.toggle('hidden');
+            });
+        };
+
+        const pageConfig = {
+            // Simplified page list for navbar rendering
+            pages: [
+                { title: 'Dashboard', path: '/dashboard.html' },
+                { title: 'Daily Photo', path: '/dailyphoto.html' },
+                { title: 'Home', path: '/index.html' },
+            ]
+        };
+        
+        // --- Core Settings Logic ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const loadingMessage = document.getElementById('loading-message');
+            const settingsContent = document.getElementById('settings-content');
+            
+            const profileForm = document.getElementById('profile-form');
+            const usernameInput = document.getElementById('username');
+            const photoUrlInput = document.getElementById('photoUrl');
+            const currentPhoto = document.getElementById('current-photo');
+            const profileMessage = document.getElementById('profile-message');
+            
+            const emailInput = document.getElementById('email');
+            const passwordSection = document.getElementById('password-section');
+            const newPasswordInput = document.getElementById('password-new');
+            const updatePasswordBtn = document.getElementById('update-password-btn');
+            const signoutBtn = document.getElementById('signout-btn');
+            const deleteAccountBtn = document.getElementById('delete-account-btn');
+            const securityMessage = document.getElementById('security-message');
+
+            const presetsGrid = document.getElementById('presets-grid');
+            const customTabForm = document.getElementById('custom-tab-form');
+            const customTitleInput = document.getElementById('custom-title');
+            const customFaviconInput = document.getElementById('custom-favicon');
+            const tabSettingsMessage = document.getElementById('tab-settings-message');
+
+
+            // 1. Initial Auth Check and Data Load
+            onAuthStateChanged(auth, async (user) => {
+                loadingMessage.style.display = 'none';
+
+                if (!user || user.isAnonymous) {
+                    // Redirect to login if not a real user
+                    window.location.replace('/login.html?redirect=/settings.html');
+                    return;
+                }
+                
+                // Show content and populate fields
+                settingsContent.style.display = 'block';
+
+                try {
+                    const userDocSnap = await getDoc(getUserProfileDocRef(user.uid));
+                    const profile = userDocSnap.exists() ? userDocSnap.data() : {};
+                    
+                    // Render Navbar
+                    renderNavbar(user, profile, pageConfig.pages);
+
+                    // Populate Profile Fields
+                    usernameInput.value = profile.username || user.displayName || '';
+                    photoUrlInput.value = profile.photoURL || user.photoURL || '';
+                    currentPhoto.src = profile.photoURL || user.photoURL || 'https://i.imgur.com/2s3k7PZ.png';
+                    
+                    // Populate Security Fields
+                    emailInput.value = user.email || 'N/A (Social Login)';
+                    // Hide password section for social logins (or if email is missing)
+                    if (!user.email || user.providerData.some(p => p.providerId !== 'password')) {
+                         passwordSection.style.display = 'block'; // Always show but warn or check later
+                    } else {
+                         passwordSection.style.display = 'block';
+                    }
+
+                } catch (error) {
+                    console.error("Error loading user data:", error);
+                    showMessage(profileMessage, "Failed to load user data. Please refresh.", 'error');
+                }
+                
+                // Load Discretion Settings
+                urlChanger.loadAndApply();
+                renderPresets();
+                loadCurrentCustomSettings();
+            });
+            
+            // --- Helper to update the live profile picture preview ---
+            photoUrlInput.addEventListener('input', () => {
+                currentPhoto.src = photoUrlInput.value || 'https://i.imgur.com/2s3k7PZ.png';
+            });
+
+
+            // 2. Handle Profile Form Submission
+            profileForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                hideMessage(profileMessage);
+                const btn = document.getElementById('update-profile-btn');
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Saving...';
+
+                const newUsername = usernameInput.value.trim();
+                const newPhotoUrl = photoUrlInput.value.trim();
+                const user = auth.currentUser;
+
+                if (!newUsername) {
+                    showMessage(profileMessage, "Username cannot be empty.", 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = 'Save Profile Changes';
+                    return;
+                }
+
+                try {
+                    // 1. Update Firebase Auth Profile
+                    await updateProfile(user, {
+                        displayName: newUsername,
+                        photoURL: newPhotoUrl
+                    });
+
+                    // 2. Update Firestore Document
+                    await updateDoc(getUserProfileDocRef(user.uid), {
+                        username: newUsername,
+                        photoURL: newPhotoUrl,
+                        updatedAt: Date.now()
+                    });
+
+                    showMessage(profileMessage, "Profile updated successfully!", 'success');
+                } catch (error) {
+                    console.error("Error updating profile:", error);
+                    showMessage(profileMessage, "Failed to update profile. " + error.message, 'error');
+                }
+
+                btn.disabled = false;
+                btn.innerHTML = 'Save Profile Changes';
+            });
+            
+            // 3. Handle Password Update
+            updatePasswordBtn.addEventListener('click', async () => {
+                hideMessage(securityMessage);
+                const newPassword = newPasswordInput.value;
+                const user = auth.currentUser;
+                
+                if (!newPassword || newPassword.length < 6) {
+                    showMessage(securityMessage, "Password must be at least 6 characters.", 'error');
+                    return;
+                }
+
+                // IMPORTANT: Firebase requires re-authentication for sensitive actions
+                const email = user.email;
+                if (!email) {
+                    showMessage(securityMessage, "Cannot change password for social/anonymous accounts.", 'warning');
+                    return;
+                }
+                
+                // Prompt user for current password to re-authenticate (required by Firebase)
+                const currentPassword = prompt("Please enter your CURRENT password to confirm the change:");
+                if (!currentPassword) {
+                    showMessage(securityMessage, "Password change cancelled.", 'warning');
+                    return;
+                }
+                
+                try {
+                    const credential = EmailAuthProvider.credential(email, currentPassword);
+                    await reauthenticateWithCredential(user, credential);
+                    await updatePassword(user, newPassword);
+                    showMessage(securityMessage, "Password updated successfully! You may need to log in again.", 'success');
+                    newPasswordInput.value = '';
+                } catch (error) {
+                    console.error("Error updating password:", error);
+                    let message = "Failed to update password. Please ensure your current password is correct.";
+                    if (error.code === 'auth/wrong-password') {
+                        message = "The current password you entered is incorrect.";
+                    } else if (error.code === 'auth/weak-password') {
+                         message = "New password is too weak. Choose a stronger one.";
+                    }
+                    showMessage(securityMessage, message, 'error');
+                }
+            });
+
+            // 4. Handle Sign Out
+            signoutBtn.addEventListener('click', async () => {
+                await signOut(auth);
+                // The onAuthStateChanged listener will handle the redirect
+            });
+
+            // 5. Handle Account Deletion
+            deleteAccountBtn.addEventListener('click', async () => {
+                hideMessage(securityMessage);
+                const user = auth.currentUser;
+                
+                if (!confirm("Are you SURE you want to permanently delete your account? This action is irreversible.")) {
+                    return;
+                }
+                
+                // IMPORTANT: Requires re-authentication before deletion
+                const email = user.email;
+                if (!email) {
+                    showMessage(securityMessage, "Cannot delete social/anonymous accounts without password re-authentication.", 'warning');
+                    return;
+                }
+
+                const currentPassword = prompt("Please enter your password one last time to confirm account deletion:");
+                if (!currentPassword) return;
+
+                try {
+                    const credential = EmailAuthProvider.credential(email, currentPassword);
+                    await reauthenticateWithCredential(user, credential);
+                    
+                    // 1. Delete Firestore Document
+                    // Note: Firebase deleteDoc is imported but not used here for simplicity. 
+                    // This is usually handled by a secure server-side function. For now, rely on auth deletion.
+                    
+                    // 2. Delete Auth User
+                    await deleteUser(user);
+                    showMessage(securityMessage, "Account permanently deleted. Redirecting...", 'success');
+                    // onAuthStateChanged will redirect
+                } catch (error) {
+                    console.error("Error deleting account:", error);
+                    let message = "Failed to delete account. You may need to log in again and retry.";
+                     if (error.code === 'auth/wrong-password') {
+                        message = "The password was incorrect. Account deletion failed.";
+                    }
+                    showMessage(securityMessage, message, 'error');
+                }
+            });
+
+            // 6. Tab Disguise Presets Renderer and Handler
+            function renderPresets() {
+                presetsGrid.innerHTML = ''; // Clear loading message
+                urlChanger.presets.forEach(preset => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.classList.add('tab-preset-btn', 'flex', 'flex-col', 'items-center', 'justify-center', 'p-3', 'rounded-xl', 'bg-custom-medium-gray', 'text-gray-300', 'border-2', 'border-transparent', 'hover:border-custom-accent', 'transition', 'text-sm');
+                    
+                    button.innerHTML = `
+                        <img src="${preset.favicon}" alt="${preset.name} Icon" class="w-6 h-6 mb-1 object-contain">
+                        <span class="font-medium">${preset.name}</span>
+                        <span class="text-xs text-gray-500 truncate w-full">${preset.title}</span>
+                    `;
+                    
+                    button.addEventListener('click', () => {
+                        urlChanger.savePreset(preset);
+                        showMessage(tabSettingsMessage, `Applied preset: ${preset.name}`, 'success');
+                    });
+                    
+                    presetsGrid.appendChild(button);
+                });
+            }
+            
+            function loadCurrentCustomSettings() {
+                customTitleInput.value = localStorage.getItem(urlChanger.CUSTOM_TITLE_KEY) || '';
+                customFaviconInput.value = localStorage.getItem(urlChanger.CUSTOM_FAVICON_KEY) || '';
+            }
+
+            customTabForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const title = customTitleInput.value.trim() || '4SP - Toolkit';
+                const favicon = customFaviconInput.value.trim() || '/favicon.ico';
+                
+                urlChanger.saveCustom(title, favicon);
+                showMessage(tabSettingsMessage, `Applied custom disguise. Title: "${title}"`, 'success');
+            });
+
+            // 7. Initial Call to apply any saved tab settings immediately
+            urlChanger.loadAndApply();
+        });
+    </script>
+</body>
+</html>
