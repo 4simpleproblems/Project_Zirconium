@@ -10,7 +10,6 @@
  * for all Gemini API calls, as requested.
  * 2. CRITICAL CDN FIX (COMPLETE): Ensures the navigation bar renders by using stable Firebase Compat SDKs.
  * 3. RENDER PRIORITY: Ensures the navigation bar is rendered immediately after CSS injection, preventing the AI logic failure from blocking the UI.
- * 4. AI MODE STYLING: Updated AI mode toggle and modal with Geist font, Playfair Display hints, and a modern orange/creme color scheme (#eb8334, #fff1d4).
  */
 
 // =========================================================================
@@ -71,14 +70,14 @@ let currentAgent = 'Standard'; // Default agent
         });
     };
 
-    // Helper to load external CSS files (Faster for icons and fonts)
+    // Helper to load external CSS files (Faster for icons)
     const loadCSS = (href) => {
         return new Promise((resolve) => {
             const link = document.createElement('link');
             link.rel = 'stylesheet';
             link.href = href;
             link.onload = resolve;
-            link.onerror = resolve; // Resolve even on error to not block page loading
+            link.onerror = resolve;
             document.head.appendChild(link);
         });
     };
@@ -171,8 +170,6 @@ let currentAgent = 'Standard'; // Default agent
 
         // Load Icons CSS first
         await loadCSS("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css");
-        // Load Playfair Display font for hints
-        await loadCSS("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap");
         
         // Fetch page configuration for the tabs
         try {
@@ -210,43 +207,13 @@ let currentAgent = 'Standard'; // Default agent
         const injectStyles = () => {
             const style = document.createElement('style');
             style.textContent = `
-                /* --- FONT IMPORTS AND CONFIGURATION --- */
-                /* Geist conversion/loading */
-                @font-face {
-                    font-family: 'Geist';
-                    src: url('https://cdn.jsdelivr.net/npm/@geist-ui/font@latest/dist/Geist-Regular.woff2') format('woff2');
-                    font-weight: 400;
-                    font-style: normal;
-                }
-                @font-face {
-                    font-family: 'Geist';
-                    src: url('https://cdn.jsdelivr.net/npm/@geist-ui/font@latest/dist/Geist-Medium.woff2') format('woff2');
-                    font-weight: 500;
-                    font-style: normal;
-                }
-                @font-face {
-                    font-family: 'Geist';
-                    src: url('https://cdn.jsdelivr.net/npm/@geist-ui/font@latest/dist/Geist-Bold.woff2') format('woff2');
-                    font-weight: 700;
-                    font-style: normal;
-                }
-                
-                :root {
-                    --geist-font: 'Geist', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-                    --playfair-font: 'Playfair Display', Georgia, serif;
-                    --ai-primary-orange: #eb8334; /* The 'Popsicle' Orange */
-                    --ai-creme: #fff1d4; /* The 'Popsicle' Creme */
-                    --ai-background-dark: #1e293b; /* Slate-700 equivalent for modal base */
-                    --ai-text-light: #f3f4f6; /* Light gray text */
-                }
-
                 /* Base Styles */
-                body { padding-top: 4rem; font-family: var(--geist-font); }
+                body { padding-top: 4rem; }
                 .auth-navbar { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: #000000; border-bottom: 1px solid rgb(31 41 55); height: 4rem; }
                 .auth-navbar nav { max-width: 80rem; margin: auto; padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
-                .initial-avatar { background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: var(--geist-font); text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; }
+                .initial-avatar { background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; }
                 
-                /* Auth Dropdown Menu Styles (unchanged) */
+                /* Auth Dropdown Menu Styles */
                 .auth-menu-container { 
                     position: absolute; right: 0; top: 50px; width: 16rem; 
                     background: #000000;
@@ -259,13 +226,12 @@ let currentAgent = 'Standard'; // Default agent
                     display: flex; align-items: center; gap: 0.75rem; width: 100%; text-align: left; 
                     padding: 0.5rem 0.75rem; font-size: 0.875rem; color: #d1d5db; border-radius: 0.375rem; 
                     transition: background-color 0.2s, color 0.2s; border: none; cursor: pointer;
-                    font-family: var(--geist-font);
                 }
                 .auth-menu-link:hover, .auth-menu-button:hover { background-color: rgb(55 65 81); color: white; }
                 .logged-out-auth-toggle { background: #010101; border: 1px solid #374151; }
                 .logged-out-auth-toggle i { color: #DADADA; }
 
-                /* Tab Wrapper and Glide Buttons (Playfair hint on active tab) */
+                /* Tab Wrapper and Glide Buttons */
                 .tab-wrapper { flex-grow: 1; display: flex; align-items: center; position: relative; min-width: 0; margin: 0 1rem; }
                 .tab-scroll-container { flex-grow: 1; display: flex; align-items: center; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; -ms-overflow-style: none; padding-bottom: 5px; margin-bottom: -5px; scroll-behavior: smooth; }
                 .tab-scroll-container::-webkit-scrollbar { display: none; }
@@ -277,70 +243,21 @@ let currentAgent = 'Standard'; // Default agent
                 #glide-left { left: 0; background: linear-gradient(to right, #000000 50%, transparent); justify-content: flex-start; padding-left: 0.5rem; }
                 #glide-right { right: 0; background: linear-gradient(to left, #000000 50%, transparent); justify-content: flex-end; padding-right: 0.5rem; }
                 .scroll-glide-button.hidden { opacity: 0 !important; pointer-events: none !important; }
-                .nav-tab { 
-                    flex-shrink: 0; padding: 0.5rem 1rem; color: #9ca3af; font-size: 0.875rem; 
-                    font-weight: 500; border-radius: 0.5rem; transition: all 0.2s; text-decoration: none; 
-                    line-height: 1.5; display: flex; align-items: center; margin-right: 0.5rem; 
-                    border: 1px solid transparent; 
-                    font-family: var(--geist-font);
-                }
-                .nav-tab:not(.active):hover { color: white; border-color: #d1d5db; background-color: rgba(235, 131, 52, 0.05); }
-                .nav-tab.active { 
-                    color: var(--ai-primary-orange); 
-                    border-color: var(--ai-primary-orange); 
-                    background-color: rgba(235, 131, 52, 0.1); 
-                    font-family: var(--playfair-font); /* Playfair hint for active tab */
-                    font-weight: 700;
-                }
-                .nav-tab.active:hover { color: #ff944d; border-color: #ff944d; background-color: rgba(235, 131, 52, 0.15); }
+                .nav-tab { flex-shrink: 0; padding: 0.5rem 1rem; color: #9ca3af; font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; transition: all 0.2s; text-decoration: none; line-height: 1.5; display: flex; align-items: center; margin-right: 0.5rem; border: 1px solid transparent; }
+                .nav-tab:not(.active):hover { color: white; border-color: #d1d5db; background-color: rgba(79, 70, 229, 0.05); }
+                .nav-tab.active { color: #4f46e5; border-color: #4f46e5; background-color: rgba(79, 70, 229, 0.1); }
+                .nav-tab.active:hover { color: #6366f1; border-color: #6366f1; background-color: rgba(79, 70, 229, 0.15); }
                 
-                /* --- AI Agent Toggle Button (NEW POPSICLE STYLE) --- */
-                @keyframes orange-creme-pulse {
-                    0% { box-shadow: 0 0 0 0 rgba(235, 131, 52, 0.7); }
-                    70% { box-shadow: 0 0 0 10px rgba(235, 131, 52, 0); }
-                    100% { box-shadow: 0 0 0 0 rgba(235, 131, 52, 0); }
-                }
-
-                #ai-mode-toggle {
-                    background-color: var(--ai-primary-orange);
-                    color: #111827; /* Dark text for contrast */
-                    width: 3rem; 
-                    height: 3rem;
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 1.1rem;
-                    font-weight: 700;
-                    cursor: pointer;
-                    border: 3px solid var(--ai-creme); /* Creme border */
-                    box-shadow: 0 0 15px rgba(235, 131, 52, 0.8);
-                    transition: all 0.2s ease-in-out;
-                    font-family: var(--geist-font);
-                    position: relative;
-                }
-                #ai-mode-toggle:hover {
-                    background-color: #ff944d; /* Lighter orange on hover */
-                    box-shadow: 0 0 20px #ff944d, 0 0 30px rgba(235, 131, 52, 0.5);
-                    transform: scale(1.05);
-                }
-                
-                /* Pulse effect when active/new for visual cue */
-                #ai-mode-toggle.active {
-                    animation: orange-creme-pulse 2s infinite;
-                }
-
-
-                /* --- AI Agent Modal Styles (Updated with Orange/Creme) --- */
+                /* --- AI Agent Modal Styles --- */
                 .ai-modal {
                     position: fixed;
                     bottom: 2rem; right: 2rem;
                     width: min(90vw, 24rem);
                     height: min(80vh, 32rem);
-                    background: var(--ai-background-dark);
-                    border: 1px solid var(--ai-primary-orange); /* Orange outline for modal */
+                    background: #111827;
+                    border: 1px solid #374151;
                     border-radius: 0.75rem;
-                    box-shadow: 0 5px 25px rgba(0,0,0,0.7), 0 0 20px rgba(235, 131, 52, 0.2);
+                    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
                     z-index: 1001;
                     display: flex;
                     flex-direction: column;
@@ -348,116 +265,547 @@ let currentAgent = 'Standard'; // Default agent
                     transform: scale(0.95);
                     opacity: 0;
                     pointer-events: none;
-                    font-family: var(--geist-font);
                 }
                 .ai-modal.active {
                     transform: scale(1);
                     opacity: 1;
                     pointer-events: auto;
                 }
-                
-                /* Modal Header (Playfair hint in header) */
                 .ai-header {
                     padding: 0.75rem 1rem;
-                    background: #111827; /* Near black for contrast */
-                    color: var(--ai-creme);
-                    border-bottom: 1px solid rgba(235, 131, 52, 0.5);
+                    background: #1f2937;
+                    color: white;
                     border-top-left-radius: 0.75rem;
                     border-top-right-radius: 0.75rem;
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    font-family: var(--playfair-font); 
-                    font-weight: 600;
-                    font-size: 1.1rem;
                 }
-                
-                /* Chat Messages */
-                .ai-chat-area { flex-grow: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+                .ai-chat-area {
+                    flex-grow: 1;
+                    overflow-y: auto;
+                    padding: 1rem;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.75rem;
+                }
                 .ai-chat-message {
                     max-width: 85%;
-                    padding: 0.6rem 0.9rem;
-                    border-radius: 0.75rem;
-                    font-size: 0.9rem;
-                    line-height: 1.4;
+                    padding: 0.5rem 0.75rem;
+                    border-radius: 0.5rem;
+                    font-size: 0.875rem;
                 }
                 .ai-user-message {
                     align-self: flex-end;
-                    background: var(--ai-primary-orange); /* User message in Orange */
-                    color: #111827; /* Dark text for contrast */
-                    border-bottom-right-radius: 0;
+                    background: #4f46e5;
+                    color: white;
                 }
                 .ai-agent-message {
                     align-self: flex-start;
-                    background: #2f3e53; /* Darker slate for agent bubble */
-                    color: var(--ai-text-light); 
-                    border-bottom-left-radius: 0;
+                    background: #374151;
+                    color: #e5e7eb;
                 }
-                .ai-loading-indicator { font-style: italic; color: #9ca3af; align-self: flex-start; padding-left: 0.75rem; }
-                
-                /* Input Area */
                 .ai-input-area {
                     padding: 0.75rem 1rem;
                     border-top: 1px solid #374151;
-                    background-color: #111827;
-                    border-bottom-left-radius: 0.75rem;
-                    border-bottom-right-radius: 0.75rem;
                 }
-                .ai-input-area form { display: flex; gap: 0.5rem; }
+                .ai-input-area form {
+                    display: flex;
+                    gap: 0.5rem;
+                }
                 .ai-input-area textarea {
-                    flex-grow: 1; 
-                    background: var(--ai-background-dark); 
-                    border: 1px solid rgba(235, 131, 52, 0.3); 
-                    color: var(--ai-creme); 
-                    padding: 0.5rem; 
-                    border-radius: 0.5rem; 
-                    resize: none; 
-                    height: 2.5rem; 
-                    overflow-y: hidden; 
-                    font-family: var(--geist-font);
+                    flex-grow: 1;
+                    background: #1f2937;
+                    border: 1px solid #4b5563;
+                    color: white;
+                    padding: 0.5rem;
+                    border-radius: 0.5rem;
+                    resize: none;
+                    height: 2.5rem;
+                    overflow-y: hidden;
                 }
-                .ai-input-area button { 
-                    background: var(--ai-primary-orange); 
-                    color: #111827; 
-                    padding: 0.5rem 1rem; 
-                    border-radius: 0.5rem; 
-                    transition: background 0.2s; 
-                    min-width: 5rem; 
-                    font-family: var(--geist-font);
-                    font-weight: 600;
-                    border: none;
+                .ai-input-area button {
+                    background: #4f46e5;
+                    color: white;
+                    padding: 0.5rem 1rem;
+                    border-radius: 0.5rem;
+                    transition: background 0.2s;
+                    min-width: 5rem;
                 }
-                .ai-input-area button:hover { background: #ff944d; }
-
-                /* Agent Selector */
-                .ai-agent-select { 
-                    background: #1f2937; 
-                    color: var(--ai-creme); 
-                    border: 1px solid var(--ai-primary-orange); 
-                    border-radius: 0.375rem; 
-                    padding: 0.25rem 0.5rem; 
-                    font-size: 0.8rem; 
-                    cursor: pointer; 
-                    margin-right: 0.5rem; 
+                .ai-input-area button:hover {
+                    background: #6366f1;
+                }
+                .ai-loading-indicator {
+                    font-style: italic;
+                    color: #9ca3af;
+                    align-self: flex-start;
+                    padding-left: 0.75rem;
+                }
+                .ai-agent-select {
+                    background: #1f2937;
+                    color: white;
+                    border: 1px solid #4b5563;
+                    border-radius: 0.375rem;
+                    padding: 0.25rem 0.5rem;
+                    font-size: 0.8rem;
+                    cursor: pointer;
+                    margin-right: 0.5rem;
                     appearance: none; 
-                    font-family: var(--geist-font);
-                    /* Update SVG color for the dropdown arrow to creme */
-                    background-image: url('data:image/svg+xml;utf8,<svg fill="%23fff1d4" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>');
+                    background-image: url('data:image/svg+xml;utf8,<svg fill="white" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>');
                     background-repeat: no-repeat;
                     background-position: right 0.5rem center;
+                    background-size: 0.8em;
                     padding-right: 1.5rem;
                 }
             `;
             document.head.appendChild(style);
         };
 
-        // --- 4. FIREBASE AUTH LISTENER ---
-        auth.onAuthStateChanged(async (user) => {
-            const isPrivilegedUser = user && user.email === PRIVILEGED_EMAIL;
-            if (user) {
-                // User is signed in. Fetch user data from Firestore.
+        const isFocusableElement = () => {
+            const activeElement = document.activeElement;
+            if (!activeElement) return false;
+            const tagName = activeElement.tagName.toLowerCase();
+            return (
+                tagName === 'input' && activeElement.type !== 'button' && activeElement.type !== 'checkbox' && activeElement.type !== 'radio' ||
+                tagName === 'textarea' ||
+                activeElement.contentEditable === 'true'
+            );
+        };
+
+        const isTabActive = (tabUrl) => {
+            const tabPathname = new URL(tabUrl, window.location.origin).pathname.toLowerCase();
+            const currentPathname = window.location.pathname.toLowerCase();
+
+            const cleanPath = (path) => {
+                if (path.endsWith('/index.html')) {
+                    path = path.substring(0, path.lastIndexOf('/')) + '/';
+                }
+                if (path.length > 1 && path.endsWith('/')) {
+                    path = path.slice(0, -1);
+                }
+                return path;
+            };
+
+            const currentCanonical = cleanPath(currentPathname);
+            const tabCanonical = cleanPath(tabPathname);
+            
+            if (currentCanonical === tabCanonical) {
+                return true;
+            }
+
+            const tabPathSuffix = tabPathname.startsWith('/') ? tabPathname.substring(1) : tabPathname;
+            
+            if (currentPathname.endsWith(tabPathSuffix)) {
+                return true;
+            }
+
+            return false;
+        };
+
+        const updateScrollGilders = () => {
+            const container = document.querySelector('.tab-scroll-container');
+            const leftButton = document.getElementById('glide-left');
+            const rightButton = document.getElementById('glide-right');
+
+            if (!container || !leftButton || !rightButton) return;
+            
+            const hasHorizontalOverflow = container.scrollWidth > container.offsetWidth;
+
+            if (hasHorizontalOverflow) {
+                const isScrolledToLeft = container.scrollLeft < 5; 
+                const isScrolledToRight = container.scrollLeft + container.offsetWidth >= container.scrollWidth - 5; 
+
+                leftButton.classList.remove('hidden');
+                rightButton.classList.remove('hidden');
+
+                if (isScrolledToLeft) {
+                    leftButton.classList.add('hidden');
+                }
+                if (isScrolledToRight) {
+                    rightButton.classList.add('hidden');
+                }
+            } else {
+                leftButton.classList.add('hidden');
+                rightButton.classList.add('hidden');
+            }
+        };
+
+        // --- 4. RENDER THE NAVBAR HTML ---
+        const renderNavbar = (user, userData, pages, isPrivilegedUser) => {
+            const container = document.getElementById('navbar-container');
+            if (!container) return; // Should not happen, but safe check
+
+            const logoPath = "/images/logo.png"; 
+            const tabsHtml = Object.values(pages || {}).map(page => {
+                const isActive = isTabActive(page.url);
+                const activeClass = isActive ? 'active' : '';
+                const iconClasses = getIconClass(page.icon);
+                return `<a href="${page.url}" class="nav-tab ${activeClass}"><i class="${iconClasses} mr-2"></i>${page.name}</a>`;
+            }).join('');
+
+            // --- AI Agent Selector HTML (Only for Privileged User) ---
+            const agentOptionsHtml = Object.keys(AGENT_CATEGORIES).map(key => 
+                `<option value="${key}" ${key === currentAgent ? 'selected' : ''}>${key}</option>`
+            ).join('');
+
+            const aiAgentButton = isPrivilegedUser ? `
+                <div class="relative flex-shrink-0 mr-4">
+                    <button id="ai-toggle" title="AI Agent (Ctrl+A)" class="w-8 h-8 rounded-full border border-indigo-600 bg-indigo-700/50 flex items-center justify-center text-indigo-300 hover:bg-indigo-600 hover:text-white transition">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    </button>
+                </div>
+            ` : '';
+
+            // --- Auth Views ---
+            const loggedOutView = `
+                <div class="relative flex-shrink-0">
+                    <button id="auth-toggle" class="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-700 transition logged-out-auth-toggle">
+                        <i class="fa-solid fa-user"></i>
+                    </button>
+                    <div id="auth-menu-container" class="auth-menu-container closed">
+                        <a href="/authentication.html" class="auth-menu-link">
+                            <i class="fa-solid fa-lock"></i>
+                            Authenticate
+                        </a>
+                    </div>
+                </div>
+            `;
+
+            const loggedInView = (user, userData) => {
+                const photoURL = user.photoURL || userData?.photoURL;
+                const username = userData?.username || user.displayName || 'User';
+                const email = user.email || 'No email';
+                const initial = username.charAt(0).toUpperCase();
+
+                const avatar = photoURL ?
+                    `<img src="${photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">` :
+                    `<div class="initial-avatar w-8 h-8 rounded-full text-sm font-semibold">${initial}</div>`;
+
+                return `
+                    ${aiAgentButton}
+                    <div class="relative flex-shrink-0">
+                        <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
+                            ${avatar}
+                        </button>
+                        <div id="auth-menu-container" class="auth-menu-container closed">
+                            <div class="px-3 py-2 border-b border-gray-700 mb-2">
+                                <p class="text-sm font-semibold text-white truncate">${username}</p>
+                                <p class="text-xs text-gray-400 truncate">${email}</p>
+                            </div>
+                            <a href="/logged-in/dashboard.html" class="auth-menu-link">
+                                <i class="fa-solid fa-house-user"></i>
+                                Dashboard
+                            </a>
+                            <a href="/logged-in/settings.html" class="auth-menu-link">
+                                <i class="fa-solid fa-gear"></i>
+                                Settings
+                            </a>
+                            <button id="logout-button" class="auth-menu-button text-red-400 hover:bg-red-900/50 hover:text-red-300">
+                                <i class="fa-solid fa-right-from-bracket"></i>
+                                Log Out
+                            </button>
+                        </div>
+                    </div>
+                `;
+            };
+
+            // --- Assemble Final Navbar HTML ---
+            container.innerHTML = `
+                <header class="auth-navbar">
+                    <nav>
+                        <a href="/" class="flex items-center space-x-2 flex-shrink-0">
+                            <img src="${logoPath}" alt="4SP Logo" class="h-8 w-auto">
+                        </a>
+
+                        <div class="tab-wrapper">
+                            <button id="glide-left" class="scroll-glide-button hidden"><i class="fa-solid fa-chevron-left"></i></button>
+
+                            <div class="tab-scroll-container">
+                                ${tabsHtml}
+                            </div>
+                            
+                            <button id="glide-right" class="scroll-glide-button hidden"><i class="fa-solid fa-chevron-right"></i></button>
+                        </div>
+
+                        ${user ? loggedInView(user, userData) : loggedOutView}
+                    </nav>
+                </header>
+            `;
+
+            // --- Append AI Modal HTML to the Body ---
+            if (isPrivilegedUser) {
+                let aiModal = document.getElementById('ai-modal');
+                if (!aiModal) {
+                    aiModal = document.createElement('div');
+                    aiModal.id = 'ai-modal';
+                    aiModal.classList.add('ai-modal');
+                    aiModal.innerHTML = `
+                        <div class="ai-header">
+                            <div class="text-sm font-bold">
+                                AI Agent: 
+                                <select id="agent-selector" class="ai-agent-select">${agentOptionsHtml}</select>
+                            </div>
+                            <button id="ai-close-button" class="text-gray-400 hover:text-white transition">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                        <div id="ai-chat-area" class="ai-chat-area">
+                            <p class="ai-agent-message">Hello! I'm the **${currentAgent}** agent. Ask me anything. Remember, you can change my persona using the dropdown above!</p>
+                        </div>
+                        <div class="ai-input-area">
+                            <form id="ai-chat-form">
+                                <textarea id="ai-input" placeholder="Type your message..." rows="1"></textarea>
+                                <button type="submit" id="ai-send-button"><i class="fa-solid fa-paper-plane mr-1"></i> Send</button>
+                            </form>
+                        </div>
+                    `;
+                    document.body.appendChild(aiModal);
+                }
+            }
+
+            // --- 5. SETUP EVENT LISTENERS ---
+            setupEventListeners(user, isPrivilegedUser);
+
+            // Auto-scroll to the active tab
+            const activeTab = document.querySelector('.nav-tab.active');
+            const tabContainer = document.querySelector('.tab-scroll-container');
+            if (activeTab && tabContainer) {
+                tabContainer.scrollLeft = activeTab.offsetLeft - (tabContainer.offsetWidth / 2) + (activeTab.offsetWidth / 2);
+            }
+            
+            updateScrollGilders();
+        };
+
+        // --- NEW: AI GENERATIVE MODEL API CALL LOGIC (Using standard fetch/retry) ---
+        
+        /**
+         * Exponential backoff retry logic for the API call.
+         */
+        const fetchWithRetry = async (url, options, retries = 3) => {
+            for (let i = 0; i < retries; i++) {
                 try {
-                    // Use Firestore to fetch user data if needed (e.g., username, profile pic URL)
+                    const response = await fetch(url, options);
+                    if (!response.ok) {
+                        const errorBody = await response.text();
+                        throw new Error(`API Error ${response.status}: ${errorBody}`);
+                    }
+                    return response;
+                } catch (error) {
+                    if (i < retries - 1) {
+                        const delay = Math.pow(2, i) * 1000; // 1s, 2s, 4s delay
+                        // console.warn(`Retrying fetch (attempt ${i + 2}) in ${delay / 1000}s...`); // Removed console log
+                        await new Promise(res => setTimeout(res, delay));
+                    } else {
+                        throw error;
+                    }
+                }
+            }
+        };
+
+        const handleChatSubmit = async (e) => {
+            e.preventDefault();
+            const input = document.getElementById('ai-input');
+            const chatArea = document.getElementById('ai-chat-area');
+            const sendButton = document.getElementById('ai-send-button');
+            const userQuery = input.value.trim();
+
+            if (!userQuery) return;
+
+            // 1. Display user message and clear input
+            const userMessageDiv = document.createElement('p');
+            userMessageDiv.classList.add('ai-chat-message', 'ai-user-message');
+            userMessageDiv.textContent = userQuery;
+            chatArea.appendChild(userMessageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+            input.value = '';
+            input.disabled = true;
+            sendButton.disabled = true;
+
+            // 2. Add loading indicator
+            const loadingDiv = document.createElement('p');
+            loadingDiv.classList.add('ai-loading-indicator');
+            loadingDiv.textContent = 'Agent is thinking...';
+            chatArea.appendChild(loadingDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+
+            try {
+                // 3. Get system context
+                const systemInfo = await getSystemInfo();
+                const baseInstruction = AGENT_CATEGORIES[currentAgent];
+                const systemPrompt = `You are acting as the '${currentAgent}' agent with the following persona: ${baseInstruction}. You MUST tailor your response to this persona.\n\n[SYSTEM CONTEXT]\n${systemInfo.time}\n${systemInfo.timezone}\nGeneral Location: ${systemInfo.location}\n[END CONTEXT]`;
+                
+                const payload = {
+                    contents: [{ parts: [{ text: userQuery }] }],
+                    tools: [{ "googleSearch": {} }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                };
+                
+                // FIX: Use the API key directly from the FIREBASE_CONFIG object
+                const apiKey = FIREBASE_CONFIG.apiKey;
+                if (!apiKey || apiKey.length < 5) {
+                    throw new Error("API Key is missing or invalid in FIREBASE_CONFIG.");
+                }
+
+                // 4. Call the Generative Model API (with retry logic)
+                const apiUrl = `${GEMINI_API_URL}${apiKey}`;
+                const response = await fetchWithRetry(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "I apologize, I could not process that request. The response was empty.";
+
+                // 5. Display agent response
+                const agentMessageDiv = document.createElement('p');
+                agentMessageDiv.classList.add('ai-chat-message', 'ai-agent-message');
+                // Use a simple replacement for bold markdown for better display
+                agentMessageDiv.innerHTML = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); 
+                
+                chatArea.removeChild(loadingDiv);
+                chatArea.appendChild(agentMessageDiv);
+
+            } catch (error) {
+                console.error("AI Agent Error:", error);
+                loadingDiv.textContent = 'Error: Failed to get response. Check the console.';
+                loadingDiv.style.color = 'red';
+            } finally {
+                chatArea.scrollTop = chatArea.scrollHeight;
+                input.disabled = false;
+                sendButton.disabled = false;
+                input.focus();
+            }
+        };
+
+        const setupEventListeners = (user, isPrivilegedUser) => {
+            const toggleButton = document.getElementById('auth-toggle');
+            const menu = document.getElementById('auth-menu-container');
+
+            // Scroll Glide Button setup
+            const tabContainer = document.querySelector('.tab-scroll-container');
+            const leftButton = document.getElementById('glide-left');
+            const rightButton = document.getElementById('glide-right');
+
+            const debouncedUpdateGilders = debounce(updateScrollGilders, 50);
+
+            if (tabContainer) {
+                const scrollAmount = tabContainer.offsetWidth * 0.8; 
+                tabContainer.addEventListener('scroll', debouncedUpdateGilders);
+                window.addEventListener('resize', debouncedUpdateGilders);
+                
+                if (leftButton) {
+                    leftButton.addEventListener('click', () => {
+                        tabContainer.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+                    });
+                }
+                if (rightButton) {
+                    rightButton.addEventListener('click', () => {
+                        tabContainer.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+                    });
+                }
+            }
+
+            // Auth Toggle
+            if (toggleButton && menu) {
+                toggleButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    menu.classList.toggle('closed');
+                    menu.classList.toggle('open');
+                });
+            }
+
+            document.addEventListener('click', (e) => {
+                if (menu && menu.classList.contains('open') && !menu.contains(e.target) && e.target !== toggleButton) {
+                    menu.classList.add('closed');
+                    menu.classList.remove('open');
+                }
+            });
+
+            if (user) {
+                const logoutButton = document.getElementById('logout-button');
+                if (logoutButton) {
+                    logoutButton.addEventListener('click', () => {
+                        auth.signOut().catch(err => console.error("Logout failed:", err));
+                    });
+                }
+            }
+
+            // --- AI Agent Listeners (Only for privileged user) ---
+            if (isPrivilegedUser) {
+                const aiModal = document.getElementById('ai-modal');
+                const aiToggleButton = document.getElementById('ai-toggle');
+                const aiCloseButton = document.getElementById('ai-close-button');
+                const aiChatForm = document.getElementById('ai-chat-form');
+                const agentSelector = document.getElementById('agent-selector');
+                const aiInput = document.getElementById('ai-input');
+
+                // Toggle Button Click
+                if (aiToggleButton && aiModal) {
+                    aiToggleButton.addEventListener('click', () => {
+                        aiModal.classList.toggle('active');
+                        if (aiModal.classList.contains('active')) {
+                            aiInput.focus();
+                        }
+                    });
+                }
+                
+                // Close Button Click
+                if (aiCloseButton && aiModal) {
+                    aiCloseButton.addEventListener('click', () => {
+                        aiModal.classList.remove('active');
+                    });
+                }
+
+                // Agent Selector Change
+                if (agentSelector) {
+                    agentSelector.addEventListener('change', (e) => {
+                        currentAgent = e.target.value;
+                        const chatArea = document.getElementById('ai-chat-area');
+                        const welcomeDiv = document.createElement('p');
+                        welcomeDiv.classList.add('ai-agent-message');
+                        welcomeDiv.innerHTML = `**Agent Switched:** I am now the **${currentAgent}** agent. Ask away!`;
+                        chatArea.appendChild(welcomeDiv);
+                        chatArea.scrollTop = chatArea.scrollHeight;
+                    });
+                }
+
+                // Chat Form Submit
+                if (aiChatForm) {
+                    aiChatForm.addEventListener('submit', handleChatSubmit);
+                    
+                    // Allow Shift+Enter for new line, Enter for submit
+                    aiInput.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleChatSubmit(e);
+                        }
+                    });
+                }
+
+                // Control + A Activation
+                document.addEventListener('keydown', (e) => {
+                    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a' && !isFocusableElement()) {
+                        e.preventDefault();
+                        aiModal.classList.toggle('active');
+                        if (aiModal.classList.contains('active')) {
+                            aiInput.focus();
+                        }
+                    }
+                });
+            }
+        };
+
+        // --- 6. AUTH STATE LISTENER ---
+        auth.onAuthStateChanged(async (user) => {
+            let isPrivilegedUser = false;
+            
+            if (user) {
+                // Check for the privileged user email
+                isPrivilegedUser = user.email === PRIVILEGED_EMAIL;
+
+                // User is signed in. Fetch their data from Firestore.
+                try {
                     const userDoc = await db.collection('users').doc(user.uid).get();
                     const userData = userDoc.exists ? userDoc.data() : null;
                     renderNavbar(user, userData, pages, isPrivilegedUser);
@@ -476,352 +824,6 @@ let currentAgent = 'Standard'; // Default agent
                 });
             }
         });
-
-        // --- 5. RENDER THE NAVBAR ---
-        const renderNavbar = (user, userData, pages, isPrivilegedUser) => {
-            // Get the current URL path to determine the active tab
-            const currentPath = window.location.pathname.replace(/\/$/, '');
-            let navContent = '';
-            
-            // --- Tabs Section ---
-            let tabsHtml = '';
-            if (pages && Array.isArray(pages.tabs)) {
-                tabsHtml = pages.tabs.map(tab => {
-                    // Check if the tab's path matches the current path
-                    const isActive = tab.path.replace(/\/$/, '') === currentPath;
-                    const iconClass = getIconClass(tab.icon);
-                    return `
-                        <a href="${tab.path}" class="nav-tab ${isActive ? 'active' : ''}">
-                            ${iconClass ? `<i class="${iconClass}" style="margin-right: 0.5rem;"></i>` : ''}
-                            ${tab.title}
-                        </a>
-                    `;
-                }).join('');
-            }
-            
-            const dropdownOpen = document.getElementById('auth-menu-container') ? document.getElementById('auth-menu-container').classList.contains('open') : false;
-
-            // --- User/Auth Section ---
-            let authHtml = '';
-            if (user && user.isAnonymous === false) {
-                const displayName = user.displayName || user.email || 'User';
-                const firstInitial = displayName ? displayName[0].toUpperCase() : '?';
-                const avatar = user.photoURL ? 
-                    `<img src="${user.photoURL}" alt="Avatar" class="w-full h-full object-cover rounded-full" onerror="this.onerror=null; this.src='https://placehold.co/40x40/374151/ffffff?text=${firstInitial}'">` :
-                    `<div class="initial-avatar w-full h-full rounded-full text-lg">${firstInitial}</div>`;
-
-                authHtml = `
-                    <button id="auth-toggle" class="w-10 h-10 rounded-full overflow-hidden border-2 border-gray-600 hover:border-white transition-colors">
-                        ${avatar}
-                    </button>
-                    <div id="auth-menu-container" class="auth-menu-container ${dropdownOpen ? 'open' : 'closed'}">
-                        <div class="px-3 py-2 border-b border-gray-700">
-                            <p class="text-sm font-medium text-white">${displayName}</p>
-                            <p class="text-xs text-gray-400">${user.email}</p>
-                        </div>
-                        <a href="/profile" class="auth-menu-link">
-                            <i class="fa-solid fa-user w-5 text-gray-400"></i> My Profile
-                        </a>
-                        <button id="sign-out-button" class="auth-menu-button">
-                            <i class="fa-solid fa-right-from-bracket w-5 text-gray-400"></i> Sign Out
-                        </button>
-                    </div>
-                `;
-            } else {
-                // Logged out or Anonymous User
-                authHtml = `
-                    <button id="sign-in-up-toggle" class="logged-out-auth-toggle text-gray-300 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">
-                        <i class="fa-solid fa-arrow-right-to-bracket mr-2"></i> Log In / Sign Up
-                    </button>
-                `;
-            }
-
-            // --- Full Navigation Bar HTML ---
-            navContent = `
-                <div class="auth-navbar">
-                    <nav>
-                        <a href="/" class="text-xl font-bold text-white tracking-wider" style="font-family: var(--playfair-font);"><i class="fa-solid fa-layer-group text-gray-400 mr-2"></i>APP</a>
-                        
-                        <!-- Tabs Scroll Container -->
-                        <div class="tab-wrapper">
-                            <button id="glide-left" class="scroll-glide-button hidden"><i class="fa-solid fa-angle-left"></i></button>
-                            <div id="tab-scroll-container" class="tab-scroll-container">
-                                ${tabsHtml}
-                            </div>
-                            <button id="glide-right" class="scroll-glide-button"><i class="fa-solid fa-angle-right"></i></button>
-                        </div>
-
-                        <!-- AI Mode Toggle & Auth -->
-                        <div class="flex items-center gap-4">
-                            <!-- AI Mode Toggle Button -->
-                            ${isPrivilegedUser ? 
-                                `<button id="ai-mode-toggle" title="Toggle AI Agent"><i class="fa-solid fa-wand-magic-sparkles"></i></button>` : 
-                                `<button id="ai-mode-toggle" title="AI Mode (User Access Required)" disabled style="cursor: not-allowed; opacity: 0.5;"><i class="fa-solid fa-lock"></i></button>`
-                            }
-
-                            <!-- Auth Toggle -->
-                            ${authHtml}
-                        </div>
-                    </nav>
-                </div>
-            `;
-
-            // Inject the navbar HTML
-            const navbarContainer = document.getElementById('navbar-container');
-            if (navbarContainer) {
-                navbarContainer.innerHTML = navContent;
-                attachEventListeners(user, isPrivilegedUser);
-            }
-        };
-
-        // --- 6. AI AGENT LOGIC ---
-
-        const sendMessage = async (user, chatArea, prompt) => {
-            if (!prompt.trim()) return;
-
-            const apiKey = FIREBASE_CONFIG.apiKey;
-            const apiUrl = GEMINI_API_URL + apiKey;
-
-            // 1. Add user message to chat
-            const userMessage = document.createElement('div');
-            userMessage.className = 'ai-chat-message ai-user-message';
-            userMessage.textContent = prompt;
-            chatArea.appendChild(userMessage);
-            chatArea.scrollTop = chatArea.scrollHeight;
-
-            // 2. Add loading indicator
-            const loadingIndicator = document.createElement('div');
-            loadingIndicator.className = 'ai-loading-indicator';
-            loadingIndicator.textContent = 'Agent is thinking...';
-            chatArea.appendChild(loadingIndicator);
-            chatArea.scrollTop = chatArea.scrollHeight;
-
-            // 3. Prepare system prompt (Agent Persona + Context)
-            const agentPersona = AGENT_CATEGORIES[currentAgent] || AGENT_CATEGORIES.Standard;
-            const systemInfo = await getSystemInfo(); // Get local time/location
-            
-            const systemPrompt = `
-                You are the specified AI Agent. Follow the persona strictly: ${agentPersona}.
-                The user's environment details are: ${systemInfo.location}, ${systemInfo.time}, ${systemInfo.timezone}.
-                The user has asked the following:
-            `;
-
-            const payload = {
-                contents: [{ parts: [{ text: prompt }] }],
-                tools: [{ google_search: {} }], // Enable Google Search grounding
-                systemInstruction: {
-                    parts: [{ text: systemPrompt }]
-                }
-            };
-
-            const retryFetch = async (url, options, retries = 3) => {
-                for (let i = 0; i < retries; i++) {
-                    try {
-                        const response = await fetch(url, options);
-                        if (!response.ok) {
-                            if (response.status === 429 && i < retries - 1) { // 429 Too Many Requests
-                                const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
-                                await new Promise(res => setTimeout(res, delay));
-                                continue;
-                            }
-                            throw new Error(`HTTP error! Status: ${response.status}`);
-                        }
-                        return response;
-                    } catch (error) {
-                        if (i === retries - 1) throw error;
-                    }
-                }
-            };
-
-            try {
-                const response = await retryFetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                const result = await response.json();
-                const candidate = result.candidates?.[0];
-
-                let agentText = 'I encountered an error generating a response.';
-                
-                if (candidate && candidate.content?.parts?.[0]?.text) {
-                    agentText = candidate.content.parts[0].text;
-                }
-
-                // 4. Remove loading indicator
-                loadingIndicator.remove();
-
-                // 5. Add Agent message to chat
-                const agentMessage = document.createElement('div');
-                agentMessage.className = 'ai-chat-message ai-agent-message';
-                agentMessage.innerHTML = agentText.replace(/\n/g, '<br>'); // Simple newline formatting
-                chatArea.appendChild(agentMessage);
-                chatArea.scrollTop = chatArea.scrollHeight;
-
-            } catch (error) {
-                console.error("Gemini API call failed:", error);
-                loadingIndicator.textContent = 'Error: Could not connect to AI Agent.';
-                loadingIndicator.style.color = 'red';
-                loadingIndicator.className = 'ai-chat-message ai-agent-message';
-            }
-        };
-
-        // --- 7. ATTACH EVENT LISTENERS ---
-        const attachEventListeners = (user, isPrivilegedUser) => {
-            const authToggle = document.getElementById('auth-toggle');
-            const authMenu = document.getElementById('auth-menu-container');
-            const signOutButton = document.getElementById('sign-out-button');
-            const signInUpToggle = document.getElementById('sign-in-up-toggle');
-            const aiModeToggle = document.getElementById('ai-mode-toggle');
-            const scrollContainer = document.getElementById('tab-scroll-container');
-            const glideLeft = document.getElementById('glide-left');
-            const glideRight = document.getElementById('glide-right');
-
-            // --- Auth Dropdown Listener ---
-            if (authToggle && authMenu) {
-                authToggle.onclick = (e) => {
-                    e.stopPropagation();
-                    authMenu.classList.toggle('open');
-                    authMenu.classList.toggle('closed');
-                };
-                document.body.onclick = () => {
-                    if (authMenu.classList.contains('open')) {
-                        authMenu.classList.remove('open');
-                        authMenu.classList.add('closed');
-                    }
-                };
-            }
-
-            // --- Sign Out Listener ---
-            if (signOutButton) {
-                signOutButton.onclick = () => {
-                    auth.signOut().then(() => {
-                        console.log("User signed out successfully.");
-                    }).catch((error) => {
-                        console.error("Sign out error:", error);
-                    });
-                };
-            }
-            
-            // --- Sign In/Up Listener (Placeholder) ---
-            if (signInUpToggle) {
-                signInUpToggle.onclick = () => {
-                    alert('Please implement your full sign-in/sign-up logic.');
-                };
-            }
-
-            // --- Tab Scrolling Listeners ---
-            const checkScroll = () => {
-                if (scrollContainer) {
-                    const { scrollLeft, scrollWidth, clientWidth } = scrollContainer;
-                    glideLeft.classList.toggle('hidden', scrollLeft === 0);
-                    glideRight.classList.toggle('hidden', scrollLeft + clientWidth >= scrollWidth - 5); // 5px tolerance
-                }
-            };
-
-            const scrollDebounced = debounce(checkScroll, 100);
-
-            if (scrollContainer) {
-                scrollContainer.addEventListener('scroll', scrollDebounced);
-                window.addEventListener('resize', scrollDebounced);
-                // Initial check after content is rendered
-                setTimeout(checkScroll, 0); 
-            }
-            if (glideLeft) {
-                glideLeft.onclick = () => scrollContainer.scrollBy({ left: -200, behavior: 'smooth' });
-            }
-            if (glideRight) {
-                glideRight.onclick = () => scrollContainer.scrollBy({ left: 200, behavior: 'smooth' });
-            }
-
-
-            // --- AI MODE (MODAL) LOGIC ---
-            if (aiModeToggle && isPrivilegedUser) {
-                // 1. Create the AI Modal if it doesn't exist
-                if (!document.getElementById('ai-modal')) {
-                    const aiModal = document.createElement('div');
-                    aiModal.id = 'ai-modal';
-                    aiModal.className = 'ai-modal';
-                    aiModal.innerHTML = `
-                        <div class="ai-header">
-                            <span style="font-size: 0.9rem; color: var(--ai-creme);">AI Agent Mode</span>
-                            <select id="ai-agent-select" class="ai-agent-select">
-                                ${Object.keys(AGENT_CATEGORIES).map(agent => 
-                                    `<option value="${agent}" ${agent === currentAgent ? 'selected' : ''}>${agent}</option>`
-                                ).join('')}
-                            </select>
-                            <button id="ai-modal-close" style="background: none; border: none; color: var(--ai-creme); font-size: 1.2rem; cursor: pointer;">
-                                <i class="fa-solid fa-xmark"></i>
-                            </button>
-                        </div>
-                        <div id="ai-chat-area" class="ai-chat-area">
-                            <div class="ai-chat-message ai-agent-message">
-                                Hello! I'm the ${currentAgent} Agent. Ask me anything to get started. My current persona: ${AGENT_CATEGORIES[currentAgent]}
-                            </div>
-                        </div>
-                        <div class="ai-input-area">
-                            <form id="ai-chat-form">
-                                <textarea id="ai-input" placeholder="Ask your agent..." rows="1"></textarea>
-                                <button type="submit" id="ai-send-button"><i class="fa-solid fa-paper-plane"></i> Send</button>
-                            </form>
-                        </div>
-                    `;
-                    document.body.appendChild(aiModal);
-                    
-                    // Attach modal-specific listeners
-                    const chatForm = document.getElementById('ai-chat-form');
-                    const chatInput = document.getElementById('ai-input');
-                    const chatArea = document.getElementById('ai-chat-area');
-                    const agentSelect = document.getElementById('ai-agent-select');
-
-                    // Auto-resize textarea
-                    const resizeTextarea = () => {
-                        chatInput.style.height = 'auto';
-                        chatInput.style.height = (chatInput.scrollHeight) + 'px';
-                    };
-                    chatInput.addEventListener('input', resizeTextarea);
-
-                    // Form Submission
-                    chatForm.onsubmit = (e) => {
-                        e.preventDefault();
-                        sendMessage(user, chatArea, chatInput.value);
-                        chatInput.value = '';
-                        resizeTextarea(); // Reset size
-                    };
-                    
-                    // Agent Select Change
-                    agentSelect.onchange = (e) => {
-                        currentAgent = e.target.value;
-                        const initialMessage = document.createElement('div');
-                        initialMessage.className = 'ai-chat-message ai-agent-message';
-                        initialMessage.innerHTML = `Switching to <b>${currentAgent} Agent</b>. Persona: ${AGENT_CATEGORIES[currentAgent]}`;
-                        chatArea.appendChild(initialMessage);
-                        chatArea.scrollTop = chatArea.scrollHeight;
-                        aiModeToggle.classList.add('active'); // Re-trigger pulse effect
-                        setTimeout(() => aiModeToggle.classList.remove('active'), 2000); // Stop after a pulse cycle
-                    };
-                    
-                    // Close button
-                    document.getElementById('ai-modal-close').onclick = () => {
-                        aiModal.classList.remove('active');
-                        aiModeToggle.classList.remove('active');
-                    };
-                }
-
-                // 2. Toggle button listener
-                aiModeToggle.onclick = () => {
-                    const aiModal = document.getElementById('ai-modal');
-                    aiModal.classList.toggle('active');
-                    aiModeToggle.classList.toggle('active', aiModal.classList.contains('active'));
-                    
-                    // Focus on input when opened
-                    if (aiModal.classList.contains('active')) {
-                        document.getElementById('ai-input').focus();
-                    }
-                };
-            }
-        };
 
         // --- FINAL SETUP ---
         // Create a div for the navbar to live in if it doesn't exist.
