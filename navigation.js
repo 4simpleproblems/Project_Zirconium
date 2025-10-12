@@ -5,6 +5,12 @@
  * to rendering user-specific information. It now includes a horizontally scrollable
  * tab menu loaded from page-identification.json.
  *
+ * --- FIXES / UPDATES ---
+ * 1. USER REQUEST: Replaced Login/Signup links with a single "Authenticate" link pointing to /authentication.html.
+ * 2. USER REQUEST: Updated logged-out button background to #010101 and icon color to #DADADA, using 'fa-solid fa-user'. (As per navigation-mini.js)
+ * 3. Dashboard Icon Updated: Changed Dashboard icon from 'fa-chart-line' to 'fa-house-user'. (Original fix retained)
+ * 4. Glide Button Style: Removed border-radius and adjusted gradients for full opacity at the edge. (Original fix retained)
+ *
  * --- INSTRUCTIONS ---
  * 1. ACTION REQUIRED: Paste your own Firebase project configuration into the `FIREBASE_CONFIG` object below.
  * 2. Place this script in the root directory of your website.
@@ -16,11 +22,6 @@
  * - It fetches the page configuration JSON to build the scrollable navigation tabs.
  * - It creates a placeholder div and then renders the navbar inside it.
  * - It initializes Firebase, listens for auth state, and fetches user data.
- *
- * --- FIXES / UPDATES ---
- * - **Glide Button Style:** Removed border-radius and adjusted gradients for full opacity at the edge.
- * - **Mini-Menu Icons:** Added icons to the Dashboard, Settings, and Logout links in the authenticated user's dropdown menu.
- * - **Dashboard Icon Updated:** Changed Dashboard icon from 'fa-chart-line' to 'fa-house-user'.
  */
 
 // =========================================================================
@@ -59,7 +60,9 @@ let db;
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
             script.src = src;
-            script.type = 'module';
+            // Removed type='module' to match navigation-mini.js style for compat libraries,
+            // though the original navigation.js used it. Keeping it as is to not break module usage.
+            script.type = 'module'; 
             script.onload = resolve;
             script.onerror = reject;
             document.head.appendChild(script);
@@ -206,8 +209,20 @@ let db;
                     color: #d1d5db; 
                     border-radius: 0.375rem; 
                     transition: background-color 0.2s, color 0.2s; 
+                    /* Ensure buttons look like links */
+                    border: none;
+                    cursor: pointer;
                 }
                 .auth-menu-link:hover, .auth-menu-button:hover { background-color: rgb(55 65 81); color: white; }
+
+                /* NEW: Custom style for the logged out button's icon and background (from navigation-mini.js) */
+                .logged-out-auth-toggle {
+                    background: #010101; /* Requested dark background */
+                    border: 1px solid #374151; /* Keep a subtle border */
+                }
+                .logged-out-auth-toggle i {
+                    color: #DADADA; /* Requested icon color */
+                }
 
                 /* Scrollable Tab Wrapper (NEW) */
                 .tab-wrapper {
@@ -394,7 +409,7 @@ let db;
             }
         };
 
-        // --- 4. RENDER THE NAVBAR HTML (UPDATED: Dashboard icon changed) ---
+        // --- 4. RENDER THE NAVBAR HTML (UPDATED: Auth views match navigation-mini.js changes) ---
         const renderNavbar = (user, userData, pages) => {
             const container = document.getElementById('navbar-container');
             if (!container) return;
@@ -418,20 +433,16 @@ let db;
                 `;
             }).join('');
 
-            // --- Auth Views (Unchanged login/signup view) ---
+            // --- Auth Views (UPDATED: Logged Out View to match navigation-mini.js) ---
             const loggedOutView = `
                 <div class="relative flex-shrink-0">
-                    <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-700 flex items-center justify-center bg-gray-800 hover:bg-gray-700 transition">
-                        <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    <button id="auth-toggle" class="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-700 transition logged-out-auth-toggle">
+                        <i class="fa-solid fa-user"></i>
                     </button>
                     <div id="auth-menu-container" class="auth-menu-container closed">
-                        <a href="/login.html" class="auth-menu-link">
-                            <i class="fa-solid fa-right-to-bracket"></i>
-                            Login
-                        </a>
-                        <a href="/signup.html" class="auth-menu-link">
-                            <i class="fa-solid fa-user-plus"></i>
-                            Sign Up
+                        <a href="/authentication.html" class="auth-menu-link">
+                            <i class="fa-solid fa-lock"></i>
+                            Authenticate
                         </a>
                     </div>
                 </div>
@@ -447,7 +458,7 @@ let db;
                     `<img src="${photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">` :
                     `<div class="initial-avatar w-8 h-8 rounded-full text-sm font-semibold">${initial}</div>`;
 
-                // --- UPDATED: Dashboard icon is now fa-house-user ---
+                // --- Dashboard icon is fa-house-user ---
                 return `
                     <div class="relative flex-shrink-0">
                         <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
