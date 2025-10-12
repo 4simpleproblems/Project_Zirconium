@@ -385,6 +385,7 @@
         import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, query, where, getDocs, serverTimestamp, arrayUnion, arrayRemove, writeBatch, deleteField, deleteDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         // --- Firebase Configuration ---
+        // NOTE: Replace this with your actual Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyASqfiYUPf7xY4wgZ0hLl8_Z0ZkBiwFUO8",
             authDomain: "theamericanmessenger-0.firebaseapp.com",
@@ -793,6 +794,7 @@
 
         /**
          * Listens to real-time messages for the current chat.
+         * Uses onSnapshot and docChanges to only update necessary elements.
          */
         function listenToMessages(chatId) {
             unsubscribeMessages();
@@ -811,8 +813,6 @@
                     shouldScroll = true;
                 }
 
-                let lastMessageAdded = null;
-                
                 snapshot.docChanges().forEach(change => {
                     const messageData = change.doc.data();
                     messageData.id = change.doc.id; // Attach doc ID for tracking
@@ -827,7 +827,6 @@
                         if (!existingEl) {
                             const messageEl = renderMessage(messageData);
                             dom.messagesContainer.appendChild(messageEl);
-                            lastMessageAdded = messageData;
                         }
                     } else if (change.type === 'modified') {
                          // Optional: Handle message modification (e.g., editing/deletion marker)
@@ -1041,14 +1040,23 @@
                 });
                 
                 // 3. Update empty state check
-                if (dom.activeListItems.children.length === 0) {
+                const listItems = dom.activeListItems.querySelectorAll('.compact-list-item');
+                if (listItems.length === 0) {
                     dom.activeListItems.innerHTML = '<p class="p-4 text-center text-gray-500">No active chats. Start a DM or group!</p>';
                 } else if (dom.activeListItems.querySelector('p')) {
-                    // Remove empty state if present and children exist
-                    dom.activeListItems.innerHTML = ''; 
-                    // Re-process all elements to ensure correct sorting (optional but good practice)
-                    // We skip re-sorting for simplicity here, relying on prepend for "newest on top"
+                    // This is slightly tricky: if we used prepend, we should ideally re-sort.
+                    // For now, we only remove the placeholder if actual items exist.
+                    const placeholder = dom.activeListItems.querySelector('p');
+                    if (placeholder && placeholder.textContent.includes('No active chats')) {
+                         dom.activeListItems.removeChild(placeholder);
+                    }
                 }
+                
+                // Re-apply active class in case the chat list was modified while a chat was open
+                if (currentChat.id) {
+                     dom.activeListItems.querySelector(`[data-list-chat-id="${currentChat.id}"]`)?.classList.add('active');
+                }
+
 
             }, (error) => {
                  console.error("Error listening to chats:", error);
@@ -1178,29 +1186,54 @@
                 const { id, isGroup } = deleteBtn.dataset;
                 if (isGroup === 'true') {
                     console.log(`Action: Leave/Delete Group ${id}`);
+                    showMessage(dom.cooldownTimer, `Group chat logic is a placeholder.`, 'info');
                 } else {
                     console.log(`Action: Delete DM Chat ${id}`);
+                    showMessage(dom.cooldownTimer, `DM chat deletion logic is a placeholder.`, 'info');
                 }
             } else if (unfriendBtn) {
                  const { uid, name } = unfriendBtn.dataset;
                  console.log(`Action: Unfriend ${name} (${uid})`);
+                 showMessage(dom.cooldownTimer, `Unfriend logic is a placeholder.`, 'info');
             } else if (blockBtn) {
                  const { uid, name } = blockBtn.dataset;
                  handleBlockUser(uid, name);
             }
         }
 
-        function handleBlockUser(uid, name) {
+        async function handleBlockUser(uid, name) {
             showConfirmModal({
                 title: `Block ${name}?`,
                 body: "This will remove them from your friends list and prevent them from contacting you. They will not be notified.",
                 onConfirm: async () => {
                     console.log(`Blocking user ${uid}`);
-                    await updateDoc(doc(db, 'users', currentUser.uid), {
-                        blocked: arrayUnion(uid),
-                        [`friends.${uid}`]: deleteField()
-                    });
-                    closeChat();
+                    
+                    try {
+                        const batch = writeBatch(db);
+                        // 1. Add to blocked list
+                        batch.update(doc(db, 'users', currentUser.uid), {
+                            blocked: arrayUnion(uid),
+                        });
+                        
+                        // 2. Remove from friends list
+                        const friendsPath = `friends.${uid}`;
+                        batch.update(doc(db, 'users', currentUser.uid), {
+                            [friendsPath]: deleteField()
+                        });
+
+                        await batch.commit();
+                        
+                        // Close chat if it was with the blocked user
+                        if (currentChat.partnerId === uid) {
+                            closeChat();
+                        }
+
+                        showMessage(dom.cooldownTimer, `${name} has been blocked.`, 'success');
+
+                    } catch (error) {
+                         console.error("Error blocking user:", error);
+                         showMessage(dom.cooldownTimer, `Failed to block user.`, 'error');
+                    }
                 }
             });
         }
@@ -1209,7 +1242,10 @@
             const newLabel = prompt(`Set a local nickname for ${currentLabel} (leave blank to clear):`);
             if (newLabel !== null) {
                 setFriendNickname(partnerUid, newLabel);
-                dom.chatHeader.textContent = getFriendNickname(partnerUid, currentLabel);
+                // Update header immediately if in chat
+                if (currentChat.partnerId === partnerUid) {
+                    dom.chatHeader.textContent = getFriendNickname(partnerUid, currentChat.name);
+                }
                 // Trigger a tab switch to refresh the list content
                 switchTab(currentTab);
             }
@@ -1224,12 +1260,13 @@
         
         function handleFriendRequestAction(e) {
             console.log("Friend Request Action fired.");
+            showMessage(dom.addFriendMessage, `Friend request logic is currently a placeholder.`, 'info');
         }
         
         function openGroupModal() {
              dom.createGroupModal.classList.remove('hidden');
              setTimeout(() => dom.createGroupModal.classList.remove('opacity-0'), 10);
-             dom.groupMembersList.innerHTML = '<p class="text-gray-500">Friend list rendering not fully implemented.</p>';
+             dom.groupMembersList.innerHTML = '<p class="text-gray-500">Friend list rendering for group creation not fully implemented.</p>';
         }
         function closeGroupModal() {
              dom.createGroupModal.classList.add('opacity-0');
@@ -1238,19 +1275,72 @@
         function handleCreateGroup(e) {
              e.preventDefault();
              console.log("Create Group attempted.");
+             showMessage(dom.cooldownTimer, `Group creation logic is currently a placeholder.`, 'info');
+             closeGroupModal();
         }
         function renderBlockedUsers() {
-             dom.blockedUsersList.innerHTML = '<p class="text-gray-500 text-sm p-2">Rendering blocked users list...</p>';
+             // In a real app, this would use an onSnapshot listener, but for a stub, we render current data.
+             const blockedUids = currentUserData.blocked || [];
+             dom.blockedUsersList.innerHTML = '';
+             
+             if (blockedUids.length === 0) {
+                 dom.blockedUsersList.innerHTML = '<p class="text-gray-500 text-sm p-2">You have not blocked any users.</p>';
+                 return;
+             }
+
+             // Fetch public IDs for blocked users (simulated/stubbed fetch)
+             // In a real app, this should be done efficiently.
+             
+             // Placeholder for list rendering:
+             blockedUids.forEach(uid => {
+                 const name = getFriendNickname(uid, `User ID: ${uid.substring(0, 8)}`);
+                 const item = document.createElement('div');
+                 item.className = 'flex justify-between items-center p-2 rounded-md bg-gray-900';
+                 item.innerHTML = `
+                    <span class="text-sm">${name}</span>
+                    <button class="unblock-btn text-green-400 hover:text-green-300 transition p-1" data-uid="${uid}" data-name="${name}" title="Unblock User">
+                        <i class="fas fa-unlock"></i> Unblock
+                    </button>
+                 `;
+                 dom.blockedUsersList.appendChild(item);
+             });
+             
+             // Add listener for unblocking
+             dom.blockedUsersList.addEventListener('click', async (e) => {
+                 const unblockBtn = e.target.closest('.unblock-btn');
+                 if (unblockBtn) {
+                     const { uid, name } = unblockBtn.dataset;
+                     showConfirmModal({
+                         title: `Unblock ${name}?`,
+                         body: "They will be able to contact you and send friend requests again.",
+                         onConfirm: async () => {
+                             await updateDoc(doc(db, 'users', currentUser.uid), {
+                                 blocked: arrayRemove(uid)
+                             });
+                             showMessage(dom.cooldownTimer, `${name} has been unblocked.`, 'success');
+                         }
+                     });
+                 }
+             });
         }
         
         function showConfirmModal({ title, body, onConfirm }) {
              dom.confirmModal.title.textContent = title;
              dom.confirmModal.body.textContent = body;
              
+             // Clear previous listeners
+             const oldYesBtn = dom.confirmModal.yesBtn.cloneNode(true);
+             dom.confirmModal.yesBtn.parentNode.replaceChild(oldYesBtn, dom.confirmModal.yesBtn);
+             dom.confirmModal.yesBtn = oldYesBtn;
+
+             const oldNoBtn = dom.confirmModal.noBtn.cloneNode(true);
+             dom.confirmModal.noBtn.parentNode.replaceChild(oldNoBtn, dom.confirmModal.noBtn);
+             dom.confirmModal.noBtn = oldNoBtn;
+
+
              const yesHandler = () => {
                 onConfirm();
                 hideConfirmModal();
-                dom.confirmModal.yesBtn.removeEventListener('click', yesHandler);
              };
              
              dom.confirmModal.yesBtn.addEventListener('click', yesHandler);
@@ -1341,6 +1431,11 @@
         // =========================================================================
 
         function switchTab(tabName) {
+            // Close the chat view if switching from chats tab
+            if (currentTab === 'chats' && tabName === 'friends') {
+                 closeChat();
+            }
+
             currentTab = tabName;
 
             dom.chatsTabBtn.classList.toggle('bg-indigo-600', tabName === 'chats');
@@ -1414,8 +1509,9 @@
             dom.fileUploadInput.addEventListener('change', handleFileSelect);
 
             dom.openSettingsBtn.addEventListener('click', () => {
-                dom.settingsModal.classList.remove('hidden', 'opacity-0');
+                dom.settingsModal.classList.remove('hidden');
                 setTimeout(() => dom.settingsModal.classList.remove('opacity-0'), 10);
+                renderBlockedUsers(); 
             });
 
             dom.settingsModalCloseBtn.addEventListener('click', () => {
