@@ -9,9 +9,7 @@
     // Update this array (and ONLY this array) to manage your application's scripts.
     const scriptsToLoad = [
       '../navigation.js',        
-      '../url-tab-title-changer.js',
-      '../panic-key.js',
-      '../artificial-integration.js'
+      '../url-tab-title-changer.js'
     ];
 
     // 2. CORE DYNAMIC LOADING FUNCTION
