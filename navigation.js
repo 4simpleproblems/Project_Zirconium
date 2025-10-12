@@ -3,20 +3,24 @@
  * * This is a fully self-contained script to create a dynamic, authentication-aware
  * navigation bar for your website. It handles everything from Firebase initialization
  * to rendering user-specific information. It now includes a horizontally scrollable
- * tab menu loaded from page-identification.json, and an exclusive AI Chatbot feature
- * for the official website administrator.
+ * tab menu loaded from page-identification.json.
  *
  * --- INSTRUCTIONS ---
  * 1. ACTION REQUIRED: Paste your own Firebase project configuration into the `FIREBASE_CONFIG` object below.
  * 2. Place this script in the root directory of your website.
  * 3. Add `<script src="/navigation.js" defer></script>` to the <head> of any HTML file where you want the navbar.
  * 4. Ensure your file paths for images and links are root-relative (e.g., "/images/logo.png", "/login.html").
+ * * --- HOW IT WORKS ---
+ * - It runs automatically once the HTML document is loaded.
+ * - It injects its own CSS for styling the navbar, dropdown menu, and the new tab bar.
+ * - It fetches the page configuration JSON to build the scrollable navigation tabs.
+ * - It creates a placeholder div and then renders the navbar inside it.
+ * - It initializes Firebase, listens for auth state, and fetches user data.
  *
- * --- FIREBASE AI FIXES ---
- * - Updated to use proper Vertex AI in Firebase SDK
- * - Correct initialization pattern with getVertexAI()
- * - Proper model instantiation using getGenerativeModel()
- * - Fixed chat session creation and streaming methods
+ * --- FIXES ---
+ * - **Font Awesome 7.1.0 Fix (Bulletproof):** The icon rendering logic in 'getIconClass' is overhauled to ensure 
+ * it always provides BOTH the style prefix (e.g., 'fa-solid') and the icon name prefix (e.g., 'fa-house-user') 
+ * regardless of the input format from 'page-identification.json'. This should guarantee the icons display.
  */
 
 // =========================================================================
@@ -36,50 +40,9 @@ const FIREBASE_CONFIG = {
 // --- Configuration for the navigation tabs ---
 const PAGE_CONFIG_URL = '../page-identification.json';
 
-// --- Exclusive AI Feature Configuration ---
-const SPECIAL_USER_EMAIL = '4simpleproblems@gmail.com';
-
-const AGENTS = {
-    "General": {
-        systemInstruction: "You are 4SP AI Mode, a supportive and creative general assistant. Keep responses engaging and friendly.",
-        temperature: 0.8
-    },
-    "Math": {
-        systemInstruction: "You are 4SP AI Mode, a precise and rigorous mathematics tutor. Provide clear step-by-step explanations for problem-solving. Use LaTeX for all mathematical expressions.",
-        temperature: 0.2
-    },
-    "Science": {
-        systemInstruction: "You are 4SP AI Mode, an expert in scientific concepts (Physics, Chemistry, Biology). Use analogies and up-to-date information. Use LaTeX for all scientific notation and formulas.",
-        temperature: 0.5
-    },
-    "Language Arts": {
-        systemInstruction: "You are 4SP AI Mode, a critical reader and writing coach. Focus on structure, grammar, and literary analysis.",
-        temperature: 0.7
-    },
-    "History": {
-        systemInstruction: "You are 4SP AI Mode, a knowledgeable historian. Provide context and multiple perspectives on historical events.",
-        temperature: 0.6
-    },
-    "STEM": {
-        systemInstruction: "You are 4SP AI Mode, an interdisciplinary guide for Science, Technology, Engineering, and Mathematics. Connect fields where possible. Use LaTeX for all technical expressions.",
-        temperature: 0.4
-    },
-    "Coding": {
-        systemInstruction: "You are 4SP AI Mode, a concise and effective programming assistant. Provide well-commented code snippets and explanations. Use simple code blocks for output.",
-        temperature: 0.1
-    }
-};
-// Default model to use for all agents
-const AI_MODEL = "gemini-2.0-flash-exp";
-
-
-// Variables to hold Firebase objects and AI state
+// Variables to hold Firebase objects, which must be globally accessible after loading scripts
 let auth;
 let db;
-let vertexAI; // Holds the Vertex AI service instance
-let currentModel; // Holds the current generative model
-let currentChat; // Holds the currently active chat session object
-let selectedAgent = 'General'; // Initial default agent
 
 // --- Self-invoking function to encapsulate all logic ---
 (function() {
@@ -98,7 +61,7 @@ let selectedAgent = 'General'; // Initial default agent
             script.src = src;
             script.type = 'module';
             script.onload = resolve;
-            script.onerror = reject; 
+            script.onerror = reject;
             document.head.appendChild(script);
         });
     };
@@ -109,6 +72,7 @@ let selectedAgent = 'General'; // Initial default agent
             const link = document.createElement('link');
             link.rel = 'stylesheet';
             link.href = href;
+            // Resolve immediately and proceed, as icons are non-critical path for the script logic
             link.onload = resolve;
             link.onerror = resolve;
             document.head.appendChild(link);
@@ -126,6 +90,9 @@ let selectedAgent = 'General'; // Initial default agent
 
     /**
      * **UPDATED UTILITY FUNCTION: Bulletproof Fix for Font Awesome 7.x icon loading for JSON.**
+     * Ensures both the style prefix (e.g., 'fa-solid') and the icon name prefix (e.g., 'fa-house-user') are present.
+     * @param {string} iconName The icon class name from page-identification.json (e.g., 'fa-house-user' or just 'house-user').
+     * @returns {string} The complete, correctly prefixed Font Awesome class string (e.g., 'fa-solid fa-house-user').
      */
     const getIconClass = (iconName) => {
         if (!iconName) return '';
@@ -135,26 +102,34 @@ let selectedAgent = 'General'; // Initial default agent
         let baseName = '';
         const stylePrefixes = ['fa-solid', 'fa-regular', 'fa-light', 'fa-thin', 'fa-brands'];
 
+        // 1. Identify and extract the style prefix (if present)
         const existingPrefix = nameParts.find(p => stylePrefixes.includes(p));
         if (existingPrefix) {
             stylePrefix = existingPrefix;
         }
 
+        // 2. Identify and sanitize the icon name
         const nameCandidate = nameParts.find(p => p.startsWith('fa-') && !stylePrefixes.includes(p));
 
         if (nameCandidate) {
+            // Case: Input is 'fa-volume-up' (or 'fa-solid fa-volume-up')
             baseName = nameCandidate;
         } else {
+            // Case: Input is 'volume-up' (less likely but covered) or missing 'fa-'
+            // We assume the non-style part is the base name and ensure it has the 'fa-' prefix.
             baseName = nameParts.find(p => !stylePrefixes.includes(p));
             if (baseName && !baseName.startsWith('fa-')) {
                  baseName = `fa-${baseName}`;
             }
         }
 
+        // If after all checks we have a baseName, ensure it's not a duplicate class.
         if (baseName) {
+            // Return the necessary style prefix and the icon name.
             return `${stylePrefix} ${baseName}`;
         }
         
+        // Fallback for completely invalid/empty input
         return '';
     };
 
@@ -172,252 +147,83 @@ let selectedAgent = 'General'; // Initial default agent
             console.log("Page configuration loaded successfully.");
         } catch (error) {
             console.error("Failed to load page identification config:", error);
+            // Continue execution even if pages fail to load, just without tabs
         }
 
         try {
-            // SEQUENTIALLY LOAD FIREBASE MODULES - Using modular SDK v11+
-            const FIREBASE_VERSION = "11.0.2"; 
-            
-            await loadScript(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-app-compat.js`);
-            await loadScript(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-auth-compat.js`);
-            await loadScript(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-firestore-compat.js`);
-            // Load Vertex AI in Firebase SDK (correct package name)
-            await loadScript(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-vertexai-preview.js`);
+            // Sequentially load Firebase modules (compat versions for simplicity).
+            await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
+            await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js");
+            await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js");
 
-            // Now that scripts are loaded, we can initialize
+            // Now that scripts are loaded, we can use the `firebase` global object
             initializeApp(pages);
         } catch (error) {
             console.error("Failed to load necessary SDKs:", error);
         }
     };
 
-    // --- AI Logic Functions (FIXED) ---
-    const initializeVertexAI = (app) => {
-        try {
-            // CORRECT: Initialize Vertex AI service using getVertexAI from the global namespace
-            vertexAI = firebase.vertexAI(app);
-            console.log("Firebase Vertex AI initialized successfully.");
-        } catch (error) {
-            console.error("Failed to initialize Firebase Vertex AI:", error);
-        }
-    };
-
-    const getAgentConfig = (agentName) => {
-        const config = AGENTS[agentName] || AGENTS['General'];
-        
-        return {
-            model: AI_MODEL,
-            systemInstruction: config.systemInstruction,
-            generationConfig: {
-                temperature: config.temperature,
-                maxOutputTokens: 8192,
-                topP: 0.95,
-                topK: 40
-            }
-        };
-    };
-
-    // Function to create or reset the chat session
-    const createChatSession = () => {
-        const chatConfig = getAgentConfig(selectedAgent);
-        
-        // Clear old chat history display
-        const chatDisplay = document.getElementById('chat-messages');
-        if (chatDisplay) {
-             chatDisplay.innerHTML = `<div class="p-3 bg-gray-900 text-gray-400 rounded-lg mb-2 text-sm">
-                <i class="fa-solid fa-star-of-life mr-2"></i>
-                4SP AI Mode (${selectedAgent} Agent) is ready. Ask me anything!
-             </div>`;
-             chatDisplay.scrollTop = chatDisplay.scrollHeight;
-        }
-
-        // Check if vertexAI is available
-        if (!vertexAI) {
-            console.error("Cannot start chat: Firebase Vertex AI is not initialized.");
-            displayMessage('system', `<i class="fa-solid fa-triangle-exclamation text-red-400 mr-2"></i>AI Error: The AI service failed to load. Please check console for SDK load errors.`);
-            return;
-        }
-
-        try {
-            // CORRECT: Get the generative model using getGenerativeModel
-            currentModel = vertexAI.getGenerativeModel({
-                model: chatConfig.model,
-                systemInstruction: chatConfig.systemInstruction,
-                generationConfig: chatConfig.generationConfig
-            });
-
-            // CORRECT: Start a chat session using the model's startChat method
-            currentChat = currentModel.startChat({
-                history: [] // Start with empty history
-            });
-
-            console.log(`New chat session started with ${selectedAgent} Agent.`);
-        } catch (error) {
-            console.error("Error creating chat session:", error);
-            displayMessage('system', `<i class="fa-solid fa-triangle-exclamation text-red-400 mr-2"></i>Error creating chat session: ${error.message}`);
-        }
-    };
-
-    const displayMessage = (role, text) => {
-        const chatDisplay = document.getElementById('chat-messages');
-        if (!chatDisplay) return;
-
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `p-3 mb-3 max-w-[80%] rounded-xl shadow-lg relative ${
-            role === 'user' 
-                ? 'bg-indigo-600 text-white self-end rounded-br-none' 
-                : 'bg-gray-700 text-gray-200 self-start rounded-tl-none'
-        }`;
-        
-        // Use a simple markdown-like rendering for text
-        const formattedText = text
-            .replace(/```(.*?)\n/gs, '<pre class="bg-gray-800 p-2 rounded-md overflow-x-auto text-xs mt-2 mb-1">')
-            .replace(/```/g, '</pre>')
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\n/g, '<br>');
-            
-        messageDiv.innerHTML = formattedText;
-        chatDisplay.appendChild(messageDiv);
-        chatDisplay.scrollTop = chatDisplay.scrollHeight;
-    };
-
-    const handleAgentSelection = (agentName) => {
-        selectedAgent = agentName;
-        // Update the active button visually
-        document.querySelectorAll('.agent-button').forEach(btn => {
-            btn.classList.remove('active-agent');
-        });
-        const targetButton = document.getElementById(`agent-${agentName.replace(/\s/g, '-')}`);
-        if (targetButton) {
-            targetButton.classList.add('active-agent');
-        }
-        
-        // Re-initialize the chat session with the new agent settings
-        createChatSession();
-    };
-
-    const sendMessageToAI = async (e) => {
-        e.preventDefault();
-        const input = document.getElementById('chat-input');
-        const userPrompt = input.value.trim();
-        
-        if (!userPrompt) return;
-        
-        if (!currentChat) {
-            displayMessage('system', `<i class="fa-solid fa-triangle-exclamation text-red-400 mr-2"></i>Error: The chat session is not active. Please reselect an agent.`);
-            return;
-        }
-
-        displayMessage('user', userPrompt);
-        input.value = '';
-        input.disabled = true;
-        document.getElementById('send-button').disabled = true;
-        document.getElementById('loading-indicator').classList.remove('hidden');
-
-        try {
-            // CORRECT: Use sendMessageStream for streaming responses
-            const result = await currentChat.sendMessageStream(userPrompt);
-
-            // Create a temporary message div for the streaming response
-            const chatDisplay = document.getElementById('chat-messages');
-            const streamMessageDiv = document.createElement('div');
-            streamMessageDiv.className = 'p-3 mb-3 max-w-[80%] bg-gray-700 text-gray-200 self-start rounded-xl rounded-tl-none shadow-lg relative';
-            streamMessageDiv.innerHTML = '<i class="fa-solid fa-hourglass-start text-indigo-400 mr-2 animate-pulse"></i>Generating...';
-            chatDisplay.appendChild(streamMessageDiv);
-            chatDisplay.scrollTop = chatDisplay.scrollHeight;
-
-            let fullResponseText = '';
-
-            // CORRECT: Iterate through the stream chunks
-            for await (const chunk of result.stream) {
-                const chunkText = chunk.text();
-                if (chunkText) {
-                    fullResponseText += chunkText;
-                    // Update the streaming message div content in real-time
-                    const formattedText = fullResponseText
-                        .replace(/```(.*?)\n/gs, '<pre class="bg-gray-800 p-2 rounded-md overflow-x-auto text-xs mt-2 mb-1">')
-                        .replace(/```/g, '</pre>')
-                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                        .replace(/\n/g, '<br>');
-                    streamMessageDiv.innerHTML = formattedText;
-                    chatDisplay.scrollTop = chatDisplay.scrollHeight;
-                }
-            }
-
-            console.log("AI response completed successfully.");
-            
-        } catch (error) {
-            console.error("AI Chat Error:", error);
-            displayMessage('system', `<i class="fa-solid fa-triangle-exclamation text-red-400 mr-2"></i>Error: ${error.message}`);
-        } finally {
-            input.disabled = false;
-            document.getElementById('send-button').disabled = false;
-            document.getElementById('loading-indicator').classList.add('hidden');
-            input.focus();
-        }
-    };
-
-
     // --- 2. INITIALIZE FIREBASE AND RENDER NAVBAR ---
     const initializeApp = (pages) => {
         // Initialize Firebase with the compat libraries
         const app = firebase.initializeApp(FIREBASE_CONFIG);
+        // Assign auth and db to module-scope variables
         auth = firebase.auth();
         db = firebase.firestore();
-        
-        // Initialize the Vertex AI client
-        initializeVertexAI(app);
 
-        // --- 3. INJECT CSS STYLES ---
+        // --- 3. INJECT CSS STYLES (UPDATED for Opacity) ---
         const injectStyles = () => {
             const style = document.createElement('style');
             style.textContent = `
                 /* Base Styles */
-                body { padding-top: 4rem; }
+                body { padding-top: 4rem; /* 64px, equal to navbar height */ }
+                /* Nav bar is now fully opaque (#000000 - pure black) */
                 .auth-navbar { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: #000000; border-bottom: 1px solid rgb(31 41 55); height: 4rem; }
+                /* Nav now needs relative positioning for glide buttons */
                 .auth-navbar nav { max-width: 80rem; margin: auto; padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
-                .initial-avatar { background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: 'Inter', sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; }
+                .initial-avatar { background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: 'Geist', sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; }
                 
-                /* Auth Dropdown Menu Styles */
+                /* Auth Dropdown Menu Styles (UPDATED: Pure Black background) */
                 .auth-menu-container { 
                     position: absolute; right: 0; top: 50px; width: 16rem; 
-                    background: #000000;
+                    background: #000000; /* Pure black */
+                    backdrop-filter: none; /* Removed backdrop filter for pure black */
+                    -webkit-backdrop-filter: none;
                     border: 1px solid rgb(55 65 81); border-radius: 0.75rem; padding: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
                     transition: transform 0.2s ease-out, opacity 0.2s ease-out; transform-origin: top right; 
                 }
-                .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); z-index: 10000; }
+                .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
                 .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
                 .auth-menu-link, .auth-menu-button { display: block; width: 100%; text-align: left; padding: 0.5rem 0.75rem; font-size: 0.875rem; color: #d1d5db; border-radius: 0.375rem; transition: background-color 0.2s, color 0.2s; }
                 .auth-menu-link:hover, .auth-menu-button:hover { background-color: rgb(55 65 81); color: white; }
 
-                /* Scrollable Tab Wrapper */
+                /* Scrollable Tab Wrapper (NEW) */
                 .tab-wrapper {
                     flex-grow: 1;
                     display: flex;
                     align-items: center;
-                    position: relative; 
-                    min-width: 0; 
-                    margin: 0 1rem;
+                    position: relative; /* Context for absolute buttons */
+                    min-width: 0; /* Needed for flex item to shrink properly */
+                    margin: 0 1rem; /* Added margin for visual spacing */
                 }
 
                 /* Horizontal Scrollable Tabs Styles */
                 .tab-scroll-container {
-                    flex-grow: 1;
+                    flex-grow: 1; /* Allows the tab container to take up available space */
                     display: flex;
                     align-items: center;
-                    overflow-x: scroll;
-                    -webkit-overflow-scrolling: touch;
-                    padding-bottom: 5px;
-                    margin-bottom: -5px;
+                    overflow-x: auto; /* Enable horizontal scrolling */
+                    -webkit-overflow-scrolling: touch; /* Smoother scrolling on iOS */
+                    scrollbar-width: none; /* Hide scrollbar for Firefox */
+                    -ms-overflow-style: none; /* Hide scrollbar for IE and Edge */
+                    padding-bottom: 5px; /* Add padding for scroll visibility */
+                    margin-bottom: -5px; /* Counteract padding-bottom for visual alignment */
                     scroll-behavior: smooth; 
-                    scrollbar-color: #4f46e5 #1f2937;
-                    scrollbar-width: thin;
                 }
-                .tab-scroll-container::-webkit-scrollbar { height: 5px; }
-                .tab-scroll-container::-webkit-scrollbar-track { background: #1f2937; border-radius: 10px; }
-                .tab-scroll-container::-webkit-scrollbar-thumb { background-color: #4f46e5; border-radius: 10px; }
+                /* Hide scrollbar for Chrome, Safari, and Opera */
+                .tab-scroll-container::-webkit-scrollbar { display: none; }
 
-                /* Scroll Glide Buttons */
+                /* Scroll Glide Buttons (UPDATED: opacity is 0.8 by default for instant load) */
                 .scroll-glide-button {
                     position: absolute;
                     top: 0;
@@ -426,26 +232,45 @@ let selectedAgent = 'General'; // Initial default agent
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    background: #000000; 
+                    background: #000000; /* Solid color matching navbar */
                     color: white;
                     font-size: 1.2rem;
                     cursor: pointer;
-                    opacity: 1;
-                    transition: background 0.3s;
+                    opacity: 0.8; /* Always visible slightly so they don't 'wake up' */
+                    transition: opacity 0.3s, background 0.3s;
                     z-index: 10;
-                    pointer-events: auto;
+                    pointer-events: auto; /* Allow interaction */
                 }
-                .scroll-glide-button:hover { background: #1f2937; }
+                .scroll-glide-button:hover {
+                    opacity: 1;
+                }
                 
-                #glide-left { left: 0; background: linear-gradient(to right, #000000 50%, transparent); }
-                #glide-right { right: 0; background: linear-gradient(to left, #000000 50%, transparent); }
+                /* Position and gradient for left button */
+                #glide-left {
+                    left: 0;
+                    border-top-right-radius: 0.5rem;
+                    border-bottom-right-radius: 0.5rem;
+                    background: linear-gradient(to right, #000000 50%, transparent); /* Opaque fade */
+                }
+
+                /* Position and gradient for right button */
+                #glide-right {
+                    right: 0;
+                    border-top-left-radius: 0.5rem;
+                    border-bottom-left-radius: 0.5rem;
+                    background: linear-gradient(to left, #000000 50%, transparent); /* Opaque fade */
+                }
                 
-                .scroll-glide-button.hidden { pointer-events: none !important; opacity: 0 !important; }
+                /* Visibility class controlled by JS to hide when not needed */
+                .scroll-glide-button.hidden {
+                    opacity: 0 !important;
+                    pointer-events: none !important;
+                }
 
                 .nav-tab {
-                    flex-shrink: 0; 
+                    flex-shrink: 0; /* Prevents tabs from shrinking */
                     padding: 0.5rem 1rem;
-                    color: #9ca3af; 
+                    color: #9ca3af; /* gray-400 */
                     font-size: 0.875rem;
                     font-weight: 500;
                     border-radius: 0.5rem;
@@ -454,133 +279,39 @@ let selectedAgent = 'General'; // Initial default agent
                     line-height: 1.5;
                     display: flex;
                     align-items: center;
-                    margin-right: 0.5rem; 
+                    margin-right: 0.5rem; /* Spacing between tabs */
                     border: 1px solid transparent;
                 }
-                .nav-tab:hover { color: white; background-color: rgb(55 65 81); } 
+                .nav-tab:hover {
+                    color: white;
+                    background-color: rgb(55 65 81); /* gray-700 */
+                }
                 .nav-tab.active {
-                    color: #4f46e5; 
+                    color: #4f46e5; /* indigo-600 - Highlight color */
                     border-color: #4f46e5;
-                    background-color: rgba(79, 70, 229, 0.1); 
+                    background-color: rgba(79, 70, 229, 0.1); /* indigo-600 with opacity */
                 }
                 .nav-tab.active:hover {
-                    color: #6366f1;
+                    color: #6366f1; /* indigo-500 */
                     border-color: #6366f1;
                     background-color: rgba(79, 70, 229, 0.15);
-                }
-
-                /* AI Chat Modal Styles */
-                .ai-modal-backdrop {
-                    position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
-                    background: rgba(0, 0, 0, 0.95); 
-                    backdrop-filter: blur(8px);
-                    -webkit-backdrop-filter: blur(8px);
-                    z-index: 2000; 
-                    display: flex; 
-                    justify-content: center; 
-                    align-items: center;
-                    opacity: 0;
-                    pointer-events: none;
-                    transition: opacity 0.3s ease;
-                }
-                .ai-modal-backdrop.open {
-                    opacity: 1;
-                    pointer-events: auto;
-                }
-                .ai-chat-container {
-                    background: #111827; 
-                    width: 95%; 
-                    max-width: 60rem; 
-                    height: 90%; 
-                    border-radius: 1rem; 
-                    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-                    display: grid;
-                    grid-template-rows: auto 1fr auto;
-                    padding: 1.5rem;
-                    gap: 1rem;
-                }
-                .agent-selector-container {
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 0.5rem;
-                    padding-bottom: 0.5rem;
-                    border-bottom: 1px solid #374151;
-                }
-                .agent-button {
-                    padding: 0.3rem 0.75rem;
-                    font-size: 0.75rem;
-                    font-weight: 600;
-                    border-radius: 9999px;
-                    border: 1px solid #4b5563;
-                    color: #d1d5db;
-                    background-color: #1f2937;
-                    transition: all 0.2s;
-                    cursor: pointer;
-                }
-                .agent-button:hover {
-                    background-color: #374151;
-                    border-color: #6b7280;
-                }
-                .agent-button.active-agent {
-                    background-color: #4f46e5;
-                    border-color: #4f46e5;
-                    color: white;
-                    box-shadow: 0 0 10px rgba(79, 70, 229, 0.5);
-                }
-                #chat-messages {
-                    display: flex;
-                    flex-direction: column;
-                    overflow-y: scroll;
-                    gap: 0.5rem;
-                    padding-right: 1rem;
-                    scrollbar-color: #4f46e5 #1f2937;
-                    scrollbar-width: thin;
-                }
-                #chat-messages::-webkit-scrollbar { width: 8px; }
-                #chat-messages::-webkit-scrollbar-thumb { background-color: #4f46e5; border-radius: 10px; }
-                #chat-messages::-webkit-scrollbar-track { background: #1f2937; border-radius: 10px; }
-                
-                .chat-input-area {
-                    display: flex;
-                    gap: 0.5rem;
-                    align-items: center;
-                }
-                .chat-input-area input {
-                    flex-grow: 1;
-                    padding: 0.75rem 1rem;
-                    border-radius: 0.5rem;
-                    background: #1f2937;
-                    color: white;
-                    border: 1px solid #374151;
-                }
-                .chat-input-area button {
-                    padding: 0.75rem 1rem;
-                    border-radius: 0.5rem;
-                    background: #4f46e5;
-                    color: white;
-                    font-weight: 600;
-                    transition: background 0.2s;
-                }
-                .chat-input-area button:hover:not(:disabled) {
-                    background: #6366f1;
-                }
-                .chat-input-area button:disabled {
-                    background: #374151;
-                    cursor: not-allowed;
                 }
             `;
             document.head.appendChild(style);
         };
 
-        // --- Function to robustly determine active tab ---
+        // --- NEW: Function to robustly determine active tab (GitHub Pages fix) ---
         const isTabActive = (tabUrl) => {
             const tabPathname = new URL(tabUrl, window.location.origin).pathname.toLowerCase();
             const currentPathname = window.location.pathname.toLowerCase();
 
+            // Helper to clean paths: remove trailing slash (unless it's root) and replace /index.html with /
             const cleanPath = (path) => {
+                // If it ends with /index.html, strip that part to treat it as the folder path
                 if (path.endsWith('/index.html')) {
                     path = path.substring(0, path.lastIndexOf('/')) + '/';
                 }
+                // Remove trailing slash unless it's the root path '/'
                 if (path.length > 1 && path.endsWith('/')) {
                     path = path.slice(0, -1);
                 }
@@ -590,10 +321,13 @@ let selectedAgent = 'General'; // Initial default agent
             const currentCanonical = cleanPath(currentPathname);
             const tabCanonical = cleanPath(tabPathname);
             
+            // 1. Exact canonical match (e.g., /dashboard === /dashboard)
             if (currentCanonical === tabCanonical) {
                 return true;
             }
 
+            // 2. GitHub Pages/Subdirectory match: Check if the current path ends with the tab path.
+            // This handles cases like: current: /my-repo/about.html, tab: /about.html
             const tabPathSuffix = tabPathname.startsWith('/') ? tabPathname.substring(1) : tabPathname;
             
             if (currentPathname.endsWith(tabPathSuffix)) {
@@ -603,7 +337,7 @@ let selectedAgent = 'General'; // Initial default agent
             return false;
         };
         
-        // --- Function to control visibility of scroll glide buttons ---
+        // --- NEW: Function to control visibility of scroll glide buttons ---
         const updateScrollGilders = () => {
             const container = document.querySelector('.tab-scroll-container');
             const leftButton = document.getElementById('glide-left');
@@ -611,14 +345,19 @@ let selectedAgent = 'General'; // Initial default agent
 
             if (!container || !leftButton || !rightButton) return;
             
+            // A threshold of 5px is used to account for minor rendering/subpixel discrepancies.
             const isScrolledToLeft = container.scrollLeft < 5; 
             const isScrolledToRight = container.scrollLeft + container.offsetWidth >= container.scrollWidth - 5; 
             const hasHorizontalOverflow = container.scrollWidth > container.offsetWidth;
 
+            // Visibility logic
             if (hasHorizontalOverflow) {
+                // Hide left button if at the start
                 leftButton.classList.toggle('hidden', isScrolledToLeft);
+                // Hide right button if at the end
                 rightButton.classList.toggle('hidden', isScrolledToRight);
             } else {
+                // Hide both buttons if there is no content overflow
                 leftButton.classList.add('hidden');
                 rightButton.classList.add('hidden');
             }
@@ -629,13 +368,15 @@ let selectedAgent = 'General'; // Initial default agent
             const container = document.getElementById('navbar-container');
             if (!container) return;
 
-            const isSpecialUser = user && user.email === SPECIAL_USER_EMAIL;
-            const logoPath = "/images/logo.png"; 
+            const logoPath = "/images/logo.png"; // Using root-relative path
 
             // --- Tab Generation ---
             const tabsHtml = Object.values(pages || {}).map(page => {
+                // Use the new robust check for active state
                 const isActive = isTabActive(page.url);
                 const activeClass = isActive ? 'active' : '';
+                
+                // Use the simplified and now robust getIconClass
                 const iconClasses = getIconClass(page.icon);
 
                 return `
@@ -646,14 +387,7 @@ let selectedAgent = 'General'; // Initial default agent
                 `;
             }).join('');
 
-            // --- AI Button (Exclusive) ---
-            const aiButton = isSpecialUser ? `
-                <button id="ai-toggle-button" class="w-8 h-8 rounded-full border border-gray-600 flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 transition shadow-lg flex-shrink-0">
-                    <i class="fa-solid fa-robot text-white text-sm"></i>
-                </button>
-            ` : '';
-
-            // --- Auth Views ---
+            // --- Auth Views (Unchanged) ---
             const loggedOutView = `
                 <div class="relative flex-shrink-0">
                     <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-700 flex items-center justify-center bg-gray-800 hover:bg-gray-700 transition">
@@ -712,79 +446,25 @@ let selectedAgent = 'General'; // Initial default agent
                             <button id="glide-right" class="scroll-glide-button hidden"><i class="fa-solid fa-chevron-right"></i></button>
                         </div>
 
-                        ${aiButton}
                         ${user ? loggedInView(user, userData) : loggedOutView}
                     </nav>
                 </header>
-                ${isSpecialUser ? renderChatModal() : ''}
             `;
 
-            // --- 5. SETUP EVENT LISTENERS ---
+            // --- 5. SETUP EVENT LISTENERS (Including auto-scroll and glide buttons) ---
             setupEventListeners(user);
 
             // Auto-scroll to the active tab if one is found
             const activeTab = document.querySelector('.nav-tab.active');
             const tabContainer = document.querySelector('.tab-scroll-container');
             if (activeTab && tabContainer) {
+                // Scroll the container so the active tab is centered
                 tabContainer.scrollLeft = activeTab.offsetLeft - (tabContainer.offsetWidth / 2) + (activeTab.offsetWidth / 2);
             }
             
             // INITIAL CHECK: After rendering and auto-scrolling, update glide button visibility
             updateScrollGilders();
-            
-            // If special user, initialize the chat
-            if (isSpecialUser) {
-                handleAgentSelection(selectedAgent);
-            }
         };
-        
-        const renderChatModal = () => {
-            const agentButtons = Object.keys(AGENTS).map(agent => `
-                <button 
-                    id="agent-${agent.replace(/\s/g, '-')}" 
-                    class="agent-button ${agent === selectedAgent ? 'active-agent' : ''}" 
-                    data-agent="${agent}"
-                >
-                    <i class="fa-solid fa-microchip mr-1"></i> ${agent} Agent
-                </button>
-            `).join('');
-
-            return `
-                <div id="ai-modal-backdrop" class="ai-modal-backdrop">
-                    <div class="ai-chat-container">
-                        <div class="flex justify-between items-center text-white pb-3">
-                            <h2 class="text-2xl font-bold text-indigo-400">4SP AI Mode <i class="fa-solid fa-brain ml-2"></i></h2>
-                            <button id="ai-close-button" class="text-gray-400 hover:text-white transition">
-                                <i class="fa-solid fa-xmark text-2xl"></i>
-                            </button>
-                        </div>
-
-                        <!-- Agent Selection Area -->
-                        <div class="agent-selector-container">
-                            <span class="text-gray-400 text-sm font-semibold mr-2 flex items-center">Agents:</span>
-                            ${agentButtons}
-                        </div>
-
-                        <!-- Chat Display Area -->
-                        <div id="chat-messages" class="flex flex-col space-y-3 overflow-y-auto">
-                            <!-- Messages will be appended here by JavaScript -->
-                        </div>
-
-                        <!-- Chat Input Area -->
-                        <form id="chat-form" class="chat-input-area">
-                            <input type="text" id="chat-input" placeholder="Message 4SP AI Mode..." autocomplete="off" />
-                            <div id="loading-indicator" class="hidden text-indigo-400 text-sm flex items-center pr-2">
-                                <i class="fa-solid fa-spinner fa-spin mr-2"></i> AI Thinking
-                            </div>
-                            <button type="submit" id="send-button">
-                                <i class="fa-solid fa-paper-plane"></i> Send
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            `;
-        };
-
 
         const setupEventListeners = (user) => {
             const toggleButton = document.getElementById('auth-toggle');
@@ -795,14 +475,20 @@ let selectedAgent = 'General'; // Initial default agent
             const leftButton = document.getElementById('glide-left');
             const rightButton = document.getElementById('glide-right');
 
+            // Use debounced function for scroll and resize updates (Performance fix)
             const debouncedUpdateGilders = debounce(updateScrollGilders, 50);
 
             if (tabContainer) {
+                // Calculate dynamic scroll amount based on container width
                 const scrollAmount = tabContainer.offsetWidth * 0.8; 
 
+                // Update visibility on scroll
                 tabContainer.addEventListener('scroll', debouncedUpdateGilders);
+                
+                // Update visibility on window resize
                 window.addEventListener('resize', debouncedUpdateGilders);
                 
+                // Add click behavior for glide buttons
                 if (leftButton) {
                     leftButton.addEventListener('click', () => {
                         tabContainer.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
@@ -815,7 +501,6 @@ let selectedAgent = 'General'; // Initial default agent
                 }
             }
 
-            // Auth Menu Toggle
             if (toggleButton && menu) {
                 toggleButton.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -831,70 +516,34 @@ let selectedAgent = 'General'; // Initial default agent
                 }
             });
 
-            // Logout
             if (user) {
                 const logoutButton = document.getElementById('logout-button');
                 if (logoutButton) {
+                    // Use the module-scope 'auth' variable
                     logoutButton.addEventListener('click', () => {
                         auth.signOut().catch(err => console.error("Logout failed:", err));
                     });
                 }
-            }
-            
-            // --- AI Chat Modal Listeners (Exclusive) ---
-            const aiToggleButton = document.getElementById('ai-toggle-button');
-            const aiCloseButton = document.getElementById('ai-close-button');
-            const aiModal = document.getElementById('ai-modal-backdrop');
-            const chatForm = document.getElementById('chat-form');
-
-            if (aiToggleButton && aiModal && aiCloseButton && chatForm) {
-                // Open Chat Modal
-                aiToggleButton.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    aiModal.classList.add('open');
-                    document.getElementById('chat-input')?.focus();
-                });
-
-                // Close Chat Modal
-                aiCloseButton.addEventListener('click', () => {
-                    aiModal.classList.remove('open');
-                });
-                
-                // Close Chat Modal by clicking outside
-                aiModal.addEventListener('click', (e) => {
-                    if (e.target.id === 'ai-modal-backdrop') {
-                        aiModal.classList.remove('open');
-                    }
-                });
-
-                // Agent Selection
-                document.querySelectorAll('.agent-button').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const agent = e.currentTarget.getAttribute('data-agent');
-                        if (agent) {
-                            handleAgentSelection(agent);
-                        }
-                    });
-                });
-
-                // Chat Form Submission
-                chatForm.addEventListener('submit', sendMessageToAI);
             }
         };
 
         // --- 6. AUTH STATE LISTENER ---
         auth.onAuthStateChanged(async (user) => {
             if (user) {
+                // User is signed in. Fetch their data from Firestore.
                 try {
+                    // Use the module-scope 'db' variable
                     const userDoc = await db.collection('users').doc(user.uid).get();
                     const userData = userDoc.exists ? userDoc.data() : null;
                     renderNavbar(user, userData, pages);
                 } catch (error) {
                     console.error("Error fetching user data:", error);
-                    renderNavbar(user, null, pages); 
+                    renderNavbar(user, null, pages); // Render even if Firestore fails
                 }
             } else {
+                // User is signed out.
                 renderNavbar(null, null, pages);
+                // Attempt to sign in anonymously for a seamless guest experience.
                 auth.signInAnonymously().catch((error) => {
                     if (error.code === 'auth/operation-not-allowed' || error.code === 'auth/admin-restricted-operation') {
                         console.warn(
@@ -908,6 +557,7 @@ let selectedAgent = 'General'; // Initial default agent
         });
 
         // --- FINAL SETUP ---
+        // Create a div for the navbar to live in if it doesn't exist.
         if (!document.getElementById('navbar-container')) {
             const navbarDiv = document.createElement('div');
             navbarDiv.id = 'navbar-container';
@@ -917,6 +567,7 @@ let selectedAgent = 'General'; // Initial default agent
     };
 
     // --- START THE PROCESS ---
+    // Wait for the DOM to be ready, then start loading scripts.
     document.addEventListener('DOMContentLoaded', run);
 
 })();
