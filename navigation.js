@@ -5,6 +5,11 @@
  * to rendering user-specific information. It now includes a horizontally scrollable
  * tab menu loaded from page-identification.json.
  *
+ * --- REFACTOR ---
+ * - The script has been updated from the Firebase v8 "compat" SDK to the modern v9 "modular" SDK.
+ * - This was necessary to correctly implement the Firebase Vertex AI features, which are only available in the v9+ SDK.
+ * - This change resolves the script loading failure and improves performance and future scalability.
+ *
  * --- SPECIAL FEATURE ---
  * - An AI Chatbot is integrated, visible only to the user '4simpleproblems@gmail.com'.
  * - It features different 'Agents' (General, Math, Science, etc.) with custom personalities
@@ -35,12 +40,6 @@ const FIREBASE_CONFIG = {
 const PAGE_CONFIG_URL = '../page-identification.json';
 const ADMIN_EMAIL = '4simpleproblems@gmail.com'; // The email that gets access to the AI chat
 
-// Global Firebase services
-let auth;
-let db;
-let vertex;
-let model;
-
 // --- Self-invoking function to encapsulate all logic ---
 (function() {
     if (!FIREBASE_CONFIG || !FIREBASE_CONFIG.apiKey) {
@@ -48,25 +47,14 @@ let model;
         return;
     }
 
-    // --- 1. DYNAMICALLY LOAD EXTERNAL ASSETS ---
-    const loadScript = (src) => {
-        return new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = src;
-            script.type = 'module';
-            script.onload = resolve;
-            script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
-            document.head.appendChild(script);
-        });
-    };
-
+    // --- 1. HELPER UTILITIES ---
     const loadCSS = (href) => {
         return new Promise((resolve) => {
             const link = document.createElement('link');
             link.rel = 'stylesheet';
             link.href = href;
             link.onload = resolve;
-            link.onerror = resolve; // Don't block execution for CSS
+            link.onerror = resolve;
             document.head.appendChild(link);
         });
     };
@@ -78,11 +66,11 @@ let model;
             timeoutId = setTimeout(() => func.apply(this, args), delay);
         };
     };
-    
+
     const getIconClass = (iconName) => {
         if (!iconName) return '';
         const nameParts = iconName.trim().split(/\s+/).filter(p => p.length > 0);
-        let stylePrefix = 'fa-solid'; 
+        let stylePrefix = 'fa-solid';
         let baseName = '';
         const stylePrefixes = ['fa-solid', 'fa-regular', 'fa-light', 'fa-thin', 'fa-brands'];
         const existingPrefix = nameParts.find(p => stylePrefixes.includes(p));
@@ -95,7 +83,7 @@ let model;
         } else {
             baseName = nameParts.find(p => !stylePrefixes.includes(p));
             if (baseName && !baseName.startsWith('fa-')) {
-                 baseName = `fa-${baseName}`;
+                baseName = `fa-${baseName}`;
             }
         }
         if (baseName) {
@@ -104,6 +92,7 @@ let model;
         return '';
     };
 
+    // --- 2. MAIN SCRIPT EXECUTION ---
     const run = async () => {
         let pages = {};
         await loadCSS("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css");
@@ -117,25 +106,34 @@ let model;
         }
 
         try {
-            await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
-            await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js");
-            await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js");
-            // Load the new Firebase AI/Vertex SDK
-            await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-vertexai-compat.js");
+            // Dynamically import the required Firebase v9 modular SDKs
+            const firebaseAppModule = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
+            const firebaseAuthModule = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
+            const firebaseFirestoreModule = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+            const firebaseVertexAIModule = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-vertexai.js");
 
-            initializeApp(pages);
+            // Combine all modules into a single object to pass to the main logic
+            const firebase = {
+                ...firebaseAppModule,
+                ...firebaseAuthModule,
+                ...firebaseFirestoreModule,
+                ...firebaseVertexAIModule,
+            };
+
+            initializeAppLogic(firebase, pages);
         } catch (error) {
-            console.error("Failed to load necessary Firebase SDKs:", error);
+            console.error("A critical error occurred while loading Firebase SDKs:", error);
         }
     };
 
-    // --- 2. INITIALIZE FIREBASE AND RENDER NAVBAR ---
-    const initializeApp = (pages) => {
+    // --- 3. FIREBASE INITIALIZATION AND APP LOGIC ---
+    const initializeAppLogic = (firebase, pages) => {
+        // Initialize Firebase services using the imported v9 functions
         const app = firebase.initializeApp(FIREBASE_CONFIG);
-        auth = firebase.auth();
-        db = firebase.firestore();
-        // Initialize Vertex AI
-        vertex = firebase.vertexAI();
+        const auth = firebase.getAuth(app);
+        const db = firebase.getFirestore(app);
+        const vertex = firebase.getVertexAI(app);
+        let model; // Will be initialized later based on agent
 
         const injectStyles = () => {
             const style = document.createElement('style');
@@ -199,7 +197,7 @@ let model;
                 .ai-chat-messages::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
                 .ai-chat-messages::-webkit-scrollbar-thumb:hover { background: #6b7280; }
 
-                .message { max-width: 80%; padding: 0.75rem 1rem; border-radius: 0.75rem; line-height: 1.5; }
+                .message { max-width: 80%; padding: 0.75rem 1rem; border-radius: 0.75rem; line-height: 1.5; word-wrap: break-word; }
                 .message.user { background-color: #3730a3; color: white; align-self: flex-end; }
                 .message.model { background-color: #374151; color: #e5e7eb; align-self: flex-start; }
                 .message.model.loading { display: flex; align-items: center; gap: 0.5rem; }
@@ -215,7 +213,7 @@ let model;
             `;
             document.head.appendChild(style);
         };
-        
+
         const isTabActive = (tabUrl) => {
             const tabPathname = new URL(tabUrl, window.location.origin).pathname.toLowerCase();
             const currentPathname = window.location.pathname.toLowerCase();
@@ -235,14 +233,14 @@ let model;
             if (currentPathname.endsWith(tabPathSuffix)) return true;
             return false;
         };
-        
+
         const updateScrollGilders = () => {
             const container = document.querySelector('.tab-scroll-container');
             const leftButton = document.getElementById('glide-left');
             const rightButton = document.getElementById('glide-right');
             if (!container || !leftButton || !rightButton) return;
-            const isScrolledToLeft = container.scrollLeft < 5; 
-            const isScrolledToRight = container.scrollLeft + container.offsetWidth >= container.scrollWidth - 5; 
+            const isScrolledToLeft = container.scrollLeft < 5;
+            const isScrolledToRight = container.scrollLeft + container.offsetWidth >= container.scrollWidth - 5;
             const hasHorizontalOverflow = container.scrollWidth > container.offsetWidth;
             if (hasHorizontalOverflow) {
                 leftButton.classList.toggle('hidden', isScrolledToLeft);
@@ -286,8 +284,6 @@ let model;
                 const avatar = photoURL ?
                     `<img src="${photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">` :
                     `<div class="initial-avatar w-8 h-8 rounded-full text-sm font-semibold">${initial}</div>`;
-                
-                // --- AI Chat Button (Conditional) ---
                 const aiChatButtonHtml = user && user.email === ADMIN_EMAIL ? `
                     <button id="ai-chat-toggle" class="ai-chat-button" title="Open 4SP AI Assistant">
                         <i class="fa-solid fa-wand-magic-sparkles"></i>
@@ -334,14 +330,10 @@ let model;
                                 <button class="agent-button" data-agent="Coding">Coding</button>
                             </div>
                             <div class="ai-chat-conversation">
-                                <div id="ai-chat-messages" class="ai-chat-messages">
-                                    <!-- Messages will be injected here -->
-                                </div>
+                                <div id="ai-chat-messages" class="ai-chat-messages"></div>
                                 <form id="ai-chat-input-form" class="ai-chat-input-form">
                                     <input type="text" id="ai-chat-input" placeholder="Ask anything..." autocomplete="off">
-                                    <button type="submit" id="ai-chat-submit" disabled>
-                                        <i class="fa-solid fa-paper-plane"></i>
-                                    </button>
+                                    <button type="submit" id="ai-chat-submit" disabled><i class="fa-solid fa-paper-plane"></i></button>
                                 </form>
                             </div>
                         </div>
@@ -352,9 +344,7 @@ let model;
             container.innerHTML = `
                 <header class="auth-navbar">
                     <nav>
-                        <a href="/" class="flex items-center space-x-2 flex-shrink-0">
-                            <img src="${logoPath}" alt="4SP Logo" class="h-8 w-auto">
-                        </a>
+                        <a href="/" class="flex items-center space-x-2 flex-shrink-0"><img src="${logoPath}" alt="4SP Logo" class="h-8 w-auto"></a>
                         <div class="tab-wrapper">
                             <button id="glide-left" class="scroll-glide-button hidden"><i class="fa-solid fa-chevron-left"></i></button>
                             <div class="tab-scroll-container">${tabsHtml}</div>
@@ -365,7 +355,7 @@ let model;
                 </header>
                 ${(user && user.email === ADMIN_EMAIL) ? aiChatUIHtml : ''}
             `;
-            
+
             setupEventListeners(user);
             const activeTab = document.querySelector('.nav-tab.active');
             const tabContainer = document.querySelector('.tab-scroll-container');
@@ -384,7 +374,7 @@ let model;
             const debouncedUpdateGilders = debounce(updateScrollGilders, 50);
 
             if (tabContainer) {
-                const scrollAmount = tabContainer.offsetWidth * 0.8; 
+                const scrollAmount = tabContainer.offsetWidth * 0.8;
                 tabContainer.addEventListener('scroll', debouncedUpdateGilders);
                 window.addEventListener('resize', debouncedUpdateGilders);
                 if (leftButton) leftButton.addEventListener('click', () => tabContainer.scrollBy({ left: -scrollAmount, behavior: 'smooth' }));
@@ -408,16 +398,14 @@ let model;
 
             if (user) {
                 const logoutButton = document.getElementById('logout-button');
-                if (logoutButton) logoutButton.addEventListener('click', () => auth.signOut().catch(err => console.error("Logout failed:", err)));
+                if (logoutButton) logoutButton.addEventListener('click', () => firebase.signOut(auth).catch(err => console.error("Logout failed:", err)));
 
-                // --- AI CHAT EVENT LISTENERS (NEW) ---
                 if (user.email === ADMIN_EMAIL) {
                     setupAiChatListeners();
                 }
             }
         };
 
-        // --- AI CHAT LOGIC (NEW) ---
         const setupAiChatListeners = () => {
             const chatToggleButton = document.getElementById('ai-chat-toggle');
             const chatOverlay = document.getElementById('ai-chat-overlay');
@@ -430,7 +418,7 @@ let model;
             const messagesContainer = document.getElementById('ai-chat-messages');
 
             let currentAgent = 'General';
-            let chat; // This will hold the chat session instance
+            let chat;
 
             const AGENT_CONFIGS = {
                 'General': { temp: 0.7, personality: 'You are 4SP AI Mode, a helpful, friendly, and knowledgeable general-purpose assistant.' },
@@ -444,29 +432,22 @@ let model;
 
             const initializeChatSession = (agent) => {
                 const config = AGENT_CONFIGS[agent];
-                // Use gemini-pro for chat
-                model = vertex.getGenerativeModel({ 
+                model = firebase.getGenerativeModel(vertex, {
                     model: "gemini-pro",
-                    systemInstruction: config.personality,
-                    generationConfig: {
-                        temperature: config.temp,
-                    }
+                    systemInstruction: { parts: [{ text: config.personality }] },
+                    generationConfig: { temperature: config.temp }
                 });
                 chat = model.startChat({ history: [] });
             };
-            
+
             initializeChatSession(currentAgent);
 
-            const toggleChat = (visible) => {
-                chatOverlay.classList.toggle('visible', visible);
-            };
+            const toggleChat = (visible) => chatOverlay.classList.toggle('visible', visible);
 
             chatToggleButton.addEventListener('click', () => toggleChat(true));
             chatCloseButton.addEventListener('click', () => toggleChat(false));
             chatOverlay.addEventListener('click', (e) => {
-                if (e.target === chatOverlay) {
-                    toggleChat(false);
-                }
+                if (e.target === chatOverlay) toggleChat(false);
             });
 
             agentButtons.forEach(button => {
@@ -475,7 +456,7 @@ let model;
                     agentButtons.forEach(btn => btn.classList.remove('selected'));
                     button.classList.add('selected');
                     agentNameDisplay.textContent = currentAgent;
-                    messagesContainer.innerHTML = ''; // Clear chat history
+                    messagesContainer.innerHTML = '';
                     initializeChatSession(currentAgent);
                 });
             });
@@ -493,20 +474,18 @@ let model;
                 chatSubmit.disabled = true;
 
                 addMessage(userInput, 'user');
-                
                 const modelLoadingDiv = addMessage('...', 'model', true);
 
                 try {
                     const result = await chat.sendMessageStream(userInput);
                     let fullResponse = "";
                     for await (const item of result.stream) {
-                         const text = item.candidates[0].content.parts[0].text;
-                         fullResponse += text;
-                         modelLoadingDiv.innerHTML = fullResponse; // Use innerHTML to render markdown correctly if library is added
-                         messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                        const text = item.candidates[0].content.parts[0].text;
+                        fullResponse += text;
+                        modelLoadingDiv.innerHTML = fullResponse;
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
                     }
                     modelLoadingDiv.classList.remove('loading');
-
                 } catch (error) {
                     console.error("AI Chat Error:", error);
                     modelLoadingDiv.innerText = "Sorry, something went wrong. Please try again.";
@@ -517,9 +496,7 @@ let model;
             const addMessage = (text, sender, isLoading = false) => {
                 const messageDiv = document.createElement('div');
                 messageDiv.classList.add('message', sender);
-                if (isLoading) {
-                    messageDiv.classList.add('loading');
-                }
+                if (isLoading) messageDiv.classList.add('loading');
                 messageDiv.innerText = text;
                 messagesContainer.appendChild(messageDiv);
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -527,12 +504,13 @@ let model;
             };
         };
 
-        // --- AUTH STATE LISTENER ---
-        auth.onAuthStateChanged(async (user) => {
+        // --- AUTH STATE LISTENER (v9 syntax) ---
+        firebase.onAuthStateChanged(auth, async (user) => {
             if (user) {
                 try {
-                    const userDoc = await db.collection('users').doc(user.uid).get();
-                    const userData = userDoc.exists ? userDoc.data() : null;
+                    const userDocRef = firebase.doc(db, 'users', user.uid);
+                    const userDoc = await firebase.getDoc(userDocRef);
+                    const userData = userDoc.exists() ? userDoc.data() : null;
                     renderNavbar(user, userData, pages);
                 } catch (error) {
                     console.error("Error fetching user data:", error);
@@ -540,8 +518,8 @@ let model;
                 }
             } else {
                 renderNavbar(null, null, pages);
-                auth.signInAnonymously().catch((error) => {
-                    if (error.code === 'auth/operation-not-allowed' || error.code === 'auth/admin-restricted-operation') {
+                firebase.signInAnonymously(auth).catch((error) => {
+                    if (error.code === 'auth/operation-not-allowed') {
                         console.warn("Anonymous sign-in is disabled in Firebase Console.");
                     } else {
                         console.error("Anonymous sign-in error:", error);
@@ -550,7 +528,6 @@ let model;
             }
         });
 
-        // --- FINAL SETUP ---
         if (!document.getElementById('navbar-container')) {
             const navbarDiv = document.createElement('div');
             navbarDiv.id = 'navbar-container';
@@ -562,3 +539,4 @@ let model;
     document.addEventListener('DOMContentLoaded', run);
 
 })();
+
