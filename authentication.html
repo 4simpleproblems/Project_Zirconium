@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4SP - ACCESS ACCOUNT</title>
+    <meta name="description" content="Log in or create your 4SP account to access the student toolkit.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="navigation-mini.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        // Keep the darker palette consistent
+                        'custom-darkest-gray': '#070707', // Very Dark Background (Body/Right Half)
+                        'custom-dark-gray': '#111111',    // Dark Background (Left Half) - From login.html
+                        'custom-medium-gray': '#252525', // Darker border, input background, and button base
+                        'custom-light-gray': '#505050',  // Darker Text, labels, and borders
+                        'custom-lighter-gray': '#808080', // Darker Hover states, subtle text, and messages
+                        'custom-white-gray': '#c0c0c0',  // Darker Main text, headings
+                    }
+                }
+            }
+        }
+    </script>
+
+    <script src="panic-key.js"></script>
+    <script src="url-changer.js"></script>
+
+    <style>
+        :root {
+            --geist-foreground: 192, 192, 192; /* custom-white-gray */
+            --geist-background: 7, 7, 7;    /* custom-darkest-gray */
+        }
+
+        body {
+            font-family: 'Geist', sans-serif;
+            background-color: rgb(var(--geist-background));
+            color: rgb(var(--geist-foreground));
+            transition: all 0.3s ease;
+        }
+
+        .btn-google {
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+        .btn-google:hover {
+            background-color: rgba(37, 37, 37, 0.7); /* custom-medium-gray with transparency */
+            border-color: #383838; /* A slightly darker hover border */
+        }
+        
+        /* Message colors */
+        .error-message { color: #f87171; font-weight: bold; } 
+        .success-message { color: #4ade80; } 
+        .warning-message { color: #fbbf24; } 
+
+        /* FOOTER */
+        .fixed-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 40px; 
+            background-color: black; 
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-top: 1px solid black;
+        }
+        
+        main {
+            padding-bottom: 60px;
+        }
+        
+        /* Responsive adjustments for the split view */
+        @media (max-width: 767px) {
+            .right-col {
+                display: none; /* Hide the secondary login option on mobile for cleaner UI */
+            }
+            .left-col {
+                border-right: none;
+            }
+        }
+    </style>
+</head>
+<body class="bg-custom-darkest-gray text-custom-white-gray min-h-screen flex flex-col">
+
+    <div id="navbar-container"></div>
+
+    <main class="flex-grow flex items-stretch justify-center p-0">
+        <div class="
+            auth-split-container
+            bg-custom-darkest-gray rounded-none shadow-none
+            flex flex-wrap w-full
+            border-0 overflow-hidden
+            p-0
+        ">
+            <div class="
+                auth-col left-col
+                flex-1 p-8 flex flex-col justify-center items-center
+                bg-custom-dark-gray border-r border-custom-medium-gray min-w-[300px]
+                sm:rounded-none sm:border-r 
+            ">
+
+                <div id="emailContainer" class="w-full flex flex-col items-center">
+                    <h2 class="text-3xl font-bold text-custom-white-gray mb-6 text-center w-full tracking-tighter">Access Your Account</h2>
+                    <form id="emailForm" novalidate class="w-full max-w-md"> 
+                        <div class="mb-5">
+                            <label for="inputEmail" class="block mb-2 text-custom-light-gray text-sm font-medium text-left">Email</label>
+                            <input type="email" id="inputEmail" placeholder="Enter your email" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-lg text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
+                        </div>
+                        <button type="submit" id="continueBtn" class="w-full p-3 bg-custom-medium-gray text-custom-white-gray rounded-lg font-semibold text-lg cursor-pointer transition hover:bg-custom-light-gray hover:shadow-lg hover:shadow-custom-medium-gray/30">CONTINUE</button>
+                    </form>
+                    <div id="emailMessage" class="message-area w-full max-w-md mt-4 min-h-[20px] text-center text-sm"></div>
+                </div>
+                
+                <div id="loginContainer" class="w-full flex flex-col items-center" style="display: none;">
+                    <h2 class="text-3xl font-bold text-custom-white-gray mb-6 text-center w-full tracking-tighter">Welcome Back!</h2>
+                    <p id="loginEmailDisplay" class="text-base text-custom-white-gray mb-4 font-semibold"></p>
+                    <form id="loginForm" novalidate class="w-full max-w-md"> 
+                        <div class="mb-5">
+                            <label for="loginPassword" class="block mb-2 text-custom-light-gray text-sm font-medium text-left">Password</label>
+                            <input type="password" id="loginPassword" placeholder="Enter your password" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-lg text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
+                        </div>
+                        <button type="submit" class="w-full p-3 bg-custom-medium-gray text-custom-white-gray rounded-lg font-semibold text-lg cursor-pointer transition hover:bg-custom-light-gray hover:shadow-lg hover:shadow-custom-medium-gray/30">LOGIN</button>
+                    </form>
+                    <div id="loginMessage" class="message-area w-full max-w-md mt-4 min-h-[20px] text-center text-sm"></div>
+                    <div class="w-full max-w-md mt-4 text-center"> <a id="forgotPasswordLink" class="text-custom-light-gray hover:text-custom-lighter-gray font-medium text-sm cursor-pointer">Forgot Password?</a> </div>
+                    <div class="w-full max-w-md mt-6 text-center"> <a id="backToEmailFromLogin" class="text-custom-light-gray hover:text-custom-lighter-gray font-medium text-sm cursor-pointer">&larr; Change Email</a> </div>
+                </div>
+
+                <div id="signupContainer" class="w-full flex flex-col items-center" style="display: none;">
+                    <h2 class="text-3xl font-bold text-custom-white-gray mb-6 text-center w-full tracking-tighter">Create Your Account</h2>
+                    <p id="signupEmailDisplay" class="text-base text-custom-white-gray mb-4 font-semibold"></p>
+                    <form id="signupForm" novalidate class="w-full max-w-md"> 
+                        <div class="mb-5">
+                            <label for="signupUsername" class="block mb-2 text-custom-light-gray text-sm font-medium text-left">Username</label>
+                            <input type="text" id="signupUsername" placeholder="4-24 characters, including symbols" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-lg text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
+                            <p class="text-xs text-custom-lighter-gray mt-2 text-left">Allowed symbols: .,-+\_!?$</p>
+                        </div>
+                        <div class="mb-5">
+                            <label for="signupPassword" class="block mb-2 text-custom-light-gray text-sm font-medium text-left">Password</label>
+                            <input type="password" id="signupPassword" placeholder="Set a new password" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-lg text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
+                            <p class="text-xs text-custom-lighter-gray mt-2 text-left">8-48 chars, must include 1 uppercase, 1 number, and 1 special symbol.</p>
+                        </div>
+                        <button type="submit" class="w-full p-3 bg-custom-medium-gray text-custom-white-gray rounded-lg font-semibold text-lg cursor-pointer transition hover:bg-custom-light-gray hover:shadow-lg hover:shadow-custom-medium-gray/30">CREATE ACCOUNT</button>
+                    </form>
+                    <div id="signupMessage" class="message-area w-full max-w-md mt-4 min-h-[20px] text-center text-sm"></div>
+                    <div class="w-full max-w-md mt-6 text-center"> <a id="backToEmailFromSignup" class="text-custom-light-gray hover:text-custom-lighter-gray font-medium text-sm cursor-pointer">&larr; Change Email</a> </div>
+                </div>
+
+                <div id="resetPasswordContainer" class="w-full flex flex-col items-center" style="display: none;">
+                    <h2 class="text-3xl font-bold text-custom-white-gray mb-6 text-center w-full tracking-tighter">Reset Your Password</h2>
+                    <p class="text-custom-light-gray text-base mb-6 text-center max-w-md">Enter the email address you used to sign up. We'll send a link to reset your password.</p>
+                    <form id="resetPasswordForm" novalidate class="w-full max-w-md">
+                        <div class="mb-5">
+                            <label for="resetEmail" class="block mb-2 text-custom-light-gray text-sm font-medium text-left">Email</label>
+                            <input type="email" id="resetEmail" placeholder="Enter your registered email" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-lg text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
+                        </div>
+                        <button type="submit" class="w-full p-3 bg-custom-medium-gray text-custom-white-gray rounded-lg font-semibold text-lg cursor-pointer transition hover:bg-custom-light-gray hover:shadow-lg hover:shadow-custom-medium-gray/30">SEND RESET LINK</button>
+                    </form>
+                    <div id="resetMessage" class="message-area w-full max-w-md mt-4 min-h-[20px] text-center text-sm"></div>
+                    <div class="w-full max-w-md mt-6 text-center"> <a id="backToLoginLink" class="text-custom-light-gray hover:text-custom-lighter-gray font-medium text-sm cursor-pointer">&larr; Back to Login</a> </div>
+                </div>
+
+
+            </div>
+
+            <div class="
+                auth-col right-col
+                flex-1 p-8 flex flex-col justify-center items-center
+                bg-custom-darkest-gray
+                sm:rounded-none
+            ">
+                <div class="right-panel-content w-full flex flex-col items-center justify-center">
+                    <h2 class="text-3xl font-bold text-custom-white-gray mb-6 text-center w-full tracking-tighter">Sign in instantly</h2>
+                    <p class="text-lg text-custom-light-gray mb-8 text-center max-w-md">
+                        Use a trusted provider like Google or GitHub to sign in/sign up instantly.
+                    </p>
+                    
+                    <button id="googleLoginBtn" class="btn-google flex items-center justify-center w-full max-w-md p-3 bg-custom-dark-gray text-custom-white-gray border border-custom-medium-gray rounded-lg font-medium cursor-pointer transition hover:bg-custom-medium-gray/50 mb-3">
+                        <img src="images/google-icon.png" alt="Google Icon" class="w-5 h-5 mr-3"> Access with Google
+                    </button>
+                    <button id="githubLoginBtn" class="btn-google flex items-center justify-center w-full max-w-md p-3 bg-custom-dark-gray text-custom-white-gray border border-custom-medium-gray rounded-lg font-medium cursor-pointer transition hover:bg-custom-medium-gray/50 mb-3">
+                        <img src="images/github-mark-white.png" alt="GitHub Icon" class="w-5 h-5 mr-3"> Access with GitHub
+                    </button>
+                    <button id="microsoftLoginBtn" class="btn-google flex items-center justify-center w-full max-w-md p-3 bg-custom-dark-gray text-custom-white-gray border border-custom-medium-gray rounded-lg font-medium cursor-pointer transition hover:bg-custom-medium-gray/50 mb-3">
+                        <img src="images/microsoft.png" alt="Microsoft Icon" class="w-5 h-5 mr-3"> Access with Microsoft
+                    </button>
+                    
+                    <p class="oauth-agreement-text text-xs italic text-custom-light-gray text-center max-w-md mt-4 leading-relaxed">
+                            By accessing with third-party providers or via email, you agree to our <a href="legal.html" target="_blank" class="text-custom-light-gray hover:text-custom-lighter-gray">Terms of Service</a>, and our <a href="legal.html" target="_blank" class="text-custom-light-gray hover:text-custom-lighter-gray">Privacy Policy</a>.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="fixed-footer">
+        <div class="text-center text-custom-light-gray text-xs">
+            &copy; 2024 4simpleproblems (4SP). Built for students.
+        </div>
+    </footer>
+
+    <script type="module" src="firebase-config.js"></script>
+
+    <script type="module">
+        // --- Firebase Imports ---
+        import { firebaseConfig } from './firebase-config.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import {
+            getAuth,
+            signInWithEmailAndPassword,
+            sendPasswordResetEmail,
+            fetchSignInMethodsForEmail,
+            createUserWithEmailAndPassword,
+            sendEmailVerification,
+            signOut,
+            GoogleAuthProvider,
+            GithubAuthProvider,
+            OAuthProvider,
+            signInWithPopup,
+            setPersistence,
+            browserLocalPersistence
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            getDoc, 
+            setDoc, 
+            collection,
+            query,
+            where,
+            getDocs,
+            serverTimestamp
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // --- Initialize Firebase ---
+        const appId = '4sp-default-app';
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Access the global navigation function you created
+        const initMiniNavigation = window.initMiniNavigation;
+        if (initMiniNavigation) {
+            initMiniNavigation(auth);
+        }
+
+        // --- Global State ---
+        let currentEmail = null;
+        let selectedUsername = null; 
+
+        // --- DOM Elements ---
+        const emailContainer = document.getElementById('emailContainer');
+        const loginContainer = document.getElementById('loginContainer');
+        const signupContainer = document.getElementById('signupContainer');
+        const resetPasswordContainer = document.getElementById('resetPasswordContainer');
+        
+        const emailMessageDiv = document.getElementById('emailMessage');
+        const loginMessageDiv = document.getElementById('loginMessage');
+        const signupMessageDiv = document.getElementById('signupMessage');
+        const resetMessageDiv = document.getElementById('resetMessage');
+
+        const inputEmail = document.getElementById('inputEmail');
+        const loginEmailDisplay = document.getElementById('loginEmailDisplay');
+        const signupEmailDisplay = document.getElementById('signupEmailDisplay');
+
+        const loginForm = document.getElementById('loginForm');
+        const signupForm = document.getElementById('signupForm');
+        const resetPasswordForm = document.getElementById('resetPasswordForm');
+        
+        // Social Buttons
+        const googleLoginBtn = document.getElementById('googleLoginBtn');
+        const githubLoginBtn = document.getElementById('githubLoginBtn');
+        const microsoftLoginBtn = document.getElementById('microsoftLoginBtn');
+
+        // --- Helper Functions (From original files) ---
+
+        const showMessage = (element, text, type = 'error') => {
+            element.innerHTML = text;
+            element.className = `message-area w-full max-w-md mt-4 min-h-[20px] text-center text-sm ${type}-message`;
+        };
+
+        const navigateToDashboard = () => {
+            window.location.href = 'logged-in/dashboard.html';
+        };
+        
+        const getUserProfileDocRef = (userId) => {
+            // Firestore Path: users/{userId} (Simplified from login.html's complex path to match signup.html's collection 'users' logic)
+            // NOTE: If you must use the login.html path: 
+            // return doc(db, 'artifacts', appId, 'users', userId, 'metadata', 'user_profile');
+            return doc(db, 'users', userId); // Using simpler path from signup.html
+        };
+
+        const isUsernameTaken = async (username) => {
+            try {
+                const q = query(collection(db, 'users'), where('username', '==', username));
+                const querySnapshot = await getDocs(q);
+                return !querySnapshot.empty;
+            } catch (error) { console.error("Error checking username uniqueness:", error); return true; }
+        };
+
+        const checkProfanity = async (text) => {
+            if (!text || !text.trim()) return false;
+            try {
+                const response = await fetch(`https://www.purgomalum.com/service/containsprofanity?text=${encodeURIComponent(text)}`);
+                if (!response.ok) throw new Error('API request failed');
+                const result = await response.text();
+                return result.toLowerCase() === 'true';
+            } catch (error) { console.error('Error calling profanity API:', error); return false; }
+        };
+        
+        const validatePassword = (password) => {
+            const minLength = 8;
+            const maxLength = 48;
+            const uppercaseRegex = /[A-Z]/;
+            const numberRegex = /[0-9]/;
+            const specialCharRegex = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/; 
+
+            if (password.length < minLength || password.length > maxLength) {
+                return `Password must be between ${minLength} and ${maxLength} characters.`;
+            }
+            if (!uppercaseRegex.test(password)) {
+                return 'Password must contain at least one uppercase letter.';
+            }
+            if (!numberRegex.test(password)) {
+                return 'Password must contain at least one number.';
+            }
+            if (!specialCharRegex.test(password)) {
+                return 'Password must contain at least one special symbol.';
+            }
+            return null; // Valid
+        };
+
+        const createUserDocument = async (user, authMethod, username, explicitEmail = null) => {
+            const emailToStore = explicitEmail || (user && user.email) || null;
+            const isVerified = (authMethod !== 'email') ? true : !!(user && user.emailVerified);
+            try {
+                // Use the path that matches signup.html
+                await setDoc(doc(db, 'users', user.uid), {
+                    email: emailToStore, 
+                    authMethod: authMethod, 
+                    createdAt: serverTimestamp(),
+                    username: username, 
+                    emailVerified: isVerified
+                });
+                return true;
+            } catch (error) { console.error("Error creating user document:", error); return false; }
+        };
+        
+        const handleSuccessfulEmailSignup = async (user, username) => {
+            await signOut(auth); // Immediately sign out the user
+            
+            let countdown = 8;
+            const message = () => {
+                showMessage(signupMessageDiv, 
+                    `Success! A verification email has been sent to **${user.email}**.<br>Your username is **${username}**.<br>Redirecting to sign in/login in ${countdown}...`, 
+                    'success'
+                );
+                countdown--;
+            };
+            
+            message(); 
+            const interval = setInterval(() => {
+                if (countdown < 0) {
+                    clearInterval(interval);
+                    window.location.reload(); // Reloads to the initial email screen
+                } else {
+                    message();
+                }
+            }, 1000);
+        };
+        
+        const handleSuccessfulEmailLogin = async (user) => {
+            await setPersistence(auth, browserLocalPersistence);
+
+            const userDocSnap = await getDoc(getUserProfileDocRef(user.uid));
+            if (!userDocSnap.exists()) {
+                 await signOut(auth);
+                 showMessage(loginMessageDiv, 'Your account record is incomplete. Please contact support.');
+                 return;
+            }
+
+            if (user.emailVerified) {
+                navigateToDashboard();
+            } else {
+                // Handle unverified email
+                loginMessageDiv.innerHTML = 'Your email is not verified. Please check your inbox. <a href="#" id="resend-link" class="text-custom-light-gray hover:text-custom-lighter-gray underline cursor-pointer">Resend verification email</a>';
+                loginMessageDiv.className = 'message-area w-full max-w-md mt-4 min-h-[20px] text-center text-sm error-message';
+                
+                document.getElementById('resend-link').addEventListener('click', async (event) => {
+                    event.preventDefault();
+                    try {
+                        await sendEmailVerification(user); // Use modular SDK function
+                        showMessage(loginMessageDiv, 'A new verification link has been sent!', 'success');
+                    } catch (err) { showMessage(loginMessageDiv, `Error sending email: ${err.message}`); }
+                });
+                await signOut(auth); // Sign out unverified user
+            }
+        };
+
+        const handleSuccessfulProviderAccess = async (user, providerName, finalUsername) => {
+            await setPersistence(auth, browserLocalPersistence);
+            
+            let countdown = 3;
+            const message = () => {
+                showMessage(emailMessageDiv, 
+                    `Success! You're logged in with ${providerName}.<br>Your username is **${finalUsername}**.<br>Redirecting to dashboard in ${countdown}...`, 
+                    'success'
+                );
+                countdown--;
+            };
+            
+            // Show message on the initial email screen for visibility
+            emailContainer.style.display = 'flex';
+            loginContainer.style.display = 'none';
+            signupContainer.style.display = 'none';
+            
+            message(); 
+            const interval = setInterval(() => {
+                if (countdown < 0) {
+                    clearInterval(interval);
+                    navigateToDashboard();
+                } else {
+                    message();
+                }
+            }, 1000);
+        };
+
+
+        // --- Display Control Functions ---
+        const resetAllViews = () => {
+            emailContainer.style.display = 'none';
+            loginContainer.style.display = 'none';
+            signupContainer.style.display = 'none';
+            resetPasswordContainer.style.display = 'none';
+            emailMessageDiv.innerHTML = '';
+            loginMessageDiv.innerHTML = '';
+            signupMessageDiv.innerHTML = '';
+            resetMessageDiv.innerHTML = '';
+        };
+
+        const showEmailInput = () => {
+            resetAllViews();
+            emailContainer.style.display = 'flex';
+            emailContainer.style.flexDirection = 'column';
+            inputEmail.focus();
+        };
+
+        const showLogin = (email) => {
+            resetAllViews();
+            loginContainer.style.display = 'flex';
+            loginContainer.style.flexDirection = 'column';
+            loginEmailDisplay.textContent = email;
+            document.getElementById('loginPassword').value = '';
+            document.getElementById('loginPassword').focus();
+        };
+
+        const showSignup = (email) => {
+            resetAllViews();
+            signupContainer.style.display = 'flex';
+            signupContainer.style.flexDirection = 'column';
+            signupEmailDisplay.textContent = email;
+            document.getElementById('signupUsername').value = '';
+            document.getElementById('signupPassword').value = '';
+            document.getElementById('signupUsername').focus();
+        };
+
+        const showResetPassword = () => {
+            resetAllViews();
+            resetPasswordContainer.style.display = 'flex';
+            resetPasswordContainer.style.flexDirection = 'column';
+            const resetEmailInput = document.getElementById('resetEmail');
+            resetEmailInput.value = currentEmail || '';
+            resetEmailInput.focus();
+        };
+
+        // --- Core Authentication Handlers ---
+
+        // 1. Email Submission (Determine Login or Signup)
+        document.getElementById('emailForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            emailMessageDiv.innerHTML = '';
+            const email = inputEmail.value.trim();
+            currentEmail = email;
+
+            if (!email) { showMessage(emailMessageDiv, 'Please enter an email address.'); return; }
+            
+            showMessage(emailMessageDiv, 'Checking account status...', 'warning');
+
+            try {
+                const methods = await fetchSignInMethodsForEmail(auth, email);
+
+                if (methods.length === 0) {
+                    // **SIGN UP**
+                    showSignup(email);
+                } else if (methods.includes('password')) {
+                    // **LOGIN** (Email/Password account)
+                    showLogin(email);
+                } else {
+                    // **SOCIAL LOGIN REQUIRED**
+                    const providers = methods.map(method => method.split('.')[0].charAt(0).toUpperCase() + method.split('.')[0].slice(1)).join(', ');
+                    showMessage(emailMessageDiv, `This email is registered. Please use ${providers} to log in.`);
+                }
+            } catch (error) {
+                console.error('Email check error:', error);
+                showMessage(emailMessageDiv, 'An error occurred. Please try again or check the email format.');
+            }
+        });
+        
+        // 2A. LOGIN Submission
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            loginMessageDiv.innerHTML = '';
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                const userCredential = await signInWithEmailAndPassword(auth, currentEmail, password);
+                const user = userCredential.user;
+                await handleSuccessfulEmailLogin(user);
+            } catch (error) {
+                console.error("Login Error:", error);
+                let message = 'Invalid email or password.'; 
+                if (error.code === 'auth/too-many-requests') {
+                    message = 'Access temporarily disabled due to too many failed login attempts.';
+                } else if (error.code === 'auth/user-disabled') {
+                    message = 'Your account has been disabled.';
+                } else if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                     message = 'Invalid email or password.'; 
+                }
+                showMessage(loginMessageDiv, message);
+            }
+        });
+
+        // 2B. SIGNUP Submission
+        signupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            signupMessageDiv.innerHTML = '';
+
+            const usernameInput = document.getElementById('signupUsername').value.trim();
+            const password = document.getElementById('signupPassword').value;
+            const email = currentEmail;
+
+            // 1. Validate Password
+            const passwordError = validatePassword(password);
+            if (passwordError) {
+                showMessage(signupMessageDiv, passwordError);
+                return;
+            }
+
+            // 2. Validate Username
+            if (usernameInput.length < 4 || usernameInput.length > 24) {
+                showMessage(signupMessageDiv, 'Username must be between 4 and 24 characters.');
+                return;
+            }
+            const allowedCharsRegex = /^[a-zA-Z0-9.,\-+_\!\?\$\\]+$/;
+            if (!allowedCharsRegex.test(usernameInput)) {
+                showMessage(signupMessageDiv, 'Username contains unallowed characters. Only letters, numbers, and .,-+_!?$ are permitted.');
+                return;
+            }
+            
+            showMessage(signupMessageDiv, 'Checking username availability and safety...', 'warning');
+
+            // 3. Check for profanity
+            const isProfane = await checkProfanity(usernameInput);
+            if (isProfane) {
+                showMessage(signupMessageDiv, 'Please choose a different username. That one is not allowed.');
+                return;
+            }
+
+            // 4. Check if username is already taken
+            const isTaken = await isUsernameTaken(usernameInput);
+            if (isTaken) {
+                showMessage(signupMessageDiv, 'This username is already taken. Please choose another.');
+                return;
+            }
+            
+            selectedUsername = usernameInput;
+
+            // 5. Create Account
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+
+                await sendEmailVerification(user);
+
+                const documentCreated = await createUserDocument(user, 'email', selectedUsername, email);
+                
+                if (documentCreated) {
+                    await handleSuccessfulEmailSignup(user, selectedUsername);
+                } else {
+                    await user.delete(); // Crucial fallback
+                    showMessage(signupMessageDiv, 'An internal error occurred (failed to create user record). Please try again or contact support.');
+                }
+            } catch (error) {
+                console.error("Signup Error:", error);
+                let message = 'An unknown sign up error occurred. Please try again.';
+                if (error.code === 'auth/email-already-in-use') {
+                    // This should have been caught in the initial email check, but good to have as a fallback
+                    showMessage(signupMessageDiv, `This email is already in use! Please use the Login form.`);
+                } else if (error.code === 'auth/invalid-email') {
+                    message = 'The email address is not valid.'; 
+                } else if (error.code === 'auth/weak-password') {
+                    message = 'Password is too weak. Please choose a stronger one.'; 
+                }
+                showMessage(signupMessageDiv, message);
+            }
+        });
+
+
+        // 3. Password Reset Submission
+        resetPasswordForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            resetMessageDiv.innerHTML = '';
+            const email = document.getElementById('resetEmail').value.trim();
+            if (!email) { showMessage(resetMessageDiv, 'Please enter your email.'); return; }
+
+            try {
+                const methods = await fetchSignInMethodsForEmail(auth, email);
+                if (methods.length === 0) { 
+                    showMessage(resetMessageDiv, 'No account found with this email.'); 
+                } 
+                else if (methods.some(method => ['google.com', 'github.com', 'microsoft.com'].includes(method))) { 
+                    showMessage(resetMessageDiv, 'This account uses a social provider and does not have a password to reset.'); 
+                } 
+                else { 
+                    await sendPasswordResetEmail(auth, email); 
+                    showMessage(resetMessageDiv, 'Password reset link sent! Please check your inbox.', 'success'); 
+                }
+            } catch (error) { 
+                console.error('Password Reset Error:', error);
+                showMessage(resetMessageDiv, 'An error occurred during password reset. Please check the email and try again.'); 
+            }
+        });
+        
+        // 4. Social Provider Login/Signup Handler
+        const handleProviderAccess = async (provider) => {
+            emailMessageDiv.innerHTML = ''; // Use the main message area
+            try {
+                const result = await signInWithPopup(auth, provider);
+                const user = result.user;
+                
+                // Use the user document check logic from signup.html's 'users' collection
+                const userDocSnap = await getDoc(doc(db, 'users', user.uid));
+                const providerName = provider.providerId.split('.')[0].charAt(0).toUpperCase() + provider.providerId.split('.')[0].slice(1);
+                let finalUsername = '';
+                
+                if (userDocSnap.exists()) {
+                    // EXISTING USER: Login
+                    finalUsername = userDocSnap.data().username || 'N/A';
+                } else {
+                    // NEW USER: Create provisional username and document
+                    let userEmail = user.email;
+                    let proposedUsername = user.displayName || userEmail.split('@')[0] || 'User';
+                    proposedUsername = proposedUsername.replace(/[^a-zA-Z0-9]/g, '').slice(0, 16); 
+                    if (proposedUsername.length < 4) { proposedUsername = `User${user.uid.substring(0, 8)}`; } 
+                    if (await checkProfanity(proposedUsername)) { proposedUsername = `User${user.uid.substring(0, 8)}`; }
+
+                    let counter = 1;
+                    finalUsername = proposedUsername;
+                    while (await isUsernameTaken(finalUsername)) {
+                        const suffix = `_${counter}`;
+                        const maxBaseLength = 16 - suffix.length;
+                        const baseUsername = proposedUsername.substring(0, maxBaseLength);
+                        finalUsername = `${baseUsername}${suffix}`;
+                        counter++;
+                    }
+
+                    const documentCreated = await createUserDocument(user, provider.providerId.split('.')[0], finalUsername, userEmail);
+                    
+                    if (!documentCreated) {
+                        throw new Error('Failed to create user document during social access.');
+                    }
+                }
+                
+                // Final successful sign-in/sign-up handler
+                await handleSuccessfulProviderAccess(user, providerName, finalUsername);
+
+            } catch (error) {
+                console.error('Provider Sign-In error:', error);
+                let message = `A problem occurred during sign-in. Please try again.`;
+                
+                if (error.code === 'auth/account-exists-with-different-credential') {
+                    let fetchEmail = error.customData?.email || 'this email';
+                    message = `An account with ${fetchEmail} already exists using a different sign-in method. Please use the email and password option.`;
+                } else if (error.code === 'auth/popup-closed-by-user') { 
+                    return; 
+                }
+
+                showMessage(emailMessageDiv, message);
+            }
+        };
+
+
+        // --- View Toggles and Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initial view
+            showEmailInput(); 
+            
+            // Link Handlers
+            document.getElementById('backToEmailFromLogin').addEventListener('click', showEmailInput);
+            document.getElementById('backToEmailFromSignup').addEventListener('click', showEmailInput);
+            
+            document.getElementById('forgotPasswordLink').addEventListener('click', showResetPassword);
+            document.getElementById('backToLoginLink').addEventListener('click', () => {
+                showLogin(document.getElementById('resetEmail').value.trim() || currentEmail);
+            });
+            
+            // Social Buttons
+            googleLoginBtn.addEventListener('click', () => handleProviderAccess(new GoogleAuthProvider()));
+            githubLoginBtn.addEventListener('click', () => handleProviderAccess(new GithubAuthProvider()));
+            microsoftLoginBtn.addEventListener('click', () => handleProviderAccess(new OAuthProvider('microsoft.com')));
+        });
+    </script>
+</body>
+</html>
