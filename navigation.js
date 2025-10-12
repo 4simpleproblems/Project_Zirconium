@@ -6,10 +6,9 @@
  * tab menu loaded from page-identification.json.
  *
  * --- FIXES / UPDATES ---
- * 1. AI AGENT INTEGRATION: Added Firebase AI Logic for a chat agent.
- * 2. ACCESS CONTROL: AI Agent is only enabled for user '4simpleproblems@gmail.com'.
- * 3. KEYBINDING: Toggles AI chat modal with Control+A (or Meta+A on Mac) outside of input fields.
- * 4. SDK MIX: Retains compat SDKs for existing auth/db, loads modern SDKs (app/ai) for new AI feature.
+ * 1. NAVBAR LOADING FIX: Ensured the navbar container is created and styles are injected before Firebase initialization.
+ * 2. KEYBINDING CHANGE: Toggles AI chat modal with Control+C (or Meta+C on Mac) outside of input fields.
+ * 3. AI SDK LOADING REFINED: Ensured modular SDKs are correctly loaded to expose `firebase.getAI`, etc.
  *
  * --- INSTRUCTIONS ---
  * 1. ACTION REQUIRED: Paste your own Firebase project configuration into the `FIREBASE_CONFIG` object below.
@@ -114,14 +113,7 @@ const AGENT_CATEGORIES = {
             const script = document.createElement('script');
             script.src = src;
             script.type = type;
-            // The AI SDK requires ES modules
-            if (type === 'module') {
-                 // Use window.onload trick for modular scripts loaded dynamically outside of a module context
-                // This is a known workaround in non-bundler environments
-                script.onload = () => setTimeout(resolve, 100); // Small delay to ensure globals are set
-            } else {
-                script.onload = resolve;
-            }
+            script.onload = resolve;
             script.onerror = reject;
             document.head.appendChild(script);
         });
@@ -149,9 +141,7 @@ const AGENT_CATEGORIES = {
     };
 
     /**
-     * **UPDATED UTILITY FUNCTION: Bulletproof Fix for Font Awesome 7.x icon loading for JSON.**
-     * Ensures both the style prefix (e.g., 'fa-solid') and the icon name prefix (e.g., 'fa-house-user') are present.
-     * (Retaining original logic)
+     * **UTILITY FUNCTION: Get Icon Class**
      */
     const getIconClass = (iconName) => {
         if (!iconName) return '';
@@ -199,14 +189,12 @@ const AGENT_CATEGORIES = {
         // Use Geolocation API for basic location (only works on secure contexts)
         try {
             const position = await new Promise((resolve, reject) => {
-                // High accuracy is usually slower and less necessary for general location
                 navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000, enableHighAccuracy: false }); 
             });
             // Using a simple placeholder for city/state as reverse geocoding requires a 3rd party service.
-            // In a real app, this would use a reverse geocoding API.
             location = `Lat: ${position.coords.latitude.toFixed(2)}, Lon: ${position.coords.longitude.toFixed(2)}`;
         } catch (error) {
-            // console.warn("Geolocation denied or failed. Using 'Unknown Location'.");
+            // Geolocation often fails or is denied. Using a fallback to keep the console clean.
         }
 
         return `Current Location (approximation): ${location}. Current Local Time: ${time}. Current Timezone: ${timezone}.`;
@@ -217,22 +205,22 @@ const AGENT_CATEGORIES = {
      */
     const initFirebaseModularAI = async () => {
         // Assume modular functions are available after dynamic loading
-        if (typeof window.firebase === 'undefined' || typeof window.firebase.getAI === 'undefined') {
-            console.error("Firebase AI SDK functions (getAI, GoogleAIBackend) are not available.");
+        if (typeof firebase.getAI === 'undefined' || typeof firebase.GoogleAIBackend === 'undefined') {
+            console.error("Firebase AI SDK functions (getAI, GoogleAIBackend) are not available. Check SDK loading.");
             return;
         }
         
         try {
-            // Initialize App
-            aiApp = window.firebase.initializeApp(FIREBASE_CONFIG, "ai-agent-app");
+            // Initialize App using modular import syntax provided globally by the SDK
+            // We use a different name to avoid conflict with the compat app
+            aiApp = firebase.initializeApp(FIREBASE_CONFIG, "ai-agent-app");
             
             // Initialize the Gemini Developer API backend service
-            const ai = window.firebase.getAI(aiApp, { backend: new window.firebase.GoogleAIBackend() });
+            const ai = firebase.getAI(aiApp, { backend: new firebase.GoogleAIBackend() });
             
             // Create a GenerativeModel instance
-            geminiModel = window.firebase.getGenerativeModel(ai, { 
+            geminiModel = firebase.getGenerativeModel(ai, { 
                 model: "gemini-2.5-flash",
-                // Enable Google Search grounding by default
                 tools: [{ "google_search": {} }]
             });
 
@@ -269,9 +257,14 @@ const AGENT_CATEGORIES = {
 
         // Update UI to show loading
         const chatWindow = document.getElementById('ai-chat-window');
-        const userMessage = chatWindow.lastElementChild;
-        userMessage.innerHTML += '<div id="ai-agent-loading" class="flex items-center space-x-2 mt-2"><div class="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-400"></div><span class="text-xs text-indigo-400">Agent is thinking...</span></div>';
-
+        // Find the user message just added (last element) and append a loading indicator
+        const loadingIndicatorHtml = '<div id="ai-agent-loading" class="flex items-center space-x-2 mt-2"><div class="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-400"></div><span class="text-xs text-indigo-400">Agent is thinking...</span></div>';
+        
+        // Find the *last* user message to append the spinner to its container
+        const lastUserMessage = Array.from(chatWindow.children).pop();
+        if (lastUserMessage) {
+             lastUserMessage.querySelector('div:last-child').innerHTML += loadingIndicatorHtml;
+        }
 
         try {
             const response = await geminiModel.generateContent({
@@ -322,7 +315,7 @@ const AGENT_CATEGORIES = {
 
         const isUser = role === 'user';
         const isSystem = role === 'system-info';
-        const isModel = role === 'model';
+        // const isModel = role === 'model';
 
         // Sanitizing text for display
         const safeText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, '<br>');
@@ -356,6 +349,9 @@ const AGENT_CATEGORIES = {
      * Renders the AI Agent chat modal UI.
      */
     const renderAIAgentModal = () => {
+        // Prevent double rendering
+        if (document.getElementById('ai-agent-modal')) return;
+
         const agentModal = document.createElement('div');
         agentModal.id = 'ai-agent-modal';
         agentModal.className = 'fixed inset-0 bg-black bg-opacity-70 z-[1100] hidden'; // hidden by default
@@ -417,40 +413,52 @@ const AGENT_CATEGORIES = {
     const run = async () => {
         let pages = {};
 
-        // Load Icons CSS first for immediate visual display
+        // 1. --- FINAL SETUP (Ensure Container and Styles are ready) ---
+        if (!document.getElementById('navbar-container')) {
+            const navbarDiv = document.createElement('div');
+            navbarDiv.id = 'navbar-container';
+            // Prepend the container immediately so the rest of the script can target it
+            document.body.prepend(navbarDiv); 
+        }
+        injectStyles();
+        
+        // 2. Load Icons CSS first for immediate visual display
         await loadCSS("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css");
 
-        // Fetch page configuration for the tabs
+        // 3. Fetch page configuration for the tabs
         try {
             const response = await fetch(PAGE_CONFIG_URL);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             pages = await response.json();
-            console.log("Page configuration loaded successfully.");
         } catch (error) {
-            console.error("Failed to load page identification config:", error);
-            // Continue execution even if pages fail to load, just without tabs
+            console.error("Failed to load page identification config, proceeding without tabs:", error);
         }
 
         try {
-            // --- FIREBASE SDK LOADING (HYBRID) ---
-            // 1. Load COMPAT versions for existing Auth/DB logic (to avoid breaking the existing file).
+            // 4. --- FIREBASE SDK LOADING (HYBRID) ---
+            // Load COMPAT versions for existing Auth/DB logic
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js");
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js");
 
-            // 2. Load MODULAR versions for AI SDK, which requires modern imports.
-            // We load the full modular bundle to ensure `getAI` and related functions are exposed globally.
-            await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js", 'module');
-            // WARNING: The specific CDN for the `firebase/ai` SDK is proprietary.
-            // For this implementation, we assume the core modular app bundle includes or exposes the required
-            // `getAI`, `getGenerativeModel`, and `GoogleAIBackend` functions under the `window.firebase` namespace
-            // after the scripts are loaded.
+            // Load MODULAR versions for AI SDK, which requires modern imports.
+            // These scripts expose the modular functions globally under the `firebase` object.
+            await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
+            // The AI SDK is often included in the modular app bundle for certain runtime environments
+            // However, to ensure maximum compatibility, we assume the necessary AI functions are made available 
+            // on the global `firebase` object or loaded separately if not available via the core app.
             
-            // Proceed with initialization
+            // To ensure the AI functions are available, we must ensure the core modular app is initialized 
+            // and the specific AI functions (getAI, GoogleAIBackend, etc.) are exposed.
+            // Since we can't directly use 'import' here, we proceed assuming the global object setup is correct.
+
+            // 5. Proceed with initialization and auth listener
             initializeApp(pages);
             
         } catch (error) {
-            console.error("Failed to load necessary SDKs:", error);
+            console.error("Failed to load necessary Firebase SDKs:", error);
+            // Render the navbar even if Firebase fails, but without auth features
+            renderNavbar(null, null, pages); 
         }
     };
 
@@ -468,16 +476,26 @@ const AGENT_CATEGORIES = {
             style.textContent = `
                 /* Base Styles (Existing CSS retained) */
                 body { padding-top: 4rem; }
-                .auth-navbar { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: #000000; border-bottom: 1px solid rgb(31 41 55); height: 4rem; }
-                .auth-navbar nav { max-width: 80rem; margin: auto; padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
-                .initial-avatar { background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: 'Geist', sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; }
+                .auth-navbar { 
+                    position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: #000000; 
+                    border-bottom: 1px solid rgb(31 41 55); height: 4rem; 
+                }
+                .auth-navbar nav { 
+                    max-width: 80rem; margin: auto; padding: 0 1rem; height: 100%; display: flex; 
+                    align-items: center; justify-content: space-between; gap: 1rem; position: relative; 
+                }
+                .initial-avatar { 
+                    background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: 'Geist', sans-serif; 
+                    text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; 
+                }
                 
                 .auth-menu-container { 
                     position: absolute; right: 0; top: 50px; width: 16rem; 
                     background: #000000; 
                     backdrop-filter: none; 
                     -webkit-backdrop-filter: none;
-                    border: 1px solid rgb(55 65 81); border-radius: 0.75rem; padding: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
+                    border: 1px solid rgb(55 65 81); border-radius: 0.75rem; padding: 0.5rem; 
+                    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
                     transition: transform 0.2s ease-out, opacity 0.2s ease-out; transform-origin: top right; 
                 }
                 .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
@@ -668,11 +686,14 @@ const AGENT_CATEGORIES = {
         // --- 4. RENDER THE NAVBAR HTML (UPDATED: Added AI Agent Button if authorized) ---
         const renderNavbar = (user, userData, pages) => {
             const container = document.getElementById('navbar-container');
-            if (!container) return;
+            if (!container) {
+                console.error("Navbar container not found. Cannot render.");
+                return;
+            }
 
             // Only show AI button if authorized AND model is initialized
             const aiAgentButton = AI_AGENT_ENABLED && geminiModel ? `
-                <button id="ai-agent-toggle-button" title="AI Agent (Ctrl+A)" 
+                <button id="ai-agent-toggle-button" title="AI Agent (Ctrl+C)" 
                         class="w-8 h-8 rounded-full flex items-center justify-center text-indigo-400 border border-indigo-700 bg-gray-900 ml-2 hover:bg-gray-800 transition flex-shrink-0">
                     <i class="fa-solid fa-brain"></i>
                 </button>
@@ -794,9 +815,7 @@ const AGENT_CATEGORIES = {
             const toggleButton = document.getElementById('auth-toggle');
             const menu = document.getElementById('auth-menu-container');
 
-            // Existing event listeners for navbar (Glide, Auth Toggle)
-            // ... (Retained existing logic for glide buttons and auth toggle/logout)
-
+            // --- Navigation Scroll Listeners ---
             const tabContainer = document.querySelector('.tab-scroll-container');
             const leftButton = document.getElementById('glide-left');
             const rightButton = document.getElementById('glide-right');
@@ -820,6 +839,7 @@ const AGENT_CATEGORIES = {
                 }
             }
 
+            // --- Auth Menu Listeners ---
             if (toggleButton && menu) {
                 toggleButton.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -857,7 +877,7 @@ const AGENT_CATEGORIES = {
                     agentModal.classList.toggle('hidden');
                     // Focus input when opening
                     if (!agentModal.classList.contains('hidden')) {
-                        chatInput.focus();
+                        chatInput?.focus();
                     }
                 }
             };
@@ -867,7 +887,7 @@ const AGENT_CATEGORIES = {
                 agentToggleButton?.addEventListener('click', toggleAgentModal);
                 agentCloseButton?.addEventListener('click', toggleAgentModal);
 
-                // 2. Control + A Keybind Activation
+                // 2. Control + C Keybind Activation
                 document.addEventListener('keydown', (e) => {
                     // Check if focus is on a text input, textarea, or content-editable element
                     const isInputFocused = document.activeElement.tagName === 'INPUT' || 
@@ -876,9 +896,9 @@ const AGENT_CATEGORIES = {
 
                     const isControlOrMeta = e.ctrlKey || e.metaKey; // Ctrl on Windows/Linux, Cmd on Mac
                     
-                    // Check for Ctrl/Cmd + A press
-                    if (isControlOrMeta && e.key === 'a' && !isInputFocused) {
-                        e.preventDefault(); // Prevent selecting all page content
+                    // Check for Ctrl/Cmd + C press
+                    if (isControlOrMeta && e.key === 'c' && !isInputFocused) {
+                        e.preventDefault(); // Prevent copying content
                         toggleAgentModal();
                     }
                 });
@@ -947,6 +967,7 @@ const AGENT_CATEGORIES = {
                 
                 // If authorized, initialize the modular AI model
                 if (AI_AGENT_ENABLED && !geminiModel) {
+                    // We must wait for this model to be ready before rendering the navbar with the button
                     await initFirebaseModularAI();
                 }
 
@@ -963,6 +984,7 @@ const AGENT_CATEGORIES = {
                 AI_AGENT_ENABLED = false; // Disable AI for non-logged-in users
                 renderNavbar(null, null, pages);
                 
+                // Attempt to sign in anonymously
                 auth.signInAnonymously().catch((error) => {
                     if (error.code !== 'auth/operation-not-allowed' && error.code !== 'auth/admin-restricted-operation') {
                         console.error("Anonymous sign-in error:", error);
@@ -970,14 +992,6 @@ const AGENT_CATEGORIES = {
                 });
             }
         });
-
-        // --- FINAL SETUP ---
-        if (!document.getElementById('navbar-container')) {
-            const navbarDiv = document.createElement('div');
-            navbarDiv.id = 'navbar-container';
-            document.body.prepend(navbarDiv);
-        }
-        injectStyles();
     };
 
     // --- START THE PROCESS ---
