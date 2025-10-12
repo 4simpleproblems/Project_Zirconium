@@ -427,12 +427,12 @@
         let unsubscribeMessages = () => {};
         let unsubscribeChats = () => {};
         let chatCooldownInterval = null;
-        let currentTab = 'chats'; // Default view
         const PUBLIC_ID_LENGTH = 8;
         const MESSAGE_COOLDOWN_MS = 2 * 1000;
         const LOCAL_STORAGE_KEY = 'messengerNicknames';
         const MAX_FILES = 5; // Max files per message
         let attachedFiles = []; // Array to hold {name, type, dataURL} for files to be sent
+        let currentTab = 'chats'; // Default view
         
         // --- DOM Elements (omitted for brevity, but exist in HTML) ---
         const dom = {
@@ -621,14 +621,50 @@
         }
         
         // =========================================================================
-        // FILE HANDLING (Omitting full implementation for brevity, keeping API)
+        // FILE HANDLING (FULLY IMPLEMENTED)
         // =========================================================================
-        // The file functions (compressImage, readFileAsBase64, handleFileSelect, 
-        // removeFile, renderFilePreviews) are kept as in the previous, provided version.
-        // They handle file UI and Base64 conversion, which is sufficient here.
 
-        function compressImage(imageFile) { /* ... implementation ... */ return Promise.resolve('data:image/jpeg;base64,...'); }
-        function readFileAsBase64(file) { /* ... implementation ... */ return Promise.resolve('data:text/plain;base64,...'); }
+        /**
+         * Compresses an image file and returns its Base64 data URL.
+         * @param {File} imageFile 
+         */
+        function compressImage(imageFile) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 800; 
+                        const scaleFactor = Math.min(1, MAX_WIDTH / img.width);
+
+                        canvas.width = img.width * scaleFactor;
+                        canvas.height = img.height * scaleFactor;
+
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                        // Output as JPEG at 80% quality
+                        resolve(canvas.toDataURL('image/jpeg', 0.8));
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(imageFile);
+            });
+        }
+        
+        /**
+         * Reads any file and returns its Base64 data URL.
+         * @param {File} file 
+         */
+        function readFileAsBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = (error) => reject(error);
+                reader.readAsDataURL(file);
+            });
+        }
 
         async function handleFileSelect(e) {
             const files = Array.from(e.target.files);
@@ -637,14 +673,24 @@
                     showMessage(dom.cooldownTimer, `You can only attach up to ${MAX_FILES} files.`, 'error');
                     break;
                 }
-                if (file.type.startsWith('image/')) {
-                    const dataUrl = await compressImage(file);
-                    attachedFiles.push({ name: file.name, type: 'image', dataURL: dataUrl });
-                } else if (file.type === 'text/plain') {
-                    const dataUrl = await readFileAsBase64(file);
-                    attachedFiles.push({ name: file.name, type: 'document', dataURL: dataUrl });
-                } else {
-                    showMessage(dom.cooldownTimer, `File type "${file.type}" is not supported.`, 'error');
+                if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                    showMessage(dom.cooldownTimer, `File "${file.name}" exceeds the 5MB limit.`, 'error');
+                    continue;
+                }
+
+                try {
+                    if (file.type.startsWith('image/')) {
+                        const dataUrl = await compressImage(file);
+                        attachedFiles.push({ name: file.name, type: 'image', dataURL: dataUrl });
+                    } else if (file.type === 'text/plain') {
+                        const dataUrl = await readFileAsBase64(file);
+                        attachedFiles.push({ name: file.name, type: 'document', dataURL: dataUrl });
+                    } else {
+                        showMessage(dom.cooldownTimer, `File type "${file.type}" is not supported.`, 'error');
+                    }
+                } catch (error) {
+                    console.error("Error processing file:", error);
+                    showMessage(dom.cooldownTimer, `Failed to process file "${file.name}".`, 'error');
                 }
             }
             dom.fileUploadInput.value = ''; 
@@ -669,6 +715,11 @@
                     content = `<div class="p-2 pt-4 text-sm text-gray-400">
                                 <i class="fas fa-file-alt text-2xl text-indigo-400 mb-1"></i>
                                 <div class="truncate text-xs">${file.name}</div>
+                            </div>`;
+                } else {
+                    content = `<div class="p-2 pt-4 text-sm text-gray-400">
+                                <i class="fas fa-question-circle text-2xl text-gray-400 mb-1"></i>
+                                <div class="truncate text-xs">Unsupported</div>
                             </div>`;
                 }
                 
@@ -696,9 +747,17 @@
             const isMe = message.senderId === currentUser.uid;
             const messageElement = document.createElement('div');
             
-            const senderName = isMe 
-                ? 'You' 
-                : getFriendNickname(message.senderId, currentUserData.friends[message.senderId] || 'Unknown');
+            // Handle group chat names vs DM names
+            let senderName;
+            if (currentChat.type === 'group' && message.senderId !== 'system') {
+                 // Try to find sender's public ID to display in group chat
+                 const memberPublicId = currentUserData.friends[message.senderId] || message.senderId.substring(0, 8);
+                 senderName = getFriendNickname(message.senderId, memberPublicId);
+            } else {
+                 senderName = isMe 
+                    ? 'You' 
+                    : getFriendNickname(message.senderId, currentUserData.friends[message.senderId] || 'Unknown');
+            }
                 
             const timeString = message.timestamp 
                 ? new Date(message.timestamp.toDate()).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) 
@@ -723,7 +782,7 @@
 
             messageElement.innerHTML = `
                 <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'}">
-                    <span class="text-xs ${isMe ? 'text-gray-500' : 'text-indigo-400'} mb-1 font-semibold">${senderName}</span>
+                    <span class="text-xs ${isMe ? 'text-gray-500' : (message.senderId === 'system' ? 'text-yellow-400' : 'text-indigo-400')} mb-1 font-semibold">${senderName}</span>
                     <div class="p-3 rounded-xl ${isMe ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-gray-800 text-gray-200 rounded-tl-none'} shadow-lg break-words max-w-full">
                         ${filesHtml}
                         ${message.text ? `<p class="whitespace-pre-wrap">${message.text}</p>` : ''}
@@ -740,7 +799,7 @@
             return outerWrapper;
         }
 
-        function listenToMessages(chatId) { /* ... implementation ... */
+        function listenToMessages(chatId) { 
             unsubscribeMessages();
             dom.messagesContainer.innerHTML = '<div class="flex justify-center items-center h-full" id="messages-loading-state"><p class="text-gray-500">Loading messages...</p></div>';
 
@@ -833,7 +892,7 @@
                 const filePreview = messageFiles.length > 0 ? `[${messageFiles.length} files]` : '';
                 const lastMessageText = filePreview 
                     ? (textPreview ? `${filePreview} ${textPreview}...` : filePreview)
-                    : textPreview;
+                    : (textPreview || filePreview); // Ensure we have some text if only files
 
                 batch.update(chatRef, {
                     lastMessage: {
@@ -1741,7 +1800,7 @@
             dom.messagesContainer.addEventListener('scroll', updateScrollButtonVisibility);
             dom.scrollToBottomBtn.addEventListener('click', () => scrollToBottom(true));
 
-            dom.fileUploadInput.addEventListener('change', handleFileSelect);
+            dom.fileUploadInput.addEventListener('change', handleFileSelect); // FULLY IMPLEMENTED
 
             dom.openSettingsBtn.addEventListener('click', () => {
                 dom.settingsModal.classList.remove('hidden');
