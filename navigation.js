@@ -9,14 +9,13 @@
  * - **Geist Font & Dark Aesthetic:** Uses a custom, dark, high-contrast style inspired by mode-activation.js.
  * - **AI Agents:** 7 specialized agents (General, Math, Science, etc.) with unique system instructions.
  * - **Firestore Persistence:** Securely saves conversation history per-agent to Firestore.
- * - **Input Control:** Implements a 500-character limit with a real-time counter.
+ * - **Input Control:** Implements a 500-character input limit with a real-time counter.
  * - **Code Utility:** Adds a one-click "Copy Code" button to all AI-generated code blocks.
  * - **UI Polish:** Scroll-glide buttons are always subtly visible when needed.
  *
- * --- INSTRUCTIONS ---
- * 1. ACTION REQUIRED: Replace the placeholder `FIREBASE_CONFIG` object below with your actual Firebase config.
- * 2. This file is self-contained. Ensure it is linked in your HTML <head> with `<script src="/navigation.js" defer></script>`.
- * 3. IMPORTANT: The AI functionality uses the direct Gemini API via 'fetch' as required by the environment.
+ * --- FIX: DEPENDENCY LOADING ---
+ * - Switched from deprecated 'compat' Firebase versions to standard modular links for better reliability.
+ * - Added comprehensive try/catch around initialization to prevent page block on script failure.
  */
 
 // =========================================================================
@@ -79,6 +78,7 @@ const AI_AGENTS = {
 };
 
 // Global variables for Firebase objects
+let app; // New global for the Firebase app instance
 let auth;
 let db;
 let currentUserId = 'guest';
@@ -96,7 +96,8 @@ let conversationHistory = {}; // Stores history loaded from Firestore for all ag
     const loadScript = (src) => new Promise((resolve, reject) => {
         const script = document.createElement('script');
         script.src = src;
-        script.type = 'module';
+        // IMPORTANT: For modular Firebase, we need type="module" for the imports to work
+        script.type = 'module'; 
         script.onload = resolve;
         script.onerror = reject;
         document.head.appendChild(script);
@@ -183,8 +184,11 @@ let conversationHistory = {}; // Stores history loaded from Firestore for all ag
     const getFirestorePath = () => {
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const userId = currentUserId || 'anonymous-user';
+        // Need to use the firebase global functions now that we are importing modular
+        const docRef = window.firebase.firestore().doc(db, `/artifacts/${appId}/users/${userId}/ai_chat_history/conversation`);
+        
         return {
-            docRef: firebase.firestore().doc(db, `/artifacts/${appId}/users/${userId}/ai_chat_history/conversation`),
+            docRef: docRef,
             userId: userId
         };
     };
@@ -274,6 +278,12 @@ let conversationHistory = {}; // Stores history loaded from Firestore for all ag
                     // Don't wrap code blocks in <p>
                     return p;
                 }
+                // Handle LaTeX formulas enclosed in $$...$$ for display purposes
+                p = p.replace(/\$\$(.*?)\$\$/g, (match, formula) => {
+                    // This is a simple wrapper; actual rendering requires MathJax/Katex on the page
+                    return `<span class="latex-formula block text-center my-2 text-lg font-mono">${match}</span>`;
+                });
+
                 return `<p class="whitespace-pre-wrap">${p}</p>`;
             }).join('');
 
@@ -331,7 +341,7 @@ let conversationHistory = {}; // Stores history loaded from Firestore for all ag
             <div class="chat-message model loading" id="loading-message">
                 <div class="chat-bubble loading-bubble">
                     <span class="chat-sender">4SP AI Mode</span>
-                    <p class="dot-flashing">...</p>
+                    <div class="dot-flashing"></div>
                 </div>
             </div>
         `;
@@ -383,7 +393,7 @@ let conversationHistory = {}; // Stores history loaded from Firestore for all ag
                 }
 
             } catch (error) {
-                console.error(`Attempt ${i + 1} failed:`, error);
+                console.error(`Attempt ${i + 1} failed. Retrying...`, error);
                 if (i < maxRetries - 1) {
                     const delay = Math.pow(2, i) * 1000; // Exponential backoff
                     await new Promise(res => setTimeout(res, delay));
@@ -410,6 +420,9 @@ let conversationHistory = {}; // Stores history loaded from Firestore for all ag
     };
 
     const setupChatLogic = () => {
+        const modal = document.getElementById('chat-modal');
+        if (!modal) return;
+        
         const closeButton = document.getElementById('chat-close-button');
         closeButton.onclick = closeChatModal;
 
@@ -419,12 +432,14 @@ let conversationHistory = {}; // Stores history loaded from Firestore for all ag
         const agentTitle = document.getElementById('agent-title');
 
         // Populate agent selector
-        Object.keys(AI_AGENTS).forEach(agentName => {
-            const option = document.createElement('option');
-            option.value = agentName;
-            option.textContent = `[${agentName}] - 4SP AI Mode v5`;
-            agentSelector.appendChild(option);
-        });
+        if(agentSelector.options.length === 0) {
+            Object.keys(AI_AGENTS).forEach(agentName => {
+                const option = document.createElement('option');
+                option.value = agentName;
+                option.textContent = `[${agentName}] - 4SP AI Mode v5`;
+                agentSelector.appendChild(option);
+            });
+        }
 
         // Set initial agent
         agentSelector.value = currentAgent;
@@ -477,15 +492,16 @@ let conversationHistory = {}; // Stores history loaded from Firestore for all ag
         // Initial setup for char counter
         inputField.dispatchEvent(new Event('input')); 
 
-        // Initial load of history
-        loadHistory();
+        // Initial load of history only if we are the admin
+        if (currentUserId !== 'guest') {
+            loadHistory();
+        }
     };
 
     const openChatModal = () => {
         const modal = document.getElementById('chat-modal');
         if (modal) {
             modal.classList.add('open');
-            // Ensure logic is set up and history is loaded when opening
             setupChatLogic();
             document.getElementById('chat-input').focus();
         }
@@ -528,6 +544,31 @@ let conversationHistory = {}; // Stores history loaded from Firestore for all ag
             .auth-navbar { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: var(--bg-dark); border-bottom: 1px solid var(--border-color); height: 4rem; }
             .auth-navbar nav { max-width: 80rem; margin: auto; padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
             .initial-avatar { background: var(--bg-medium); display: flex; align-items: center; justify-content: center; color: var(--fg-light); font-weight: 600; }
+
+            /* Auth Menu */
+            .auth-menu-container {
+                position: absolute; top: 3.5rem; right: 0; z-index: 50;
+                width: 200px; padding: 0.5rem;
+                border: 1px solid var(--border-color);
+                border-radius: 0.75rem;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+                opacity: 0; visibility: hidden; transform: translateY(-10px);
+                transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
+            }
+            .auth-menu-container.open {
+                opacity: 1; visibility: visible; transform: translateY(0);
+            }
+            .auth-menu-link, .auth-menu-button {
+                display: block; width: 100%; padding: 0.5rem 0.75rem;
+                border-radius: 0.5rem; text-decoration: none;
+                text-align: left; font-size: 0.875rem; font-weight: 500;
+                transition: background-color 0.2s;
+            }
+            .auth-menu-link:hover, .auth-menu-button:hover {
+                background-color: var(--bg-medium);
+            }
+            .auth-menu-button { background: none; border: none; cursor: pointer; }
+
 
             /* Tab and Scroll Styles */
             .tab-wrapper { flex-grow: 1; display: flex; align-items: center; position: relative; min-width: 0; margin: 0 1rem; }
@@ -589,6 +630,13 @@ let conversationHistory = {}; // Stores history loaded from Firestore for all ag
                 color: var(--fg-light);
                 border-bottom-left-radius: 0.25rem;
             }
+            .latex-formula {
+                /* Basic styling for LaTeX output */
+                font-style: italic;
+                opacity: 0.9;
+                padding: 0.5rem 0;
+            }
+
 
             /* Code Block Styling (mode-activation.js style) */
             .code-block-wrapper {
@@ -619,6 +667,7 @@ let conversationHistory = {}; // Stores history loaded from Firestore for all ag
                 border-radius: 0.3rem;
                 cursor: pointer;
                 transition: background 0.2s, border-color 0.2s, color 0.2s;
+                display: flex; align-items: center;
             }
             .copy-button:hover {
                 background: var(--primary-indigo);
@@ -704,6 +753,13 @@ let conversationHistory = {}; // Stores history loaded from Firestore for all ag
             @keyframes dot-flashing { 0% { background-color: var(--fg-light); } 50%, 100% { background-color: var(--fg-medium); } }
             @keyframes dot-flashing-before { 0% { background-color: var(--fg-medium); } 50%, 100% { background-color: var(--fg-light); } }
             @keyframes dot-flashing-after { 0% { background-color: var(--fg-medium); } 50%, 100% { background-color: var(--fg-light); } }
+
+            @media (max-width: 640px) {
+                .auth-navbar nav { gap: 0.5rem; padding: 0 0.5rem; }
+                .tab-wrapper { margin: 0 0.5rem; }
+                .nav-tab { font-size: 0.75rem; padding: 0.4rem 0.8rem; }
+                .chat-modal { border-radius: 1rem; }
+            }
         `;
         document.head.appendChild(style);
     };
@@ -907,7 +963,7 @@ let conversationHistory = {}; // Stores history loaded from Firestore for all ag
             const logoutButton = document.getElementById('logout-button');
             if (logoutButton) {
                 logoutButton.addEventListener('click', () => {
-                    auth.signOut().catch(err => console.error("Logout failed:", err));
+                    window.firebase.auth().signOut().catch(err => console.error("Logout failed:", err));
                 });
             }
         }
@@ -917,40 +973,51 @@ let conversationHistory = {}; // Stores history loaded from Firestore for all ag
             const aiButton = document.getElementById('ai-chat-button');
             if (aiButton) {
                 aiButton.addEventListener('click', openChatModal);
-                setupChatLogic();
+                // setupChatLogic() will be called on openChatModal now
             }
         }
     };
 
     const initializeApp = (pages) => {
-        const app = firebase.initializeApp(FIREBASE_CONFIG);
-        auth = firebase.auth();
-        db = firebase.firestore();
+        try {
+            // Use the globally available Firebase functions from the loaded scripts
+            app = window.firebase.initializeApp(FIREBASE_CONFIG);
+            auth = window.firebase.auth();
+            db = window.firebase.firestore();
 
-        // Optional: Enable Firestore logging for debugging
-        // firebase.firestore.setLogLevel('debug');
-
-        auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                currentUserId = user.uid;
-                try {
-                    const userDoc = await db.collection('users').doc(user.uid).get();
-                    const userData = userDoc.exists ? userDoc.data() : null;
-                    renderNavbar(user, userData, pages);
-                } catch (error) {
-                    console.error("Error fetching user data:", error);
-                    renderNavbar(user, null, pages);
-                }
-            } else {
-                currentUserId = 'guest';
-                renderNavbar(null, null, pages);
-                auth.signInAnonymously().catch((error) => {
-                    if (error.code !== 'auth/operation-not-allowed') {
-                        console.error("Anonymous sign-in error:", error);
-                    }
-                });
+            // Check if auth is defined before setting up the listener
+            if (!auth) {
+                console.error("Firebase Auth service failed to initialize.");
+                return;
             }
-        });
+
+            auth.onAuthStateChanged(async (user) => {
+                if (user) {
+                    currentUserId = user.uid;
+                    try {
+                        // Use the globally available Firestore functions
+                        const userDoc = await db.collection('users').doc(user.uid).get();
+                        const userData = userDoc.exists ? userDoc.data() : null;
+                        renderNavbar(user, userData, pages);
+                    } catch (error) {
+                        console.error("Error fetching user data:", error);
+                        renderNavbar(user, null, pages);
+                    }
+                } else {
+                    currentUserId = 'guest';
+                    renderNavbar(null, null, pages);
+                    window.firebase.auth().signInAnonymously().catch((error) => {
+                        if (error.code !== 'auth/operation-not-allowed') {
+                            console.error("Anonymous sign-in error:", error);
+                        }
+                    });
+                }
+            });
+        } catch (error) {
+            console.error("Critical Firebase Initialization Error: The application could not start correctly.", error);
+            // Render basic navbar without auth/firestore to prevent total page failure
+            renderNavbar(null, null, pages); 
+        }
 
         if (!document.getElementById('navbar-container')) {
             const navbarDiv = document.createElement('div');
@@ -963,22 +1030,39 @@ let conversationHistory = {}; // Stores history loaded from Firestore for all ag
     const run = async () => {
         let pages = {};
 
-        // Load Icons and Firebase
-        await loadCSS("[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css)");
-        await loadScript("[https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js](https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js)");
-        await loadScript("[https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js](https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js)");
-        await loadScript("[https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js](https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js)");
-
-        // Fetch page configuration
         try {
-            const response = await fetch(PAGE_CONFIG_URL);
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            pages = await response.json();
-        } catch (error) {
-            console.warn("Failed to load page identification config, using empty tabs.", error);
-        }
+            // Load necessary external dependencies first
+            await loadCSS("[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css)");
+            
+            // --- UPDATED: Using modular Firebase scripts (Non-compat) ---
+            await loadScript("[https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js](https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js)");
+            await loadScript("[https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js](https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js)");
+            await loadScript("[https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js](https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js)");
 
-        initializeApp(pages);
+
+            // Fetch page configuration
+            try {
+                const response = await fetch(PAGE_CONFIG_URL);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                pages = await response.json();
+            } catch (error) {
+                console.warn("Failed to load page identification config, using empty tabs.", error);
+            }
+
+            // The initializer function handles the auth and rendering
+            initializeApp(pages);
+
+        } catch (error) {
+            console.error("FATAL: One or more required scripts failed to load. The navigation bar may not function.", error);
+            // Ensure the page content still loads even if the navbar scripts fail
+            injectStyles();
+            if (!document.getElementById('navbar-container')) {
+                const navbarDiv = document.createElement('div');
+                navbarDiv.id = 'navbar-container';
+                document.body.prepend(navbarDiv);
+            }
+            document.getElementById('navbar-container').innerHTML = `<header class="auth-navbar"><nav><p class="text-red-400">Navigation Load Error. Check Console.</p></nav></header>`;
+        }
     };
 
     // Start on DOM content loaded
