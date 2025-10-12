@@ -444,11 +444,12 @@
             loginMessageDiv.innerHTML = '';
             signupMessageDiv.innerHTML = '';
             resetMessageDiv.innerHTML = '';
-            // isExistingAccount is managed in the email submission flow now
+            // isExistingAccount is now managed exclusively in the emailForm handler to prevent reset race conditions.
         };
 
         const showEmailInput = () => {
             resetAllViews();
+            isExistingAccount = false; // Always reset when returning to email input
             emailContainer.style.display = 'flex';
             emailContainer.style.flexDirection = 'column';
             inputEmail.focus();
@@ -501,26 +502,26 @@
             if (!email) { showMessage(emailMessageDiv, 'Please enter an email address.'); return; }
             
             showMessage(emailMessageDiv, 'Checking account status...', 'warning');
-            
-            // --- UPDATED: Resetting the security flag at the start of the flow ---
-            isExistingAccount = false; 
+
+            // Set to false at the start of the flow before the async call
+            isExistingAccount = false;
 
             try {
                 const methods = await fetchSignInMethodsForEmail(auth, email);
 
                 if (methods.length === 0) {
                     // **SIGN UP**
+                    // isExistingAccount remains false
                     showSignup(email);
                 } else if (methods.includes('password')) {
                     // **LOGIN** (Email/Password account)
-                    // We must set the security flag and then show the login screen.
-                    isExistingAccount = true; 
+                    isExistingAccount = true;
                     showLogin(email);
                 } else {
                     // **SOCIAL LOGIN REQUIRED**
-                    isExistingAccount = true; // Mark as existing to block any attempt to force sign up
                     const providers = methods.map(method => method.split('.')[0].charAt(0).toUpperCase() + method.split('.')[0].slice(1)).join(', ');
                     showMessage(emailMessageDiv, `This email is registered. Please use **${providers}** to log in.`, 'warning');
+                    isExistingAccount = true; // Mark as existing to block any attempt to force sign up
                     // Keep user on the email screen to retry/use social buttons
                 }
             } catch (error) {
@@ -618,7 +619,14 @@
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
 
-                await sendEmailVerification(user);
+                // 6. Send Email Verification (Added specific error check for better user feedback)
+                try {
+                    await sendEmailVerification(user);
+                } catch (verificationError) {
+                    // Log the error for developer but continue the user flow since the account is created
+                    console.error("Verification Email Send Error:", verificationError);
+                    // This error might indicate a configuration issue in the Firebase project itself.
+                }
 
                 const documentCreated = await createUserDocument(user, 'email', selectedUsername, email);
                 
