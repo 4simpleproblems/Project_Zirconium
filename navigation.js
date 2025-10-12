@@ -21,6 +21,8 @@
  * - **Font Awesome 7.1.0 Fix (Bulletproof):** The icon rendering logic in 'getIconClass' is overhauled to ensure 
  * it always provides BOTH the style prefix (e.g., 'fa-solid') and the icon name prefix (e.g., 'fa-house-user') 
  * regardless of the input format from 'page-identification.json'. This should guarantee the icons display.
+ * - **NEW: Inactive Tab Hover Style:** Inactive tabs now show a light outline and a slightly lighter background on hover.
+ * - **NEW: Dynamic Scroll Arrows:** Glide buttons are now checked and loaded immediately after rendering to ensure the correct state without user interaction.
  */
 
 // =========================================================================
@@ -171,7 +173,7 @@ let db;
         auth = firebase.auth();
         db = firebase.firestore();
 
-        // --- 3. INJECT CSS STYLES (UPDATED for Opacity) ---
+        // --- 3. INJECT CSS STYLES (UPDATED for Inactive Tab Hover) ---
         const injectStyles = () => {
             const style = document.createElement('style');
             style.textContent = `
@@ -267,6 +269,7 @@ let db;
                     pointer-events: none !important;
                 }
 
+                /* Tab Base Styles */
                 .nav-tab {
                     flex-shrink: 0; /* Prevents tabs from shrinking */
                     padding: 0.5rem 1rem;
@@ -282,10 +285,15 @@ let db;
                     margin-right: 0.5rem; /* Spacing between tabs */
                     border: 1px solid transparent;
                 }
-                .nav-tab:hover {
-                    color: white;
-                    background-color: rgb(55 65 81); /* gray-700 */
+                
+                /* INACTIVE Tab Hover Styles (NEW) */
+                .nav-tab:not(.active):hover {
+                    color: white; /* Text color remains white */
+                    border-color: #d1d5db; /* light color for outline: gray-300 */
+                    background-color: rgba(79, 70, 229, 0.05); /* very slight indigo-600 tint for lighter background */
                 }
+
+                /* Active Tab Styles (Unchanged) */
                 .nav-tab.active {
                     color: #4f46e5; /* indigo-600 - Highlight color */
                     border-color: #4f46e5;
@@ -345,19 +353,29 @@ let db;
 
             if (!container || !leftButton || !rightButton) return;
             
-            // A threshold of 5px is used to account for minor rendering/subpixel discrepancies.
-            const isScrolledToLeft = container.scrollLeft < 5; 
-            const isScrolledToRight = container.scrollLeft + container.offsetWidth >= container.scrollWidth - 5; 
+            // Check if there is any content overflow
             const hasHorizontalOverflow = container.scrollWidth > container.offsetWidth;
 
-            // Visibility logic
             if (hasHorizontalOverflow) {
+                // A threshold of 5px is used to account for minor rendering/subpixel discrepancies.
+                const isScrolledToLeft = container.scrollLeft < 5; 
+                // Check if scrolled to right end (within a 5px threshold)
+                const isScrolledToRight = container.scrollLeft + container.offsetWidth >= container.scrollWidth - 5; 
+
+                // Show buttons if there is overflow
+                leftButton.classList.remove('hidden');
+                rightButton.classList.remove('hidden');
+
                 // Hide left button if at the start
-                leftButton.classList.toggle('hidden', isScrolledToLeft);
+                if (isScrolledToLeft) {
+                    leftButton.classList.add('hidden');
+                }
                 // Hide right button if at the end
-                rightButton.classList.toggle('hidden', isScrolledToRight);
+                if (isScrolledToRight) {
+                    rightButton.classList.add('hidden');
+                }
             } else {
-                // Hide both buttons if there is no content overflow
+                // Hide both buttons if there is no content overflow (most common case)
                 leftButton.classList.add('hidden');
                 rightButton.classList.add('hidden');
             }
@@ -463,6 +481,7 @@ let db;
             }
             
             // INITIAL CHECK: After rendering and auto-scrolling, update glide button visibility
+            // This is the key change to make the arrows dynamic upon load.
             updateScrollGilders();
         };
 
