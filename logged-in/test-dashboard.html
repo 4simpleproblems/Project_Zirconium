@@ -11,23 +11,36 @@
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.1.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- 
+        *** FIX: Load global Firebase SDKs BEFORE navigation-test.js ***
+        This is necessary for the global 'firebase' object to be defined.
+    -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    
+    <!-- Load the main AI script AFTER Firebase is globally available -->
     <script src="../navigation-test.js"></script>
 
 
-    <!-- Firebase SDKs -->
+    <!-- Firebase Initialization and Clock Logic -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        
-        // Import firebaseConfig from the sibling file.
         import { firebaseConfig } from '../firebase-config.js';
 
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
+        // Initialize Firebase globally using the window object for older SDK compatibility
+        // Only initialize if 'firebase' is available (from the scripts above)
+        if (typeof firebase !== 'undefined') {
+            const app = firebase.initializeApp(firebaseConfig);
+            const auth = firebase.auth(app);
+            // Optionally set global variables for modules that need them
+            window.db = firebase.firestore(app);
+            window.auth = auth;
+        }
+
 
         const dateTimeElement = document.getElementById('date-time-display');
-        const redirectPath = '../index.html'; // Path to redirect if logged out
+        const redirectPath = '../index.html';
 
         /**
          * Updates the date and time display every second.
@@ -44,8 +57,13 @@
             const dateString = now.toLocaleDateString('en-US', dateOptions);
 
             if (dateTimeElement) {
+                // Ensure seconds are formatted to 2 digits for consistent width
+                const parts = timeString.split(':');
+                const timeWithColon = `${parts[0]}:${parts[1]}`;
+                const secondsAndAmPm = parts[2];
+                
                 dateTimeElement.innerHTML = `
-                    <div class="text-7xl font-light">${timeString}</div>
+                    <div class="text-7xl font-light">${timeWithColon}<span class="text-3xl font-normal ml-2">${secondsAndAmPm}</span></div>
                     <div class="text-3xl font-thin mt-2">${dateString}</div>
                 `;
             }
@@ -54,20 +72,23 @@
         /**
          * Handles user authentication state and redirects if logged out.
          */
-        onAuthStateChanged(auth, (user) => {
-            if (!user) {
-                // User is signed out. Redirect immediately.
-                console.log("User logged out. Redirecting to:", redirectPath);
-                window.location.replace(redirectPath);
-            } else {
-                // User is signed in. Start the clock update.
-                console.log("User signed in. UID:", user.uid);
-                
-                // Set the initial time and then update it every second
-                updateDateTime();
-                setInterval(updateDateTime, 1000);
-            }
-        });
+        if (typeof firebase !== 'undefined' && firebase.auth) {
+            firebase.auth().onAuthStateChanged((user) => {
+                if (!user) {
+                    // User is signed out. Redirect immediately.
+                    console.log("User logged out. Redirecting to:", redirectPath);
+                    window.location.replace(redirectPath);
+                } else {
+                    // User is signed in. Start the clock update.
+                    console.log("User signed in. UID:", user.uid);
+                    
+                    // Set the initial time and then update it every second
+                    updateDateTime();
+                    setInterval(updateDateTime, 1000);
+                }
+            });
+        }
+
 
         // Add CSS for minimal black screen look
         document.head.insertAdjacentHTML('beforeend', `
@@ -88,7 +109,6 @@
                 html { height: 100%; }
             </style>
         `);
-
     </script>
 </head>
 <body>
