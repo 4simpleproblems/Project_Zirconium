@@ -5,18 +5,11 @@
  * enhanced animations, intelligent chat history (token saving),
  * and advanced file previews. This version includes a character limit,
  * smart paste handling, and refined animations.
- * * UPDATED:
- * - Text alignment in chat bubbles set to left.
- * - Highlight/glow color changed to f78725 (orange).
- * - "AI Mode" renamed to "4SP AI Agent".
- * - Focus Topics replaced with Agent Categories (with new options).
- * - Chat bubbles now comfortably wrap content (width: fit-content).
- * - All markdown parsing/transformation (bold, headings, lists) has been removed.
- * - Gemini responses now display as pure, raw text (except for code blocks).
- * * NEW UPDATES:
- * - All icons replaced with Font Awesome 6.5.2 icons.
- * - Font Awesome 6.5.2 CDN link added to injected styles.
- * - Icon styling updated for consistency.
+ * * LATEST UPDATES (Matching dailyphoto.html style):
+ * - Font Awesome CDN updated to v7.1.0 (to fix icon loading).
+ * - Primary glow color set to deep indigo (#4f46e5) to match the particleGlow animation.
+ * - Icon and element styling adjusted to match the dark, vibrant aesthetic.
+ * - Text wrapping and pure-text Gemini responses maintained from previous update.
  */
 (function() {
     // =========================================================================
@@ -39,7 +32,7 @@
     const MAX_INPUT_HEIGHT = 200;
     const CHAR_LIMIT = 500;
 
-    // --- ICONS (for event handlers) - Updated to Font Awesome 6.5.2 ---
+    // --- ICONS (for event handlers) - Using Font Awesome 7.1.0 classes ---
     const copyIconHTML = '<i class="fa-solid fa-copy"></i>';
     const checkIconHTML = '<i class="fa-solid fa-check"></i>';
 
@@ -433,14 +426,15 @@
                 fileCard.classList.add('loading');
                 fileName = file.file.name;
                 fileExt = fileName.split('.').pop().toUpperCase();
-                previewHTML = `<div class="ai-loader"></div><span class="file-icon">📄</span>`;
+                // Font Awesome generic file icon
+                previewHTML = `<div class="ai-loader"></div><span class="file-icon"><i class="fa-solid fa-file"></i></span>`;
             } else {
                 fileName = file.fileName;
                 fileExt = fileName.split('.').pop().toUpperCase();
                 if (file.inlineData.mimeType.startsWith('image/')) {
                     previewHTML = `<img src="data:${file.inlineData.mimeType};base64,${file.inlineData.data}" alt="${fileName}" />`;
                 } else {
-                    previewHTML = `<span class="file-icon">📄</span>`;
+                    previewHTML = `<span class="file-icon"><i class="fa-solid fa-file"></i></span>`;
                 }
             }
 
@@ -456,7 +450,7 @@
             marqueeWrapper.className = 'file-name';
             marqueeWrapper.appendChild(nameSpan);
 
-            fileCard.innerHTML = `${previewHTML}<div class="file-info"></div>${fileTypeBadge}<button class="remove-attachment-btn" data-index="${index}">&times;</button>`;
+            fileCard.innerHTML = `${previewHTML}<div class="file-info"></div>${fileTypeBadge}<button class="remove-attachment-btn" data-index="${index}"><i class="fa-solid fa-xmark"></i></button>`;
             fileCard.querySelector('.file-info').appendChild(marqueeWrapper);
 
             setTimeout(() => {
@@ -479,7 +473,7 @@
     function createActionMenu() {
         const menu = document.createElement('div');
         menu.id = 'ai-action-menu';
-        // Updated icons to Font Awesome 6.5.2
+        // Updated icons to Font Awesome 7.1.0
         const attachments = [ 
             { id: 'photo', icon: '<i class="fa-solid fa-image"></i>', label: 'Photo', type: 'images' }, 
             { id: 'file', icon: '<i class="fa-solid fa-paperclip"></i>', label: 'File', type: 'file' } 
@@ -677,11 +671,11 @@
     function injectStyles() {
         if (document.getElementById('ai-dynamic-styles')) return;
         
-        // --- NEW: Add Font Awesome 6.5.2 CDN link ---
+        // --- UPDATED: Font Awesome 7.1.0 CDN link (from dailyphoto.html) ---
         if (!document.querySelector('link[href*="font-awesome"]')) {
             const faLink = document.createElement('link');
             faLink.rel = 'stylesheet';
-            faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css';
+            faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.1.0/css/all.min.css';
             document.head.appendChild(faLink);
         }
 
@@ -689,18 +683,20 @@
         if (!document.querySelector('style[data-font="geist"]')) {
             const fontStyle = document.createElement("style");
             fontStyle.setAttribute("data-font","geist");
+            // Geist font family is used across both files
             fontStyle.textContent = `@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;700&family=Merriweather:wght@400;700&display=swap');`;
             document.head.appendChild(fontStyle);
         }
         
         const style = document.createElement("style");
         style.id = "ai-dynamic-styles";
-        // --- START OF MODIFIED CSS ---
+        // --- START OF MODIFIED CSS (dailyphoto.html aesthetic) ---
         style.innerHTML = `
-            :root { --ai-primary-glow: #f78725; }
+            /* NEW PRIMARY GLOW COLOR: Deep Indigo from dailyphoto.html */
+            :root { --ai-primary-glow: #4f46e5; }
             #ai-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0,0,0,0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); z-index: 2147483647; opacity: 0; transition: opacity 0.5s, background 0.5s, backdrop-filter 0.5s; font-family: 'Geist', sans-serif; display: flex; flex-direction: column; justify-content: flex-end; padding: 0; box-sizing: border-box; overflow: hidden; }
             #ai-container.active { opacity: 1; background-color: rgba(0, 0, 0, 0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
-            /* Updated background for different categories (using simplified name) */
+            /* Updated background categories to fit a dark, subtle theme */
             #ai-container[data-subject="General"] { background: rgba(0, 0, 0, 0.8); }
             #ai-container[data-subject="MathExpert"] { background: linear-gradient(rgba(150, 40, 40, 0.2), rgba(150, 40, 40, 0.2)), rgba(10, 10, 15, 0.75); }
             #ai-container[data-subject="ScienceTutor"] { background: linear-gradient(rgba(40, 130, 80, 0.15), rgba(40, 130, 80, 0.15)), rgba(10, 10, 15, 0.75); }
@@ -721,7 +717,7 @@
             #ai-char-counter.limit-exceeded { color: #e57373; font-weight: bold; }
             #ai-response-container { flex: 1 1 auto; overflow-y: auto; width: 100%; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; padding: 70px 20px 20px 20px; -webkit-mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%); mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%);}
             
-            /* FIX: Allow bubble to comfortably wrap content */
+            /* Message Bubble Styling */
             .ai-message-bubble { 
                 background: rgba(15,15,18,.8); 
                 border: 1px solid rgba(255,255,255,.1); 
@@ -735,21 +731,25 @@
                 overflow-wrap: break-word; 
                 transition: opacity 0.3s ease-in-out;
                 text-align: left;
-                
-                /* KEY CHANGES for wrapping content */
                 display: inline-block; 
                 max-width: 650px; 
             }
             .user-message { 
                 align-self: flex-end; 
                 background: rgba(40,45,50,.8); 
-                margin-left: auto; /* Pushes to the right */
+                margin-left: auto; 
             }
             .gemini-response { 
-                margin-right: auto; /* Ensures it stays on the left */
+                margin-right: auto; 
             }
 
-            .gemini-response.loading { display: flex; justify-content: center; align-items: center; min-height: 60px; max-width: 100px; padding: 15px; background: rgba(15,15,18,.8); animation: unified-glow 4s linear infinite; } 
+            .gemini-response.loading { 
+                display: flex; justify-content: center; align-items: center; min-height: 60px; max-width: 100px; padding: 15px; background: rgba(15,15,18,.8); 
+                /* Uses the dailyphoto glow color */
+                animation: unified-glow 4s linear infinite; 
+            } 
+
+            /* Input Wrapper and Toggle */
             #ai-input-wrapper { display: flex; flex-direction: column; flex-shrink: 0; position: relative; z-index: 2; transition: all .4s cubic-bezier(.4,0,.2,1); margin: 15px auto; width: 90%; max-width: 800px; border-radius: 25px; background: rgba(10,10,10,.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,.2); }
             #ai-input-wrapper::before, #ai-input-wrapper::after { content: ''; position: absolute; top: -1px; left: -1px; right: -1px; bottom: -1px; border-radius: 26px; z-index: -1; transition: opacity 0.5s ease-in-out; }
             #ai-input-wrapper::before { animation: glow 3s infinite; opacity: 1; }
@@ -762,37 +762,64 @@
                 position: absolute; right: 10px; bottom: 12px; transform: translateY(0); background: 0 0; border: none; color: rgba(255,255,255,.5); 
                 cursor: pointer; padding: 5px; line-height: 1; z-index: 3; transition: all .3s ease; border-radius: 50%; width: 34px; height: 34px; 
                 display: flex; align-items: center; justify-content: center; overflow: hidden;
-                font-size: initial; /* Reset font size for icons inside */
+                font-size: initial; 
             }
-            /* NEW: Icon styling for the toggle button */
             #ai-action-toggle i { font-size: 20px; color: rgba(255,255,255,.5); transition: color 0.3s; }
             
             #ai-action-toggle .icon-ellipsis, #ai-action-toggle .icon-stop { transition: opacity 0.3s, transform 0.3s; position: absolute; }
             #ai-action-toggle .icon-stop { opacity: 0; transform: scale(0.5); } 
-            #ai-action-toggle.generating { background-color: #581e1e; border: 1px solid #a12832; border-radius: 8px; }
+            /* NEW GENERATING STYLE: Uses Indigo theme colors */
+            #ai-action-toggle.generating { 
+                background-color: rgba(79, 70, 229, 0.2); 
+                border: 1px solid rgba(79, 70, 229, 0.5); 
+                border-radius: 8px; 
+            }
             #ai-action-toggle.generating .icon-ellipsis { opacity: 0; transform: scale(0.5); }
             #ai-action-toggle.generating .icon-stop { opacity: 1; transform: scale(1); }
-            #ai-action-toggle.generating .icon-stop i { color: #ff8a80; } /* Highlight stop icon */
+            #ai-action-toggle.generating .icon-stop i { color: #4f46e5; } 
 
+            /* Action Menu & Buttons (Social Style) */
             #ai-action-menu { position: fixed; background: rgba(20, 20, 22, 0.7); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 5px; padding: 8px; z-index: 2147483647; opacity: 0; visibility: hidden; transform: translateY(10px) scale(.95); transition: all .25s cubic-bezier(.4,0,.2,1); transform-origin: bottom right; }
             #ai-action-menu.active { opacity: 1; visibility: visible; transform: translateY(-5px); }
             #ai-action-menu button { background: rgba(255,255,255,0.05); border: none; color: #ddd; font-family: 'Geist', sans-serif; font-size: 1em; padding: 10px 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 12px; text-align: left; transition: background-color 0.2s, filter 0.2s, box-shadow 0.2s; }
             
-            /* NEW: Icon styling for action menu buttons (familiar look) */
+            /* Icon styling for action menu buttons (social/clean look) */
             #ai-action-menu button .icon i {
                 font-size: 1.1em;
-                color: #aaa;
+                color: #4f46e5; /* Primary accent color */
                 transition: color 0.2s;
             }
+            #ai-action-menu button:hover { background-color: rgba(79, 70, 229, 0.1); filter: none; }
             #ai-action-menu button:hover .icon i {
-                color: #fff; /* White on hover for visibility */
+                color: #fff; /* White on hover for contrast */
             }
 
             #ai-action-menu button[data-subject] { justify-content: center; }
-            #ai-action-menu button:hover { filter: brightness(1.2); }
             #ai-action-menu button[data-subject].active { filter: brightness(1.2); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.8); }
             #ai-action-menu hr { border: none; height: 1px; background-color: rgba(255,255,255,0.1); margin: 5px 10px; }
             #ai-action-menu .menu-header { font-size: 0.8em; color: #888; text-transform: uppercase; padding: 10px 15px 5px; cursor: default; }
+
+            /* Code Block & Copy Button */
+            .code-block-wrapper { background-color: rgba(42, 42, 48, 0.8); border-radius: 8px; margin: 10px 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+            .code-block-header { display: flex; justify-content: flex-end; align-items: center; padding: 6px 12px; background-color: rgba(0,0,0,0.2); }
+            .copy-code-btn { 
+                background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); 
+                border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; border-radius: 6px; width: 32px; height: 32px; 
+                cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s; 
+            }
+            .copy-code-btn:hover { background: rgba(79, 70, 229, 0.2); border-color: #4f46e5; }
+            .copy-code-btn:disabled { cursor: default; background: rgba(25, 103, 55, 0.5); }
+            .copy-code-btn i { font-size: 16px; color: #e0e0e0; transition: color 0.2s; }
+            .copy-code-btn:hover i { color: #fff; }
+            .copy-code-btn:disabled i { color: #fff; }
+            
+            /* Keyframes matching dailyphoto.html style */
+            @keyframes glow { 0%,100% { box-shadow: 0 0 5px rgba(255,255,255,.15), 0 0 10px rgba(255,255,255,.1); } 50% { box-shadow: 0 0 10px rgba(255,255,255,.25), 0 0 20px rgba(255,255,255,.2); } }
+            /* Updated unified-glow to use the indigo color */
+            @keyframes unified-glow { 0%,100% { box-shadow: 0 0 8px 2px var(--ai-primary-glow); } 50% { box-shadow: 0 0 12px 3px var(--ai-primary-glow); } }
+            @keyframes title-pulse { 0%, 100% { text-shadow: 0 0 7px var(--ai-primary-glow); } 50% { text-shadow: 0 0 10px var(--ai-primary-glow); } } 
+
+            /* Remaining standard styles */
             #ai-attachment-preview { display: none; flex-direction: row; gap: 10px; padding: 0; max-height: 0; border-bottom: 1px solid transparent; overflow-x: auto; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
             #ai-input-wrapper.has-attachments #ai-attachment-preview { max-height: 100px; padding: 10px 15px; }
             .attachment-card { position: relative; border-radius: 8px; overflow: hidden; background: #333; height: 80px; width: 80px; flex-shrink: 0; display: flex; justify-content: center; align-items: center; transition: filter 0.3s; }
@@ -805,27 +832,15 @@
             .file-name.marquee > span { display: inline-block; padding-left: 100%; animation: marquee linear infinite; }
             .file-type-badge { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.7em; padding: 2px 5px; border-radius: 4px; font-family: 'Geist', sans-serif; font-weight: bold; }
             .remove-attachment-btn { position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.5); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; z-index: 3; }
+            .remove-attachment-btn i { font-size: 10px; }
             .ai-loader { width: 25px; height: 25px; border-radius: 50%; animation: spin 1s linear infinite; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; }
-            .code-block-wrapper { background-color: rgba(42, 42, 48, 0.8); border-radius: 8px; margin: 10px 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
-            .code-block-header { display: flex; justify-content: flex-end; align-items: center; padding: 6px 12px; background-color: rgba(0,0,0,0.2); }
             .code-metadata { font-size: 0.8em; color: #aaa; margin-right: auto; font-family: 'Geist', sans-serif; }
-            .copy-code-btn { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; border-radius: 6px; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s; }
-            .copy-code-btn:hover { background: rgba(255, 255, 255, 0.2); }
-            .copy-code-btn:disabled { cursor: default; background: rgba(25, 103, 55, 0.5); }
-            /* NEW: Font Awesome icon styling inside the copy button */
-            .copy-code-btn i { font-size: 16px; color: #e0e0e0; }
-            .copy-code-btn:disabled i { color: #fff; }
-
             .code-block-wrapper pre { margin: 0; padding: 15px; overflow: auto; background-color: transparent; }
             .code-block-wrapper pre::-webkit-scrollbar { height: 8px; }
             .code-block-wrapper pre::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
             .code-block-wrapper code { font-family: 'Geist', monospace; font-size: 0.9em; color: #f0f0f0; }
-            /* CHANGED: Simplified 'glow' to a single color */
-            @keyframes glow { 0%,100% { box-shadow: 0 0 5px rgba(255,255,255,.15), 0 0 10px rgba(255,255,255,.1); } 50% { box-shadow: 0 0 10px rgba(255,255,255,.25), 0 0 20px rgba(255,255,255,.2); } }
-            @keyframes unified-glow { 0%,100% { box-shadow: 0 0 8px 2px var(--ai-primary-glow); } 50% { box-shadow: 0 0 12px 3px var(--ai-primary-glow); } }
             @keyframes spin { to { transform: rotate(360deg); } }
             @keyframes message-pop-in { 0% { opacity: 0; transform: translateY(10px) scale(.98); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
-            @keyframes title-pulse { 0%, 100% { text-shadow: 0 0 7px var(--ai-primary-glow); } 50% { text-shadow: 0 0 10px var(--ai-primary-glow); } } 
             @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
         `;
     document.head.appendChild(style);}
