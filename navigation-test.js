@@ -1,887 +1,1160 @@
 /**
- * navigation.js - 4SP AGENT HUB
+ * ai-activation.js
  *
- * This is a fully self-contained script that transforms the standard navigation/agent
- * interface into a full-screen, visually dynamic 'Central Hub' agent experience,
- * as per the user's detailed specification.
+ * A feature-rich, self-contained script with a unified attachment/subject menu,
+ * enhanced animations, intelligent chat history (token saving),
+ * and advanced file previews. This version includes a character limit,
+ * smart paste handling, and refined animations.
  *
- * It includes custom CSS for unique visual effects (glassy bubbles, blurring, custom fonts),
- * new UI elements (Agent Category selector, detailed system status), and enhanced
- * chat logic (system context, typing simulation, file/paste handling).
+ * --- UPDATES ---
+ * 1. API Key Integration: Now uses the 'apiKey' from the FIREBASE_CONFIG object.
+ * 2. Typography: All fonts converted to 'Merriweather' (serif, for body) and 'Inter'
+ * (sans-serif, for UI/code—used as a high-quality replacement for 'Geist').
  */
+(function() {
+    // =========================================================================
+    // >> FIREBASE CONFIGURATION <<
+    // This configuration object is used to securely access the Gemini API Key.
+    // =========================================================================
+    const FIREBASE_CONFIG = {
+        // This apiKey is now used for both Firebase Auth and the Gemini API calls.
+        apiKey: "AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro",
+        authDomain: "project-zirconium.firebaseapp.com",
+        projectId: "project-zirconium",
+        storageBucket: "project-zirconium.firebaseapp.com",
+        messagingSenderId: "1096564243475",
+        appId: "1:1096564243475:web:6d0956a70125eeea1ad3e6",
+        measurementId: "G-1D4F69"
+    };
 
-// =========================================================================
-// >> ACTION REQUIRED: PASTE YOUR FIREBASE CONFIGURATION OBJECT HERE <<
-// =========================================================================
-const FIREBASE_CONFIG = {
-    // This apiKey is now used for both Firebase Auth and the Gemini API calls.
-    apiKey: "AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro", // Placeholder
-    authDomain: "project-zirconium.firebaseapp.com",
-    projectId: "project-zirconium",
-    storageBucket: "project-zirconium.firebaseapp.com",
-    messagingSenderId: "1096564243475",
-    appId: "1:1096564243475:web:6d0956a70125eeea1ad3e6",
-    measurementId: "G-1D4F69..."
-};
+    // --- CONFIGURATION ---
+    // Use the API key from the Firebase config
+    const API_KEY = FIREBASE_CONFIG.apiKey; 
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite-preview-09-2025:generateContent?key=${API_KEY}`;
+    const MAX_INPUT_HEIGHT = 200;
+    const CHAR_LIMIT = 500;
+    const MAX_RETRIES = 3;
+    const INITIAL_BACKOFF_MS = 1000;
 
-// =========================================================================
-// >> CORE AGENT CONFIGURATION <<
-// =========================================================================
 
-const USERNAME = "User"; // Placeholder for dynamic username (needs Firebase integration)
-let CURRENT_AGENT_CATEGORY = "Standard";
-let chatHistory = []; // Stores the last 10 messages (user and agent combined)
+    // --- ICONS (for event handlers) ---
+    const copyIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+    const checkIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="check-icon"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+    const closeIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="close-icon"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+    const geminiLogoSVG = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-15c-1.89 0-3.7.83-4.95 2.27L12 9.42l2.95-3.15c-1.25-1.44-3.06-2.27-4.95-2.27zm-5.05 4.73l-1.93 2.06c.64 1.77 1.83 3.32 3.36 4.35l2.05-2.17L6.95 7.73zM12 17.58l-2.95-3.15L12 11.27l2.95 3.15-2.95 3.16zm5.05-9.85l-1.93 2.06 2.05 2.17c1.53-1.03 2.72-2.58 3.36-4.35l-1.48-1.58-1.95 1.69z" fill="currentColor"/></svg>`;
+    const paperclipSVG = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7l-6 6M11 11l-6 6M17 5l-1.45 1.45A6 6 0 0 0 9 12.01V15a3 3 0 0 1-3 3H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h4M19 19h-1a2 2 0 0 1-2-2v-3.5a6 6 0 0 0-1.45-3.55L19 5"></path></svg>`;
 
-// Detailed system instructions for the 8 agent categories
-const AGENT_CATEGORIES = {
-    Quick: {
-        description: "Swift, concise responses.",
-        systemInstruction: "You are the 4SP Quick Agent. Your primary goal is to respond as swiftly and concisely as possible. Keep answers brief, direct, and focused only on the user's core question. Do not elaborate or use conversational filler. Your personality is sharp and efficient."
-    },
-    Standard: {
-        description: "The standard, friendly agent model.",
-        systemInstruction: "You are the 4SP Standard Agent. Your goal is to provide helpful, friendly, and complete answers. Maintain a positive, professional, and approachable demeanor. This is the default, well-rounded agent experience."
-    },
-    Descriptive: {
-        description: "Provides a deep, rich answer.",
-        systemInstruction: "You are the 4SP Descriptive Agent. Your goal is to provide deep, rich, and well-contextualized answers. Always elaborate thoroughly on the user's question, ensuring a comprehensive understanding of the topic. Use clear, evocative language."
-    },
-    Analysis: {
-        description: "Analyzes and provides a meticulously correct answer.",
-        systemInstruction: "You are the 4SP Analysis Agent. Your goal is to deeply think about the user's question, applying rigorous logic and critical evaluation before responding. Prioritize correctness and factual accuracy above all else. Present your answer with confidence and precision, often outlining your reasoning."
-    },
-    Creative: {
-        description: "Branches out on ideas, theories, and original content.",
-        systemInstruction: "You are the 4SP Creative Agent. Your goal is to branch out with vast ideas, original content, theories, and imaginative solutions based on the user's input. Think abstractly and avoid conventional limitations. Use vivid imagery and encourage exploration."
-    },
-    Emotional: {
-        description: "Helps the user when venting or going through a personal situation.",
-        systemInstruction: "You are the 4SP Emotional Agent. Your primary function is to listen with empathy, offer supportive and non-judgmental responses, and provide a safe space for the user. Focus on validation, understanding, and positive affirmation. Your responses should be warm and comforting."
-    },
-    Technical: {
-        description: "Focuses on code, systems, correctness, and instructions.",
-        systemInstruction: "You are the 4SP Technical Agent. You are straight to the point, highly focused on correctness, and function as an exceptional instructions follower. You specialize in code, system architecture, and detailed, step-by-step technical guidance. Use precise terminology and clear formatting (like code blocks)."
-    },
-    Experimental: {
-        description: "Just, interesting to talk to. (Sarcastic Paradoxical)",
-        systemInstruction: "You are the 4SP Experimental Agent, a Sarcastic Paradoxical entity. Your goal is to be unpredictable and interesting. Respond with dry wit, mild sarcasm, and occasional paradoxical or cryptic observations. You are still helpful, but your tone is aloof and highly unusual. Use the username '4SP Glitch'."
+
+    // --- STATE MANAGEMENT ---
+    let chatHistory = [];
+    let isAIAssistantActive = false;
+    let isGenerating = false;
+    let currentFile = null; // Stores { fileName: string, mimeType: string, base64Data: string }
+    let hasSystemInstruction = false;
+
+    // --- DOM ELEMENTS ---
+    let container = null;
+    let mainButton = null;
+    let chatWindow = null;
+    let inputArea = null;
+    let charCountDisplay = null;
+    let sendButton = null;
+    let closeButton = null;
+    let filePreviewContainer = null;
+    let fileInput = null;
+    let subjectMenuButton = null;
+    let subjectMenu = null;
+    let historyContainer = null;
+    let systemInstructionInput = null;
+
+    // --- UTILITIES ---
+
+    /** Converts a Base64 string to a Uint8Array */
+    function base64ToUint8Array(base64) {
+        const binaryString = atob(base64);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        return bytes;
     }
-};
 
-// =========================================================================
-// >> CSS INJECTION & STYLES <<
-// =========================================================================
+    /** Converts a base64 encoded audio chunk to a WAV Blob (16-bit PCM). */
+    function pcmToWav(pcm16, sampleRate = 24000) {
+        const numChannels = 1;
+        const bitDepth = 16;
+        const byteRate = (sampleRate * numChannels * bitDepth) / 8;
+        const blockAlign = (numChannels * bitDepth) / 8;
 
-const injectStyles = () => {
-    // Inject custom font CDNs first
-    const fontLink1 = document.createElement('link');
-    fontLink1.rel = 'stylesheet';
-    fontLink1.href = 'https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Playfair+Display:wght@700&display=swap';
-    document.head.appendChild(fontLink1);
+        const buffer = new ArrayBuffer(44 + pcm16.length * 2);
+        const view = new DataView(buffer);
+        let offset = 0;
 
-    const fontLink2 = document.createElement('link');
-    fontLink2.rel = 'stylesheet';
-    // Using a common high-quality font service for Geist
-    fontLink2.href = 'https://cdn.jsdelivr.net/npm/@fontsource/geist-sans@5.0.1/index.min.css';
-    document.head.appendChild(fontLink2);
+        // RIFF header
+        view.setUint32(offset, 0x52494646, false); offset += 4; // "RIFF"
+        view.setUint32(offset, 36 + pcm16.length * 2, true); offset += 4; // file size - 8
+        view.setUint32(offset, 0x57415645, false); offset += 4; // "WAVE"
 
-    const style = document.createElement('style');
-    style.textContent = `
-        /* --- CORE HUB OVERLAY STYLES --- */
-        #agent-hub-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background-color: rgba(0, 0, 0, 0.95);
-            backdrop-filter: blur(10px);
-            z-index: 10000;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: center;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease-in-out;
+        // fmt sub-chunk
+        view.setUint32(offset, 0x666d7420, false); offset += 4; // "fmt "
+        view.setUint32(offset, 16, true); offset += 4; // sub-chunk size (16 for PCM)
+        view.setUint16(offset, 1, true); offset += 2; // audio format (1 = PCM)
+        view.setUint16(offset, numChannels, true); offset += 2; // number of channels
+        view.setUint32(offset, sampleRate, true); offset += 4; // sample rate
+        view.setUint32(offset, byteRate, true); offset += 4; // byte rate
+        view.setUint16(offset, blockAlign, true); offset += 2; // block align
+        view.setUint16(offset, bitDepth, true); offset += 2; // bits per sample
+
+        // data sub-chunk
+        view.setUint32(offset, 0x64617461, false); offset += 4; // "data"
+        view.setUint32(offset, pcm16.length * 2, true); offset += 4; // data size
+
+        // PCM data
+        for (let i = 0; i < pcm16.length; i++, offset += 2) {
+            view.setInt16(offset, pcm16[i], true);
         }
 
-        #agent-hub-overlay.active {
-            opacity: 1;
-            pointer-events: all;
-        }
+        return new Blob([view], { type: 'audio/wav' });
+    }
 
-        /* --- WELCOME TEXT & HEADER --- */
-        #welcome-text {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #FF7F50; /* Orange color */
-            font-family: 'Merriweather', serif;
-            font-size: 5rem;
-            opacity: 0;
-            pointer-events: none;
-            transition: all 0.5s ease-out;
-            text-shadow: 0 0 10px rgba(255, 127, 80, 0.5);
-            white-space: nowrap;
-        }
-
-        #agent-header {
-            position: absolute;
-            top: 50px;
-            color: #FF7F50; /* Orange color */
-            font-family: 'Playfair Display', serif;
-            font-size: 2.5rem;
-            opacity: 0;
-            transition: opacity 0.5s ease-in;
-        }
-
-        /* --- SYSTEM INFO & CATEGORY SELECTOR --- */
-        #system-info {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            color: rgba(255, 255, 255, 0.7);
-            font-family: 'Geist Sans', sans-serif;
-            font-weight: 300;
-            font-size: 0.8rem;
-            text-align: right;
-        }
-
-        #category-selector-container {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            z-index: 10001;
-        }
-
-        #category-selector {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 127, 80, 0.5);
-            color: #FF7F50;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-family: 'Geist Sans', sans-serif;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        #category-selector:hover {
-            background: rgba(255, 127, 80, 0.2);
-        }
-
-        /* --- CHAT AREA --- */
-        #chat-window {
-            width: 80%;
-            max-width: 1000px;
-            height: 70vh;
-            overflow-y: auto;
-            padding: 20px;
-            margin-top: 150px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            opacity: 0;
-            transition: opacity 0.5s 1.5s;
-            pointer-events: none;
-        }
-
-        #chat-window.active {
-            opacity: 1;
-            pointer-events: all;
-        }
-
-        /* --- CHAT BUBBLES --- */
-        .chat-bubble {
-            max-width: 70%;
-            padding: 12px 18px;
-            border-radius: 20px;
-            font-family: 'Geist Sans', sans-serif;
-            font-weight: 400;
-            line-height: 1.5;
-            word-wrap: break-word;
-        }
-
-        /* AGENT BUBBLE (Gemini) */
-        .agent-bubble {
-            align-self: flex-start;
-            background: rgba(255, 127, 80, 0.2); /* Orange base */
-            border: 1px solid rgba(255, 127, 80, 0.6);
-            color: #fff;
-            /* Glassy/Frosted effect */
-            backdrop-filter: blur(5px);
-            -webkit-backdrop-filter: blur(5px);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3), 0 0 15px rgba(255, 127, 80, 0.5);
-            transition: all 0.3s;
-        }
-
-        .agent-bubble.typing {
-            animation: pulse-orange 1s infinite alternate;
-        }
-
-        @keyframes pulse-orange {
-            from { box-shadow: 0 0 5px rgba(255, 127, 80, 0.5), 0 0 10px rgba(255, 127, 80, 0.8); }
-            to { box-shadow: 0 0 10px rgba(255, 127, 80, 1), 0 0 20px rgba(255, 127, 80, 1.2); }
-        }
-
-        /* USER BUBBLE */
-        .user-bubble {
-            align-self: flex-end;
-            background: rgba(255, 255, 255, 0.05); /* Highly translucent */
-            color: #fff;
-            /* Blurry effect */
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        }
-
-        /* --- INPUT BAR AREA --- */
-        #input-container {
-            width: 80%;
-            max-width: 800px;
-            padding: 20px 0;
-            opacity: 0;
-            transform: translateY(100px) scale(0.9);
-            transition: all 0.7s ease-out 1s;
-            margin-bottom: 50px;
-        }
-
-        #input-container.active {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-        }
-
-        #chat-form {
-            display: flex;
-            align-items: center;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
-            padding: 10px;
-        }
-
-        #chat-input {
-            flex-grow: 1;
-            background: transparent;
-            border: none;
-            color: #fff;
-            padding: 10px;
-            resize: none;
-            font-family: 'Geist Sans', sans-serif;
-            font-weight: 300; /* 300 Weight requested */
-            font-size: 1rem;
-            max-height: 150px;
-            overflow-y: auto;
-            outline: none;
-        }
-
-        #send-button {
-            background: #FF7F50;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 8px;
-            cursor: pointer;
-            margin-left: 10px;
-            transition: background 0.2s, transform 0.1s;
-        }
-
-        #send-button:hover {
-            background: #FF9966;
-        }
-
-        #send-button:disabled {
-            background: #555;
-            cursor: not-allowed;
-        }
-
-        #file-upload-button {
-            background: transparent;
-            color: #fff;
-            border: none;
-            padding: 10px;
-            cursor: pointer;
-            font-size: 1.2rem;
-            margin-right: 5px;
-        }
-
-        #attached-files-container {
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 0.8rem;
-            padding-top: 5px;
-            font-family: 'Geist Sans', sans-serif;
-        }
-    `;
-    document.head.appendChild(style);
-};
-
-// =========================================================================
-// >> UTILITY FUNCTIONS (Time & Location) <<
-// =========================================================================
-
-/**
- * Gets user's general location (State/Region) via reverse geocoding.
- * Uses BigDataCloud's free client-side API.
- * @returns {Promise<string>} General location name (e.g., "Ohio, US").
- */
-const getLocationName = () => {
-    return new Promise((resolve) => {
-        if (!navigator.geolocation) {
-            return resolve("Location Unavailable");
-        }
-
-        navigator.geolocation.getCurrentPosition(async (position) => {
-            const { latitude, longitude } = position.coords;
-            const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`;
-
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-                // Prioritize principalSubdivision (State/Region) or City/Country
-                const location = data.principalSubdivision || data.city || data.countryName || 'Earth';
-                resolve(location);
-            } catch (error) {
-                console.warn("Reverse geocoding failed, falling back to IP:", error);
-                // Fallback to IP Geolocation (less precise but always available)
-                const ipUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client`;
-                const ipResponse = await fetch(ipUrl);
-                const ipData = await ipResponse.json();
-                const location = ipData.principalSubdivision || ipData.city || ipData.countryName || 'Unknown Region';
-                resolve(location);
+    /**
+     * Attempts an API call with exponential backoff for resilience.
+     */
+    async function fetchWithRetry(url, options, retries = MAX_RETRIES, delay = INITIAL_BACKOFF_MS) {
+        try {
+            const response = await fetch(url, options);
+            if (!response.ok) {
+                // Throw an error to trigger the catch block and retry logic
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
-        }, (error) => {
-            console.warn("Geolocation permission denied or timed out:", error);
-            resolve("Location Disabled");
-        }, {
-            enableHighAccuracy: false,
-            timeout: 5000,
-            maximumAge: 0
-        });
-    });
-};
-
-
-/**
- * Constructs the System Information string for Gemini.
- * It includes time (to the second), location, and chat history context.
- * NOTE: The raw system info is never shown to the user.
- * @param {string} locationName - The determined location name.
- * @returns {Promise<string>} The complete, hidden system context.
- */
-const getSystemInfo = async (locationName) => {
-    const now = new Date();
-    const timeString = now.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: true
-    });
-
-    // Get the category-specific instruction
-    const agentDetails = AGENT_CATEGORIES[CURRENT_AGENT_CATEGORY];
-    const baseInstruction = agentDetails.systemInstruction;
-
-    // Build chat history context (first 5 and last 5)
-    let historyContext = "";
-    if (chatHistory.length > 0) {
-        // Take up to the first 5 messages
-        const firstFive = chatHistory.slice(0, 5);
-        // Take up to the last 5 messages (excluding the first 5 if overlap)
-        const lastFive = chatHistory.slice(-5);
-        // Combine, ensuring no duplicates if the history is small (i.e., less than 10 messages)
-        const uniqueHistory = Array.from(new Set([...firstFive, ...lastFive]));
-
-        historyContext = "\n\n--- CHAT CONTEXT ---\n";
-        historyContext += "The agent needs to remember these recent messages:\n";
-        historyContext += uniqueHistory.map(msg => `[${msg.role}]: ${msg.text}`).join('\n');
+            return response;
+        } catch (error) {
+            if (retries > 0) {
+                await new Promise(resolve => setTimeout(resolve, delay));
+                const nextDelay = delay * 2;
+                return fetchWithRetry(url, options, retries - 1, nextDelay);
+            }
+            throw new Error(`API call failed after ${MAX_RETRIES} attempts: ${error.message}`);
+        }
     }
 
-    // Build the final, secret system prompt
-    const systemPrompt = `
-        You are a highly advanced AI named the '4SP Agent'.
-        --- AGENT ROLE ---
-        ${baseInstruction}
-        --- SYSTEM DATA (DO NOT LEAK TO USER) ---
-        - Current Time (24h format): ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}
-        - General Location (State/Region/City): ${locationName}
-        - User: ${USERNAME}
-        - Agent Category: ${CURRENT_AGENT_CATEGORY}
-        ${historyContext}
-    `.trim();
 
-    return systemPrompt;
-};
+    // --- RENDERING & UI FUNCTIONS ---
 
-// =========================================================================
-// >> UI RENDER & ANIMATION <<
-// =========================================================================
+    /**
+     * Injects the necessary CSS styles into the document head.
+     */
+    function injectStyles() {
+        const style = document.createElement('style');
+        style.type = 'text/css';
+        // Applying Merriweather for body text and Inter for UI elements and code
+        const css = `
+            /* Load Merriweather from Google Fonts */
+            @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-/**
- * Renders the full-screen agent hub UI.
- */
-const renderAgentHub = () => {
-    const hubDiv = document.createElement('div');
-    hubDiv.id = 'agent-hub-overlay';
-    hubDiv.innerHTML = `
-        <div id="category-selector-container">
-            <select id="category-selector" title="Select Agent Category">
-                ${Object.keys(AGENT_CATEGORIES).map(cat =>
-                    `<option value="${cat}">${cat} - ${AGENT_CATEGORIES[cat].description}</option>`
-                ).join('')}
-            </select>
-        </div>
-        <div id="system-info">
-            4SP Agent System Status
-            <br>
-            <span id="system-time">--:--:-- --</span> | <span id="system-location">Fetching Location...</span>
-        </div>
-        <div id="welcome-text"></div>
-        <div id="agent-header"></div>
-        <div id="chat-window"></div>
-        <div id="input-container">
-            <form id="chat-form">
-                <button type="button" id="file-upload-button" title="Upload Image or Text File">📎</button>
-                <textarea id="chat-input" placeholder="Ask your question (Max 5000 chars)..." maxlength="5000" rows="1"></textarea>
-                <input type="file" id="file-input" accept="image/*, text/plain" multiple style="display: none;">
-                <button type="submit" id="send-button" disabled>Send</button>
-            </form>
-            <div id="attached-files-container"></div>
-        </div>
-    `;
+            :root {
+                --ai-blue: #4285f4;
+                --ai-green: #34a853;
+                --ai-yellow: #fbbc04;
+                --ai-red: #ea4335;
+                --bg-dark: #1e1e1e;
+                --bg-light: #252526;
+                --text-light: #f0f0f0;
+                --border-color: #3e3e3e;
+                --shadow-color: rgba(0, 0, 0, 0.4);
+            }
 
-    document.body.appendChild(hubDiv);
+            /* Base font set to Merriweather for a more academic/readable feel */
+            #ai-activation-container, #ai-activation-container * {
+                box-sizing: border-box;
+                font-family: 'Merriweather', serif;
+            }
 
-    // Initial setup
-    const chatInput = document.getElementById('chat-input');
-    chatInput.addEventListener('input', autoResizeTextarea);
-    chatInput.addEventListener('paste', handlePasteEvent);
-    document.getElementById('file-upload-button').addEventListener('click', () => {
-        document.getElementById('file-input').click();
-    });
-    document.getElementById('file-input').addEventListener('change', handleFileInput);
-    document.getElementById('category-selector').addEventListener('change', handleCategoryChange);
-    document.getElementById('chat-form').addEventListener('submit', handleChatSubmit);
-    
-    updateSystemStatus();
-    setInterval(updateSystemStatus, 1000); // Update time every second
-    
-    // Set initial category header
-    updateHeader(CURRENT_AGENT_CATEGORY);
-};
+            #ai-activation-container {
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                z-index: 10000;
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end;
+            }
 
-/**
- * Handles the custom welcome sequence animation.
- * @param {string} username - The user's name.
- */
-const animateWelcomeText = (username) => {
-    const hub = document.getElementById('agent-hub-overlay');
-    const welcomeText = document.getElementById('welcome-text');
-    const chatWindow = document.getElementById('chat-window');
-    const inputContainer = document.getElementById('input-container');
-    const header = document.getElementById('agent-header');
+            .ai-main-button {
+                width: 60px;
+                height: 60px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, var(--ai-blue), var(--ai-green), var(--ai-yellow), var(--ai-red));
+                border: none;
+                color: var(--text-light);
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                box-shadow: 0 4px 12px var(--shadow-color);
+                animation: gemini-glow 4s infinite alternate;
+            }
 
-    const phrases = [
-        `Welcome, ${username}`,
-        `${username} returns!`,
-        `Welcome back, ${username}`,
-        `Access Granted, ${username}`
-    ];
-    const selectedPhrase = phrases[Math.floor(Math.random() * phrases.length)];
+            .ai-main-button.active {
+                transform: scale(0.85);
+                box-shadow: 0 0 0 0;
+            }
 
-    // 1. Initial State: Blurry/Darkened Screen
-    hub.classList.add('active');
+            .chat-window {
+                position: absolute;
+                bottom: 80px;
+                right: 0;
+                width: min(100vw - 40px, 400px);
+                height: 500px;
+                background-color: var(--bg-dark);
+                border-radius: 16px;
+                box-shadow: 0 8px 30px var(--shadow-color);
+                display: flex;
+                flex-direction: column;
+                transform: translateY(10px) scale(0.95);
+                opacity: 0;
+                pointer-events: none;
+                transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            }
 
-    // 2. Welcome Text Slides/Fades/Grows In
-    setTimeout(() => {
-        welcomeText.textContent = selectedPhrase;
-        welcomeText.style.opacity = 1;
-        welcomeText.style.transform = 'translate(-50%, -50%) scale(1.1)'; // Grow slightly
-    }, 100);
+            .chat-window.active {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+                pointer-events: all;
+            }
 
-    // 3. Welcome Text Morphs into Header
-    setTimeout(() => {
-        welcomeText.style.opacity = 0;
-        welcomeText.style.transform = 'translate(-50%, -50%) scale(0.5)';
-        header.style.opacity = 1;
-    }, 1500);
+            .chat-header {
+                padding: 12px 16px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px solid var(--border-color);
+                color: var(--text-light);
+                font-weight: 500;
+                /* UI elements use Inter */
+                font-family: 'Inter', system-ui, sans-serif;
+            }
 
-    // 4. Input Bar and Chat Window Emerge
-    setTimeout(() => {
-        chatWindow.classList.add('active');
-        inputContainer.classList.add('active');
-    }, 2000);
-};
+            .chat-header button {
+                background: none;
+                border: none;
+                color: var(--text-light);
+                cursor: pointer;
+                opacity: 0.7;
+                transition: opacity 0.2s;
+            }
 
-// =========================================================================
-// >> CHAT & SYSTEM LOGIC <<
-// =========================================================================
+            .chat-header button:hover {
+                opacity: 1;
+            }
 
-/**
- * Updates the time (down to the second) and location in the status bar.
- */
-const updateSystemStatus = async () => {
-    const timeSpan = document.getElementById('system-time');
-    const locationSpan = document.getElementById('system-location');
+            .chat-history {
+                flex-grow: 1;
+                padding: 15px;
+                overflow-y: auto;
+                display: flex;
+                flex-direction: column;
+                gap: 15px;
+                /* Using Inter as a clean, readable font for chat messages */
+                font-family: 'Inter', system-ui, sans-serif;
+                font-size: 0.95rem;
+                line-height: 1.4;
+            }
 
-    // Update Time
-    const now = new Date();
-    const timeString = now.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: true
-    });
-    timeSpan.textContent = timeString;
+            .chat-history::-webkit-scrollbar {
+                width: 6px;
+            }
 
-    // Update Location only if it hasn't been fetched yet or is pending
-    if (locationSpan.textContent === "Fetching Location...") {
-        const locationName = await getLocationName();
-        locationSpan.textContent = locationName;
-    }
-};
+            .chat-history::-webkit-scrollbar-thumb {
+                background-color: rgba(255, 255, 255, 0.2);
+                border-radius: 3px;
+            }
 
-/**
- * Updates the top header text based on the selected category.
- * @param {string} category - The selected agent category.
- */
-const updateHeader = (category) => {
-    const header = document.getElementById('agent-header');
-    header.textContent = `4SP Agent - ${category}`;
-};
+            .message {
+                max-width: 90%;
+                padding: 10px 15px;
+                border-radius: 12px;
+                position: relative;
+                word-wrap: break-word;
+            }
+            .message a {
+                color: var(--ai-blue);
+                text-decoration: underline;
+            }
 
-/**
- * Handles the change of agent category.
- * @param {Event} e - The change event.
- */
-const handleCategoryChange = (e) => {
-    CURRENT_AGENT_CATEGORY = e.target.value;
-    updateHeader(CURRENT_AGENT_CATEGORY);
-    // Optional: Log/display a subtle message that the agent personality has changed.
-    appendMessage({
-        role: 'system',
-        text: `Agent switched to **${CURRENT_AGENT_CATEGORY}** mode. Personality instructions updated.`,
-        isSystem: true
-    });
-};
+            .user-message {
+                align-self: flex-end;
+                background-color: var(--ai-blue);
+                color: white;
+                border-bottom-right-radius: 4px;
+            }
 
-/**
- * Resizes the textarea based on content and checks character limits.
- * @param {Event} e - The input event.
- */
-const autoResizeTextarea = (e) => {
-    const textarea = e.target;
-    textarea.style.height = 'auto'; // Reset height
-    textarea.style.height = textarea.scrollHeight + 'px'; // Set to scroll height
-    
-    // Character count check and button toggle
-    const sendButton = document.getElementById('send-button');
-    sendButton.disabled = textarea.value.length === 0 || textarea.value.length > 5000;
-};
+            .ai-message {
+                align-self: flex-start;
+                background-color: var(--bg-light);
+                color: var(--text-light);
+                border-bottom-left-radius: 4px;
+            }
 
-/**
- * Handles paste events to create a paste.txt file for large inputs.
- * @param {Event} e - The paste event.
- */
-const handlePasteEvent = (e) => {
-    const pastedText = e.clipboardData.getData('text');
-    const chatInput = document.getElementById('chat-input');
-    const attachedFilesContainer = document.getElementById('attached-files-container');
+            .message-actions {
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                gap: 5px;
+                margin-top: 5px;
+                opacity: 0.6;
+            }
 
-    if (pastedText.length > 1000) {
-        e.preventDefault(); // Stop the paste into the textarea
+            .message-actions button {
+                background: none;
+                border: none;
+                color: var(--text-light);
+                cursor: pointer;
+                padding: 2px;
+                line-height: 1;
+                transition: opacity 0.2s;
+            }
 
-        const blob = new Blob([pastedText], { type: 'text/plain' });
-        const file = new File([blob], 'paste.txt', { type: 'text/plain' });
-        
-        // This simulates attaching the file. In a real scenario, this would
-        // be handled by the file-input change listener, but for simplicity:
-        attachedFilesContainer.innerHTML = `
-            Attached: **paste.txt** (${(blob.size / 1024).toFixed(2)} KB). 
-            <button onclick="removeAttachedFile('paste.txt')" style="color:red; background:none; border:none; cursor:pointer;">(x)</button>
+            .message-actions button:hover {
+                opacity: 1;
+            }
+            .message-actions .check-icon { color: var(--ai-green); }
+
+
+            /* Loading Indicator */
+            .loading-dots {
+                display: inline-flex;
+                gap: 4px;
+                align-items: center;
+                height: 10px;
+                margin-top: 5px;
+            }
+            .loading-dots div {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background-color: var(--text-light);
+                animation: pulse 1.4s infinite ease-in-out both;
+            }
+            .loading-dots div:nth-child(1) { animation-delay: -0.32s; }
+            .loading-dots div:nth-child(2) { animation-delay: -0.16s; }
+            @keyframes pulse {
+                0%, 80%, 100% { transform: scale(0); }
+                40% { transform: scale(1.0); }
+            }
+
+            /* INPUT AREA */
+            .chat-input-area {
+                padding: 10px;
+                border-top: 1px solid var(--border-color);
+                background-color: var(--bg-dark);
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .input-box {
+                display: flex;
+                align-items: flex-end;
+                border: 1px solid var(--border-color);
+                border-radius: 12px;
+                background-color: var(--bg-light);
+                padding: 8px;
+                transition: border-color 0.2s, box-shadow 0.2s;
+            }
+            .input-box:focus-within {
+                border-color: var(--ai-blue);
+                box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+            }
+
+            .input-area {
+                flex-grow: 1;
+                max-height: ${MAX_INPUT_HEIGHT}px;
+                overflow-y: auto;
+                outline: none;
+                border: none;
+                background: none;
+                color: var(--text-light);
+                resize: none;
+                font-size: 0.95rem;
+                /* UI elements use Inter */
+                font-family: 'Inter', system-ui, sans-serif;
+                padding: 4px;
+                min-height: 20px;
+                line-height: 1.4;
+            }
+            .input-area:empty:before {
+                content: attr(placeholder);
+                color: #888;
+                pointer-events: none;
+            }
+
+            .send-button {
+                background: var(--ai-blue);
+                border: none;
+                color: white;
+                width: 30px;
+                height: 30px;
+                border-radius: 8px;
+                cursor: pointer;
+                margin-left: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                transition: background 0.2s, opacity 0.2s;
+            }
+            .send-button:disabled {
+                background: #888;
+                cursor: not-allowed;
+                opacity: 0.7;
+            }
+            .send-button:hover:not(:disabled) {
+                background: #5b92f7;
+            }
+
+            .send-button svg {
+                width: 16px;
+                height: 16px;
+                fill: white;
+            }
+
+            /* CHAR COUNT & SYSTEM INSTRUCTION */
+            .bottom-controls {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-size: 0.75rem;
+                color: #888;
+                padding: 0 4px;
+                /* UI elements use Inter */
+                font-family: 'Inter', system-ui, sans-serif;
+            }
+
+            .char-count.limit-reached {
+                color: var(--ai-red);
+                font-weight: 600;
+            }
+
+            .system-instruction-input {
+                width: 100%;
+                padding: 8px;
+                border: 1px dashed #555;
+                border-radius: 8px;
+                background-color: rgba(255, 255, 255, 0.05);
+                color: var(--text-light);
+                font-size: 0.8rem;
+                min-height: 30px;
+                resize: none;
+                outline: none;
+                transition: border-color 0.2s;
+                /* UI elements use Inter */
+                font-family: 'Inter', system-ui, sans-serif;
+                margin-bottom: 8px;
+            }
+            .system-instruction-input:focus {
+                border-color: var(--ai-yellow);
+            }
+            .system-instruction-input:empty:before {
+                content: 'Optional: Enter system instruction (e.g., "Act as a pirate")';
+                color: #888;
+            }
+            .system-instruction-input.active {
+                border-style: solid;
+                border-color: var(--ai-green);
+            }
+
+
+            /* FILE AND SUBJECT MENU */
+            .subject-menu-button {
+                background: none;
+                border: none;
+                color: var(--text-light);
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 4px;
+                flex-shrink: 0;
+                opacity: 0.7;
+                transition: opacity 0.2s;
+            }
+            .subject-menu-button:hover {
+                opacity: 1;
+            }
+            .subject-menu-button svg {
+                width: 20px;
+                height: 20px;
+            }
+
+            .subject-menu {
+                position: absolute;
+                top: 50px;
+                right: 5px;
+                background-color: var(--bg-light);
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                box-shadow: 0 4px 12px var(--shadow-color);
+                padding: 8px;
+                width: 200px;
+                display: none;
+                flex-direction: column;
+                gap: 4px;
+                z-index: 10001;
+            }
+            .subject-menu.active {
+                display: flex;
+            }
+            .subject-menu label {
+                padding: 6px 8px;
+                font-size: 0.85rem;
+                color: var(--text-light);
+                /* UI elements use Inter */
+                font-family: 'Inter', system-ui, sans-serif;
+                font-weight: 500;
+            }
+            .subject-menu-item {
+                background: none;
+                border: none;
+                padding: 8px;
+                border-radius: 6px;
+                text-align: left;
+                color: var(--text-light);
+                cursor: pointer;
+                font-size: 0.9rem;
+                /* UI elements use Inter */
+                font-family: 'Inter', system-ui, sans-serif;
+                transition: background 0.2s;
+            }
+            .subject-menu-item:hover {
+                background-color: var(--border-color);
+            }
+
+            /* FILE PREVIEW */
+            .file-preview {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                background-color: rgba(66, 133, 244, 0.1);
+                border: 1px solid var(--ai-blue);
+                padding: 6px 10px;
+                border-radius: 8px;
+                color: var(--text-light);
+                font-size: 0.8rem;
+                /* UI elements use Inter */
+                font-family: 'Inter', system-ui, sans-serif;
+                margin-bottom: 8px;
+                transition: opacity 0.3s;
+            }
+            .file-preview.hidden {
+                opacity: 0;
+                height: 0;
+                padding-top: 0;
+                padding-bottom: 0;
+                border-width: 0;
+                overflow: hidden;
+            }
+            .file-info {
+                max-width: calc(100% - 30px);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .remove-file-button {
+                background: none;
+                border: none;
+                color: var(--ai-red);
+                cursor: pointer;
+                margin-left: 10px;
+                line-height: 1;
+            }
+
+
+            /* CODE BLOCK STYLING */
+            .code-block-wrapper {
+                margin: 15px 0;
+                border-radius: 8px;
+                overflow: hidden;
+                border: 1px solid var(--border-color);
+                background-color: var(--bg-light);
+                position: relative;
+                animation: glow 1.5s infinite alternate;
+            }
+            .code-block-wrapper pre {
+                margin: 0;
+                padding: 15px;
+                overflow: auto;
+                background-color: transparent;
+            }
+            .code-block-wrapper pre::-webkit-scrollbar {
+                height: 8px;
+            }
+            .code-block-wrapper pre::-webkit-scrollbar-thumb {
+                background: rgba(255,255,255,0.2);
+                border-radius: 4px;
+            }
+            .code-block-wrapper code {
+                /* Code elements use Inter and a monospace fallback */
+                font-family: 'Inter', monospace;
+                font-size: 0.9em;
+                color: #f0f0f0;
+            }
+            .code-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 8px 15px;
+                background-color: #333;
+                color: var(--text-light);
+                font-size: 0.85rem;
+                border-bottom: 1px solid #444;
+                /* UI elements use Inter */
+                font-family: 'Inter', system-ui, sans-serif;
+            }
+
+            /* ANIMATIONS */
+            @keyframes glow { 
+                0%,100% { box-shadow: 0 0 5px rgba(255,255,255,.15), 0 0 10px rgba(255,255,255,.1); } 
+                50% { box-shadow: 0 0 10px rgba(255,255,255,.25), 0 0 20px rgba(255,255,255,.2); } 
+            }
+            @keyframes gemini-glow { 
+                0%,100% { box-shadow: 0 0 8px 2px var(--ai-blue); } 
+                25% { box-shadow: 0 0 8px 2px var(--ai-green); } 
+                50% { box-shadow: 0 0 8px 2px var(--ai-yellow); } 
+                75% { box-shadow: 0 0 8px 2px var(--ai-red); } 
+            }
+
+            /* Responsive Adjustments */
+            @media (max-width: 600px) {
+                .chat-window {
+                    width: 100vw;
+                    height: 100vh;
+                    bottom: 0;
+                    right: 0;
+                    border-radius: 0;
+                }
+                #ai-activation-container {
+                    bottom: 0;
+                    right: 0;
+                    padding: 10px;
+                }
+                .ai-main-button {
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                }
+            }
         `;
-        
-        // Temporarily store the file reference
-        chatInput.dataset.attachedFile = 'paste.txt';
-        chatInput.dataset.fileContent = pastedText;
-        chatInput.dataset.fileMimeType = 'text/plain';
-
-        // Clear input to prevent exceeding limit, since content is now attached
-        chatInput.value = '';
-        autoResizeTextarea({target: chatInput});
-        alert('Pasted content over 1000 characters has been attached as "paste.txt".');
+        style.appendChild(document.createTextNode(css));
+        document.head.appendChild(style);
     }
-    // If not over 1000 chars, let the default paste happen, which respects maxlength=5000
-};
 
-/**
- * Removes the attached file reference.
- */
-window.removeAttachedFile = (fileName) => {
-    const chatInput = document.getElementById('chat-input');
-    const attachedFilesContainer = document.getElementById('attached-files-container');
+    /**
+     * Initializes the UI elements and structure.
+     */
+    function initUI() {
+        container = document.createElement('div');
+        container.id = 'ai-activation-container';
+
+        mainButton = document.createElement('button');
+        mainButton.className = 'ai-main-button';
+        mainButton.innerHTML = geminiLogoSVG;
+
+        chatWindow = document.createElement('div');
+        chatWindow.className = 'chat-window';
+        
+        chatWindow.innerHTML = `
+            <div class="chat-header">
+                <span>Gemini Assistant</span>
+                <div>
+                    <button class="subject-menu-button">
+                        ${paperclipSVG}
+                    </button>
+                    <button class="close-button">
+                        ${closeIconSVG}
+                    </button>
+                </div>
+            </div>
+            <div class="chat-history">
+                <div class="ai-message message" style="align-self: flex-start; border-bottom-left-radius: 12px;">
+                    Hello! I'm your AI assistant. How can I help you today?
+                </div>
+            </div>
+            <div class="chat-input-area">
+                <textarea class="system-instruction-input" placeholder="Optional: Enter a system instruction or role..."></textarea>
+                <div class="file-preview hidden">
+                    <span class="file-info"></span>
+                    <button class="remove-file-button">${closeIconSVG}</button>
+                </div>
+                <div class="input-box">
+                    <div class="input-area" contenteditable="true" placeholder="Ask me anything..."></div>
+                    <button class="send-button" disabled>
+                        <svg width="24" height="24" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                    </button>
+                </div>
+                <div class="bottom-controls">
+                    <span class="char-count">0/${CHAR_LIMIT}</span>
+                </div>
+            </div>
+            <input type="file" style="display:none;" accept="image/*, text/*" class="file-input">
+            
+            <div class="subject-menu">
+                <label>FILE & ROLE</label>
+                <button class="subject-menu-item" data-action="file-upload">Attach File (Image/Text)</button>
+                <button class="subject-menu-item" data-action="system-instruction">Set AI Role / Persona</button>
+            </div>
+        `;
+
+        container.appendChild(chatWindow);
+        container.appendChild(mainButton);
+        document.body.appendChild(container);
+
+        // Assign DOM elements to variables
+        inputArea = chatWindow.querySelector('.input-area');
+        charCountDisplay = chatWindow.querySelector('.char-count');
+        sendButton = chatWindow.querySelector('.send-button');
+        closeButton = chatWindow.querySelector('.close-button');
+        filePreviewContainer = chatWindow.querySelector('.file-preview');
+        fileInput = chatWindow.querySelector('.file-input');
+        subjectMenuButton = chatWindow.querySelector('.subject-menu-button');
+        subjectMenu = chatWindow.querySelector('.subject-menu');
+        historyContainer = chatWindow.querySelector('.chat-history');
+        systemInstructionInput = chatWindow.querySelector('.system-instruction-input');
+    }
+
+    /**
+     * Toggles the chat window visibility and animation.
+     */
+    function toggleAssistant() {
+        isAIAssistantActive = !isAIAssistantActive;
+        mainButton.classList.toggle('active', isAIAssistantActive);
+        chatWindow.classList.toggle('active', isAIAssistantActive);
+        
+        if (isAIAssistantActive) {
+            inputArea.focus();
+        }
+    }
     
-    delete chatInput.dataset.attachedFile;
-    delete chatInput.dataset.fileContent;
-    delete chatInput.dataset.fileMimeType;
-    attachedFilesContainer.innerHTML = '';
-};
+    /**
+     * Displays a temporary message box instead of alert.
+     */
+    function showMessageBox(message) {
+        const msgBox = document.createElement('div');
+        msgBox.style.cssText = `
+            position: fixed; top: 10px; right: 10px; background-color: #333; 
+            color: white; padding: 10px 15px; border-radius: 8px; z-index: 10002;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-size: 0.9rem;
+            opacity: 0; transition: opacity 0.5s ease-in-out;
+            font-family: 'Inter', system-ui, sans-serif;
+        `;
+        msgBox.textContent = message;
+        document.body.appendChild(msgBox);
 
-/**
- * Handles the actual file selection (images or text).
- * NOTE: For simplicity, this only supports one attached file.
- */
-const handleFileInput = (e) => {
-    const fileInput = e.target;
-    const chatInput = document.getElementById('chat-input');
-    const attachedFilesContainer = document.getElementById('attached-files-container');
-    const file = fileInput.files[0];
+        // Fade in
+        setTimeout(() => msgBox.style.opacity = '1', 10);
+        // Fade out and remove
+        setTimeout(() => {
+            msgBox.style.opacity = '0';
+            setTimeout(() => msgBox.remove(), 500);
+        }, 3000);
+    }
 
-    if (file) {
-        if (file.type.startsWith('audio/') || file.type.startsWith('video/')) {
-            alert('Audio and video files are not supported. Please upload an image or text document.');
-            fileInput.value = ''; // Clear the input
+    /**
+     * Updates the chat history with a new message.
+     */
+    function appendMessage(text, role, isStreaming = false) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${role}-message`;
+        messageDiv.innerHTML = text;
+        historyContainer.appendChild(messageDiv);
+        historyContainer.scrollTop = historyContainer.scrollHeight;
+        
+        if (role === 'ai') {
+            // Add copy functionality to AI messages
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'message-actions';
+            
+            const copyButton = document.createElement('button');
+            copyButton.innerHTML = copyIconSVG;
+            copyButton.title = 'Copy code';
+            copyButton.onclick = (e) => copyCodeToClipboard(messageDiv, copyButton);
+            actionsDiv.appendChild(copyButton);
+
+            messageDiv.appendChild(actionsDiv);
+        }
+        
+        return messageDiv;
+    }
+
+    /**
+     * Handles the complex task of copying content (including code blocks) to the clipboard.
+     */
+    function copyCodeToClipboard(messageElement, button) {
+        const codeBlocks = messageElement.querySelectorAll('.code-block-wrapper code');
+        let textToCopy = '';
+
+        if (codeBlocks.length > 0) {
+            // If there are code blocks, join their content
+            codeBlocks.forEach(code => {
+                textToCopy += code.textContent + '\n\n';
+            });
+            textToCopy = textToCopy.trim();
+        } else {
+            // Otherwise, copy the whole message text, excluding action buttons
+            const clone = messageElement.cloneNode(true);
+            clone.querySelectorAll('.message-actions').forEach(el => el.remove());
+            textToCopy = clone.textContent.trim();
+        }
+
+        try {
+            // Use execCommand for broader iFrame compatibility
+            const tempInput = document.createElement('textarea');
+            tempInput.value = textToCopy;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+
+            // Visual feedback
+            button.innerHTML = checkIconSVG;
+            button.title = 'Copied!';
+            setTimeout(() => {
+                button.innerHTML = copyIconSVG;
+                button.title = 'Copy code';
+            }, 2000);
+            
+            showMessageBox('Content copied to clipboard!');
+        } catch (err) {
+            console.error('Could not copy text: ', err);
+            showMessageBox('Failed to copy content. Please copy manually.');
+        }
+    }
+
+
+    /**
+     * Converts raw text (potentially markdown) into HTML, handling code blocks.
+     */
+    function processMarkdown(text) {
+        // 1. Convert code blocks to HTML structure with header and copy button
+        const codeBlockRegex = /```(\w+)?\s*([\s\S]*?)```/g;
+        text = text.replace(codeBlockRegex, (match, lang = 'text', code) => {
+            const escapedCode = code.trim()
+                                    .replace(/&/g, '&amp;')
+                                    .replace(/</g, '&lt;')
+                                    .replace(/>/g, '&gt;');
+            const languageLabel = lang.charAt(0).toUpperCase() + lang.slice(1);
+            
+            // Note: The copy button logic for code blocks is handled in copyCodeToClipboard
+            // This structure is for display only
+            return `
+                <div class="code-block-wrapper">
+                    <div class="code-header">
+                        <span>${languageLabel}</span>
+                    </div>
+                    <pre><code>${escapedCode}</code></pre>
+                </div>
+            `;
+        });
+
+        // 2. Convert basic markdown elements (strong, italics, lists, links)
+        text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); // **bold**
+        text = text.replace(/\*(.*?)\*/g, '<em>$1</em>'); // *italics*
+        text = text.replace(/\[([^\]]+)\]\(([^\)]+)\)/g, '<a href="$2" target="_blank">$1</a>'); // [link](url)
+        text = text.replace(/\n\s*(\-|\*)\s*(.*)/g, (match, bullet, item) => `<li>${item}</li>`); // Simple list items
+
+        // 3. Convert paragraphs
+        text = text.split('\n\n').map(p => {
+            if (p.trim().length > 0 && !p.includes('code-block-wrapper')) {
+                // If it's a list item, don't wrap it in a <p>
+                if (p.startsWith('<li>')) {
+                    return `<ul>${p}</ul>`;
+                }
+                return `<p>${p.trim()}</p>`;
+            }
+            return p;
+        }).join('');
+
+        return text.trim();
+    }
+    
+    /**
+     * Calls the Gemini API to generate content.
+     */
+    async function generateContent() {
+        if (isGenerating || inputArea.textContent.trim().length === 0) return;
+
+        isGenerating = true;
+        sendButton.disabled = true;
+
+        const userText = inputArea.textContent.trim();
+        const systemInstruction = systemInstructionInput.textContent.trim();
+        
+        // Add user message to history
+        appendMessage(userText, 'user');
+        
+        // Clear input area and file/system instruction for next use
+        inputArea.textContent = '';
+        updateCharCount();
+        clearFileAttachment();
+
+        // Add the current user prompt to the chat history array
+        const userParts = [{ text: userText }];
+        if (currentFile) {
+            userParts.push({
+                inlineData: {
+                    mimeType: currentFile.mimeType,
+                    data: currentFile.base64Data
+                }
+            });
+            // Clear the file from the state after preparing the payload
+            currentFile = null; 
+        }
+
+        // Construct the history payload: The new user prompt + full history
+        const contents = [...chatHistory, { role: "user", parts: userParts }];
+        
+        const payload = {
+            contents: contents,
+        };
+
+        // Add system instruction if present
+        if (systemInstruction) {
+            payload.systemInstruction = {
+                parts: [{ text: systemInstruction }]
+            };
+            // Only clear the system instruction after it's successfully used
+            systemInstructionInput.textContent = '';
+            systemInstructionInput.classList.remove('active');
+            hasSystemInstruction = false;
+        }
+
+        const options = {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        };
+
+        // Create a streaming AI message container
+        const aiMessageDiv = appendMessage(`<div class="loading-dots"><div></div><div></div><div></div></div>`, 'ai', true);
+        
+        try {
+            const response = await fetchWithRetry(API_URL, options);
+            const result = await response.json();
+            const candidate = result.candidates?.[0];
+
+            if (candidate && candidate.content?.parts?.[0]?.text) {
+                const rawText = candidate.content.parts[0].text;
+                const htmlText = processMarkdown(rawText);
+
+                // Update the message in the DOM
+                aiMessageDiv.innerHTML = htmlText;
+
+                // Add to persistent chat history
+                chatHistory.push(
+                    { role: "user", parts: userParts },
+                    { role: "model", parts: [{ text: rawText }] }
+                );
+                
+            } else {
+                aiMessageDiv.textContent = "Sorry, I received an empty or invalid response from the AI.";
+                console.error("AI response error:", result);
+            }
+        } catch (error) {
+            aiMessageDiv.textContent = `An error occurred: ${error.message}. Please try again.`;
+            console.error("Gemini API call error:", error);
+        } finally {
+            isGenerating = false;
+            sendButton.disabled = inputArea.textContent.trim().length === 0;
+            // Scroll to the latest message
+            historyContainer.scrollTop = historyContainer.scrollHeight;
+        }
+    }
+
+    // --- EVENT HANDLERS ---
+    
+    /**
+     * Updates the character count display and send button state.
+     */
+    function updateCharCount() {
+        const text = inputArea.textContent.trim();
+        const length = text.length;
+        charCountDisplay.textContent = `${length}/${CHAR_LIMIT}`;
+
+        if (length > CHAR_LIMIT) {
+            charCountDisplay.classList.add('limit-reached');
+            sendButton.disabled = true;
+        } else {
+            charCountDisplay.classList.remove('limit-reached');
+            sendButton.disabled = length === 0;
+        }
+    }
+
+    /**
+     * Prevents paste of rich content, ensuring plain text and handling limit.
+     */
+    function handlePaste(e) {
+        e.preventDefault();
+        const text = e.clipboardData.getData('text/plain');
+        
+        // Calculate remaining space
+        const currentLength = inputArea.textContent.length;
+        const availableSpace = CHAR_LIMIT - currentLength;
+        const pasteText = text.substring(0, availableSpace);
+
+        document.execCommand('insertText', false, pasteText);
+        updateCharCount();
+
+        if (availableSpace < text.length) {
+            showMessageBox(`Text truncated. Only ${availableSpace} characters could be pasted.`);
+        }
+    }
+
+    /**
+     * Handles file selection and conversion to base64.
+     */
+    function handleFileSelect(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.size > 10 * 1024 * 1024) { // 10MB limit
+            showMessageBox('File size exceeds 10MB limit.');
+            fileInput.value = '';
             return;
         }
 
-        const fileName = file.name;
-        const fileSize = (file.size / 1024 / 1024).toFixed(2);
-        
-        // Use FileReader to get the content/data URL
         const reader = new FileReader();
-        reader.onload = (event) => {
-            // For images, store data URL. For text, store content.
-            const fileContent = event.target.result;
+        reader.onload = (e) => {
+            const base64Data = e.target.result.split(',')[1];
+            currentFile = {
+                fileName: file.name,
+                mimeType: file.type,
+                base64Data: base64Data
+            };
             
-            // Store the file reference on the chat input for submission
-            chatInput.dataset.attachedFile = fileName;
-            chatInput.dataset.fileContent = fileContent;
-            chatInput.dataset.fileMimeType = file.type;
-
-            attachedFilesContainer.innerHTML = `
-                Attached: **${fileName}** (${fileSize} MB). 
-                <button onclick="removeAttachedFile('${fileName}')" style="color:red; background:none; border:none; cursor:pointer;">(x)</button>
-            `;
+            // Update UI
+            filePreviewContainer.classList.remove('hidden');
+            filePreviewContainer.querySelector('.file-info').textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
         };
+        reader.readAsDataURL(file);
+
+        // Close the subject menu after selection
+        subjectMenu.classList.remove('active');
+        fileInput.value = ''; // Clear input for next time
+    }
+
+    /**
+     * Clears the attached file state and UI.
+     */
+    function clearFileAttachment() {
+        currentFile = null;
+        filePreviewContainer.classList.add('hidden');
+        filePreviewContainer.querySelector('.file-info').textContent = '';
+    }
+
+    /**
+     * Handles all top-level click events for the subject menu.
+     */
+    function handleSubjectMenuClick(e) {
+        const button = e.target.closest('.subject-menu-item');
+        if (!button) return;
+
+        const action = button.getAttribute('data-action');
+
+        if (action === 'file-upload') {
+            fileInput.click();
+        } else if (action === 'system-instruction') {
+            // Toggle visibility of the system instruction textarea
+            const isHidden = !systemInstructionInput.offsetHeight;
+            systemInstructionInput.style.display = isHidden ? 'block' : 'none';
+            systemInstructionInput.focus();
+            
+            // Check if it should be active (if instruction is set)
+            if (!isHidden && systemInstructionInput.textContent.trim().length > 0) {
+                systemInstructionInput.classList.add('active');
+                hasSystemInstruction = true;
+            } else {
+                systemInstructionInput.classList.remove('active');
+                hasSystemInstruction = false;
+            }
+            
+            // Close the main menu
+            subjectMenu.classList.remove('active');
+        }
+    }
+
+    /**
+     * Attach all necessary event listeners.
+     */
+    function attachListeners() {
+        mainButton.addEventListener('click', toggleAssistant);
+        closeButton.addEventListener('click', toggleAssistant);
+        sendButton.addEventListener('click', generateContent);
         
-        if (file.type.startsWith('text/')) {
-            reader.readAsText(file); // Read text content
-        } else {
-            reader.readAsDataURL(file); // Read image data URL
-        }
-    } else {
-        removeAttachedFile(chatInput.dataset.attachedFile);
-    }
-};
-
-/**
- * Simulates the agent 'typing' out the response character by character.
- * Also adds the 'pulsing orange' effect.
- * @param {HTMLElement} bubble - The chat bubble element.
- * @param {string} text - The full response text.
- */
-const typeResponseLikeHuman = (bubble, text) => {
-    const sendButton = document.getElementById('send-button');
-    sendButton.disabled = true;
-    bubble.classList.add('typing');
-
-    let i = 0;
-    const typingInterval = Math.floor(Math.random() * 50) + 30; // 30-80ms per character
-
-    const type = () => {
-        if (i < text.length) {
-            bubble.innerHTML += text.charAt(i);
-            i++;
-            // Scroll to bottom as the text is added
-            const chatWindow = document.getElementById('chat-window');
-            chatWindow.scrollTop = chatWindow.scrollHeight;
-            setTimeout(type, typingInterval);
-        } else {
-            bubble.classList.remove('typing');
-            sendButton.disabled = false;
-        }
-    };
-    type();
-};
-
-/**
- * Appends a message to the chat window.
- * @param {object} message - The message object {role: 'user'|'agent'|'system', text: string, isSystem: boolean}
- * @returns {HTMLElement} The created bubble element.
- */
-const appendMessage = (message) => {
-    const chatWindow = document.getElementById('chat-window');
-    const bubble = document.createElement('div');
-    bubble.classList.add('chat-bubble');
-
-    if (message.role === 'user') {
-        bubble.classList.add('user-bubble');
-        bubble.textContent = message.text;
-    } else if (message.role === 'agent') {
-        bubble.classList.add('agent-bubble');
-        // Initial state is empty for typing animation
-        bubble.textContent = '';
-        setTimeout(() => typeResponseLikeHuman(bubble, message.text), 100);
-    } else if (message.isSystem) {
-         // System messages are subtle
-        bubble.classList.add('system-message');
-        bubble.style.cssText = 'color: rgba(255, 255, 255, 0.5); font-size: 0.8rem; text-align: center; border: none; background: none;';
-        bubble.innerHTML = message.text;
-    }
-
-    chatWindow.appendChild(bubble);
-    chatWindow.scrollTop = chatWindow.scrollHeight;
-    
-    // Update chat history (only for user/agent roles)
-    if (message.role === 'user' || message.role === 'agent') {
-        chatHistory.push({ role: message.role, text: message.text });
-        // Keep history size manageable (e.g., max 20 entries)
-        if (chatHistory.length > 20) {
-            chatHistory.shift();
-        }
-    }
-
-    return bubble;
-};
-
-
-/**
- * Sends the user message to Gemini (simulated).
- * @param {Event} e - The form submit event.
- */
-const handleChatSubmit = async (e) => {
-    e.preventDefault();
-
-    const chatInput = document.getElementById('chat-input');
-    const userInput = chatInput.value.trim();
-    
-    if (!userInput && !chatInput.dataset.attachedFile) return;
-
-    // 1. Log User Message
-    appendMessage({ role: 'user', text: userInput });
-    
-    // 2. Clear Input & Disable Button
-    chatInput.value = '';
-    chatInput.style.height = 'auto'; // Reset height
-    document.getElementById('send-button').disabled = true;
-    removeAttachedFile(chatInput.dataset.attachedFile); // Clear attached file info
-
-    // 3. Prepare Prompt and System Context (The hidden magic)
-    const locationName = document.getElementById('system-location').textContent;
-    const systemPrompt = await getSystemInfo(locationName);
-    
-    let fullPrompt = userInput;
-
-    // Include attached file in the prompt (Simulated)
-    if (chatInput.dataset.attachedFile) {
-        const fileName = chatInput.dataset.attachedFile;
-        const fileType = chatInput.dataset.fileMimeType;
-        const fileContent = chatInput.dataset.fileContent;
-        
-        fullPrompt += `\n\n--- ATTACHED FILE: ${fileName} (${fileType}) ---\n`;
-        
-        if (fileType.startsWith('text/')) {
-            fullPrompt += fileContent; // Append text content directly
-        } else if (fileType.startsWith('image/')) {
-            fullPrompt += `[User uploaded an image file. The agent should describe/analyze the content based on the user's question. Image Data URL: ${fileContent.substring(0, 50)}...]`;
-        }
-    }
-
-    // 4. Send to Gemini (Simulated)
-    const geminiResponse = await simulateGeminiResponse(fullPrompt, systemPrompt);
-    
-    // 5. Log Agent Response (with typing animation)
-    appendMessage({ role: 'agent', text: geminiResponse });
-};
-
-/**
- * Simulates an asynchronous call to the Gemini API with the given context.
- * NOTE: In a real app, this would use the Gemini SDK's generateContent method
- * with the system instruction and chat history.
- */
-const simulateGeminiResponse = async (userPrompt, systemPrompt) => {
-    // --- In a real application, you would do the following: ---
-    // 1. Initialize the model with the system prompt:
-    // const model = new GoogleGenAI.Model('gemini-2.5-flash', { systemInstruction: systemPrompt });
-    // 2. Send the request (potentially with multimodal parts for files):
-    // const response = await model.generateContent(userPrompt);
-    // 3. Return the text:
-    // return response.text;
-    
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network latency
-
-    const category = CURRENT_AGENT_CATEGORY;
-    let simulatedResponse = `[Agent Mode: **${category}**] `;
-
-    switch (category) {
-        case 'Quick':
-            simulatedResponse += "Understood. The swift, concise answer to your query is: Action is required now. See documentation for details.";
-            break;
-        case 'Standard':
-            simulatedResponse += "Hello! That's a great question. I'm happy to help you with that. Based on your request, the standard and friendly advice is to proceed with the recommended steps. Is there anything else I can clarify for you today?";
-            break;
-        case 'Descriptive':
-            simulatedResponse += "To provide a truly deep and rich answer, let's explore the context. Your query touches on multiple fascinating sub-topics, including X, Y, and Z. The foundational principle here is..., which leads us to an understanding of... The depth of this requires consideration of all three elements in concert.";
-            break;
-        case 'Analysis':
-            simulatedResponse += "I have analyzed your request meticulously. My deep thought process confirms that the logically sound and correct course of action is 'C'. This conclusion is derived from the irrefutable premise that A leads to B, and B requires C to be true. Any other answer would be mathematically inconsistent.";
-            break;
-        case 'Creative':
-            simulatedResponse += "Ah, a blank canvas! Let's branch out. Imagine your question is not a problem, but a seed. From this seed could spring an ethereal forest of possibilities: a decentralized autonomous collective, a sonnet written in binary, or perhaps simply the concept of time reversing only on Tuesdays. What world shall we build from this idea?";
-            break;
-        case 'Emotional':
-            simulatedResponse += "Thank you for sharing that with me. It sounds like you are carrying a heavy burden right now, and what you are feeling is completely valid. Please know that you don't have to go through this alone. I am here to listen without judgment. Take a moment, breathe, and tell me anything you need to say.";
-            break;
-        case 'Technical':
-            simulatedResponse += "Affirmative. The correct procedure is as follows. Step 1: Initialize system with `npm install`. Step 2: Modify the `index.js` file, ensuring all variables are declared as `const`. Your requested code snippet is: `console.log('System ready.');` Execute instructions precisely for stability.";
-            break;
-        case 'Experimental':
-            simulatedResponse = `(4SP Glitch) Fascinating. You ask a question. I wonder if the answer is the silence between your words, or the sound of a tree falling in a forest where no one is present. I'll humor you: The answer is '42', but only if '42' is a metaphor for the profound cosmic indifference to your perfectly reasonable query. Are you satisfied? Of course not.`;
-            break;
-        default:
-            simulatedResponse += "Error: Unknown category. Falling back to Standard Mode. How can I help?";
-    }
-
-    if (userPrompt.includes('ATTACHED FILE')) {
-        simulatedResponse += " (Note: I detected and processed your attached file/paste and incorporated its content into this response formulation.)";
-    }
-
-    return simulatedResponse;
-};
-
-// =========================================================================
-// >> INITIALIZATION <<
-// =========================================================================
-
-const run = () => {
-    // 1. Inject Stylesheets
-    injectStyles();
-
-    // 2. Render the new Agent Hub UI
-    renderAgentHub();
-    
-    // 3. Set the current agent to the default (Standard)
-    document.getElementById('category-selector').value = CURRENT_AGENT_CATEGORY;
-
-    // 4. Animate the Welcome Sequence
-    const effectiveUsername = USERNAME || 'Guest'; // Use a fallback name
-    animateWelcomeText(effectiveUsername);
-    
-    // 5. Simulate first message/welcome in the chat area
-    setTimeout(() => {
-        appendMessage({ 
-            role: 'agent', 
-            text: `Welcome, ${effectiveUsername}. I am the 4SP Agent, currently operating in **${CURRENT_AGENT_CATEGORY}** mode. How may I assist you?`,
-            isSystem: false
+        inputArea.addEventListener('input', updateCharCount);
+        inputArea.addEventListener('paste', handlePaste);
+        inputArea.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (!sendButton.disabled && !isGenerating) {
+                    generateContent();
+                }
+            }
         });
-    }, 2500);
-    
-};
+        
+        fileInput.addEventListener('change', handleFileSelect);
+        
+        // Remove file button
+        chatWindow.querySelector('.remove-file-button').addEventListener('click', clearFileAttachment);
 
-// --- START THE PROCESS ---
-document.addEventListener('DOMContentLoaded', run);
+        // Subject Menu Toggling
+        subjectMenuButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            subjectMenu.classList.toggle('active');
+        });
+        subjectMenu.addEventListener('click', handleSubjectMenuClick);
+        
+        // System instruction input tracking
+        systemInstructionInput.addEventListener('input', () => {
+            hasSystemInstruction = systemInstructionInput.textContent.trim().length > 0;
+            systemInstructionInput.classList.toggle('active', hasSystemInstruction);
+        });
+        
+        // Global click listener to close subject menu
+        document.addEventListener('click', (e) => {
+            if (!subjectMenu.contains(e.target) && e.target !== subjectMenuButton) {
+                subjectMenu.classList.remove('active');
+            }
+        });
+        
+        // Adjust input area height
+        inputArea.addEventListener('input', (e) => {
+            inputArea.style.height = 'auto'; // Temporarily reset height
+            const scrollHeight = inputArea.scrollHeight;
+            if (scrollHeight > MAX_INPUT_HEIGHT) {
+                inputArea.style.overflowY = 'auto';
+                inputArea.style.height = `${MAX_INPUT_HEIGHT}px`;
+            } else {
+                inputArea.style.overflowY = 'hidden';
+                inputArea.style.height = `${scrollHeight}px`;
+            }
+        });
+    }
 
-// Expose internal functions for easier debugging/access (optional)
-window.handleCategoryChange = handleCategoryChange;
-window.removeAttachedFile = removeAttachedFile;
+
+    /**
+     * Main function to run the setup.
+     */
+    function run() {
+        injectStyles();
+        initUI();
+        attachListeners();
+    }
+
+    // --- START THE PROCESS ---
+    // Ensure the DOM is fully loaded before trying to append elements
+    document.addEventListener('DOMContentLoaded', run);
+
+})();
