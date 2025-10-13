@@ -10,6 +10,7 @@
  * - Primary glow color set to deep indigo (#4f46e5) to match the particleGlow animation.
  * - Icon and element styling adjusted to match the dark, vibrant aesthetic.
  * - Text wrapping and pure-text Gemini responses maintained from previous update.
+ * - ACTIVATION SHORTCUT CHANGED TO: Ctrl + \ 
  */
 (function() {
     // =========================================================================
@@ -90,18 +91,22 @@
     }
 
     async function handleKeyDown(e) {
-        if (e.ctrlKey && e.key.toLowerCase() === 'c') {
+        // The new shortcut: Ctrl + \
+        if (e.ctrlKey && e.key === '\\') {
             const selection = window.getSelection().toString();
             if (isAIActive) {
+                // If text is selected, allow default behavior (like copy or other system shortcuts)
                 if (selection.length > 0) {
-                    return; // Allow default copy behavior for selected text
+                    return; 
                 }
                 e.preventDefault();
                 const mainEditor = document.getElementById('ai-input');
+                // Deactivate only if input is empty (clean exit)
                 if (mainEditor && mainEditor.innerText.trim().length === 0 && attachedFiles.length === 0) {
                     deactivateAI();
                 }
             } else {
+                // Activate if inactive and no text is currently selected on the page
                 if (selection.length === 0) {
                     const isAuthorized = await isUserAuthorized();
                     if (isAuthorized) {
@@ -110,6 +115,19 @@
                     }
                 }
             }
+        }
+        
+        // Retain the complex Ctrl + C logic for copying text while active, 
+        // but it no longer contains activation logic.
+        else if (e.ctrlKey && e.key.toLowerCase() === 'c') {
+            const selection = window.getSelection().toString();
+            if (isAIActive) {
+                if (selection.length > 0) {
+                    return; // Allow default copy behavior for selected text
+                }
+                e.preventDefault();
+            }
+            // If inactive, the original activation logic is now completely moved to Ctrl + \
         }
     }
 
