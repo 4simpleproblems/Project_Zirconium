@@ -10,10 +10,13 @@
  * - Highlight/glow color changed to f78725 (orange).
  * - "AI Mode" renamed to "4SP AI Agent".
  * - Focus Topics replaced with Agent Categories (with new options).
- * * NEW UPDATES:
  * - Chat bubbles now comfortably wrap content (width: fit-content).
  * - All markdown parsing/transformation (bold, headings, lists) has been removed.
  * - Gemini responses now display as pure, raw text (except for code blocks).
+ * * NEW UPDATES:
+ * - All icons replaced with Font Awesome 6.5.2 icons.
+ * - Font Awesome 6.5.2 CDN link added to injected styles.
+ * - Icon styling updated for consistency.
  */
 (function() {
     // =========================================================================
@@ -36,9 +39,9 @@
     const MAX_INPUT_HEIGHT = 200;
     const CHAR_LIMIT = 500;
 
-    // --- ICONS (for event handlers) ---
-    const copyIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
-    const checkIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="check-icon"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+    // --- ICONS (for event handlers) - Updated to Font Awesome 6.5.2 ---
+    const copyIconHTML = '<i class="fa-solid fa-copy"></i>';
+    const checkIconHTML = '<i class="fa-solid fa-check"></i>';
 
     // --- STATE MANAGEMENT ---
     let isAIActive = false;
@@ -169,7 +172,8 @@
         
         const actionToggle = document.createElement('button');
         actionToggle.id = 'ai-action-toggle';
-        actionToggle.innerHTML = '<span class="icon-ellipsis">&#8942;</span><span class="icon-stop">■</span>';
+        // Updated action toggle icons to Font Awesome
+        actionToggle.innerHTML = '<span class="icon-ellipsis"><i class="fa-solid fa-ellipsis-vertical"></i></span><span class="icon-stop"><i class="fa-solid fa-stop"></i></span>';
         actionToggle.onclick = handleActionToggleClick;
 
         const charCounter = document.createElement('div');
@@ -475,7 +479,11 @@
     function createActionMenu() {
         const menu = document.createElement('div');
         menu.id = 'ai-action-menu';
-        const attachments = [ { id: 'photo', icon: '📷', label: 'Photo', type: 'images' }, { id: 'file', icon: '📎', label: 'File', type: 'file' } ];
+        // Updated icons to Font Awesome 6.5.2
+        const attachments = [ 
+            { id: 'photo', icon: '<i class="fa-solid fa-image"></i>', label: 'Photo', type: 'images' }, 
+            { id: 'file', icon: '<i class="fa-solid fa-paperclip"></i>', label: 'File', type: 'file' } 
+        ];
         const categories = AGENT_CATEGORIES; // New categories
         
         attachments.forEach(opt => {
@@ -484,6 +492,7 @@
             const canUpload = limitManager.canUpload(opt.type);
             let limitText = '';
             if (opt.type === 'images') { const usage = limitManager.getUsage(); limitText = `<span>${usage[opt.type] || 0}/${DAILY_LIMITS[opt.type]} used</span>`; }
+            // Use the HTML icon from the attachments array
             button.innerHTML = `<span class="icon">${opt.icon}</span> ${opt.label} ${limitText}`;
             if (!canUpload) { button.disabled = true; button.title = 'You have reached your daily limit for this file type.'; }
             button.onclick = () => { handleFileUpload(opt.id); toggleActionMenu(); };
@@ -608,10 +617,10 @@
         const code = wrapper.querySelector('pre > code');
         if (code) {
             navigator.clipboard.writeText(code.innerText).then(() => {
-                btn.innerHTML = checkIconSVG;
+                btn.innerHTML = checkIconHTML; // Use Font Awesome check icon
                 btn.disabled = true;
                 setTimeout(() => {
-                    btn.innerHTML = copyIconSVG;
+                    btn.innerHTML = copyIconHTML; // Use Font Awesome copy icon
                     btn.disabled = false;
                 }, 2000);
             }).catch(err => {
@@ -645,7 +654,7 @@
                 <div class="code-block-wrapper">
                     <div class="code-block-header">
                         <span class="code-metadata">${lines} lines &middot; ${words} words</span>
-                        <button class="copy-code-btn" title="Copy code">${copyIconSVG}</button>
+                        <button class="copy-code-btn" title="Copy code">${copyIconHTML}</button>
                     </div>
                     <pre><code class="${langClass}">${escapedCode}</code></pre>
                 </div>
@@ -667,12 +676,23 @@
 
     function injectStyles() {
         if (document.getElementById('ai-dynamic-styles')) return;
+        
+        // --- NEW: Add Font Awesome 6.5.2 CDN link ---
+        if (!document.querySelector('link[href*="font-awesome"]')) {
+            const faLink = document.createElement('link');
+            faLink.rel = 'stylesheet';
+            faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css';
+            document.head.appendChild(faLink);
+        }
+
+        // Add Geist Font
         if (!document.querySelector('style[data-font="geist"]')) {
             const fontStyle = document.createElement("style");
             fontStyle.setAttribute("data-font","geist");
             fontStyle.textContent = `@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;700&family=Merriweather:wght@400;700&display=swap');`;
             document.head.appendChild(fontStyle);
         }
+        
         const style = document.createElement("style");
         style.id = "ai-dynamic-styles";
         // --- START OF MODIFIED CSS ---
@@ -701,7 +721,7 @@
             #ai-char-counter.limit-exceeded { color: #e57373; font-weight: bold; }
             #ai-response-container { flex: 1 1 auto; overflow-y: auto; width: 100%; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; padding: 70px 20px 20px 20px; -webkit-mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%); mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%);}
             
-            /* FIX 1: Allow bubble to comfortably wrap content */
+            /* FIX: Allow bubble to comfortably wrap content */
             .ai-message-bubble { 
                 background: rgba(15,15,18,.8); 
                 border: 1px solid rgba(255,255,255,.1); 
@@ -729,26 +749,46 @@
                 margin-right: auto; /* Ensures it stays on the left */
             }
 
-            .gemini-response.loading { display: flex; justify-content: center; align-items: center; min-height: 60px; max-width: 100px; padding: 15px; background: rgba(15,15,18,.8); animation: unified-glow 4s linear infinite; } /* Changed animation to unified-glow */
+            .gemini-response.loading { display: flex; justify-content: center; align-items: center; min-height: 60px; max-width: 100px; padding: 15px; background: rgba(15,15,18,.8); animation: unified-glow 4s linear infinite; } 
             #ai-input-wrapper { display: flex; flex-direction: column; flex-shrink: 0; position: relative; z-index: 2; transition: all .4s cubic-bezier(.4,0,.2,1); margin: 15px auto; width: 90%; max-width: 800px; border-radius: 25px; background: rgba(10,10,10,.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,.2); }
             #ai-input-wrapper::before, #ai-input-wrapper::after { content: ''; position: absolute; top: -1px; left: -1px; right: -1px; bottom: -1px; border-radius: 26px; z-index: -1; transition: opacity 0.5s ease-in-out; }
             #ai-input-wrapper::before { animation: glow 3s infinite; opacity: 1; }
-            #ai-input-wrapper::after { animation: unified-glow 4s linear infinite; opacity: 0; } /* Changed animation to unified-glow */
+            #ai-input-wrapper::after { animation: unified-glow 4s linear infinite; opacity: 0; } 
             #ai-input-wrapper.waiting::before { opacity: 0; }
             #ai-input-wrapper.waiting::after { opacity: 1; }
             #ai-input { min-height: 52px; max-height: ${MAX_INPUT_HEIGHT}px; overflow-y: hidden; color: #fff; font-size: 1.1em; padding: 15px 50px 15px 20px; box-sizing: border-box; word-wrap: break-word; outline: 0; }
             #ai-input:empty::before { content: 'Ask a question or describe your files...'; color: rgba(255, 255, 255, 0.4); pointer-events: none; }
-            #ai-action-toggle { position: absolute; right: 10px; bottom: 12px; transform: translateY(0); background: 0 0; border: none; color: rgba(255,255,255,.5); font-size: 24px; cursor: pointer; padding: 5px; line-height: 1; z-index: 3; transition: all .3s ease; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+            #ai-action-toggle { 
+                position: absolute; right: 10px; bottom: 12px; transform: translateY(0); background: 0 0; border: none; color: rgba(255,255,255,.5); 
+                cursor: pointer; padding: 5px; line-height: 1; z-index: 3; transition: all .3s ease; border-radius: 50%; width: 34px; height: 34px; 
+                display: flex; align-items: center; justify-content: center; overflow: hidden;
+                font-size: initial; /* Reset font size for icons inside */
+            }
+            /* NEW: Icon styling for the toggle button */
+            #ai-action-toggle i { font-size: 20px; color: rgba(255,255,255,.5); transition: color 0.3s; }
+            
             #ai-action-toggle .icon-ellipsis, #ai-action-toggle .icon-stop { transition: opacity 0.3s, transform 0.3s; position: absolute; }
-            #ai-action-toggle .icon-stop { opacity: 0; transform: scale(0.5); font-size: 14px; }
-            #ai-action-toggle.generating { background-color: #581e1e; border: 1px solid #a12832; color: #ff8a80; border-radius: 8px; }
+            #ai-action-toggle .icon-stop { opacity: 0; transform: scale(0.5); } 
+            #ai-action-toggle.generating { background-color: #581e1e; border: 1px solid #a12832; border-radius: 8px; }
             #ai-action-toggle.generating .icon-ellipsis { opacity: 0; transform: scale(0.5); }
             #ai-action-toggle.generating .icon-stop { opacity: 1; transform: scale(1); }
+            #ai-action-toggle.generating .icon-stop i { color: #ff8a80; } /* Highlight stop icon */
+
             #ai-action-menu { position: fixed; background: rgba(20, 20, 22, 0.7); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 5px; padding: 8px; z-index: 2147483647; opacity: 0; visibility: hidden; transform: translateY(10px) scale(.95); transition: all .25s cubic-bezier(.4,0,.2,1); transform-origin: bottom right; }
             #ai-action-menu.active { opacity: 1; visibility: visible; transform: translateY(-5px); }
             #ai-action-menu button { background: rgba(255,255,255,0.05); border: none; color: #ddd; font-family: 'Geist', sans-serif; font-size: 1em; padding: 10px 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 12px; text-align: left; transition: background-color 0.2s, filter 0.2s, box-shadow 0.2s; }
+            
+            /* NEW: Icon styling for action menu buttons (familiar look) */
+            #ai-action-menu button .icon i {
+                font-size: 1.1em;
+                color: #aaa;
+                transition: color 0.2s;
+            }
+            #ai-action-menu button:hover .icon i {
+                color: #fff; /* White on hover for visibility */
+            }
+
             #ai-action-menu button[data-subject] { justify-content: center; }
-            /* Subject specific colors are now set inline in JavaScript, but we keep hover/active styles */
             #ai-action-menu button:hover { filter: brightness(1.2); }
             #ai-action-menu button[data-subject].active { filter: brightness(1.2); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.8); }
             #ai-action-menu hr { border: none; height: 1px; background-color: rgba(255,255,255,0.1); margin: 5px 10px; }
@@ -772,7 +812,10 @@
             .copy-code-btn { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; border-radius: 6px; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s; }
             .copy-code-btn:hover { background: rgba(255, 255, 255, 0.2); }
             .copy-code-btn:disabled { cursor: default; background: rgba(25, 103, 55, 0.5); }
-            .copy-code-btn svg { stroke: #e0e0e0; }
+            /* NEW: Font Awesome icon styling inside the copy button */
+            .copy-code-btn i { font-size: 16px; color: #e0e0e0; }
+            .copy-code-btn:disabled i { color: #fff; }
+
             .code-block-wrapper pre { margin: 0; padding: 15px; overflow: auto; background-color: transparent; }
             .code-block-wrapper pre::-webkit-scrollbar { height: 8px; }
             .code-block-wrapper pre::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
@@ -782,10 +825,9 @@
             @keyframes unified-glow { 0%,100% { box-shadow: 0 0 8px 2px var(--ai-primary-glow); } 50% { box-shadow: 0 0 12px 3px var(--ai-primary-glow); } }
             @keyframes spin { to { transform: rotate(360deg); } }
             @keyframes message-pop-in { 0% { opacity: 0; transform: translateY(10px) scale(.98); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
-            @keyframes title-pulse { 0%, 100% { text-shadow: 0 0 7px var(--ai-primary-glow); } 50% { text-shadow: 0 0 10px var(--ai-primary-glow); } } /* CHANGED: Simplified title pulse to single color */
+            @keyframes title-pulse { 0%, 100% { text-shadow: 0 0 7px var(--ai-primary-glow); } 50% { text-shadow: 0 0 10px var(--ai-primary-glow); } } 
             @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
         `;
-        // --- END OF MODIFIED CSS ---
     document.head.appendChild(style);}
     document.addEventListener('keydown', handleKeyDown);
 
