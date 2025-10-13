@@ -7,9 +7,9 @@
  * smart paste handling, and refined animations.
  *
  * LATEST UPDATES:
- * - Font Awesome CDN updated to v6.5.2 (highly stable version to fix intermittent loading errors).
- * - All custom UI logic (Model selection, attachment button, stop button) is maintained.
- * - FIXED: Pro model not responding due to outdated API URL in configuration.
+ * - Font Awesome dependency removed; all icons converted to inline SVGs.
+ * - 'Pro (Ultra)' model name corrected to 'gemini-2.5-pro' to fix response error.
+ * - Code block metadata and copy button moved to the bottom of the code block.
  */
 (function() {
     // =========================================================================
@@ -30,21 +30,43 @@
     // --- CONFIGURATION ---
     const MAX_INPUT_HEIGHT = 200;
     const CHAR_LIMIT = 500;
+    
+    // --- SVG ICONS (Replaces Font Awesome) ---
+    const ICON_SIZE = '1em'; // Standard size for inline SVGs
+    
+    // Core Action Icons
+    const copySVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" width="${ICON_SIZE}" height="${ICON_SIZE}"><path fill="currentColor" d="M384 336H192c-8.8 0-16-7.2-16-16V160c0-8.8 7.2-16 16-16h192c8.8 0 16 7.2 16 16v160c0 8.8-7.2 16-16 16zM192 376c-30.9 0-56-25.1-56-56V112c0-30.9 25.1-56 56-56h224c30.9 0 56 25.1 56 56v208c0 30.9-25.1 56-56 56H192zM0 312c0 30.9 25.1 56 56 56h80c8.8 0 16-7.2 16-16V144c0-8.8-7.2-16-16-16H56c-30.9 0-56 25.1-56 56v128z"/></svg>`;
+    const checkSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" width="${ICON_SIZE}" height="${ICON_SIZE}"><path fill="currentColor" d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"/></svg>`;
+    const stopSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" width="${ICON_SIZE}" height="${ICON_SIZE}"><path fill="currentColor" d="M0 480c0 17.7 14.3 32 32 32h320c17.7 0 32-14.3 32-32V32c0-17.7-14.3-32-32-32H32C14.3 0 0 14.3 0 32v448z"/></svg>`;
+    
+    // UI Icons
+    const linkSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="${ICON_SIZE}" height="${ICON_SIZE}"><path fill="currentColor" d="M175 190.5c-33.1 0-60 26.9-60 60s26.9 60 60 60h74.2c3.4 0 6.6-1.5 8.7-4l22.4-48c9.9-21.1 36.4-25.7 58.6-11.7l163.7 109.1c15.2 10.1 34.6 10.1 49.8 0l22.4-14.9c15.2-10.1 24.3-27.5 24.3-46.7V174.5c0-19.2-9.1-36.6-24.3-46.7L434.4 67.2c-15.2-10.1-34.6-10.1-49.8 0l-14.9 9.9c-14.2 9.4-31.9 9.4-46 0L208.7 82.2c-2.1-1.4-4.7-2.2-7.3-2.2H175c-33.1 0-60 26.9-60 60s26.9 60 60 60zm161.7 11.2l-33.6-22.4c-21.2-14.1-48.9-10.5-62.8 9.9L175 391.2c-33.1 0-60 26.9-60 60s26.9 60 60 60h161.7c33.1 0 60-26.9 60-60s-26.9-60-60-60z"/></svg>`;
+    const xMarkSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" width="${ICON_SIZE}" height="${ICON_SIZE}"><path fill="currentColor" d="M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 87.7 106.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 42.4 357.3c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 296.3 405.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.3 256 342.6 150.6z"/></svg>`;
+    
+    // File Type Icons
+    const fileSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" width="${ICON_SIZE}" height="${ICON_SIZE}"><path fill="currentColor" d="M0 64C0 28.7 28.7 0 64 0h256c35.3 0 64 28.7 64 64v384c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V64zm96 32v64c0 17.7 14.3 32 32 32h96c17.7 0 32-14.3 32-32V96c0-17.7-14.3-32-32-32H128c-17.7 0-32 14.3-32 32zm0 256v64c0 17.7 14.3 32 32 32h96c17.7 0 32-14.3 32-32v-64c0-17.7-14.3-32-32-32H128c-17.7 0-32 14.3-32 32z"/></svg>`;
+    const filePdfSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" width="${ICON_SIZE}" height="${ICON_SIZE}"><path fill="currentColor" d="M184 96V51.4c0-17.8 21.5-26.7 34.1-14.1l152.1 152.1c12.6 12.6 3.7 34.1-14.1 34.1H296c-13.3 0-24 10.7-24 24v240c0 17.7-14.3 32-32 32H136c-13.3 0-24-10.7-24-24V32c0-17.7 14.3-32 32-32h88c13.3 0 24 10.7 24 24V96h-64zM32 352c-17.7 0-32 14.3-32 32v96c0 17.7 14.3 32 32 32h80c17.7 0 32-14.3 32-32V384c0-17.7-14.3-32-32-32H32z"/></svg>`;
+    const fileLinesSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" width="${ICON_SIZE}" height="${ICON_SIZE}"><path fill="currentColor" d="M64 0C28.7 0 0 28.7 0 64V448c0 35.3 28.7 64 64 64H320c35.3 0 64-28.7 64-64V160c0-17.7-7.1-34.9-19.1-47.5L274.5 19.1C262.9 7.1 245.7 0 228.3 0H64zm72 176H320c8.8 0 16 7.2 16 16s-7.2 16-16 16H136c-8.8 0-16-7.2-16-16s7.2-16 16-16zm-16 80c0-8.8 7.2-16 16-16H320c8.8 0 16 7.2 16 16s-7.2 16-16 16H136c-8.8 0-16-7.2-16-16zm16 144H320c8.8 0 16 7.2 16 16s-7.2 16-16 16H136c-8.8 0-16-7.2-16-16s7.2-16 16-16zm-16-160c0-8.8 7.2-16 16-16H320c8.8 0 16 7.2 16 16s-7.2 16-16 16H136c-8.8 0-16-7.2-16-16z"/></svg>`;
+    const fileZipperSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" width="${ICON_SIZE}" height="${ICON_SIZE}"><path fill="currentColor" d="M16 48c0-8.8 7.2-16 16-16h80c8.8 0 16 7.2 16 16v16H16V48zM368 48H144v16H368c8.8 0 16-7.2 16-16s-7.2-16-16-16zM0 64c0-35.3 28.7-64 64-64h256c35.3 0 64 28.7 64 64V448c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V64zm184 32v96H24c-13.3 0-24-10.7-24-24V128c0-13.3 10.7-24 24-24h160zm0 176v96H24c-13.3 0-24-10.7-24-24V256c0-13.3 10.7-24 24-24h160zm-160 96c-13.3 0-24 10.7-24 24v64c0 13.3 10.7 24 24 24h160V368H24zM24 192c-13.3 0-24 10.7-24 24v64c0 13.3 10.7 24 24 24h160V192H24zM200 448v32h160c13.3 0 24-10.7 24-24V416c0-13.3-10.7-24-24-24H200v64zM200 192v160h160c13.3 0 24-10.7 24-24V216c0-13.3-10.7-24-24-24H200z"/></svg>`;
+    
+    // Model Icons
+    const starSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" width="${ICON_SIZE}" height="${ICON_SIZE}"><path fill="currentColor" d="M316.9 18C311.6 7 300.4 0 288.1 0s-23.4 7-28.8 18L195 150.3 51.4 171.5c-11.4 1.7-20.1 11.5-19.1 23.1s10.5 20.9 22.3 22.2L180.8 332.9 141.6 478.9c-2.6 9.4 1.8 19 10.1 24.3s18.9 4.6 26.6-2.6l126-105.7 126 105.7c7.7 7.2 18.2 8 26.6 2.6s12.7-14.9 10.1-24.3L395.2 332.9 524.3 216.9c11.8-1.3 21.2-10.2 22.3-22.2s-7.7-21.4-19.1-23.1L381.2 150.3 316.9 18z"/></svg>`;
+    const boltSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" width="${ICON_SIZE}" height="${ICON_SIZE}"><path fill="currentColor" d="M184 0H216C243.6 0 266 22.4 266 50V384h118.6C409.5 384 425.2 411.4 411.7 428.1L248 512H216c-27.6 0-50-22.4-50-50V128H3.4C-10.5 128-26.2 100.6-12.7 83.9L148 0H184z"/></svg>`;
+    const rocketSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="${ICON_SIZE}" height="${ICON_SIZE}"><path fill="currentColor" d="M495.2 403.4c-7.9-10.3-20.7-15.6-33.5-15.6H368.5c-4.4 0-8.8 1.4-12.7 4.1L243.2 460.8c-11.6 7.8-26.7 8.3-38.8 1.2L116.7 416c-3.1-1.9-6.3-3-9.5-3c-15.7 0-30.8 7.3-40.1 19.8l-5.7 7.6c-13.6 18.2-7 43.8 13.9 53.9l121.2 60.6c13.7 6.9 29.8 4.7 41.5-6.2l99.3-99.3c10.9-10.9 13.1-26.9 6.2-40.6l-60.6-121.2c-10.1-20.9-35.7-27.5-53.9-13.9l-7.6 5.7c-12.5 9.3-19.8 24.4-19.8 40.1c0 3.2 1.1 6.4 3 9.5l44.8 100.3c2.7 3.9 4.1 8.3 4.1 12.7v93.2c0 12.8-5.3 25.6-15.6 33.5L8.8 495.2c-10.3 7.9-25.7 7.9-36 0L1.7 488.7c-7.9-10.3-7.9-25.7 0-36L448 8.8c10.3-7.9 25.7-7.9 36 0l1.7 1.3c7.9 10.3 7.9 25.7 0 36L495.2 403.4zM100.2 121.2l-30.9 30.9c-14.1 14.1-14.1 37.1 0 51.2l61.8 61.8c14.1 14.1 37.1 14.1 51.2 0l30.9-30.9c14.1-14.1 14.1-37.1 0-51.2L151.4 121.2c-14.1-14.1-37.1-14.1-51.2 0z"/></svg>`;
 
-    // --- ICONS (for event handlers) - Using Font Awesome 6.5.2 classes ---
-    const copyIconHTML = '<i class="fa-solid fa-copy"></i>';
-    const checkIconHTML = '<i class="fa-solid fa-check"></i>';
-    const stopIconHTML = '<i class="fa-solid fa-stop"></i>'; // New stop icon
+
+    // --- ICONS (for event handlers) ---
+    const copyIconHTML = copySVG;
+    const checkIconHTML = checkSVG;
+    const stopIconHTML = stopSVG; // New stop icon
 
     // --- MODEL CONFIGURATION ---
     const MODELS = [
         // Using Advanced (Flash) as the default for better multi-modal capability
-        // FIX: Updated apiUrl for consistency and stability.
-        { name: 'Standard (Lite)', model: 'gemini-2.5-flash-lite-preview-09-2025', apiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite-preview-09-2025:generateContent?key=', icon: 'fa-solid fa-star', description: 'Fast, basic text and chat.' },
-        // FIX: Updated apiUrl to the correct and stable version for Flash.
-        { name: 'Advanced (Flash)', model: 'gemini-2.5-flash-preview-05-20', apiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=', icon: 'fa-solid fa-bolt', description: 'Faster, multi-modal, better reasoning.' },
-        // FIX: Updated apiUrl to the correct and stable version for Pro. This should resolve the Pro model not responding.
-        { name: 'Pro (Ultra)', model: 'gemini-2.5-pro-preview-05-20', apiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=', icon: 'fa-solid fa-rocket', description: 'Highest capability for complex tasks. (Subject to usage limits)' }
+        { name: 'Standard (Lite)', model: 'gemini-2.5-flash-lite-preview-09-2025', apiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite-preview-09-2025:generateContent?key=', iconSVG: starSVG, description: 'Fast, basic text and chat.' },
+        { name: 'Advanced (Flash)', model: 'gemini-2.5-flash-preview-05-20', apiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=', iconSVG: boltSVG, description: 'Faster, multi-modal, better reasoning.' },
+        // FIX: Updated model identifier from preview tag to stable 'gemini-2.5-pro' to fix the non-responding issue.
+        { name: 'Pro (Ultra)', model: 'gemini-2.5-pro', apiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=', iconSVG: rocketSVG, description: 'Highest capability for complex tasks. (Subject to usage limits)' }
     ];
     let currentModel = MODELS[1]; // Set Advanced (Flash) as default
 
@@ -162,17 +184,17 @@
         const controlsContainer = document.createElement('div');
         controlsContainer.id = 'ai-controls-container';
         
-        // Button 1: Attachment Button (uses fa-link as requested)
+        // Button 1: Attachment Button (uses SVG)
         const attachmentButton = document.createElement('button');
         attachmentButton.id = 'ai-attachment-button';
-        attachmentButton.innerHTML = '<i class="fa-solid fa-link"></i>';
+        attachmentButton.innerHTML = linkSVG; // Use SVG
         attachmentButton.onclick = (e) => { e.stopPropagation(); handleFileUpload(); };
 
-        // Button 2: Model Selector Button (replaces action toggle for menu/stop)
+        // Button 2: Model Selector Button (uses SVG)
         const modelSelectorButton = document.createElement('button');
         modelSelectorButton.id = 'ai-model-selector-button';
-        // Initial icon based on default model
-        modelSelectorButton.innerHTML = `<span class="icon-model"><i class="${currentModel.icon}"></i></span><span class="icon-stop">${stopIconHTML}</span>`;
+        // Initial icon based on default model (using iconSVG)
+        modelSelectorButton.innerHTML = `<span class="icon-model">${currentModel.iconSVG}</span><span class="icon-stop">${stopIconHTML}</span>`;
         modelSelectorButton.onclick = (e) => { e.stopPropagation(); if (isRequestPending) { stopGeneration(); } else { toggleModelMenu(); } };
 
         controlsContainer.appendChild(attachmentButton);
@@ -353,7 +375,8 @@
         // Update UI
         const selectorButton = document.getElementById('ai-model-selector-button');
         if (selectorButton) {
-             selectorButton.innerHTML = `<span class="icon-model"><i class="${currentModel.icon}"></i></span><span class="icon-stop">${stopIconHTML}</span>`;
+             // Use iconSVG
+             selectorButton.innerHTML = `<span class="icon-model">${currentModel.iconSVG}</span><span class="icon-stop">${stopIconHTML}</span>`;
         }
         
         const persistentTitle = document.getElementById('ai-persistent-title');
@@ -437,21 +460,21 @@
                 fileCard.classList.add('loading');
                 fileName = file.file.name;
                 fileExt = fileName.split('.').pop().toUpperCase();
-                // Font Awesome generic file icon
-                previewHTML = `<div class="ai-loader"></div><span class="file-icon"><i class="fa-solid fa-file"></i></span>`;
+                // Use generic file SVG
+                previewHTML = `<div class="ai-loader"></div><span class="file-icon">${fileSVG}</span>`;
             } else {
                 fileName = file.fileName;
                 fileExt = fileName.split('.').pop().toUpperCase();
                 if (file.inlineData.mimeType.startsWith('image/')) {
                     previewHTML = `<img src="data:${file.inlineData.mimeType};base64,${file.inlineData.data}" alt="${fileName}" />`;
                 } else {
-                    // Font Awesome icons for common file types
-                    let iconClass = 'fa-file';
-                    if (fileExt === 'PDF') iconClass = 'fa-file-pdf';
-                    else if (['TXT', 'CSV', 'JSON', 'XML'].includes(fileExt)) iconClass = 'fa-file-lines';
-                    else if (fileExt === 'ZIP') iconClass = 'fa-file-zipper';
+                    // Use file type SVGs
+                    let iconSVG = fileSVG;
+                    if (fileExt === 'PDF') iconSVG = filePdfSVG;
+                    else if (['TXT', 'CSV', 'JSON', 'XML'].includes(fileExt)) iconSVG = fileLinesSVG;
+                    else if (fileExt === 'ZIP') iconSVG = fileZipperSVG;
                     
-                    previewHTML = `<span class="file-icon"><i class="fa-solid ${iconClass}"></i></span>`;
+                    previewHTML = `<span class="file-icon">${iconSVG}</span>`;
                 }
             }
 
@@ -467,7 +490,8 @@
             marqueeWrapper.className = 'file-name';
             marqueeWrapper.appendChild(nameSpan);
 
-            fileCard.innerHTML = `${previewHTML}<div class="file-info"></div>${fileTypeBadge}<button class="remove-attachment-btn" data-index="${index}"><i class="fa-solid fa-xmark"></i></button>`;
+            // Use xMarkSVG for remove button
+            fileCard.innerHTML = `${previewHTML}<div class="file-info"></div>${fileTypeBadge}<button class="remove-attachment-btn" data-index="${index}">${xMarkSVG}</button>`;
             fileCard.querySelector('.file-info').appendChild(marqueeWrapper);
 
             setTimeout(() => {
@@ -506,8 +530,9 @@
                 ? '<span class="limit-warning">Usage Limits Apply</span>' 
                 : '';
             
+            // Use iconSVG
             button.innerHTML = `
-                <span class="icon"><i class="${modelConfig.icon}"></i></span> 
+                <span class="icon">${modelConfig.iconSVG}</span> 
                 <span>${modelConfig.name}</span>
                 <div class="model-description">${modelConfig.description} ${limitText}</div>
             `;
@@ -619,10 +644,10 @@
         const code = wrapper.querySelector('pre > code');
         if (code) {
             navigator.clipboard.writeText(code.innerText).then(() => {
-                btn.innerHTML = checkIconHTML; // Use Font Awesome check icon
+                btn.innerHTML = checkIconHTML; // Use checkSVG
                 btn.disabled = true;
                 setTimeout(() => {
-                    btn.innerHTML = copyIconHTML; // Use Font Awesome copy icon
+                    btn.innerHTML = copyIconHTML; // Use copySVG
                     btn.disabled = false;
                 }, 2000);
             }).catch(err => {
@@ -638,7 +663,6 @@
     /**
      * Parses the Gemini response. It only handles code block extraction,
      * HTML escapes the remaining text, and replaces newlines with <br>.
-     * All markdown (bold, lists, headings) is removed to show raw text.
      */
     function parseGeminiResponse(text) {
         let html = text;
@@ -652,13 +676,18 @@
             const escapedCode = escapeHTML(trimmedCode);
             const langClass = lang ? `language-${lang.toLowerCase()}` : '';
 
+            // FIX: Code block header moved to footer/bottom
+            const codeFooter = `
+                <div class="code-block-footer">
+                    <span class="code-metadata">${lines} lines &middot; ${words} words</span>
+                    <button class="copy-code-btn" title="Copy code">${copyIconHTML}</button>
+                </div>
+            `;
+
             codeBlocks.push(`
                 <div class="code-block-wrapper">
-                    <div class="code-block-header">
-                        <span class="code-metadata">${lines} lines &middot; ${words} words</span>
-                        <button class="copy-code-btn" title="Copy code">${copyIconHTML}</button>
-                    </div>
                     <pre><code class="${langClass}">${escapedCode}</code></pre>
+                    ${codeFooter}
                 </div>
             `);
             return "%%CODE_BLOCK%%";
@@ -679,15 +708,7 @@
     function injectStyles() {
         if (document.getElementById('ai-dynamic-styles')) return;
         
-        // --- Font Awesome v6.5.2 CDN link (UPDATED FOR STABILITY) ---
-        // This is the correct Font Awesome v6.5.2 URL which should work unless the sandbox is blocking external resources.
-        if (!document.querySelector('link[href*="font-awesome"]')) {
-            const faLink = document.createElement('link');
-            faLink.rel = 'stylesheet';
-            // Switched to v6.5.2 for improved loading stability in sandboxed environments
-            faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css'; 
-            document.head.appendChild(faLink);
-        }
+        // Font Awesome CDN removed, using inline SVGs instead.
 
         // Add Geist Font
         if (!document.querySelector('style[data-font="geist"]')) {
@@ -771,12 +792,12 @@
                 cursor: pointer; padding: 5px; line-height: 1; transition: all .3s ease; border-radius: 50%; width: 34px; height: 34px; 
                 display: flex; align-items: center; justify-content: center; overflow: hidden;
             }
-            #ai-attachment-button i { font-size: 18px; color: #4f46e5; transition: color 0.2s; }
-            #ai-attachment-button:hover i { color: #fff; }
+            #ai-attachment-button svg { font-size: 18px; color: #4f46e5; transition: color 0.2s; }
+            #ai-attachment-button:hover svg { color: #fff; }
 
             #ai-model-selector-button .icon-model, #ai-model-selector-button .icon-stop { transition: opacity 0.3s, transform 0.3s; position: absolute; }
             #ai-model-selector-button .icon-stop { opacity: 0; transform: scale(0.5); } 
-            #ai-model-selector-button .icon-model i { font-size: 18px; color: #4f46e5; transition: color 0.2s; }
+            #ai-model-selector-button .icon-model svg { font-size: 18px; color: #4f46e5; transition: color 0.2s; }
 
             /* NEW GENERATING/STOP STYLE */
             #ai-model-selector-button.generating { 
@@ -786,7 +807,7 @@
             }
             #ai-model-selector-button.generating .icon-model { opacity: 0; transform: scale(0.5); }
             #ai-model-selector-button.generating .icon-stop { opacity: 1; transform: scale(1); }
-            #ai-model-selector-button.generating .icon-stop i { color: #ff0000; } 
+            #ai-model-selector-button.generating .icon-stop svg { color: #ff0000; } 
             
             /* Model Selection Menu */
             #ai-model-menu { 
@@ -804,7 +825,7 @@
                 align-items: center; 
             }
             
-            #ai-model-menu button .icon i {
+            #ai-model-menu button .icon svg {
                 font-size: 1.1em;
                 color: #4f46e5; 
             }
@@ -817,7 +838,15 @@
 
             /* Code Block & Copy Button */
             .code-block-wrapper { background-color: rgba(42, 42, 48, 0.8); border-radius: 8px; margin: 10px 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
-            .code-block-header { display: flex; justify-content: flex-end; align-items: center; padding: 6px 12px; background-color: rgba(0,0,0,0.2); }
+            
+            /* FIX: Code bar moved to bottom and renamed to footer */
+            .code-block-footer { 
+                display: flex; justify-content: space-between; align-items: center; 
+                padding: 6px 12px; 
+                background-color: rgba(0,0,0,0.2); 
+                border-top: 1px solid rgba(255,255,255,0.1); /* Separator line for footer */
+            }
+
             .copy-code-btn { 
                 background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); 
                 border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; border-radius: 6px; width: 32px; height: 32px; 
@@ -825,9 +854,9 @@
             }
             .copy-code-btn:hover { background: rgba(79, 70, 229, 0.2); border-color: #4f46e5; }
             .copy-code-btn:disabled { cursor: default; background: rgba(25, 103, 55, 0.5); }
-            .copy-code-btn i { font-size: 16px; color: #e0e0e0; transition: color 0.2s; }
-            .copy-code-btn:hover i { color: #fff; }
-            .copy-code-btn:disabled i { color: #fff; }
+            .copy-code-btn svg { width: 16px; height: 16px; color: #e0e0e0; transition: color 0.2s; }
+            .copy-code-btn:hover svg { color: #fff; }
+            .copy-code-btn:disabled svg { color: #fff; }
             
             /* Keyframes matching dailyphoto.html style */
             @keyframes glow { 0%,100% { box-shadow: 0 0 5px rgba(255,255,255,.15), 0 0 10px rgba(255,255,255,.1); } 50% { box-shadow: 0 0 10px rgba(255,255,255,.25), 0 0 20px rgba(255,255,255,.2); } }
@@ -842,13 +871,13 @@
             .attachment-card.loading .file-icon { opacity: 0.3; }
             .attachment-card.loading .ai-loader { position: absolute; z-index: 2; }
             .attachment-card img { width: 100%; height: 100%; object-fit: cover; }
-            .file-icon i { font-size: 30px; color: #fff; opacity: 0.8; }
+            .file-icon svg { font-size: 30px; color: #fff; opacity: 0.8; }
             .file-info { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); overflow: hidden; }
             .file-name { display: block; color: #fff; font-size: 0.75em; padding: 4px; text-align: center; white-space: nowrap; }
             .file-name.marquee > span { display: inline-block; padding-left: 100%; animation: marquee linear infinite; }
             .file-type-badge { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.7em; padding: 2px 5px; border-radius: 4px; font-family: 'Geist', sans-serif; font-weight: bold; }
             .remove-attachment-btn { position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.5); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; z-index: 3; }
-            .remove-attachment-btn i { font-size: 10px; }
+            .remove-attachment-btn svg { width: 10px; height: 10px; }
             .ai-loader { width: 25px; height: 25px; border-radius: 50%; animation: spin 1s linear infinite; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; }
             .code-metadata { font-size: 0.8em; color: #aaa; margin-right: auto; font-family: 'Geist', sans-serif; }
             .code-block-wrapper pre { margin: 0; padding: 15px; overflow: auto; background-color: transparent; }
