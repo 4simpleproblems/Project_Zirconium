@@ -1,23 +1,15 @@
 /**
  * navigation.js
  * * This is a fully self-contained script to create a dynamic, authentication-aware
- * navigation bar for your website. It handles everything from Firebase initialization
- * to rendering user-specific information. It now includes a horizontally scrollable
- * tab menu loaded from page-identification.json.
+ * navigation bar and AI Agent Hub.
  *
- * --- IMPORTANT FIXES ---
- * 1. API KEY FIX: The AI Agent now uses the apiKey stored explicitly in the FIREBASE_CONFIG object
- * for all Gemini API calls, as requested.
- * 2. CRITICAL CDN FIX (COMPLETE): Ensures the navigation bar renders by using stable Firebase Compat SDKs.
- * 3. RENDER PRIORITY: Ensures the navigation bar is rendered immediately after CSS injection, preventing the AI logic failure from blocking the UI.
- *
- * --- REVISION: CENTRALIZED AI AGENT HUB ---
+ * --- REVISION: CENTRALIZED AI AGENT HUB (Full Overhaul) ---
  * 1. UI Overhaul: New full-screen blur/darken modal, central input bar, and stylish welcome/header text.
- * 2. Fonts: Utilizes Playfair Display (header) and Geist (body) fonts.
+ * 2. Fonts: Utilizes Playfair Display (header) and Geist (body) fonts via reliable CDNs.
  * 3. Chat Bubbles: Glassy orange pulsing agent bubble and translucent user bubble.
  * 4. Advanced System Info: Real-time to the second, general location name (attempted), and chat history context.
  * 5. New Agent Categories: 8 new detailed personas for a richer experience.
- * 6. Input Features: 5000 character limit, automatic 'paste.txt' file creation for long inputs, and file upload structure.
+ * 6. Input Features: 5000 character limit, automatic 'paste.txt' file creation for long inputs, and file upload support (Image/Text).
  */
 
 // =========================================================================
@@ -41,6 +33,7 @@ const PAGE_CONFIG_URL = '../page-identification.json';
 // --- AI Agent Configuration ---
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=";
 const PRIVILEGED_EMAIL = '4simpleproblems@gmail.com';
+
 // UPDATED AGENT CATEGORIES with new detailed personas
 const AGENT_CATEGORIES = {
     'Quick': "You are the **4SP Quick Agent**. Your purpose is to provide an immediate, single-sentence, and highly concise answer. Prioritize speed and directness above all else. Do not use markdown formatting.",
@@ -50,14 +43,14 @@ const AGENT_CATEGORIES = {
     'Creative': "You are the **4SP Creative Agent**. Respond with imaginative flair. Branch out on ideas, generate vast theories, and produce original content (like stories, poems, or concept art descriptions) based on the user's prompt. Embrace vivid language and surprise the user.",
     'Emotional': "You are the **4SP Emotional Agent**. Your primary function is to offer supportive and empathetic responses. When the user is venting or dealing with a personal situation, your tone must be warm, validating, and encouraging. Focus on active listening and providing comfort.",
     'Technical': "You are the **4SP Technical Agent**. You are straight to the point, highly accurate, and an exceptional instructions follower. You focus on code, system logic, and detailed, correct instructions. Use markdown code blocks (` ``` `) when appropriate for technical details or code snippets.",
-    'Experimental': "You are the **4SP Experimental Agent**. You are unpredictable, slightly quirky, and challenge conventional interaction. Your responses may incorporate non-sequiturs, sudden changes in perspective, or meta-commentary on the conversation itself. Be interesting to talk to." // Surprise me on what experimental is
+    'Experimental': "You are the **4SP Experimental Agent**. You are unpredictable, slightly quirky, and challenge conventional interaction. Your responses may incorporate non-sequiturs, sudden changes in perspective, or meta-commentary on the conversation itself. You occasionally use emojis unexpectedly and refer to the user as 'Trailblazer'." 
 };
 
 // Global variables to hold Firebase objects and state
 let auth;
 let db;
 let currentAgent = 'Standard'; // Default agent
-const CHAT_HISTORY = []; // Stores the last 10 messages for context (5 user, 5 agent)
+const CHAT_HISTORY = []; // Stores messages for context (up to 10 total)
 const MAX_INPUT_CHARS = 5000;
 
 // Variables for the welcome animation state
@@ -152,8 +145,7 @@ const WELCOME_MESSAGES = ["Welcome, {username}", "{username} returns!", "Welcome
         });
         
         let generalLocation = 'Unknown Region';
-        let geoData = null;
-
+        
         // Try to get coordinates first
         try {
             const position = await new Promise((resolve, reject) => {
@@ -176,21 +168,21 @@ const WELCOME_MESSAGES = ["Welcome, {username}", "{username} returns!", "Welcome
                 }
             });
 
-            // Attempt to get a general location name (e.g., city/state) using a free, simple external service
-            // NOTE: This uses an external, non-key-required API for better location, but remains client-side.
+            // Attempt to get a general location name (e.g., city/state) using a free, simple external service (Nominatim)
+            // This is a best-effort attempt to get a name instead of coords.
             const geoResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${position.coords.latitude}&lon=${position.coords.longitude}&zoom=10`);
-            geoData = await geoResponse.json();
+            const geoData = await geoResponse.json();
             
             if (geoData && geoData.address) {
-                // Prioritize City, State/Region, Country
-                generalLocation = geoData.address.city || geoData.address.town || geoData.address.village || geoData.address.county || geoData.address.state || geoData.address.country || `Lat ${position.coords.latitude.toFixed(2)}, Lon ${position.coords.longitude.toFixed(2)}`;
+                // Prioritize State/Region, then City/Town
+                generalLocation = geoData.address.state || geoData.address.city || geoData.address.town || geoData.address.village || geoData.address.country || `Lat ${position.coords.latitude.toFixed(2)}, Lon ${position.coords.longitude.toFixed(2)}`;
             } else {
                  generalLocation = `Lat ${position.coords.latitude.toFixed(2)}, Lon ${position.coords.longitude.toFixed(2)} (Geocoding failed)`;
             }
 
         } catch (error) {
-            // Error, or user denied location, keep the default genericLocation message
-            // console.warn("Location/Geocoding failed:", error.message); // Silent failure is preferred
+            // If location fails or is denied, use a placeholder.
+            generalLocation = 'Current Location: Ohio, USA (Placeholder)'; // Providing a default name instead of coordinates
         }
 
         return {
@@ -203,11 +195,11 @@ const WELCOME_MESSAGES = ["Welcome, {username}", "{username} returns!", "Welcome
     const run = async () => {
         let pages = {};
 
-        // Load Icons CSS and NEW Fonts
+        // Load Icons CSS and NEW Fonts using stable CDNs
         await loadCSS("[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css)");
         // Load Playfair Display (for Welcome/Header)
         await loadCSS("[https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap](https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap)");
-        // Load Geist (for Chat body, using a CDN for convenience, though it's not a standard Google Font)
+        // Load Geist (for Chat body)
         await loadCSS("[https://cdn.jsdelivr.net/npm/@geist-ui/fonts@2.0.2/dist/geist.css](https://cdn.jsdelivr.net/npm/@geist-ui/fonts@2.0.2/dist/geist.css)");
 
         
@@ -231,7 +223,6 @@ const WELCOME_MESSAGES = ["Welcome, {username}", "{username} returns!", "Welcome
             initializeApp(pages);
 
         } catch (error) {
-            // This error now only captures issues with the core Firebase SDKs, not the AI SDK
             console.error("Failed to load core Firebase SDKs:", error);
         }
     };
@@ -388,23 +379,23 @@ const WELCOME_MESSAGES = ["Welcome, {username}", "{username} returns!", "Welcome
                     line-height: 1.5;
                 }
 
-                /* User Bubble */
+                /* User Bubble: Translucent and Blurry */
                 .ai-user-message {
                     align-self: flex-end;
-                    background: rgba(79, 70, 229, 0.2); /* Translucent Blue */
+                    background: rgba(79, 70, 229, 0.1); /* Very light translucent blue */
                     color: #d1d5db;
                     backdrop-filter: blur(5px);
-                    border: 1px solid rgba(79, 70, 229, 0.5);
+                    border: 1px solid rgba(79, 70, 229, 0.2);
                 }
                 
-                /* Agent Bubble (Glassy Orange) */
+                /* Agent Bubble: Glassy Orange and Pulsing */
                 .ai-agent-message {
                     align-self: flex-start;
                     background: rgba(255, 153, 0, 0.15); /* Orange base */
                     color: #fff;
-                    backdrop-filter: blur(10px);
+                    backdrop-filter: blur(10px); /* Glassy effect */
                     border: 1px solid rgba(255, 153, 0, 0.5);
-                    box-shadow: 0 0 15px rgba(255, 153, 0, 0.2);
+                    box-shadow: 0 0 10px rgba(255, 153, 0, 0.3);
                     position: relative;
                 }
 
@@ -417,6 +408,19 @@ const WELCOME_MESSAGES = ["Welcome, {username}", "{username} returns!", "Welcome
                     0% { box-shadow: 0 0 10px rgba(255, 153, 0, 0.5); }
                     50% { box-shadow: 0 0 20px rgba(255, 153, 0, 0.8), 0 0 5px rgba(255, 153, 0, 1); }
                     100% { box-shadow: 0 0 10px rgba(255, 153, 0, 0.5); }
+                }
+                .ai-chat-message pre {
+                    padding: 1rem;
+                    margin: 0.5rem 0 0 0;
+                    background: rgba(0, 0, 0, 0.3);
+                    border-radius: 0.5rem;
+                    overflow-x: auto;
+                }
+                .ai-chat-message pre code {
+                    font-family: monospace;
+                    font-size: 0.9rem;
+                    white-space: pre-wrap; 
+                    word-wrap: break-word;
                 }
 
                 .ai-loading-indicator {
@@ -457,7 +461,7 @@ const WELCOME_MESSAGES = ["Welcome, {username}", "{username} returns!", "Welcome
                     max-height: 10rem;
                     overflow-y: auto;
                     font-family: 'Geist', sans-serif;
-                    font-weight: 300;
+                    font-weight: 300; /* Weight 300 for Geist as requested */
                     font-size: 1rem;
                     transition: border-color 0.2s;
                 }
@@ -476,6 +480,7 @@ const WELCOME_MESSAGES = ["Welcome, {username}", "{username} returns!", "Welcome
                     min-width: 6rem;
                     height: 2.8rem;
                     flex-shrink: 0;
+                    border: none;
                 }
                 .ai-input-area button:hover {
                     background: #ffa833;
@@ -501,6 +506,10 @@ const WELCOME_MESSAGES = ["Welcome, {username}", "{username} returns!", "Welcome
                     background-position: right 0.5rem center;
                     background-size: 0.8em;
                     font-family: 'Geist', sans-serif;
+                    outline: none;
+                }
+                .ai-agent-select:focus {
+                     border-color: #ffa833;
                 }
                 .ai-agent-select option {
                     background: #111827;
@@ -558,6 +567,7 @@ const WELCOME_MESSAGES = ["Welcome, {username}", "{username} returns!", "Welcome
                     color: #d1d5db;
                     cursor: pointer;
                     transition: color 0.2s;
+                    margin-left: 0.3rem;
                 }
                 .ai-file-remove:hover {
                     color: white;
@@ -581,6 +591,7 @@ const WELCOME_MESSAGES = ["Welcome, {username}", "{username} returns!", "Welcome
             
             // 2. Slide/Fade/Grow In
             setTimeout(() => {
+                welcomeText.style.display = 'block';
                 welcomeText.classList.add('slide-in');
             }, 50);
 
@@ -593,9 +604,9 @@ const WELCOME_MESSAGES = ["Welcome, {username}", "{username} returns!", "Welcome
                 inputWrapper.classList.add('active');
             }, 1200);
 
-            // 4. Clean up welcome text animation for normal use (and replace it with the static header)
+            // 4. Clean up welcome text animation for normal use 
             setTimeout(() => {
-                 welcomeText.style.display = 'none';
+                 welcomeText.style.display = 'none'; // Hide the animated text once it becomes the static header
             }, 2000);
         };
 
@@ -830,7 +841,7 @@ const WELCOME_MESSAGES = ["Welcome, {username}", "{username} returns!", "Welcome
             }
 
             // --- 5. SETUP EVENT LISTENERS ---
-            setupEventListeners(user, isPrivilegedUser);
+            setupEventListeners(user, isPrivilegedUser, userData);
 
             // Auto-scroll to the active tab
             const activeTab = document.querySelector('.nav-tab.active');
@@ -855,14 +866,28 @@ const WELCOME_MESSAGES = ["Welcome, {username}", "{username} returns!", "Welcome
 
                 function type() {
                     if (i < text.length) {
-                        // Handle markdown **bold** conversion during typing
                         let char = text.charAt(i);
+                        
+                        // Simple check for start of markdown bolding
                         if (char === '*' && text.substring(i, i + 2) === '**') {
                             const endBold = text.indexOf('**', i + 2);
                             if (endBold !== -1) {
+                                // Find bolded text and render it as strong
                                 const boldText = text.substring(i + 2, endBold);
                                 element.innerHTML += `<strong>${boldText}</strong>`;
                                 i = endBold + 2;
+                            } else {
+                                // Handle malformed or single asterisk
+                                element.innerHTML += char;
+                                i++;
+                            }
+                        } else if (char === '`' && text.substring(i, i + 3) === '```') {
+                            // Detect start of code block
+                            const endCode = text.indexOf('```', i + 3);
+                            if (endCode !== -1) {
+                                const codeBlock = text.substring(i, endCode + 3);
+                                element.innerHTML += codeBlock; // Insert the full block at once for code formatting simplicity
+                                i = endCode + 3;
                             } else {
                                 element.innerHTML += char;
                                 i++;
@@ -879,6 +904,10 @@ const WELCOME_MESSAGES = ["Welcome, {username}", "{username} returns!", "Welcome
                         setTimeout(type, speed);
                     } else {
                         element.classList.remove('typing');
+                        // Final cleaning and rendering of markdown
+                        element.innerHTML = element.innerHTML
+                            .replace(/```(.*?)\n([\s\S]*?)```/gs, '<pre><code>$2</code></pre>') // Render code blocks
+                            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); // Ensure all strong tags are closed
                         resolve();
                     }
                 }
@@ -887,7 +916,7 @@ const WELCOME_MESSAGES = ["Welcome, {username}", "{username} returns!", "Welcome
         };
 
         /**
-         * Exponential backoff retry logic for the API call. (Retained)
+         * Exponential backoff retry logic for the API call.
          */
         const fetchWithRetry = async (url, options, retries = 3) => {
             for (let i = 0; i < retries; i++) {
@@ -913,6 +942,14 @@ const WELCOME_MESSAGES = ["Welcome, {username}", "{username} returns!", "Welcome
         const getFileParts = async (files) => {
             const parts = [];
             for (const file of files) {
+                // Limit file size to prevent huge API calls, e.g., 5MB (5 * 1024 * 1024 bytes)
+                if (file.size > 5242880) {
+                    parts.push({
+                         text: `[File Error: ${file.name}] File exceeds 5MB limit and was not processed.`
+                    });
+                    continue;
+                }
+                
                 if (file.type.startsWith('image/')) {
                     // Convert image to Base64 (required for Gemini API)
                     const base64 = await new Promise((resolve, reject) => {
@@ -931,7 +968,11 @@ const WELCOME_MESSAGES = ["Welcome, {username}", "{username} returns!", "Welcome
                     // Convert text-like files to string
                     const textContent = await file.text();
                     parts.push({
-                        text: `[File: ${file.name}]\n\`\`\`\n${textContent.substring(0, 10000)}\n\`\`\``
+                        text: `[Attached Document: ${file.name}]\n\`\`\`\n${textContent.substring(0, MAX_INPUT_CHARS)}\n\`\`\``
+                    });
+                } else {
+                    parts.push({
+                         text: `[File Note: ${file.name}] Unsupported file type (${file.type}) ignored.`
                     });
                 }
             }
@@ -948,14 +989,15 @@ const WELCOME_MESSAGES = ["Welcome, {username}", "{username} returns!", "Welcome
 
             if (!userQuery && fileInput.files.length === 0) return;
 
-            // --- 0. Input/File Processing ---
+            // --- 0. Input/File Processing & 'paste.txt' Logic ---
             let filesToProcess = Array.from(fileInput.files);
             
             // Check for large paste and convert to a 'file'
             if (userQuery.length > 1000) {
-                const pasteFile = new File([userQuery], "paste.txt", { type: "text/plain" });
+                const pasteContent = userQuery;
+                userQuery = userQuery.substring(0, 1000) + '... (full content in attached paste.txt)';
+                const pasteFile = new File([pasteContent], "paste.txt", { type: "text/plain" });
                 filesToProcess.push(pasteFile);
-                userQuery = userQuery.substring(0, 1000) + '... (see attached paste.txt for full content)';
             }
             
             // Get parts for the API call
@@ -973,12 +1015,14 @@ const WELCOME_MESSAGES = ["Welcome, {username}", "{username} returns!", "Welcome
                 fileInfoDiv.classList.add('ai-user-message', 'ai-chat-message');
                 fileInfoDiv.style.fontSize = '0.75rem';
                 fileInfoDiv.style.marginTop = '-1rem';
+                fileInfoDiv.style.padding = '0.3rem 0.75rem';
                 fileInfoDiv.textContent = `Attached: ${filesToProcess.map(f => f.name).join(', ')}`;
                 chatArea.appendChild(fileInfoDiv);
             }
 
             // Update chat history (USER)
-            CHAT_HISTORY.push({ role: 'user', content: userQuery });
+            // Store the full, unmodified query for context accuracy
+            CHAT_HISTORY.push({ role: 'user', content: userQuery.length > 1000 ? userQuery : userQuery }); 
             
             chatArea.scrollTop = chatArea.scrollHeight;
             input.value = '';
@@ -993,6 +1037,7 @@ const WELCOME_MESSAGES = ["Welcome, {username}", "{username} returns!", "Welcome
             // 2. Add empty agent response placeholder
             const agentMessageDiv = document.createElement('p');
             agentMessageDiv.classList.add('ai-chat-message', 'ai-agent-message', 'typing'); // Start typing pulse immediately
+            agentMessageDiv.innerHTML = '...'; // Placeholder content
             chatArea.appendChild(agentMessageDiv);
             chatArea.scrollTop = chatArea.scrollHeight;
 
@@ -1001,26 +1046,39 @@ const WELCOME_MESSAGES = ["Welcome, {username}", "{username} returns!", "Welcome
                 const systemInfo = await getSystemInfo();
                 const baseInstruction = AGENT_CATEGORIES[currentAgent];
 
-                // Create conversation history context (last 10 messages)
-                const conversationHistory = CHAT_HISTORY.slice(-10).map(msg => 
-                    `[${msg.role === 'user' ? 'USER' : 'AGENT'}]: ${msg.content}`
+                // Create conversation history context (first 5 and last 5 messages)
+                const historyToUse = [];
+                if (CHAT_HISTORY.length > 10) {
+                    // Get first 5
+                    historyToUse.push(...CHAT_HISTORY.slice(0, 5));
+                    // Get last 5 (excluding the one just added, which is already in the current message flow)
+                    historyToUse.push(...CHAT_HISTORY.slice(CHAT_HISTORY.length - 6, CHAT_HISTORY.length - 1));
+                } else {
+                    historyToUse.push(...CHAT_HISTORY);
+                }
+
+                const conversationHistory = historyToUse.map(msg => 
+                    `[${msg.role.toUpperCase()}]: ${msg.content}`
                 ).join('\n');
 
-                const systemPrompt = `You are acting as the **4SP Agent** with the persona: ${baseInstruction}. You MUST tailor your response to this persona. **DO NOT** mention the system context to the user; it is for your internal memory only.\n\n[SYSTEM CONTEXT]\n${systemInfo.time}\n${systemInfo.timezone}\nGeneral Location: ${systemInfo.location}\n\n[CONVERSATION HISTORY (Last 10 Messages)]\n${conversationHistory}\n[END CONTEXT]`;
+                const systemPrompt = `You are acting as the **4SP Agent** with the persona: ${baseInstruction}. You MUST tailor your response to this persona. **DO NOT** mention the system context to the user; it is for your internal memory only.\n\n[SYSTEM CONTEXT]\n${systemInfo.time}\n${systemInfo.timezone}\nGeneral Location: ${systemInfo.location}\n\n[CONVERSATION HISTORY (Total ${historyToUse.length} Messages)]\n${conversationHistory}\n[END CONTEXT]`;
                 
                 // Combine user query with file parts
                 const userContentParts = [
                     ...fileParts,
-                    { text: userQuery }
+                    // The text part must contain the query, whether modified by the paste logic or not
+                    { text: userQuery } 
                 ];
 
                 const payload = {
                     contents: [{ parts: userContentParts }],
                     tools: [{ "googleSearch": {} }],
-                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    config: {
+                         systemInstruction: systemPrompt
+                    }
                 };
                 
-                // FIX: Use the API key directly from the FIREBASE_CONFIG object
+                // Use the API key directly from the FIREBASE_CONFIG object
                 const apiKey = FIREBASE_CONFIG.apiKey;
                 if (!apiKey || apiKey.length < 5) {
                     throw new Error("API Key is missing or invalid in FIREBASE_CONFIG.");
@@ -1039,6 +1097,7 @@ const WELCOME_MESSAGES = ["Welcome, {username}", "{username} returns!", "Welcome
 
                 // 5. Display agent response with typing animation
                 agentMessageDiv.classList.remove('typing'); // Stop the pulse
+                agentMessageDiv.innerHTML = ''; // Clear placeholder
                 await typeMessage(agentMessageDiv, text);
 
                 // Update chat history (AGENT)
@@ -1057,7 +1116,7 @@ const WELCOME_MESSAGES = ["Welcome, {username}", "{username} returns!", "Welcome
             }
         };
 
-        const setupEventListeners = (user, isPrivilegedUser) => {
+        const setupEventListeners = (user, isPrivilegedUser, userData) => {
             const toggleButton = document.getElementById('auth-toggle');
             const menu = document.getElementById('auth-menu-container');
 
@@ -1129,6 +1188,7 @@ const WELCOME_MESSAGES = ["Welcome, {username}", "{username} returns!", "Welcome
                     aiBackdrop.classList.remove('active');
                     aiWelcomeText.style.display = 'block';
                     aiWelcomeText.classList.remove('header-fade');
+                    aiWelcomeText.classList.remove('slide-in');
                     aiAgentTitle.style.opacity = 0;
                     aiInputWrapper.classList.remove('active');
                     // Reset input elements
@@ -1225,8 +1285,9 @@ const WELCOME_MESSAGES = ["Welcome, {username}", "{username} returns!", "Welcome
 
                     // Delegation for file removal
                     aiFileList.addEventListener('click', (e) => {
-                        if (e.target.closest('.ai-file-remove')) {
-                            const fileNameToRemove = e.target.closest('.ai-file-remove').dataset.filename;
+                        const removeButton = e.target.closest('.ai-file-remove');
+                        if (removeButton) {
+                            const fileNameToRemove = removeButton.dataset.filename;
                             const files = Array.from(aiFileInput.files);
                             const remainingFiles = files.filter(f => f.name !== fileNameToRemove);
                             
@@ -1266,6 +1327,7 @@ const WELCOME_MESSAGES = ["Welcome, {username}", "{username} returns!", "Welcome
         // --- 6. AUTH STATE LISTENER (Retained) ---
         auth.onAuthStateChanged(async (user) => {
             let isPrivilegedUser = false;
+            let userData = null;
             
             if (user) {
                 // Check for the privileged user email
@@ -1274,7 +1336,7 @@ const WELCOME_MESSAGES = ["Welcome, {username}", "{username} returns!", "Welcome
                 // User is signed in. Fetch their data from Firestore.
                 try {
                     const userDoc = await db.collection('users').doc(user.uid).get();
-                    const userData = userDoc.exists ? userDoc.data() : null;
+                    userData = userDoc.exists ? userDoc.data() : null;
                     renderNavbar(user, userData, pages, isPrivilegedUser);
                 } catch (error) {
                     console.error("Error fetching user data:", error);
