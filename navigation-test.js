@@ -5,12 +5,14 @@
  * enhanced animations, intelligent chat history (token saving),
  * and advanced file previews. This version includes a character limit,
  * smart paste handling, and refined animations.
- * * LATEST UPDATES (Matching dailyphoto.html style):
- * - Font Awesome CDN updated to v7.1.0 (to fix icon loading).
- * - Primary glow color set to deep indigo (#4f46e5) to match the particleGlow animation.
- * - Icon and element styling adjusted to match the dark, vibrant aesthetic.
- * - Text wrapping and pure-text Gemini responses maintained from previous update.
- * - ACTIVATION SHORTCUT CHANGED TO: Ctrl + \ 
+ *
+ * LATEST UPDATES:
+ * - Font Awesome CDN updated to v6.5.2.
+ * - Activation shortcut set to Ctrl + \.
+ * - Action Toggle (three dots) replaced with two dedicated buttons: Attachment and Model Selector.
+ * - Image daily limits and Agent Categories/Focus Topics removed.
+ * - New Model Selection feature implemented (Standard, Advanced, Pro).
+ * - Model Selector button displays current model icon and acts as a STOP button during generation.
  */
 (function() {
     // =========================================================================
@@ -29,55 +31,34 @@
     // =========================================================================
 
     // --- CONFIGURATION ---
-    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite-preview-09-2025:generateContent?key=${FIREBASE_CONFIG.apiKey}`;
     const MAX_INPUT_HEIGHT = 200;
     const CHAR_LIMIT = 500;
 
-    // --- ICONS (for event handlers) - Using Font Awesome 7.1.0 classes ---
+    // --- ICONS (for event handlers) - Using Font Awesome 6.5.2 classes ---
     const copyIconHTML = '<i class="fa-solid fa-copy"></i>';
     const checkIconHTML = '<i class="fa-solid fa-check"></i>';
+    const stopIconHTML = '<i class="fa-solid fa-stop"></i>'; // New stop icon
+
+    // --- MODEL CONFIGURATION ---
+    const MODELS = [
+        // Using Advanced (Flash) as the default for better multi-modal capability
+        { name: 'Standard (Lite)', model: 'gemini-2.5-flash-lite-preview-09-2025', apiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite-preview-09-2025:generateContent?key=', icon: 'fa-solid fa-star', description: 'Fast, basic text and chat.' },
+        { name: 'Advanced (Flash)', model: 'gemini-2.5-flash-preview-05-20', apiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=', icon: 'fa-solid fa-bolt', description: 'Faster, multi-modal, better reasoning.' },
+        { name: 'Pro (Ultra)', model: 'gemini-2.5-pro-preview-05-20', apiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-preview-05-20:generateContent?key=', icon: 'fa-solid fa-rocket', description: 'Highest capability for complex tasks. (Subject to usage limits)' }
+    ];
+    let currentModel = MODELS[1]; // Set Advanced (Flash) as default
 
     // --- STATE MANAGEMENT ---
     let isAIActive = false;
     let isRequestPending = false;
-    let isActionMenuOpen = false;
+    let isModelMenuOpen = false; // Renamed from isActionMenuOpen
     let currentAIRequestController = null;
-    let currentSubject = 'General';
     let chatHistory = [];
     let attachedFiles = [];
 
-    // --- DAILY LIMITS CONFIGURATION ---
-    const DAILY_LIMITS = { images: 5 };
+    // --- AGENT INSTRUCTION (Generic since categories were removed) ---
+    const SYSTEM_INSTRUCTION = 'You are a helpful, comprehensive, and detail-oriented AI assistant.';
 
-    // --- AGENT CATEGORIES (formerly Focus Topics) ---
-    const AGENT_CATEGORIES = [
-        { name: 'General', instruction: 'You are a helpful and comprehensive AI assistant.', color: 'rgba(55, 65, 81, 0.7)' },
-        { name: 'Math Expert', instruction: 'You are a mathematics expert. Prioritize accuracy and provide detailed, step-by-step reasoning for all calculations and proofs. Double-check your work for correctness.', color: 'rgba(127, 29, 29, 0.7)' },
-        { name: 'Science Tutor', instruction: 'You are a science expert. Explain complex scientific concepts clearly and concisely, using analogies where helpful. Provide sources or references for claims where appropriate.', color: 'rgba(22, 101, 52, 0.7)' },
-        { name: 'Writer/Editor', instruction: 'You are an expert in English language and literature. Adopt a human-like, conversational, and slightly literary tone. Analyze texts with nuance, considering themes, character development, and authorial intent. Mirror the user\'s writing style in terms of formality.', color: 'rgba(30, 64, 175, 0.7)' },
-        { name: 'Code Assistant', instruction: 'You are an expert programmer and software architect. Provide complete and runnable code examples. Do not use brevity or omit necessary parts of the code for simplicity. Explain the code clearly, covering its logic, structure, and potential edge cases.', color: 'rgba(12, 74, 110, 0.7)' }
-    ];
-    
-    // Function to find the instruction for the current subject
-    function getSystemInstruction(subject) {
-        const category = AGENT_CATEGORIES.find(c => c.name === subject);
-        return category ? category.instruction : AGENT_CATEGORIES[0].instruction;
-    }
-
-    const limitManager = {
-        getToday: () => new Date().toLocaleDateString("en-US"),
-        getUsage: () => {
-            const usageData = JSON.parse(localStorage.getItem('aiUsageLimits')) || {};
-            const today = limitManager.getToday();
-            if (usageData.date !== today) {
-                return { date: today, images: 0 };
-            }
-            return usageData;
-        },
-        saveUsage: (usageData) => { localStorage.setItem('aiUsageLimits', JSON.stringify(usageData)); },
-        canUpload: (type) => { const usage = limitManager.getUsage(); return (type in DAILY_LIMITS) ? ((usage[type] || 0) < DAILY_LIMITS[type]) : true; },
-        recordUpload: (type, count = 1) => { if (type in DAILY_LIMITS) { let usage = limitManager.getUsage(); usage[type] = (usage[type] || 0) + count; limitManager.saveUsage(usage); } }
-    };
 
     async function isUserAuthorized() {
         const user = firebase.auth().currentUser;
@@ -117,17 +98,12 @@
             }
         }
         
-        // Retain the complex Ctrl + C logic for copying text while active, 
-        // but it no longer contains activation logic.
+        // Retain the complex Ctrl + C logic for copying text while active.
         else if (e.ctrlKey && e.key.toLowerCase() === 'c') {
             const selection = window.getSelection().toString();
-            if (isAIActive) {
-                if (selection.length > 0) {
-                    return; // Allow default copy behavior for selected text
-                }
+            if (isAIActive && selection.length === 0) {
                 e.preventDefault();
             }
-            // If inactive, the original activation logic is now completely moved to Ctrl + \
         }
     }
 
@@ -140,11 +116,12 @@
         
         const container = document.createElement('div');
         container.id = 'ai-container';
-        container.dataset.subject = currentSubject;
+        // Subject categories removed, setting a default data-attribute for base styling
+        container.dataset.subject = 'Advanced'; 
         
         const brandTitle = document.createElement('div');
         brandTitle.id = 'ai-brand-title';
-        const brandText = "4SP - AI AGENT"; // Updated name
+        const brandText = "4SP - AI AGENT";
         brandText.split('').forEach(char => {
             const span = document.createElement('span');
             span.textContent = char;
@@ -154,11 +131,11 @@
         
         const persistentTitle = document.createElement('div');
         persistentTitle.id = 'ai-persistent-title';
-        persistentTitle.textContent = `4SP AI Agent - ${currentSubject}`; // Updated name
+        persistentTitle.textContent = `4SP AI Agent - ${currentModel.name}`;
         
         const welcomeMessage = document.createElement('div');
         welcomeMessage.id = 'ai-welcome-message';
-        welcomeMessage.innerHTML = `<h2>Welcome to 4SP AI Agent</h2><p>This is a beta feature. To improve your experience, your general location (state or country) will be shared with your first message. You may be subject to message limits.</p>`; // Updated name
+        welcomeMessage.innerHTML = `<h2>Welcome to 4SP AI Agent</h2><p>This is a beta feature. To improve your experience, your general location (state or country) will be shared with your first message. You may be subject to message limits.</p>`; 
         
         const closeButton = document.createElement('div');
         closeButton.id = 'ai-close-button';
@@ -181,11 +158,25 @@
         visualInput.oninput = handleContentEditableInput;
         visualInput.addEventListener('paste', handlePaste);
         
-        const actionToggle = document.createElement('button');
-        actionToggle.id = 'ai-action-toggle';
-        // Updated action toggle icons to Font Awesome
-        actionToggle.innerHTML = '<span class="icon-ellipsis"><i class="fa-solid fa-ellipsis-vertical"></i></span><span class="icon-stop"><i class="fa-solid fa-stop"></i></span>';
-        actionToggle.onclick = handleActionToggleClick;
+        // NEW: Controls Container for the two buttons
+        const controlsContainer = document.createElement('div');
+        controlsContainer.id = 'ai-controls-container';
+        
+        // Button 1: Attachment Button (uses fa-link as requested)
+        const attachmentButton = document.createElement('button');
+        attachmentButton.id = 'ai-attachment-button';
+        attachmentButton.innerHTML = '<i class="fa-solid fa-link"></i>';
+        attachmentButton.onclick = (e) => { e.stopPropagation(); handleFileUpload(); };
+
+        // Button 2: Model Selector Button (replaces action toggle for menu/stop)
+        const modelSelectorButton = document.createElement('button');
+        modelSelectorButton.id = 'ai-model-selector-button';
+        // Initial icon based on default model
+        modelSelectorButton.innerHTML = `<span class="icon-model"><i class="${currentModel.icon}"></i></span><span class="icon-stop">${stopIconHTML}</span>`;
+        modelSelectorButton.onclick = (e) => { e.stopPropagation(); if (isRequestPending) { stopGeneration(); } else { toggleModelMenu(); } };
+
+        controlsContainer.appendChild(attachmentButton);
+        controlsContainer.appendChild(modelSelectorButton);
 
         const charCounter = document.createElement('div');
         charCounter.id = 'ai-char-counter';
@@ -193,7 +184,7 @@
 
         inputWrapper.appendChild(attachmentPreviewContainer);
         inputWrapper.appendChild(visualInput);
-        inputWrapper.appendChild(actionToggle);
+        inputWrapper.appendChild(controlsContainer);
         
         container.appendChild(brandTitle);
         container.appendChild(persistentTitle);
@@ -201,7 +192,7 @@
         container.appendChild(closeButton);
         container.appendChild(responseContainer);
         container.appendChild(inputWrapper);
-        container.appendChild(createActionMenu());
+        container.appendChild(createModelSelectionMenu());
         container.appendChild(charCounter);
         
         document.body.appendChild(container);
@@ -230,7 +221,7 @@
             }, 500);
         }
         isAIActive = false;
-        isActionMenuOpen = false;
+        isModelMenuOpen = false;
         isRequestPending = false;
         attachedFiles = [];
     }
@@ -265,6 +256,10 @@
     async function callGoogleAI(responseBubble) {
         if (!FIREBASE_CONFIG.apiKey) { responseBubble.innerHTML = `<div class="ai-error">API Key is missing.</div>`; return; }
         currentAIRequestController = new AbortController();
+        
+        // Use the selected model's API URL
+        const apiUrl = currentModel.apiUrl + FIREBASE_CONFIG.apiKey;
+
         let firstMessageContext = '';
         if (chatHistory.length <= 1) {
             const location = localStorage.getItem('ai-user-location') || 'an unknown location';
@@ -275,6 +270,7 @@
         }
         
         let processedChatHistory = [...chatHistory];
+        // Simplified token-saving logic: keeps first 3 and last 3 messages.
         if (processedChatHistory.length > 6) {
              processedChatHistory = [ ...processedChatHistory.slice(0, 3), ...processedChatHistory.slice(-3) ];
         }
@@ -288,20 +284,16 @@
              userParts.unshift({ text: firstMessageContext.trim() });
         }
         
-        // Use the new function to get the system instruction based on the currentSubject (Agent Category)
-        const systemInstruction = getSystemInstruction(currentSubject);
-
-        const payload = { contents: processedChatHistory, systemInstruction: { parts: [{ text: systemInstruction }] } };
+        const payload = { contents: processedChatHistory, systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] } };
         
         try {
-            const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: currentAIRequestController.signal });
+            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: currentAIRequestController.signal });
             if (!response.ok) throw new Error(`Network response was not ok. Status: ${response.status}`);
             const data = await response.json();
             if (!data.candidates || data.candidates.length === 0) throw new Error("Invalid response from API.");
             const text = data.candidates[0].content.parts[0].text;
             chatHistory.push({ role: "model", parts: [{ text: text }] });
             
-            // Use the simplified parseGeminiResponse function
             const contentHTML = `<div class="ai-response-content">${parseGeminiResponse(text)}</div>`;
             responseBubble.style.opacity = '0';
             setTimeout(() => {
@@ -318,8 +310,9 @@
         } finally {
             isRequestPending = false;
             currentAIRequestController = null;
-            const actionToggle = document.getElementById('ai-action-toggle');
-            if (actionToggle) { actionToggle.classList.remove('generating'); }
+            
+            const selectorButton = document.getElementById('ai-model-selector-button');
+            if (selectorButton) { selectorButton.classList.remove('generating'); }
             
             setTimeout(() => {
                 responseBubble.classList.remove('loading');
@@ -333,67 +326,68 @@
         }
     }
 
-    function handleActionToggleClick(e) { e.stopPropagation(); if (isRequestPending) { stopGeneration(); } else { toggleActionMenu(); } }
-    function stopGeneration(){if(currentAIRequestController){currentAIRequestController.abort();}}
-    function toggleActionMenu(){
-        isActionMenuOpen = !isActionMenuOpen;
-        const menu = document.getElementById('ai-action-menu');
-        const toggleBtn = document.getElementById('ai-action-toggle');
-        if (isActionMenuOpen) {
+    function stopGeneration(){
+        if(currentAIRequestController) currentAIRequestController.abort();
+    }
+    
+    function toggleModelMenu(){
+        isModelMenuOpen = !isModelMenuOpen;
+        const menu = document.getElementById('ai-model-menu');
+        const toggleBtn = document.getElementById('ai-model-selector-button');
+        
+        if (isModelMenuOpen) {
             const btnRect = toggleBtn.getBoundingClientRect();
+            // Position the menu near the button
             menu.style.bottom = `${window.innerHeight - btnRect.top}px`;
             menu.style.right = `${window.innerWidth - btnRect.right}px`;
-            menu.querySelectorAll('button[data-type]').forEach(button => {
-                const type = button.dataset.type;
-                if (type === 'images') {
-                    const usage = limitManager.getUsage();
-                    const limitText = `<span>${usage[type] || 0}/${DAILY_LIMITS[type]} used</span>`;
-                    button.querySelector('span:last-child').innerHTML = limitText;
-                    button.disabled = !limitManager.canUpload(type);
-                }
-            });
         }
-        menu.classList.toggle('active', isActionMenuOpen);
-        toggleBtn.classList.toggle('active', isActionMenuOpen);
+        menu.classList.toggle('active', isModelMenuOpen);
     }
     
-    function selectSubject(subject){
-        currentSubject=subject;
-        chatHistory = [];
+    function selectModel(modelName) {
+        const newModel = MODELS.find(m => m.model === modelName);
+        if (!newModel) return;
+        currentModel = newModel;
+        chatHistory = []; // Reset history when changing models
+        
+        // Update UI
+        const selectorButton = document.getElementById('ai-model-selector-button');
+        if (selectorButton) {
+             selectorButton.innerHTML = `<span class="icon-model"><i class="${currentModel.icon}"></i></span><span class="icon-stop">${stopIconHTML}</span>`;
+        }
+        
         const persistentTitle = document.getElementById('ai-persistent-title');
-        if (persistentTitle) { persistentTitle.textContent = `4SP AI Agent - ${subject}`; } // Updated name
-        document.getElementById('ai-container').dataset.subject = subject.replace(/\s/g, ''); // Use subject name without spaces for CSS data-attribute
+        if (persistentTitle) { persistentTitle.textContent = `4SP AI Agent - ${currentModel.name}`; }
 
-        const menu=document.getElementById('ai-action-menu');
-        menu.querySelectorAll('button[data-subject]').forEach(b=>b.classList.remove('active'));
-        const activeBtn=menu.querySelector(`button[data-subject="${subject}"]`);
-        if(activeBtn)activeBtn.classList.add('active');
-        toggleActionMenu();
+        const menu = document.getElementById('ai-model-menu');
+        if (menu) {
+            menu.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            menu.querySelector(`button[data-model="${modelName}"]`).classList.add('active');
+        }
+        // Always close menu after selection
+        toggleModelMenu();
     }
     
-    function handleFileUpload(fileType) {
+    function handleFileUpload() {
         const input = document.createElement('input');
         input.type = 'file';
-        const typeMap = {'photo':'image/*','file':'*'};
-        input.accept = typeMap[fileType] || '*';
-        if (fileType === 'photo') { input.multiple = true; }
+        // Only accept common file types and images (no audio/video)
+        input.accept = 'image/*,application/pdf,text/plain,.zip,.csv,.json,.xml'; 
+        input.multiple = true;
         input.onchange = (event) => {
             const files = Array.from(event.target.files);
             if (!files || files.length === 0) return;
+            
             const currentTotalSize = attachedFiles.reduce((sum, file) => sum + (file.inlineData ? atob(file.inlineData.data).length : 0), 0);
             const newFilesSize = files.reduce((sum, file) => sum + file.size, 0);
-            if (currentTotalSize + newFilesSize > (4 * 1024 * 1024)) { // Example: 4MB limit
+            
+            // Retain the 4MB total size limit per message
+            if (currentTotalSize + newFilesSize > (4 * 1024 * 1024)) { 
                 alert(`Upload failed: Total size of attachments would exceed the 4MB limit per message.`);
                 return;
             }
-            let filesToProcess = [...files];
-            const usage = limitManager.getUsage();
-            const remainingSlots = DAILY_LIMITS.images - (usage.images || 0);
-            if (fileType === 'photo' && filesToProcess.length > remainingSlots) {
-                alert(`You can only upload ${remainingSlots} more image(s) today.`);
-                filesToProcess = filesToProcess.slice(0, remainingSlots);
-            }
-            filesToProcess.forEach(file => {
+            
+            files.forEach(file => {
                 const tempId = `file-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
                 attachedFiles.push({ tempId, file, isLoading: true });
                 renderAttachments();
@@ -414,7 +408,6 @@
                 };
                 reader.readAsDataURL(file);
             });
-            if (fileType === 'photo') { limitManager.recordUpload('images', filesToProcess.length); }
         };
         input.click();
     }
@@ -431,7 +424,7 @@
 
         previewContainer.style.display = 'flex';
         inputWrapper.classList.add('has-attachments');
-        previewContainer.innerHTML = ''; // Clear previous previews
+        previewContainer.innerHTML = ''; 
 
         attachedFiles.forEach((file, index) => {
             const fileCard = document.createElement('div');
@@ -452,7 +445,13 @@
                 if (file.inlineData.mimeType.startsWith('image/')) {
                     previewHTML = `<img src="data:${file.inlineData.mimeType};base64,${file.inlineData.data}" alt="${fileName}" />`;
                 } else {
-                    previewHTML = `<span class="file-icon"><i class="fa-solid fa-file"></i></span>`;
+                    // Font Awesome icons for common file types
+                    let iconClass = 'fa-file';
+                    if (fileExt === 'PDF') iconClass = 'fa-file-pdf';
+                    else if (['TXT', 'CSV', 'JSON', 'XML'].includes(fileExt)) iconClass = 'fa-file-lines';
+                    else if (fileExt === 'ZIP') iconClass = 'fa-file-zipper';
+                    
+                    previewHTML = `<span class="file-icon"><i class="fa-solid ${iconClass}"></i></span>`;
                 }
             }
 
@@ -488,41 +487,32 @@
         });
     }
 
-    function createActionMenu() {
+    function createModelSelectionMenu() {
         const menu = document.createElement('div');
-        menu.id = 'ai-action-menu';
-        // Updated icons to Font Awesome 7.1.0
-        const attachments = [ 
-            { id: 'photo', icon: '<i class="fa-solid fa-image"></i>', label: 'Photo', type: 'images' }, 
-            { id: 'file', icon: '<i class="fa-solid fa-paperclip"></i>', label: 'File', type: 'file' } 
-        ];
-        const categories = AGENT_CATEGORIES; // New categories
+        menu.id = 'ai-model-menu';
+        menu.className = 'ai-action-menu'; 
         
-        attachments.forEach(opt => {
+        const header = document.createElement('div');
+        header.className = 'menu-header';
+        header.textContent = 'Select AI Model';
+        menu.appendChild(header);
+
+        MODELS.forEach(modelConfig => {
             const button = document.createElement('button');
-            button.dataset.type = opt.type;
-            const canUpload = limitManager.canUpload(opt.type);
-            let limitText = '';
-            if (opt.type === 'images') { const usage = limitManager.getUsage(); limitText = `<span>${usage[opt.type] || 0}/${DAILY_LIMITS[opt.type]} used</span>`; }
-            // Use the HTML icon from the attachments array
-            button.innerHTML = `<span class="icon">${opt.icon}</span> ${opt.label} ${limitText}`;
-            if (!canUpload) { button.disabled = true; button.title = 'You have reached your daily limit for this file type.'; }
-            button.onclick = () => { handleFileUpload(opt.id); toggleActionMenu(); };
-            menu.appendChild(button);
-        });
-        menu.appendChild(document.createElement('hr'));
-        const subjectHeader = document.createElement('div');
-        subjectHeader.className = 'menu-header';
-        subjectHeader.textContent = 'Agent Categories'; // Changed from 'Focus Topic'
-        menu.appendChild(subjectHeader);
-        
-        categories.forEach(category => {
-            const button = document.createElement('button');
-            button.textContent = category.name;
-            button.dataset.subject = category.name;
-            button.style.backgroundColor = category.color; // Set background color from AGENT_CATEGORIES
-            if (category.name === 'General') button.classList.add('active');
-            button.onclick = () => selectSubject(category.name);
+            button.dataset.model = modelConfig.model;
+            button.classList.toggle('active', modelConfig.model === currentModel.model);
+
+            const limitText = modelConfig.name.includes('(Ultra)') 
+                ? '<span class="limit-warning">Usage Limits Apply</span>' 
+                : '';
+            
+            button.innerHTML = `
+                <span class="icon"><i class="${modelConfig.icon}"></i></span> 
+                <span>${modelConfig.name}</span>
+                <div class="model-description">${modelConfig.description} ${limitText}</div>
+            `;
+            
+            button.onclick = () => selectModel(modelConfig.model);
             menu.appendChild(button);
         });
         
@@ -586,7 +576,7 @@
 
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            if (isActionMenuOpen) { toggleActionMenu(); }
+            if (isModelMenuOpen) { toggleModelMenu(); }
             
             if (attachedFiles.some(f => f.isLoading)) {
                 alert("Please wait for files to finish uploading before sending.");
@@ -596,7 +586,7 @@
             if (isRequestPending) return;
             
             isRequestPending = true;
-            document.getElementById('ai-action-toggle').classList.add('generating');
+            document.getElementById('ai-model-selector-button').classList.add('generating');
             document.getElementById('ai-input-wrapper').classList.add('waiting');
             const parts = [];
             if (query) parts.push({ text: query });
@@ -689,11 +679,11 @@
     function injectStyles() {
         if (document.getElementById('ai-dynamic-styles')) return;
         
-        // --- UPDATED: Font Awesome 7.1.0 CDN link (from dailyphoto.html) ---
+        // --- Font Awesome 6.5.2 CDN link ---
         if (!document.querySelector('link[href*="font-awesome"]')) {
             const faLink = document.createElement('link');
             faLink.rel = 'stylesheet';
-            faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.1.0/css/all.min.css';
+            faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css';
             document.head.appendChild(faLink);
         }
 
@@ -701,25 +691,19 @@
         if (!document.querySelector('style[data-font="geist"]')) {
             const fontStyle = document.createElement("style");
             fontStyle.setAttribute("data-font","geist");
-            // Geist font family is used across both files
             fontStyle.textContent = `@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;700&family=Merriweather:wght@400;700&display=swap');`;
             document.head.appendChild(fontStyle);
         }
         
         const style = document.createElement("style");
         style.id = "ai-dynamic-styles";
-        // --- START OF MODIFIED CSS (dailyphoto.html aesthetic) ---
         style.innerHTML = `
             /* NEW PRIMARY GLOW COLOR: Deep Indigo from dailyphoto.html */
             :root { --ai-primary-glow: #4f46e5; }
             #ai-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0,0,0,0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); z-index: 2147483647; opacity: 0; transition: opacity 0.5s, background 0.5s, backdrop-filter 0.5s; font-family: 'Geist', sans-serif; display: flex; flex-direction: column; justify-content: flex-end; padding: 0; box-sizing: border-box; overflow: hidden; }
             #ai-container.active { opacity: 1; background-color: rgba(0, 0, 0, 0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
-            /* Updated background categories to fit a dark, subtle theme */
-            #ai-container[data-subject="General"] { background: rgba(0, 0, 0, 0.8); }
-            #ai-container[data-subject="MathExpert"] { background: linear-gradient(rgba(150, 40, 40, 0.2), rgba(150, 40, 40, 0.2)), rgba(10, 10, 15, 0.75); }
-            #ai-container[data-subject="ScienceTutor"] { background: linear-gradient(rgba(40, 130, 80, 0.15), rgba(40, 130, 80, 0.15)), rgba(10, 10, 15, 0.75); }
-            #ai-container[data-subject="Writer/Editor"] { background: linear-gradient(rgba(50, 80, 160, 0.2), rgba(50, 80, 160, 0.2)), rgba(10, 10, 15, 0.75); }
-            #ai-container[data-subject="CodeAssistant"] { background: linear-gradient(rgba(40, 100, 150, 0.2), rgba(40, 100, 150, 0.2)), rgba(10, 10, 15, 0.75); }
+            /* Simplified background: always dark theme */
+            #ai-container[data-subject] { background: rgba(10, 10, 15, 0.9); } 
             
             #ai-container.deactivating, #ai-container.deactivating > * { transition: opacity 0.4s, transform 0.4s; }
             #ai-container.deactivating { opacity: 0 !important; background-color: rgba(0,0,0,0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); }
@@ -763,59 +747,71 @@
 
             .gemini-response.loading { 
                 display: flex; justify-content: center; align-items: center; min-height: 60px; max-width: 100px; padding: 15px; background: rgba(15,15,18,.8); 
-                /* Uses the dailyphoto glow color */
                 animation: unified-glow 4s linear infinite; 
             } 
 
-            /* Input Wrapper and Toggle */
+            /* Input Wrapper and Controls */
             #ai-input-wrapper { display: flex; flex-direction: column; flex-shrink: 0; position: relative; z-index: 2; transition: all .4s cubic-bezier(.4,0,.2,1); margin: 15px auto; width: 90%; max-width: 800px; border-radius: 25px; background: rgba(10,10,10,.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,.2); }
             #ai-input-wrapper::before, #ai-input-wrapper::after { content: ''; position: absolute; top: -1px; left: -1px; right: -1px; bottom: -1px; border-radius: 26px; z-index: -1; transition: opacity 0.5s ease-in-out; }
             #ai-input-wrapper::before { animation: glow 3s infinite; opacity: 1; }
             #ai-input-wrapper::after { animation: unified-glow 4s linear infinite; opacity: 0; } 
             #ai-input-wrapper.waiting::before { opacity: 0; }
             #ai-input-wrapper.waiting::after { opacity: 1; }
-            #ai-input { min-height: 52px; max-height: ${MAX_INPUT_HEIGHT}px; overflow-y: hidden; color: #fff; font-size: 1.1em; padding: 15px 50px 15px 20px; box-sizing: border-box; word-wrap: break-word; outline: 0; }
+            #ai-input { min-height: 52px; max-height: ${MAX_INPUT_HEIGHT}px; overflow-y: hidden; color: #fff; font-size: 1.1em; padding: 15px 120px 15px 20px; box-sizing: border-box; word-wrap: break-word; outline: 0; }
             #ai-input:empty::before { content: 'Ask a question or describe your files...'; color: rgba(255, 255, 255, 0.4); pointer-events: none; }
-            #ai-action-toggle { 
-                position: absolute; right: 10px; bottom: 12px; transform: translateY(0); background: 0 0; border: none; color: rgba(255,255,255,.5); 
-                cursor: pointer; padding: 5px; line-height: 1; z-index: 3; transition: all .3s ease; border-radius: 50%; width: 34px; height: 34px; 
-                display: flex; align-items: center; justify-content: center; overflow: hidden;
-                font-size: initial; 
-            }
-            #ai-action-toggle i { font-size: 20px; color: rgba(255,255,255,.5); transition: color 0.3s; }
             
-            #ai-action-toggle .icon-ellipsis, #ai-action-toggle .icon-stop { transition: opacity 0.3s, transform 0.3s; position: absolute; }
-            #ai-action-toggle .icon-stop { opacity: 0; transform: scale(0.5); } 
-            /* NEW GENERATING STYLE: Uses Indigo theme colors */
-            #ai-action-toggle.generating { 
-                background-color: rgba(79, 70, 229, 0.2); 
-                border: 1px solid rgba(79, 70, 229, 0.5); 
+            #ai-controls-container {
+                position: absolute; right: 10px; bottom: 12px; height: 34px; display: flex; gap: 8px; z-index: 3;
+            }
+
+            #ai-attachment-button, #ai-model-selector-button { 
+                background: 0 0; border: none; color: rgba(255,255,255,.5); 
+                cursor: pointer; padding: 5px; line-height: 1; transition: all .3s ease; border-radius: 50%; width: 34px; height: 34px; 
+                display: flex; align-items: center; justify-content: center; overflow: hidden;
+            }
+            #ai-attachment-button i { font-size: 18px; color: #4f46e5; transition: color 0.2s; }
+            #ai-attachment-button:hover i { color: #fff; }
+
+            #ai-model-selector-button .icon-model, #ai-model-selector-button .icon-stop { transition: opacity 0.3s, transform 0.3s; position: absolute; }
+            #ai-model-selector-button .icon-stop { opacity: 0; transform: scale(0.5); } 
+            #ai-model-selector-button .icon-model i { font-size: 18px; color: #4f46e5; transition: color 0.2s; }
+
+            /* NEW GENERATING/STOP STYLE */
+            #ai-model-selector-button.generating { 
+                background-color: rgba(255, 0, 0, 0.2); 
+                border: 1px solid rgba(255, 0, 0, 0.5); 
                 border-radius: 8px; 
             }
-            #ai-action-toggle.generating .icon-ellipsis { opacity: 0; transform: scale(0.5); }
-            #ai-action-toggle.generating .icon-stop { opacity: 1; transform: scale(1); }
-            #ai-action-toggle.generating .icon-stop i { color: #4f46e5; } 
-
-            /* Action Menu & Buttons (Social Style) */
-            #ai-action-menu { position: fixed; background: rgba(20, 20, 22, 0.7); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 5px; padding: 8px; z-index: 2147483647; opacity: 0; visibility: hidden; transform: translateY(10px) scale(.95); transition: all .25s cubic-bezier(.4,0,.2,1); transform-origin: bottom right; }
-            #ai-action-menu.active { opacity: 1; visibility: visible; transform: translateY(-5px); }
-            #ai-action-menu button { background: rgba(255,255,255,0.05); border: none; color: #ddd; font-family: 'Geist', sans-serif; font-size: 1em; padding: 10px 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 12px; text-align: left; transition: background-color 0.2s, filter 0.2s, box-shadow 0.2s; }
+            #ai-model-selector-button.generating .icon-model { opacity: 0; transform: scale(0.5); }
+            #ai-model-selector-button.generating .icon-stop { opacity: 1; transform: scale(1); }
+            #ai-model-selector-button.generating .icon-stop i { color: #ff0000; } 
             
-            /* Icon styling for action menu buttons (social/clean look) */
-            #ai-action-menu button .icon i {
+            /* Model Selection Menu */
+            #ai-model-menu { 
+                position: fixed; background: rgba(20, 20, 22, 0.7); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); 
+                border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); 
+                display: flex; flex-direction: column; gap: 5px; padding: 8px; z-index: 2147483647; opacity: 0; visibility: hidden; 
+                transform: translateY(10px) scale(.95); transition: all .25s cubic-bezier(.4,0,.2,1); transform-origin: bottom right; 
+                min-width: 300px; 
+            }
+            #ai-model-menu.active { opacity: 1; visibility: visible; transform: translateY(-5px); }
+            #ai-model-menu button { 
+                background: rgba(255,255,255,0.05); border: none; color: #ddd; font-family: 'Geist', sans-serif; 
+                font-size: 1em; padding: 10px 15px; border-radius: 8px; cursor: pointer; display: grid; grid-template-columns: 20px 1fr; 
+                gap: 12px; text-align: left; transition: background-color 0.2s, box-shadow 0.2s; 
+                align-items: center; 
+            }
+            
+            #ai-model-menu button .icon i {
                 font-size: 1.1em;
-                color: #4f46e5; /* Primary accent color */
-                transition: color 0.2s;
+                color: #4f46e5; 
             }
-            #ai-action-menu button:hover { background-color: rgba(79, 70, 229, 0.1); filter: none; }
-            #ai-action-menu button:hover .icon i {
-                color: #fff; /* White on hover for contrast */
-            }
-
-            #ai-action-menu button[data-subject] { justify-content: center; }
-            #ai-action-menu button[data-subject].active { filter: brightness(1.2); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.8); }
-            #ai-action-menu hr { border: none; height: 1px; background-color: rgba(255,255,255,0.1); margin: 5px 10px; }
-            #ai-action-menu .menu-header { font-size: 0.8em; color: #888; text-transform: uppercase; padding: 10px 15px 5px; cursor: default; }
+            #ai-model-menu button span:first-of-type { font-weight: bold; }
+            #ai-model-menu button:hover { background-color: rgba(79, 70, 229, 0.1); }
+            #ai-model-menu button.active { background-color: rgba(79, 70, 229, 0.2); box-shadow: inset 0 0 0 2px #4f46e5; }
+            #ai-model-menu .model-description { font-size: 0.85em; color: #aaa; grid-column: 2; margin-top: -5px; line-height: 1.4; }
+            #ai-model-menu .menu-header { font-size: 0.8em; color: #888; text-transform: uppercase; padding: 10px 15px 5px; cursor: default; }
+            .limit-warning { color: #e57373; font-weight: 500; margin-left: 5px; }
 
             /* Code Block & Copy Button */
             .code-block-wrapper { background-color: rgba(42, 42, 48, 0.8); border-radius: 8px; margin: 10px 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
@@ -833,18 +829,18 @@
             
             /* Keyframes matching dailyphoto.html style */
             @keyframes glow { 0%,100% { box-shadow: 0 0 5px rgba(255,255,255,.15), 0 0 10px rgba(255,255,255,.1); } 50% { box-shadow: 0 0 10px rgba(255,255,255,.25), 0 0 20px rgba(255,255,255,.2); } }
-            /* Updated unified-glow to use the indigo color */
             @keyframes unified-glow { 0%,100% { box-shadow: 0 0 8px 2px var(--ai-primary-glow); } 50% { box-shadow: 0 0 12px 3px var(--ai-primary-glow); } }
             @keyframes title-pulse { 0%, 100% { text-shadow: 0 0 7px var(--ai-primary-glow); } 50% { text-shadow: 0 0 10px var(--ai-primary-glow); } } 
 
-            /* Remaining standard styles */
-            #ai-attachment-preview { display: none; flex-direction: row; gap: 10px; padding: 0; max-height: 0; border-bottom: 1px solid transparent; overflow-x: auto; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+            /* Attachment Preview */
+            #ai-attachment-preview { display: none; flex-direction: row; gap: 10px; padding: 0; max-height: 0; border-bottom: 1px solid rgba(255,255,255,0.1); overflow-x: auto; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
             #ai-input-wrapper.has-attachments #ai-attachment-preview { max-height: 100px; padding: 10px 15px; }
             .attachment-card { position: relative; border-radius: 8px; overflow: hidden; background: #333; height: 80px; width: 80px; flex-shrink: 0; display: flex; justify-content: center; align-items: center; transition: filter 0.3s; }
             .attachment-card.loading { filter: grayscale(80%) brightness(0.7); }
             .attachment-card.loading .file-icon { opacity: 0.3; }
             .attachment-card.loading .ai-loader { position: absolute; z-index: 2; }
             .attachment-card img { width: 100%; height: 100%; object-fit: cover; }
+            .file-icon i { font-size: 30px; color: #fff; opacity: 0.8; }
             .file-info { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); overflow: hidden; }
             .file-name { display: block; color: #fff; font-size: 0.75em; padding: 4px; text-align: center; white-space: nowrap; }
             .file-name.marquee > span { display: inline-block; padding-left: 100%; animation: marquee linear infinite; }
