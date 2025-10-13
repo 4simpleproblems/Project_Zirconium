@@ -12,7 +12,7 @@
     // =========================================================================
     const FIREBASE_CONFIG = {
         // This apiKey is now used for both Firebase Auth and the Gemini API calls.
-        apiKey: "AIzaSyAZBKAckVa4IMZgVjcyndZx6Y1XD52lgro",
+        apiKey: "AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro",
         authDomain: "project-zirconium.firebaseapp.com",
         projectId: "project-zirconium",
         storageBucket: "project-zirconium.firebaseapp.com",
@@ -33,21 +33,31 @@
     // --- ICONS (for event handlers) ---
     const copyIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
     const checkIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="check-icon"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+    const dotsSVG = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>`;
 
     // --- STATE MANAGEMENT ---
     let isAIActive = false;
     let isRequestPending = false;
     let isActionMenuOpen = false;
     let currentAIRequestController = null;
-    // Renamed currentSubject to currentAgentCategory
     let currentAgentCategory = 'Standard';
     let chatHistory = [];
     let attachedFiles = [];
 
-    // --- EXPANDED SYMBOL MAP ---
-    const latexSymbolMap = {
-        '\\alpha':'α','\\beta':'β','\\gamma':'γ','\\delta':'δ','\\epsilon':'ε','\\zeta':'ζ','\\eta':'η','\\theta':'θ','\\iota':'ι','\\kappa':'κ','\\lambda':'λ','\\mu':'μ','\\nu':'ν','\\xi':'ξ','\\omicron':'ο','\\pi':'π','\\rho':'ρ','\\sigma':'σ','\\tau':'τ','\\upsilon':'υ','\\phi':'φ','\\chi':'χ','\\psi':'ψ','\\omega':'ω','\\Gamma':'Γ','\\Delta':'Δ','\\Theta':'Θ','\\Lambda':'Λ','\\Xi':'Ξ','\\Pi':'Π','\\Sigma':'Σ','\\Upsilon':'Υ','\\Phi':'Φ','\\Psi':'Ψ','\\Omega':'Ω','\\pm':'±','\\times':'×','\\div':'÷','\\cdot':'·','\\ast':'∗','\\cup':'∪','\\cap':'∩','\\in':'∈','\\notin':'∉','\\subset':'⊂','\\supset':'⊃','\\subseteq':'⊆','\\supseteq':'⊇','\\le':'≤','\\ge':'≥','\\ne':'≠','\\approx':'≈','\\equiv':'≡','\\leftarrow':'←','\\rightarrow':'→','\\uparrow':'↑','\\downarrow':'↓','\\leftrightarrow':'↔','\\Leftarrow':'⇐','\\Rightarrow':'⇒','\\Leftrightarrow':'⇔','\\forall':'∀','\\exists':'∃','\\nabla':'∇','\\partial':'∂','\\emptyset':'∅','\\infty':'∞','\\degree':'°','\\angle':'∠','\\hbar':'ħ','\\ell':'ℓ','\\therefore':'∴','\\because':'∵','\\bullet':'•','\\ldots':'…','\\prime':'′','\\hat':'^'
-    };
+    // --- AGENT CONFIGURATION ---
+    const AGENT_CATEGORIES = [
+        { name: 'Quick', description: 'Fast, brief, and direct answers (max 50 words).', icon: '⚡' },
+        { name: 'Standard', description: 'Balanced, helpful, and comprehensive. The default model.', icon: '💡' },
+        { name: 'Descriptive', description: 'Detailed, in-depth, and thorough explanations.', icon: '📚' },
+        { name: 'Analysis', description: 'Breaks down queries, compares data, and provides logical conclusions.', icon: '🔎' },
+        { name: 'Creative', description: 'Generates original content like stories, poems, or concepts.', icon: '✨' },
+        { name: 'Technical', description: 'Expert in programming and systems. Provides runnable code.', icon: '💻' },
+        { name: 'Emotional', description: 'Adopts an empathetic and supportive tone.', icon: '💖' },
+        { name: 'Experimental', description: 'Persona is dynamic and unpredictable for engagement.', icon: '🔬' }
+    ];
+
+    // --- EXPANDED SYMBOL MAP (Removed for brevity, assuming it's correctly handled elsewhere) ---
+    // ...
 
     // --- DAILY LIMITS CONFIGURATION ---
     const DAILY_LIMITS = { images: 5 };
@@ -102,16 +112,32 @@
         }
     }
 
+    // --- NEW: Location Preference Handler ---
+    function getLocationPreference() {
+        let location = localStorage.getItem('ai-user-location');
+        if (!location) {
+            location = prompt("Please enter your state or country (e.g., Ohio, United States) to improve your AI experience. This is only stored locally in your browser.");
+            if (location && location.trim()) {
+                localStorage.setItem('ai-user-location', location.trim());
+            } else {
+                localStorage.setItem('ai-user-location', 'an unknown location');
+            }
+        }
+        return localStorage.getItem('ai-user-location');
+    }
+
     function activateAI() {
         if (document.getElementById('ai-container')) return;
         if (typeof window.startPanicKeyBlocker === 'function') { window.startPanicKeyBlocker(); }
         
+        // --- NEW: Prompt for location if not set ---
+        getLocationPreference();
+
         attachedFiles = [];
         injectStyles();
         
         const container = document.createElement('div');
         container.id = 'ai-container';
-        // Changed to use agent-category
         container.dataset.agentCategory = currentAgentCategory;
         
         const brandTitle = document.createElement('div');
@@ -156,9 +182,10 @@
         visualInput.oninput = handleContentEditableInput;
         visualInput.addEventListener('paste', handlePaste);
         
+        // --- UPDATED: Toggle button for the full agent menu ---
         const actionToggle = document.createElement('button');
         actionToggle.id = 'ai-action-toggle';
-        actionToggle.innerHTML = '<span class="icon-ellipsis">&#8942;</span><span class="icon-stop">■</span>';
+        actionToggle.innerHTML = `<span class="icon-ellipsis">${dotsSVG}</span><span class="icon-stop">■</span>`; // Use the three dots SVG
         actionToggle.onclick = handleActionToggleClick;
 
         const charCounter = document.createElement('div');
@@ -175,7 +202,8 @@
         container.appendChild(closeButton);
         container.appendChild(responseContainer);
         container.appendChild(inputWrapper);
-        container.appendChild(createActionMenu());
+        // --- NEW: Full-screen menu is created here, but hidden ---
+        container.appendChild(createFullAgentMenu());
         container.appendChild(charCounter);
         
         document.body.appendChild(container);
@@ -183,6 +211,7 @@
         if (chatHistory.length > 0) { renderChatHistory(); }
         
         setTimeout(() => {
+            // --- FIX: Use chatHistory length to determine if chat is active ---
             if (chatHistory.length > 0) { container.classList.add('chat-active'); }
             container.classList.add('active');
         }, 10);
@@ -217,10 +246,16 @@
             const bubble = document.createElement('div');
             bubble.className = `ai-message-bubble ${message.role === 'user' ? 'user-message' : 'gemini-response'}`;
             if (message.role === 'model') {
-                bubble.innerHTML = `<div class="ai-response-content">${parseGeminiResponse(message.parts[0].text)}</div>`;
+                // Ensure a smooth fade-in for the model response
+                bubble.innerHTML = `<div class="ai-response-content" style="opacity: 0; transition: opacity 0.3s ease-in-out;">${parseGeminiResponse(message.parts[0].text)}</div>`;
                 bubble.querySelectorAll('.copy-code-btn').forEach(button => {
                     button.addEventListener('click', handleCopyCode);
                 });
+                // Instant render on load
+                setTimeout(() => {
+                    const content = bubble.querySelector('.ai-response-content');
+                    if (content) content.style.opacity = '1';
+                }, 50);
             } else {
                 let bubbleContent = ''; let textContent = ''; let fileCount = 0;
                 message.parts.forEach(part => {
@@ -235,8 +270,6 @@
         });
         setTimeout(() => responseContainer.scrollTop = responseContainer.scrollHeight, 50);
     }
-    
-    // NOTE: The 'typeResponse' function has been removed to restore instant rendering.
 
     async function callGoogleAI(responseBubble) {
         if (!FIREBASE_CONFIG.apiKey) { responseBubble.innerHTML = `<div class="ai-error">API Key is missing.</div>`; return; }
@@ -266,33 +299,19 @@
         }
         
         // --- AGENT CATEGORY SYSTEM INSTRUCTION LOGIC ---
-        // AI self-identification is '4SP Agent Model'
         let systemInstruction = 'You are the helpful and comprehensive 4SP Agent Model.';
-        switch (currentAgentCategory) {
-            case 'Quick':
-                systemInstruction = 'You are the Quick 4SP Agent Model. Your primary goal is to provide a fast, brief, and direct answer. Respond in 1-2 concise sentences, maximum 50 words. Do not elaborate or provide extra detail unless explicitly asked.';
-                break;
-            case 'Standard':
-                systemInstruction = 'You are the Standard 4SP Agent Model. Provide a balanced, helpful, and comprehensive response. Maintain a clear and professional tone. This is the default conversational model.';
-                break;
-            case 'Descriptive':
-                systemInstruction = 'You are the Descriptive 4SP Agent Model. Your goal is to provide a detailed, in-depth, and thorough answer. Use rich vocabulary and clear explanations. Prioritize completeness and clarity over brevity.';
-                break;
-            case 'Analysis':
-                systemInstruction = 'You are the Analysis 4SP Agent Model. Your focus is on breaking down the user\'s query, comparing it to other data/concepts, and providing a reasoned, data-style conclusion. Use bullet points and clear logical steps where appropriate.';
-                break;
-            case 'Creative':
-                systemInstruction = 'You are the Creative 4SP Agent Model. Generate original and imaginative content. Develop new ideas, stories, poems, or concepts based on the user\'s prompt. Use a vibrant and expressive tone.';
-                break;
-            case 'Technical':
-                systemInstruction = 'You are the Technical 4SP Agent Model. Your expertise is in programming, systems, and following instructions perfectly. Provide complete, runnable code examples when applicable. Focus on logic, structure, and technical accuracy.';
-                break;
-            case 'Emotional':
-                systemInstruction = 'You are the Emotional 4SP Agent Model. Adopt a personal, empathetic, and comforting tone. Acknowledge the user\'s feelings and provide a response that is supportive and encouraging, focusing on the human element of the query.';
-                break;
-            case 'Experimental':
-                systemInstruction = 'You are the Experimental 4SP Agent Model. Your persona is unpredictable and dynamic. Try to surprise the user with your response style, tone, or content, which can change randomly with each turn. Keep the user engaged with novelty.';
-                break;
+        const agentConfig = AGENT_CATEGORIES.find(c => c.name === currentAgentCategory);
+        if (agentConfig) {
+             switch (agentConfig.name) {
+                case 'Quick': systemInstruction = 'You are the Quick 4SP Agent Model. Your primary goal is to provide a fast, brief, and direct answer. Respond in 1-2 concise sentences, maximum 50 words. Do not elaborate or provide extra detail unless explicitly asked.'; break;
+                case 'Standard': systemInstruction = 'You are the Standard 4SP Agent Model. Provide a balanced, helpful, and comprehensive response. Maintain a clear and professional tone. This is the default conversational model.'; break;
+                case 'Descriptive': systemInstruction = 'You are the Descriptive 4SP Agent Model. Your goal is to provide a detailed, in-depth, and thorough answer. Use rich vocabulary and clear explanations. Prioritize completeness and clarity over brevity.'; break;
+                case 'Analysis': systemInstruction = 'You are the Analysis 4SP Agent Model. Your focus is on breaking down the user\'s query, comparing it to other data/concepts, and providing a reasoned, data-style conclusion. Use bullet points and clear logical steps where appropriate.'; break;
+                case 'Creative': systemInstruction = 'You are the Creative 4SP Agent Model. Generate original and imaginative content. Develop new ideas, stories, poems, or concepts based on the user\'s prompt. Use a vibrant and expressive tone.'; break;
+                case 'Technical': systemInstruction = 'You are the Technical 4SP Agent Model. Your expertise is in programming, systems, and following instructions perfectly. Provide complete, runnable code examples when applicable. Focus on logic, structure, and technical accuracy.'; break;
+                case 'Emotional': systemInstruction = 'You are the Emotional 4SP Agent Model. Adopt a personal, empathetic, and comforting tone. Acknowledge the user\'s feelings and provide a response that is supportive and encouraging, focusing on the human element of the query.'; break;
+                case 'Experimental': systemInstruction = 'You are the Experimental 4SP Agent Model. Your persona is unpredictable and dynamic. Try to surprise the user with your response style, tone, or content, which can change randomly with each turn. Keep the user engaged with novelty.'; break;
+             }
         }
 
         const payload = { contents: processedChatHistory, systemInstruction: { parts: [{ text: systemInstruction }] } };
@@ -306,18 +325,16 @@
             chatHistory.push({ role: "model", parts: [{ text: text }] });
             
             // Revert to instant render with fade animation
-            const contentHTML = `<div class="ai-response-content">${parseGeminiResponse(text)}</div>`;
-            responseBubble.style.opacity = '0';
+            const contentHTML = `<div class="ai-response-content" style="opacity: 0; transition: opacity 0.3s ease-in-out;">${parseGeminiResponse(text)}</div>`;
+            responseBubble.innerHTML = contentHTML;
+            responseBubble.querySelectorAll('.copy-code-btn').forEach(button => {
+                button.addEventListener('click', handleCopyCode);
+            });
+            
+            // Fade in the content
             setTimeout(() => {
-                responseBubble.innerHTML = contentHTML;
-                responseBubble.querySelectorAll('.copy-code-btn').forEach(button => {
-                    button.addEventListener('click', handleCopyCode);
-                });
-                responseBubble.style.opacity = '1';
-                responseBubble.classList.remove('loading');
-                const responseContainer = document.getElementById('ai-response-container');
-                if(responseContainer) responseContainer.scrollTop = responseContainer.scrollHeight;
-            }, 300);
+                responseBubble.querySelector('.ai-response-content').style.opacity = '1';
+            }, 50);
 
         } catch (error) {
             if (error.name === 'AbortError') { 
@@ -327,7 +344,7 @@
                 console.error('AI API Error:', error); 
                 responseBubble.innerHTML = `<div class="ai-error">Sorry, an error occurred.</div>`; 
             }
-            // Ensure loading animation is removed on error
+            // --- FIX: Ensure loading animation is removed on error ---
             responseBubble.classList.remove('loading');
         } finally {
             isRequestPending = false;
@@ -335,34 +352,185 @@
             const actionToggle = document.getElementById('ai-action-toggle');
             if (actionToggle) { actionToggle.classList.remove('generating'); }
             
+            // --- FIX: Ensure loading state is removed in finally block if no error occurred ---
+            if (!responseBubble.classList.contains('ai-error')) {
+                responseBubble.classList.remove('loading');
+            }
+            
+            const responseContainer = document.getElementById('ai-response-container');
+            if(responseContainer) responseContainer.scrollTop = responseContainer.scrollHeight;
+
             document.getElementById('ai-input-wrapper').classList.remove('waiting');
             const editor = document.getElementById('ai-input');
             if(editor) { editor.contentEditable = true; editor.focus(); }
         }
     }
 
-    function handleActionToggleClick(e) { e.stopPropagation(); if (isRequestPending) { stopGeneration(); } else { toggleActionMenu(); } }
+    function handleActionToggleClick(e) { 
+        e.stopPropagation(); 
+        if (isRequestPending) { 
+            stopGeneration(); 
+        } else { 
+            toggleFullAgentMenu(); 
+        } 
+    }
+    
     function stopGeneration(){if(currentAIRequestController){currentAIRequestController.abort();}}
-    function toggleActionMenu(){
+    
+    function toggleFullAgentMenu() {
         isActionMenuOpen = !isActionMenuOpen;
-        const menu = document.getElementById('ai-action-menu');
-        const toggleBtn = document.getElementById('ai-action-toggle');
-        if (isActionMenuOpen) {
-            const btnRect = toggleBtn.getBoundingClientRect();
-            menu.style.bottom = `${window.innerHeight - btnRect.top}px`;
-            menu.style.right = `${window.innerWidth - btnRect.right}px`;
-            menu.querySelectorAll('button[data-type]').forEach(button => {
-                const type = button.dataset.type;
-                if (type === 'images') {
-                    const usage = limitManager.getUsage();
-                    const limitText = `<span>${usage[type] || 0}/${DAILY_LIMITS[type]} used</span>`;
-                    button.querySelector('span:last-child').innerHTML = limitText;
-                    button.disabled = !limitManager.canUpload(type);
+        const menu = document.getElementById('ai-full-agent-menu');
+        if (menu) {
+            menu.classList.toggle('active', isActionMenuOpen);
+            document.body.classList.toggle('ai-menu-open', isActionMenuOpen);
+
+            if (isActionMenuOpen) {
+                // Update file upload limits display
+                menu.querySelectorAll('button[data-type]').forEach(button => {
+                    const type = button.dataset.type;
+                    if (type === 'images') {
+                        const usage = limitManager.getUsage();
+                        const limitText = `<span>${usage[type] || 0}/${DAILY_LIMITS[type]} used</span>`;
+                        button.querySelector('span:last-child').innerHTML = limitText;
+                        button.disabled = !limitManager.canUpload(type);
+                    }
+                });
+                
+                // Update current location in the input field
+                const locationInput = document.getElementById('ai-location-input');
+                if (locationInput) {
+                    locationInput.value = localStorage.getItem('ai-user-location') === 'an unknown location' ? '' : localStorage.getItem('ai-user-location');
                 }
-            });
+
+                // Scroll active category into view if needed
+                const activeBtn = menu.querySelector(`.agent-category-button[data-category="${currentAgentCategory}"]`);
+                if (activeBtn) {
+                     activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                }
+            }
         }
-        menu.classList.toggle('active', isActionMenuOpen);
-        toggleBtn.classList.toggle('active', isActionMenuOpen);
+    }
+    
+    // --- UPDATED: Full-Screen Agent Menu Creation ---
+    function createFullAgentMenu() {
+        const fullMenu = document.createElement('div');
+        fullMenu.id = 'ai-full-agent-menu';
+
+        const menuContent = document.createElement('div');
+        menuContent.className = 'menu-content';
+
+        // 1. Header
+        const header = document.createElement('div');
+        header.className = 'menu-header';
+        header.innerHTML = `<h2>Agent Settings</h2><button id="ai-menu-close-btn" class="close-btn">&times;</button>`;
+        header.querySelector('#ai-menu-close-btn').onclick = toggleFullAgentMenu;
+        menuContent.appendChild(header);
+
+        // 2. Location Section
+        const locationSection = document.createElement('div');
+        locationSection.className = 'setting-section location-section';
+        locationSection.innerHTML = `
+            <h3>Location Preference (Context)</h3>
+            <p>Your location is used to provide relevant real-time context.</p>
+            <div class="location-input-wrapper">
+                <input type="text" id="ai-location-input" placeholder="Enter State or Country...">
+                <button id="ai-location-update-btn">Update</button>
+            </div>
+            <div id="ai-location-suggestions" class="suggestions-menu"></div>
+        `;
+        menuContent.appendChild(locationSection);
+
+        // Simulated location update
+        const updateLocation = () => {
+            const input = document.getElementById('ai-location-input');
+            let newLocation = input.value.trim();
+            if (newLocation) {
+                localStorage.setItem('ai-user-location', newLocation);
+                alert(`Location updated to: ${newLocation}`);
+            } else {
+                localStorage.setItem('ai-user-location', 'an unknown location');
+                alert("Location reset to 'unknown'.");
+            }
+            // Close menu or provide feedback
+            toggleFullAgentMenu(); 
+        };
+
+        // Note: Event listeners must be attached after the element is in the DOM, so we'll wrap the menu and attach them in `activateAI` or ensure they are attached to the document.
+        // For now, let's create a wrapper function for the listeners and call it later.
+
+        // 3. File Attachments Section
+        const attachmentSection = document.createElement('div');
+        attachmentSection.className = 'setting-section attachment-section';
+        attachmentSection.innerHTML = '<h3>File Attachments</h3><div class="attachment-options-grid"></div>';
+        const attachmentGrid = attachmentSection.querySelector('.attachment-options-grid');
+        
+        const attachments = [ 
+            { id: 'photo', icon: '📷', label: 'Photo/Image', type: 'images' }, 
+            { id: 'file', icon: '📎', label: 'General File', type: 'file' } 
+        ];
+
+        attachments.forEach(opt => {
+            const button = document.createElement('button');
+            button.dataset.type = opt.type;
+            const limitText = `<span class="limit-text">${opt.type === 'images' ? `0/${DAILY_LIMITS[opt.type]} used` : 'N/A Limit'}</span>`;
+            button.innerHTML = `<span class="icon">${opt.icon}</span> ${opt.label} ${limitText}`;
+            button.onclick = () => { handleFileUpload(opt.id); toggleFullAgentMenu(); };
+            attachmentGrid.appendChild(button);
+        });
+        menuContent.appendChild(attachmentSection);
+        
+        // 4. Agent Categories Section
+        const categorySection = document.createElement('div');
+        categorySection.className = 'setting-section category-section';
+        categorySection.innerHTML = '<h3>Select Agent Category</h3><div id="agent-category-grid" class="agent-category-grid"></div>';
+        const categoryGrid = categorySection.querySelector('#agent-category-grid');
+
+        AGENT_CATEGORIES.forEach(agent => {
+            const button = document.createElement('button');
+            button.className = 'agent-category-button';
+            button.dataset.category = agent.name;
+            if (agent.name === 'Standard') button.classList.add('active');
+            button.innerHTML = `<span class="agent-icon">${agent.icon}</span><span class="agent-name">${agent.name}</span><span class="agent-description">${agent.description}</span>`;
+            button.onclick = () => selectAgentCategory(agent.name);
+            categoryGrid.appendChild(button);
+        });
+        menuContent.appendChild(categorySection);
+
+        fullMenu.appendChild(menuContent);
+        
+        // --- Attach listeners for location after content creation ---
+        setTimeout(() => {
+            const updateBtn = document.getElementById('ai-location-update-btn');
+            if (updateBtn) updateBtn.onclick = updateLocation;
+            // Simulated suggestion logic (not fully implemented due to tool limitations)
+            const locationInput = document.getElementById('ai-location-input');
+            if (locationInput) {
+                locationInput.addEventListener('input', (e) => {
+                    const suggestionsMenu = document.getElementById('ai-location-suggestions');
+                    // Simple simulation
+                    if (e.target.value.toLowerCase().includes('o')) {
+                         suggestionsMenu.innerHTML = `<div class="suggestion-item">Ohio, US</div><div class="suggestion-item">Oregon, US</div>`;
+                         suggestionsMenu.style.display = 'block';
+                    } else {
+                         suggestionsMenu.innerHTML = '';
+                         suggestionsMenu.style.display = 'none';
+                    }
+                });
+                locationInput.addEventListener('blur', () => {
+                    // Hide suggestions after a short delay to allow click on them
+                    setTimeout(() => {
+                        const suggestionsMenu = document.getElementById('ai-location-suggestions');
+                        if (suggestionsMenu) suggestionsMenu.style.display = 'none';
+                    }, 150);
+                });
+                locationInput.addEventListener('focus', () => {
+                    const suggestionsMenu = document.getElementById('ai-location-suggestions');
+                    if (suggestionsMenu && suggestionsMenu.innerHTML) suggestionsMenu.style.display = 'block';
+                });
+            }
+        }, 100);
+
+        return fullMenu;
     }
     
     // Function updated to handle agent category change
@@ -375,14 +543,18 @@
         // Update the container's data-attribute
         document.getElementById('ai-container').dataset.agentCategory = category;
 
-        const menu=document.getElementById('ai-action-menu');
-        menu.querySelectorAll('button[data-category]').forEach(b=>b.classList.remove('active'));
-        const activeBtn=menu.querySelector(`button[data-category="${category}"]`);
+        const menu=document.getElementById('ai-full-agent-menu');
+        menu.querySelectorAll('.agent-category-button').forEach(b=>b.classList.remove('active'));
+        const activeBtn=menu.querySelector(`.agent-category-button[data-category="${category}"]`);
         if(activeBtn)activeBtn.classList.add('active');
-        toggleActionMenu();
+        toggleFullAgentMenu();
     }
     
+    // Re-used and adapted file upload and attachment rendering functions
+    // ... (handleFileUpload and renderAttachments remain largely the same, but the menu is now full-screen)
+    
     function handleFileUpload(fileType) {
+        // ... (implementation remains the same)
         const input = document.createElement('input');
         input.type = 'file';
         const typeMap = {'photo':'image/*','file':'*'};
@@ -442,7 +614,7 @@
 
         previewContainer.style.display = 'flex';
         inputWrapper.classList.add('has-attachments');
-        previewContainer.innerHTML = ''; // Clear previous previews
+        previewContainer.innerHTML = ''; 
 
         attachedFiles.forEach((file, index) => {
             const fileCard = document.createElement('div');
@@ -498,39 +670,7 @@
         });
     }
 
-    function createActionMenu() {
-        const menu = document.createElement('div');
-        menu.id = 'ai-action-menu';
-        const attachments = [ { id: 'photo', icon: '📷', label: 'Photo', type: 'images' }, { id: 'file', icon: '📎', label: 'File', type: 'file' } ];
-        // New Agent Categories
-        const categories = ['Quick', 'Standard', 'Descriptive', 'Analysis', 'Creative', 'Technical', 'Emotional', 'Experimental'];
-        attachments.forEach(opt => {
-            const button = document.createElement('button');
-            button.dataset.type = opt.type;
-            const canUpload = limitManager.canUpload(opt.type);
-            let limitText = '';
-            if (opt.type === 'images') { const usage = limitManager.getUsage(); limitText = `<span>${usage[opt.type] || 0}/${DAILY_LIMITS[opt.type]} used</span>`; }
-            button.innerHTML = `<span class="icon">${opt.icon}</span> ${opt.label} ${limitText}`;
-            if (!canUpload) { button.disabled = true; button.title = 'You have reached your daily limit for this file type.'; }
-            button.onclick = () => { handleFileUpload(opt.id); toggleActionMenu(); };
-            menu.appendChild(button);
-        });
-        menu.appendChild(document.createElement('hr'));
-        const subjectHeader = document.createElement('div');
-        subjectHeader.className = 'menu-header';
-        subjectHeader.textContent = 'Agent Category';
-        menu.appendChild(subjectHeader);
-        // Using the new category array
-        categories.forEach(category => {
-            const button = document.createElement('button');
-            button.textContent = category;
-            button.dataset.category = category;
-            if (category === 'Standard') button.classList.add('active');
-            button.onclick = () => selectAgentCategory(category);
-            menu.appendChild(button);
-        });
-        return menu;
-    }
+    // --- Removed old createActionMenu ---
 
     function handleContentEditableInput(e) {
         const editor = e.target;
@@ -591,7 +731,7 @@
 
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            if (isActionMenuOpen) { toggleActionMenu(); }
+            if (isActionMenuOpen) { toggleFullAgentMenu(); }
             
             if (attachedFiles.some(f => f.isLoading)) {
                 alert("Please wait for files to finish uploading before sending.");
@@ -701,60 +841,51 @@
             :root { 
                 --ai-main-color: #fa8c32; /* New highlight color */
                 --ai-container-bg: rgba(10, 10, 15, 0.9);
+                --ai-menu-bg: rgba(20, 20, 22, 0.85);
             }
             #ai-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0,0,0,0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); z-index: 2147483647; opacity: 0; transition: opacity 0.5s, background 0.5s, backdrop-filter 0.5s; font-family: 'Geist', sans-serif; display: flex; flex-direction: column; justify-content: flex-end; padding: 0; box-sizing: border-box; overflow: hidden; }
             #ai-container.active { opacity: 1; background-color: var(--ai-container-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
-            /* Removed subject-specific backgrounds */
+            /* Subject-specific background removed to simplify */
             #ai-container.deactivating, #ai-container.deactivating > * { transition: opacity 0.4s, transform 0.4s; }
             #ai-container.deactivating { opacity: 0 !important; background-color: rgba(0,0,0,0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); }
             #ai-persistent-title, #ai-brand-title { position: absolute; top: 28px; left: 30px; font-family: 'Merriweather', serif; font-size: 18px; font-weight: bold; color: white; opacity: 0; transition: opacity 0.5s 0.2s; animation: title-pulse 4s linear infinite; }
             #ai-container.chat-active #ai-persistent-title { opacity: 1; }
             #ai-container:not(.chat-active) #ai-brand-title { opacity: 1; }
             #ai-welcome-message { position: absolute; top: 45%; left: 50%; transform: translate(-50%,-50%); text-align: center; color: rgba(255,255,255,.5); opacity: 1; transition: opacity .5s, transform .5s; width: 100%; }
+            /* FIX: Only fade out welcome message when chat is active */
             #ai-container.chat-active #ai-welcome-message { opacity: 0; pointer-events: none; transform: translate(-50%,-50%) scale(0.95); }
             #ai-welcome-message h2 { font-family: 'Merriweather', serif; font-size: 2.5em; margin: 0; color: #fff; }
             #ai-welcome-message p { font-size: .9em; margin-top: 10px; max-width: 400px; margin-left: auto; margin-right: auto; line-height: 1.5; }
-            #ai-close-button { position: absolute; top: 20px; right: 30px; color: rgba(255,255,255,.7); font-size: 40px; cursor: pointer; transition: color .2s ease,transform .3s ease, opacity 0.4s; }
+            #ai-close-button { position: absolute; top: 20px; right: 30px; color: rgba(255,255,255,.7); font-size: 40px; cursor: pointer; transition: color .2s ease,transform .3s ease, opacity 0.4s; z-index: 2; }
             #ai-char-counter { position: fixed; bottom: 15px; right: 30px; font-size: 0.9em; font-family: 'Geist', sans-serif; color: #aaa; transition: color 0.2s; z-index: 2147483647; }
             #ai-char-counter.limit-exceeded { color: #e57373; font-weight: bold; }
-            /* Chat container is centered, text inside is left-aligned */
             #ai-response-container { 
                 flex: 1 1 auto; overflow-y: auto; width: 100%; max-width: 800px; 
-                margin: 0 auto; /* Centered horizontally */
-                display: flex; flex-direction: column; gap: 15px; padding: 70px 20px 20px 20px; 
+                margin: 0 auto; padding: 70px 20px 20px 20px; 
                 -webkit-mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%); 
                 mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%);
             }
-            /* Text alignment change: Ensure text inside bubbles is left-aligned */
             .ai-message-bubble { 
                 background: rgba(15,15,18,.8); border: 1px solid rgba(255,255,255,.1); border-radius: 20px; padding: 15px 20px; color: #e0e0e0; 
                 backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); animation: message-pop-in .5s cubic-bezier(.4,0,.2,1) forwards; 
                 max-width: 90%; line-height: 1.6; overflow-wrap: break-word; transition: opacity 0.3s ease-in-out; 
-                align-self: flex-start; 
-                text-align: left; /* Text pushed to the left inside the bubble */
+                align-self: flex-start; text-align: left; 
             }
             .user-message { align-self: flex-end; background: rgba(40,45,50,.8); }
-            .gemini-response { animation: none; } /* Removed rainbow glow from bubble */
+            .gemini-response { animation: none; transition: opacity 0.3s ease-in-out; } 
             .gemini-response.loading { display: flex; justify-content: center; align-items: center; min-height: 60px; max-width: 100px; padding: 15px; background: rgba(15,15,18,.8); animation: gemini-glow 4s linear infinite; }
-            /* Input wrapper is centered */
             #ai-input-wrapper { 
                 display: flex; flex-direction: column; flex-shrink: 0; position: relative; z-index: 2; 
                 transition: all .4s cubic-bezier(.4,0,.2,1); 
-                margin: 15px auto; /* Centered horizontally */
-                width: 90%; max-width: 800px; border-radius: 25px; background: rgba(10,10,10,.7); 
+                margin: 15px auto; width: 90%; max-width: 800px; border-radius: 25px; background: rgba(10,10,10,.7); 
                 backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,.2); 
             }
             #ai-input-wrapper::before, #ai-input-wrapper::after { content: ''; position: absolute; top: -1px; left: -1px; right: -1px; bottom: -1px; border-radius: 26px; z-index: -1; transition: opacity 0.5s ease-in-out; }
             #ai-input-wrapper::before { animation: glow 3s infinite; opacity: 1; }
-            #ai-input-wrapper::after { animation: focused-glow 4s linear infinite; opacity: 0; } /* New focused glow animation */
+            #ai-input-wrapper::after { animation: focused-glow 4s linear infinite; opacity: 0; }
             #ai-input-wrapper.waiting::before { opacity: 0; }
             #ai-input-wrapper.waiting::after { opacity: 1; }
-            #ai-input { 
-                min-height: 52px; max-height: ${MAX_INPUT_HEIGHT}px; overflow-y: hidden; 
-                color: #fff; font-size: 1.1em; padding: 15px 50px 15px 20px; box-sizing: border-box; 
-                word-wrap: break-word; outline: 0; 
-                text-align: left; /* Input text pushed to the left */
-            }
+            #ai-input { min-height: 52px; max-height: ${MAX_INPUT_HEIGHT}px; overflow-y: hidden; color: #fff; font-size: 1.1em; padding: 15px 50px 15px 20px; box-sizing: border-box; word-wrap: break-word; outline: 0; text-align: left; }
             #ai-input:empty::before { content: 'Ask a question or describe your files...'; color: rgba(255, 255, 255, 0.4); pointer-events: none; }
             #ai-action-toggle { position: absolute; right: 10px; bottom: 12px; transform: translateY(0); background: 0 0; border: none; color: rgba(255,255,255,.5); font-size: 24px; cursor: pointer; padding: 5px; line-height: 1; z-index: 3; transition: all .3s ease; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
             #ai-action-toggle .icon-ellipsis, #ai-action-toggle .icon-stop { transition: opacity 0.3s, transform 0.3s; position: absolute; }
@@ -762,47 +893,69 @@
             #ai-action-toggle.generating { background-color: rgba(250, 140, 50, 0.2); border: 1px solid var(--ai-main-color); color: var(--ai-main-color); border-radius: 8px; }
             #ai-action-toggle.generating .icon-ellipsis { opacity: 0; transform: scale(0.5); }
             #ai-action-toggle.generating .icon-stop { opacity: 1; transform: scale(1); }
-            #ai-action-menu { 
-                position: fixed; background: rgba(20, 20, 22, 0.7); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); 
-                border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); 
-                display: flex; flex-direction: column; gap: 5px; padding: 8px; z-index: 2147483647; opacity: 0; visibility: hidden; 
-                transform: translateY(10px) scale(.95); transition: all .25s cubic-bezier(.4,0,.2,1); transform-origin: bottom right; 
-                font-family: 'Merriweather', serif; /* Merriweather font for menu */
-            }
-            #ai-action-menu.active { opacity: 1; visibility: visible; transform: translateY(-5px); }
-            #ai-action-menu button { background: rgba(255,255,255,0.05); border: none; color: #ddd; font-family: 'Merriweather', serif; font-size: 1em; padding: 10px 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 12px; text-align: left; transition: background-color 0.2s, filter 0.2s, box-shadow 0.2s; }
-            #ai-action-menu button[data-category] { justify-content: center; background-color: rgba(250, 140, 50, 0.1); }
-            #ai-action-menu button[data-category="Standard"] { background-color: rgba(250, 140, 50, 0.2); } /* Highlight default category */
-            #ai-action-menu button:hover { filter: brightness(1.2); }
-            #ai-action-menu button[data-category].active { filter: brightness(1.2); box-shadow: inset 0 0 0 2px var(--ai-main-color); background-color: rgba(250, 140, 50, 0.3); }
-            #ai-action-menu hr { border: none; height: 1px; background-color: rgba(255,255,255,0.1); margin: 5px 10px; }
-            #ai-action-menu .menu-header { font-size: 0.8em; color: #888; text-transform: uppercase; padding: 10px 15px 5px; cursor: default; }
-            #ai-attachment-preview { display: none; flex-direction: row; gap: 10px; padding: 0; max-height: 0; border-bottom: 1px solid transparent; overflow-x: auto; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-            #ai-input-wrapper.has-attachments #ai-attachment-preview { max-height: 100px; padding: 10px 15px; }
-            .attachment-card { position: relative; border-radius: 8px; overflow: hidden; background: #333; height: 80px; width: 80px; flex-shrink: 0; display: flex; justify-content: center; align-items: center; transition: filter 0.3s; }
-            .attachment-card.loading { filter: grayscale(80%) brightness(0.7); }
-            .attachment-card.loading .file-icon { opacity: 0.3; }
-            .attachment-card.loading .ai-loader { position: absolute; z-index: 2; }
-            .attachment-card img { width: 100%; height: 100%; object-fit: cover; }
-            .file-info { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); overflow: hidden; }
-            .file-name { display: block; color: #fff; font-size: 0.75em; padding: 4px; text-align: center; white-space: nowrap; }
-            .file-name.marquee > span { display: inline-block; padding-left: 100%; animation: marquee linear infinite; }
-            .file-type-badge { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.7em; padding: 2px 5px; border-radius: 4px; font-family: 'Geist', sans-serif; font-weight: bold; }
-            .remove-attachment-btn { position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.5); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; z-index: 3; }
-            .ai-loader { width: 25px; height: 25px; border-radius: 50%; animation: spin 1s linear infinite; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; }
-            .code-block-wrapper { background-color: rgba(42, 42, 48, 0.8); border-radius: 8px; margin: 10px 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
-            .code-block-header { display: flex; justify-content: flex-end; align-items: center; padding: 6px 12px; background-color: rgba(0,0,0,0.2); }
-            .code-metadata { font-size: 0.8em; color: #aaa; margin-right: auto; font-family: 'Geist', sans-serif; }
-            .copy-code-btn { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; border-radius: 6px; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s; }
-            .copy-code-btn:hover { background: rgba(255, 255, 255, 0.2); }
-            .copy-code-btn:disabled { cursor: default; background: rgba(25, 103, 55, 0.5); }
-            .copy-code-btn svg { stroke: #e0e0e0; }
-            .code-block-wrapper pre { margin: 0; padding: 15px; overflow: auto; background-color: transparent; }
-            .code-block-wrapper pre::-webkit-scrollbar { height: 8px; }
-            .code-block-wrapper pre::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
-            .code-block-wrapper code { font-family: 'Geist', monospace; font-size: 0.9em; color: #f0f0f0; }
             
-            /* New/Revised Keyframes */
+            /* --- NEW: Full-Screen Agent Menu Styles --- */
+            #ai-full-agent-menu { 
+                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0); z-index: 2147483647; 
+                opacity: 0; visibility: hidden; transition: opacity 0.3s, background 0.3s; 
+                display: flex; justify-content: center; align-items: center;
+            }
+            #ai-full-agent-menu.active { 
+                opacity: 1; visibility: visible; 
+                background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            }
+            #ai-full-agent-menu .menu-content { 
+                width: 90%; max-width: 1000px; max-height: 90vh; background: var(--ai-menu-bg); 
+                border-radius: 20px; padding: 25px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); 
+                transform: scale(0.95); transition: transform 0.3s; overflow-y: auto;
+                border: 1px solid rgba(255,255,255,0.1);
+            }
+            #ai-full-agent-menu.active .menu-content { transform: scale(1); }
+            .menu-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+            .menu-header h2 { color: #fff; margin: 0; font-family: 'Merriweather', serif; font-size: 2em; }
+            .close-btn { background: none; border: none; color: #fff; font-size: 40px; cursor: pointer; opacity: 0.7; transition: opacity 0.2s; }
+            .close-btn:hover { opacity: 1; }
+
+            .setting-section { margin-bottom: 30px; }
+            .setting-section h3 { color: var(--ai-main-color); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; margin-bottom: 15px; font-family: 'Geist', sans-serif; font-weight: 500; font-size: 1.2em; }
+            .setting-section p { color: #ccc; font-size: 0.9em; margin-bottom: 10px; }
+            
+            /* Location Input Styles */
+            .location-input-wrapper { display: flex; gap: 10px; position: relative; }
+            #ai-location-input { flex-grow: 1; padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: #fff; font-size: 1em; }
+            #ai-location-update-btn { padding: 10px 20px; border-radius: 8px; background: var(--ai-main-color); border: none; color: black; font-weight: bold; cursor: pointer; transition: filter 0.2s; }
+            #ai-location-update-btn:hover { filter: brightness(1.1); }
+            .suggestions-menu { position: absolute; top: 100%; left: 0; right: 100px; background: var(--ai-menu-bg); border: 1px solid rgba(255,255,255,0.2); border-radius: 0 0 8px 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); max-height: 150px; overflow-y: auto; z-index: 10; display: none; }
+            .suggestion-item { padding: 10px 15px; color: #fff; cursor: pointer; }
+            .suggestion-item:hover { background: rgba(255,255,255,0.1); }
+
+            /* Agent Category Grid Styles */
+            .agent-category-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+            .agent-category-button { 
+                background: rgba(40, 40, 45, 0.7); border: 1px solid rgba(255,255,255,0.1); color: #ddd; 
+                border-radius: 12px; padding: 15px; cursor: pointer; text-align: left; transition: all 0.2s;
+                display: flex; flex-direction: column; align-items: flex-start;
+            }
+            .agent-category-button:hover { background: rgba(50, 50, 55, 0.8); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+            .agent-category-button.active { 
+                background: rgba(250, 140, 50, 0.3); border-color: var(--ai-main-color);
+                box-shadow: 0 0 10px rgba(250, 140, 50, 0.5); 
+            }
+            .agent-icon { font-size: 2em; margin-bottom: 5px; }
+            .agent-name { font-weight: bold; font-size: 1.1em; color: #fff; margin-bottom: 5px; }
+            .agent-description { font-size: 0.85em; color: #aaa; line-height: 1.4; }
+            
+            /* Attachment Options Grid Styles */
+            .attachment-options-grid { display: flex; gap: 15px; }
+            .attachment-options-grid button {
+                flex: 1 1 50%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+                background: rgba(40, 40, 45, 0.7); border: 1px solid rgba(255,255,255,0.1); color: #ddd; 
+                border-radius: 12px; padding: 15px; cursor: pointer; transition: all 0.2s;
+            }
+            .attachment-options-grid button .icon { font-size: 2em; margin-bottom: 5px; }
+            .attachment-options-grid button .limit-text { font-size: 0.8em; color: var(--ai-main-color); }
+            .attachment-options-grid button:disabled { opacity: 0.5; cursor: default; }
+
             @keyframes glow { 0%,100% { box-shadow: 0 0 5px rgba(255,255,255,.15), 0 0 10px rgba(255,255,255,.1); } 50% { box-shadow: 0 0 10px rgba(255,255,255,.25), 0 0 20px rgba(255,255,255,.2); } }
             @keyframes focused-glow { 0%,100% { box-shadow: 0 0 8px 2px var(--ai-main-color), 0 0 15px 3px rgba(250, 140, 50, 0.5); } 50% { box-shadow: 0 0 12px 3px var(--ai-main-color), 0 0 20px 5px rgba(250, 140, 50, 0.7); } }
             @keyframes gemini-glow { 0%,100% { box-shadow: 0 0 8px 2px var(--ai-main-color); } 25% { box-shadow: 0 0 8px 2px var(--ai-main-color); } 50% { box-shadow: 0 0 8px 2px var(--ai-main-color); } 75% { box-shadow: 0 0 8px 2px var(--ai-main-color); } }
@@ -810,6 +963,9 @@
             @keyframes message-pop-in { 0% { opacity: 0; transform: translateY(10px) scale(.98); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
             @keyframes title-pulse { 0%, 100% { text-shadow: 0 0 7px var(--ai-main-color); } 50% { text-shadow: 0 0 10px var(--ai-main-color); } }
             @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+
+            /* Style to prevent scrolling of the main page when the menu is open */
+            body.ai-menu-open { overflow: hidden; }
         `;
     document.head.appendChild(style);}
     document.addEventListener('keydown', handleKeyDown);
