@@ -5,6 +5,11 @@
  * enhanced animations, intelligent chat history (token saving),
  * and advanced file previews. This version includes a character limit,
  * smart paste handling, and refined animations.
+ * * UPDATED:
+ * - Text alignment in chat bubbles set to left.
+ * - Highlight/glow color changed to f78725 (orange).
+ * - "AI Mode" renamed to "4SP AI Agent".
+ * - Focus Topics replaced with Agent Categories (with new options).
  */
 (function() {
     // =========================================================================
@@ -47,6 +52,21 @@
 
     // --- DAILY LIMITS CONFIGURATION ---
     const DAILY_LIMITS = { images: 5 };
+
+    // --- AGENT CATEGORIES (formerly Focus Topics) ---
+    const AGENT_CATEGORIES = [
+        { name: 'General', instruction: 'You are a helpful and comprehensive AI assistant.', color: 'rgba(55, 65, 81, 0.7)' },
+        { name: 'Math Expert', instruction: 'You are a mathematics expert. Prioritize accuracy and provide detailed, step-by-step reasoning for all calculations and proofs. Double-check your work for correctness.', color: 'rgba(127, 29, 29, 0.7)' },
+        { name: 'Science Tutor', instruction: 'You are a science expert. Explain complex scientific concepts clearly and concisely, using analogies where helpful. Provide sources or references for claims where appropriate.', color: 'rgba(22, 101, 52, 0.7)' },
+        { name: 'Writer/Editor', instruction: 'You are an expert in English language and literature. Adopt a human-like, conversational, and slightly literary tone. Analyze texts with nuance, considering themes, character development, and authorial intent. Mirror the user\'s writing style in terms of formality.', color: 'rgba(30, 64, 175, 0.7)' },
+        { name: 'Code Assistant', instruction: 'You are an expert programmer and software architect. Provide complete and runnable code examples. Do not use brevity or omit necessary parts of the code for simplicity. Explain the code clearly, covering its logic, structure, and potential edge cases.', color: 'rgba(12, 74, 110, 0.7)' }
+    ];
+    
+    // Function to find the instruction for the current subject
+    function getSystemInstruction(subject) {
+        const category = AGENT_CATEGORIES.find(c => c.name === subject);
+        return category ? category.instruction : AGENT_CATEGORIES[0].instruction;
+    }
 
     const limitManager = {
         getToday: () => new Date().toLocaleDateString("en-US"),
@@ -111,7 +131,7 @@
         
         const brandTitle = document.createElement('div');
         brandTitle.id = 'ai-brand-title';
-        const brandText = "4SP - AI MODE";
+        const brandText = "4SP - AI AGENT"; // Updated name
         brandText.split('').forEach(char => {
             const span = document.createElement('span');
             span.textContent = char;
@@ -121,11 +141,11 @@
         
         const persistentTitle = document.createElement('div');
         persistentTitle.id = 'ai-persistent-title';
-        persistentTitle.textContent = "AI Mode - General";
+        persistentTitle.textContent = `4SP AI Agent - ${currentSubject}`; // Updated name
         
         const welcomeMessage = document.createElement('div');
         welcomeMessage.id = 'ai-welcome-message';
-        welcomeMessage.innerHTML = `<h2>Welcome to AI Mode</h2><p>This is a beta feature. To improve your experience, your general location (state or country) will be shared with your first message. You may be subject to message limits.</p>`;
+        welcomeMessage.innerHTML = `<h2>Welcome to 4SP AI Agent</h2><p>This is a beta feature. To improve your experience, your general location (state or country) will be shared with your first message. You may be subject to message limits.</p>`; // Updated name
         
         const closeButton = document.createElement('div');
         closeButton.id = 'ai-close-button';
@@ -254,24 +274,8 @@
              userParts.unshift({ text: firstMessageContext.trim() });
         }
         
-        let systemInstruction = 'You are a helpful and comprehensive AI assistant.';
-        switch (currentSubject) {
-            case 'Mathematics':
-                systemInstruction = 'You are a mathematics expert. Prioritize accuracy and provide detailed, step-by-step reasoning for all calculations and proofs. Double-check your work for correctness.';
-                break;
-            case 'Science':
-                systemInstruction = 'You are a science expert. Explain complex scientific concepts clearly and concisely, using analogies where helpful. Provide sources or references for claims where appropriate.';
-                break;
-            case 'History':
-                systemInstruction = 'You are a history expert. Provide detailed and chronologically accurate information. When discussing events, include context and the perspectives of different groups involved.';
-                break;
-            case 'English':
-                systemInstruction = 'You are an expert in English language and literature. Adopt a human-like, conversational, and slightly literary tone. Analyze texts with nuance, considering themes, character development, and authorial intent. Mirror the user\'s writing style in terms of formality.';
-                break;
-            case 'Programming':
-                systemInstruction = 'You are an expert programmer and software architect. Provide complete and runnable code examples. Do not use brevity or omit necessary parts of the code for simplicity. Explain the code clearly, covering its logic, structure, and potential edge cases.';
-                break;
-        }
+        // Use the new function to get the system instruction based on the currentSubject (Agent Category)
+        const systemInstruction = getSystemInstruction(currentSubject);
 
         const payload = { contents: processedChatHistory, systemInstruction: { parts: [{ text: systemInstruction }] } };
         
@@ -342,8 +346,8 @@
         currentSubject=subject;
         chatHistory = [];
         const persistentTitle = document.getElementById('ai-persistent-title');
-        if (persistentTitle) { persistentTitle.textContent = `AI Mode - ${subject}`; }
-        document.getElementById('ai-container').dataset.subject = subject;
+        if (persistentTitle) { persistentTitle.textContent = `4SP AI Agent - ${subject}`; } // Updated name
+        document.getElementById('ai-container').dataset.subject = subject.replace(/\s/g, ''); // Use subject name without spaces for CSS data-attribute
 
         const menu=document.getElementById('ai-action-menu');
         menu.querySelectorAll('button[data-subject]').forEach(b=>b.classList.remove('active'));
@@ -472,7 +476,9 @@
         const menu = document.createElement('div');
         menu.id = 'ai-action-menu';
         const attachments = [ { id: 'photo', icon: '📷', label: 'Photo', type: 'images' }, { id: 'file', icon: '📎', label: 'File', type: 'file' } ];
-        const subjects = ['General','Mathematics','Science','History','English','Programming'];
+        // const subjects = ['General','Mathematics','Science','History','English','Programming']; // Old subjects
+        const categories = AGENT_CATEGORIES; // New categories
+        
         attachments.forEach(opt => {
             const button = document.createElement('button');
             button.dataset.type = opt.type;
@@ -487,16 +493,19 @@
         menu.appendChild(document.createElement('hr'));
         const subjectHeader = document.createElement('div');
         subjectHeader.className = 'menu-header';
-        subjectHeader.textContent = 'Focus Topic';
+        subjectHeader.textContent = 'Agent Categories'; // Changed from 'Focus Topic'
         menu.appendChild(subjectHeader);
-        subjects.forEach(subject => {
+        
+        categories.forEach(category => {
             const button = document.createElement('button');
-            button.textContent = subject;
-            button.dataset.subject = subject;
-            if (subject === 'General') button.classList.add('active');
-            button.onclick = () => selectSubject(subject);
+            button.textContent = category.name;
+            button.dataset.subject = category.name;
+            button.style.backgroundColor = category.color; // Set background color from AGENT_CATEGORIES
+            if (category.name === 'General') button.classList.add('active');
+            button.onclick = () => selectSubject(category.name);
             menu.appendChild(button);
         });
+        
         return menu;
     }
 
@@ -663,16 +672,18 @@
         }
         const style = document.createElement("style");
         style.id = "ai-dynamic-styles";
+        // --- START OF MODIFIED CSS ---
         style.innerHTML = `
-            :root { --ai-red: #ea4335; --ai-blue: #4285f4; --ai-green: #34a853; --ai-yellow: #fbbc05; }
+            :root { --ai-primary-glow: #f78725; }
             #ai-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0,0,0,0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); z-index: 2147483647; opacity: 0; transition: opacity 0.5s, background 0.5s, backdrop-filter 0.5s; font-family: 'Geist', sans-serif; display: flex; flex-direction: column; justify-content: flex-end; padding: 0; box-sizing: border-box; overflow: hidden; }
             #ai-container.active { opacity: 1; background-color: rgba(0, 0, 0, 0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+            /* Updated background for different categories (using simplified name) */
             #ai-container[data-subject="General"] { background: rgba(0, 0, 0, 0.8); }
-            #ai-container[data-subject="Mathematics"] { background: linear-gradient(rgba(150, 40, 40, 0.2), rgba(150, 40, 40, 0.2)), rgba(10, 10, 15, 0.75); }
-            #ai-container[data-subject="Science"] { background: linear-gradient(rgba(40, 130, 80, 0.15), rgba(40, 130, 80, 0.15)), rgba(10, 10, 15, 0.75); }
-            #ai-container[data-subject="History"] { background: linear-gradient(rgba(140, 90, 30, 0.2), rgba(140, 90, 30, 0.2)), rgba(10, 10, 15, 0.75); }
-            #ai-container[data-subject="English"] { background: linear-gradient(rgba(50, 80, 160, 0.2), rgba(50, 80, 160, 0.2)), rgba(10, 10, 15, 0.75); }
-            #ai-container[data-subject="Programming"] { background: linear-gradient(rgba(40, 100, 150, 0.2), rgba(40, 100, 150, 0.2)), rgba(10, 10, 15, 0.75); }
+            #ai-container[data-subject="MathExpert"] { background: linear-gradient(rgba(150, 40, 40, 0.2), rgba(150, 40, 40, 0.2)), rgba(10, 10, 15, 0.75); }
+            #ai-container[data-subject="ScienceTutor"] { background: linear-gradient(rgba(40, 130, 80, 0.15), rgba(40, 130, 80, 0.15)), rgba(10, 10, 15, 0.75); }
+            #ai-container[data-subject="Writer/Editor"] { background: linear-gradient(rgba(50, 80, 160, 0.2), rgba(50, 80, 160, 0.2)), rgba(10, 10, 15, 0.75); }
+            #ai-container[data-subject="CodeAssistant"] { background: linear-gradient(rgba(40, 100, 150, 0.2), rgba(40, 100, 150, 0.2)), rgba(10, 10, 15, 0.75); }
+            
             #ai-container.deactivating, #ai-container.deactivating > * { transition: opacity 0.4s, transform 0.4s; }
             #ai-container.deactivating { opacity: 0 !important; background-color: rgba(0,0,0,0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); }
             #ai-persistent-title, #ai-brand-title { position: absolute; top: 28px; left: 30px; font-family: 'Merriweather', serif; font-size: 18px; font-weight: bold; color: white; opacity: 0; transition: opacity 0.5s 0.2s; animation: title-pulse 4s linear infinite; }
@@ -686,14 +697,28 @@
             #ai-char-counter { position: fixed; bottom: 15px; right: 30px; font-size: 0.9em; font-family: 'Geist', sans-serif; color: #aaa; transition: color 0.2s; z-index: 2147483647; }
             #ai-char-counter.limit-exceeded { color: #e57373; font-weight: bold; }
             #ai-response-container { flex: 1 1 auto; overflow-y: auto; width: 100%; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; padding: 70px 20px 20px 20px; -webkit-mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%); mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%);}
-            .ai-message-bubble { background: rgba(15,15,18,.8); border: 1px solid rgba(255,255,255,.1); border-radius: 20px; padding: 15px 20px; color: #e0e0e0; backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); animation: message-pop-in .5s cubic-bezier(.4,0,.2,1) forwards; max-width: 90%; line-height: 1.6; overflow-wrap: break-word; transition: opacity 0.3s ease-in-out; }
+            .ai-message-bubble { 
+                background: rgba(15,15,18,.8); 
+                border: 1px solid rgba(255,255,255,.1); 
+                border-radius: 20px; 
+                padding: 15px 20px; 
+                color: #e0e0e0; 
+                backdrop-filter: blur(15px); 
+                -webkit-backdrop-filter: blur(15px); 
+                animation: message-pop-in .5s cubic-bezier(.4,0,.2,1) forwards; 
+                max-width: 90%; 
+                line-height: 1.6; 
+                overflow-wrap: break-word; 
+                transition: opacity 0.3s ease-in-out;
+                text-align: left; /* CHANGED: text alignment */
+            }
             .user-message { align-self: flex-end; background: rgba(40,45,50,.8); }
             .gemini-response { animation: glow 4s infinite; }
-            .gemini-response.loading { display: flex; justify-content: center; align-items: center; min-height: 60px; max-width: 100px; padding: 15px; background: rgba(15,15,18,.8); animation: gemini-glow 4s linear infinite; }
+            .gemini-response.loading { display: flex; justify-content: center; align-items: center; min-height: 60px; max-width: 100px; padding: 15px; background: rgba(15,15,18,.8); animation: unified-glow 4s linear infinite; } /* Changed animation to unified-glow */
             #ai-input-wrapper { display: flex; flex-direction: column; flex-shrink: 0; position: relative; z-index: 2; transition: all .4s cubic-bezier(.4,0,.2,1); margin: 15px auto; width: 90%; max-width: 800px; border-radius: 25px; background: rgba(10,10,10,.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,.2); }
             #ai-input-wrapper::before, #ai-input-wrapper::after { content: ''; position: absolute; top: -1px; left: -1px; right: -1px; bottom: -1px; border-radius: 26px; z-index: -1; transition: opacity 0.5s ease-in-out; }
             #ai-input-wrapper::before { animation: glow 3s infinite; opacity: 1; }
-            #ai-input-wrapper::after { animation: gemini-glow 4s linear infinite; opacity: 0; }
+            #ai-input-wrapper::after { animation: unified-glow 4s linear infinite; opacity: 0; } /* Changed animation to unified-glow */
             #ai-input-wrapper.waiting::before { opacity: 0; }
             #ai-input-wrapper.waiting::after { opacity: 1; }
             #ai-input { min-height: 52px; max-height: ${MAX_INPUT_HEIGHT}px; overflow-y: hidden; color: #fff; font-size: 1.1em; padding: 15px 50px 15px 20px; box-sizing: border-box; word-wrap: break-word; outline: 0; }
@@ -708,12 +733,7 @@
             #ai-action-menu.active { opacity: 1; visibility: visible; transform: translateY(-5px); }
             #ai-action-menu button { background: rgba(255,255,255,0.05); border: none; color: #ddd; font-family: 'Geist', sans-serif; font-size: 1em; padding: 10px 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 12px; text-align: left; transition: background-color 0.2s, filter 0.2s, box-shadow 0.2s; }
             #ai-action-menu button[data-subject] { justify-content: center; }
-            #ai-action-menu button[data-subject="General"] { background-color: rgba(55, 65, 81, 0.7); }
-            #ai-action-menu button[data-subject="Mathematics"] { background-color: rgba(127, 29, 29, 0.7); }
-            #ai-action-menu button[data-subject="Science"] { background-color: rgba(22, 101, 52, 0.7); }
-            #ai-action-menu button[data-subject="History"] { background-color: rgba(120, 53, 15, 0.7); }
-            #ai-action-menu button[data-subject="English"] { background-color: rgba(30, 64, 175, 0.7); }
-            #ai-action-menu button[data-subject="Programming"] { background-color: rgba(12, 74, 110, 0.7); }
+            /* Subject specific colors are now set inline in JavaScript, but we keep hover/active styles */
             #ai-action-menu button:hover { filter: brightness(1.2); }
             #ai-action-menu button[data-subject].active { filter: brightness(1.2); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.8); }
             #ai-action-menu hr { border: none; height: 1px; background-color: rgba(255,255,255,0.1); margin: 5px 10px; }
@@ -742,13 +762,15 @@
             .code-block-wrapper pre::-webkit-scrollbar { height: 8px; }
             .code-block-wrapper pre::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
             .code-block-wrapper code { font-family: 'Geist', monospace; font-size: 0.9em; color: #f0f0f0; }
+            /* CHANGED: Simplified 'glow' to a single color */
             @keyframes glow { 0%,100% { box-shadow: 0 0 5px rgba(255,255,255,.15), 0 0 10px rgba(255,255,255,.1); } 50% { box-shadow: 0 0 10px rgba(255,255,255,.25), 0 0 20px rgba(255,255,255,.2); } }
-            @keyframes gemini-glow { 0%,100% { box-shadow: 0 0 8px 2px var(--ai-blue); } 25% { box-shadow: 0 0 8px 2px var(--ai-green); } 50% { box-shadow: 0 0 8px 2px var(--ai-yellow); } 75% { box-shadow: 0 0 8px 2px var(--ai-red); } }
+            @keyframes unified-glow { 0%,100% { box-shadow: 0 0 8px 2px var(--ai-primary-glow); } 50% { box-shadow: 0 0 12px 3px var(--ai-primary-glow); } }
             @keyframes spin { to { transform: rotate(360deg); } }
             @keyframes message-pop-in { 0% { opacity: 0; transform: translateY(10px) scale(.98); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
-            @keyframes title-pulse { 0%, 100% { text-shadow: 0 0 7px var(--ai-blue); } 25% { text-shadow: 0 0 7px var(--ai-green); } 50% { text-shadow: 0 0 7px var(--ai-yellow); } 75% { text-shadow: 0 0 7px var(--ai-red); } }
+            @keyframes title-pulse { 0%, 100% { text-shadow: 0 0 7px var(--ai-primary-glow); } 50% { text-shadow: 0 0 10px var(--ai-primary-glow); } } /* CHANGED: Simplified title pulse to single color */
             @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
         `;
+        // --- END OF MODIFIED CSS ---
     document.head.appendChild(style);}
     document.addEventListener('keydown', handleKeyDown);
 
