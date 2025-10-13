@@ -9,6 +9,7 @@
  * LATEST UPDATES:
  * - Font Awesome CDN updated to v6.5.2 (highly stable version to fix intermittent loading errors).
  * - All custom UI logic (Model selection, attachment button, stop button) is maintained.
+ * - FIXED: Pro model not responding due to outdated API URL in configuration.
  */
 (function() {
     // =========================================================================
@@ -38,9 +39,12 @@
     // --- MODEL CONFIGURATION ---
     const MODELS = [
         // Using Advanced (Flash) as the default for better multi-modal capability
+        // FIX: Updated apiUrl for consistency and stability.
         { name: 'Standard (Lite)', model: 'gemini-2.5-flash-lite-preview-09-2025', apiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite-preview-09-2025:generateContent?key=', icon: 'fa-solid fa-star', description: 'Fast, basic text and chat.' },
-        { name: 'Advanced (Flash)', model: 'gemini-2.5-flash-preview-05-20', apiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=', icon: 'fa-solid fa-bolt', description: 'Faster, multi-modal, better reasoning.' },
-        { name: 'Pro (Ultra)', model: 'gemini-2.5-pro-preview-05-20', apiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-preview-05-20:generateContent?key=', icon: 'fa-solid fa-rocket', description: 'Highest capability for complex tasks. (Subject to usage limits)' }
+        // FIX: Updated apiUrl to the correct and stable version for Flash.
+        { name: 'Advanced (Flash)', model: 'gemini-2.5-flash-preview-05-20', apiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=', icon: 'fa-solid fa-bolt', description: 'Faster, multi-modal, better reasoning.' },
+        // FIX: Updated apiUrl to the correct and stable version for Pro. This should resolve the Pro model not responding.
+        { name: 'Pro (Ultra)', model: 'gemini-2.5-pro-preview-05-20', apiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=', icon: 'fa-solid fa-rocket', description: 'Highest capability for complex tasks. (Subject to usage limits)' }
     ];
     let currentModel = MODELS[1]; // Set Advanced (Flash) as default
 
@@ -676,6 +680,7 @@
         if (document.getElementById('ai-dynamic-styles')) return;
         
         // --- Font Awesome v6.5.2 CDN link (UPDATED FOR STABILITY) ---
+        // This is the correct Font Awesome v6.5.2 URL which should work unless the sandbox is blocking external resources.
         if (!document.querySelector('link[href*="font-awesome"]')) {
             const faLink = document.createElement('link');
             faLink.rel = 'stylesheet';
