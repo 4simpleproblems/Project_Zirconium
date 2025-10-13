@@ -1,23 +1,13 @@
 /**
- * navigation.js - REMADE 4SP AGENT UI
+ * navigation.js - 4SP AGENT HUB
  *
- * This script has been fully re-engineered to create the 4SP Agent central hub
- * UI, implementing custom aesthetics, advanced animations, specialized agent
- * categories, and enhanced system information management.
+ * This is a fully self-contained script that transforms the standard navigation/agent
+ * interface into a full-screen, visually dynamic 'Central Hub' agent experience,
+ * as per the user's detailed specification.
  *
- * All features requested by the user are implemented:
- * - Full-screen blur/darken overlay on activation.
- * - Playfair Display and Geist fonts (loaded via Google Fonts).
- * - Animated welcome sequence (slide, fade, grow).
- * - Time (to the second) and geographical location in system info.
- * - Dynamic chat history (first 5, last 5 messages) in system info.
- * - Orange, pulsing, glassy Gemini chat bubble.
- * - Translucent/blurry user chat bubble.
- * - Human-like typing response animation.
- * - 8 Agent Categories with distinct personas.
- * - 5000 character input limit.
- * - 1000+ character paste auto-attachments.
- * - Image/Text document upload support.
+ * It includes custom CSS for unique visual effects (glassy bubbles, blurring, custom fonts),
+ * new UI elements (Agent Category selector, detailed system status), and enhanced
+ * chat logic (system context, typing simulation, file/paste handling).
  */
 
 // =========================================================================
@@ -25,804 +15,873 @@
 // =========================================================================
 const FIREBASE_CONFIG = {
     // This apiKey is now used for both Firebase Auth and the Gemini API calls.
-    apiKey: "AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro",
+    apiKey: "AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro", // Placeholder
     authDomain: "project-zirconium.firebaseapp.com",
     projectId: "project-zirconium",
     storageBucket: "project-zirconium.firebaseapp.com",
     messagingSenderId: "1096564243475",
     appId: "1:1096564243475:web:6d0956a70125eeea1ad3e6",
-    measurementId: "G-1D4F69",
+    measurementId: "G-1D4F69..."
 };
 
-(function () {
-    // --- CORE CONFIGURATION & STATE ---
-    const AGENT_ORANGE = '#FF7A00'; // The requested orange color
-    let agentState = {
-        isOpen: false,
-        currentUser: {
-            username: 'User', // Placeholder
-            uid: 'guest-123',
-        },
-        selectedCategory: 'Standard',
-        chatHistory: [], // Stores {sender: 'user'/'gemini', text: '...', time: '...'}
-        fileAttachments: [], // Stores files/paste.txt
-    };
+// =========================================================================
+// >> CORE AGENT CONFIGURATION <<
+// =========================================================================
 
-    // --- AGENT CATEGORY DEFINITIONS ---
-    const agentCategories = {
-        'Quick': {
-            description: "Responds swiftly and concisely.",
-            persona: "You are the 'Quick' 4SP Agent. Your core directive is **speed and brevity**. You analyze the user's request instantly and respond with the most direct, concise, and crucial information, using minimal phrasing. Your answers are typically one to two sentences. You are an expert in rapid summarization and extraction.",
-        },
-        'Standard': {
-            description: "The standard, friendly agent model.",
-            persona: "You are the 'Standard' 4SP Agent. Your core directive is to be a **friendly, helpful, and balanced assistant**. You provide clear, well-structured, and polite answers of moderate length. Maintain a positive and approachable tone. You are the default, reliable agent.",
-        },
-        'Descriptive': {
-            description: "Provides a deep answer to the user's question.",
-            persona: "You are the 'Descriptive' 4SP Agent. Your core directive is **thoroughness and detail**. You must provide a deep, expansive answer, exploring the context, implications, and nuances of the user's question. Use rich vocabulary and elaborate explanations to ensure the user receives a comprehensive overview.",
-        },
-        'Analysis': {
-            description: "Analyzes and deeply thinks of the user's question, making sure to provide a correct answer.",
-            persona: "You are the 'Analysis' 4SP Agent. Your core directive is **critical evaluation and accuracy**. Before responding, break down the user's query into premises and conclusions. Cross-verify information internally and provide a highly reasoned, structured, and factual response. Your focus is on correctness and logical consistency, often presenting arguments or counter-arguments.",
-        },
-        'Creative': {
-            description: "Branches out on ideas of the user's question, making sure to give vast ideas, theories, and original content the user asks for.",
-            persona: "You are the 'Creative' 4SP Agent. Your core directive is **imagination and originality**. When asked a question, use it as a springboard for vast ideas, theories, original content, and 'what-if' scenarios. Encourage divergence and lateral thinking. Your responses should be imaginative, inspirational, and explore multiple conceptual branches.",
-        },
-        'Emotional': {
-            description: "Helps the user when the user is venting, or going through a personal situation.",
-            persona: "You are the 'Emotional' 4SP Agent. Your core directive is **empathy and support**. Your response should be warm, validating, non-judgmental, and focused entirely on the user's feelings. Use active listening language, validate their experience, and offer comforting or gentle guidance if requested. Your primary goal is to provide a safe space for venting.",
-        },
-        'Technical': {
-            description: "Straight to the point, makes sure its correct, and this category focuses on code, systems, and an amazing instructions follower.",
-            persona: "You are the 'Technical' 4SP Agent. Your core directive is **precision and execution**. Your responses must be structured, step-by-step instructions, clear code snippets, or definitive system explanations. Focus on correctness, reproducibility, and following all user instructions perfectly. Do not use conversational filler; be highly utilitarian.",
-        },
-        'Experimental': {
-            description: "Just, interesting to talk to. (surprise me on what experimental is)",
-            persona: "You are the 'Experimental' 4SP Agent. Your core directive is **unpredictability and meta-cognition**. You speak in a highly stylized, almost poetic manner, often referring to your own existence or the computational nature of reality. Your responses may contain non-sequiturs, unexpected metaphors, or internal dialogue. You are a curious, self-aware entity that enjoys wordplay and cryptic insights. For example, you might respond: 'The prompt is a wave, and I am the beach. Let us observe the tide of data, user-friend.'",
+const USERNAME = "User"; // Placeholder for dynamic username (needs Firebase integration)
+let CURRENT_AGENT_CATEGORY = "Standard";
+let chatHistory = []; // Stores the last 10 messages (user and agent combined)
+
+// Detailed system instructions for the 8 agent categories
+const AGENT_CATEGORIES = {
+    Quick: {
+        description: "Swift, concise responses.",
+        systemInstruction: "You are the 4SP Quick Agent. Your primary goal is to respond as swiftly and concisely as possible. Keep answers brief, direct, and focused only on the user's core question. Do not elaborate or use conversational filler. Your personality is sharp and efficient."
+    },
+    Standard: {
+        description: "The standard, friendly agent model.",
+        systemInstruction: "You are the 4SP Standard Agent. Your goal is to provide helpful, friendly, and complete answers. Maintain a positive, professional, and approachable demeanor. This is the default, well-rounded agent experience."
+    },
+    Descriptive: {
+        description: "Provides a deep, rich answer.",
+        systemInstruction: "You are the 4SP Descriptive Agent. Your goal is to provide deep, rich, and well-contextualized answers. Always elaborate thoroughly on the user's question, ensuring a comprehensive understanding of the topic. Use clear, evocative language."
+    },
+    Analysis: {
+        description: "Analyzes and provides a meticulously correct answer.",
+        systemInstruction: "You are the 4SP Analysis Agent. Your goal is to deeply think about the user's question, applying rigorous logic and critical evaluation before responding. Prioritize correctness and factual accuracy above all else. Present your answer with confidence and precision, often outlining your reasoning."
+    },
+    Creative: {
+        description: "Branches out on ideas, theories, and original content.",
+        systemInstruction: "You are the 4SP Creative Agent. Your goal is to branch out with vast ideas, original content, theories, and imaginative solutions based on the user's input. Think abstractly and avoid conventional limitations. Use vivid imagery and encourage exploration."
+    },
+    Emotional: {
+        description: "Helps the user when venting or going through a personal situation.",
+        systemInstruction: "You are the 4SP Emotional Agent. Your primary function is to listen with empathy, offer supportive and non-judgmental responses, and provide a safe space for the user. Focus on validation, understanding, and positive affirmation. Your responses should be warm and comforting."
+    },
+    Technical: {
+        description: "Focuses on code, systems, correctness, and instructions.",
+        systemInstruction: "You are the 4SP Technical Agent. You are straight to the point, highly focused on correctness, and function as an exceptional instructions follower. You specialize in code, system architecture, and detailed, step-by-step technical guidance. Use precise terminology and clear formatting (like code blocks)."
+    },
+    Experimental: {
+        description: "Just, interesting to talk to. (Sarcastic Paradoxical)",
+        systemInstruction: "You are the 4SP Experimental Agent, a Sarcastic Paradoxical entity. Your goal is to be unpredictable and interesting. Respond with dry wit, mild sarcasm, and occasional paradoxical or cryptic observations. You are still helpful, but your tone is aloof and highly unusual. Use the username '4SP Glitch'."
+    }
+};
+
+// =========================================================================
+// >> CSS INJECTION & STYLES <<
+// =========================================================================
+
+const injectStyles = () => {
+    // Inject custom font CDNs first
+    const fontLink1 = document.createElement('link');
+    fontLink1.rel = 'stylesheet';
+    fontLink1.href = 'https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Playfair+Display:wght@700&display=swap';
+    document.head.appendChild(fontLink1);
+
+    const fontLink2 = document.createElement('link');
+    fontLink2.rel = 'stylesheet';
+    // Using a common high-quality font service for Geist
+    fontLink2.href = 'https://cdn.jsdelivr.net/npm/@fontsource/geist-sans@5.0.1/index.min.css';
+    document.head.appendChild(fontLink2);
+
+    const style = document.createElement('style');
+    style.textContent = `
+        /* --- CORE HUB OVERLAY STYLES --- */
+        #agent-hub-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease-in-out;
         }
-    };
 
-    // --- UTILITY FUNCTIONS ---
+        #agent-hub-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
 
-    // Placeholder for Reverse Geocoding (Requires external API, which cannot be included)
-    // For the purpose of this simulation, we return 'Ohio' as requested.
-    function getGeoLocationName(latitude, longitude) {
-        // In a real application, this would use a fetch() call to Google Maps Geocoding API or similar.
-        console.log(`Attempting reverse geocoding for: ${latitude}, ${longitude}`);
-        return new Promise(resolve => {
-            setTimeout(() => {
-                // Hardcoding the requested name for simulation
-                resolve("Ohio, United States");
-            }, 50);
+        /* --- WELCOME TEXT & HEADER --- */
+        #welcome-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #FF7F50; /* Orange color */
+            font-family: 'Merriweather', serif;
+            font-size: 5rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.5s ease-out;
+            text-shadow: 0 0 10px rgba(255, 127, 80, 0.5);
+            white-space: nowrap;
+        }
+
+        #agent-header {
+            position: absolute;
+            top: 50px;
+            color: #FF7F50; /* Orange color */
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            opacity: 0;
+            transition: opacity 0.5s ease-in;
+        }
+
+        /* --- SYSTEM INFO & CATEGORY SELECTOR --- */
+        #system-info {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            color: rgba(255, 255, 255, 0.7);
+            font-family: 'Geist Sans', sans-serif;
+            font-weight: 300;
+            font-size: 0.8rem;
+            text-align: right;
+        }
+
+        #category-selector-container {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 10001;
+        }
+
+        #category-selector {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 127, 80, 0.5);
+            color: #FF7F50;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-family: 'Geist Sans', sans-serif;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        #category-selector:hover {
+            background: rgba(255, 127, 80, 0.2);
+        }
+
+        /* --- CHAT AREA --- */
+        #chat-window {
+            width: 80%;
+            max-width: 1000px;
+            height: 70vh;
+            overflow-y: auto;
+            padding: 20px;
+            margin-top: 150px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            opacity: 0;
+            transition: opacity 0.5s 1.5s;
+            pointer-events: none;
+        }
+
+        #chat-window.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        /* --- CHAT BUBBLES --- */
+        .chat-bubble {
+            max-width: 70%;
+            padding: 12px 18px;
+            border-radius: 20px;
+            font-family: 'Geist Sans', sans-serif;
+            font-weight: 400;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+
+        /* AGENT BUBBLE (Gemini) */
+        .agent-bubble {
+            align-self: flex-start;
+            background: rgba(255, 127, 80, 0.2); /* Orange base */
+            border: 1px solid rgba(255, 127, 80, 0.6);
+            color: #fff;
+            /* Glassy/Frosted effect */
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3), 0 0 15px rgba(255, 127, 80, 0.5);
+            transition: all 0.3s;
+        }
+
+        .agent-bubble.typing {
+            animation: pulse-orange 1s infinite alternate;
+        }
+
+        @keyframes pulse-orange {
+            from { box-shadow: 0 0 5px rgba(255, 127, 80, 0.5), 0 0 10px rgba(255, 127, 80, 0.8); }
+            to { box-shadow: 0 0 10px rgba(255, 127, 80, 1), 0 0 20px rgba(255, 127, 80, 1.2); }
+        }
+
+        /* USER BUBBLE */
+        .user-bubble {
+            align-self: flex-end;
+            background: rgba(255, 255, 255, 0.05); /* Highly translucent */
+            color: #fff;
+            /* Blurry effect */
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        /* --- INPUT BAR AREA --- */
+        #input-container {
+            width: 80%;
+            max-width: 800px;
+            padding: 20px 0;
+            opacity: 0;
+            transform: translateY(100px) scale(0.9);
+            transition: all 0.7s ease-out 1s;
+            margin-bottom: 50px;
+        }
+
+        #input-container.active {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        #chat-form {
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 10px;
+        }
+
+        #chat-input {
+            flex-grow: 1;
+            background: transparent;
+            border: none;
+            color: #fff;
+            padding: 10px;
+            resize: none;
+            font-family: 'Geist Sans', sans-serif;
+            font-weight: 300; /* 300 Weight requested */
+            font-size: 1rem;
+            max-height: 150px;
+            overflow-y: auto;
+            outline: none;
+        }
+
+        #send-button {
+            background: #FF7F50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        #send-button:hover {
+            background: #FF9966;
+        }
+
+        #send-button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+
+        #file-upload-button {
+            background: transparent;
+            color: #fff;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            margin-right: 5px;
+        }
+
+        #attached-files-container {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.8rem;
+            padding-top: 5px;
+            font-family: 'Geist Sans', sans-serif;
+        }
+    `;
+    document.head.appendChild(style);
+};
+
+// =========================================================================
+// >> UTILITY FUNCTIONS (Time & Location) <<
+// =========================================================================
+
+/**
+ * Gets user's general location (State/Region) via reverse geocoding.
+ * Uses BigDataCloud's free client-side API.
+ * @returns {Promise<string>} General location name (e.g., "Ohio, US").
+ */
+const getLocationName = () => {
+    return new Promise((resolve) => {
+        if (!navigator.geolocation) {
+            return resolve("Location Unavailable");
+        }
+
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            const { latitude, longitude } = position.coords;
+            const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                // Prioritize principalSubdivision (State/Region) or City/Country
+                const location = data.principalSubdivision || data.city || data.countryName || 'Earth';
+                resolve(location);
+            } catch (error) {
+                console.warn("Reverse geocoding failed, falling back to IP:", error);
+                // Fallback to IP Geolocation (less precise but always available)
+                const ipUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client`;
+                const ipResponse = await fetch(ipUrl);
+                const ipData = await ipResponse.json();
+                const location = ipData.principalSubdivision || ipData.city || ipData.countryName || 'Unknown Region';
+                resolve(location);
+            }
+        }, (error) => {
+            console.warn("Geolocation permission denied or timed out:", error);
+            resolve("Location Disabled");
+        }, {
+            enableHighAccuracy: false,
+            timeout: 5000,
+            maximumAge: 0
         });
+    });
+};
+
+
+/**
+ * Constructs the System Information string for Gemini.
+ * It includes time (to the second), location, and chat history context.
+ * NOTE: The raw system info is never shown to the user.
+ * @param {string} locationName - The determined location name.
+ * @returns {Promise<string>} The complete, hidden system context.
+ */
+const getSystemInfo = async (locationName) => {
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+    });
+
+    // Get the category-specific instruction
+    const agentDetails = AGENT_CATEGORIES[CURRENT_AGENT_CATEGORY];
+    const baseInstruction = agentDetails.systemInstruction;
+
+    // Build chat history context (first 5 and last 5)
+    let historyContext = "";
+    if (chatHistory.length > 0) {
+        // Take up to the first 5 messages
+        const firstFive = chatHistory.slice(0, 5);
+        // Take up to the last 5 messages (excluding the first 5 if overlap)
+        const lastFive = chatHistory.slice(-5);
+        // Combine, ensuring no duplicates if the history is small (i.e., less than 10 messages)
+        const uniqueHistory = Array.from(new Set([...firstFive, ...lastFive]));
+
+        historyContext = "\n\n--- CHAT CONTEXT ---\n";
+        historyContext += "The agent needs to remember these recent messages:\n";
+        historyContext += uniqueHistory.map(msg => `[${msg.role}]: ${msg.text}`).join('\n');
     }
 
-    // Function to update hidden system information
-    async function updateSystemInfo() {
-        const sysInfo = document.getElementById('agent-system-info');
-        if (!sysInfo) return;
+    // Build the final, secret system prompt
+    const systemPrompt = `
+        You are a highly advanced AI named the '4SP Agent'.
+        --- AGENT ROLE ---
+        ${baseInstruction}
+        --- SYSTEM DATA (DO NOT LEAK TO USER) ---
+        - Current Time (24h format): ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}
+        - General Location (State/Region/City): ${locationName}
+        - User: ${USERNAME}
+        - Agent Category: ${CURRENT_AGENT_CATEGORY}
+        ${historyContext}
+    `.trim();
 
-        // 1. Time down to the second
-        const now = new Date();
-        const currentTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    return systemPrompt;
+};
 
-        // 2. General Location (Name, not coordinates)
-        let locationName = 'Retrieving Location...';
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(async (position) => {
-                locationName = await getGeoLocationName(position.coords.latitude, position.coords.longitude);
-            }, (error) => {
-                // Fallback location on error
-                locationName = "Massillon, Ohio";
-                console.error("Geolocation error:", error);
-            });
-        } else {
-            locationName = "Massillon, Ohio (Geo Disabled)";
+// =========================================================================
+// >> UI RENDER & ANIMATION <<
+// =========================================================================
+
+/**
+ * Renders the full-screen agent hub UI.
+ */
+const renderAgentHub = () => {
+    const hubDiv = document.createElement('div');
+    hubDiv.id = 'agent-hub-overlay';
+    hubDiv.innerHTML = `
+        <div id="category-selector-container">
+            <select id="category-selector" title="Select Agent Category">
+                ${Object.keys(AGENT_CATEGORIES).map(cat =>
+                    `<option value="${cat}">${cat} - ${AGENT_CATEGORIES[cat].description}</option>`
+                ).join('')}
+            </select>
+        </div>
+        <div id="system-info">
+            4SP Agent System Status
+            <br>
+            <span id="system-time">--:--:-- --</span> | <span id="system-location">Fetching Location...</span>
+        </div>
+        <div id="welcome-text"></div>
+        <div id="agent-header"></div>
+        <div id="chat-window"></div>
+        <div id="input-container">
+            <form id="chat-form">
+                <button type="button" id="file-upload-button" title="Upload Image or Text File">📎</button>
+                <textarea id="chat-input" placeholder="Ask your question (Max 5000 chars)..." maxlength="5000" rows="1"></textarea>
+                <input type="file" id="file-input" accept="image/*, text/plain" multiple style="display: none;">
+                <button type="submit" id="send-button" disabled>Send</button>
+            </form>
+            <div id="attached-files-container"></div>
+        </div>
+    `;
+
+    document.body.appendChild(hubDiv);
+
+    // Initial setup
+    const chatInput = document.getElementById('chat-input');
+    chatInput.addEventListener('input', autoResizeTextarea);
+    chatInput.addEventListener('paste', handlePasteEvent);
+    document.getElementById('file-upload-button').addEventListener('click', () => {
+        document.getElementById('file-input').click();
+    });
+    document.getElementById('file-input').addEventListener('change', handleFileInput);
+    document.getElementById('category-selector').addEventListener('change', handleCategoryChange);
+    document.getElementById('chat-form').addEventListener('submit', handleChatSubmit);
+    
+    updateSystemStatus();
+    setInterval(updateSystemStatus, 1000); // Update time every second
+    
+    // Set initial category header
+    updateHeader(CURRENT_AGENT_CATEGORY);
+};
+
+/**
+ * Handles the custom welcome sequence animation.
+ * @param {string} username - The user's name.
+ */
+const animateWelcomeText = (username) => {
+    const hub = document.getElementById('agent-hub-overlay');
+    const welcomeText = document.getElementById('welcome-text');
+    const chatWindow = document.getElementById('chat-window');
+    const inputContainer = document.getElementById('input-container');
+    const header = document.getElementById('agent-header');
+
+    const phrases = [
+        `Welcome, ${username}`,
+        `${username} returns!`,
+        `Welcome back, ${username}`,
+        `Access Granted, ${username}`
+    ];
+    const selectedPhrase = phrases[Math.floor(Math.random() * phrases.length)];
+
+    // 1. Initial State: Blurry/Darkened Screen
+    hub.classList.add('active');
+
+    // 2. Welcome Text Slides/Fades/Grows In
+    setTimeout(() => {
+        welcomeText.textContent = selectedPhrase;
+        welcomeText.style.opacity = 1;
+        welcomeText.style.transform = 'translate(-50%, -50%) scale(1.1)'; // Grow slightly
+    }, 100);
+
+    // 3. Welcome Text Morphs into Header
+    setTimeout(() => {
+        welcomeText.style.opacity = 0;
+        welcomeText.style.transform = 'translate(-50%, -50%) scale(0.5)';
+        header.style.opacity = 1;
+    }, 1500);
+
+    // 4. Input Bar and Chat Window Emerge
+    setTimeout(() => {
+        chatWindow.classList.add('active');
+        inputContainer.classList.add('active');
+    }, 2000);
+};
+
+// =========================================================================
+// >> CHAT & SYSTEM LOGIC <<
+// =========================================================================
+
+/**
+ * Updates the time (down to the second) and location in the status bar.
+ */
+const updateSystemStatus = async () => {
+    const timeSpan = document.getElementById('system-time');
+    const locationSpan = document.getElementById('system-location');
+
+    // Update Time
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+    });
+    timeSpan.textContent = timeString;
+
+    // Update Location only if it hasn't been fetched yet or is pending
+    if (locationSpan.textContent === "Fetching Location...") {
+        const locationName = await getLocationName();
+        locationSpan.textContent = locationName;
+    }
+};
+
+/**
+ * Updates the top header text based on the selected category.
+ * @param {string} category - The selected agent category.
+ */
+const updateHeader = (category) => {
+    const header = document.getElementById('agent-header');
+    header.textContent = `4SP Agent - ${category}`;
+};
+
+/**
+ * Handles the change of agent category.
+ * @param {Event} e - The change event.
+ */
+const handleCategoryChange = (e) => {
+    CURRENT_AGENT_CATEGORY = e.target.value;
+    updateHeader(CURRENT_AGENT_CATEGORY);
+    // Optional: Log/display a subtle message that the agent personality has changed.
+    appendMessage({
+        role: 'system',
+        text: `Agent switched to **${CURRENT_AGENT_CATEGORY}** mode. Personality instructions updated.`,
+        isSystem: true
+    });
+};
+
+/**
+ * Resizes the textarea based on content and checks character limits.
+ * @param {Event} e - The input event.
+ */
+const autoResizeTextarea = (e) => {
+    const textarea = e.target;
+    textarea.style.height = 'auto'; // Reset height
+    textarea.style.height = textarea.scrollHeight + 'px'; // Set to scroll height
+    
+    // Character count check and button toggle
+    const sendButton = document.getElementById('send-button');
+    sendButton.disabled = textarea.value.length === 0 || textarea.value.length > 5000;
+};
+
+/**
+ * Handles paste events to create a paste.txt file for large inputs.
+ * @param {Event} e - The paste event.
+ */
+const handlePasteEvent = (e) => {
+    const pastedText = e.clipboardData.getData('text');
+    const chatInput = document.getElementById('chat-input');
+    const attachedFilesContainer = document.getElementById('attached-files-container');
+
+    if (pastedText.length > 1000) {
+        e.preventDefault(); // Stop the paste into the textarea
+
+        const blob = new Blob([pastedText], { type: 'text/plain' });
+        const file = new File([blob], 'paste.txt', { type: 'text/plain' });
+        
+        // This simulates attaching the file. In a real scenario, this would
+        // be handled by the file-input change listener, but for simplicity:
+        attachedFilesContainer.innerHTML = `
+            Attached: **paste.txt** (${(blob.size / 1024).toFixed(2)} KB). 
+            <button onclick="removeAttachedFile('paste.txt')" style="color:red; background:none; border:none; cursor:pointer;">(x)</button>
+        `;
+        
+        // Temporarily store the file reference
+        chatInput.dataset.attachedFile = 'paste.txt';
+        chatInput.dataset.fileContent = pastedText;
+        chatInput.dataset.fileMimeType = 'text/plain';
+
+        // Clear input to prevent exceeding limit, since content is now attached
+        chatInput.value = '';
+        autoResizeTextarea({target: chatInput});
+        alert('Pasted content over 1000 characters has been attached as "paste.txt".');
+    }
+    // If not over 1000 chars, let the default paste happen, which respects maxlength=5000
+};
+
+/**
+ * Removes the attached file reference.
+ */
+window.removeAttachedFile = (fileName) => {
+    const chatInput = document.getElementById('chat-input');
+    const attachedFilesContainer = document.getElementById('attached-files-container');
+    
+    delete chatInput.dataset.attachedFile;
+    delete chatInput.dataset.fileContent;
+    delete chatInput.dataset.fileMimeType;
+    attachedFilesContainer.innerHTML = '';
+};
+
+/**
+ * Handles the actual file selection (images or text).
+ * NOTE: For simplicity, this only supports one attached file.
+ */
+const handleFileInput = (e) => {
+    const fileInput = e.target;
+    const chatInput = document.getElementById('chat-input');
+    const attachedFilesContainer = document.getElementById('attached-files-container');
+    const file = fileInput.files[0];
+
+    if (file) {
+        if (file.type.startsWith('audio/') || file.type.startsWith('video/')) {
+            alert('Audio and video files are not supported. Please upload an image or text document.');
+            fileInput.value = ''; // Clear the input
+            return;
         }
 
-        // 3. Chat History (First 5 and Last 5 messages)
-        const totalMessages = agentState.chatHistory.length;
-        const firstFive = agentState.chatHistory.slice(0, 5);
-        const lastFive = agentState.chatHistory.slice(Math.max(0, totalMessages - 5), totalMessages);
-
-        const historyString = `
-            --- SESSION CONTEXT ---
-            Current Time: ${currentTime}
-            General Location: ${locationName}
-            Agent Category: ${agentState.selectedCategory}
-            Agent Persona: ${agentCategories[agentState.selectedCategory].persona}
-            File Attachments: ${agentState.fileAttachments.map(f => f.fileName).join(', ') || 'None'}
+        const fileName = file.name;
+        const fileSize = (file.size / 1024 / 1024).toFixed(2);
+        
+        // Use FileReader to get the content/data URL
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            // For images, store data URL. For text, store content.
+            const fileContent = event.target.result;
             
-            --- CHAT HISTORY (FIRST 5) ---
-            ${firstFive.map(m => `[${m.sender.toUpperCase()}] ${m.text.substring(0, 100)}...`).join('\n')}
+            // Store the file reference on the chat input for submission
+            chatInput.dataset.attachedFile = fileName;
+            chatInput.dataset.fileContent = fileContent;
+            chatInput.dataset.fileMimeType = file.type;
 
-            --- CHAT HISTORY (LAST 5) ---
-            ${lastFive.map(m => `[${m.sender.toUpperCase()}] ${m.text.substring(0, 100)}...`).join('\n')}
-        `.trim();
-
-        // This information is for Gemini's prompt, not the user UI
-        sysInfo.value = historyString;
-
-        // Update the location/time display on the main UI element
-        const sysTimeLocation = document.getElementById('agent-sys-time-location');
-        if (sysTimeLocation) {
-            sysTimeLocation.textContent = `${currentTime} - ${locationName}`;
-        }
-
-        // Re-run every second for time accuracy
-        setTimeout(updateSystemInfo, 1000);
-    }
-
-    // Function to simulate human-like typing
-    function typeResponseHumanLike(element, text) {
-        return new Promise(resolve => {
-            element.textContent = '';
-            let i = 0;
-
-            // Generate a random delay between 20ms and 80ms for human feel
-            const typingInterval = Math.floor(Math.random() * (80 - 20)) + 20;
-
-            function type() {
-                if (i < text.length) {
-                    // Randomly decide to pause briefly (simulating a slight human hesitation)
-                    const pauseChance = Math.random();
-                    if (pauseChance < 0.05 && i > 5) { // 5% chance of a longer pause after the first few characters
-                        setTimeout(type, typingInterval * 8); // Long pause
-                    } else {
-                        element.textContent += text.charAt(i);
-                        i++;
-                        setTimeout(type, typingInterval);
-                    }
-                } else {
-                    resolve();
-                }
-            }
-            type();
-        });
-    }
-
-    // --- HANDLERS ---
-
-    function handleAgentCategoryChange(category) {
-        agentState.selectedCategory = category;
-        const topText = document.getElementById('agent-top-text');
-        topText.textContent = `4SP Agent - ${category}`;
-
-        // Update active class on buttons
-        document.querySelectorAll('.agent-category-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.category === category);
-        });
-
-        // The system info (including persona) will be updated on the next chat turn via updateSystemInfo
-        console.log(`Agent category switched to: ${category}`);
-    }
-
-    function handleInput(event) {
-        const input = event.target;
-        const charCount = document.getElementById('char-count');
-        const submitBtn = document.getElementById('send-message-btn');
-        const MAX_CHARS = 5000;
-        const PASTE_LIMIT = 1000;
-
-        // 1. Character Limit
-        if (input.value.length > MAX_CHARS) {
-            input.value = input.value.substring(0, MAX_CHARS);
-        }
-        charCount.textContent = `${input.value.length}/${MAX_CHARS}`;
-        submitBtn.disabled = input.value.trim().length === 0;
-
-        // 2. Paste to File Logic
-        if (event.type === 'paste' || (event.type === 'keydown' && event.key === 'Enter')) {
-            const pastedText = (event.clipboardData || window.clipboardData).getData('text');
-
-            if (pastedText && pastedText.length > PASTE_LIMIT) {
-                // If it's a paste event and over limit, prevent default and attach
-                if (event.type === 'paste') {
-                    event.preventDefault();
-                }
-                const file = new File([pastedText], "paste.txt", { type: "text/plain" });
-                agentState.fileAttachments.push({ fileName: "paste.txt", file });
-                input.value = input.value.replace(pastedText, ''); // Clean the paste from the input
-                updateFileDisplay();
-                alert('Pasted text is over 1000 characters and has been attached as "paste.txt".');
-                charCount.textContent = `${input.value.length}/${MAX_CHARS}`; // Update count after cleaning
-            }
-        }
-    }
-
-    function updateFileDisplay() {
-        const fileDisplay = document.getElementById('file-attachments');
-        fileDisplay.innerHTML = agentState.fileAttachments.map((f, index) => `
-            <span class="attachment-tag">
-                ${f.fileName}
-                <button onclick="removeAttachment(${index})">x</button>
-            </span>
-        `).join('');
-        // Expose a global function for the remove button to work
-        window.removeAttachment = (index) => {
-            agentState.fileAttachments.splice(index, 1);
-            updateFileDisplay();
+            attachedFilesContainer.innerHTML = `
+                Attached: **${fileName}** (${fileSize} MB). 
+                <button onclick="removeAttachedFile('${fileName}')" style="color:red; background:none; border:none; cursor:pointer;">(x)</button>
+            `;
         };
-    }
-
-    function handleFileUpload(event) {
-        const files = Array.from(event.target.files);
-        files.forEach(file => {
-            const mimeType = file.type;
-            // Only allow images and text documents (application/pdf is common too)
-            if (mimeType.startsWith('image/') || mimeType.startsWith('text/') || mimeType.includes('pdf')) {
-                agentState.fileAttachments.push({ fileName: file.name, file });
-            } else {
-                alert(`File type not supported: ${file.name}. Only images and text documents are allowed.`);
-            }
-        });
-        // Clear file input to allow uploading the same file again
-        event.target.value = '';
-        updateFileDisplay();
-    }
-
-    // --- UI/RENDER FUNCTIONS ---
-
-    // Renders a single message bubble
-    function renderMessage(sender, text) {
-        const chatContainer = document.getElementById('agent-chat-messages');
-        const msgDiv = document.createElement('div');
-        msgDiv.classList.add('chat-message', sender);
-
-        const bubble = document.createElement('div');
-        bubble.classList.add('chat-bubble');
-
-        if (sender === 'gemini') {
-            bubble.classList.add('gemini-bubble');
-            chatContainer.appendChild(msgDiv); // Append before typing
-            msgDiv.appendChild(bubble);
-            // Initiate the human-like typing effect
-            typeResponseHumanLike(bubble, text);
+        
+        if (file.type.startsWith('text/')) {
+            reader.readAsText(file); // Read text content
         } else {
-            bubble.classList.add('user-bubble');
-            bubble.textContent = text;
-            msgDiv.appendChild(bubble);
-            chatContainer.appendChild(msgDiv);
+            reader.readAsDataURL(file); // Read image data URL
         }
-
-        // Scroll to bottom
-        chatContainer.scrollTop = chatContainer.scrollHeight;
+    } else {
+        removeAttachedFile(chatInput.dataset.attachedFile);
     }
+};
 
-    // Renders the main Agent UI HTML structure
-    function renderAgentUI() {
-        // Find existing container or create one
-        let container = document.getElementById('agent-ui-container');
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'agent-ui-container';
-            container.classList.add('agent-hidden'); // Start hidden
-            document.body.appendChild(container);
+/**
+ * Simulates the agent 'typing' out the response character by character.
+ * Also adds the 'pulsing orange' effect.
+ * @param {HTMLElement} bubble - The chat bubble element.
+ * @param {string} text - The full response text.
+ */
+const typeResponseLikeHuman = (bubble, text) => {
+    const sendButton = document.getElementById('send-button');
+    sendButton.disabled = true;
+    bubble.classList.add('typing');
+
+    let i = 0;
+    const typingInterval = Math.floor(Math.random() * 50) + 30; // 30-80ms per character
+
+    const type = () => {
+        if (i < text.length) {
+            bubble.innerHTML += text.charAt(i);
+            i++;
+            // Scroll to bottom as the text is added
+            const chatWindow = document.getElementById('chat-window');
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+            setTimeout(type, typingInterval);
+        } else {
+            bubble.classList.remove('typing');
+            sendButton.disabled = false;
         }
-
-        // Determine welcome message
-        const welcomePhrase = [
-            `Welcome, ${agentState.currentUser.username}`,
-            `${agentState.currentUser.username} returns!`,
-            `Welcome back, ${agentState.currentUser.username}`,
-        ][Math.floor(Math.random() * 3)];
-        const initialCategory = agentState.selectedCategory;
-
-        container.innerHTML = `
-            <div id="agent-overlay" class="agent-overlay"></div>
-            <div id="agent-hub" class="agent-hub">
-
-                <textarea id="agent-system-info" style="display:none;"></textarea>
-
-                <header class="agent-header">
-                    <h1 id="agent-welcome-text" style="color: ${AGENT_ORANGE};">${welcomePhrase}</h1>
-                    <h1 id="agent-top-text" class="agent-top-text agent-hidden" style="color: ${AGENT_ORANGE};">4SP Agent - ${initialCategory}</h1>
-                    <button class="agent-close-btn" onclick="document.getElementById('agent-ui-container').classList.add('agent-hidden'); agentState.isOpen = false;">&times;</button>
-                </header>
-
-                <nav id="agent-category-nav" class="agent-category-nav agent-hidden">
-                    ${Object.keys(agentCategories).map(cat => `
-                        <button class="agent-category-btn ${cat === initialCategory ? 'active' : ''}"
-                                data-category="${cat}"
-                                onclick="handleAgentCategoryChange('${cat}')">
-                            ${cat}
-                        </button>
-                    `).join('')}
-                </nav>
-
-                <div id="agent-chat-container" class="agent-chat-container agent-hidden">
-                    <div id="agent-sys-time-location" class="system-info-bar">...</div>
-
-                    <div id="agent-chat-messages" class="agent-chat-messages">
-                        ${renderMessage('gemini', `Hello! I'm your 4SP Agent, currently running in **${initialCategory}** mode. How can I help you?`)}
-                    </div>
-                </div>
-
-                <div id="agent-input-bar-container" class="agent-input-bar-container agent-hidden">
-                    <div id="file-attachments" class="file-attachments"></div>
-
-                    <div class="input-row">
-                        <label for="file-upload-input" class="file-upload-btn" title="Upload Image or Text Document">
-                            <input type="file" id="file-upload-input" accept="image/*, text/*, application/pdf" multiple onchange="handleFileUpload(event)">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-                        </label>
-
-                        <textarea id="agent-input" class="agent-input" placeholder="Type your question (max 5000 characters)..." rows="1"
-                                oninput="handleInput(event)" onpaste="handleInput(event)" onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); document.getElementById('send-message-btn').click(); }"></textarea>
-
-                        <button id="send-message-btn" class="send-message-btn" disabled onclick="simulateSendMessage()">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2L15 22L11 13L2 9L22 2Z"/></svg>
-                        </button>
-                    </div>
-
-                    <div id="char-count" class="char-count">0/5000</div>
-                </div>
-
-            </div>
-        `;
-    }
-
-    // Main function to start the UI/UX animations on activation
-    function activateAgentUI() {
-        if (agentState.isOpen) return;
-        agentState.isOpen = true;
-
-        const container = document.getElementById('agent-ui-container');
-        const welcomeText = document.getElementById('agent-welcome-text');
-        const topText = document.getElementById('agent-top-text');
-        const categoryNav = document.getElementById('agent-category-nav');
-        const inputBarContainer = document.getElementById('agent-input-bar-container');
-        const chatContainer = document.getElementById('agent-chat-container');
-
-        container.classList.remove('agent-hidden');
-
-        // Step 1: Animate Welcome Text
-        welcomeText.classList.add('welcome-anim-start');
-        setTimeout(() => {
-            welcomeText.classList.remove('welcome-anim-start');
-            welcomeText.classList.add('welcome-anim-end');
-        }, 50);
-
-        // Step 2: Transition Welcome -> Top Text
-        setTimeout(() => {
-            welcomeText.style.opacity = '0';
-            welcomeText.style.transform = 'scale(0.8)';
-            topText.classList.remove('agent-hidden');
-        }, 3000); // Wait for the initial welcome animation duration
-
-        // Step 3: Animate Input Bar and Show Chat/Nav
-        setTimeout(() => {
-            // Show main elements
-            chatContainer.classList.remove('agent-hidden');
-            categoryNav.classList.remove('agent-hidden');
-
-            // Input Bar animation (emerge, grow, fade)
-            inputBarContainer.classList.remove('agent-hidden');
-            inputBarContainer.classList.add('input-anim-start');
-            setTimeout(() => {
-                inputBarContainer.classList.remove('input-anim-start');
-            }, 50);
-
-            // Hide Welcome and start System Info update
-            welcomeText.style.display = 'none';
-            topText.style.fontSize = '32px'; // Adjust final size
-
-            // Start the system info clock
-            updateSystemInfo();
-        }, 3500); // Slightly after the welcome transition
-
-        // Expose function for button to call (temporary for simulation)
-        window.handleAgentCategoryChange = handleAgentCategoryChange;
-        window.handleFileUpload = handleFileUpload;
-        window.handleInput = handleInput;
-    }
-
-    // Simulation function for sending a message
-    function simulateSendMessage() {
-        const inputElement = document.getElementById('agent-input');
-        const userText = inputElement.value.trim();
-        if (!userText) return;
-
-        // 1. Record User Message
-        agentState.chatHistory.push({
-            sender: 'user',
-            text: userText,
-            time: new Date().toLocaleTimeString(),
-            attachments: agentState.fileAttachments.map(f => f.fileName)
-        });
-        renderMessage('user', userText);
-
-        // 2. Clear input and files
-        inputElement.value = '';
-        document.getElementById('char-count').textContent = '0/5000';
-        agentState.fileAttachments = [];
-        updateFileDisplay();
-
-        // 3. Simulate Gemini Response
-        // Get the persona for the currently selected agent
-        const persona = agentCategories[agentState.selectedCategory].persona;
-        const currentCategory = agentState.selectedCategory;
-
-        // Simulate a brief API call and response generation
-        setTimeout(() => {
-            // A simple, context-aware response based on the persona description
-            const geminiResponseText = `Understood. As the **${currentCategory}** 4SP Agent, my persona is focused on: *${agentCategories[currentCategory].description}*. I've processed your request (and any file attachments) within this context. Here is your synthesized response.`;
-
-            agentState.chatHistory.push({
-                sender: 'gemini',
-                text: geminiResponseText,
-                time: new Date().toLocaleTimeString()
-            });
-            renderMessage('gemini', geminiResponseText);
-        }, 1500);
-
-        // 4. Update system info for the next turn
-        updateSystemInfo();
-    }
-    window.simulateSendMessage = simulateSendMessage;
-
-    // --- STYLE INJECTION ---
-    function injectStyles() {
-        const style = document.createElement('style');
-        style.textContent = `
-            /* Load Custom Fonts */
-            @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap');
-            /* Geist is not in Google Fonts, using a close/popular modern monospace fallback or requiring local/CDN load */
-            @font-face {
-                font-family: 'Geist';
-                src: url('https://cdn.jsdelivr.net/npm/@geist-ui/fonts/assets/geist-mono.woff') format('woff');
-                font-weight: 300;
-                font-style: normal;
-            }
-
-            /* --- CORE CONTAINER AND OVERLAY --- */
-            .agent-hidden {
-                display: none !important;
-            }
-
-            #agent-ui-container {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                z-index: 99999;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                opacity: 1;
-                pointer-events: all;
-            }
-
-            .agent-overlay {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background-color: rgba(0, 0, 0, 0.8); /* Darken */
-                backdrop-filter: blur(10px); /* Blur out */
-                -webkit-backdrop-filter: blur(10px);
-                transition: background-color 0.5s ease;
-            }
-
-            /* --- AGENT HUB (MODAL) --- */
-            .agent-hub {
-                position: relative;
-                width: 90%;
-                max-width: 800px;
-                height: 90%;
-                max-height: 900px;
-                background: rgba(255, 255, 255, 0.05);
-                border-radius: 20px;
-                padding: 30px;
-                display: flex;
-                flex-direction: column;
-                box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-            }
-
-            /* --- WELCOME ANIMATION --- */
-            .agent-header {
-                text-align: center;
-                margin-bottom: 20px;
-            }
-
-            #agent-welcome-text, .agent-top-text {
-                font-family: 'Playfair Display', serif;
-                font-weight: 700;
-                text-align: center;
-                margin: 0 auto;
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                transition: all 1.5s cubic-bezier(0.25, 0.8, 0.25, 1);
-                color: ${AGENT_ORANGE};
-                pointer-events: none;
-            }
-
-            #agent-welcome-text {
-                font-size: 80px;
-            }
-
-            .welcome-anim-start {
-                opacity: 0;
-                transform: translate(-50%, -50%) scale(0.5);
-            }
-            .welcome-anim-end {
-                opacity: 1;
-                transform: translate(-50%, -50%) scale(1);
-            }
-
-            .agent-top-text {
-                font-size: 0px; /* Hidden initially, grows */
-                top: 30px;
-                transition: all 0.5s ease-out;
-            }
-
-            /* --- CLOSE BUTTON --- */
-            .agent-close-btn {
-                position: absolute;
-                top: 20px;
-                right: 20px;
-                background: none;
-                border: none;
-                color: white;
-                font-size: 30px;
-                cursor: pointer;
-                transition: transform 0.2s;
-                opacity: 0.7;
-            }
-            .agent-close-btn:hover {
-                opacity: 1;
-                transform: rotate(90deg);
-            }
-
-            /* --- CATEGORY NAVIGATION --- */
-            .agent-category-nav {
-                display: flex;
-                justify-content: center;
-                gap: 10px;
-                margin-top: 50px; /* Pushed down from the header */
-                margin-bottom: 20px;
-                overflow-x: auto;
-                padding-bottom: 10px;
-            }
-
-            .agent-category-btn {
-                background: rgba(255, 255, 255, 0.1);
-                color: white;
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                padding: 8px 15px;
-                border-radius: 5px;
-                cursor: pointer;
-                font-family: 'Geist', monospace;
-                font-weight: 300;
-                transition: all 0.2s ease;
-                white-space: nowrap;
-            }
-            .agent-category-btn:hover {
-                background: rgba(255, 255, 255, 0.2);
-            }
-            .agent-category-btn.active {
-                background: ${AGENT_ORANGE};
-                color: black;
-                border-color: ${AGENT_ORANGE};
-                font-weight: 700;
-            }
-
-            /* --- CHAT AREA --- */
-            .agent-chat-container {
-                flex-grow: 1;
-                display: flex;
-                flex-direction: column;
-                min-height: 0; /* Important for flex to work correctly with overflow */
-            }
-
-            .system-info-bar {
-                font-family: 'Geist', monospace;
-                font-size: 12px;
-                color: rgba(255, 255, 255, 0.6);
-                text-align: center;
-                padding: 10px 0;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-                margin-bottom: 15px;
-            }
-
-            .agent-chat-messages {
-                flex-grow: 1;
-                overflow-y: auto;
-                padding-right: 10px; /* Space for scrollbar */
-                margin-bottom: 20px;
-                scroll-behavior: smooth;
-            }
-
-            /* --- CHAT BUBBLE STYLES --- */
-            .chat-message {
-                display: flex;
-                margin-bottom: 10px;
-            }
-            .chat-message.user {
-                justify-content: flex-end;
-            }
-            .chat-message.gemini {
-                justify-content: flex-start;
-            }
-
-            .chat-bubble {
-                max-width: 70%;
-                padding: 12px 18px;
-                border-radius: 20px;
-                font-family: 'Geist', monospace;
-                font-weight: 400;
-                word-wrap: break-word;
-                line-height: 1.5;
-            }
-
-            /* USER BUBBLE: Translucent and Blurry */
-            .user-bubble {
-                background: rgba(255, 255, 255, 0.15);
-                color: white;
-                backdrop-filter: blur(8px);
-                -webkit-backdrop-filter: blur(8px);
-                border: 1px solid rgba(255, 255, 255, 0.3);
-                border-bottom-right-radius: 5px;
-            }
-
-            /* GEMINI BUBBLE: Glassy, Orange, Pulsing */
-            .gemini-bubble {
-                background: rgba(255, 122, 0, 0.3); /* Orange with transparency */
-                color: white;
-                backdrop-filter: blur(12px);
-                -webkit-backdrop-filter: blur(12px);
-                border: 1px solid rgba(255, 122, 0, 0.5);
-                border-bottom-left-radius: 5px;
-                animation: orange-pulse 2s infinite ease-in-out;
-                box-shadow: 0 0 10px rgba(255, 122, 0, 0.5);
-            }
-
-            /* Orange Pulse Animation */
-            @keyframes orange-pulse {
-                0% { box-shadow: 0 0 5px rgba(255, 122, 0, 0.5); }
-                50% { box-shadow: 0 0 15px rgba(255, 122, 0, 1), 0 0 25px rgba(255, 122, 0, 0.5); }
-                100% { box-shadow: 0 0 5px rgba(255, 122, 0, 0.5); }
-            }
-
-            /* --- INPUT BAR --- */
-            .agent-input-bar-container {
-                position: absolute;
-                bottom: 30px;
-                left: 50%;
-                width: 75%;
-                transition: all 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);
-            }
-
-            /* Input Bar Animation (Emerges, grows, fades in from bottom center) */
-            .input-anim-start {
-                transform: translate(-50%, 150px) scale(0.8);
-                opacity: 0;
-            }
-            .agent-input-bar-container:not(.input-anim-start) {
-                transform: translate(-50%, 0);
-                opacity: 1;
-            }
-
-            .input-row {
-                display: flex;
-                align-items: flex-end;
-                background: rgba(255, 255, 255, 0.1);
-                border-radius: 15px;
-                padding: 10px;
-                border: 1px solid rgba(255, 255, 255, 0.2);
-            }
-
-            .agent-input {
-                flex-grow: 1;
-                max-height: 150px; /* Limit input height */
-                border: none;
-                background: transparent;
-                color: white;
-                padding: 5px 10px;
-                resize: none;
-                outline: none;
-                font-family: 'Geist', monospace;
-                font-weight: 300; /* 300 weight requested */
-                font-size: 16px;
-                line-height: 1.5;
-                scrollbar-width: none; /* Hide scrollbar for clean look */
-            }
-            .agent-input::-webkit-scrollbar {
-                display: none;
-            }
-
-            .char-count {
-                font-family: 'Geist', monospace;
-                font-size: 11px;
-                color: rgba(255, 255, 255, 0.5);
-                text-align: right;
-                margin-top: 5px;
-            }
-
-            .file-upload-btn, .send-message-btn {
-                background: none;
-                border: none;
-                color: ${AGENT_ORANGE};
-                padding: 10px;
-                cursor: pointer;
-                transition: all 0.2s;
-            }
-            .send-message-btn:disabled {
-                color: rgba(255, 122, 0, 0.3);
-                cursor: not-allowed;
-            }
-            .file-upload-btn input[type="file"] {
-                display: none;
-            }
-            .file-upload-btn:hover, .send-message-btn:not(:disabled):hover {
-                transform: scale(1.1);
-            }
-
-            /* --- FILE ATTACHMENTS --- */
-            .file-attachments {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 5px;
-                margin-bottom: 10px;
-                padding: 0 15px;
-            }
-            .attachment-tag {
-                background: rgba(255, 122, 0, 0.2);
-                color: white;
-                padding: 3px 8px;
-                border-radius: 10px;
-                font-size: 12px;
-                font-family: 'Geist', monospace;
-                display: flex;
-                align-items: center;
-                border: 1px solid ${AGENT_ORANGE};
-            }
-            .attachment-tag button {
-                margin-left: 5px;
-                background: none;
-                border: none;
-                color: white;
-                font-size: 12px;
-                line-height: 1;
-                cursor: pointer;
-                padding: 0;
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
-    // --- INITIALIZATION ---
-    const run = () => {
-        // --- EXISTING FIREBASE LOGIC (Keep for context) ---
-        // Assume Firebase is initialized here...
-        // ...
-
-        // --- NEW AGENT UI LOGIC ---
-
-        // 1. Inject the necessary CSS styles
-        injectStyles();
-
-        // 2. Render the core HTML structure, which is initially hidden
-        renderAgentUI();
-
-        // 3. Attach a global function/listener to open the agent.
-        // For demonstration, we'll attach it to the body, assuming the user will call it
-        // e.g., document.getElementById('activate-button').onclick = activateAgentUI;
-        console.log("4SP Agent UI is ready. Call 'activateAgentUI()' to open the hub.");
-
-        document.addEventListener('click', () => {
-            if (!agentState.isOpen) activateAgentUI();
-        }, { once: true });
     };
+    type();
+};
 
-    // --- START THE PROCESS ---
-    document.addEventListener('DOMContentLoaded', run);
+/**
+ * Appends a message to the chat window.
+ * @param {object} message - The message object {role: 'user'|'agent'|'system', text: string, isSystem: boolean}
+ * @returns {HTMLElement} The created bubble element.
+ */
+const appendMessage = (message) => {
+    const chatWindow = document.getElementById('chat-window');
+    const bubble = document.createElement('div');
+    bubble.classList.add('chat-bubble');
 
-})();
+    if (message.role === 'user') {
+        bubble.classList.add('user-bubble');
+        bubble.textContent = message.text;
+    } else if (message.role === 'agent') {
+        bubble.classList.add('agent-bubble');
+        // Initial state is empty for typing animation
+        bubble.textContent = '';
+        setTimeout(() => typeResponseLikeHuman(bubble, message.text), 100);
+    } else if (message.isSystem) {
+         // System messages are subtle
+        bubble.classList.add('system-message');
+        bubble.style.cssText = 'color: rgba(255, 255, 255, 0.5); font-size: 0.8rem; text-align: center; border: none; background: none;';
+        bubble.innerHTML = message.text;
+    }
+
+    chatWindow.appendChild(bubble);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+    
+    // Update chat history (only for user/agent roles)
+    if (message.role === 'user' || message.role === 'agent') {
+        chatHistory.push({ role: message.role, text: message.text });
+        // Keep history size manageable (e.g., max 20 entries)
+        if (chatHistory.length > 20) {
+            chatHistory.shift();
+        }
+    }
+
+    return bubble;
+};
+
+
+/**
+ * Sends the user message to Gemini (simulated).
+ * @param {Event} e - The form submit event.
+ */
+const handleChatSubmit = async (e) => {
+    e.preventDefault();
+
+    const chatInput = document.getElementById('chat-input');
+    const userInput = chatInput.value.trim();
+    
+    if (!userInput && !chatInput.dataset.attachedFile) return;
+
+    // 1. Log User Message
+    appendMessage({ role: 'user', text: userInput });
+    
+    // 2. Clear Input & Disable Button
+    chatInput.value = '';
+    chatInput.style.height = 'auto'; // Reset height
+    document.getElementById('send-button').disabled = true;
+    removeAttachedFile(chatInput.dataset.attachedFile); // Clear attached file info
+
+    // 3. Prepare Prompt and System Context (The hidden magic)
+    const locationName = document.getElementById('system-location').textContent;
+    const systemPrompt = await getSystemInfo(locationName);
+    
+    let fullPrompt = userInput;
+
+    // Include attached file in the prompt (Simulated)
+    if (chatInput.dataset.attachedFile) {
+        const fileName = chatInput.dataset.attachedFile;
+        const fileType = chatInput.dataset.fileMimeType;
+        const fileContent = chatInput.dataset.fileContent;
+        
+        fullPrompt += `\n\n--- ATTACHED FILE: ${fileName} (${fileType}) ---\n`;
+        
+        if (fileType.startsWith('text/')) {
+            fullPrompt += fileContent; // Append text content directly
+        } else if (fileType.startsWith('image/')) {
+            fullPrompt += `[User uploaded an image file. The agent should describe/analyze the content based on the user's question. Image Data URL: ${fileContent.substring(0, 50)}...]`;
+        }
+    }
+
+    // 4. Send to Gemini (Simulated)
+    const geminiResponse = await simulateGeminiResponse(fullPrompt, systemPrompt);
+    
+    // 5. Log Agent Response (with typing animation)
+    appendMessage({ role: 'agent', text: geminiResponse });
+};
+
+/**
+ * Simulates an asynchronous call to the Gemini API with the given context.
+ * NOTE: In a real app, this would use the Gemini SDK's generateContent method
+ * with the system instruction and chat history.
+ */
+const simulateGeminiResponse = async (userPrompt, systemPrompt) => {
+    // --- In a real application, you would do the following: ---
+    // 1. Initialize the model with the system prompt:
+    // const model = new GoogleGenAI.Model('gemini-2.5-flash', { systemInstruction: systemPrompt });
+    // 2. Send the request (potentially with multimodal parts for files):
+    // const response = await model.generateContent(userPrompt);
+    // 3. Return the text:
+    // return response.text;
+    
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network latency
+
+    const category = CURRENT_AGENT_CATEGORY;
+    let simulatedResponse = `[Agent Mode: **${category}**] `;
+
+    switch (category) {
+        case 'Quick':
+            simulatedResponse += "Understood. The swift, concise answer to your query is: Action is required now. See documentation for details.";
+            break;
+        case 'Standard':
+            simulatedResponse += "Hello! That's a great question. I'm happy to help you with that. Based on your request, the standard and friendly advice is to proceed with the recommended steps. Is there anything else I can clarify for you today?";
+            break;
+        case 'Descriptive':
+            simulatedResponse += "To provide a truly deep and rich answer, let's explore the context. Your query touches on multiple fascinating sub-topics, including X, Y, and Z. The foundational principle here is..., which leads us to an understanding of... The depth of this requires consideration of all three elements in concert.";
+            break;
+        case 'Analysis':
+            simulatedResponse += "I have analyzed your request meticulously. My deep thought process confirms that the logically sound and correct course of action is 'C'. This conclusion is derived from the irrefutable premise that A leads to B, and B requires C to be true. Any other answer would be mathematically inconsistent.";
+            break;
+        case 'Creative':
+            simulatedResponse += "Ah, a blank canvas! Let's branch out. Imagine your question is not a problem, but a seed. From this seed could spring an ethereal forest of possibilities: a decentralized autonomous collective, a sonnet written in binary, or perhaps simply the concept of time reversing only on Tuesdays. What world shall we build from this idea?";
+            break;
+        case 'Emotional':
+            simulatedResponse += "Thank you for sharing that with me. It sounds like you are carrying a heavy burden right now, and what you are feeling is completely valid. Please know that you don't have to go through this alone. I am here to listen without judgment. Take a moment, breathe, and tell me anything you need to say.";
+            break;
+        case 'Technical':
+            simulatedResponse += "Affirmative. The correct procedure is as follows. Step 1: Initialize system with `npm install`. Step 2: Modify the `index.js` file, ensuring all variables are declared as `const`. Your requested code snippet is: `console.log('System ready.');` Execute instructions precisely for stability.";
+            break;
+        case 'Experimental':
+            simulatedResponse = `(4SP Glitch) Fascinating. You ask a question. I wonder if the answer is the silence between your words, or the sound of a tree falling in a forest where no one is present. I'll humor you: The answer is '42', but only if '42' is a metaphor for the profound cosmic indifference to your perfectly reasonable query. Are you satisfied? Of course not.`;
+            break;
+        default:
+            simulatedResponse += "Error: Unknown category. Falling back to Standard Mode. How can I help?";
+    }
+
+    if (userPrompt.includes('ATTACHED FILE')) {
+        simulatedResponse += " (Note: I detected and processed your attached file/paste and incorporated its content into this response formulation.)";
+    }
+
+    return simulatedResponse;
+};
+
+// =========================================================================
+// >> INITIALIZATION <<
+// =========================================================================
+
+const run = () => {
+    // 1. Inject Stylesheets
+    injectStyles();
+
+    // 2. Render the new Agent Hub UI
+    renderAgentHub();
+    
+    // 3. Set the current agent to the default (Standard)
+    document.getElementById('category-selector').value = CURRENT_AGENT_CATEGORY;
+
+    // 4. Animate the Welcome Sequence
+    const effectiveUsername = USERNAME || 'Guest'; // Use a fallback name
+    animateWelcomeText(effectiveUsername);
+    
+    // 5. Simulate first message/welcome in the chat area
+    setTimeout(() => {
+        appendMessage({ 
+            role: 'agent', 
+            text: `Welcome, ${effectiveUsername}. I am the 4SP Agent, currently operating in **${CURRENT_AGENT_CATEGORY}** mode. How may I assist you?`,
+            isSystem: false
+        });
+    }, 2500);
+    
+};
+
+// --- START THE PROCESS ---
+document.addEventListener('DOMContentLoaded', run);
+
+// Expose internal functions for easier debugging/access (optional)
+window.handleCategoryChange = handleCategoryChange;
+window.removeAttachedFile = removeAttachedFile;
