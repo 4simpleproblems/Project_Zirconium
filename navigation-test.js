@@ -12,7 +12,7 @@
     // =========================================================================
     const FIREBASE_CONFIG = {
         // This apiKey is now used for both Firebase Auth and the Gemini API calls.
-        apiKey: "AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro",
+        apiKey: "AIzaSyAZBKAckVa4IMZgVjcyndZx6Y1XD52lgro",
         authDomain: "project-zirconium.firebaseapp.com",
         projectId: "project-zirconium",
         storageBucket: "project-zirconium.firebaseapp.com",
@@ -25,7 +25,7 @@
     // --- CONFIGURATION ---
     const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite-preview-09-2025:generateContent?key=${FIREBASE_CONFIG.apiKey}`;
     const MAX_INPUT_HEIGHT = 200;
-    // New character limit
+    // New character limit (kept at 5000)
     const CHAR_LIMIT = 5000;
     // Keep paste limit at 500 characters before file conversion
     const PASTE_LIMIT = 500;
@@ -236,76 +236,7 @@
         setTimeout(() => responseContainer.scrollTop = responseContainer.scrollHeight, 50);
     }
     
-    // NEW: Human-like typing effect function
-    async function typeResponse(responseBubble, text) {
-        const responseContainer = document.getElementById('ai-response-container');
-        const fullContentHTML = parseGeminiResponse(text);
-        const contentText = text; // Use the raw text for typing before HTML conversion
-
-        // 1. Calculate base delay: Faster for longer text
-        const textLength = contentText.length;
-        // Base speed (ms)
-        let delay = 35; 
-        // Minimum delay (ms)
-        const minDelay = 5; 
-        // Reduce delay by 1ms for every 100 characters (max 20ms reduction)
-        // This makes longer responses type faster overall.
-        delay = Math.max(minDelay, delay - Math.floor(textLength / 100));
-
-        // 2. Create and append a temporary wrapper for typing
-        const typingWrapper = document.createElement('div');
-        typingWrapper.className = 'ai-response-content';
-        responseBubble.appendChild(typingWrapper);
-        
-        // 3. Perform typing
-        for (let i = 0; i < contentText.length; i++) {
-            // Check for abort request
-            if (currentAIRequestController && currentAIRequestController.signal.aborted) {
-                typingWrapper.innerHTML = fullContentHTML; // Show the rest instantly
-                break;
-            }
-
-            const char = contentText[i];
-            
-            // Adjust delay for rhythm (faster for spaces, slight pause for punctuation)
-            let currentDelay = delay;
-            if (char === ' ' || char === '\n') {
-                currentDelay = Math.max(minDelay, delay * 0.5);
-            } else if (/[.,?!]/.test(char)) {
-                // Slight pause after punctuation for rhythm
-                currentDelay = delay + 10;
-            }
-
-            typingWrapper.textContent += char;
-
-            if(responseContainer) {
-                // Keep scrolling to the bottom during typing
-                responseContainer.scrollTop = responseContainer.scrollHeight;
-            }
-
-            // Wait
-            await new Promise(resolve => setTimeout(resolve, currentDelay));
-        }
-        
-        // 4. Final step: Swap to rich HTML content and cleanup loading state
-        // Use a small timeout to allow a visual transition from plain text to rich markdown
-        setTimeout(() => {
-            // Check again for abort before final swap
-            if (!(currentAIRequestController && currentAIRequestController.signal.aborted)) {
-                typingWrapper.innerHTML = fullContentHTML;
-                typingWrapper.style.opacity = '1';
-                responseBubble.querySelectorAll('.copy-code-btn').forEach(button => {
-                    button.addEventListener('click', handleCopyCode);
-                });
-                responseBubble.classList.remove('loading');
-            } else {
-                 // If aborted during the final timeout, ensure loading is removed
-                 responseBubble.classList.remove('loading');
-            }
-            if(responseContainer) responseContainer.scrollTop = responseContainer.scrollHeight;
-        }, 50);
-    }
-
+    // NOTE: The 'typeResponse' function has been removed to restore instant rendering.
 
     async function callGoogleAI(responseBubble) {
         if (!FIREBASE_CONFIG.apiKey) { responseBubble.innerHTML = `<div class="ai-error">API Key is missing.</div>`; return; }
@@ -374,8 +305,19 @@
             const text = data.candidates[0].content.parts[0].text;
             chatHistory.push({ role: "model", parts: [{ text: text }] });
             
-            // Use the new typing function
-            await typeResponse(responseBubble, text);
+            // Revert to instant render with fade animation
+            const contentHTML = `<div class="ai-response-content">${parseGeminiResponse(text)}</div>`;
+            responseBubble.style.opacity = '0';
+            setTimeout(() => {
+                responseBubble.innerHTML = contentHTML;
+                responseBubble.querySelectorAll('.copy-code-btn').forEach(button => {
+                    button.addEventListener('click', handleCopyCode);
+                });
+                responseBubble.style.opacity = '1';
+                responseBubble.classList.remove('loading');
+                const responseContainer = document.getElementById('ai-response-container');
+                if(responseContainer) responseContainer.scrollTop = responseContainer.scrollHeight;
+            }, 300);
 
         } catch (error) {
             if (error.name === 'AbortError') { 
@@ -393,10 +335,6 @@
             const actionToggle = document.getElementById('ai-action-toggle');
             if (actionToggle) { actionToggle.classList.remove('generating'); }
             
-            // Scroll to bottom one last time
-            const responseContainer = document.getElementById('ai-response-container');
-            if(responseContainer) responseContainer.scrollTop = responseContainer.scrollHeight;
-
             document.getElementById('ai-input-wrapper').classList.remove('waiting');
             const editor = document.getElementById('ai-input');
             if(editor) { editor.contentEditable = true; editor.focus(); }
