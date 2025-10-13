@@ -7,7 +7,7 @@
  * smart paste handling, and refined animations.
  *
  * LATEST UPDATES:
- * - Font Awesome CDN updated to v7.0.1 (to fix icon loading).
+ * - Font Awesome CDN updated to v6.5.2 (highly stable version to fix intermittent loading errors).
  * - All custom UI logic (Model selection, attachment button, stop button) is maintained.
  */
 (function() {
@@ -30,7 +30,7 @@
     const MAX_INPUT_HEIGHT = 200;
     const CHAR_LIMIT = 500;
 
-    // --- ICONS (for event handlers) - Using Font Awesome 7.0.1 classes ---
+    // --- ICONS (for event handlers) - Using Font Awesome 6.5.2 classes ---
     const copyIconHTML = '<i class="fa-solid fa-copy"></i>';
     const checkIconHTML = '<i class="fa-solid fa-check"></i>';
     const stopIconHTML = '<i class="fa-solid fa-stop"></i>'; // New stop icon
@@ -675,12 +675,12 @@
     function injectStyles() {
         if (document.getElementById('ai-dynamic-styles')) return;
         
-        // --- Font Awesome 7.0.1 CDN link (UPDATED) ---
+        // --- Font Awesome v6.5.2 CDN link (UPDATED FOR STABILITY) ---
         if (!document.querySelector('link[href*="font-awesome"]')) {
             const faLink = document.createElement('link');
             faLink.rel = 'stylesheet';
-            // Using the link confirmed by the user to be working
-            faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css'; 
+            // Switched to v6.5.2 for improved loading stability in sandboxed environments
+            faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css'; 
             document.head.appendChild(faLink);
         }
 
