@@ -21,8 +21,8 @@
 
     const CONFIG = {
         models: [
-            { id: 'flash', name: 'Gemini 1.5 Flash', url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-latest:generateContent?key=${API_KEY}` },
-            { id: 'pro', name: 'Gemini 1.5 Pro', url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-latest:generateContent?key=${API_KEY}` },
+            { id: 'flash', name: 'Gemini 2.5 Flash', url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}` },
+            { id: 'pro', name: 'Gemini 2.5 Pro', url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${API_KEY}` },
         ],
         agents: [
             { id: 'standard', name: 'Standard', systemPrompt: 'You are a helpful and friendly AI assistant. Be concise but informative.' },
