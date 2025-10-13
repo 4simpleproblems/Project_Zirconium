@@ -5,6 +5,8 @@
  * enhanced animations, intelligent chat history (token saving),
  * and advanced file previews. This version includes a character limit,
  * smart paste handling, and refined animations.
+ *
+ * --- UPDATE: ACTIVATION CHANGED TO KEYBOARD SHORTCUT (CTRL/CMD + C) ---
  */
 (function() {
     // --- CONFIGURATION ---
@@ -29,7 +31,7 @@
     // --- ICONS (for event handlers) ---
     const copyIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
     const checkIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="check-icon"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
-    const geminiLogoSVG = `<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true" class="gemini-logo"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-2.34-.33-4.48-1.57-6-3.32-.4-.44-.35-1.14.1-1.56.45-.42 1.15-.35 1.56.1.72.8 1.63 1.4 2.62 1.83V14c0-.55.45-1 1-1s1 .45 1 1v5.93zM12 11H8c-.55 0-1-.45-1-1s.45-1 1-1h4c.55 0 1 .45 1 1s-.45 1-1 1zm4.78-4.14c.42.45.35 1.15-.1 1.56-1.55 1.75-3.69 2.99-6 3.32V8c0-.55-.45-1-1-1s-1 .45-1 1v3.93c-1-.43-1.91-1.03-2.62-1.83-.41-.45-1.11-.52-1.56-.1-.45.42-.52 1.12-.1 1.56 1.52 1.7 3.37 2.82 5.37 3.23.01.03.01.06.01.09s0 .06-.01.09c-2 .41-3.85 1.53-5.37 3.23-.42.45-.35 1.15.1 1.56.45.42 1.15.35 1.56-.1 1.55-1.75 3.69-2.99 6-3.32V16c0 .55.45 1 1 1s1-.45 1-1v-3.93c1 .43 1.91 1.03 2.62 1.83.41.45 1.11.52 1.56.1.45-.42.52-1.12.1-1.56-1.52-1.7-3.37-2.82-5.37-3.23.01-.03.01-.06.01-.09s0-.06-.01-.09c2-.41 3.85-1.53 5.37-3.23.42-.45.35-1.15-.1-1.56-.45-.42-1.15-.35-1.56.1z"/></svg>`;
+    const geminiLogoSVG = `<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true" class="gemini-logo"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-2.34-.33-4.48-1.57-6-3.32-.4-.44-.35-1.14.1-1.56.45-.42 1.15-.35 1.56.1.72.8 1.63 1.4 2.62 1.83V14c0-.55.45-1 1-1s1 .45 1 1v5.93zM12 11H8c-.55 0-1-.45-1-1s.45-1 1-1h4c.55 0 1 .45 1 1s-.45 1-1 1zm4.78-4.14c.42.45.35 1.15-.1 1.56-1.55 1.75-3.69 2.99-6 3.32V8c0-.55-.45-1-1-1s-1 .45-1 1v3.93c-1-.43-1.91-1.03-2.62-1.83-.41-.45-1.11-.52-.1-1.56.45-.42-.52 1.12-.1 1.56 1.52 1.7 3.37 2.82 5.37 3.23.01.03.01.06.01.09s0 .06-.01.09c-2 .41-3.85 1.53-5.37 3.23-.42.45-.35 1.15.1 1.56.45-.42.52-1.12-.1-1.56-1.52-1.7-3.37-2.82-5.37-3.23.01-.03.01-.06.01-.09s0-.06-.01-.09c2-.41 3.85-1.53 5.37-3.23.42-.45.35-1.15-.1-1.56-.45-.42-1.15-.35-1.56.1z"/></svg>`;
     const attachIconSVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 0 10h-3M9 17H6a5 5 0 0 1 0-10h3M8 12h8"></path></svg>`;
     const sendIconSVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="send-icon"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`;
     const clearIconSVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="clear-icon"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
@@ -242,7 +244,8 @@
                 <div class="message model initial">
                     ${geminiLogoSVG}
                     <div class="message-content">
-                        Hello! I'm Gemini, your helpful programming and academic assistant. How can I help you today?
+                        Hello! I'm Gemini, your helpful programming and academic assistant.
+                        Press **Ctrl + C** (or Cmd + C) to close me. How can I help you today?
                     </div>
                 </div>
             </div>
@@ -326,6 +329,22 @@
     // --- EVENT HANDLERS ---
 
     let uploadedFile = null;
+
+    // Function to toggle the chat UI visibility
+    const toggleChat = () => {
+        const chatContainer = document.getElementById('ai-chat-container');
+        const textarea = document.getElementById('ai-input-textarea');
+
+        chatContainer.classList.toggle('inactive');
+        chatContainer.classList.toggle('active');
+
+        if (chatContainer.classList.contains('active')) {
+            textarea.focus();
+        } else {
+            textarea.blur();
+        }
+    };
+
 
     const handleInput = (event) => {
         const textarea = event.target;
@@ -455,6 +474,20 @@
     const handleToggleMenu = () => {
         const menu = document.getElementById('ai-attachment-subject-menu');
         menu.classList.toggle('hidden');
+    };
+
+    /**
+     * Handles keyboard events to activate the AI chat via Ctrl/Cmd + C
+     */
+    const handleKeyboardShortcut = (e) => {
+        // Check for Ctrl key (Windows/Linux) or Command key (Mac)
+        const isModifierPressed = e.ctrlKey || e.metaKey;
+
+        // Check for 'C' key
+        if (isModifierPressed && e.key === 'c') {
+            e.preventDefault(); // Prevent the default copy action
+            toggleChat();
+        }
     };
 
     // --- CSS INJECTION ---
@@ -950,21 +983,18 @@
     // --- INITIALIZATION ---
 
     const init = () => {
-        // Find the mode activation button (which is assumed to exist on the page)
-        const modeButton = document.getElementById('ai-mode-activation-btn');
-        if (!modeButton) {
-            console.warn("AI mode activation button (#ai-mode-activation-btn) not found. Cannot initialize AI chat.");
-            return;
-        }
-
         // 1. Inject Styles
         injectStyles();
 
         // 2. Render UI
         renderChatContainer();
 
-        // 3. Attach Events to Static Elements
-        const chatContainer = document.getElementById('ai-chat-container');
+        // 3. Attach Keyboard Shortcut Listener
+        // This is the new logic for Ctrl/Cmd + C activation
+        document.addEventListener('keydown', handleKeyboardShortcut);
+
+
+        // 4. Attach Events to Input Elements
         const textarea = document.getElementById('ai-input-textarea');
         const sendButton = document.getElementById('ai-send-btn');
         const clearButton = document.getElementById('ai-clear-history-btn');
@@ -972,14 +1002,6 @@
         const removeFileBtn = document.getElementById('ai-remove-file-btn');
         const fileInput = document.getElementById('ai-file-input');
         const attachMenuBtn = document.getElementById('ai-attach-menu-btn');
-
-        modeButton.addEventListener('click', () => {
-            chatContainer.classList.toggle('inactive');
-            chatContainer.classList.toggle('active');
-            if (chatContainer.classList.contains('active')) {
-                textarea.focus();
-            }
-        });
 
         if (textarea) {
             textarea.addEventListener('input', handleInput);
@@ -1006,6 +1028,8 @@
             button.addEventListener('click', handleCopyCode);
         });
 
+        // NOTE: The previous click listener for the #ai-mode-activation-btn has been removed
+        // as activation is now purely keyboard-based.
     };
 
     // Run initialization on DOM content loaded
