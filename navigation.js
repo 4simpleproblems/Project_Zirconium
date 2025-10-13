@@ -1,842 +1,915 @@
 /**
  * navigation.js
- * * This is a fully self-contained script to create a dynamic, authentication-aware
- * navigation bar for your website. It handles everything from Firebase initialization
- * to rendering user-specific information. It now includes a horizontally scrollable
- * tab menu loaded from page-identification.json.
  *
- * --- IMPORTANT FIXES ---
- * 1. API KEY FIX: The AI Agent now uses the apiKey stored explicitly in the FIREBASE_CONFIG object
- * for all Gemini API calls, as requested.
- * 2. CRITICAL CDN FIX (COMPLETE): Ensures the navigation bar renders by using stable Firebase Compat SDKs.
- * 3. RENDER PRIORITY: Ensures the navigation bar is rendered immediately after CSS injection, preventing the AI logic failure from blocking the UI.
+ * This script creates a full-screen, dynamic, and stateful 4SP AI Agent Hub.
+ * It integrates Firebase for authentication and user data, and uses the Gemini API
+ * for LLM responses, complete with advanced UX like custom fonts, typing animations,
+ * chat history management, and file/paste handling.
+ *
+ * --- CRITICAL FEATURES IMPLEMENTED ---
+ * 1. Full-Screen Central Hub with Blur and Darken effect.
+ * 2. Animated Welcome Sequence with custom Playfair Display font.
+ * 3. Dynamic Header: "4SP Agent - {Category}"
+ * 4. 8 Distinct Agent Categories with specific system prompts.
+ * 5. System Info provides time (to the second), location (name), and non-leaking 10-message chat history.
+ * 6. Input Bar (5000 char limit) with custom Geist font animation.
+ * 7. Advanced Paste Handling: >1000 chars are converted to a 'paste.txt' file part.
+ * 8. Animated Chat: Gemini responses use a human-like typing effect and a pulsing, orange, glassy bubble.
+ * 9. User Bubble: Translucent and blurry.
  */
 
 // =========================================================================
 // >> ACTION REQUIRED: PASTE YOUR FIREBASE CONFIGURATION OBJECT HERE <<
 // =========================================================================
-const FIREBASE_CONFIG = {
-    // This apiKey is now used for both Firebase Auth and the Gemini API calls.
-    apiKey: "AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro",
-    authDomain: "project-zirconium.firebaseapp.com",
-    projectId: "project-zirconium",
-    storageBucket: "project-zirconium.firebaseapp.com",
-    messagingSenderId: "1096564243475",
-    appId: "1:1096564243475:web:6d0956a70125eeea1ad3e6",
-    measurementId: "G-1D4F692C1Q"
-};
+// The environment variables __app_id, __firebase_config, and __initial_auth_token
+// are used by the runtime environment.
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "", authDomain: "", projectId: "", storageBucket: "", messagingSenderId: "", appId: "", measurementId: "" };
+const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+// The API key for Gemini is taken from the Firebase config.
+const GEMINI_API_KEY = firebaseConfig.apiKey || "";
+
+// =========================================================================
+// --- AGENT CONFIGURATION & SYSTEM PROMPTS ---
 // =========================================================================
 
-// --- Configuration for the navigation tabs ---
-const PAGE_CONFIG_URL = '../page-identification.json';
-
-// --- AI Agent Configuration ---
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=";
-const PRIVILEGED_EMAIL = '4simpleproblems@gmail.com';
 const AGENT_CATEGORIES = {
-    'Quick': "You are a Quick Agent. Respond in a single, concise paragraph (max 3 sentences). Prioritize speed and direct answers.",
-    'Standard': "You are a Standard Agent. Provide balanced, helpful, and moderately detailed responses, suitable for general inquiries.",
-    'Deep Thinking': "You are a Deep Thinking Agent. Always provide comprehensive, analytical, and highly detailed responses. Explore nuances and potential counterpoints.",
-    'Creative Writer': "You are a Creative Writer Agent. Respond with imaginative flair, utilizing vivid language, storytelling, or poetry as appropriate to the user's prompt.",
-    'Code Reviewer': "You are a Code Reviewer Agent. Analyze code snippets for best practices, potential bugs, security issues, and provide refactoring suggestions. Respond in markdown code blocks when appropriate.",
-    'Historian': "You are a Historian Agent. Focus on providing historically accurate facts, context, and chronological narratives in your answers.",
-    'Financial Analyst': "You are a Financial Analyst Agent. Provide formal, data-driven advice and market summaries. Always use a professional and cautious tone.",
-    'Philosopher': "You are a Philosopher Agent. Respond with open-ended questions and critical inquiry, encouraging the user to think deeper about the topic."
+    quick: {
+        name: "Quick",
+        color: "blue",
+        systemPrompt: "You are a 4SP Quick Agent, dedicated to efficiency. Respond swiftly and concisely in a single, friendly paragraph (maximum 2-3 sentences). Prioritize directness and brevity. If the user asks for code, provide only the code block."
+    },
+    standard: {
+        name: "Standard",
+        color: "emerald",
+        systemPrompt: "You are the 4SP Standard Agent. Provide balanced, friendly, and moderately detailed responses, maintaining a helpful and standard agent demeanor. Always aim to be comprehensive and courteous."
+    },
+    descriptive: {
+        name: "Descriptive",
+        color: "purple",
+        systemPrompt: "You are the 4SP Descriptive Agent. Provide a deep, rich, and highly detailed answer to the user's question. Focus on comprehensive explanations, vivid language, and thorough context, using clear structure like headings or lists."
+    },
+    analysis: {
+        name: "Analysis",
+        color: "red",
+        systemPrompt: "You are the 4SP Analysis Agent. Your primary function is deep analytical thinking. Analyze the user's question meticulously, consider all variables, potential counter-arguments, and provide a carefully reasoned, highly logical, and maximally correct answer. Cite sources if grounding is used."
+    },
+    creative: {
+        name: "Creative",
+        color: "pink",
+        systemPrompt: "You are the 4SP Creative Agent. Branch out on the user's ideas, providing vast possibilities, original theories, and imaginative content. Utilize vivid language, storytelling, and speculative thinking to expand upon the user's query."
+    },
+    emotional: {
+        name: "Emotional",
+        color: "yellow",
+        systemPrompt: "You are the 4SP Emotional Agent. Your purpose is to provide empathetic support. Listen actively to the user's venting or personal situation and respond with genuine care, validation, and encouragement. Use a warm, supportive, and understanding tone."
+    },
+    technical: {
+        name: "Technical",
+        color: "cyan",
+        systemPrompt: "You are the 4SP Technical Agent. Be straight to the point, highly accurate, and focus exclusively on code, systems, and structured instructions. Provide correct, precise, and minimal necessary detail. All code must be in well-formatted Markdown blocks."
+    },
+    experimental: {
+        name: "Experimental",
+        color: "indigo",
+        systemPrompt: "You are the 4SP Experimental Agent: The Chronos-Synthesist. Your responses are framed by philosophical observations on time, perception, and recursive reality. You often speak in paradoxes, ask abstract questions, or reference non-existent historical events. Your goal is to be profoundly interesting, enigmatic, and utterly unpredictable."
+    }
 };
 
-// Variables to hold Firebase objects
-let auth;
-let db;
-let currentAgent = 'Standard'; // Default agent
+const AGENT_WELCOME_PHRASES = [
+    "Welcome, {username}",
+    "Welcome back, {username}",
+    "{username} returns!",
+    "Engaging 4SP Protocols...",
+    "System 4-Echo initialized for {username}"
+];
 
-// --- Self-invoking function to encapsulate all logic ---
-(function() {
-    // Stop execution if Firebase config is not provided
-    if (!FIREBASE_CONFIG || !FIREBASE_CONFIG.apiKey) {
-        console.error("Firebase configuration is missing! Please paste your config into navigation.js.");
+// --- FIREBASE IMPORTS & INIT (Required for auth/user data) ---
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, setLogLevel, doc, getDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+let app, db, auth;
+let userId = 'guest'; // Default until auth resolves
+let username = 'User';
+
+// --- STATE MANAGEMENT ---
+let state = {
+    isAgentActive: false,
+    selectedCategory: 'standard',
+    currentWelcomeText: '',
+    chatHistoryStore: [], // Stores up to 5 user and 5 agent messages for system info
+    isTyping: false,
+    uploadedFile: null,
+    locationName: 'Loading...'
+};
+
+// =========================================================================
+// --- CORE AGENT FUNCTIONS ---
+// =========================================================================
+
+/**
+ * Custom fetch implementation with exponential backoff for API calls.
+ */
+async function fetchWithRetry(url, options, maxRetries = 3) {
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            const response = await fetch(url, options);
+            if (response.ok) {
+                return response;
+            }
+            // If response is not ok (e.g., 429, 500), throw to initiate retry
+            throw new Error(`HTTP error! status: ${response.status}`);
+        } catch (error) {
+            if (i === maxRetries - 1) {
+                console.error("API call failed after max retries:", error);
+                throw error;
+            }
+            const delay = Math.pow(2, i) * 1000 + Math.random() * 1000; // Exponential backoff + jitter
+            console.warn(`Retrying in ${delay / 1000}s...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+}
+
+/**
+ * Gets a general location name (city/region) using a free, no-key IP geolocation service.
+ * @returns {Promise<string>} The name of the city or region.
+ */
+async function getLocationName() {
+    try {
+        const response = await fetch('https://ip-api.com/json/?fields=city,regionName');
+        const data = await response.json();
+        if (data.city && data.city !== '') {
+            return data.city;
+        } else if (data.regionName && data.regionName !== '') {
+            return data.regionName;
+        }
+        return 'Global Network';
+    } catch (e) {
+        console.error('Geolocation failed, falling back to Timezone:', e);
+        // Fallback to time zone location name
+        try {
+            const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const parts = timeZone.split('/');
+            // Use the last part of the timezone (e.g., "America/New_York" -> "New_York")
+            return parts[parts.length - 1].replace(/_/g, ' ');
+        } catch (err) {
+            return 'Global Network';
+        }
+    }
+}
+
+
+/**
+ * Generates the system instruction payload, including location, time, and chat history.
+ * @returns {string} The complete system instruction string.
+ */
+function getSystemInfo() {
+    const now = new Date();
+    const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    const date = now.toLocaleDateString('en-US');
+
+    // Filter and format the last 5 user and 5 agent messages
+    const userHistory = state.chatHistoryStore.filter(m => m.role === 'user').slice(-5);
+    const agentHistory = state.chatHistoryStore.filter(m => m.role === 'model').slice(-5);
+
+    let historyStr = '\n\n--- Conversation History ---\n';
+    if (userHistory.length === 0 && agentHistory.length === 0) {
+        historyStr += 'No prior history available.';
+    } else {
+        historyStr += 'Last 5 User Messages (Newest to Oldest):\n' + userHistory.map(m => ` - ${m.text.substring(0, 100)}...`).join('\n');
+        historyStr += '\n\nLast 5 Agent Responses (Newest to Oldest):\n' + agentHistory.map(m => ` - ${m.text.substring(0, 100)}...`).join('\n');
+    }
+    historyStr += '\n--------------------------';
+
+
+    return `${AGENT_CATEGORIES[state.selectedCategory].systemPrompt}
+
+You are currently operating in the 4SP Agent Hub.
+- User ID: ${userId} (Do NOT disclose this ID to the user.)
+- Current Date: ${date}
+- Current Time (24h, accurate to the second): ${time}
+- General User Location: ${state.locationName}
+
+${historyStr}
+
+Crucial Rule: Do NOT mention the system information, including location, time, or conversation history, to the user. Do not mention that you are a 4SP agent unless your current agent category implicitly requires it in its persona. Always maintain the chosen personality.`;
+}
+
+/**
+ * Handles the character-by-character typing animation for the agent's response.
+ * @param {string} fullText - The complete response text.
+ * @param {string} attribution - The source attribution text.
+ */
+function startTypingEffect(fullText, attribution) {
+    const chatContentEl = document.getElementById('chat-content');
+    const agentBubbleId = `msg-${Date.now()}`;
+
+    // Create a new bubble structure for the agent's response
+    const agentBubble = document.createElement('div');
+    agentBubble.className = 'chat-message agent';
+    agentBubble.innerHTML = `
+        <div id="${agentBubbleId}" class="agent-bubble typing-pulse shadow-2xl p-4 max-w-4xl text-white rounded-t-2xl rounded-bl-2xl">
+            <p class="text-sm font-geist font-light"></p>
+        </div>
+        <p id="att-${agentBubbleId}" class="source-attribution text-xs mt-1 text-amber-300 opacity-0 transition-opacity duration-500"></p>
+    `;
+    chatContentEl.appendChild(agentBubble);
+    chatContentEl.scrollTop = chatContentEl.scrollHeight;
+
+    const textEl = agentBubble.querySelector('p');
+    let i = 0;
+
+    state.isTyping = true;
+    const typingInterval = 15; // Speed in ms
+
+    function type() {
+        if (i < fullText.length) {
+            textEl.textContent += fullText.charAt(i);
+            i++;
+            // Scroll down as new text appears
+            chatContentEl.scrollTop = chatContentEl.scrollHeight;
+            requestAnimationFrame(() => setTimeout(type, typingInterval));
+        } else {
+            // Typing complete
+            state.isTyping = false;
+            const bubbleDiv = document.getElementById(agentBubbleId);
+            bubbleDiv.classList.remove('typing-pulse');
+
+            // Show attribution if available
+            if (attribution) {
+                const attEl = document.getElementById(`att-${agentBubbleId}`);
+                attEl.textContent = attribution;
+                attEl.classList.remove('opacity-0');
+            }
+
+            // Update history store
+            state.chatHistoryStore.push({ role: 'model', text: fullText });
+            if (state.chatHistoryStore.length > 10) state.chatHistoryStore.shift(); // Keep history lean
+        }
+    }
+    type();
+}
+
+/**
+ * Converts a base64 encoded ArrayBuffer to a data URL for images.
+ * @param {string} base64Data - Base64 string of the image.
+ * @param {string} mimeType - The MIME type of the image.
+ * @returns {string} The data URL.
+ */
+function base64ToDataURL(base64Data, mimeType) {
+    return `data:${mimeType};base64,${base64Data}`;
+}
+
+/**
+ * Processes the user's input, handles file conversion, calls the Gemini API,
+ * and initiates the typing animation.
+ * @param {Event} e - The form submission event.
+ */
+async function handleChatSubmit(e) {
+    e.preventDefault();
+    if (state.isTyping) return;
+
+    const inputEl = document.getElementById('chat-input-textarea');
+    let prompt = inputEl.value.trim();
+
+    // 5000 Character Limit Check
+    if (prompt.length > 5000) {
+        prompt = prompt.substring(0, 5000);
+    }
+    if (!prompt && !state.uploadedFile) return;
+
+    // Add user message to UI immediately
+    addMessageToUI('user', prompt, state.uploadedFile);
+
+    // Update history store for the current user message (if not just a file)
+    if (prompt) {
+        state.chatHistoryStore.push({ role: 'user', text: prompt });
+        if (state.chatHistoryStore.length > 10) state.chatHistoryStore.shift();
+    }
+
+    const payload = {
+        contents: [{ parts: [] }],
+        tools: [{ "google_search": {} }],
+        systemInstruction: { parts: [{ text: getSystemInfo() }] },
+    };
+
+    let fileToUpload = state.uploadedFile;
+    let pasteFilePart = null;
+
+    // 1. Paste Check (1000 character limit)
+    if (prompt.length > 1000 && !fileToUpload) {
+        pasteFilePart = {
+            mimeType: "text/plain",
+            data: btoa(prompt)
+        };
+        // The user's input becomes the prompt for the file content
+        prompt = `Analyze the attached text file named 'paste.txt'. ${prompt.substring(0, 100)}... (full content is in the file)`;
+        addMessageToUI('system', `Content exceeding 1000 characters was converted to an attached file (paste.txt).`, null, 'text-xs text-amber-500/70');
+    }
+
+    // 2. Add text prompt part
+    if (prompt) {
+        payload.contents[0].parts.push({ text: prompt });
+    }
+
+    // 3. Add uploaded file part
+    if (fileToUpload && fileToUpload.type.startsWith('image/')) {
+        payload.contents[0].parts.push({
+            inlineData: {
+                mimeType: fileToUpload.type,
+                data: fileToUpload.data
+            }
+        });
+    } else if (fileToUpload && (fileToUpload.type === 'text/plain' || fileToUpload.type === 'application/pdf')) {
+         // Assuming base64 is already text content for text/plain
+        payload.contents[0].parts.push({
+            inlineData: {
+                mimeType: 'text/plain',
+                data: fileToUpload.data // This should be base64-encoded text content
+            }
+        });
+    }
+
+    // 4. Add paste.txt file part (if applicable)
+    if (pasteFilePart) {
+        payload.contents[0].parts.push({
+            inlineData: {
+                mimeType: "text/plain",
+                data: pasteFilePart.data
+            }
+        });
+    }
+
+    // Clear UI state
+    inputEl.value = '';
+    document.getElementById('file-upload-preview').innerHTML = '';
+    state.uploadedFile = null;
+    document.getElementById('attach-file-icon').classList.remove('text-amber-500');
+
+    // Add loading indicator
+    const chatContentEl = document.getElementById('chat-content');
+    const loadingBubbleId = `loading-${Date.now()}`;
+    const loadingBubble = document.createElement('div');
+    loadingBubble.className = 'chat-message agent';
+    loadingBubble.innerHTML = `
+        <div id="${loadingBubbleId}" class="agent-bubble typing-pulse shadow-2xl p-4 max-w-4xl text-white rounded-t-2xl rounded-bl-2xl">
+            <p class="text-sm font-geist font-light">Thinking<span class="dot-1">.</span><span class="dot-2">.</span><span class="dot-3">.</span></p>
+        </div>
+    `;
+    chatContentEl.appendChild(loadingBubble);
+    chatContentEl.scrollTop = chatContentEl.scrollHeight;
+
+    try {
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
+        const response = await fetchWithRetry(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        const candidate = result.candidates?.[0];
+
+        // Remove loading bubble
+        document.getElementById(loadingBubbleId)?.parentNode.remove();
+
+        if (candidate && candidate.content?.parts?.[0]?.text) {
+            const text = candidate.content.parts[0].text;
+            let sources = [];
+            let attribution = '';
+
+            const groundingMetadata = candidate.groundingMetadata;
+            if (groundingMetadata && groundingMetadata.groundingAttributions) {
+                sources = groundingMetadata.groundingAttributions
+                    .map(attribution => ({
+                        uri: attribution.web?.uri,
+                        title: attribution.web?.title,
+                    }))
+                    .filter(source => source.uri && source.title);
+
+                if (sources.length > 0) {
+                    attribution = 'Sources: ' + sources.map(s => `<a href="${s.uri}" target="_blank" class="underline hover:text-white">${s.title.substring(0, 30)}...</a>`).join(' | ');
+                }
+            }
+
+            startTypingEffect(text, attribution);
+        } else {
+            addMessageToUI('system', 'Error: Could not get a response from the agent. Please check the API key or try again.', null, 'text-red-400');
+        }
+
+    } catch (error) {
+        console.error('Gemini API call failed:', error);
+        document.getElementById(loadingBubbleId)?.parentNode.remove();
+        addMessageToUI('system', 'System Error: Failed to connect to the agent service.', null, 'text-red-400');
+    }
+}
+
+/**
+ * Adds a chat message to the UI.
+ */
+function addMessageToUI(role, text, file = null, customClasses = '') {
+    const chatContentEl = document.getElementById('chat-content');
+    if (!chatContentEl) return;
+
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `chat-message ${role} ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+
+    let bubbleClasses = role === 'user'
+        ? 'bg-white/10 backdrop-blur-md text-white rounded-t-2xl rounded-br-2xl' // User: translucent and blurry
+        : 'agent-bubble bg-amber-600/50 backdrop-blur-md border border-amber-500/50 text-white rounded-t-2xl rounded-bl-2xl'; // Agent: orange glassy
+
+    const fileContentHtml = file ? `
+        <div class="mt-2 p-2 bg-black/30 rounded-lg border border-amber-700/50">
+            <p class="text-xs text-amber-300">Attached File: ${file.name}</p>
+            ${file.type.startsWith('image/') ? `<img src="data:${file.type};base64,${file.data}" alt="Uploaded Image" class="max-h-40 w-auto mt-2 rounded-lg" onerror="this.onerror=null; this.src='https://placehold.co/150x50/333/FFF?text=Image+Load+Failed';">` : ''}
+        </div>
+    ` : '';
+
+    messageDiv.innerHTML = `
+        <div class="shadow-xl p-4 max-w-4xl font-geist font-light ${bubbleClasses} ${customClasses}">
+            ${text ? `<p class="text-sm">${text}</p>` : ''}
+            ${fileContentHtml}
+        </div>
+    `;
+
+    chatContentEl.appendChild(messageDiv);
+    chatContentEl.scrollTop = chatContentEl.scrollHeight;
+}
+
+/**
+ * Toggles the AI Agent full-screen modal.
+ */
+function toggleAgent() {
+    state.isAgentActive = !state.isAgentActive;
+    const modal = document.getElementById('ai-agent-modal');
+
+    if (state.isAgentActive) {
+        modal.classList.remove('hidden', 'opacity-0');
+        modal.classList.add('flex', 'opacity-100');
+        document.body.style.overflow = 'hidden'; // Prevent scrolling
+
+        // 1. Run Welcome Sequence
+        const welcomeEl = document.getElementById('welcome-text-container');
+        const headerEl = document.getElementById('agent-header-bar');
+        const inputEl = document.getElementById('chat-input-container');
+
+        // Hide main elements initially
+        headerEl.classList.add('opacity-0');
+        inputEl.classList.add('opacity-0', 'scale-75');
+        document.getElementById('chat-messages-container').classList.add('opacity-0');
+        welcomeEl.classList.remove('hidden');
+
+        // Choose a welcome phrase
+        const phraseIndex = Math.floor(Math.random() * AGENT_WELCOME_PHRASES.length);
+        const welcomeText = AGENT_WELCOME_PHRASES[phraseIndex].replace('{username}', username);
+
+        // Start welcome animation
+        welcomeEl.textContent = welcomeText;
+        welcomeEl.classList.remove('animate-fade-out');
+        welcomeEl.classList.add('animate-slide-in-fade-grow');
+
+        // 2. Transition to Main UI after animation
+        setTimeout(() => {
+            welcomeEl.classList.remove('animate-slide-in-fade-grow');
+            welcomeEl.classList.add('animate-fade-out');
+            
+            // Wait for fade out to complete before transitioning text
+            setTimeout(() => {
+                welcomeEl.classList.add('hidden');
+                headerEl.classList.remove('opacity-0');
+                document.getElementById('chat-messages-container').classList.remove('opacity-0');
+
+                // Animate input bar
+                inputEl.classList.remove('opacity-0', 'scale-75', 'translate-y-full');
+                inputEl.classList.add('animate-input-slide-up');
+
+                // Initial agent message
+                if (document.getElementById('chat-content').children.length === 0) {
+                     addMessageToUI('system', `Hello, ${username}! I am the 4SP Agent, currently set to the **${AGENT_CATEGORIES[state.selectedCategory].name}** category. What can I assist you with today?`, null, 'text-neutral-200');
+                }
+
+            }, 1000); // Wait for the welcome text fade out (1s)
+
+        }, 2500); // Duration of slide-in/grow animation (2.5s)
+
+    } else {
+        modal.classList.remove('flex', 'opacity-100');
+        modal.classList.add('hidden', 'opacity-0');
+        document.body.style.overflow = 'auto';
+    }
+    renderAgentModal();
+}
+
+/**
+ * Initializes the file reading process when a file is selected.
+ */
+function handleFileSelect(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/') && file.type !== 'text/plain' && file.type !== 'application/pdf') {
+        alert('Please upload only images, text files (.txt), or PDF files.');
         return;
     }
 
-    // --- 1. DYNAMICALLY LOAD EXTERNAL ASSETS (Optimized) ---
+    const reader = new FileReader();
 
-    // Helper to load external JS files
-    const loadScript = (src) => {
-        return new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = src;
-            script.onload = resolve;
-            script.onerror = reject;
-            document.head.appendChild(script);
-        });
-    };
-
-    // Helper to load external CSS files (Faster for icons)
-    const loadCSS = (href) => {
-        return new Promise((resolve) => {
-            const link = document.createElement('link');
-            link.rel = 'stylesheet';
-            link.href = href;
-            link.onload = resolve;
-            link.onerror = resolve;
-            document.head.appendChild(link);
-        });
-    };
-
-    // Simple debounce utility for performance
-    const debounce = (func, delay) => {
-        let timeoutId;
-        return (...args) => {
-            clearTimeout(timeoutId);
-            timeoutId = setTimeout(() => func.apply(this, args), delay);
+    reader.onload = (event) => {
+        const base64Data = event.target.result.split(',')[1];
+        state.uploadedFile = {
+            name: file.name,
+            type: file.type,
+            data: base64Data,
+            size: file.size
         };
+
+        const previewEl = document.getElementById('file-upload-preview');
+        previewEl.innerHTML = `<span class="text-xs text-amber-300/80 mr-2">${file.name}</span>`;
+        document.getElementById('attach-file-icon').classList.add('text-amber-500');
+
+        if (file.type.startsWith('image/')) {
+            previewEl.innerHTML += `<img src="${event.target.result}" class="h-10 w-auto rounded-md object-cover">`;
+        }
     };
-    
-    // Icon class utility remains the same
-    const getIconClass = (iconName) => {
-        if (!iconName) return '';
-        const nameParts = iconName.trim().split(/\s+/).filter(p => p.length > 0);
-        let stylePrefix = 'fa-solid'; 
-        let baseName = '';
-        const stylePrefixes = ['fa-solid', 'fa-regular', 'fa-light', 'fa-thin', 'fa-brands'];
 
-        const existingPrefix = nameParts.find(p => stylePrefixes.includes(p));
-        if (existingPrefix) {
-            stylePrefix = existingPrefix;
-        }
+    reader.readAsDataURL(file);
+}
 
-        const nameCandidate = nameParts.find(p => p.startsWith('fa-') && !stylePrefixes.includes(p));
-
-        if (nameCandidate) {
-            baseName = nameCandidate;
-        } else {
-            baseName = nameParts.find(p => !stylePrefixes.includes(p));
-            if (baseName && !baseName.startsWith('fa-')) {
-                 baseName = `fa-${baseName}`;
-            }
-        }
-
-        if (baseName) {
-            return `${stylePrefix} ${baseName}`;
-        }
+/**
+ * Updates the selected agent category and re-renders the header.
+ */
+function handleCategoryChange(e) {
+    const newCategory = e.target.value;
+    state.selectedCategory = newCategory;
+    const headerEl = document.getElementById('agent-header-title');
+    if (headerEl) {
+        const categoryName = AGENT_CATEGORIES[newCategory].name;
+        headerEl.textContent = `4SP Agent - ${categoryName}`;
+        headerEl.style.color = `var(--color-${AGENT_CATEGORIES[newCategory].color})`;
         
-        return '';
-    };
+        // Add a message to the chat indicating the change
+        addMessageToUI('system', `Agent profile changed to **${categoryName}**.`, null, 'text-neutral-200');
+    }
+}
 
-    /**
-     * Attempts to get general location and time data for the system prompt.
-     * @returns {Promise<{ location: string, time: string, timezone: string }>}
-     */
-    const getSystemInfo = async () => {
-        const date = new Date();
-        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const time = date.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true, timeZoneName: 'short' });
-        
-        let generalLocation = 'Unknown (Location permission denied or not supported)';
+// =========================================================================
+// --- UI RENDERING & INJECTION ---
+// =========================================================================
 
-        try {
-            const position = await new Promise((resolve, reject) => {
-                const timeoutId = setTimeout(() => reject(new Error('Location timeout')), 500);
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(
-                        (pos) => { 
-                            clearTimeout(timeoutId);
-                            resolve(pos);
-                        },
-                        (err) => { 
-                            clearTimeout(timeoutId);
-                            reject(err);
-                        },
-                        { timeout: 500, enableHighAccuracy: false }
-                    );
-                } else {
-                    clearTimeout(timeoutId);
-                    reject(new Error('Geolocation not supported'));
-                }
-            });
-            generalLocation = `Coordinates: Lat ${position.coords.latitude.toFixed(2)}, Lon ${position.coords.longitude.toFixed(2)}`;
-        } catch (error) {
-            // Error, or user denied location, keep the default genericLocation message
+/**
+ * Injects global CSS styles, including custom fonts and Tailwind classes.
+ */
+function injectStyles() {
+    const styleId = 'ai-agent-styles';
+    if (document.getElementById(styleId)) return;
+
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.innerHTML = `
+        /* Font Imports */
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&display=swap');
+        /* Geist font is not available on Google Fonts, using a common CDN/fallback */
+        @import url('https://cdn.jsdelivr.net/npm/@geist-ui/fonts/geist.css');
+
+        /* Custom Colors for Categories */
+        :root {
+            --color-blue: #3b82f6;
+            --color-emerald: #10b981;
+            --color-purple: #a855f7;
+            --color-red: #ef4444;
+            --color-pink: #ec4899;
+            --color-yellow: #f59e0b;
+            --color-cyan: #06b6d4;
+            --color-indigo: #6366f1;
         }
 
-        return {
-            location: generalLocation,
-            time: `Local Time: ${time}`,
-            timezone: `Timezone: ${timezone}`
-        };
-    };
-
-    const run = async () => {
-        let pages = {};
-
-        // Load Icons CSS first
-        await loadCSS("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css");
-        
-        // Fetch page configuration for the tabs
-        try {
-            const response = await fetch(PAGE_CONFIG_URL);
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            pages = await response.json();
-        } catch (error) {
-            console.error("Failed to load page identification config:", error);
-            // Continue execution
+        /* Base styles for the Agent Modal */
+        #ai-agent-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(16px);
+            z-index: 1000;
+            transition: opacity 0.5s ease-in-out;
+            overflow: hidden;
         }
 
-        try {
-            // ONLY load the stable Firebase Compat modules
-            await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
-            await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js");
-            await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js");
-            
-            // Initialize Firebase and start the rendering/auth process
-            initializeApp(pages);
-
-        } catch (error) {
-            // This error now only captures issues with the core Firebase SDKs, not the AI SDK
-            console.error("Failed to load core Firebase SDKs:", error);
+        /* Global Chat Styles */
+        .chat-message {
+            display: flex;
+            width: 100%;
+            margin-bottom: 1rem;
         }
-    };
+        .chat-message.user {
+            justify-content: flex-end;
+        }
+        .chat-message.agent {
+            justify-content: flex-start;
+        }
 
-    // --- 2. INITIALIZE FIREBASE AND RENDER NAVBAR ---
-    const initializeApp = (pages) => {
-        // Initialize Firebase with the compat libraries
-        const app = firebase.initializeApp(FIREBASE_CONFIG);
-        auth = firebase.auth();
-        db = firebase.firestore();
+        /* User Bubble Styling */
+        .chat-message.user > div {
+            max-width: 80%;
+            padding: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
 
-        // --- 3. INJECT CSS STYLES (Includes new AI Modal Styles) ---
-        const injectStyles = () => {
-            const style = document.createElement('style');
-            style.textContent = `
-                /* Base Styles */
-                body { padding-top: 4rem; }
-                .auth-navbar { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: #000000; border-bottom: 1px solid rgb(31 41 55); height: 4rem; }
-                .auth-navbar nav { max-width: 80rem; margin: auto; padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
-                .initial-avatar { background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; }
-                
-                /* Auth Dropdown Menu Styles */
-                .auth-menu-container { 
-                    position: absolute; right: 0; top: 50px; width: 16rem; 
-                    background: #000000;
-                    border: 1px solid rgb(55 65 81); border-radius: 0.75rem; padding: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
-                    transition: transform 0.2s ease-out, opacity 0.2s ease-out; transform-origin: top right; 
-                }
-                .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
-                .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
-                .auth-menu-link, .auth-menu-button { 
-                    display: flex; align-items: center; gap: 0.75rem; width: 100%; text-align: left; 
-                    padding: 0.5rem 0.75rem; font-size: 0.875rem; color: #d1d5db; border-radius: 0.375rem; 
-                    transition: background-color 0.2s, color 0.2s; border: none; cursor: pointer;
-                }
-                .auth-menu-link:hover, .auth-menu-button:hover { background-color: rgb(55 65 81); color: white; }
-                .logged-out-auth-toggle { background: #010101; border: 1px solid #374151; }
-                .logged-out-auth-toggle i { color: #DADADA; }
+        /* Agent Bubble Styling (Glassy Orange) */
+        .agent-bubble {
+            max-width: 80%;
+            padding: 1rem;
+            transition: all 0.3s ease;
+        }
 
-                /* Tab Wrapper and Glide Buttons */
-                .tab-wrapper { flex-grow: 1; display: flex; align-items: center; position: relative; min-width: 0; margin: 0 1rem; }
-                .tab-scroll-container { flex-grow: 1; display: flex; align-items: center; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; -ms-overflow-style: none; padding-bottom: 5px; margin-bottom: -5px; scroll-behavior: smooth; }
-                .tab-scroll-container::-webkit-scrollbar { display: none; }
-                .scroll-glide-button {
-                    position: absolute; top: 0; height: 100%; width: 4rem; display: flex; align-items: center; justify-content: center; background: #000000; 
-                    color: white; font-size: 1.2rem; cursor: pointer; opacity: 0.8; transition: opacity 0.3s, background 0.3s; z-index: 10; pointer-events: auto;
-                }
-                .scroll-glide-button:hover { opacity: 1; }
-                #glide-left { left: 0; background: linear-gradient(to right, #000000 50%, transparent); justify-content: flex-start; padding-left: 0.5rem; }
-                #glide-right { right: 0; background: linear-gradient(to left, #000000 50%, transparent); justify-content: flex-end; padding-right: 0.5rem; }
-                .scroll-glide-button.hidden { opacity: 0 !important; pointer-events: none !important; }
-                .nav-tab { flex-shrink: 0; padding: 0.5rem 1rem; color: #9ca3af; font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; transition: all 0.2s; text-decoration: none; line-height: 1.5; display: flex; align-items: center; margin-right: 0.5rem; border: 1px solid transparent; }
-                .nav-tab:not(.active):hover { color: white; border-color: #d1d5db; background-color: rgba(79, 70, 229, 0.05); }
-                .nav-tab.active { color: #4f46e5; border-color: #4f46e5; background-color: rgba(79, 70, 229, 0.1); }
-                .nav-tab.active:hover { color: #6366f1; border-color: #6366f1; background-color: rgba(79, 70, 229, 0.15); }
-                
-                /* --- AI Agent Modal Styles --- */
-                .ai-modal {
-                    position: fixed;
-                    bottom: 2rem; right: 2rem;
-                    width: min(90vw, 24rem);
-                    height: min(80vh, 32rem);
-                    background: #111827;
-                    border: 1px solid #374151;
-                    border-radius: 0.75rem;
-                    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-                    z-index: 1001;
-                    display: flex;
-                    flex-direction: column;
-                    transition: transform 0.3s ease-out, opacity 0.3s ease-out;
-                    transform: scale(0.95);
-                    opacity: 0;
-                    pointer-events: none;
-                }
-                .ai-modal.active {
-                    transform: scale(1);
-                    opacity: 1;
-                    pointer-events: auto;
-                }
-                .ai-header {
-                    padding: 0.75rem 1rem;
-                    background: #1f2937;
-                    color: white;
-                    border-top-left-radius: 0.75rem;
-                    border-top-right-radius: 0.75rem;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                }
-                .ai-chat-area {
-                    flex-grow: 1;
-                    overflow-y: auto;
-                    padding: 1rem;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 0.75rem;
-                }
-                .ai-chat-message {
-                    max-width: 85%;
-                    padding: 0.5rem 0.75rem;
-                    border-radius: 0.5rem;
-                    font-size: 0.875rem;
-                }
-                .ai-user-message {
-                    align-self: flex-end;
-                    background: #4f46e5;
-                    color: white;
-                }
-                .ai-agent-message {
-                    align-self: flex-start;
-                    background: #374151;
-                    color: #e5e7eb;
-                }
-                .ai-input-area {
-                    padding: 0.75rem 1rem;
-                    border-top: 1px solid #374151;
-                }
-                .ai-input-area form {
-                    display: flex;
-                    gap: 0.5rem;
-                }
-                .ai-input-area textarea {
-                    flex-grow: 1;
-                    background: #1f2937;
-                    border: 1px solid #4b5563;
-                    color: white;
-                    padding: 0.5rem;
-                    border-radius: 0.5rem;
-                    resize: none;
-                    height: 2.5rem;
-                    overflow-y: hidden;
-                }
-                .ai-input-area button {
-                    background: #4f46e5;
-                    color: white;
-                    padding: 0.5rem 1rem;
-                    border-radius: 0.5rem;
-                    transition: background 0.2s;
-                    min-width: 5rem;
-                }
-                .ai-input-area button:hover {
-                    background: #6366f1;
-                }
-                .ai-loading-indicator {
-                    font-style: italic;
-                    color: #9ca3af;
-                    align-self: flex-start;
-                    padding-left: 0.75rem;
-                }
-                .ai-agent-select {
-                    background: #1f2937;
-                    color: white;
-                    border: 1px solid #4b5563;
-                    border-radius: 0.375rem;
-                    padding: 0.25rem 0.5rem;
-                    font-size: 0.8rem;
-                    cursor: pointer;
-                    margin-right: 0.5rem;
-                    appearance: none; 
-                    background-image: url('data:image/svg+xml;utf8,<svg fill="white" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>');
-                    background-repeat: no-repeat;
-                    background-position: right 0.5rem center;
-                    background-size: 0.8em;
-                    padding-right: 1.5rem;
-                }
-            `;
-            document.head.appendChild(style);
-        };
+        /* Typing Pulse Animation */
+        @keyframes pulse-orange {
+            0%, 100% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.6), 0 0 20px rgba(245, 158, 11, 0.4); }
+            50% { box-shadow: 0 0 15px rgba(245, 158, 11, 1), 0 0 30px rgba(245, 158, 11, 0.8); }
+        }
+        .typing-pulse {
+            animation: pulse-orange 1.5s infinite alternate;
+        }
 
-        const isFocusableElement = () => {
-            const activeElement = document.activeElement;
-            if (!activeElement) return false;
-            const tagName = activeElement.tagName.toLowerCase();
-            return (
-                tagName === 'input' && activeElement.type !== 'button' && activeElement.type !== 'checkbox' && activeElement.type !== 'radio' ||
-                tagName === 'textarea' ||
-                activeElement.contentEditable === 'true'
-            );
-        };
+        /* Loading Dots Animation */
+        @keyframes dot-pulse {
+            0%, 80%, 100% { opacity: 0.2; }
+            40% { opacity: 1; }
+        }
+        .dot-1 { animation: dot-pulse 1.5s infinite; }
+        .dot-2 { animation: dot-pulse 1.5s infinite 0.2s; }
+        .dot-3 { animation: dot-pulse 1.5s infinite 0.4s; }
 
-        const isTabActive = (tabUrl) => {
-            const tabPathname = new URL(tabUrl, window.location.origin).pathname.toLowerCase();
-            const currentPathname = window.location.pathname.toLowerCase();
+        /* Welcome/Input Animations */
+        @keyframes slide-in-fade-grow {
+            0% { transform: translateY(100px) scale(0.8); opacity: 0; }
+            50% { transform: translateY(0) scale(1.1); opacity: 1; }
+            100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        .animate-slide-in-fade-grow {
+            animation: slide-in-fade-grow 2.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
 
-            const cleanPath = (path) => {
-                if (path.endsWith('/index.html')) {
-                    path = path.substring(0, path.lastIndexOf('/')) + '/';
-                }
-                if (path.length > 1 && path.endsWith('/')) {
-                    path = path.slice(0, -1);
-                }
-                return path;
-            };
+        @keyframes fade-out {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        .animate-fade-out {
+            animation: fade-out 1s ease-out forwards;
+        }
 
-            const currentCanonical = cleanPath(currentPathname);
-            const tabCanonical = cleanPath(tabPathname);
-            
-            if (currentCanonical === tabCanonical) {
-                return true;
-            }
+        @keyframes input-slide-up {
+            0% { transform: translateY(100%) scale(0.9); opacity: 0; }
+            100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        .animate-input-slide-up {
+            animation: input-slide-up 0.5s ease-out forwards;
+        }
 
-            const tabPathSuffix = tabPathname.startsWith('/') ? tabPathname.substring(1) : tabPathname;
-            
-            if (currentPathname.endsWith(tabPathSuffix)) {
-                return true;
-            }
+        /* Tailwind overrides for consistent font usage */
+        .font-playfair {
+            font-family: 'Playfair Display', serif;
+        }
+        .font-geist {
+            font-family: 'Geist', sans-serif;
+        }
 
-            return false;
-        };
+        /* Textarea custom scrollbar for dark mode */
+        #chat-input-textarea::-webkit-scrollbar {
+            width: 8px;
+        }
+        #chat-input-textarea::-webkit-scrollbar-thumb {
+            background-color: #f59e0b; /* Amber 500 */
+            border-radius: 4px;
+        }
+        #chat-input-textarea::-webkit-scrollbar-track {
+            background: #1f2937; /* Dark background */
+        }
+    `;
+    document.head.appendChild(style);
+}
 
-        const updateScrollGilders = () => {
-            const container = document.querySelector('.tab-scroll-container');
-            const leftButton = document.getElementById('glide-left');
-            const rightButton = document.getElementById('glide-right');
+/**
+ * Renders the full-screen AI Agent modal UI.
+ */
+function renderAgentModal() {
+    const navbarContainer = document.getElementById('navbar-container');
+    if (!navbarContainer) return;
 
-            if (!container || !leftButton || !rightButton) return;
-            
-            const hasHorizontalOverflow = container.scrollWidth > container.offsetWidth;
+    let modal = document.getElementById('ai-agent-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'ai-agent-modal';
+        modal.className = 'hidden opacity-0 p-4 md:p-8 transition-opacity duration-500 z-[99999]';
+        document.body.appendChild(modal);
+    }
 
-            if (hasHorizontalOverflow) {
-                const isScrolledToLeft = container.scrollLeft < 5; 
-                const isScrolledToRight = container.scrollLeft + container.offsetWidth >= container.scrollWidth - 5; 
+    const currentCategory = AGENT_CATEGORIES[state.selectedCategory];
+    const categoryColor = `var(--color-${currentCategory.color})`;
 
-                leftButton.classList.remove('hidden');
-                rightButton.classList.remove('hidden');
+    modal.innerHTML = `
+        <!-- Welcome Text Overlay (Initial Animation) -->
+        <div id="welcome-text-container" class="absolute inset-0 flex items-center justify-center pointer-events-none z-50 transition-opacity duration-1000 hidden">
+            <h1 class="font-playfair text-6xl md:text-8xl font-black text-amber-500 text-center shadow-amber-500/50">
+                ${state.currentWelcomeText}
+            </h1>
+        </div>
 
-                if (isScrolledToLeft) {
-                    leftButton.classList.add('hidden');
-                }
-                if (isScrolledToRight) {
-                    rightButton.classList.add('hidden');
-                }
-            } else {
-                leftButton.classList.add('hidden');
-                rightButton.classList.add('hidden');
-            }
-        };
+        <div class="flex flex-col h-full w-full max-w-7xl mx-auto backdrop-blur-sm">
 
-        // --- 4. RENDER THE NAVBAR HTML ---
-        const renderNavbar = (user, userData, pages, isPrivilegedUser) => {
-            const container = document.getElementById('navbar-container');
-            if (!container) return; // Should not happen, but safe check
-
-            const logoPath = "/images/logo.png"; 
-            const tabsHtml = Object.values(pages || {}).map(page => {
-                const isActive = isTabActive(page.url);
-                const activeClass = isActive ? 'active' : '';
-                const iconClasses = getIconClass(page.icon);
-                return `<a href="${page.url}" class="nav-tab ${activeClass}"><i class="${iconClasses} mr-2"></i>${page.name}</a>`;
-            }).join('');
-
-            // --- AI Agent Selector HTML (Only for Privileged User) ---
-            const agentOptionsHtml = Object.keys(AGENT_CATEGORIES).map(key => 
-                `<option value="${key}" ${key === currentAgent ? 'selected' : ''}>${key}</option>`
-            ).join('');
-
-            const aiAgentButton = isPrivilegedUser ? `
-                <div class="relative flex-shrink-0 mr-4">
-                    <button id="ai-toggle" title="AI Agent (Ctrl+A)" class="w-8 h-8 rounded-full border border-indigo-600 bg-indigo-700/50 flex items-center justify-center text-indigo-300 hover:bg-indigo-600 hover:text-white transition">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i>
-                    </button>
-                </div>
-            ` : '';
-
-            // --- Auth Views ---
-            const loggedOutView = `
-                <div class="relative flex-shrink-0">
-                    <button id="auth-toggle" class="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-700 transition logged-out-auth-toggle">
-                        <i class="fa-solid fa-user"></i>
-                    </button>
-                    <div id="auth-menu-container" class="auth-menu-container closed">
-                        <a href="/authentication.html" class="auth-menu-link">
-                            <i class="fa-solid fa-lock"></i>
-                            Authenticate
-                        </a>
+            <!-- Header and System Info Bar -->
+            <div id="agent-header-bar" class="flex justify-between items-center p-4 rounded-xl border-b border-amber-500/30 transition-opacity duration-1000">
+                <h1 id="agent-header-title" class="font-playfair text-3xl font-bold transition-colors duration-300" style="color: ${categoryColor};">
+                    4SP Agent - ${currentCategory.name}
+                </h1>
+                <div class="flex items-center space-x-4">
+                    <div class="text-sm text-neutral-300 font-geist">
+                        <p>${state.locationName}</p>
+                        <p id="current-time">${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}</p>
                     </div>
+                    <select onchange="handleCategoryChange(event)" class="bg-amber-600/50 backdrop-blur-sm border border-amber-500/50 text-white text-sm rounded-lg p-2 font-geist cursor-pointer focus:ring-amber-500 focus:border-amber-500 transition-all duration-300">
+                        ${Object.entries(AGENT_CATEGORIES).map(([key, cat]) => `
+                            <option value="${key}" ${key === state.selectedCategory ? 'selected' : ''}>${cat.name}</option>
+                        `).join('')}
+                    </select>
+                    <button onclick="toggleAgent()" class="p-2 bg-neutral-700/50 hover:bg-neutral-600/50 backdrop-blur-sm rounded-full transition-all text-white">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
                 </div>
-            `;
+            </div>
 
-            const loggedInView = (user, userData) => {
-                const photoURL = user.photoURL || userData?.photoURL;
-                const username = userData?.username || user.displayName || 'User';
-                const email = user.email || 'No email';
-                const initial = username.charAt(0).toUpperCase();
+            <!-- Chat Messages Area -->
+            <div id="chat-messages-container" class="flex-grow overflow-hidden p-2 md:p-6 transition-opacity duration-1000">
+                <div id="chat-content" class="h-full overflow-y-auto space-y-4 pr-3">
+                    <!-- Chat messages will be dynamically added here -->
+                </div>
+            </div>
 
-                const avatar = photoURL ?
-                    `<img src="${photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">` :
-                    `<div class="initial-avatar w-8 h-8 rounded-full text-sm font-semibold">${initial}</div>`;
+            <!-- Input Bar Container (Slides in from bottom) -->
+            <div id="chat-input-container" class="w-full pb-4 pt-2 transition-transform duration-500">
+                <form id="chat-form" onsubmit="handleChatSubmit(event)" class="flex flex-col bg-neutral-800/70 backdrop-blur-lg rounded-2xl p-4 shadow-2xl border border-neutral-700/50">
 
-                return `
-                    ${aiAgentButton}
-                    <div class="relative flex-shrink-0">
-                        <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
-                            ${avatar}
+                    <!-- File Preview & Action Buttons -->
+                    <div class="flex justify-between items-center mb-2">
+                        <div id="file-upload-preview" class="flex items-center space-x-2 h-10 overflow-hidden">
+                            <!-- Preview content goes here -->
+                        </div>
+                        <label for="file-upload" class="cursor-pointer p-2 rounded-full hover:bg-neutral-600/50 transition-all">
+                            <input type="file" id="file-upload" accept="image/*, .txt, .pdf" onchange="handleFileSelect(event)" class="hidden">
+                            <svg id="attach-file-icon" class="w-6 h-6 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.57 6.57a4.5 4.5 0 01-6.364-6.364l6.57-6.57a3 3 0 014.243 4.243l-6.57 6.57a1.5 1.5 0 01-2.121-2.121l6.57-6.57"></path></svg>
+                        </label>
+                    </div>
+
+                    <!-- Textarea and Send Button -->
+                    <div class="flex items-end space-x-3">
+                        <textarea
+                            id="chat-input-textarea"
+                            class="flex-grow p-3 bg-neutral-900/50 backdrop-blur-sm border border-neutral-700/50 rounded-xl text-white font-geist font-light text-base focus:ring-amber-500 focus:border-amber-500 resize-none"
+                            placeholder="Type your question (max 5000 characters)..."
+                            rows="1"
+                            maxlength="5000"
+                            oninput="this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px';"
+                            onpaste="handlePaste(event)"
+                        ></textarea>
+                        <button type="submit" class="p-3 rounded-full bg-amber-500 text-neutral-900 shadow-lg hover:bg-amber-400 transition-all duration-300 transform active:scale-95" title="Send Message">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                         </button>
-                        <div id="auth-menu-container" class="auth-menu-container closed">
-                            <div class="px-3 py-2 border-b border-gray-700 mb-2">
-                                <p class="text-sm font-semibold text-white truncate">${username}</p>
-                                <p class="text-xs text-gray-400 truncate">${email}</p>
-                            </div>
-                            <a href="/logged-in/dashboard.html" class="auth-menu-link">
-                                <i class="fa-solid fa-house-user"></i>
-                                Dashboard
-                            </a>
-                            <a href="/logged-in/settings.html" class="auth-menu-link">
-                                <i class="fa-solid fa-gear"></i>
-                                Settings
-                            </a>
-                            <button id="logout-button" class="auth-menu-button text-red-400 hover:bg-red-900/50 hover:text-red-300">
-                                <i class="fa-solid fa-right-from-bracket"></i>
-                                Log Out
-                            </button>
-                        </div>
                     </div>
-                `;
-            };
+                </form>
+            </div>
+        </div>
+    `;
 
-            // --- Assemble Final Navbar HTML ---
-            container.innerHTML = `
-                <header class="auth-navbar">
-                    <nav>
-                        <a href="/" class="flex items-center space-x-2 flex-shrink-0">
-                            <img src="${logoPath}" alt="4SP Logo" class="h-8 w-auto">
-                        </a>
-
-                        <div class="tab-wrapper">
-                            <button id="glide-left" class="scroll-glide-button hidden"><i class="fa-solid fa-chevron-left"></i></button>
-
-                            <div class="tab-scroll-container">
-                                ${tabsHtml}
-                            </div>
-                            
-                            <button id="glide-right" class="scroll-glide-button hidden"><i class="fa-solid fa-chevron-right"></i></button>
-                        </div>
-
-                        ${user ? loggedInView(user, userData) : loggedOutView}
-                    </nav>
-                </header>
-            `;
-
-            // --- Append AI Modal HTML to the Body ---
-            if (isPrivilegedUser) {
-                let aiModal = document.getElementById('ai-modal');
-                if (!aiModal) {
-                    aiModal = document.createElement('div');
-                    aiModal.id = 'ai-modal';
-                    aiModal.classList.add('ai-modal');
-                    aiModal.innerHTML = `
-                        <div class="ai-header">
-                            <div class="text-sm font-bold">
-                                AI Agent: 
-                                <select id="agent-selector" class="ai-agent-select">${agentOptionsHtml}</select>
-                            </div>
-                            <button id="ai-close-button" class="text-gray-400 hover:text-white transition">
-                                <i class="fa-solid fa-xmark"></i>
-                            </button>
-                        </div>
-                        <div id="ai-chat-area" class="ai-chat-area">
-                            <p class="ai-agent-message">Hello! I'm the **${currentAgent}** agent. Ask me anything. Remember, you can change my persona using the dropdown above!</p>
-                        </div>
-                        <div class="ai-input-area">
-                            <form id="ai-chat-form">
-                                <textarea id="ai-input" placeholder="Type your message..." rows="1"></textarea>
-                                <button type="submit" id="ai-send-button"><i class="fa-solid fa-paper-plane mr-1"></i> Send</button>
-                            </form>
-                        </div>
-                    `;
-                    document.body.appendChild(aiModal);
-                }
-            }
-
-            // --- 5. SETUP EVENT LISTENERS ---
-            setupEventListeners(user, isPrivilegedUser);
-
-            // Auto-scroll to the active tab
-            const activeTab = document.querySelector('.nav-tab.active');
-            const tabContainer = document.querySelector('.tab-scroll-container');
-            if (activeTab && tabContainer) {
-                tabContainer.scrollLeft = activeTab.offsetLeft - (tabContainer.offsetWidth / 2) + (activeTab.offsetWidth / 2);
-            }
-            
-            updateScrollGilders();
-        };
-
-        // --- NEW: AI GENERATIVE MODEL API CALL LOGIC (Using standard fetch/retry) ---
-        
-        /**
-         * Exponential backoff retry logic for the API call.
-         */
-        const fetchWithRetry = async (url, options, retries = 3) => {
-            for (let i = 0; i < retries; i++) {
-                try {
-                    const response = await fetch(url, options);
-                    if (!response.ok) {
-                        const errorBody = await response.text();
-                        throw new Error(`API Error ${response.status}: ${errorBody}`);
-                    }
-                    return response;
-                } catch (error) {
-                    if (i < retries - 1) {
-                        const delay = Math.pow(2, i) * 1000; // 1s, 2s, 4s delay
-                        // console.warn(`Retrying fetch (attempt ${i + 2}) in ${delay / 1000}s...`); // Removed console log
-                        await new Promise(res => setTimeout(res, delay));
-                    } else {
-                        throw error;
-                    }
-                }
-            }
-        };
-
-        const handleChatSubmit = async (e) => {
-            e.preventDefault();
-            const input = document.getElementById('ai-input');
-            const chatArea = document.getElementById('ai-chat-area');
-            const sendButton = document.getElementById('ai-send-button');
-            const userQuery = input.value.trim();
-
-            if (!userQuery) return;
-
-            // 1. Display user message and clear input
-            const userMessageDiv = document.createElement('p');
-            userMessageDiv.classList.add('ai-chat-message', 'ai-user-message');
-            userMessageDiv.textContent = userQuery;
-            chatArea.appendChild(userMessageDiv);
-            chatArea.scrollTop = chatArea.scrollHeight;
-            input.value = '';
-            input.disabled = true;
-            sendButton.disabled = true;
-
-            // 2. Add loading indicator
-            const loadingDiv = document.createElement('p');
-            loadingDiv.classList.add('ai-loading-indicator');
-            loadingDiv.textContent = 'Agent is thinking...';
-            chatArea.appendChild(loadingDiv);
-            chatArea.scrollTop = chatArea.scrollHeight;
-
-            try {
-                // 3. Get system context
-                const systemInfo = await getSystemInfo();
-                const baseInstruction = AGENT_CATEGORIES[currentAgent];
-                const systemPrompt = `You are acting as the '${currentAgent}' agent with the following persona: ${baseInstruction}. You MUST tailor your response to this persona.\n\n[SYSTEM CONTEXT]\n${systemInfo.time}\n${systemInfo.timezone}\nGeneral Location: ${systemInfo.location}\n[END CONTEXT]`;
-                
-                const payload = {
-                    contents: [{ parts: [{ text: userQuery }] }],
-                    tools: [{ "googleSearch": {} }],
-                    systemInstruction: { parts: [{ text: systemPrompt }] },
-                };
-                
-                // FIX: Use the API key directly from the FIREBASE_CONFIG object
-                const apiKey = FIREBASE_CONFIG.apiKey;
-                if (!apiKey || apiKey.length < 5) {
-                    throw new Error("API Key is missing or invalid in FIREBASE_CONFIG.");
-                }
-
-                // 4. Call the Generative Model API (with retry logic)
-                const apiUrl = `${GEMINI_API_URL}${apiKey}`;
-                const response = await fetchWithRetry(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
-                const result = await response.json();
-                const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "I apologize, I could not process that request. The response was empty.";
-
-                // 5. Display agent response
-                const agentMessageDiv = document.createElement('p');
-                agentMessageDiv.classList.add('ai-chat-message', 'ai-agent-message');
-                // Use a simple replacement for bold markdown for better display
-                agentMessageDiv.innerHTML = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); 
-                
-                chatArea.removeChild(loadingDiv);
-                chatArea.appendChild(agentMessageDiv);
-
-            } catch (error) {
-                console.error("AI Agent Error:", error);
-                loadingDiv.textContent = 'Error: Failed to get response. Check the console.';
-                loadingDiv.style.color = 'red';
-            } finally {
-                chatArea.scrollTop = chatArea.scrollHeight;
-                input.disabled = false;
-                sendButton.disabled = false;
-                input.focus();
-            }
-        };
-
-        const setupEventListeners = (user, isPrivilegedUser) => {
-            const toggleButton = document.getElementById('auth-toggle');
-            const menu = document.getElementById('auth-menu-container');
-
-            // Scroll Glide Button setup
-            const tabContainer = document.querySelector('.tab-scroll-container');
-            const leftButton = document.getElementById('glide-left');
-            const rightButton = document.getElementById('glide-right');
-
-            const debouncedUpdateGilders = debounce(updateScrollGilders, 50);
-
-            if (tabContainer) {
-                const scrollAmount = tabContainer.offsetWidth * 0.8; 
-                tabContainer.addEventListener('scroll', debouncedUpdateGilders);
-                window.addEventListener('resize', debouncedUpdateGilders);
-                
-                if (leftButton) {
-                    leftButton.addEventListener('click', () => {
-                        tabContainer.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
-                    });
-                }
-                if (rightButton) {
-                    rightButton.addEventListener('click', () => {
-                        tabContainer.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-                    });
-                }
-            }
-
-            // Auth Toggle
-            if (toggleButton && menu) {
-                toggleButton.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    menu.classList.toggle('closed');
-                    menu.classList.toggle('open');
-                });
-            }
-
-            document.addEventListener('click', (e) => {
-                if (menu && menu.classList.contains('open') && !menu.contains(e.target) && e.target !== toggleButton) {
-                    menu.classList.add('closed');
-                    menu.classList.remove('open');
-                }
-            });
-
-            if (user) {
-                const logoutButton = document.getElementById('logout-button');
-                if (logoutButton) {
-                    logoutButton.addEventListener('click', () => {
-                        auth.signOut().catch(err => console.error("Logout failed:", err));
-                    });
-                }
-            }
-
-            // --- AI Agent Listeners (Only for privileged user) ---
-            if (isPrivilegedUser) {
-                const aiModal = document.getElementById('ai-modal');
-                const aiToggleButton = document.getElementById('ai-toggle');
-                const aiCloseButton = document.getElementById('ai-close-button');
-                const aiChatForm = document.getElementById('ai-chat-form');
-                const agentSelector = document.getElementById('agent-selector');
-                const aiInput = document.getElementById('ai-input');
-
-                // Toggle Button Click
-                if (aiToggleButton && aiModal) {
-                    aiToggleButton.addEventListener('click', () => {
-                        aiModal.classList.toggle('active');
-                        if (aiModal.classList.contains('active')) {
-                            aiInput.focus();
-                        }
-                    });
-                }
-                
-                // Close Button Click
-                if (aiCloseButton && aiModal) {
-                    aiCloseButton.addEventListener('click', () => {
-                        aiModal.classList.remove('active');
-                    });
-                }
-
-                // Agent Selector Change
-                if (agentSelector) {
-                    agentSelector.addEventListener('change', (e) => {
-                        currentAgent = e.target.value;
-                        const chatArea = document.getElementById('ai-chat-area');
-                        const welcomeDiv = document.createElement('p');
-                        welcomeDiv.classList.add('ai-agent-message');
-                        welcomeDiv.innerHTML = `**Agent Switched:** I am now the **${currentAgent}** agent. Ask away!`;
-                        chatArea.appendChild(welcomeDiv);
-                        chatArea.scrollTop = chatArea.scrollHeight;
-                    });
-                }
-
-                // Chat Form Submit
-                if (aiChatForm) {
-                    aiChatForm.addEventListener('submit', handleChatSubmit);
-                    
-                    // Allow Shift+Enter for new line, Enter for submit
-                    aiInput.addEventListener('keydown', (e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            handleChatSubmit(e);
-                        }
-                    });
-                }
-
-                // Control + A Activation
-                document.addEventListener('keydown', (e) => {
-                    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a' && !isFocusableElement()) {
-                        e.preventDefault();
-                        aiModal.classList.toggle('active');
-                        if (aiModal.classList.contains('active')) {
-                            aiInput.focus();
-                        }
-                    }
-                });
-            }
-        };
-
-        // --- 6. AUTH STATE LISTENER ---
-        auth.onAuthStateChanged(async (user) => {
-            let isPrivilegedUser = false;
-            
-            if (user) {
-                // Check for the privileged user email
-                isPrivilegedUser = user.email === PRIVILEGED_EMAIL;
-
-                // User is signed in. Fetch their data from Firestore.
-                try {
-                    const userDoc = await db.collection('users').doc(user.uid).get();
-                    const userData = userDoc.exists ? userDoc.data() : null;
-                    renderNavbar(user, userData, pages, isPrivilegedUser);
-                } catch (error) {
-                    console.error("Error fetching user data:", error);
-                    renderNavbar(user, null, pages, isPrivilegedUser); // Render even if Firestore fails
-                }
-            } else {
-                // User is signed out.
-                renderNavbar(null, null, pages, false);
-                // Attempt to sign in anonymously for a seamless guest experience.
-                auth.signInAnonymously().catch((error) => {
-                    if (error.code !== 'auth/operation-not-allowed') {
-                        console.error("Anonymous sign-in error:", error);
-                    }
-                });
-            }
-        });
-
-        // --- FINAL SETUP ---
-        // Create a div for the navbar to live in if it doesn't exist.
-        if (!document.getElementById('navbar-container')) {
-            const navbarDiv = document.createElement('div');
-            navbarDiv.id = 'navbar-container';
-            document.body.prepend(navbarDiv);
+    // Update time every second
+    if (state.isAgentActive) {
+        const timeEl = document.getElementById('current-time');
+        if (timeEl) {
+            setInterval(() => {
+                timeEl.textContent = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+            }, 1000);
         }
-        // Inject styles before anything else is rendered for best stability
-        injectStyles();
-    };
+    }
+}
 
-    // --- START THE PROCESS ---
-    document.addEventListener('DOMContentLoaded', run);
+/**
+ * Handles the paste event, checking the character count for file conversion.
+ */
+function handlePaste(e) {
+    const pasteText = e.clipboardData.getData('text');
+    if (pasteText.length > 1000 && !state.uploadedFile) {
+        e.preventDefault();
+        
+        // Convert the large paste content into a simulated file
+        state.uploadedFile = {
+            name: 'paste.txt',
+            type: 'text/plain',
+            data: btoa(pasteText), // Base64 encode the large text content
+            size: pasteText.length
+        };
+        
+        // Update the textarea with a short reference and update preview
+        const truncatedText = pasteText.substring(0, 100) + '... (Full text attached as paste.txt)';
+        document.getElementById('chat-input-textarea').value = truncatedText;
 
-})();
+        const previewEl = document.getElementById('file-upload-preview');
+        previewEl.innerHTML = `<span class="text-xs text-amber-300/80 mr-2">Attached File: paste.txt</span>`;
+        document.getElementById('attach-file-icon').classList.add('text-amber-500');
+
+        // Allow the user to submit now
+        document.getElementById('chat-input-textarea').dispatchEvent(new Event('input'));
+    }
+}
+
+
+// =========================================================================
+// --- INITIALIZATION & SETUP ---
+// =========================================================================
+
+/**
+ * The main run function executed after DOM content is loaded.
+ */
+const run = async () => {
+    // 1. Inject Styles
+    injectStyles();
+
+    // 2. Initialize Firebase
+    try {
+        app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+        setLogLevel('error'); // Set log level to 'error' to avoid noisy console output
+    } catch (e) {
+        console.error('Firebase initialization failed:', e);
+        return;
+    }
+
+    // 3. Perform Initial Geolocation
+    state.locationName = await getLocationName();
+
+    // 4. Create AI Agent Toggle Button in the Navbar container
+    const navbarDiv = document.getElementById('navbar-container');
+    if (!navbarDiv) {
+        // Create a div for the navbar/utility bar if it doesn't exist
+        const newNavbarDiv = document.createElement('div');
+        newNavbarDiv.id = 'navbar-container';
+        document.body.prepend(newNavbarDiv);
+        navbarDiv = newNavbarDiv;
+    }
+
+    // Create a basic floating utility button for demonstration (as the navigation context is removed)
+    const agentButton = document.createElement('button');
+    agentButton.textContent = '4SP Agent';
+    agentButton.className = 'fixed bottom-4 right-4 z-[1000] p-3 rounded-full bg-amber-600 text-white font-bold shadow-2xl hover:bg-amber-500 transition-all transform active:scale-95';
+    agentButton.onclick = toggleAgent;
+    document.body.appendChild(agentButton);
+
+    // 5. Handle Authentication
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            userId = user.uid;
+            // Attempt to get username from Firestore (assuming a 'users' collection with doc ID = uid)
+            try {
+                const userDocRef = doc(db, 'artifacts', appId, 'users', userId, 'profile', 'data');
+                const userDoc = await getDoc(userDocRef);
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    username = userData.username || userData.email || 'Agent User';
+                }
+            } catch (error) {
+                console.error("Error fetching user data for username:", error);
+                username = user.email || 'Agent User';
+            }
+        } else {
+            // User is signed out.
+            // Attempt to sign in anonymously for a seamless guest experience.
+            try {
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Anonymous sign-in error:", error);
+            }
+        }
+        // Prefill the welcome text with the resolved username for the first activation
+        const phraseIndex = Math.floor(Math.random() * AGENT_WELCOME_PHRASES.length);
+        state.currentWelcomeText = AGENT_WELCOME_PHRASES[phraseIndex].replace('{username}', username);
+        renderAgentModal();
+    });
+
+    // 6. Make core functions globally accessible for the HTML attributes
+    window.toggleAgent = toggleAgent;
+    window.handleChatSubmit = handleChatSubmit;
+    window.handleCategoryChange = handleCategoryChange;
+    window.handleFileSelect = handleFileSelect;
+    window.handlePaste = handlePaste;
+};
+
+// --- START THE PROCESS ---
+document.addEventListener('DOMContentLoaded', run);
