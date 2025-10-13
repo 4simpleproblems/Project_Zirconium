@@ -10,6 +10,10 @@
  * - Highlight/glow color changed to f78725 (orange).
  * - "AI Mode" renamed to "4SP AI Agent".
  * - Focus Topics replaced with Agent Categories (with new options).
+ * * NEW UPDATES:
+ * - Chat bubbles now comfortably wrap content (width: fit-content).
+ * - All markdown parsing/transformation (bold, headings, lists) has been removed.
+ * - Gemini responses now display as pure, raw text (except for code blocks).
  */
 (function() {
     // =========================================================================
@@ -44,11 +48,6 @@
     let currentSubject = 'General';
     let chatHistory = [];
     let attachedFiles = [];
-
-    // --- EXPANDED SYMBOL MAP ---
-    const latexSymbolMap = {
-        '\\alpha':'α','\\beta':'β','\\gamma':'γ','\\delta':'δ','\\epsilon':'ε','\\zeta':'ζ','\\eta':'η','\\theta':'θ','\\iota':'ι','\\kappa':'κ','\\lambda':'λ','\\mu':'μ','\\nu':'ν','\\xi':'ξ','\\omicron':'ο','\\pi':'π','\\rho':'ρ','\\sigma':'σ','\\tau':'τ','\\upsilon':'υ','\\phi':'φ','\\chi':'χ','\\psi':'ψ','\\omega':'ω','\\Gamma':'Γ','\\Delta':'Δ','\\Theta':'Θ','\\Lambda':'Λ','\\Xi':'Ξ','\\Pi':'Π','\\Sigma':'Σ','\\Upsilon':'Υ','\\Phi':'Φ','\\Psi':'Ψ','\\Omega':'Ω','\\pm':'±','\\times':'×','\\div':'÷','\\cdot':'·','\\ast':'∗','\\cup':'∪','\\cap':'∩','\\in':'∈','\\notin':'∉','\\subset':'⊂','\\supset':'⊃','\\subseteq':'⊆','\\supseteq':'⊇','\\le':'≤','\\ge':'≥','\\ne':'≠','\\approx':'≈','\\equiv':'≡','\\leftarrow':'←','\\rightarrow':'→','\\uparrow':'↑','\\downarrow':'↓','\\leftrightarrow':'↔','\\Leftarrow':'⇐','\\Rightarrow':'⇒','\\Leftrightarrow':'⇔','\\forall':'∀','\\exists':'∃','\\nabla':'∇','\\partial':'∂','\\emptyset':'∅','\\infty':'∞','\\degree':'°','\\angle':'∠','\\hbar':'ħ','\\ell':'ℓ','\\therefore':'∴','\\because':'∵','\\bullet':'•','\\ldots':'…','\\prime':'′','\\hat':'^'
-    };
 
     // --- DAILY LIMITS CONFIGURATION ---
     const DAILY_LIMITS = { images: 5 };
@@ -287,6 +286,7 @@
             const text = data.candidates[0].content.parts[0].text;
             chatHistory.push({ role: "model", parts: [{ text: text }] });
             
+            // Use the simplified parseGeminiResponse function
             const contentHTML = `<div class="ai-response-content">${parseGeminiResponse(text)}</div>`;
             responseBubble.style.opacity = '0';
             setTimeout(() => {
@@ -476,7 +476,6 @@
         const menu = document.createElement('div');
         menu.id = 'ai-action-menu';
         const attachments = [ { id: 'photo', icon: '📷', label: 'Photo', type: 'images' }, { id: 'file', icon: '📎', label: 'File', type: 'file' } ];
-        // const subjects = ['General','Mathematics','Science','History','English','Programming']; // Old subjects
         const categories = AGENT_CATEGORIES; // New categories
         
         attachments.forEach(opt => {
@@ -624,10 +623,17 @@
     
     function fadeOutWelcomeMessage(){const container=document.getElementById("ai-container");if(container&&!container.classList.contains("chat-active")){container.classList.add("chat-active")}}
     function escapeHTML(str){const p=document.createElement("p");p.textContent=str;return p.innerHTML}
+
+    /**
+     * Parses the Gemini response. It only handles code block extraction,
+     * HTML escapes the remaining text, and replaces newlines with <br>.
+     * All markdown (bold, lists, headings) is removed to show raw text.
+     */
     function parseGeminiResponse(text) {
         let html = text;
         const codeBlocks = [];
 
+        // 1. Extract code blocks and replace with placeholders
         html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
             const trimmedCode = code.trim();
             const lines = trimmedCode.split('\n').length;
@@ -647,16 +653,13 @@
             return "%%CODE_BLOCK%%";
         });
 
+        // 2. Escape the remaining text (to prevent XSS and render raw markdown characters)
         html = escapeHTML(html);
-        html = html.replace(/^### (.*$)/gm, "<h3>$1</h3>")
-                   .replace(/^## (.*$)/gm, "<h2>$1</h2>")
-                   .replace(/^# (.*$)/gm, "<h1>$1</h1>");
-        html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-                   .replace(/\*(.*?)\*/g, "<em>$1</em>");
-        html = html.replace(/^(?:\*|-)\s(.*$)/gm, "<li>$1</li>");
-        html = html.replace(/(<\/li>\s*<li>)/g, "</li><li>")
-                   .replace(/((<li>.*<\/li>)+)/gs, "<ul>$1</ul>");
+
+        // 3. Convert newlines to breaks (Keep basic formatting)
         html = html.replace(/\n/g, "<br>");
+
+        // 4. Replace code block placeholders
         html = html.replace(/%%CODE_BLOCK%%/g, () => codeBlocks.shift());
         
         return html;
@@ -697,6 +700,8 @@
             #ai-char-counter { position: fixed; bottom: 15px; right: 30px; font-size: 0.9em; font-family: 'Geist', sans-serif; color: #aaa; transition: color 0.2s; z-index: 2147483647; }
             #ai-char-counter.limit-exceeded { color: #e57373; font-weight: bold; }
             #ai-response-container { flex: 1 1 auto; overflow-y: auto; width: 100%; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; padding: 70px 20px 20px 20px; -webkit-mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%); mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%);}
+            
+            /* FIX 1: Allow bubble to comfortably wrap content */
             .ai-message-bubble { 
                 background: rgba(15,15,18,.8); 
                 border: 1px solid rgba(255,255,255,.1); 
@@ -706,14 +711,24 @@
                 backdrop-filter: blur(15px); 
                 -webkit-backdrop-filter: blur(15px); 
                 animation: message-pop-in .5s cubic-bezier(.4,0,.2,1) forwards; 
-                max-width: 90%; 
                 line-height: 1.6; 
                 overflow-wrap: break-word; 
                 transition: opacity 0.3s ease-in-out;
-                text-align: left; /* CHANGED: text alignment */
+                text-align: left;
+                
+                /* KEY CHANGES for wrapping content */
+                display: inline-block; 
+                max-width: 650px; 
             }
-            .user-message { align-self: flex-end; background: rgba(40,45,50,.8); }
-            .gemini-response { animation: glow 4s infinite; }
+            .user-message { 
+                align-self: flex-end; 
+                background: rgba(40,45,50,.8); 
+                margin-left: auto; /* Pushes to the right */
+            }
+            .gemini-response { 
+                margin-right: auto; /* Ensures it stays on the left */
+            }
+
             .gemini-response.loading { display: flex; justify-content: center; align-items: center; min-height: 60px; max-width: 100px; padding: 15px; background: rgba(15,15,18,.8); animation: unified-glow 4s linear infinite; } /* Changed animation to unified-glow */
             #ai-input-wrapper { display: flex; flex-direction: column; flex-shrink: 0; position: relative; z-index: 2; transition: all .4s cubic-bezier(.4,0,.2,1); margin: 15px auto; width: 90%; max-width: 800px; border-radius: 25px; background: rgba(10,10,10,.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,.2); }
             #ai-input-wrapper::before, #ai-input-wrapper::after { content: ''; position: absolute; top: -1px; left: -1px; right: -1px; bottom: -1px; border-radius: 26px; z-index: -1; transition: opacity 0.5s ease-in-out; }
