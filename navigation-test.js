@@ -7,14 +7,16 @@
  * smart paste handling, and refined animations.
  *
  * --- UPDATES ---
- * 1. API Key Integration: Now uses the 'apiKey' from the FIREBASE_CONFIG object.
- * 2. Typography: All fonts converted to 'Merriweather' (serif, for body) and 'Inter'
- * (sans-serif, for UI/code—used as a high-quality replacement for 'Geist').
+ * 1. API Key Integration: Now uses the 'apiKey' stored explicitly in the FIREBASE_CONFIG object,
+ * just like the navigation.js file.
+ * 2. Typography: Fonts updated to use 'Merriweather' (serif, for body text) and 'Inter'
+ * (sans-serif, for UI/code, replacing Geist).
  */
 (function() {
     // =========================================================================
-    // >> FIREBASE CONFIGURATION <<
+    // >> FIREBASE CONFIGURATION (For API Key) <<
     // This configuration object is used to securely access the Gemini API Key.
+    // NOTE: This MUST match the config in navigation.js.
     // =========================================================================
     const FIREBASE_CONFIG = {
         // This apiKey is now used for both Firebase Auth and the Gemini API calls.
@@ -29,7 +31,7 @@
 
     // --- CONFIGURATION ---
     // Use the API key from the Firebase config
-    const API_KEY = FIREBASE_CONFIG.apiKey; 
+    const API_KEY = FIREBASE_CONFIG.apiKey;
     const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite-preview-09-2025:generateContent?key=${API_KEY}`;
     const MAX_INPUT_HEIGHT = 200;
     const CHAR_LIMIT = 500;
@@ -148,9 +150,8 @@
     function injectStyles() {
         const style = document.createElement('style');
         style.type = 'text/css';
-        // Applying Merriweather for body text and Inter for UI elements and code
         const css = `
-            /* Load Merriweather from Google Fonts */
+            /* Load Merriweather and Inter from Google Fonts */
             @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&display=swap');
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
@@ -166,7 +167,7 @@
                 --shadow-color: rgba(0, 0, 0, 0.4);
             }
 
-            /* Base font set to Merriweather for a more academic/readable feel */
+            /* Base font set to Merriweather (serif) for body text */
             #ai-activation-container, #ai-activation-container * {
                 box-sizing: border-box;
                 font-family: 'Merriweather', serif;
@@ -258,7 +259,7 @@
                 display: flex;
                 flex-direction: column;
                 gap: 15px;
-                /* Using Inter as a clean, readable font for chat messages */
+                /* Using Inter (sans-serif) for cleaner message reading */
                 font-family: 'Inter', system-ui, sans-serif;
                 font-size: 0.95rem;
                 line-height: 1.4;
@@ -355,7 +356,7 @@
                 flex-direction: column;
                 gap: 8px;
             }
-            
+
             .input-box {
                 display: flex;
                 align-items: flex-end;
@@ -616,15 +617,15 @@
             }
 
             /* ANIMATIONS */
-            @keyframes glow { 
-                0%,100% { box-shadow: 0 0 5px rgba(255,255,255,.15), 0 0 10px rgba(255,255,255,.1); } 
-                50% { box-shadow: 0 0 10px rgba(255,255,255,.25), 0 0 20px rgba(255,255,255,.2); } 
+            @keyframes glow {
+                0%,100% { box-shadow: 0 0 5px rgba(255,255,255,.15), 0 0 10px rgba(255,255,255,.1); }
+                50% { box-shadow: 0 0 10px rgba(255,255,255,.25), 0 0 20px rgba(255,255,255,.2); }
             }
-            @keyframes gemini-glow { 
-                0%,100% { box-shadow: 0 0 8px 2px var(--ai-blue); } 
-                25% { box-shadow: 0 0 8px 2px var(--ai-green); } 
-                50% { box-shadow: 0 0 8px 2px var(--ai-yellow); } 
-                75% { box-shadow: 0 0 8px 2px var(--ai-red); } 
+            @keyframes gemini-glow {
+                0%,100% { box-shadow: 0 0 8px 2px var(--ai-blue); }
+                25% { box-shadow: 0 0 8px 2px var(--ai-green); }
+                50% { box-shadow: 0 0 8px 2px var(--ai-yellow); }
+                75% { box-shadow: 0 0 8px 2px var(--ai-red); }
             }
 
             /* Responsive Adjustments */
@@ -665,7 +666,7 @@
 
         chatWindow = document.createElement('div');
         chatWindow.className = 'chat-window';
-        
+
         chatWindow.innerHTML = `
             <div class="chat-header">
                 <span>Gemini Assistant</span>
@@ -700,7 +701,7 @@
                 </div>
             </div>
             <input type="file" style="display:none;" accept="image/*, text/*" class="file-input">
-            
+
             <div class="subject-menu">
                 <label>FILE & ROLE</label>
                 <button class="subject-menu-item" data-action="file-upload">Attach File (Image/Text)</button>
@@ -732,19 +733,19 @@
         isAIAssistantActive = !isAIAssistantActive;
         mainButton.classList.toggle('active', isAIAssistantActive);
         chatWindow.classList.toggle('active', isAIAssistantActive);
-        
+
         if (isAIAssistantActive) {
             inputArea.focus();
         }
     }
-    
+
     /**
      * Displays a temporary message box instead of alert.
      */
     function showMessageBox(message) {
         const msgBox = document.createElement('div');
         msgBox.style.cssText = `
-            position: fixed; top: 10px; right: 10px; background-color: #333; 
+            position: fixed; top: 10px; right: 10px; background-color: #333;
             color: white; padding: 10px 15px; border-radius: 8px; z-index: 10002;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-size: 0.9rem;
             opacity: 0; transition: opacity 0.5s ease-in-out;
@@ -771,12 +772,12 @@
         messageDiv.innerHTML = text;
         historyContainer.appendChild(messageDiv);
         historyContainer.scrollTop = historyContainer.scrollHeight;
-        
+
         if (role === 'ai') {
             // Add copy functionality to AI messages
             const actionsDiv = document.createElement('div');
             actionsDiv.className = 'message-actions';
-            
+
             const copyButton = document.createElement('button');
             copyButton.innerHTML = copyIconSVG;
             copyButton.title = 'Copy code';
@@ -785,7 +786,7 @@
 
             messageDiv.appendChild(actionsDiv);
         }
-        
+
         return messageDiv;
     }
 
@@ -825,7 +826,7 @@
                 button.innerHTML = copyIconSVG;
                 button.title = 'Copy code';
             }, 2000);
-            
+
             showMessageBox('Content copied to clipboard!');
         } catch (err) {
             console.error('Could not copy text: ', err);
@@ -846,7 +847,7 @@
                                     .replace(/</g, '&lt;')
                                     .replace(/>/g, '&gt;');
             const languageLabel = lang.charAt(0).toUpperCase() + lang.slice(1);
-            
+
             // Note: The copy button logic for code blocks is handled in copyCodeToClipboard
             // This structure is for display only
             return `
@@ -879,7 +880,7 @@
 
         return text.trim();
     }
-    
+
     /**
      * Calls the Gemini API to generate content.
      */
@@ -891,10 +892,10 @@
 
         const userText = inputArea.textContent.trim();
         const systemInstruction = systemInstructionInput.textContent.trim();
-        
+
         // Add user message to history
         appendMessage(userText, 'user');
-        
+
         // Clear input area and file/system instruction for next use
         inputArea.textContent = '';
         updateCharCount();
@@ -910,12 +911,12 @@
                 }
             });
             // Clear the file from the state after preparing the payload
-            currentFile = null; 
+            currentFile = null;
         }
 
         // Construct the history payload: The new user prompt + full history
         const contents = [...chatHistory, { role: "user", parts: userParts }];
-        
+
         const payload = {
             contents: contents,
         };
@@ -939,7 +940,7 @@
 
         // Create a streaming AI message container
         const aiMessageDiv = appendMessage(`<div class="loading-dots"><div></div><div></div><div></div></div>`, 'ai', true);
-        
+
         try {
             const response = await fetchWithRetry(API_URL, options);
             const result = await response.json();
@@ -957,7 +958,7 @@
                     { role: "user", parts: userParts },
                     { role: "model", parts: [{ text: rawText }] }
                 );
-                
+
             } else {
                 aiMessageDiv.textContent = "Sorry, I received an empty or invalid response from the AI.";
                 console.error("AI response error:", result);
@@ -974,7 +975,7 @@
     }
 
     // --- EVENT HANDLERS ---
-    
+
     /**
      * Updates the character count display and send button state.
      */
@@ -998,7 +999,7 @@
     function handlePaste(e) {
         e.preventDefault();
         const text = e.clipboardData.getData('text/plain');
-        
+
         // Calculate remaining space
         const currentLength = inputArea.textContent.length;
         const availableSpace = CHAR_LIMIT - currentLength;
@@ -1033,7 +1034,7 @@
                 mimeType: file.type,
                 base64Data: base64Data
             };
-            
+
             // Update UI
             filePreviewContainer.classList.remove('hidden');
             filePreviewContainer.querySelector('.file-info').textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
@@ -1070,7 +1071,7 @@
             const isHidden = !systemInstructionInput.offsetHeight;
             systemInstructionInput.style.display = isHidden ? 'block' : 'none';
             systemInstructionInput.focus();
-            
+
             // Check if it should be active (if instruction is set)
             if (!isHidden && systemInstructionInput.textContent.trim().length > 0) {
                 systemInstructionInput.classList.add('active');
@@ -1079,7 +1080,7 @@
                 systemInstructionInput.classList.remove('active');
                 hasSystemInstruction = false;
             }
-            
+
             // Close the main menu
             subjectMenu.classList.remove('active');
         }
@@ -1092,7 +1093,7 @@
         mainButton.addEventListener('click', toggleAssistant);
         closeButton.addEventListener('click', toggleAssistant);
         sendButton.addEventListener('click', generateContent);
-        
+
         inputArea.addEventListener('input', updateCharCount);
         inputArea.addEventListener('paste', handlePaste);
         inputArea.addEventListener('keydown', (e) => {
@@ -1103,9 +1104,9 @@
                 }
             }
         });
-        
+
         fileInput.addEventListener('change', handleFileSelect);
-        
+
         // Remove file button
         chatWindow.querySelector('.remove-file-button').addEventListener('click', clearFileAttachment);
 
@@ -1115,20 +1116,20 @@
             subjectMenu.classList.toggle('active');
         });
         subjectMenu.addEventListener('click', handleSubjectMenuClick);
-        
+
         // System instruction input tracking
         systemInstructionInput.addEventListener('input', () => {
             hasSystemInstruction = systemInstructionInput.textContent.trim().length > 0;
             systemInstructionInput.classList.toggle('active', hasSystemInstruction);
         });
-        
+
         // Global click listener to close subject menu
         document.addEventListener('click', (e) => {
             if (!subjectMenu.contains(e.target) && e.target !== subjectMenuButton) {
                 subjectMenu.classList.remove('active');
             }
         });
-        
+
         // Adjust input area height
         inputArea.addEventListener('input', (e) => {
             inputArea.style.height = 'auto'; // Temporarily reset height
