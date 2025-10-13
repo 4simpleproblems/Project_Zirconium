@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4SP - DASHBOARD</title>
+    
+    <!-- Load Geist Font and TailwindCSS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.1.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../navigation-test.js"></script>
+
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        
+        // Import firebaseConfig from the sibling file.
+        import { firebaseConfig } from '../firebase-config.js';
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        const dateTimeElement = document.getElementById('date-time-display');
+        const redirectPath = '../index.html'; // Path to redirect if logged out
+
+        /**
+         * Updates the date and time display every second.
+         */
+        function updateDateTime() {
+            const now = new Date();
+            
+            // Format time (e.g., 04:20 PM:23)
+            const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+            const timeString = now.toLocaleTimeString('en-US', timeOptions);
+            
+            // Format date (e.g., Saturday, October 4, 2025)
+            const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const dateString = now.toLocaleDateString('en-US', dateOptions);
+
+            if (dateTimeElement) {
+                dateTimeElement.innerHTML = `
+                    <div class="text-7xl font-light">${timeString}</div>
+                    <div class="text-3xl font-thin mt-2">${dateString}</div>
+                `;
+            }
+        }
+
+        /**
+         * Handles user authentication state and redirects if logged out.
+         */
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                // User is signed out. Redirect immediately.
+                console.log("User logged out. Redirecting to:", redirectPath);
+                window.location.replace(redirectPath);
+            } else {
+                // User is signed in. Start the clock update.
+                console.log("User signed in. UID:", user.uid);
+                
+                // Set the initial time and then update it every second
+                updateDateTime();
+                setInterval(updateDateTime, 1000);
+            }
+        });
+
+        // Add CSS for minimal black screen look
+        document.head.insertAdjacentHTML('beforeend', `
+            <style>
+                /* Apply Geist font universally */
+                body { 
+                    font-family: 'Geist', sans-serif; 
+                    background-color: #000000;
+                    color: #FFFFFF;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    height: 100vh;
+                    margin: 0;
+                    text-align: center;
+                }
+                /* Ensure HTML and body take full viewport height */
+                html { height: 100%; }
+            </style>
+        `);
+
+    </script>
+</head>
+<body>
+    <div id="date-time-display" class="tracking-tighter p-8 rounded-xl bg-white/5 backdrop-blur-sm shadow-2xl">
+        <!-- Content will be injected by JavaScript -->
+        <p class="text-xl">Loading time and authentication check...</p>
+    </div>
+</body>
+</html>
