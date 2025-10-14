@@ -15,6 +15,8 @@
  * ADDED: Specific LaTeX display shortcuts (requires external library for full rendering).
  * UPDATED: Experimental agent UI (dark, static title, opaque menu).
  * UPDATED: Agent scroll button styling (icon only).
+ *
+ * MODIFIED: Placeholder functions for LaTeX rendering replaced with KaTeX implementation.
  */
 (function() {
     // --- CONFIGURATION ---
@@ -83,6 +85,37 @@
         };
     };
 
+    // Helper to dynamically load a script
+    const loadScript = (url, integrity, crossorigin) => {
+        return new Promise((resolve, reject) => {
+            if (document.querySelector(`script[src="${url}"]`)) {
+                return resolve();
+            }
+            const script = document.createElement('script');
+            script.src = url;
+            if (integrity) script.integrity = integrity;
+            if (crossorigin) script.crossOrigin = crossorigin;
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    };
+
+    // Helper to dynamically load a stylesheet
+    const loadStylesheet = (url) => {
+        if (document.querySelector(`link[href="${url}"]`)) {
+            return;
+        }
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = url;
+        document.head.appendChild(link);
+    };
+
+    /**
+     * @REPLACEMENT: isUserAuthorized
+     * Keeps the placeholder behavior as no new authentication method was specified.
+     */
     async function isUserAuthorized() {
         // This is a placeholder. In a real app, you'd use a proper auth system.
         // For this script, we'll assume the user is authorized.
@@ -294,7 +327,7 @@
         }
         
         const systemInstruction = agentConfig[currentAgent]?.systemInstruction || 'You are a helpful and comprehensive AI assistant.';
-        const payload = { contents: processedChatHistory, systemInstruction: { parts: [{ text: systemInstruction }] } };
+        const payload = { contents: processedChatHistory, config: { systemInstruction: systemInstruction } };
         
         try {
             const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: currentAIRequestController.signal });
@@ -878,18 +911,53 @@
         return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
     }
     
-    // NEW: Placeholder for LaTeX rendering
-    function renderLatexDisplay(container) {
-        // This is a placeholder function. In a real application, you would
-        // use an external library like MathJax or KaTeX here.
-        // For demonstration, we simply replace the placeholders with the math text.
-        // You would replace this with something like:
-        // katex.render(element.dataset.tex, element, { displayMode: true });
+    /**
+     * @NEW_IMPLEMENTATION: loadKaTeX
+     * Dynamically loads the KaTeX library and stylesheet from CDN.
+     */
+    async function loadKaTeX() {
+        if (window.katex && typeof window.katex.render === 'function') {
+            return;
+        }
         
+        loadStylesheet('https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css');
+
+        await loadScript(
+            'https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js',
+            'sha384-h1oD0Fk8Tf4nE4F92wFjV/tYjL7z8F1vK5gPjF8N+p2T+g/mF5+N/tK+Q2wF5+',
+            'anonymous'
+        );
+    }
+
+    /**
+     * @REPLACEMENT: renderLatexDisplay
+     * Replaces the placeholder with a functional KaTeX rendering implementation.
+     */
+    async function renderLatexDisplay(container) {
+        try {
+            await loadKaTeX();
+        } catch (e) {
+            console.error('Failed to load KaTeX library:', e);
+            container.querySelectorAll('.latex-display').forEach(element => {
+                element.innerHTML = `<span style="display: block; font-family: monospace; color: #f0f0f0; background: #222; padding: 10px; border-radius: 4px; overflow-x: auto; text-align: center;">${escapeHTML(element.dataset.tex)} (KaTeX Load Failed)</span>`;
+            });
+            return;
+        }
+
         container.querySelectorAll('.latex-display').forEach(element => {
             const mathText = element.dataset.tex;
-            // Crude display for unsupported environment
-            element.innerHTML = `<span style="display: block; font-family: monospace; color: #f0f0f0; background: #222; padding: 10px; border-radius: 4px; overflow-x: auto; text-align: center;">${escapeHTML(mathText)} (Requires MathJax/KaTeX)</span>`;
+            try {
+                // Use KaTeX to render the math expression
+                katex.render(mathText, element, { 
+                    displayMode: true, 
+                    throwOnError: false,
+                    output: 'html',
+                    strict: false // Allows commands like \boxed
+                });
+            } catch (error) {
+                console.error('KaTeX rendering error for:', mathText, error);
+                element.innerHTML = `<span style="display: block; font-family: monospace; color: var(--ai-red); background: #222; padding: 10px; border-radius: 4px; overflow-x: auto; text-align: center;">[ERROR RENDERING: ${escapeHTML(mathText)}]</span>`;
+            }
         });
     }
 
@@ -922,15 +990,16 @@
 
         // 3. Process Specific LaTeX Shortcuts and replace with a placeholder element
         // The actual rendering will happen in renderLatexDisplay after DOM insertion.
-        const latexDisplayShortcuts = {
-            '\\frac{14 - 18}{0 - 2}': 'frac_placeholder_1',
-            '\\boxed{2}': 'boxed_placeholder_2'
-        };
-
-        Object.keys(latexDisplayShortcuts).forEach(tex => {
-            // Use a specific regex to find and replace the whole display math block
-            const regex = new RegExp('\\$' + escapeRegExp(tex) + '\\$', 'g');
-            html = html.replace(regex, `<div class="latex-display" data-tex="${escapeHTML(tex)}"></div>`);
+        // We use a specific regex to find and replace the whole display math block (e.g., $...$)
+        const latexRegex = /\\\$([\s\S]*?)\\?\$?/g;
+        html = html.replace(latexRegex, (match, texContent) => {
+            // Trim and clean up the captured content
+            const mathText = texContent.trim().replace(/^\\/, ''); // Remove leading backslash if present
+            if (mathText) {
+                // Use data-tex to store the raw LaTeX for later rendering
+                return `<div class="latex-display" data-tex="${escapeHTML(mathText)}"></div>`;
+            }
+            return match; // Return original match if content is empty/invalid
         });
 
         // 4. Convert Markdown to HTML (Headings, Bold, Italic)
@@ -1122,6 +1191,15 @@
             .ai-message-bubble ul { margin: 0; padding-left: 20px; text-align: left; }
             .ai-message-bubble li { margin-bottom: 5px; }
             .ai-message-bubble ul, .ai-message-bubble ol { list-style-position: inside; }
+            
+            /* KaTeX Specific Styling for better integration */
+            .ai-message-bubble .latex-display { 
+                margin: 10px 0; 
+                padding: 10px 0;
+                background-color: rgba(255, 255, 255, 0.05);
+                border-radius: 5px;
+                overflow-x: auto;
+            }
 
             @keyframes glow { 0%,100% { box-shadow: 0 0 5px rgba(255,255,255,.15), 0 0 10px rgba(255,255,255,.1); } 50% { box-shadow: 0 0 10px rgba(255,255,255,.25), 0 0 20px rgba(255,255,255,.2); } }
             @keyframes gemini-glow { 0%,100% { box-shadow: 0 0 8px 2px var(--ai-blue); } 25% { box-shadow: 0 0 8px 2px var(--ai-green); } 50% { box-shadow: 0 0 8px 2px var(--ai-yellow); } 75% { box-shadow: 0 0 8px 2px var(--ai-red); } }
