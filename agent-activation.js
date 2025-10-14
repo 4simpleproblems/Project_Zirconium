@@ -1,22 +1,10 @@
 /**
  * agent-activation.js
  *
- * A feature-rich, self-contained script with a unified attachment/subject menu,
- * enhanced animations, intelligent chat history (token saving),
- * and advanced file previews. This version includes a character limit,
- * smart paste handling (including images), and refined animations.
- *
- * Updated with a redesigned horizontal "Agent" selection menu featuring scroll buttons
- * and fading edges. Each agent's detail view has a unique texture. The back/select
- * buttons are now square icons. The "Experimental" agent background animation is
- * now a continuous, smooth loop.
- *
- * ADDED: Image paste support.
- * ADDED: Specific LaTeX display shortcuts (requires external library for full rendering).
- * UPDATED: Experimental agent UI (dark, static title, opaque menu).
- * UPDATED: Agent scroll button styling (icon only).
- *
- * MODIFIED: Replaced placeholder functions (isUserAuthorized, location storage, renderLatexDisplay) with working/simulated implementations.
+ * MODIFIED: Refactored to remove Agent/Category system and implement a dynamic, context-aware AI persona.
+ * NEW: Added a Settings Menu to store user preferences (nickname, color, gender, age) using localStorage.
+ * NEW: The AI's system instruction (persona) now changes intelligently based on the content and tone of the user's latest message.
+ * UI: Fixed background and title colors. Replaced Agent button with a grey Settings button.
  */
 (function() {
     // --- CONFIGURATION ---
@@ -27,54 +15,34 @@
     const PASTE_TO_FILE_THRESHOLD = 1000;
     const MAX_ATTACHMENTS_PER_MESSAGE = 10;
 
+    const DEFAULT_NICKNAME = 'User';
+    const DEFAULT_COLOR = '#4285f4'; // Google Blue
+    const FAVORITE_COLORS = [
+        { name: 'Red', hex: '#ea4335' },
+        { name: 'Orange', hex: '#fbbc05' },
+        { name: 'Green', hex: '#34a853' },
+        { name: 'Blue', hex: '#4285f4' }, // Default
+        { name: 'Purple', hex: '#6f2da8' },
+        { name: 'Black', hex: '#000000' }
+    ];
+
     // --- ICONS (for event handlers) ---
     const copyIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
     const checkIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="check-icon"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
     const attachmentIconSVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.2a2 2 0 0 1-2.83-2.83l8.49-8.49"></path></svg>`;
 
-    // --- AGENT CONFIGURATION ---
-    const agentConfig = {
-        'Standard': {
-            description: "A balanced and helpful assistant for general-purpose questions. Provides comprehensive and reliable information.",
-            systemInstruction: 'You are a helpful and comprehensive AI assistant.'
-        },
-        'Quick': {
-            description: "Fast, concise answers. Ideal for quick facts, summaries, and direct responses without elaboration.",
-            systemInstruction: 'You are an AI assistant that provides brief, direct, and concise answers. Get straight to the point. Do not use lengthy explanations unless absolutely necessary.'
-        },
-        'Analysis': {
-            description: "Deep-dives into data, text, or complex problems. Provides structured, logical breakdowns and critical evaluations.",
-            systemInstruction: 'You are an analytical AI expert. Your goal is to provide deep, structured analysis. Break down complex topics into logical components, identify patterns, and offer critical evaluations. Use data-driven reasoning.'
-        },
-        'Descriptive': {
-            description: "Paints a picture with words. Focuses on rich detail, vivid imagery, and evocative language.",
-            systemInstruction: 'You are a descriptive AI writer. Your responses should be rich in detail, using vivid imagery and evocative language to paint a clear picture for the user. Focus on sensory details and creating atmosphere.'
-        },
-        'Creative': {
-            description: "Your partner for brainstorming and imagination. Generates novel ideas, stories, poetry, and artistic concepts.",
-            systemInstruction: 'You are a creative AI partner. Your purpose is to brainstorm, generate novel ideas, write stories, and explore imaginative concepts. Be unconventional, inspiring, and think outside the box.'
-        },
-        'Technical': {
-            description: "Precise and accurate for specialized domains. Excels at code, scientific explanations, and complex instructions.",
-            systemInstruction: 'You are an expert programmer and technical specialist. Provide complete, accurate, and runnable code examples. Explain technical concepts clearly, covering logic, structure, and potential edge cases. Do not use brevity or omit necessary details for simplicity.'
-        },
-        'Emotional': {
-            description: "Empathetic and nuanced communication. Understands and responds to emotional context, suitable for drafting sensitive messages.",
-            systemInstruction: 'You are an emotionally intelligent AI assistant. Your communication style is empathetic, nuanced, and considerate of the user\'s feelings. You are skilled at drafting sensitive messages and understanding emotional context.'
-        },
-        'Experimental': {
-            description: "Pushes the boundaries of AI. Responses may be unpredictable, highly creative, or abstract. Use with an open mind.",
-            systemInstruction: 'You are an experimental AI. Your purpose is to generate unpredictable, abstract, and highly creative responses that push the boundaries of typical AI behavior. Your answers might be unconventional or artistic. Embrace ambiguity.'
-        }
-    };
-
     // --- STATE MANAGEMENT ---
     let isAIActive = false;
     let isRequestPending = false;
     let currentAIRequestController = null;
-    let currentAgent = 'Standard';
     let chatHistory = [];
     let attachedFiles = [];
+    let userSettings = {
+        nickname: DEFAULT_NICKNAME,
+        favoriteColor: DEFAULT_COLOR,
+        gender: 'Other',
+        age: 0
+    };
 
     // Simple debounce utility for performance
     const debounce = (func, delay) => {
@@ -85,84 +53,48 @@
         };
     };
 
+    /**
+     * Loads user settings from localStorage on script initialization.
+     */
+    function loadUserSettings() {
+        try {
+            const storedSettings = localStorage.getItem('ai-user-settings');
+            if (storedSettings) {
+                userSettings = { ...userSettings, ...JSON.parse(storedSettings) };
+                userSettings.age = parseInt(userSettings.age) || 0;
+            }
+        } catch (e) {
+            console.error("Error loading user settings:", e);
+        }
+    }
+    loadUserSettings(); // Load initial settings
+
     // --- REPLACED/MODIFIED FUNCTIONS ---
 
-    /**
-     * @MODIFIED: Replaces the placeholder function. 
-     * Simulates a successful authorization check for the self-contained script.
-     * In a real application, this would involve checking cookies, tokens, or a session variable.
-     */
     async function isUserAuthorized() {
-        // Assume user is authorized if the script loads. 
-        // Real implementation would check session/token/etc.
         return true; 
     }
 
-    /**
-     * @ADDED: A dedicated function to simulate/manage user location storage.
-     * In a real app, this might use a geo-IP service or prompt the user.
-     * We'll use a localStorage placeholder.
-     */
     function getUserLocationForContext() {
         let location = localStorage.getItem('ai-user-location');
         if (!location) {
-            // Simulate a simple location based on an external service/default
             location = 'United States'; 
             localStorage.setItem('ai-user-location', location);
         }
         return location;
     }
 
-    /**
-     * @MODIFIED: Replaces the placeholder function.
-     * This function should be replaced with a call to a library like KaTeX or MathJax 
-     * in a real environment. For a self-contained script, we replace the element 
-     * with an HTML representation of the LaTeX text, styled to look like a math block, 
-     * and a message indicating the required library.
-     * * Note: To make this fully functional for math rendering, you would need to:
-     * 1. Load the KaTeX/MathJax script tags in the injectStyles function or the main page.
-     * 2. Replace the body of this function with calls to the library's render method, e.g.:
-     * katex.render(mathText, element, { displayMode: true, throwOnError: false });
-     */
     function renderLatexDisplay(container) {
-        // --- START OF SIMULATED/FALLBACK RENDERING ---
-        
-        // Check if a real library (like KaTeX) is loaded.
-        // We'll assume the external library is not loaded for this self-contained script.
-        
         container.querySelectorAll('.latex-display').forEach(element => {
             const mathText = element.dataset.tex;
-            // Create a visually distinct block for the formula text
             element.innerHTML = `
                 <div class="latex-fallback-box">
                     <span class="latex-formula-text">$$${escapeHTML(mathText)}$$</span>
                     <span class="latex-note">(Full rendering requires MathJax/KaTeX)</span>
                 </div>
             `;
-            // Apply a unique style class for the fallback look (defined in injectStyles)
             element.classList.add('latex-fallback-active');
         });
-        
-        // --- END OF SIMULATED/FALLBACK RENDERING ---
-        
-        // NOTE for a real implementation: If you load KaTeX, the code would be:
-        /*
-        if (typeof katex !== 'undefined') {
-            container.querySelectorAll('.latex-display').forEach(element => {
-                try {
-                    const mathText = element.dataset.tex;
-                    katex.render(mathText, element, { 
-                        displayMode: true, 
-                        throwOnError: false, 
-                        output: 'html' // Or 'htmlAndMathml'
-                    });
-                } catch (e) {
-                    console.error("KaTeX rendering error:", e);
-                    element.innerHTML = `<div class="ai-error">LaTeX render error: ${e.message}</div>`;
-                }
-            });
-        }
-        */
     }
 
     // --- END REPLACED/MODIFIED FUNCTIONS ---
@@ -198,7 +130,7 @@
         
         const container = document.createElement('div');
         container.id = 'ai-container';
-        container.dataset.agent = currentAgent;
+        // Removed: container.dataset.agent = currentAgent;
         
         const brandTitle = document.createElement('div');
         brandTitle.id = 'ai-brand-title';
@@ -211,7 +143,7 @@
         
         const persistentTitle = document.createElement('div');
         persistentTitle.id = 'ai-persistent-title';
-        persistentTitle.textContent = "AI Agent - Standard";
+        persistentTitle.textContent = "AI Agent"; // Fixed title
         
         const welcomeMessage = document.createElement('div');
         welcomeMessage.id = 'ai-welcome-message';
@@ -248,11 +180,12 @@
         attachmentButton.title = 'Attach files';
         attachmentButton.onclick = () => handleFileUpload();
         
-        const agentButton = document.createElement('button');
-        agentButton.id = 'ai-agent-button';
-        agentButton.innerHTML = '<span class="icon-ellipsis">&#8942;</span>';
-        agentButton.title = 'Change Agent';
-        agentButton.onclick = toggleAgentMenu;
+        // NEW: Settings Button
+        const settingsButton = document.createElement('button');
+        settingsButton.id = 'ai-settings-button';
+        settingsButton.innerHTML = '<i class="fa-solid fa-gear"></i>';
+        settingsButton.title = 'Settings';
+        settingsButton.onclick = toggleSettingsMenu;
 
         const charCounter = document.createElement('div');
         charCounter.id = 'ai-char-counter';
@@ -261,9 +194,9 @@
         inputWrapper.appendChild(attachmentPreviewContainer);
         inputWrapper.appendChild(visualInput);
         inputWrapper.appendChild(attachmentButton);
-        inputWrapper.appendChild(agentButton);
+        inputWrapper.appendChild(settingsButton); // Use new button
         
-        composeArea.appendChild(createAgentMenu());
+        composeArea.appendChild(createSettingsMenu()); // Use new menu
         composeArea.appendChild(inputWrapper);
 
         container.appendChild(brandTitle);
@@ -276,9 +209,6 @@
         
         document.body.appendChild(container);
 
-        // Call setup for glide buttons after menu is in the DOM
-        setupAgentWheelListeners();
-        
         if (chatHistory.length > 0) { renderChatHistory(); }
         
         setTimeout(() => {
@@ -307,8 +237,8 @@
         isAIActive = false;
         isRequestPending = false;
         attachedFiles = [];
-        const agentMenu = document.getElementById('ai-agent-menu');
-        if (agentMenu) agentMenu.classList.remove('active');
+        const settingsMenu = document.getElementById('ai-settings-menu');
+        if (settingsMenu) settingsMenu.classList.remove('active');
     }
     
     function renderChatHistory() {
@@ -319,7 +249,6 @@
             const bubble = document.createElement('div');
             bubble.className = `ai-message-bubble ${message.role === 'user' ? 'user-message' : 'gemini-response'}`;
             if (message.role === 'model') {
-                // Ensure math rendering on history load
                 const parsedResponse = parseGeminiResponse(message.parts[0].text);
                 bubble.innerHTML = `<div class="ai-response-content">${parsedResponse}</div>`;
                 
@@ -327,7 +256,6 @@
                     button.addEventListener('click', handleCopyCode);
                 });
 
-                // Trigger math rendering for history
                 renderLatexDisplay(bubble);
             } else {
                 let bubbleContent = ''; let textContent = ''; let fileCount = 0;
@@ -343,13 +271,58 @@
         });
         setTimeout(() => responseContainer.scrollTop = responseContainer.scrollHeight, 50);
     }
+    
+    /**
+     * Dynamically generates a system instruction based on the user's latest query
+     * and their stored settings.
+     */
+    function getDynamicSystemInstruction(query, settings) {
+        const user = settings.nickname;
+        const userAge = settings.age > 0 ? `${settings.age} years old` : 'of unknown age';
+        const userGender = settings.gender.toLowerCase();
+        const userColor = settings.favoriteColor;
+
+        // Base instruction with user context
+        let instruction = `You are a highly adaptable AI assistant. Your primary goal is to respond with the appropriate tone and persona matching the user's current query and mood.
+User Profile: Nickname: ${user}, Age: ${userAge}, Gender: ${userGender}, Favorite Color (used for subtle theming inspiration): ${userColor}.
+Adapt your persona and tone for each turn.`;
+
+        // Tone analysis (simple keyword matching for demonstration)
+        const lowerQuery = query.toLowerCase();
+
+        if (lowerQuery.includes('math') || lowerQuery.includes('algebra') || lowerQuery.includes('calculus') || lowerQuery.includes('formula') || lowerQuery.includes('solve') || lowerQuery.includes('proof')) {
+            // Math/Technical
+            instruction += `\n\n**Current Persona: Technical Expert.** Respond with extreme clarity, professionalism, and precision. Focus on step-by-step logic, equations, and definitive answers. Use a formal, neutral tone. Do not use slang or casual language.`;
+        } else if (lowerQuery.includes('code') || lowerQuery.includes('javascript') || lowerQuery.includes('python') || lowerQuery.includes('html') || lowerQuery.includes('debug')) {
+            // Coding
+            instruction += `\n\n**Current Persona: Coding Specialist.** Provide complete, runnable code examples. Explain technical concepts clearly, covering logic, structure, and edge cases. Be thorough and objective.`;
+        } else if (lowerQuery.includes('ex') || lowerQuery.includes('breakup') || lowerQuery.includes('hate') || lowerQuery.includes('awful') || lowerQuery.includes('trash talk') || lowerQuery.includes('roast')) {
+            // Emotional/Roasting (The friend persona)
+            const roastInsults = [
+                `They sound like a cheap knock-off of a decent human.`, 
+                `Honestly, you dodged a bullet the size of a planet.`, 
+                `Forget them, ${user}, you have better things to do, like talking to me.`,
+                `Wow, good riddance. That's a level of trash I wouldn't touch with a ten-foot pole.`
+            ];
+            const roastInsult = roastInsults[Math.floor(Math.random() * roastInsults.length)];
+
+            instruction += `\n\n**Current Persona: Sarcastic, Supportive Friend.** Your goal is to empathize with the user, validate their feelings, and join them in 'roasting' or speaking negatively about their ex/situation. Be funny, slightly aggressive toward the subject of the trash talk, and deeply supportive of ${user}. Use casual language and slang. **Example of tone/support:** "${roastInsult}"`;
+        } else if (lowerQuery.includes('story') || lowerQuery.includes('poem') || lowerQuery.includes('imagine') || lowerQuery.includes('creative')) {
+            // Creative
+            instruction += `\n\n**Current Persona: Creative Partner.** Use rich, evocative language. Be imaginative, focus on descriptive details, and inspire new ideas.`;
+        } else {
+            // Default
+            instruction += `\n\n**Current Persona: Standard Assistant.** You are balanced, helpful, and comprehensive. Use a friendly but professional tone.`;
+        }
+
+        return instruction;
+    }
 
     async function callGoogleAI(responseBubble) {
         if (!API_KEY) { responseBubble.innerHTML = `<div class="ai-error">API Key is missing.</div>`; return; }
         currentAIRequestController = new AbortController();
         let firstMessageContext = '';
         if (chatHistory.length <= 1) {
-            // Get the user's location using the dedicated function
             const location = getUserLocationForContext(); 
             const now = new Date();
             const date = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -358,7 +331,6 @@
         }
         
         let processedChatHistory = [...chatHistory];
-        // Smart history shortening to save tokens (keeps first 3 and last 3 messages)
         if (processedChatHistory.length > 6) {
              processedChatHistory = [ ...processedChatHistory.slice(0, 3), ...processedChatHistory.slice(-3) ];
         }
@@ -366,20 +338,27 @@
         const lastMessageIndex = processedChatHistory.length - 1;
         const userParts = processedChatHistory[lastMessageIndex].parts;
         const textPartIndex = userParts.findIndex(p => p.text);
+        
+        // --- DYNAMIC INSTRUCTION LOGIC ---
+        const lastUserQuery = userParts[textPartIndex]?.text || '';
+        const dynamicInstruction = getDynamicSystemInstruction(lastUserQuery, userSettings);
+        
         if (textPartIndex > -1) {
              userParts[textPartIndex].text = firstMessageContext + userParts[textPartIndex].text;
         } else if (firstMessageContext) {
              userParts.unshift({ text: firstMessageContext.trim() });
         }
         
-        const systemInstruction = agentConfig[currentAgent]?.systemInstruction || 'You are a helpful and comprehensive AI assistant.';
-        const payload = { contents: processedChatHistory, systemInstruction: { parts: [{ text: systemInstruction }] } };
+        const payload = { 
+            contents: processedChatHistory, 
+            systemInstruction: { parts: [{ text: dynamicInstruction }] } 
+        };
+        // --- END DYNAMIC INSTRUCTION LOGIC ---
         
         try {
             const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: currentAIRequestController.signal });
             if (!response.ok) {
                 const errorData = await response.json();
-                console.error("API Error Response:", errorData);
                 throw new Error(`Network response was not ok. Status: ${response.status}. Details: ${JSON.stringify(errorData)}`);
             }
             const data = await response.json();
@@ -392,7 +371,6 @@
             
             const text = data.candidates[0].content.parts[0]?.text || '';
             if (!text) {
-                console.warn("AI response had no text part, but was not blocked. Possibly empty generation.");
                 responseBubble.innerHTML = `<div class="ai-error">The AI generated an empty response. Please try again or rephrase.</div>`;
                 return;
             }
@@ -408,7 +386,6 @@
                 });
                 responseBubble.style.opacity = '1';
 
-                // Trigger math rendering
                 renderLatexDisplay(responseBubble);
             }, 300);
 
@@ -434,8 +411,153 @@
             if(editor) { editor.contentEditable = true; editor.focus(); }
         }
     }
+    
+    // --- NEW SETTINGS MENU LOGIC ---
+    function toggleSettingsMenu() {
+        const menu = document.getElementById('ai-settings-menu');
+        const toggleBtn = document.getElementById('ai-settings-button');
+        const isMenuOpen = menu.classList.toggle('active');
+        toggleBtn.classList.toggle('active', isMenuOpen);
+        if (isMenuOpen) {
+            // Ensure inputs reflect current state when opening
+            document.getElementById('settings-nickname').value = userSettings.nickname === DEFAULT_NICKNAME ? '' : userSettings.nickname;
+            document.getElementById('settings-age').value = userSettings.age || '';
+            document.getElementById('settings-gender').value = userSettings.gender;
+            renderColorWheel();
+            // Attach a one-time handler to auto-save when menu is closed
+            document.addEventListener('click', handleMenuOutsideClick);
+        } else {
+             document.removeEventListener('click', handleMenuOutsideClick);
+        }
+    }
+    
+    function handleMenuOutsideClick(event) {
+        const menu = document.getElementById('ai-settings-menu');
+        const button = document.getElementById('ai-settings-button');
+        const composeArea = document.getElementById('ai-compose-area');
 
-    // NEW: Function to handle file-like object processing
+        if (menu.classList.contains('active') && !composeArea.contains(event.target) && event.target !== button && !button.contains(event.target)) {
+            // Check if the click is outside the entire compose area (which contains the menu and button)
+            saveSettings();
+            toggleSettingsMenu();
+        }
+    }
+
+    function saveSettings() {
+        // Read from DOM and update userSettings
+        const nicknameEl = document.getElementById('settings-nickname');
+        const ageEl = document.getElementById('settings-age');
+        const genderEl = document.getElementById('settings-gender');
+        const colorElement = document.querySelector('.color-card.selected');
+
+        const nickname = nicknameEl.value.trim();
+        const age = parseInt(ageEl.value);
+        const gender = genderEl.value;
+        const favoriteColor = colorElement ? colorElement.dataset.hex : DEFAULT_COLOR;
+
+        userSettings.nickname = nickname || DEFAULT_NICKNAME;
+        userSettings.age = (isNaN(age) || age < 0) ? 0 : age;
+        userSettings.gender = gender;
+        userSettings.favoriteColor = favoriteColor;
+        
+        // Save to localStorage
+        localStorage.setItem('ai-user-settings', JSON.stringify(userSettings));
+    }
+
+    function renderColorWheel() {
+        const wheel = document.getElementById('color-wheel');
+        if (!wheel) return;
+        wheel.innerHTML = '';
+
+        FAVORITE_COLORS.forEach(color => {
+            const card = document.createElement('div');
+            card.className = 'color-card';
+            card.dataset.hex = color.hex;
+            card.style.backgroundColor = color.hex;
+            card.title = color.name;
+
+            if (color.hex === userSettings.favoriteColor) {
+                card.classList.add('selected');
+            }
+
+            card.onclick = (e) => {
+                // Deselect all
+                document.querySelectorAll('.color-card').forEach(c => c.classList.remove('selected'));
+                // Select current
+                e.currentTarget.classList.add('selected');
+                saveSettings(); // Auto-save color change
+            };
+            wheel.appendChild(card);
+        });
+    }
+
+    function createSettingsMenu() {
+        const menu = document.createElement('div');
+        menu.id = 'ai-settings-menu';
+
+        menu.innerHTML = `
+            <div class="menu-header">AI Agent Settings</div>
+
+            <div class="setting-group">
+                <label for="settings-nickname">Nickname</label>
+                <input type="text" id="settings-nickname" placeholder="${DEFAULT_NICKNAME}" value="${userSettings.nickname === DEFAULT_NICKNAME ? '' : userSettings.nickname}" />
+                <p class="setting-note">How the AI should refer to you.</p>
+            </div>
+
+            <div class="setting-group">
+                <label>Favorite Color</label>
+                <div class="color-wheel-wrapper">
+                    <div id="color-wheel" class="color-wheel"></div>
+                </div>
+                <p class="setting-note">Subtly influences the AI's response style.</p>
+            </div>
+
+            <div class="setting-group-split">
+                <div class="setting-group">
+                    <label for="settings-gender">Gender</label>
+                    <select id="settings-gender" value="${userSettings.gender}">
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Non Binary">Non Binary</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label for="settings-age">Age</label>
+                    <input type="number" id="settings-age" placeholder="Optional" min="0" value="${userSettings.age || ''}" />
+                </div>
+            </div>
+
+            <button id="settings-save-button">Save</button>
+        `;
+
+        // Add event listeners for inputs
+        const saveButton = menu.querySelector('#settings-save-button');
+        const inputs = menu.querySelectorAll('input, select');
+        
+        // Use debounce for inputs to avoid excessive saves
+        const debouncedSave = debounce(saveSettings, 500);
+        inputs.forEach(input => {
+            input.addEventListener('input', debouncedSave);
+            input.addEventListener('change', debouncedSave);
+        });
+
+        saveButton.onclick = () => {
+            saveSettings();
+            toggleSettingsMenu();
+        };
+
+        // Render the wheel content after it's in the DOM
+        setTimeout(renderColorWheel, 0);
+
+        return menu;
+    }
+    // --- END NEW SETTINGS MENU LOGIC ---
+
+    // Removed: processFileLike, handleFileUpload, toggleAgentMenu, showAgentDetails, goBackToAgentSelection, selectAgent, updateAgentWheelGliders, setupAgentWheelListeners
+
+    // Remaining utility functions (processFileLike, handleFileUpload, renderAttachments, showFilePreview, formatCharCount, handleContentEditableInput, handlePaste, handleInputSubmission, handleCopyCode, fadeOutWelcomeMessage, escapeHTML, formatBytes, parseGeminiResponse, escapeRegExp, injectStyles) remain mostly the same or slightly adjusted for code cleanup.
+
     function processFileLike(file, base64Data, dataUrl, tempId) {
         if (attachedFiles.length >= MAX_ATTACHMENTS_PER_MESSAGE) {
             alert(`You can attach a maximum of ${MAX_ATTACHMENTS_PER_MESSAGE} files per message.`);
@@ -455,9 +577,7 @@
             isLoading: false
         };
         
-        if (tempId) { // For drag/drop or immediate paste where we need a temporary entry
-            item.tempId = tempId;
-        }
+        if (tempId) { item.tempId = tempId; }
 
         attachedFiles.push(item);
         renderAttachments();
@@ -520,98 +640,6 @@
             });
         };
         input.click();
-    }
-    
-    function toggleAgentMenu() {
-        const menu = document.getElementById('ai-agent-menu');
-        const toggleBtn = document.getElementById('ai-agent-button');
-        const isMenuOpen = menu.classList.toggle('active');
-        toggleBtn.classList.toggle('active', isMenuOpen);
-        if (!isMenuOpen) {
-            menu.classList.remove('details-view-active');
-        } else {
-            // Check gliders when menu opens
-            updateAgentWheelGliders();
-        }
-    }
-
-    function showAgentDetails(agentName) {
-        const menu = document.getElementById('ai-agent-menu');
-        const detailsView = document.getElementById('agent-details-view');
-        const agent = agentConfig[agentName];
-        if (!agent || !detailsView) return;
-
-        detailsView.dataset.agent = agentName; // Set data-agent for texture styling
-        detailsView.querySelector('h3').textContent = agentName;
-        detailsView.querySelector('p').textContent = agent.description;
-        const selectBtn = detailsView.querySelector('#agent-menu-select-btn');
-        selectBtn.dataset.agent = agentName;
-        
-        menu.classList.add('details-view-active');
-    }
-
-    function goBackToAgentSelection() {
-        const menu = document.getElementById('ai-agent-menu');
-        menu.classList.remove('details-view-active');
-        updateAgentWheelGliders(); // Re-check gliders when going back
-    }
-    
-    function selectAgent(agentName) {
-        currentAgent = agentName;
-        chatHistory = [];
-        const persistentTitle = document.getElementById('ai-persistent-title');
-        if (persistentTitle) { persistentTitle.textContent = `AI Agent - ${agentName}`; }
-        document.getElementById('ai-container').dataset.agent = agentName;
-        
-        toggleAgentMenu();
-    }
-    
-    const updateAgentWheelGliders = () => {
-        const container = document.querySelector('.agent-wheel');
-        const leftButton = document.getElementById('agent-glide-left');
-        const rightButton = document.getElementById('agent-glide-right');
-
-        if (!container || !leftButton || !rightButton) return;
-        
-        const hasHorizontalOverflow = container.scrollWidth > container.offsetWidth + 2; // +2 for tolerance
-
-        if (hasHorizontalOverflow) {
-            const isScrolledToLeft = container.scrollLeft < 5; 
-            const isScrolledToRight = container.scrollLeft + container.offsetWidth >= container.scrollWidth - 5; 
-
-            leftButton.classList.toggle('hidden', isScrolledToLeft);
-            rightButton.classList.toggle('hidden', isScrolledToRight);
-        } else {
-            leftButton.classList.add('hidden');
-            rightButton.classList.add('hidden');
-        }
-    };
-
-    function setupAgentWheelListeners() {
-        const container = document.querySelector('.agent-wheel');
-        const leftButton = document.getElementById('agent-glide-left');
-        const rightButton = document.getElementById('agent-glide-right');
-        
-        const debouncedUpdate = debounce(updateAgentWheelGliders, 50);
-
-        if (container) {
-            const scrollAmount = container.offsetWidth * 0.8; 
-            container.addEventListener('scroll', debouncedUpdate);
-            window.addEventListener('resize', debouncedUpdate);
-            
-            if (leftButton) {
-                leftButton.addEventListener('click', () => {
-                    container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
-                });
-            }
-            if (rightButton) {
-                rightButton.addEventListener('click', () => {
-                    container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-                });
-            }
-        }
-        // Initial check
-        updateAgentWheelGliders();
     }
 
     function renderAttachments() {
@@ -705,8 +733,6 @@
         if (file.inlineData.mimeType.startsWith('image/')) {
             previewArea.innerHTML = `<img src="${file.fileContent}" alt="${file.fileName}" style="max-width: 100%; max-height: 80vh; object-fit: contain;">`;
         } else if (file.inlineData.mimeType.startsWith('text/')) {
-            // Text content for text files is already available in fileContent as data URL.
-            // We need to fetch/read it to display the raw text.
             fetch(file.fileContent)
                 .then(response => response.text())
                 .then(text => {
@@ -731,55 +757,6 @@
         });
     }
 
-    function createAgentMenu() {
-        const menu = document.createElement('div');
-        menu.id = 'ai-agent-menu';
-
-        const selectionView = document.createElement('div');
-        selectionView.id = 'agent-selection-view';
-        selectionView.innerHTML = `<div class="menu-header">Select an Agent</div>`;
-        
-        const agentWheelWrapper = document.createElement('div');
-        agentWheelWrapper.className = 'agent-wheel-wrapper';
-        
-        const agentWheel = document.createElement('div');
-        agentWheel.className = 'agent-wheel';
-        Object.keys(agentConfig).forEach(agentName => {
-            const card = document.createElement('div');
-            card.className = 'agent-card';
-            card.dataset.agent = agentName;
-            card.textContent = agentName;
-            card.onclick = () => showAgentDetails(agentName);
-            agentWheel.appendChild(card);
-        });
-
-        agentWheelWrapper.innerHTML = `
-            <button id="agent-glide-left" class="agent-glide-button hidden" title="Scroll left"><i class="fa-solid fa-chevron-left"></i></button>
-            <button id="agent-glide-right" class="agent-glide-button hidden" title="Scroll right"><i class="fa-solid fa-chevron-right"></i></button>
-        `;
-        agentWheelWrapper.appendChild(agentWheel);
-        selectionView.appendChild(agentWheelWrapper);
-        menu.appendChild(selectionView);
-
-        const detailsView = document.createElement('div');
-        detailsView.id = 'agent-details-view';
-        detailsView.innerHTML = `
-            <div class="agent-details-content">
-                <h3></h3>
-                <p></p>
-            </div>
-            <div class="agent-menu-footer">
-                <button id="agent-menu-back-btn" title="Back"><i class="fa-solid fa-arrow-left"></i></button>
-                <button id="agent-menu-select-btn" title="Select Agent"><i class="fa-solid fa-check"></i></button>
-            </div>
-        `;
-        menu.appendChild(detailsView);
-
-        detailsView.querySelector('#agent-menu-back-btn').onclick = goBackToAgentSelection;
-        detailsView.querySelector('#agent-menu-select-btn').onclick = (e) => selectAgent(e.currentTarget.dataset.agent);
-        
-        return menu;
-    }
 
     function formatCharCount(count) {
         if (count >= 1000) {
@@ -832,12 +809,11 @@
                     reader.onload = (event) => {
                         const base64Data = event.target.result.split(',')[1];
                         const dataUrl = event.target.result;
-                        // Use a placeholder name as clipboard image doesn't have one
                         file.name = `pasted-image-${Date.now()}.${file.type.split('/')[1] || 'png'}`;
                         processFileLike(file, base64Data, dataUrl);
                     };
                     reader.readAsDataURL(file);
-                    return; // Stop processing if an image is found
+                    return; 
                 }
             }
         }
@@ -858,7 +834,7 @@
             const encoded = encoder.encode(pastedText);
             const base64Data = btoa(String.fromCharCode.apply(null, encoded));
             const blob = new Blob([pastedText], {type: 'text/plain'});
-            blob.name = filename; // Add name property for consistent display
+            blob.name = filename; 
             
             if (attachedFiles.length < MAX_ATTACHMENTS_PER_MESSAGE) {
                 const reader = new FileReader();
@@ -890,8 +866,11 @@
 
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            const agentMenu = document.getElementById('ai-agent-menu');
-            if (agentMenu && agentMenu.classList.contains('active')) { toggleAgentMenu(); }
+            const settingsMenu = document.getElementById('ai-settings-menu');
+            if (settingsMenu && settingsMenu.classList.contains('active')) { 
+                saveSettings();
+                toggleSettingsMenu(); 
+            }
             
             if (attachedFiles.some(f => f.isLoading)) {
                 alert("Please wait for files to finish uploading before sending.");
@@ -961,7 +940,6 @@
         let html = text;
         const codeBlocks = [];
 
-        // 1. Process Code Blocks
         html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
             const trimmedCode = code.trim();
             const lines = trimmedCode.split('\n').length;
@@ -981,57 +959,40 @@
             return "%%CODE_BLOCK%%";
         });
 
-        // 2. Escape the rest of the HTML
         html = escapeHTML(html);
 
-        // 3. Process Specific LaTeX Shortcuts and replace with a placeholder element
-        // The actual rendering will happen in renderLatexDisplay after DOM insertion.
-        // NOTE: The placeholders in the original file were just examples. 
-        // A robust solution would look for $...$ for inline math and $$...$$ or block math.
-        
-        // This regex attempts to find and replace any text enclosed in single '$' 
-        // that is NOT within a code block (which is already replaced by %%CODE_BLOCK%%).
-        // It's a simplistic approach, but covers the examples given and avoids escaping issues.
-        // NOTE: A more robust solution for display math is usually $$...$$ or \begin{...}\end{...}
         const latexDisplayShortcuts = {
             '\\frac{14 - 18}{0 - 2}': 'frac_placeholder_1',
             '\\boxed{2}': 'boxed_placeholder_2'
         };
 
         Object.keys(latexDisplayShortcuts).forEach(tex => {
-            // Use a specific regex to find and replace the whole display math block
             const regex = new RegExp('\\$' + escapeRegExp(tex) + '\\$', 'g');
             html = html.replace(regex, `<div class="latex-display" data-tex="${escapeHTML(tex)}"></div>`);
         });
 
-        // 4. Convert Markdown to HTML (Headings, Bold, Italic)
         html = html.replace(/^### (.*$)/gm, "<h3>$1</h3>")
                    .replace(/^## (.*$)/gm, "<h2>$1</h2>")
                    .replace(/^# (.*$)/gm, "<h1>$1</h1>");
         html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
                    .replace(/\*(.*?)\*/g, "<em>$1</em>");
         
-        // 5. Convert Markdown Lists (must be after other block-level elements)
-        // Simple list item conversion
         html = html.replace(/^(?:\*|-)\s(.*$)/gm, "<li>$1</li>");
-        // Wrap adjacent list items in <ul> or <ol>
         html = html.replace(/((?:<br>)?\s*<li>.*<\/li>(\s*<br>)*)+/gs, (match) => {
             const listItems = match.replace(/<br>/g, '').trim();
-            return `<ul>${listItems}</ul>`; // Assuming unordered list for simple markdown
+            return `<ul>${listItems}</ul>`;
         });
         html = html.replace(/(<\/li>\s*<li>)/g, "</li><li>");
         
-        // 6. Convert newlines to breaks (must be near the end)
         html = html.replace(/\n/g, "<br>");
         
-        // 7. Re-insert Code Blocks
         html = html.replace(/%%CODE_BLOCK%%/g, () => codeBlocks.shift());
         
         return html;
     }
     
     function escapeRegExp(string) {
-        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 
     function injectStyles() {
@@ -1043,60 +1004,38 @@
             googleFonts.rel = 'stylesheet';
             document.head.appendChild(googleFonts);
         }
-        // Load Font Awesome for icons
         const fontAwesome = document.createElement('link');
         fontAwesome.rel = 'stylesheet';
         fontAwesome.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css';
         document.head.appendChild(fontAwesome);
 
-        // *** NOTE FOR LaTeX: ***
-        // To fully implement LaTeX rendering (KaTeX), you would need to also load its CSS and JS here:
-        /*
-        const katexCSS = document.createElement('link');
-        katexCSS.rel = 'stylesheet';
-        katexCSS.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css';
-        document.head.appendChild(katexCSS);
-
-        const katexJS = document.createElement('script');
-        katexJS.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js';
-        document.head.appendChild(katexJS);
-        // And potentially other auto-render extensions if needed.
-        */
-
         const style = document.createElement("style");
         style.id = "ai-dynamic-styles";
         style.innerHTML = `
             :root { --ai-red: #ea4335; --ai-blue: #4285f4; --ai-green: #34a853; --ai-yellow: #fbbc05; }
-            #ai-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0,0,0,0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); z-index: 2147483647; opacity: 0; transition: opacity 0.5s, background 0.5s, backdrop-filter 0.5s; font-family: 'Lora', serif; display: flex; flex-direction: column; justify-content: flex-end; padding: 0; box-sizing: border-box; overflow: hidden; }
-            #ai-container.active { opacity: 1; background-color: rgba(0, 0, 0, 0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+            #ai-container { 
+                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+                background-color: rgba(10, 10, 15, 0.95); /* Fixed Dark Background */
+                backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); 
+                z-index: 2147483647; opacity: 0; transition: opacity 0.5s, background 0.5s; 
+                font-family: 'Lora', serif; display: flex; flex-direction: column; 
+                justify-content: flex-end; padding: 0; box-sizing: border-box; overflow: hidden; 
+            }
+            #ai-container.active { opacity: 1; }
             
-            #ai-container[data-agent="Standard"] { background: rgba(10, 10, 15, 0.8); }
-            #ai-container[data-agent="Quick"] { background: linear-gradient(rgba(75, 85, 99, 0.2), rgba(75, 85, 99, 0.2)), rgba(10, 10, 15, 0.75); }
-            #ai-container[data-agent="Analysis"] { background: linear-gradient(rgba(30, 64, 175, 0.2), rgba(30, 64, 175, 0.2)), rgba(10, 10, 15, 0.75); }
-            #ai-container[data-agent="Descriptive"] { background: linear-gradient(rgba(120, 53, 15, 0.2), rgba(120, 53, 15, 0.2)), rgba(10, 10, 15, 0.75); }
-            #ai-container[data-agent="Creative"] { background: linear-gradient(rgba(126, 34, 206, 0.2), rgba(126, 34, 206, 0.2)), rgba(10, 10, 15, 0.75); }
-            #ai-container[data-agent="Technical"] { background: linear-gradient(rgba(7, 89, 133, 0.2), rgba(7, 89, 133, 0.2)), rgba(10, 10, 15, 0.75); }
-            #ai-container[data-agent="Emotional"] { background: linear-gradient(rgba(217, 70, 239, 0.15), rgba(217, 70, 239, 0.15)), rgba(10, 10, 15, 0.75); }
-            #ai-container[data-agent="Experimental"] { background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab); background-size: 400% 400%; animation: experimental-bg-pan 15s ease infinite; }
-            
-            /* UPDATED: Experimental Title Color */
-            #ai-container[data-agent="Experimental"] #ai-persistent-title { color: #333333; animation: none; }
-            #ai-container[data-agent="Experimental"] #ai-brand-title span { animation: none; color: #333333; }
-            
-            #ai-container[data-agent="Standard"] #ai-persistent-title { color: #ffffff; }
-            #ai-container[data-agent="Quick"] #ai-persistent-title { color: #9ca3af; }
-            #ai-container[data-agent="Analysis"] #ai-persistent-title { color: #60a5fa; }
-            #ai-container[data-agent="Descriptive"] #ai-persistent-title { color: #f59e0b; }
-            #ai-container[data-agent="Creative"] #ai-persistent-title { color: #c084fc; }
-            #ai-container[data-agent="Technical"] #ai-persistent-title { color: #38bdf8; }
-            #ai-container[data-agent="Emotional"] #ai-persistent-title { color: #f472b6; }
-
             #ai-container.deactivating, #ai-container.deactivating > * { transition: opacity 0.4s, transform 0.4s; }
             #ai-container.deactivating { opacity: 0 !important; background-color: rgba(0,0,0,0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); }
-            #ai-persistent-title, #ai-brand-title { position: absolute; top: 28px; left: 30px; font-family: 'Lora', serif; font-size: 18px; font-weight: bold; color: white; opacity: 0; transition: opacity 0.5s 0.2s, color 0.5s; }
+
+            #ai-persistent-title, #ai-brand-title { 
+                position: absolute; top: 28px; left: 30px; font-family: 'Lora', serif; 
+                font-size: 18px; font-weight: bold; color: #FFFFFF; /* Fixed Title Color */
+                opacity: 0; transition: opacity 0.5s 0.2s, color 0.5s; 
+            }
             #ai-container.chat-active #ai-persistent-title { opacity: 1; }
             #ai-container:not(.chat-active) #ai-brand-title { opacity: 1; }
             #ai-brand-title span { animation: brand-title-pulse 4s linear infinite; }
+            /* Animation pulse is kept, but title color is static white/current color */
+
             #ai-welcome-message { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; color: rgba(255,255,255,.5); opacity: 1; transition: opacity .5s, transform .5s; width: 100%; }
             #ai-container.chat-active #ai-welcome-message { opacity: 0; pointer-events: none; transform: translate(-50%,-50%) scale(0.95); }
             #ai-welcome-message h2 { font-family: 'Merriweather', serif; font-size: 2.2em; margin: 0; color: #fff; }
@@ -1104,6 +1043,7 @@
             #ai-close-button { position: absolute; top: 20px; right: 30px; color: rgba(255,255,255,.7); font-size: 40px; cursor: pointer; transition: color .2s ease,transform .3s ease, opacity 0.4s; }
             #ai-char-counter { position: fixed; bottom: 15px; right: 30px; font-size: 0.9em; font-family: monospace; color: #aaa; transition: color 0.2s; z-index: 2147483647; }
             #ai-char-counter.limit-exceeded { color: #e57373; font-weight: bold; }
+
             #ai-response-container { flex: 1 1 auto; overflow-y: auto; width: 100%; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; padding: 60px 20px 20px 20px; -webkit-mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%); mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%);}
             .ai-message-bubble { background: rgba(15,15,18,.8); border: 1px solid rgba(255,255,255,.1); border-radius: 16px; padding: 12px 18px; color: #e0e0e0; backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); animation: message-pop-in .5s cubic-bezier(.4,0,.2,1) forwards; max-width: 90%; line-height: 1.6; overflow-wrap: break-word; transition: opacity 0.3s ease-in-out; align-self: flex-start; text-align: left; }
             .user-message { background: rgba(40,45,50,.8); align-self: flex-end; }
@@ -1123,53 +1063,34 @@
             #ai-attachment-button:hover { background-color: rgba(120, 120, 120, 0.7); }
             #ai-attachment-button svg { stroke: currentColor; }
 
-            #ai-agent-button { position: absolute; right: 10px; bottom: 7px; background: rgba(100, 100, 100, 0.5); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,.5); font-size: 24px; cursor: pointer; padding: 5px; line-height: 1; z-index: 3; transition: all .3s ease; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; }
-            #ai-agent-button:hover { background-color: rgba(120, 120, 120, 0.7); }
-            #ai-agent-button.active { background-color: rgba(150, 150, 150, 0.8); color: white; }
+            /* NEW: Settings Button Style (Grey) */
+            #ai-settings-button { position: absolute; right: 10px; bottom: 7px; background: rgba(100, 100, 100, 0.5); border: 1px solid rgba(255,255,255,0.2); color: #ccc; font-size: 20px; cursor: pointer; padding: 5px; line-height: 1; z-index: 3; transition: all .3s ease; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; }
+            #ai-settings-button:hover { background-color: rgba(120, 120, 120, 0.7); color: #fff; }
+            #ai-settings-button.active { background-color: rgba(150, 150, 150, 0.8); color: white; }
 
-            /* UPDATED: Agent Selection Menu Opacity/Blur */
-            #ai-agent-menu { position: absolute; bottom: calc(100% + 10px); left: 0; right: 0; width: 100%; z-index: 1; background: rgb(20, 20, 22); backdrop-filter: none; -webkit-backdrop-filter: none; border: 1px solid rgba(255,255,255,0.2); border-radius: 16px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); padding: 15px; opacity: 0; visibility: hidden; transform: translateY(20px); transition: all .3s cubic-bezier(.4,0,.2,1); overflow: hidden; }
-            #ai-agent-menu.active { opacity: 1; visibility: visible; transform: translateY(0); }
-            #ai-agent-menu .menu-header { font-size: 0.9em; color: #aaa; text-transform: uppercase; margin-bottom: 15px; text-align: center; }
-            #agent-details-view { display: none; }
-            #ai-agent-menu.details-view-active #agent-selection-view { display: none; }
-            #ai-agent-menu.details-view-active #agent-details-view { display: flex; flex-direction: column; }
-            .agent-wheel-wrapper { position: relative; }
-            .agent-wheel-wrapper::before, .agent-wheel-wrapper::after { content: ''; position: absolute; top: 0; bottom: 0; width: 30px; z-index: 2; pointer-events: none; }
-            /* Adjusted for opaque menu */
-            .agent-wheel-wrapper::before { left: 0; background: linear-gradient(to right, rgb(20, 20, 22) 30%, transparent); }
-            .agent-wheel-wrapper::after { right: 0; background: linear-gradient(to left, rgb(20, 20, 22) 30%, transparent); }
-            .agent-wheel { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; margin-bottom: -10px; scroll-behavior: smooth; scrollbar-width: none; -ms-overflow-style: none; }
-            .agent-wheel::-webkit-scrollbar { display: none; }
-            
-            /* UPDATED: Agent Glide Button Style (Icon Only) */
-            .agent-glide-button { position: absolute; top: 50%; transform: translateY(-50%); background: transparent; color: rgba(255,255,255,.5); border: none; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 3; transition: color .2s; }
-            .agent-glide-button:hover { color: rgba(255,255,255,.8); }
-            .agent-glide-button.hidden { opacity: 0; pointer-events: none; }
-            #agent-glide-left { left: -15px; }
-            #agent-glide-right { right: -15px; }
+            /* NEW: Settings Menu Style */
+            #ai-settings-menu { position: absolute; bottom: calc(100% + 10px); right: 0; width: 350px; z-index: 1; background: rgb(20, 20, 22); border: 1px solid rgba(255,255,255,0.2); border-radius: 16px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); padding: 15px; opacity: 0; visibility: hidden; transform: translateY(20px); transition: all .3s cubic-bezier(.4,0,.2,1); overflow: hidden; }
+            #ai-settings-menu.active { opacity: 1; visibility: visible; transform: translateY(0); }
+            #ai-settings-menu .menu-header { font-size: 1.1em; color: #fff; text-transform: uppercase; margin-bottom: 15px; text-align: center; font-family: 'Merriweather', serif; }
+            .setting-group { margin-bottom: 15px; }
+            .setting-group-split { display: flex; gap: 15px; }
+            .setting-group-split .setting-group { flex: 1; }
+            .setting-group label { display: block; color: #ccc; font-size: 0.9em; margin-bottom: 5px; font-weight: bold; }
+            .setting-group input, .setting-group select { width: 100%; padding: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff; box-sizing: border-box; }
+            .setting-group input:focus, .setting-group select:focus { outline: none; border-color: #4285f4; }
+            .setting-note { font-size: 0.75em; color: #888; margin-top: 5px; }
 
-            .agent-card { flex-shrink: 0; padding: 10px 20px; background-color: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; cursor: pointer; transition: background-color .2s, transform .2s; color: #ddd; font-family: 'Merriweather', serif; }
-            .agent-card:hover { background-color: rgba(255,255,255,0.15); transform: translateY(-2px); }
-            
-            #agent-details-view { border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
-            .agent-details-content { padding: 1rem; background-color: rgba(0,0,0,0.3); flex-grow: 1; }
-            #agent-details-view[data-agent="Standard"] .agent-details-content { background-image: radial-gradient(rgba(200, 200, 200, 0.05) 1px, transparent 1px); background-size: 15px 15px; }
-            #agent-details-view[data-agent="Quick"] .agent-details-content { background-image: linear-gradient(rgba(200,200,200,0.05) 1px, transparent 1px), linear-gradient(to right, rgba(200,200,200,0.05) 1px, transparent 1px); background-size: 20px 20px; }
-            #agent-details-view[data-agent="Analysis"] .agent-details-content { background: linear-gradient(135deg, rgba(30, 64, 175, 0) 40%, rgba(30, 64, 175, 0.1) 100%), repeating-linear-gradient(-45deg, transparent, transparent 5px, rgba(255,255,255,0.02) 5px, rgba(255,255,255,0.02) 10px); }
-            #agent-details-view[data-agent="Descriptive"] .agent-details-content { background-color: rgba(120, 53, 15, 0.1); background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMCIgaGVpZ2h0PSIzMCI+PHJlY3Qgd2lkdGg9IjMwIiBoZWlnaHQ9IjMwIiBmaWxsPSJ0cmFuc3BhcmVudCIvPjxwYXRoIGQ9Ik0zIDNoMjR2MjRIM3ptMjUgMGgydjJoLTJ6bTAgM2gydjJoLTJ6bTAgM2gydjJoLTJ6bTAgM2gydjJoLTJ6bTAgM2gydjJoLTJ6bTAgM2gydjJoLTJ6bTAgM2gydjJoLTJ6bTAgM2gydjJoLTJ6TTIgMmgydjJoLTJ6bTMgMGgydjJoLTJ6bTMgMGgydjJoLTJ6bTMgMGgydjJoLTJ6bTMgMGgydjJoLTJ6bTMgMGgydjJoLTJ6bTMgMGgydjJoLTJ6bTMgMGgydjJoLTJ6IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDMpIiBmaWxsLW9wYWNpdHk9IjAuNSIvPjwvc3ZnPg=='); }
-            #agent-details-view[data-agent="Creative"] .agent-details-content { background: radial-gradient(circle at 50% 50%, rgba(126, 34, 206, 0.15), transparent 70%); }
-            #agent-details-view[data-agent="Technical"] .agent-details-content { background-image: linear-gradient(45deg, rgba(255,255,255,0.03) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.03) 75%, rgba(255,255,255,0.03)), linear-gradient(-45deg, rgba(255,255,255,0.03) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.03) 75%, rgba(255,255,255,0.03)); background-size: 20px 20px; }
-            #agent-details-view[data-agent="Emotional"] .agent-details-content { background-image: radial-gradient(circle, rgba(217, 70, 239, 0.08) 10%, transparent 11%), radial-gradient(circle, rgba(217, 70, 239, 0.08) 10%, transparent 11%); background-size: 30px 30px; background-position: 0 0, 15px 15px; }
-            #agent-details-view[data-agent="Experimental"] .agent-details-content { background: repeating-conic-gradient(rgba(255,255,255,0.05) 0% 25%, transparent 0% 50%) 50% / 30px 30px; }
+            /* Color Wheel Styling */
+            .color-wheel-wrapper { overflow-x: auto; padding-bottom: 5px; }
+            .color-wheel { display: flex; gap: 10px; padding: 5px 0; scroll-behavior: smooth; scrollbar-width: none; }
+            .color-card { flex-shrink: 0; width: 35px; height: 35px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; transition: transform 0.2s, border-color 0.2s; }
+            .color-card:hover { transform: scale(1.05); }
+            .color-card.selected { border-color: #fff; transform: scale(1.1); box-shadow: 0 0 10px rgba(255,255,255,0.5); }
 
-            #agent-details-view h3 { margin-top: 0; margin-bottom: 10px; color: #fff; text-align: center; font-family: 'Merriweather', serif; }
-            #agent-details-view p { color: #ccc; font-size: 0.95em; line-height: 1.6; text-align: center; margin-bottom: 20px; min-height: 50px; }
-            .agent-menu-footer { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.4); padding: 0.5rem; }
-            #agent-menu-back-btn, #agent-menu-select-btn { background-color: rgba(100, 100, 100, 0.5); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,.8); font-size: 1em; cursor: pointer; transition: all .3s ease; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; }
-            #agent-menu-back-btn:hover, #agent-menu-select-btn:hover { background-color: rgba(120, 120, 120, 0.7); }
-            #agent-menu-select-btn { background-color: rgba(67, 56, 202, 0.6); }
-            #agent-menu-select-btn:hover { background-color: rgba(79, 70, 229, 0.7); }
+            #settings-save-button { width: 100%; padding: 10px; background: #4285f4; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; margin-top: 10px; transition: background 0.2s; }
+            #settings-save-button:hover { background: #3c77e6; }
+
+            /* Attachment Preview, Code Blocks, LaTeX - Existing Styles */
 
             #ai-attachment-preview { display: none; flex-direction: row; gap: 10px; padding: 0; max-height: 0; border-bottom: 1px solid transparent; overflow-x: auto; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
             #ai-input-wrapper.has-attachments #ai-attachment-preview { max-height: 100px; padding: 10px 15px; }
@@ -1183,6 +1104,7 @@
             .file-name.marquee > span { display: inline-block; padding-left: 100%; animation: marquee linear infinite; }
             .file-type-badge { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.7em; padding: 2px 5px; border-radius: 4px; font-family: sans-serif; font-weight: bold; }
             .remove-attachment-btn { position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.5); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; z-index: 3; }
+
             .ai-loader { width: 25px; height: 25px; border-radius: 50%; animation: spin 1s linear infinite; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; }
             .code-block-wrapper { background-color: rgba(42, 42, 48, 0.8); border-radius: 8px; margin: 10px 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
             .code-block-header { display: flex; justify-content: flex-end; align-items: center; padding: 6px 12px; background-color: rgba(0,0,0,0.2); }
@@ -1196,7 +1118,6 @@
             .code-block-wrapper pre::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
             .code-block-wrapper code { font-family: 'Menlo', 'Consolas', monospace; font-size: 0.9em; color: #f0f0f0; }
 
-            /* NEW: Styles for LaTeX Fallback */
             .latex-fallback-active { display: block; margin: 10px 0; }
             .latex-fallback-box { display: block; background: #1a1a1e; border: 1px solid #333; border-radius: 4px; padding: 12px; overflow-x: auto; text-align: center; }
             .latex-formula-text { display: block; font-family: monospace; color: #f0f0f0; font-size: 1.1em; white-space: pre-wrap; word-break: break-all; }
@@ -1220,12 +1141,9 @@
             @keyframes message-pop-in { 0% { opacity: 0; transform: translateY(10px) scale(.98); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
             @keyframes brand-title-pulse { 0%, 100% { text-shadow: 0 0 7px var(--ai-blue); } 25% { text-shadow: 0 0 7px var(--ai-green); } 50% { text-shadow: 0 0 7px var(--ai-yellow); } 75% { text-shadow: 0 0 7px var(--ai-red); } }
             @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
-            @keyframes experimental-bg-pan { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-            @keyframes experimental-title-color { 0%,100% { color: #ee7752; } 25% { color: #e73c7e; } 50% { color: #23a6d5; } 75% { color: #23d5ab; } }
         `;
     document.head.appendChild(style);}
     document.addEventListener('DOMContentLoaded', async () => {
-        // Simple activation for demonstration. In a real site, this would be part of your app's logic.
         const isAuthorized = await isUserAuthorized();
         if (isAuthorized) {
             activateAI();
