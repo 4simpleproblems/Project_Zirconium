@@ -6,10 +6,11 @@
  * and advanced file previews. This version includes a character limit,
  * smart paste handling, and refined animations.
  *
- * Updated with a redesigned horizontal "Agent" selection menu, rebranding to "AI Agent",
- * new agent categories with unique background themes and system instructions,
- * and an animated "Experimental" mode. The top-left title color now matches the agent theme.
- * The menu features a two-step selection process with details and back/select buttons.
+ * Updated with a redesigned horizontal "Agent" selection menu that slides up from
+ * under the input bar, rebranding to "AI Agent", new agent categories with unique
+ * background themes, and an animated "Experimental" mode. The top-left title color
+ * now matches the agent theme. The menu features a two-step selection process
+ * with details and back/select buttons.
  */
 (function() {
     // --- CONFIGURATION ---
@@ -65,7 +66,7 @@
     let isAIActive = false;
     let isRequestPending = false;
     let currentAIRequestController = null;
-    let currentAgent = 'Standard'; // Replaces currentSubject
+    let currentAgent = 'Standard';
     let chatHistory = [];
     let attachedFiles = [];
 
@@ -134,7 +135,7 @@
         
         const brandTitle = document.createElement('div');
         brandTitle.id = 'ai-brand-title';
-        const brandText = "4SP - AI AGENT"; // Rebranded
+        const brandText = "4SP - AI AGENT";
         brandText.split('').forEach(char => {
             const span = document.createElement('span');
             span.textContent = char;
@@ -143,11 +144,11 @@
         
         const persistentTitle = document.createElement('div');
         persistentTitle.id = 'ai-persistent-title';
-        persistentTitle.textContent = "AI Agent - Standard"; // Rebranded
+        persistentTitle.textContent = "AI Agent - Standard";
         
         const welcomeMessage = document.createElement('div');
         welcomeMessage.id = 'ai-welcome-message';
-        const welcomeHeader = chatHistory.length > 0 ? "Welcome Back" : "Welcome to AI Agent"; // Rebranded
+        const welcomeHeader = chatHistory.length > 0 ? "Welcome Back" : "Welcome to AI Agent";
         welcomeMessage.innerHTML = `<h2>${welcomeHeader}</h2><p>This is a beta feature. To improve your experience, your general location (state or country) will be shared with your first message. You may be subject to message limits.</p>`;
         
         const closeButton = document.createElement('div');
@@ -158,6 +159,10 @@
         const responseContainer = document.createElement('div');
         responseContainer.id = 'ai-response-container';
         
+        // --- NEW: Compose Area Wrapper for Input and Menu ---
+        const composeArea = document.createElement('div');
+        composeArea.id = 'ai-compose-area';
+
         const inputWrapper = document.createElement('div');
         inputWrapper.id = 'ai-input-wrapper';
         
@@ -192,13 +197,16 @@
         inputWrapper.appendChild(attachmentButton);
         inputWrapper.appendChild(agentButton);
         
+        // Append menu and input wrapper to the new compose area
+        composeArea.appendChild(createAgentMenu());
+        composeArea.appendChild(inputWrapper);
+
         container.appendChild(brandTitle);
         container.appendChild(persistentTitle);
         container.appendChild(welcomeMessage);
         container.appendChild(closeButton);
         container.appendChild(responseContainer);
-        container.appendChild(inputWrapper);
-        container.appendChild(createAgentMenu()); // New menu creation function
+        container.appendChild(composeArea); // Add the compose area instead of the individual elements
         container.appendChild(charCounter);
         
         document.body.appendChild(container);
@@ -404,14 +412,11 @@
         input.click();
     }
     
-    // --- NEW AGENT MENU LOGIC ---
-
     function toggleAgentMenu() {
         const menu = document.getElementById('ai-agent-menu');
         const toggleBtn = document.getElementById('ai-agent-button');
         const isMenuOpen = menu.classList.toggle('active');
         toggleBtn.classList.toggle('active', isMenuOpen);
-        // Reset to selection view when closing
         if (!isMenuOpen) {
             menu.classList.remove('details-view-active');
         }
@@ -426,7 +431,7 @@
         detailsView.querySelector('h3').textContent = agentName;
         detailsView.querySelector('p').textContent = agent.description;
         const selectBtn = detailsView.querySelector('#agent-menu-select-btn');
-        selectBtn.dataset.agent = agentName; // Store agent name for the click handler
+        selectBtn.dataset.agent = agentName;
         
         menu.classList.add('details-view-active');
     }
@@ -445,8 +450,6 @@
         
         toggleAgentMenu();
     }
-
-    // --- END NEW AGENT MENU LOGIC ---
 
     function renderAttachments() {
         const previewContainer = document.getElementById('ai-attachment-preview');
@@ -567,7 +570,6 @@
         const menu = document.createElement('div');
         menu.id = 'ai-agent-menu';
 
-        // View 1: Agent Selection Wheel
         const selectionView = document.createElement('div');
         selectionView.id = 'agent-selection-view';
         selectionView.innerHTML = `<div class="menu-header">Select an Agent</div>`;
@@ -584,7 +586,6 @@
         selectionView.appendChild(agentWheel);
         menu.appendChild(selectionView);
 
-        // View 2: Agent Details
         const detailsView = document.createElement('div');
         detailsView.id = 'agent-details-view';
         detailsView.innerHTML = `
@@ -597,7 +598,6 @@
         `;
         menu.appendChild(detailsView);
 
-        // Add event listeners for the details view buttons
         detailsView.querySelector('#agent-menu-back-btn').onclick = goBackToAgentSelection;
         detailsView.querySelector('#agent-menu-select-btn').onclick = (e) => selectAgent(e.target.dataset.agent);
         
@@ -812,7 +812,6 @@
             #ai-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0,0,0,0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); z-index: 2147483647; opacity: 0; transition: opacity 0.5s, background 0.5s, backdrop-filter 0.5s; font-family: 'Lora', serif; display: flex; flex-direction: column; justify-content: flex-end; padding: 0; box-sizing: border-box; overflow: hidden; }
             #ai-container.active { opacity: 1; background-color: rgba(0, 0, 0, 0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
             
-            /* --- Agent Themes --- */
             #ai-container[data-agent="Standard"] { background: rgba(10, 10, 15, 0.8); }
             #ai-container[data-agent="Quick"] { background: linear-gradient(rgba(75, 85, 99, 0.2), rgba(75, 85, 99, 0.2)), rgba(10, 10, 15, 0.75); }
             #ai-container[data-agent="Analysis"] { background: linear-gradient(rgba(30, 64, 175, 0.2), rgba(30, 64, 175, 0.2)), rgba(10, 10, 15, 0.75); }
@@ -823,7 +822,6 @@
             #ai-container[data-agent="Experimental"] { animation: experimental-bg 20s ease infinite; }
             #ai-container[data-agent="Experimental"] #ai-persistent-title { animation: experimental-title-color 10s linear infinite; }
             
-            /* --- Title Colors by Agent --- */
             #ai-container[data-agent="Standard"] #ai-persistent-title { color: #ffffff; }
             #ai-container[data-agent="Quick"] #ai-persistent-title { color: #9ca3af; }
             #ai-container[data-agent="Analysis"] #ai-persistent-title { color: #60a5fa; }
@@ -850,7 +848,10 @@
             .user-message { background: rgba(40,45,50,.8); align-self: flex-end; }
             .gemini-response { animation: glow 4s infinite; }
             .gemini-response.loading { display: flex; justify-content: center; align-items: center; min-height: 60px; max-width: 100px; padding: 15px; background: rgba(15,15,18,.8); animation: gemini-glow 4s linear infinite; }
-            #ai-input-wrapper { display: flex; flex-direction: column; flex-shrink: 0; position: relative; z-index: 2; transition: all .4s cubic-bezier(.4,0,.2,1); margin: 15px auto; width: 90%; max-width: 720px; border-radius: 20px; background: rgba(10,10,10,.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,.2); }
+            
+            /* --- NEW/MODIFIED: Input Area and Menu --- */
+            #ai-compose-area { position: relative; flex-shrink: 0; z-index: 2; margin: 15px auto; width: 90%; max-width: 720px; }
+            #ai-input-wrapper { position: relative; z-index: 2; width: 100%; display: flex; flex-direction: column; border-radius: 20px; background: rgba(10,10,10,.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,.2); transition: all .4s cubic-bezier(.4,0,.2,1); }
             #ai-input-wrapper::before, #ai-input-wrapper::after { content: ''; position: absolute; top: -1px; left: -1px; right: -1px; bottom: -1px; border-radius: 21px; z-index: -1; transition: opacity 0.5s ease-in-out; }
             #ai-input-wrapper::before { animation: glow 3s infinite; opacity: 1; }
             #ai-input-wrapper.waiting::before { opacity: 0; }
@@ -866,8 +867,7 @@
             #ai-agent-button:hover { background-color: rgba(120, 120, 120, 0.7); }
             #ai-agent-button.active { background-color: rgba(150, 150, 150, 0.8); color: white; }
 
-            /* --- New Agent Menu --- */
-            #ai-agent-menu { position: absolute; bottom: calc(100% - 10px); left: 0; right: 0; width: 90%; max-width: 720px; margin: 0 auto; z-index: 1; background: rgba(20, 20, 22, 0.85); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,0.2); border-radius: 16px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); padding: 15px; opacity: 0; visibility: hidden; transform: translateY(20px); transition: all .3s cubic-bezier(.4,0,.2,1); overflow: hidden; }
+            #ai-agent-menu { position: absolute; bottom: calc(100% + 10px); left: 0; right: 0; width: 100%; z-index: 1; background: rgba(20, 20, 22, 0.85); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,0.2); border-radius: 16px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); padding: 15px; opacity: 0; visibility: hidden; transform: translateY(20px); transition: all .3s cubic-bezier(.4,0,.2,1); overflow: hidden; }
             #ai-agent-menu.active { opacity: 1; visibility: visible; transform: translateY(0); }
             #ai-agent-menu .menu-header { font-size: 0.9em; color: #aaa; text-transform: uppercase; margin-bottom: 15px; text-align: center; }
             #agent-details-view { display: none; }
