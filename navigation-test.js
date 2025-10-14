@@ -33,30 +33,25 @@
     let chatHistory = [];
     let attachedFiles = [];
 
-    // --- EXPANDED SYMBOL MAP ---
+    // --- EXPANDED SYMBOL MAP (Syntax corrected) ---
     const latexSymbolMap = {
-        '\\alpha':'α','\\beta':'β','\\gamma':'γ','\\delta':'δ','\\epsilon':'ε','\\zeta':'ζ','\\eta':'η','\\theta':'θ','\\iota':'ι','\\kappa':'κ','\\lambda':'λ','\\mu':'μ','\\nu':'ν','\\xi':'ξ','\\omicron':'ο','\\pi':'π','\\rho':'ρ','\\sigma':'σ','\\tau':'τ','\\upsilon':'υ','\\phi':'φ','\\chi':'χ','\\psi':'ψ','\\omega':'ω','\\Gamma':'Γ','\\Delta':'Δ','\\Theta':'Θ','\\Lambda':'Λ','\\Xi':'Ξ','\\Pi':'Π','\\Sigma':'Σ','\\Upsilon':'Υ','\\Phi':'Φ','\\Psi':'\\Omega':'Ω','\\pm':'±','\\times':'×','\\div':'÷','\\cdot':'·','\\ast':'∗','\\cup':'∪','\\cap':'∩','\\in':'∈','\\notin':'∉','\\subset':'⊂','\\supset':'⊃','\\subseteq':'⊆','\\supseteq':'⊇','\\ne':'≠','\\neq':'≠','\\le':'≤','\\leq':'≤','\\ge':'≥','\\geq':'≥','\\approx':'≈','\\equiv':'≡','\\sim':'∼','\\ll':'≪','\\gg':'≫','\\propto':'∝','\\leftarrow':'←','\\rightarrow':'→','\\to':'→','\\uparrow':'↑','\\downarrow':'↓','\\leftrightarrow':'↔','\\mapsto':'↦','\\Leftarrow':'⇐','\\Rightarrow':'⇒','\\implies':'⇒','\\Leftrightarrow':'⇔','\\iff':'⇔','\\forall':'∀','\\exists':'∃','\\nabla':'∇','\\partial':'∂','\\emptyset':'∅','\\infty':'∞','\\degree':'°','\\angle':'∠','\\hbar':'ħ','\\ell':'ℓ','\\therefore':'∴','\\because':'∵','\\bullet':'•','\\ldots':'…','\\dots':'…','\\prime':'′','\\hat':'^','\\oplus':'⊕','\\otimes':'⊗','\\perp':'⊥','\\sqrt':'√'
+        '\\alpha':'α','\\beta':'β','\\gamma':'γ','\\delta':'δ','\\epsilon':'ε','\\zeta':'ζ','\\eta':'η','\\theta':'θ','\\iota':'ι','\\kappa':'κ','\\lambda':'λ','\\mu':'μ','\\nu':'ν','\\xi':'ξ','\\omicron':'ο','\\pi':'π','\\rho':'ρ','\\sigma':'σ','\\tau':'τ','\\upsilon':'υ','\\phi':'φ','\\chi':'χ','\\psi':'ψ','\\omega':'ω','\\Gamma':'Γ','\\Delta':'Δ','\\Theta':'Θ','\\Lambda':'Λ','\\Xi':'Ξ','\\Pi':'Π','\\Sigma':'Σ','\\Upsilon':'Υ','\\Phi':'Φ','\\Psi':'Ψ','\\Omega':'Ω','\\pm':'±','\\times':'×','\\div':'÷','\\cdot':'·','\\ast':'∗','\\cup':'∪','\\cap':'∩','\\in':'∈','\\notin':'∉','\\subset':'⊂','\\supset':'⊃','\\subseteq':'⊆','\\supseteq':'⊇','\\ne':'≠','\\neq':'≠','\\le':'≤','\\leq':'≤','\\ge':'≥','\\geq':'≥','\\approx':'≈','\\equiv':'≡','\\sim':'∼','\\ll':'≪','\\gg':'≫','\\propto':'∝','\\leftarrow':'←','\\rightarrow':'→','\\to':'→','\\uparrow':'↑','\\downarrow':'↓','\\leftrightarrow':'↔','\\mapsto':'↦','\\Leftarrow':'⇐','\\Rightarrow':'⇒','\\implies':'⇒','\\Leftrightarrow':'⇔','\\iff':'⇔','\\forall':'∀','\\exists':'∃','\\nabla':'∇','\\partial':'∂','\\emptyset':'∅','\\infty':'∞','\\degree':'°','\\angle':'∠','\\hbar':'ħ','\\ell':'ℓ','\\therefore':'∴','\\because':'∵','\\bullet':'•','\\ldots':'…','\\dots':'…','\\prime':'′','\\hat':'^','\\oplus':'⊕','\\otimes':'⊗','\\perp':'⊥','\\sqrt':'√'
     };
 
     // --- DAILY LIMITS CONFIGURATION (image limits removed) ---
-    // const DAILY_LIMITS = { images: 5 }; // Removed
-
-    // limitManager is now simplified since image limits are removed
     const limitManager = {
-        // Keeping structure but daily limits are effectively removed for images.
-        // Can be repurposed for other limits if needed later.
         getToday: () => new Date().toLocaleDateString("en-US"),
         getUsage: () => {
             const usageData = JSON.parse(localStorage.getItem('aiUsageLimits')) || {};
             const today = limitManager.getToday();
             if (usageData.date !== today) {
-                return { date: today }; // Only date is relevant if no other limits.
+                return { date: today };
             }
             return usageData;
         },
         saveUsage: (usageData) => { localStorage.setItem('aiUsageLimits', JSON.stringify(usageData)); },
-        canUpload: (type) => true, // Always true as limits are removed
-        recordUpload: (type, count = 1) => {} // No-op as limits are removed
+        canUpload: (type) => true,
+        recordUpload: (type, count = 1) => {}
     };
 
     async function isUserAuthorized() {
@@ -735,7 +730,6 @@
             #ai-input-wrapper { display: flex; flex-direction: column; flex-shrink: 0; position: relative; z-index: 2; transition: all .4s cubic-bezier(.4,0,.2,1); margin: 15px auto; width: 90%; max-width: 720px; border-radius: 20px; background: rgba(10,10,10,.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,.2); }
             #ai-input-wrapper::before, #ai-input-wrapper::after { content: ''; position: absolute; top: -1px; left: -1px; right: -1px; bottom: -1px; border-radius: 21px; z-index: -1; transition: opacity 0.5s ease-in-out; }
             #ai-input-wrapper::before { animation: glow 3s infinite; opacity: 1; }
-            #ai-input-wrapper::after { animation: gemini-glow 4s linear infinite; opacity: 0; }
             #ai-input-wrapper.waiting::before { opacity: 0; }
             #ai-input-wrapper.waiting::after { opacity: 1; }
             #ai-input { min-height: 48px; max-height: ${MAX_INPUT_HEIGHT}px; overflow-y: hidden; color: #fff; font-size: 1.1em; padding: 13px 60px 13px 60px; /* Adjusted padding for buttons */ box-sizing: border-box; word-wrap: break-word; outline: 0; text-align: left; }
