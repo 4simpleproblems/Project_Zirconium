@@ -1,5 +1,5 @@
 /**
- * ai-activation.js
+ * agent-activation.js
  *
  * A feature-rich, self-contained script with a unified attachment/subject menu,
  * enhanced animations, intelligent chat history (token saving),
