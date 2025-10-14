@@ -4,12 +4,17 @@
  * A feature-rich, self-contained script with a unified attachment/subject menu,
  * enhanced animations, intelligent chat history (token saving),
  * and advanced file previews. This version includes a character limit,
- * smart paste handling, and refined animations.
+ * smart paste handling (including images), and refined animations.
  *
  * Updated with a redesigned horizontal "Agent" selection menu featuring scroll buttons
  * and fading edges. Each agent's detail view has a unique texture. The back/select
  * buttons are now square icons. The "Experimental" agent background animation is
  * now a continuous, smooth loop.
+ *
+ * ADDED: Image paste support.
+ * ADDED: Specific LaTeX display shortcuts (requires external library for full rendering).
+ * UPDATED: Experimental agent UI (dark, static title, opaque menu).
+ * UPDATED: Agent scroll button styling (icon only).
  */
 (function() {
     // --- CONFIGURATION ---
@@ -236,10 +241,16 @@
             const bubble = document.createElement('div');
             bubble.className = `ai-message-bubble ${message.role === 'user' ? 'user-message' : 'gemini-response'}`;
             if (message.role === 'model') {
-                bubble.innerHTML = `<div class="ai-response-content">${parseGeminiResponse(message.parts[0].text)}</div>`;
+                // Ensure math rendering on history load
+                const parsedResponse = parseGeminiResponse(message.parts[0].text);
+                bubble.innerHTML = `<div class="ai-response-content">${parsedResponse}</div>`;
+                
                 bubble.querySelectorAll('.copy-code-btn').forEach(button => {
                     button.addEventListener('click', handleCopyCode);
                 });
+
+                // Trigger math rendering for history
+                renderLatexDisplay(bubble);
             } else {
                 let bubbleContent = ''; let textContent = ''; let fileCount = 0;
                 message.parts.forEach(part => {
@@ -268,6 +279,7 @@
         }
         
         let processedChatHistory = [...chatHistory];
+        // Smart history shortening to save tokens (keeps first 3 and last 3 messages)
         if (processedChatHistory.length > 6) {
              processedChatHistory = [ ...processedChatHistory.slice(0, 3), ...processedChatHistory.slice(-3) ];
         }
@@ -316,6 +328,9 @@
                     button.addEventListener('click', handleCopyCode);
                 });
                 responseBubble.style.opacity = '1';
+
+                // Trigger math rendering
+                renderLatexDisplay(responseBubble);
             }, 300);
 
         } catch (error) {
@@ -340,6 +355,35 @@
             if(editor) { editor.contentEditable = true; editor.focus(); }
         }
     }
+
+    // NEW: Function to handle file-like object processing
+    function processFileLike(file, base64Data, dataUrl, tempId) {
+        if (attachedFiles.length >= MAX_ATTACHMENTS_PER_MESSAGE) {
+            alert(`You can attach a maximum of ${MAX_ATTACHMENTS_PER_MESSAGE} files per message.`);
+            return;
+        }
+
+        const currentTotalSize = attachedFiles.reduce((sum, f) => sum + (f.inlineData ? atob(f.inlineData.data).length : 0), 0);
+        if (currentTotalSize + file.size > (4 * 1024 * 1024)) {
+            alert(`Upload failed: Total size of attachments would exceed the 4MB limit per message. (Current: ${formatBytes(currentTotalSize)}, Adding: ${formatBytes(file.size)})`);
+            return;
+        }
+
+        const item = {
+            inlineData: { mimeType: file.type, data: base64Data },
+            fileName: file.name || 'Pasted Image',
+            fileContent: dataUrl,
+            isLoading: false
+        };
+        
+        if (tempId) { // For drag/drop or immediate paste where we need a temporary entry
+            item.tempId = tempId;
+        }
+
+        attachedFiles.push(item);
+        renderAttachments();
+    }
+
 
     function handleFileUpload() {
         if (attachedFiles.length >= MAX_ATTACHMENTS_PER_MESSAGE) {
@@ -379,13 +423,15 @@
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     const base64Data = e.target.result.split(',')[1];
+                    const dataUrl = e.target.result;
+                    
                     const itemIndex = attachedFiles.findIndex(f => f.tempId === tempId);
                     if (itemIndex > -1) {
                         const item = attachedFiles[itemIndex];
                         item.isLoading = false;
                         item.inlineData = { mimeType: file.type, data: base64Data };
                         item.fileName = file.name;
-                        item.fileContent = e.target.result;
+                        item.fileContent = dataUrl;
                         delete item.file;
                         delete item.tempId;
                         renderAttachments();
@@ -580,6 +626,8 @@
         if (file.inlineData.mimeType.startsWith('image/')) {
             previewArea.innerHTML = `<img src="${file.fileContent}" alt="${file.fileName}" style="max-width: 100%; max-height: 80vh; object-fit: contain;">`;
         } else if (file.inlineData.mimeType.startsWith('text/')) {
+            // Text content for text files is already available in fileContent as data URL.
+            // We need to fetch/read it to display the raw text.
             fetch(file.fileContent)
                 .then(response => response.text())
                 .then(text => {
@@ -692,7 +740,30 @@
     
     function handlePaste(e) {
         e.preventDefault();
-        const pastedText = (e.clipboardData || window.clipboardData).getData('text/plain');
+        const clipboardData = e.clipboardData || window.clipboardData;
+        const pastedText = clipboardData.getData('text/plain');
+        
+        // --- 1. Check for Image Data ---
+        const items = clipboardData.items;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf("image") !== -1) {
+                const file = items[i].getAsFile();
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const base64Data = event.target.result.split(',')[1];
+                        const dataUrl = event.target.result;
+                        // Use a placeholder name as clipboard image doesn't have one
+                        file.name = `pasted-image-${Date.now()}.${file.type.split('/')[1] || 'png'}`;
+                        processFileLike(file, base64Data, dataUrl);
+                    };
+                    reader.readAsDataURL(file);
+                    return; // Stop processing if an image is found
+                }
+            }
+        }
+        
+        // --- 2. Check for Text Data (Original Logic) ---
         const currentText = e.target.innerText;
         const totalLengthIfPasted = currentText.length + pastedText.length;
 
@@ -707,7 +778,9 @@
             const encoder = new TextEncoder();
             const encoded = encoder.encode(pastedText);
             const base64Data = btoa(String.fromCharCode.apply(null, encoded));
-
+            const blob = new Blob([pastedText], {type: 'text/plain'});
+            blob.name = filename; // Add name property for consistent display
+            
             if (attachedFiles.length < MAX_ATTACHMENTS_PER_MESSAGE) {
                 const reader = new FileReader();
                 reader.onloadend = (event) => {
@@ -718,7 +791,7 @@
                     });
                     renderAttachments();
                 };
-                reader.readAsDataURL(new Blob([pastedText], {type: 'text/plain'}));
+                reader.readAsDataURL(blob);
             } else {
                 alert(`Cannot attach more than ${MAX_ATTACHMENTS_PER_MESSAGE} files. Text was too large to paste directly.`);
             }
@@ -804,10 +877,27 @@
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
     }
+    
+    // NEW: Placeholder for LaTeX rendering
+    function renderLatexDisplay(container) {
+        // This is a placeholder function. In a real application, you would
+        // use an external library like MathJax or KaTeX here.
+        // For demonstration, we simply replace the placeholders with the math text.
+        // You would replace this with something like:
+        // katex.render(element.dataset.tex, element, { displayMode: true });
+        
+        container.querySelectorAll('.latex-display').forEach(element => {
+            const mathText = element.dataset.tex;
+            // Crude display for unsupported environment
+            element.innerHTML = `<span style="display: block; font-family: monospace; color: #f0f0f0; background: #222; padding: 10px; border-radius: 4px; overflow-x: auto; text-align: center;">${escapeHTML(mathText)} (Requires MathJax/KaTeX)</span>`;
+        });
+    }
+
     function parseGeminiResponse(text) {
         let html = text;
         const codeBlocks = [];
 
+        // 1. Process Code Blocks
         html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
             const trimmedCode = code.trim();
             const lines = trimmedCode.split('\n').length;
@@ -827,23 +917,50 @@
             return "%%CODE_BLOCK%%";
         });
 
+        // 2. Escape the rest of the HTML
         html = escapeHTML(html);
+
+        // 3. Process Specific LaTeX Shortcuts and replace with a placeholder element
+        // The actual rendering will happen in renderLatexDisplay after DOM insertion.
+        const latexDisplayShortcuts = {
+            '\\frac{14 - 18}{0 - 2}': 'frac_placeholder_1',
+            '\\boxed{2}': 'boxed_placeholder_2'
+        };
+
+        Object.keys(latexDisplayShortcuts).forEach(tex => {
+            // Use a specific regex to find and replace the whole display math block
+            const regex = new RegExp('\\$' + escapeRegExp(tex) + '\\$', 'g');
+            html = html.replace(regex, `<div class="latex-display" data-tex="${escapeHTML(tex)}"></div>`);
+        });
+
+        // 4. Convert Markdown to HTML (Headings, Bold, Italic)
         html = html.replace(/^### (.*$)/gm, "<h3>$1</h3>")
                    .replace(/^## (.*$)/gm, "<h2>$1</h2>")
                    .replace(/^# (.*$)/gm, "<h1>$1</h1>");
         html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
                    .replace(/\*(.*?)\*/g, "<em>$1</em>");
+        
+        // 5. Convert Markdown Lists (must be after other block-level elements)
+        // Simple list item conversion
         html = html.replace(/^(?:\*|-)\s(.*$)/gm, "<li>$1</li>");
+        // Wrap adjacent list items in <ul> or <ol>
         html = html.replace(/((?:<br>)?\s*<li>.*<\/li>(\s*<br>)*)+/gs, (match) => {
             const listItems = match.replace(/<br>/g, '').trim();
-            return `<ul>${listItems}</ul>`;
+            return `<ul>${listItems}</ul>`; // Assuming unordered list for simple markdown
         });
         html = html.replace(/(<\/li>\s*<li>)/g, "</li><li>");
-
+        
+        // 6. Convert newlines to breaks (must be near the end)
         html = html.replace(/\n/g, "<br>");
+        
+        // 7. Re-insert Code Blocks
         html = html.replace(/%%CODE_BLOCK%%/g, () => codeBlocks.shift());
         
         return html;
+    }
+    
+    function escapeRegExp(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
     }
 
     function injectStyles() {
@@ -876,7 +993,10 @@
             #ai-container[data-agent="Technical"] { background: linear-gradient(rgba(7, 89, 133, 0.2), rgba(7, 89, 133, 0.2)), rgba(10, 10, 15, 0.75); }
             #ai-container[data-agent="Emotional"] { background: linear-gradient(rgba(217, 70, 239, 0.15), rgba(217, 70, 239, 0.15)), rgba(10, 10, 15, 0.75); }
             #ai-container[data-agent="Experimental"] { background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab); background-size: 400% 400%; animation: experimental-bg-pan 15s ease infinite; }
-            #ai-container[data-agent="Experimental"] #ai-persistent-title { animation: experimental-title-color 10s linear infinite; }
+            
+            /* UPDATED: Experimental Title Color */
+            #ai-container[data-agent="Experimental"] #ai-persistent-title { color: #333333; animation: none; }
+            #ai-container[data-agent="Experimental"] #ai-brand-title span { animation: none; color: #333333; }
             
             #ai-container[data-agent="Standard"] #ai-persistent-title { color: #ffffff; }
             #ai-container[data-agent="Quick"] #ai-persistent-title { color: #9ca3af; }
@@ -922,7 +1042,8 @@
             #ai-agent-button:hover { background-color: rgba(120, 120, 120, 0.7); }
             #ai-agent-button.active { background-color: rgba(150, 150, 150, 0.8); color: white; }
 
-            #ai-agent-menu { position: absolute; bottom: calc(100% + 10px); left: 0; right: 0; width: 100%; z-index: 1; background: rgba(20, 20, 22, 0.85); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,0.2); border-radius: 16px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); padding: 15px; opacity: 0; visibility: hidden; transform: translateY(20px); transition: all .3s cubic-bezier(.4,0,.2,1); overflow: hidden; }
+            /* UPDATED: Agent Selection Menu Opacity/Blur */
+            #ai-agent-menu { position: absolute; bottom: calc(100% + 10px); left: 0; right: 0; width: 100%; z-index: 1; background: rgb(20, 20, 22); backdrop-filter: none; -webkit-backdrop-filter: none; border: 1px solid rgba(255,255,255,0.2); border-radius: 16px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); padding: 15px; opacity: 0; visibility: hidden; transform: translateY(20px); transition: all .3s cubic-bezier(.4,0,.2,1); overflow: hidden; }
             #ai-agent-menu.active { opacity: 1; visibility: visible; transform: translateY(0); }
             #ai-agent-menu .menu-header { font-size: 0.9em; color: #aaa; text-transform: uppercase; margin-bottom: 15px; text-align: center; }
             #agent-details-view { display: none; }
@@ -930,15 +1051,19 @@
             #ai-agent-menu.details-view-active #agent-details-view { display: flex; flex-direction: column; }
             .agent-wheel-wrapper { position: relative; }
             .agent-wheel-wrapper::before, .agent-wheel-wrapper::after { content: ''; position: absolute; top: 0; bottom: 0; width: 30px; z-index: 2; pointer-events: none; }
-            .agent-wheel-wrapper::before { left: 0; background: linear-gradient(to right, rgba(20, 20, 22, 1), transparent); }
-            .agent-wheel-wrapper::after { right: 0; background: linear-gradient(to left, rgba(20, 20, 22, 1), transparent); }
+            /* Adjusted for opaque menu */
+            .agent-wheel-wrapper::before { left: 0; background: linear-gradient(to right, rgb(20, 20, 22) 30%, transparent); }
+            .agent-wheel-wrapper::after { right: 0; background: linear-gradient(to left, rgb(20, 20, 22) 30%, transparent); }
             .agent-wheel { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; margin-bottom: -10px; scroll-behavior: smooth; scrollbar-width: none; -ms-overflow-style: none; }
             .agent-wheel::-webkit-scrollbar { display: none; }
-            .agent-glide-button { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(50,50,50,0.7); color: white; border: 1px solid rgba(255,255,255,0.2); border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 3; transition: opacity .2s, background .2s; }
-            .agent-glide-button:hover { background: rgba(80,80,80,0.9); }
+            
+            /* UPDATED: Agent Glide Button Style (Icon Only) */
+            .agent-glide-button { position: absolute; top: 50%; transform: translateY(-50%); background: transparent; color: rgba(255,255,255,.5); border: none; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 3; transition: color .2s; }
+            .agent-glide-button:hover { color: rgba(255,255,255,.8); }
             .agent-glide-button.hidden { opacity: 0; pointer-events: none; }
             #agent-glide-left { left: -15px; }
             #agent-glide-right { right: -15px; }
+
             .agent-card { flex-shrink: 0; padding: 10px 20px; background-color: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; cursor: pointer; transition: background-color .2s, transform .2s; color: #ddd; font-family: 'Merriweather', serif; }
             .agent-card:hover { background-color: rgba(255,255,255,0.15); transform: translateY(-2px); }
             
