@@ -5,6 +5,9 @@
  * NEW: Added a Settings Menu to store user preferences (nickname, color, gender, age) using localStorage.
  * NEW: The AI's system instruction (persona) now changes intelligently based on the content and tone of the user's latest message.
  * UI: Fixed background and title colors. Replaced Agent button with a grey Settings button.
+ * UPDATED: Implemented browser color selector for user favorite color.
+ * UPDATED: AI container does not load on DOMContentLoaded; requires Ctrl + \ shortcut.
+ * UPDATED: Ensured Ctrl + \ shortcut for activation/deactivation is fully functional.
  */
 (function() {
     // --- CONFIGURATION ---
@@ -17,14 +20,7 @@
 
     const DEFAULT_NICKNAME = 'User';
     const DEFAULT_COLOR = '#4285f4'; // Google Blue
-    const FAVORITE_COLORS = [
-        { name: 'Red', hex: '#ea4335' },
-        { name: 'Orange', hex: '#fbbc05' },
-        { name: 'Green', hex: '#34a853' },
-        { name: 'Blue', hex: '#4285f4' }, // Default
-        { name: 'Purple', hex: '#6f2da8' },
-        { name: 'Black', hex: '#000000' }
-    ];
+    /* REMOVED: FAVORITE_COLORS array */
 
     // --- ICONS (for event handlers) ---
     const copyIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
@@ -99,17 +95,24 @@
 
     // --- END REPLACED/MODIFIED FUNCTIONS ---
 
+    /**
+     * Handles the Ctrl + \ shortcut for AI activation/deactivation.
+     */
     async function handleKeyDown(e) {
+        // Check for Ctrl + \ (or Cmd + \ on Mac, but Ctrl is standard cross-browser for this)
         if (e.ctrlKey && e.key === '\\') {
             const selection = window.getSelection().toString();
             if (isAIActive) {
+                // Deactivation logic
                 if (selection.length > 0) { return; }
                 e.preventDefault();
                 const mainEditor = document.getElementById('ai-input');
+                // Only deactivate if the input is empty and no files are attached
                 if (mainEditor && mainEditor.innerText.trim().length === 0 && attachedFiles.length === 0) {
                     deactivateAI();
                 }
             } else {
+                // Activation logic
                 if (selection.length === 0) {
                     const isAuthorized = await isUserAuthorized();
                     if (isAuthorized) {
@@ -148,7 +151,7 @@
         const welcomeMessage = document.createElement('div');
         welcomeMessage.id = 'ai-welcome-message';
         const welcomeHeader = chatHistory.length > 0 ? "Welcome Back" : "Welcome to AI Agent";
-        welcomeMessage.innerHTML = `<h2>${welcomeHeader}</h2><p>This is a beta feature. To improve your experience, your general location (state or country) will be shared with your first message. You may be subject to message limits.</p>`;
+        welcomeMessage.innerHTML = `<h2>${welcomeHeader}</h2><p>This is a beta feature. To improve your experience, your general location (state or country) will be shared with your first message. You may be subject to message limits.</p><p class="shortcut-tip">(Press Ctrl + \\ to close)</p>`;
         
         const closeButton = document.createElement('div');
         closeButton.id = 'ai-close-button';
@@ -232,6 +235,8 @@
                 if (styles) styles.remove();
                 const fonts = document.getElementById('ai-google-fonts');
                 if (fonts) fonts.remove();
+                const fontAwesome = document.querySelector('link[href*="font-awesome"]');
+                if (fontAwesome) fontAwesome.remove();
             }, 500);
         }
         isAIActive = false;
@@ -239,6 +244,7 @@
         attachedFiles = [];
         const settingsMenu = document.getElementById('ai-settings-menu');
         if (settingsMenu) settingsMenu.classList.remove('active');
+         document.removeEventListener('click', handleMenuOutsideClick); // Clean up listener
     }
     
     function renderChatHistory() {
@@ -423,7 +429,8 @@ Adapt your persona and tone for each turn.`;
             document.getElementById('settings-nickname').value = userSettings.nickname === DEFAULT_NICKNAME ? '' : userSettings.nickname;
             document.getElementById('settings-age').value = userSettings.age || '';
             document.getElementById('settings-gender').value = userSettings.gender;
-            renderColorWheel();
+            document.getElementById('settings-color').value = userSettings.favoriteColor; // Set color picker value
+            
             // Attach a one-time handler to auto-save when menu is closed
             document.addEventListener('click', handleMenuOutsideClick);
         } else {
@@ -436,8 +443,8 @@ Adapt your persona and tone for each turn.`;
         const button = document.getElementById('ai-settings-button');
         const composeArea = document.getElementById('ai-compose-area');
 
+        // Check if the click is outside the entire compose area (which contains the menu and button)
         if (menu.classList.contains('active') && !composeArea.contains(event.target) && event.target !== button && !button.contains(event.target)) {
-            // Check if the click is outside the entire compose area (which contains the menu and button)
             saveSettings();
             toggleSettingsMenu();
         }
@@ -448,12 +455,12 @@ Adapt your persona and tone for each turn.`;
         const nicknameEl = document.getElementById('settings-nickname');
         const ageEl = document.getElementById('settings-age');
         const genderEl = document.getElementById('settings-gender');
-        const colorElement = document.querySelector('.color-card.selected');
+        const colorEl = document.getElementById('settings-color');
 
         const nickname = nicknameEl.value.trim();
         const age = parseInt(ageEl.value);
         const gender = genderEl.value;
-        const favoriteColor = colorElement ? colorElement.dataset.hex : DEFAULT_COLOR;
+        const favoriteColor = colorEl.value || DEFAULT_COLOR; // Use color input value
 
         userSettings.nickname = nickname || DEFAULT_NICKNAME;
         userSettings.age = (isNaN(age) || age < 0) ? 0 : age;
@@ -464,32 +471,7 @@ Adapt your persona and tone for each turn.`;
         localStorage.setItem('ai-user-settings', JSON.stringify(userSettings));
     }
 
-    function renderColorWheel() {
-        const wheel = document.getElementById('color-wheel');
-        if (!wheel) return;
-        wheel.innerHTML = '';
-
-        FAVORITE_COLORS.forEach(color => {
-            const card = document.createElement('div');
-            card.className = 'color-card';
-            card.dataset.hex = color.hex;
-            card.style.backgroundColor = color.hex;
-            card.title = color.name;
-
-            if (color.hex === userSettings.favoriteColor) {
-                card.classList.add('selected');
-            }
-
-            card.onclick = (e) => {
-                // Deselect all
-                document.querySelectorAll('.color-card').forEach(c => c.classList.remove('selected'));
-                // Select current
-                e.currentTarget.classList.add('selected');
-                saveSettings(); // Auto-save color change
-            };
-            wheel.appendChild(card);
-        });
-    }
+    /* REMOVED: renderColorWheel function */
 
     function createSettingsMenu() {
         const menu = document.createElement('div');
@@ -505,11 +487,9 @@ Adapt your persona and tone for each turn.`;
             </div>
 
             <div class="setting-group">
-                <label>Favorite Color</label>
-                <div class="color-wheel-wrapper">
-                    <div id="color-wheel" class="color-wheel"></div>
-                </div>
-                <p class="setting-note">Subtly influences the AI's response style.</p>
+                <label for="settings-color">Favorite Color</label>
+                <input type="color" id="settings-color" value="${userSettings.favoriteColor}" />
+                <p class="setting-note">Subtly influences the AI's response style (e.g., in theming).</p>
             </div>
 
             <div class="setting-group-split">
@@ -538,6 +518,7 @@ Adapt your persona and tone for each turn.`;
         // Use debounce for inputs to avoid excessive saves
         const debouncedSave = debounce(saveSettings, 500);
         inputs.forEach(input => {
+            // 'input' event for text/number/color inputs, 'change' for select
             input.addEventListener('input', debouncedSave);
             input.addEventListener('change', debouncedSave);
         });
@@ -546,9 +527,6 @@ Adapt your persona and tone for each turn.`;
             saveSettings();
             toggleSettingsMenu();
         };
-
-        // Render the wheel content after it's in the DOM
-        setTimeout(renderColorWheel, 0);
 
         return menu;
     }
@@ -1040,6 +1018,7 @@ Adapt your persona and tone for each turn.`;
             #ai-container.chat-active #ai-welcome-message { opacity: 0; pointer-events: none; transform: translate(-50%,-50%) scale(0.95); }
             #ai-welcome-message h2 { font-family: 'Merriweather', serif; font-size: 2.2em; margin: 0; color: #fff; }
             #ai-welcome-message p { font-size: .9em; margin-top: 10px; max-width: 400px; line-height: 1.5; margin-left: auto; margin-right: auto; }
+            .shortcut-tip { font-size: 0.8em; color: rgba(255,255,255,.7); margin-top: 20px; }
             #ai-close-button { position: absolute; top: 20px; right: 30px; color: rgba(255,255,255,.7); font-size: 40px; cursor: pointer; transition: color .2s ease,transform .3s ease, opacity 0.4s; }
             #ai-char-counter { position: fixed; bottom: 15px; right: 30px; font-size: 0.9em; font-family: monospace; color: #aaa; transition: color 0.2s; z-index: 2147483647; }
             #ai-char-counter.limit-exceeded { color: #e57373; font-weight: bold; }
@@ -1063,12 +1042,12 @@ Adapt your persona and tone for each turn.`;
             #ai-attachment-button:hover { background-color: rgba(120, 120, 120, 0.7); }
             #ai-attachment-button svg { stroke: currentColor; }
 
-            /* NEW: Settings Button Style (Grey) */
+            /* Settings Button Style (Grey) */
             #ai-settings-button { position: absolute; right: 10px; bottom: 7px; background: rgba(100, 100, 100, 0.5); border: 1px solid rgba(255,255,255,0.2); color: #ccc; font-size: 20px; cursor: pointer; padding: 5px; line-height: 1; z-index: 3; transition: all .3s ease; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; }
             #ai-settings-button:hover { background-color: rgba(120, 120, 120, 0.7); color: #fff; }
             #ai-settings-button.active { background-color: rgba(150, 150, 150, 0.8); color: white; }
 
-            /* NEW: Settings Menu Style */
+            /* Settings Menu Style */
             #ai-settings-menu { position: absolute; bottom: calc(100% + 10px); right: 0; width: 350px; z-index: 1; background: rgb(20, 20, 22); border: 1px solid rgba(255,255,255,0.2); border-radius: 16px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); padding: 15px; opacity: 0; visibility: hidden; transform: translateY(20px); transition: all .3s cubic-bezier(.4,0,.2,1); overflow: hidden; }
             #ai-settings-menu.active { opacity: 1; visibility: visible; transform: translateY(0); }
             #ai-settings-menu .menu-header { font-size: 1.1em; color: #fff; text-transform: uppercase; margin-bottom: 15px; text-align: center; font-family: 'Merriweather', serif; }
@@ -1080,12 +1059,10 @@ Adapt your persona and tone for each turn.`;
             .setting-group input:focus, .setting-group select:focus { outline: none; border-color: #4285f4; }
             .setting-note { font-size: 0.75em; color: #888; margin-top: 5px; }
 
-            /* Color Wheel Styling */
-            .color-wheel-wrapper { overflow-x: auto; padding-bottom: 5px; }
-            .color-wheel { display: flex; gap: 10px; padding: 5px 0; scroll-behavior: smooth; scrollbar-width: none; }
-            .color-card { flex-shrink: 0; width: 35px; height: 35px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; transition: transform 0.2s, border-color 0.2s; }
-            .color-card:hover { transform: scale(1.05); }
-            .color-card.selected { border-color: #fff; transform: scale(1.1); box-shadow: 0 0 10px rgba(255,255,255,0.5); }
+            /* Color Picker Styling */
+            #settings-color { width: 100%; height: 40px; padding: 0; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; background: none; }
+            #settings-color::-webkit-color-swatch-wrapper { padding: 0; }
+            #settings-color::-webkit-color-swatch { border: 0; border-radius: 5px; }
 
             #settings-save-button { width: 100%; padding: 10px; background: #4285f4; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; margin-top: 10px; transition: background 0.2s; }
             #settings-save-button:hover { background: #3c77e6; }
@@ -1143,10 +1120,13 @@ Adapt your persona and tone for each turn.`;
             @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
         `;
     document.head.appendChild(style);}
+    
+    // Attach the main keydown listener to the document
+    document.addEventListener('keydown', handleKeyDown);
+
+    // Initial check on load: Only load settings, do not activate the UI.
     document.addEventListener('DOMContentLoaded', async () => {
-        const isAuthorized = await isUserAuthorized();
-        if (isAuthorized) {
-            activateAI();
-        }
+        loadUserSettings(); // Ensure settings are loaded even if the UI isn't active
+        // Removed: activateAI() call
     });
 })();
