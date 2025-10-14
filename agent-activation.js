@@ -17,6 +17,7 @@
  * UPDATED: Agent scroll button styling (icon only).
  *
  * MODIFIED: Placeholder functions for LaTeX rendering replaced with KaTeX implementation.
+ * FIXED: API payload error by renaming 'config' to 'generationConfig'.
  */
 (function() {
     // --- CONFIGURATION ---
@@ -327,7 +328,14 @@
         }
         
         const systemInstruction = agentConfig[currentAgent]?.systemInstruction || 'You are a helpful and comprehensive AI assistant.';
-        const payload = { contents: processedChatHistory, config: { systemInstruction: systemInstruction } };
+        
+        // FIX: Renamed 'config' to 'generationConfig' to resolve the 400 error.
+        const payload = { 
+            contents: processedChatHistory, 
+            generationConfig: { 
+                systemInstruction: systemInstruction 
+            } 
+        };
         
         try {
             const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: currentAIRequestController.signal });
