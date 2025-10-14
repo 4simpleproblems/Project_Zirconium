@@ -8,7 +8,11 @@
  *
  * Updated with centered welcome text, left-aligned chat UI, expanded LaTeX shortcuts,
  * simplified attachment button, increased character limit with simplified display,
- * smart paste to file, and increased file attachment limit (10 files).
+ * smart paste to file, increased file attachment limit (10 files),
+ * fixed "Network 400" error handling for attachments,
+ * new paste-to-file logic for >1000 chars or exceeding 10K limit,
+ * dynamic numbering for pasted text files,
+ * on-click preview for attached files, and improved message padding/alignment.
  */
 (function() {
     // --- CONFIGURATION ---
@@ -16,7 +20,7 @@
     const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
     const MAX_INPUT_HEIGHT = 200;
     const CHAR_LIMIT = 10000; // Updated character limit
-    const PASTE_TO_FILE_THRESHOLD = 5000; // New threshold for converting large pastes to files
+    const PASTE_TO_FILE_THRESHOLD = 1000; // NEW: Threshold for converting large pastes to files
     const MAX_ATTACHMENTS_PER_MESSAGE = 10; // New limit for total attachments per message
 
     // --- ICONS (for event handlers) ---
@@ -254,9 +258,10 @@
 
         const lastMessageIndex = processedChatHistory.length - 1;
         const userParts = processedChatHistory[lastMessageIndex].parts;
-        const textPart = userParts.find(p => p.text);
-        if (textPart) {
-             textPart.text = firstMessageContext + textPart.text;
+        // Fix: Ensure firstMessageContext is added to the text part correctly
+        const textPartIndex = userParts.findIndex(p => p.text);
+        if (textPartIndex > -1) {
+             userParts[textPartIndex].text = firstMessageContext + userParts[textPartIndex].text;
         } else if (firstMessageContext) {
              userParts.unshift({ text: firstMessageContext.trim() });
         }
@@ -284,10 +289,28 @@
         
         try {
             const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: currentAIRequestController.signal });
-            if (!response.ok) throw new Error(`Network response was not ok. Status: ${response.status}`);
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error("API Error Response:", errorData);
+                throw new Error(`Network response was not ok. Status: ${response.status}. Details: ${JSON.stringify(errorData)}`);
+            }
             const data = await response.json();
-            if (!data.candidates || data.candidates.length === 0) throw new Error("Invalid response from API.");
-            const text = data.candidates[0].content.parts[0].text;
+            if (!data.candidates || data.candidates.length === 0) {
+                 // Check for "promptFeedback" which indicates safety issues or empty response
+                if (data.promptFeedback && data.promptFeedback.blockReason) {
+                    throw new Error(`Content blocked due to: ${data.promptFeedback.blockReason}. Safety ratings: ${JSON.stringify(data.promptFeedback.safetyRatings)}`);
+                }
+                throw new Error("Invalid response from API: No candidates or empty candidates array.");
+            }
+            
+            // Fix: Check if content.parts[0].text exists before accessing
+            const text = data.candidates[0].content.parts[0]?.text || '';
+            if (!text) {
+                console.warn("AI response had no text part, but was not blocked. Possibly empty generation.");
+                responseBubble.innerHTML = `<div class="ai-error">The AI generated an empty response. Please try again or rephrase.</div>`;
+                return;
+            }
+
             chatHistory.push({ role: "model", parts: [{ text: text }] });
             
             const contentHTML = `<div class="ai-response-content">${parseGeminiResponse(text)}</div>`;
@@ -302,11 +325,13 @@
 
         } catch (error) {
             if (error.name === 'AbortError') { responseBubble.innerHTML = `<div class="ai-error">Message generation stopped.</div>`; } 
-            else { console.error('AI API Error:', error); responseBubble.innerHTML = `<div class="ai-error">Sorry, an error occurred.</div>`; }
+            else { 
+                console.error('AI API Error:', error); 
+                responseBubble.innerHTML = `<div class="ai-error">Sorry, an error occurred: ${error.message || "Unknown error"}.</div>`; 
+            }
         } finally {
             isRequestPending = false;
             currentAIRequestController = null;
-            // No actionToggle, so remove generating class from the input wrapper if needed
             const inputWrapper = document.getElementById('ai-input-wrapper');
             if (inputWrapper) { inputWrapper.classList.remove('waiting'); }
             
@@ -338,8 +363,7 @@
             if (!files || files.length === 0) return;
 
             const filesToProcess = files.filter(file => {
-                const totalAttachments = attachedFiles.length + 1;
-                if (totalAttachments > MAX_ATTACHMENTS_PER_MESSAGE) {
+                if (attachedFiles.length >= MAX_ATTACHMENTS_PER_MESSAGE) {
                     alert(`Cannot attach more than ${MAX_ATTACHMENTS_PER_MESSAGE} files. Skipping: ${file.name}`);
                     return false;
                 }
@@ -348,7 +372,7 @@
 
             const currentTotalSize = attachedFiles.reduce((sum, file) => sum + (file.inlineData ? atob(file.inlineData.data).length : 0), 0);
             const newFilesSize = filesToProcess.reduce((sum, file) => sum + file.size, 0);
-            if (currentTotalSize + newFilesSize > (4 * 1024 * 1024)) { // Example: 4MB limit
+            if (currentTotalSize + newFilesSize > (4 * 1024 * 1024)) { // Example: 4MB limit for total attachments
                 alert(`Upload failed: Total size of attachments would exceed the 4MB limit per message. (Current: ${formatBytes(currentTotalSize)}, Adding: ${formatBytes(newFilesSize)})`);
                 return;
             }
@@ -367,6 +391,7 @@
                         item.isLoading = false;
                         item.inlineData = { mimeType: file.type, data: base64Data };
                         item.fileName = file.name;
+                        item.fileContent = e.target.result; // Store content for preview
                         delete item.file;
                         delete item.tempId;
                         renderAttachments();
@@ -440,6 +465,7 @@
                 } else {
                     previewHTML = `<span class="file-icon">📄</span>`;
                 }
+                fileCard.onclick = () => showFilePreview(file); // Add click handler for preview
             }
 
             if (fileExt.length > 5) fileExt = 'FILE';
@@ -466,11 +492,59 @@
                 }
             }, 0);
 
-            fileCard.querySelector('.remove-attachment-btn').onclick = () => {
+            fileCard.querySelector('.remove-attachment-btn').onclick = (e) => {
+                e.stopPropagation(); // Prevent card click from firing
                 attachedFiles.splice(index, 1);
                 renderAttachments();
             };
             previewContainer.appendChild(fileCard);
+        });
+    }
+
+    // Function to show file preview modal
+    function showFilePreview(file) {
+        if (!file.fileContent) {
+            alert("File content not available for preview.");
+            return;
+        }
+
+        const previewModal = document.createElement('div');
+        previewModal.id = 'ai-preview-modal';
+        previewModal.innerHTML = `
+            <div class="modal-content">
+                <span class="close-button">&times;</span>
+                <h3>${escapeHTML(file.fileName)}</h3>
+                <div class="preview-area"></div>
+            </div>
+        `;
+        document.body.appendChild(previewModal);
+
+        const previewArea = previewModal.querySelector('.preview-area');
+        if (file.inlineData.mimeType.startsWith('image/')) {
+            previewArea.innerHTML = `<img src="${file.fileContent}" alt="${file.fileName}" style="max-width: 100%; max-height: 80vh; object-fit: contain;">`;
+        } else if (file.inlineData.mimeType.startsWith('text/')) {
+            // Fetch text content if it's a text file
+            fetch(file.fileContent)
+                .then(response => response.text())
+                .then(text => {
+                    previewArea.innerHTML = `<pre style="white-space: pre-wrap; word-break: break-all; max-height: 70vh; overflow-y: auto; background-color: #222; padding: 10px; border-radius: 5px;">${escapeHTML(text)}</pre>`;
+                })
+                .catch(error => {
+                    console.error("Error reading text file for preview:", error);
+                    previewArea.innerHTML = `<p>Could not load text content for preview.</p>`;
+                });
+        } else {
+            previewArea.innerHTML = `<p>Preview not available for this file type. You can download it to view.</p>
+                                     <a href="${file.fileContent}" download="${file.fileName}" class="download-button">Download File</a>`;
+        }
+
+        previewModal.querySelector('.close-button').onclick = () => {
+            previewModal.remove();
+        };
+        previewModal.addEventListener('click', (e) => {
+            if (e.target === previewModal) {
+                previewModal.remove();
+            }
         });
     }
 
@@ -535,42 +609,45 @@
     
     function handlePaste(e) {
         e.preventDefault();
-        const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+        const pastedText = (e.clipboardData || window.clipboardData).getData('text/plain');
         const currentText = e.target.innerText;
+        const totalLengthIfPasted = currentText.length + pastedText.length;
 
-        // If pasted text alone exceeds PASTE_TO_FILE_THRESHOLD, convert to file
-        if (pastedText.length > PASTE_TO_FILE_THRESHOLD) {
-            let filename = 'pasted_text.txt';
-            let counter = 2;
+        // NEW: Paste to file if over 1000 chars OR if it exceeds the CHAR_LIMIT
+        if (pastedText.length > PASTE_TO_FILE_THRESHOLD || totalLengthIfPasted > CHAR_LIMIT) {
+            let filenameBase = 'paste';
+            let filename = `${filenameBase}.txt`;
+            let counter = 1;
+            // Ensure unique filename
             while (attachedFiles.some(f => f.fileName === filename)) {
-                filename = `pasted_text_${counter++}.txt`;
+                filename = `${filenameBase}(${counter++}).txt`;
             }
+            
             // Use TextEncoder to handle various character encodings correctly for Base64
             const encoder = new TextEncoder();
             const encoded = encoder.encode(pastedText);
             const base64Data = btoa(String.fromCharCode.apply(null, encoded));
 
             if (attachedFiles.length < MAX_ATTACHMENTS_PER_MESSAGE) {
-                attachedFiles.push({
-                    inlineData: { mimeType: 'text/plain', data: base64Data },
-                    fileName: filename
-                });
-                renderAttachments();
+                // Read as DataURL for preview purposes
+                const reader = new FileReader();
+                reader.onloadend = (event) => {
+                    attachedFiles.push({
+                        inlineData: { mimeType: 'text/plain', data: base64Data },
+                        fileName: filename,
+                        fileContent: event.target.result // Store Data URL for preview
+                    });
+                    renderAttachments();
+                };
+                reader.readAsDataURL(new Blob([pastedText], {type: 'text/plain'}));
             } else {
                 alert(`Cannot attach more than ${MAX_ATTACHMENTS_PER_MESSAGE} files. Text was too large to paste directly.`);
             }
-        } else if (currentText.length + pastedText.length > CHAR_LIMIT) {
-            // If combining current text and pasted text exceeds CHAR_LIMIT
-            // Only paste up to the limit, truncate the rest
-            const remainingChars = CHAR_LIMIT - currentText.length;
-            if (remainingChars > 0) {
-                document.execCommand('insertText', false, pastedText.substring(0, remainingChars));
-            }
-            // Optionally notify user that some text was truncated
-            alert('Pasted text was too long and has been truncated. Consider attaching as a file.');
         } else {
             // Otherwise, paste normally
             document.execCommand('insertText', false, pastedText);
+            // Manually trigger input handler to update character count and height
+            handleContentEditableInput({target: e.target});
         }
     }
 
@@ -680,9 +757,15 @@
                    .replace(/^# (.*$)/gm, "<h1>$1</h1>");
         html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
                    .replace(/\*(.*?)\*/g, "<em>$1</em>");
+        // NEW: Improved list item and padding handling
         html = html.replace(/^(?:\*|-)\s(.*$)/gm, "<li>$1</li>");
-        html = html.replace(/(<\/li>\s*<li>)/g, "</li><li>")
-                   .replace(/((<li>.*<\/li>)+)/gs, "<ul>$1</ul>");
+        // Ensure ul/ol tags are correctly wrapped and remove extra <br> after lists
+        html = html.replace(/((?:<br>)?\s*<li>.*<\/li>(\s*<br>)*)+/gs, (match) => {
+            const listItems = match.replace(/<br>/g, '').trim(); // Remove all br for cleaner processing
+            return `<ul>${listItems}</ul>`;
+        });
+        html = html.replace(/(<\/li>\s*<li>)/g, "</li><li>"); // Clean up multiple <li> in the same list
+
         html = html.replace(/\n/g, "<br>");
         html = html.replace(/%%CODE_BLOCK%%/g, () => codeBlocks.shift());
         
@@ -828,7 +911,7 @@
 
             #ai-attachment-preview { display: none; flex-direction: row; gap: 10px; padding: 0; max-height: 0; border-bottom: 1px solid transparent; overflow-x: auto; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
             #ai-input-wrapper.has-attachments #ai-attachment-preview { max-height: 100px; padding: 10px 15px; }
-            .attachment-card { position: relative; border-radius: 8px; overflow: hidden; background: #333; height: 80px; width: 80px; flex-shrink: 0; display: flex; justify-content: center; align-items: center; transition: filter 0.3s; }
+            .attachment-card { position: relative; border-radius: 8px; overflow: hidden; background: #333; height: 80px; width: 80px; flex-shrink: 0; display: flex; justify-content: center; align-items: center; transition: filter 0.3s; cursor: pointer; }
             .attachment-card.loading { filter: grayscale(80%) brightness(0.7); }
             .attachment-card.loading .file-icon { opacity: 0.3; }
             .attachment-card.loading .ai-loader { position: absolute; z-index: 2; }
@@ -850,6 +933,22 @@
             .code-block-wrapper pre::-webkit-scrollbar { height: 8px; }
             .code-block-wrapper pre::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
             .code-block-wrapper code { font-family: 'Menlo', 'Consolas', monospace; font-size: 0.9em; color: #f0f0f0; }
+            
+            /* File Preview Modal Styles */
+            #ai-preview-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.8); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index: 2147483648; display: flex; justify-content: center; align-items: center; }
+            #ai-preview-modal .modal-content { background: #1a1a1e; border-radius: 12px; padding: 20px; box-shadow: 0 5px 30px rgba(0,0,0,0.7); max-width: 90vw; max-height: 90vh; display: flex; flex-direction: column; position: relative; }
+            #ai-preview-modal .close-button { position: absolute; top: 10px; right: 15px; color: #ccc; font-size: 30px; cursor: pointer; }
+            #ai-preview-modal h3 { color: #fff; margin-top: 0; margin-bottom: 15px; text-align: center; }
+            #ai-preview-modal .preview-area { flex-grow: 1; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+            #ai-preview-modal .download-button { display: inline-block; padding: 10px 20px; background-color: var(--ai-blue); color: #fff; text-decoration: none; border-radius: 8px; margin-top: 20px; }
+
+            /* Fix for message padding/alignment */
+            .ai-message-bubble p { margin: 0; padding: 0; text-align: left; }
+            .ai-message-bubble ul { margin: 0; padding-left: 20px; text-align: left; }
+            .ai-message-bubble li { margin-bottom: 5px; }
+            .ai-message-bubble ul, .ai-message-bubble ol { list-style-position: inside; }
+
+
             @keyframes glow { 0%,100% { box-shadow: 0 0 5px rgba(255,255,255,.15), 0 0 10px rgba(255,255,255,.1); } 50% { box-shadow: 0 0 10px rgba(255,255,255,.25), 0 0 20px rgba(255,255,255,.2); } }
             @keyframes gemini-glow { 0%,100% { box-shadow: 0 0 8px 2px var(--ai-blue); } 25% { box-shadow: 0 0 8px 2px var(--ai-green); } 50% { box-shadow: 0 0 8px 2px var(--ai-yellow); } 75% { box-shadow: 0 0 8px 2px var(--ai-red); } }
             @keyframes spin { to { transform: rotate(360deg); } }
