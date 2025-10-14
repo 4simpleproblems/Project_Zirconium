@@ -6,19 +6,11 @@
  * and advanced file previews. This version includes a character limit,
  * smart paste handling (including images), and refined animations.
  *
- * Updated with a redesigned horizontal "Agent" selection menu featuring scroll buttons
- * and fading edges. Each agent's detail view has a unique texture. The back/select
- * buttons are now square icons. The "Experimental" agent background animation is
- * now a continuous, smooth loop.
- *
- * ADDED: Image paste support.
- * ADDED: Specific LaTeX display shortcuts (requires external library for full rendering).
- * UPDATED: Experimental agent UI (dark, static title, opaque menu).
- * UPDATED: Agent scroll button styling (icon only).
- *
- * MODIFIED: Added 'Custom' agent with browser color picker.
- * MODIFIED: AI interface is now closed on load, requiring Ctrl + \ to activate.
- * MODIFIED: Re-enabled the Ctrl + \ shortcut by adding the necessary event listener.
+ * MODIFIED: Replaced the 'Agent Selection Menu' (three-dots icon and all categories)
+ * with a new 'Settings Menu' (gear icon).
+ * MODIFIED: The color picker now controls the primary theme color for the entire interface.
+ * MODIFIED: Added a 'Clear History' button to the settings menu.
+ * REMOVED: All multi-agent configuration and selection logic. The AI defaults to the 'Standard' role.
  */
 (function() {
     // --- CONFIGURATION ---
@@ -28,63 +20,21 @@
     const CHAR_LIMIT = 10000;
     const PASTE_TO_FILE_THRESHOLD = 1000;
     const MAX_ATTACHMENTS_PER_MESSAGE = 10;
+    const SYSTEM_INSTRUCTION_DEFAULT = 'You are a helpful and comprehensive AI assistant.';
 
     // --- ICONS (for event handlers) ---
     const copyIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
     const checkIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="check-icon"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
     const attachmentIconSVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.2a2 2 0 0 1-2.83-2.83l8.49-8.49"></path></svg>`;
 
-    // --- AGENT CONFIGURATION ---
-    const agentConfig = {
-        'Standard': {
-            description: "A balanced and helpful assistant for general-purpose questions. Provides comprehensive and reliable information.",
-            systemInstruction: 'You are a helpful and comprehensive AI assistant.'
-        },
-        'Quick': {
-            description: "Fast, concise answers. Ideal for quick facts, summaries, and direct responses without elaboration.",
-            systemInstruction: 'You are an AI assistant that provides brief, direct, and concise answers. Get straight to the point. Do not use lengthy explanations unless absolutely necessary.'
-        },
-        'Analysis': {
-            description: "Deep-dives into data, text, or complex problems. Provides structured, logical breakdowns and critical evaluations.",
-            systemInstruction: 'You are an analytical AI expert. Your goal is to provide deep, structured analysis. Break down complex topics into logical components, identify patterns, and offer critical evaluations. Use data-driven reasoning.'
-        },
-        'Descriptive': {
-            description: "Paints a picture with words. Focuses on rich detail, vivid imagery, and evocative language.",
-            systemInstruction: 'You are a descriptive AI writer. Your responses should be rich in detail, using vivid imagery and evocative language to paint a clear picture for the user. Focus on sensory details and creating atmosphere.'
-        },
-        'Creative': {
-            description: "Your partner for brainstorming and imagination. Generates novel ideas, stories, poetry, and artistic concepts.",
-            systemInstruction: 'You are a creative AI partner. Your purpose is to brainstorm, generate novel ideas, write stories, and explore imaginative concepts. Be unconventional, inspiring, and think outside the box.'
-        },
-        'Technical': {
-            description: "Precise and accurate for specialized domains. Excels at code, scientific explanations, and complex instructions.",
-            systemInstruction: 'You are an expert programmer and technical specialist. Provide complete, accurate, and runnable code examples. Explain technical concepts clearly, covering logic, structure, and potential edge cases. Do not use brevity or omit necessary details for simplicity.'
-        },
-        'Emotional': {
-            description: "Empathetic and nuanced communication. Understands and responds to emotional context, suitable for drafting sensitive messages.",
-            systemInstruction: 'You are an emotionally intelligent AI assistant. Your communication style is empathetic, nuanced, and considerate of the user\'s feelings. You are skilled at drafting sensitive messages and understanding emotional context.'
-        },
-        // ADDED: Custom agent with color selection
-        'Custom': {
-            description: "Allows you to select a custom color theme for your chat session. The AI uses the Standard configuration.",
-            systemInstruction: 'You are a helpful and comprehensive AI assistant.',
-            isCustom: true
-        },
-        'Experimental': {
-            description: "Pushes the boundaries of AI. Responses may be unpredictable, highly creative, or abstract. Use with an open mind.",
-            systemInstruction: 'You are an experimental AI. Your purpose is to generate unpredictable, abstract, and highly creative responses that push the boundaries of typical AI behavior. Your answers might be unconventional or artistic. Embrace ambiguity.'
-        }
-    };
-
     // --- STATE MANAGEMENT ---
     let isAIActive = false;
     let isRequestPending = false;
     let currentAIRequestController = null;
-    let currentAgent = 'Standard';
     let chatHistory = [];
     let attachedFiles = [];
-    // ADDED: State for custom color
-    let customAgentColor = '#4285f4'; // Default color for the custom agent
+    // State for custom color, now the global theme
+    let customAgentColor = '#4285f4'; 
 
     // Simple debounce utility for performance
     const debounce = (func, delay) => {
@@ -96,12 +46,9 @@
     };
 
     async function isUserAuthorized() {
-        // This is a placeholder. In a real app, you'd use a proper auth system.
-        // For this script, we'll assume the user is authorized.
         return true;
     }
 
-    // UPDATED: handleKeyDown function is now connected via addEventListener
     async function handleKeyDown(e) {
         if (e.ctrlKey && e.key === '\\') {
             const selection = window.getSelection().toString();
@@ -133,16 +80,14 @@
         
         const container = document.createElement('div');
         container.id = 'ai-container';
-        container.dataset.agent = currentAgent;
-        
-        // Apply custom color immediately if the current agent is 'Custom'
-        if (agentConfig[currentAgent]?.isCustom) {
-            container.style.setProperty('--ai-custom-color', customAgentColor);
-        }
+        // Use a generic state to ensure custom color applies immediately
+        container.dataset.agent = 'Themed'; 
+        container.style.setProperty('--ai-custom-color', customAgentColor);
+        container.classList.add('custom-color-active'); // For custom glow animation
 
         const brandTitle = document.createElement('div');
         brandTitle.id = 'ai-brand-title';
-        const brandText = "4SP - AI AGENT";
+        const brandText = "4SP - AI ASSISTANT";
         brandText.split('').forEach(char => {
             const span = document.createElement('span');
             span.textContent = char;
@@ -151,11 +96,11 @@
         
         const persistentTitle = document.createElement('div');
         persistentTitle.id = 'ai-persistent-title';
-        persistentTitle.textContent = `AI Agent - ${currentAgent}`;
+        persistentTitle.textContent = `AI Assistant`;
         
         const welcomeMessage = document.createElement('div');
         welcomeMessage.id = 'ai-welcome-message';
-        const welcomeHeader = chatHistory.length > 0 ? "Welcome Back" : "Welcome to AI Agent";
+        const welcomeHeader = chatHistory.length > 0 ? "Welcome Back" : "Welcome to AI Assistant";
         welcomeMessage.innerHTML = `<h2>${welcomeHeader}</h2><p>This is a beta feature. To improve your experience, your general location (state or country) will be shared with your first message. You may be subject to message limits.</p>`;
         
         const closeButton = document.createElement('div');
@@ -188,11 +133,12 @@
         attachmentButton.title = 'Attach files';
         attachmentButton.onclick = () => handleFileUpload();
         
-        const agentButton = document.createElement('button');
-        agentButton.id = 'ai-agent-button';
-        agentButton.innerHTML = '<span class="icon-ellipsis">&#8942;</span>';
-        agentButton.title = 'Change Agent';
-        agentButton.onclick = toggleAgentMenu;
+        // REPLACED: agentButton with settingsButton
+        const settingsButton = document.createElement('button');
+        settingsButton.id = 'ai-settings-button';
+        settingsButton.innerHTML = '<i class="fa-solid fa-gear"></i>';
+        settingsButton.title = 'Settings';
+        settingsButton.onclick = toggleSettingsMenu;
 
         const charCounter = document.createElement('div');
         charCounter.id = 'ai-char-counter';
@@ -201,9 +147,10 @@
         inputWrapper.appendChild(attachmentPreviewContainer);
         inputWrapper.appendChild(visualInput);
         inputWrapper.appendChild(attachmentButton);
-        inputWrapper.appendChild(agentButton);
+        inputWrapper.appendChild(settingsButton); // Use new button
         
-        composeArea.appendChild(createAgentMenu());
+        // REPLACED: createAgentMenu with createSettingsMenu
+        composeArea.appendChild(createSettingsMenu());
         composeArea.appendChild(inputWrapper);
 
         container.appendChild(brandTitle);
@@ -216,9 +163,6 @@
         
         document.body.appendChild(container);
 
-        // Call setup for glide buttons after menu is in the DOM
-        setupAgentWheelListeners();
-        
         if (chatHistory.length > 0) { renderChatHistory(); }
         
         setTimeout(() => {
@@ -247,8 +191,9 @@
         isAIActive = false;
         isRequestPending = false;
         attachedFiles = [];
-        const agentMenu = document.getElementById('ai-agent-menu');
-        if (agentMenu) agentMenu.classList.remove('active');
+        // UPDATED: Agent menu to settings menu
+        const settingsMenu = document.getElementById('ai-settings-menu');
+        if (settingsMenu) settingsMenu.classList.remove('active');
     }
     
     function renderChatHistory() {
@@ -259,7 +204,6 @@
             const bubble = document.createElement('div');
             bubble.className = `ai-message-bubble ${message.role === 'user' ? 'user-message' : 'gemini-response'}`;
             if (message.role === 'model') {
-                // Ensure math rendering on history load
                 const parsedResponse = parseGeminiResponse(message.parts[0].text);
                 bubble.innerHTML = `<div class="ai-response-content">${parsedResponse}</div>`;
                 
@@ -267,7 +211,6 @@
                     button.addEventListener('click', handleCopyCode);
                 });
 
-                // Trigger math rendering for history
                 renderLatexDisplay(bubble);
             } else {
                 let bubbleContent = ''; let textContent = ''; let fileCount = 0;
@@ -297,7 +240,6 @@
         }
         
         let processedChatHistory = [...chatHistory];
-        // Smart history shortening to save tokens (keeps first 3 and last 3 messages)
         if (processedChatHistory.length > 6) {
              processedChatHistory = [ ...processedChatHistory.slice(0, 3), ...processedChatHistory.slice(-3) ];
         }
@@ -311,7 +253,8 @@
              userParts.unshift({ text: firstMessageContext.trim() });
         }
         
-        const systemInstruction = agentConfig[currentAgent]?.systemInstruction || 'You are a helpful and comprehensive AI assistant.';
+        // SIMPLIFIED: Hardcoded system instruction for the default AI role
+        const systemInstruction = SYSTEM_INSTRUCTION_DEFAULT; 
         const payload = { contents: processedChatHistory, systemInstruction: { parts: [{ text: systemInstruction }] } };
         
         try {
@@ -347,7 +290,6 @@
                 });
                 responseBubble.style.opacity = '1';
 
-                // Trigger math rendering
                 renderLatexDisplay(responseBubble);
             }, 300);
 
@@ -374,7 +316,6 @@
         }
     }
 
-    // NEW: Function to handle file-like object processing
     function processFileLike(file, base64Data, dataUrl, tempId) {
         if (attachedFiles.length >= MAX_ATTACHMENTS_PER_MESSAGE) {
             alert(`You can attach a maximum of ${MAX_ATTACHMENTS_PER_MESSAGE} files per message.`);
@@ -394,7 +335,7 @@
             isLoading: false
         };
         
-        if (tempId) { // For drag/drop or immediate paste where we need a temporary entry
+        if (tempId) { 
             item.tempId = tempId;
         }
 
@@ -461,199 +402,63 @@
         input.click();
     }
     
-    function toggleAgentMenu() {
-        const menu = document.getElementById('ai-agent-menu');
-        const toggleBtn = document.getElementById('ai-agent-button');
+    // NEW: Function to toggle the Settings Menu
+    function toggleSettingsMenu() {
+        const menu = document.getElementById('ai-settings-menu');
+        const toggleBtn = document.getElementById('ai-settings-button');
         const isMenuOpen = menu.classList.toggle('active');
         toggleBtn.classList.toggle('active', isMenuOpen);
-        if (!isMenuOpen) {
-            menu.classList.remove('details-view-active');
-        } else {
-            // Check gliders when menu opens
-            updateAgentWheelGliders();
-        }
-    }
-
-    // UPDATED: showAgentDetails to include color picker logic for 'Custom' agent
-    function showAgentDetails(agentName) {
-        const menu = document.getElementById('ai-agent-menu');
-        const detailsView = document.getElementById('agent-details-view');
-        const agent = agentConfig[agentName];
-        if (!agent || !detailsView) return;
-
-        detailsView.dataset.agent = agentName; 
-        detailsView.querySelector('h3').textContent = agentName;
-        detailsView.querySelector('p').textContent = agent.description;
-        const selectBtn = detailsView.querySelector('#agent-menu-select-btn');
-        selectBtn.dataset.agent = agentName;
-
-        const colorPickerWrapper = detailsView.querySelector('#color-picker-wrapper');
-        const colorPicker = detailsView.querySelector('#agent-color-picker');
-        
-        if (agent.isCustom) {
-            colorPickerWrapper.style.display = 'flex';
-            colorPicker.value = customAgentColor;
-            
-            // Function to update color preview dynamically
-            const updateColorPreview = (color) => {
-                // Update the container's CSS variable for immediate feedback
-                document.getElementById('ai-container').style.setProperty('--ai-custom-color', color);
-                selectBtn.style.backgroundColor = color;
-                detailsView.style.borderColor = color;
-            };
-
-            // Set initial preview when opening the details view
-            updateColorPreview(customAgentColor);
-
-            // Update color and state on input change
-            colorPicker.oninput = (e) => {
-                customAgentColor = e.target.value;
-                updateColorPreview(customAgentColor);
-            };
-
-        } else {
-            colorPickerWrapper.style.display = 'none';
-            selectBtn.style.backgroundColor = ''; 
-            detailsView.style.borderColor = ''; 
-            // Reset the container's custom style when viewing other agents
-            document.getElementById('ai-container').style.removeProperty('--ai-custom-color');
-        }
-        
-        menu.classList.add('details-view-active');
-    }
-
-    function goBackToAgentSelection() {
-        const menu = document.getElementById('ai-agent-menu');
-        menu.classList.remove('details-view-active');
-        updateAgentWheelGliders(); // Re-check gliders when going back
-        // Clear temporary color preview from container
-        document.getElementById('ai-container').style.removeProperty('--ai-custom-color');
     }
     
-    // UPDATED: selectAgent to manage custom color persistence
-    function selectAgent(agentName) {
-        currentAgent = agentName;
-        chatHistory = [];
-        
-        const persistentTitle = document.getElementById('ai-persistent-title');
-        if (persistentTitle) { persistentTitle.textContent = `AI Agent - ${agentName}`; }
-        
+    // NEW: Handler for the color picker input
+    function handleColorChange(e) {
+        customAgentColor = e.target.value;
         const container = document.getElementById('ai-container');
-        container.dataset.agent = agentName;
-        
-        // Apply or clear custom color property
-        if (agentConfig[agentName]?.isCustom && customAgentColor) {
-             // The color is already set on the container via showAgentDetails, 
-             // ensure it remains set after selection.
-             container.style.setProperty('--ai-custom-color', customAgentColor);
-        } else {
-             // Clear custom color CSS variable when switching to a non-custom agent
-             container.style.removeProperty('--ai-custom-color');
-        }
-
-        toggleAgentMenu();
-    }
-    
-    const updateAgentWheelGliders = () => {
-        const container = document.querySelector('.agent-wheel');
-        const leftButton = document.getElementById('agent-glide-left');
-        const rightButton = document.getElementById('agent-glide-right');
-
-        if (!container || !leftButton || !rightButton) return;
-        
-        const hasHorizontalOverflow = container.scrollWidth > container.offsetWidth + 2; // +2 for tolerance
-
-        if (hasHorizontalOverflow) {
-            const isScrolledToLeft = container.scrollLeft < 5; 
-            const isScrolledToRight = container.scrollLeft + container.offsetWidth >= container.scrollWidth - 5; 
-
-            leftButton.classList.toggle('hidden', isScrolledToLeft);
-            rightButton.classList.toggle('hidden', isScrolledToRight);
-        } else {
-            leftButton.classList.add('hidden');
-            rightButton.classList.add('hidden');
-        }
-    };
-
-    function setupAgentWheelListeners() {
-        const container = document.querySelector('.agent-wheel');
-        const leftButton = document.getElementById('agent-glide-left');
-        const rightButton = document.getElementById('agent-glide-right');
-        
-        const debouncedUpdate = debounce(updateAgentWheelGliders, 50);
-
-        if (container) {
-            const scrollAmount = container.offsetWidth * 0.8; 
-            container.addEventListener('scroll', debouncedUpdate);
-            window.addEventListener('resize', debouncedUpdate);
-            
-            if (leftButton) {
-                leftButton.addEventListener('click', () => {
-                    container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
-                });
-            }
-            if (rightButton) {
-                rightButton.addEventListener('click', () => {
-                    container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-                });
-            }
-        }
-        // Initial check
-        updateAgentWheelGliders();
+        container.style.setProperty('--ai-custom-color', customAgentColor);
     }
 
-    // UPDATED: createAgentMenu to inject color picker UI
-    function createAgentMenu() {
+    // NEW: Handler for clearing chat history
+    function clearChatHistory() {
+        if (confirm('Are you sure you want to clear all chat history? This cannot be undone.')) {
+            chatHistory = [];
+            const responseContainer = document.getElementById('ai-response-container');
+            if (responseContainer) { responseContainer.innerHTML = ''; }
+            const container = document.getElementById('ai-container');
+            if (container) { container.classList.remove('chat-active'); }
+            toggleSettingsMenu();
+            document.getElementById('ai-input').focus();
+        }
+    }
+
+    // NEW: Function to create the Settings Menu
+    function createSettingsMenu() {
         const menu = document.createElement('div');
-        menu.id = 'ai-agent-menu';
-
-        const selectionView = document.createElement('div');
-        selectionView.id = 'agent-selection-view';
-        selectionView.innerHTML = `<div class="menu-header">Select an Agent</div>`;
+        menu.id = 'ai-settings-menu'; 
         
-        const agentWheelWrapper = document.createElement('div');
-        agentWheelWrapper.className = 'agent-wheel-wrapper';
-        
-        const agentWheel = document.createElement('div');
-        agentWheel.className = 'agent-wheel';
-        Object.keys(agentConfig).forEach(agentName => {
-            const card = document.createElement('div');
-            card.className = 'agent-card';
-            card.dataset.agent = agentName;
-            card.textContent = agentName;
-            card.onclick = () => showAgentDetails(agentName);
-            agentWheel.appendChild(card);
-        });
-
-        agentWheelWrapper.innerHTML = `
-            <button id="agent-glide-left" class="agent-glide-button hidden" title="Scroll left"><i class="fa-solid fa-chevron-left"></i></button>
-            <button id="agent-glide-right" class="agent-glide-button hidden" title="Scroll right"><i class="fa-solid fa-chevron-right"></i></button>
-        `;
-        agentWheelWrapper.appendChild(agentWheel);
-        selectionView.appendChild(agentWheelWrapper);
-        menu.appendChild(selectionView);
-
-        const detailsView = document.createElement('div');
-        detailsView.id = 'agent-details-view';
-        detailsView.innerHTML = `
-            <div class="agent-details-content">
-                <h3></h3>
-                <p></p>
-                <div id="color-picker-wrapper" style="display: none; flex-direction: column; align-items: center; margin-top: 15px;">
-                    <label for="agent-color-picker" style="color: #ddd; font-size: 0.9em; margin-bottom: 5px;">Theme Color:</label>
-                    <input type="color" id="agent-color-picker" value="#4285f4" style="width: 80px; height: 30px; border: none; border-radius: 4px; padding: 0;">
+        // Settings Menu HTML structure
+        menu.innerHTML = `
+            <div class="menu-header">AI Chat Settings</div>
+            
+            <div class="setting-group">
+                <h3>Theme Color</h3>
+                <div class="setting-row color-picker-row">
+                    <label for="agent-color-picker">Interface Theme Color:</label>
+                    <input type="color" id="agent-color-picker" value="${customAgentColor}">
                 </div>
+                <p class="setting-note">Sets the primary theme color for the chat interface and the AI response glow.</p>
             </div>
-            <div class="agent-menu-footer">
-                <button id="agent-menu-back-btn" title="Back"><i class="fa-solid fa-arrow-left"></i></button>
-                <button id="agent-menu-select-btn" title="Select Agent"><i class="fa-solid fa-check"></i></button>
+
+            <div class="setting-group">
+                <h3>Chat History</h3>
+                <button id="clear-history-btn" class="action-button"><i class="fa-solid fa-eraser"></i> Clear All History</button>
+                <p class="setting-note">This action cannot be undone and will delete all stored chat messages for this session.</p>
             </div>
         `;
-        menu.appendChild(detailsView);
-
-        detailsView.querySelector('#agent-menu-back-btn').onclick = goBackToAgentSelection;
-        detailsView.querySelector('#agent-menu-select-btn').onclick = (e) => selectAgent(e.currentTarget.dataset.agent);
         
+        // Event listeners for settings
+        menu.querySelector('#agent-color-picker').oninput = handleColorChange;
+        menu.querySelector('#clear-history-btn').onclick = clearChatHistory;
+
         return menu;
     }
 
@@ -708,12 +513,11 @@
                     reader.onload = (event) => {
                         const base64Data = event.target.result.split(',')[1];
                         const dataUrl = event.target.result;
-                        // Use a placeholder name as clipboard image doesn't have one
                         file.name = `pasted-image-${Date.now()}.${file.type.split('/')[1] || 'png'}`;
                         processFileLike(file, base64Data, dataUrl);
                     };
                     reader.readAsDataURL(file);
-                    return; // Stop processing if an image is found
+                    return; 
                 }
             }
         }
@@ -734,7 +538,7 @@
             const encoded = encoder.encode(pastedText);
             const base64Data = btoa(String.fromCharCode.apply(null, encoded));
             const blob = new Blob([pastedText], {type: 'text/plain'});
-            blob.name = filename; // Add name property for consistent display
+            blob.name = filename; 
             
             if (attachedFiles.length < MAX_ATTACHMENTS_PER_MESSAGE) {
                 const reader = new FileReader();
@@ -766,8 +570,9 @@
 
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            const agentMenu = document.getElementById('ai-agent-menu');
-            if (agentMenu && agentMenu.classList.contains('active')) { toggleAgentMenu(); }
+            // UPDATED: Check for settings menu open
+            const settingsMenu = document.getElementById('ai-settings-menu');
+            if (settingsMenu && settingsMenu.classList.contains('active')) { toggleSettingsMenu(); }
             
             if (attachedFiles.some(f => f.isLoading)) {
                 alert("Please wait for files to finish uploading before sending.");
@@ -833,17 +638,9 @@
         return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
     }
     
-    // NEW: Placeholder for LaTeX rendering
     function renderLatexDisplay(container) {
-        // This is a placeholder function. In a real application, you would
-        // use an external library like MathJax or KaTeX here.
-        // For demonstration, we simply replace the placeholders with the math text.
-        // You would replace this with something like:
-        // katex.render(element.dataset.tex, element, { displayMode: true });
-        
         container.querySelectorAll('.latex-display').forEach(element => {
             const mathText = element.dataset.tex;
-            // Crude display for unsupported environment
             element.innerHTML = `<span style="display: block; font-family: monospace; color: #f0f0f0; background: #222; padding: 10px; border-radius: 4px; overflow-x: auto; text-align: center;">${escapeHTML(mathText)} (Requires MathJax/KaTeX)</span>`;
         });
     }
@@ -852,7 +649,6 @@
         let html = text;
         const codeBlocks = [];
 
-        // 1. Process Code Blocks
         html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
             const trimmedCode = code.trim();
             const lines = trimmedCode.split('\n').length;
@@ -872,53 +668,43 @@
             return "%%CODE_BLOCK%%";
         });
 
-        // 2. Escape the rest of the HTML
         html = escapeHTML(html);
 
-        // 3. Process Specific LaTeX Shortcuts and replace with a placeholder element
-        // The actual rendering will happen in renderLatexDisplay after DOM insertion.
         const latexDisplayShortcuts = {
             '\\frac{14 - 18}{0 - 2}': 'frac_placeholder_1',
             '\\boxed{2}': 'boxed_placeholder_2'
         };
 
         Object.keys(latexDisplayShortcuts).forEach(tex => {
-            // Use a specific regex to find and replace the whole display math block
             const regex = new RegExp('\\$' + escapeRegExp(tex) + '\\$', 'g');
             html = html.replace(regex, `<div class="latex-display" data-tex="${escapeHTML(tex)}"></div>`);
         });
 
-        // 4. Convert Markdown to HTML (Headings, Bold, Italic)
         html = html.replace(/^### (.*$)/gm, "<h3>$1</h3>")
                    .replace(/^## (.*$)/gm, "<h2>$1</h2>")
                    .replace(/^# (.*$)/gm, "<h1>$1</h1>");
         html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
                    .replace(/\*(.*?)\*/g, "<em>$1</em>");
         
-        // 5. Convert Markdown Lists (must be after other block-level elements)
-        // Simple list item conversion
         html = html.replace(/^(?:\*|-)\s(.*$)/gm, "<li>$1</li>");
-        // Wrap adjacent list items in <ul> or <ol>
         html = html.replace(/((?:<br>)?\s*<li>.*<\/li>(\s*<br>)*)+/gs, (match) => {
             const listItems = match.replace(/<br>/g, '').trim();
-            return `<ul>${listItems}</ul>`; // Assuming unordered list for simple markdown
+            return `<ul>${listItems}</ul>`;
         });
         html = html.replace(/(<\/li>\s*<li>)/g, "</li><li>");
         
-        // 6. Convert newlines to breaks (must be near the end)
         html = html.replace(/\n/g, "<br>");
         
-        // 7. Re-insert Code Blocks
         html = html.replace(/%%CODE_BLOCK%%/g, () => codeBlocks.shift());
         
         return html;
     }
     
     function escapeRegExp(string) {
-        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); 
     }
-
-    // UPDATED: injectStyles to include Custom agent styles
+    
+    // UPDATED: Styling to reflect the removal of multiple agents and use of the custom color variable
     function injectStyles() {
         if (document.getElementById('ai-dynamic-styles')) return;
         if (!document.getElementById('ai-google-fonts')) {
@@ -928,7 +714,6 @@
             googleFonts.rel = 'stylesheet';
             document.head.appendChild(googleFonts);
         }
-        // Load Font Awesome for icons
         const fontAwesome = document.createElement('link');
         fontAwesome.rel = 'stylesheet';
         fontAwesome.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css';
@@ -937,38 +722,25 @@
         const style = document.createElement("style");
         style.id = "ai-dynamic-styles";
         style.innerHTML = `
-            /* ADDED: Custom color variable */
-            :root { --ai-red: #ea4335; --ai-blue: #4285f4; --ai-green: #34a853; --ai-yellow: #fbbc05; --ai-custom-color: #4285f4; }
-            #ai-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0,0,0,0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); z-index: 2147483647; opacity: 0; transition: opacity 0.5s, background 0.5s, backdrop-filter 0.5s; font-family: 'Lora', serif; display: flex; flex-direction: column; justify-content: flex-end; padding: 0; box-sizing: border-box; overflow: hidden; }
-            #ai-container.active { opacity: 1; background-color: rgba(0, 0, 0, 0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
-            
-            #ai-container[data-agent="Standard"] { background: rgba(10, 10, 15, 0.8); }
-            #ai-container[data-agent="Quick"] { background: linear-gradient(rgba(75, 85, 99, 0.2), rgba(75, 85, 99, 0.2)), rgba(10, 10, 15, 0.75); }
-            #ai-container[data-agent="Analysis"] { background: linear-gradient(rgba(30, 64, 175, 0.2), rgba(30, 64, 175, 0.2)), rgba(10, 10, 15, 0.75); }
-            #ai-container[data-agent="Descriptive"] { background: linear-gradient(rgba(120, 53, 15, 0.2), rgba(120, 53, 15, 0.2)), rgba(10, 10, 15, 0.75); }
-            #ai-container[data-agent="Creative"] { background: linear-gradient(rgba(126, 34, 206, 0.2), rgba(126, 34, 206, 0.2)), rgba(10, 10, 15, 0.75); }
-            #ai-container[data-agent="Technical"] { background: linear-gradient(rgba(7, 89, 133, 0.2), rgba(7, 89, 133, 0.2)), rgba(10, 10, 15, 0.75); }
-            #ai-container[data-agent="Emotional"] { background: linear-gradient(rgba(217, 70, 239, 0.15), rgba(217, 70, 239, 0.15)), rgba(10, 10, 15, 0.75); }
-            #ai-container[data-agent="Experimental"] { background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab); background-size: 400% 400%; animation: experimental-bg-pan 15s ease infinite; }
-            /* ADDED: Custom agent style */
-            #ai-container[data-agent="Custom"] { 
-                background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), var(--ai-custom-color); 
+            :root { 
+                --ai-red: #ea4335; --ai-blue: #4285f4; --ai-green: #34a853; --ai-yellow: #fbbc05; 
+                --ai-custom-color: ${customAgentColor}; 
+            }
+            #ai-container { 
+                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+                background-color: rgba(0,0,0,0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); 
+                z-index: 2147483647; opacity: 0; 
+                transition: opacity 0.5s, background 0.5s, backdrop-filter 0.5s; 
+                font-family: 'Lora', serif; display: flex; flex-direction: column; justify-content: flex-end; 
+                padding: 0; box-sizing: border-box; overflow: hidden; 
+            }
+            #ai-container.active { 
+                opacity: 1; 
+                /* Use custom color for a subtle background theme */
+                background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), var(--ai-custom-color); 
+                backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); 
             }
             
-            /* UPDATED: Experimental Title Color */
-            #ai-container[data-agent="Experimental"] #ai-persistent-title { color: #333333; animation: none; }
-            #ai-container[data-agent="Experimental"] #ai-brand-title span { animation: none; color: #333333; }
-            
-            #ai-container[data-agent="Standard"] #ai-persistent-title { color: #ffffff; }
-            #ai-container[data-agent="Quick"] #ai-persistent-title { color: #9ca3af; }
-            #ai-container[data-agent="Analysis"] #ai-persistent-title { color: #60a5fa; }
-            #ai-container[data-agent="Descriptive"] #ai-persistent-title { color: #f59e0b; }
-            #ai-container[data-agent="Creative"] #ai-persistent-title { color: #c084fc; }
-            #ai-container[data-agent="Technical"] #ai-persistent-title { color: #38bdf8; }
-            #ai-container[data-agent="Emotional"] #ai-persistent-title { color: #f472b6; }
-            /* ADDED: Custom agent title color */
-            #ai-container[data-agent="Custom"] #ai-persistent-title { color: #ffffff; }
-
             #ai-container.deactivating, #ai-container.deactivating > * { transition: opacity 0.4s, transform 0.4s; }
             #ai-container.deactivating { opacity: 0 !important; background-color: rgba(0,0,0,0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); }
             #ai-persistent-title, #ai-brand-title { position: absolute; top: 28px; left: 30px; font-family: 'Lora', serif; font-size: 18px; font-weight: bold; color: white; opacity: 0; transition: opacity 0.5s 0.2s, color 0.5s; }
@@ -986,9 +758,10 @@
             .ai-message-bubble { background: rgba(15,15,18,.8); border: 1px solid rgba(255,255,255,.1); border-radius: 16px; padding: 12px 18px; color: #e0e0e0; backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); animation: message-pop-in .5s cubic-bezier(.4,0,.2,1) forwards; max-width: 90%; line-height: 1.6; overflow-wrap: break-word; transition: opacity 0.3s ease-in-out; align-self: flex-start; text-align: left; }
             .user-message { background: rgba(40,45,50,.8); align-self: flex-end; }
             .gemini-response { animation: glow 4s infinite; }
-            /* UPDATED: gemini-response glow for Custom agent */
-            #ai-container:not([data-agent="Custom"]) .gemini-response.loading { animation: gemini-glow 4s linear infinite; }
-            #ai-container[data-agent="Custom"] .gemini-response.loading { animation: custom-gemini-glow 4s linear infinite; }
+            
+            /* Use custom glow for the AI response */
+            .gemini-response.loading { animation: custom-gemini-glow 4s linear infinite; }
+            
             .gemini-response.loading { display: flex; justify-content: center; align-items: center; min-height: 60px; max-width: 100px; padding: 15px; background: rgba(15,15,18,.8); }
             
             #ai-compose-area { position: relative; flex-shrink: 0; z-index: 2; margin: 15px auto; width: 90%; max-width: 720px; }
@@ -1004,57 +777,53 @@
             #ai-attachment-button:hover { background-color: rgba(120, 120, 120, 0.7); }
             #ai-attachment-button svg { stroke: currentColor; }
 
-            #ai-agent-button { position: absolute; right: 10px; bottom: 7px; background: rgba(100, 100, 100, 0.5); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,.5); font-size: 24px; cursor: pointer; padding: 5px; line-height: 1; z-index: 3; transition: all .3s ease; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; }
-            #ai-agent-button:hover { background-color: rgba(120, 120, 120, 0.7); }
-            #ai-agent-button.active { background-color: rgba(150, 150, 150, 0.8); color: white; }
+            /* UPDATED: Settings Button Styles */
+            #ai-settings-button { position: absolute; right: 10px; bottom: 7px; background: rgba(100, 100, 100, 0.5); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,.5); font-size: 20px; cursor: pointer; padding: 5px; line-height: 1; z-index: 3; transition: all .3s ease; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; }
+            #ai-settings-button:hover { background-color: rgba(120, 120, 120, 0.7); }
+            #ai-settings-button.active { background-color: var(--ai-custom-color); color: white; }
 
-            /* UPDATED: Agent Selection Menu Opacity/Blur */
-            #ai-agent-menu { position: absolute; bottom: calc(100% + 10px); left: 0; right: 0; width: 100%; z-index: 1; background: rgb(20, 20, 22); backdrop-filter: none; -webkit-backdrop-filter: none; border: 1px solid rgba(255,255,255,0.2); border-radius: 16px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); padding: 15px; opacity: 0; visibility: hidden; transform: translateY(20px); transition: all .3s cubic-bezier(.4,0,.2,1); overflow: hidden; }
-            #ai-agent-menu.active { opacity: 1; visibility: visible; transform: translateY(0); }
-            #ai-agent-menu .menu-header { font-size: 0.9em; color: #aaa; text-transform: uppercase; margin-bottom: 15px; text-align: center; }
-            #agent-details-view { display: none; }
-            #ai-agent-menu.details-view-active #agent-selection-view { display: none; }
-            #ai-agent-menu.details-view-active #agent-details-view { display: flex; flex-direction: column; }
-            .agent-wheel-wrapper { position: relative; }
-            .agent-wheel-wrapper::before, .agent-wheel-wrapper::after { content: ''; position: absolute; top: 0; bottom: 0; width: 30px; z-index: 2; pointer-events: none; }
-            /* Adjusted for opaque menu */
-            .agent-wheel-wrapper::before { left: 0; background: linear-gradient(to right, rgb(20, 20, 22) 30%, transparent); }
-            .agent-wheel-wrapper::after { right: 0; background: linear-gradient(to left, rgb(20, 20, 22) 30%, transparent); }
-            .agent-wheel { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; margin-bottom: -10px; scroll-behavior: smooth; scrollbar-width: none; -ms-overflow-style: none; }
-            .agent-wheel::-webkit-scrollbar { display: none; }
-            
-            /* UPDATED: Agent Glide Button Style (Icon Only) */
-            .agent-glide-button { position: absolute; top: 50%; transform: translateY(-50%); background: transparent; color: rgba(255,255,255,.5); border: none; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 3; transition: color .2s; }
-            .agent-glide-button:hover { color: rgba(255,255,255,.8); }
-            .agent-glide-button.hidden { opacity: 0; pointer-events: none; }
-            #agent-glide-left { left: -15px; }
-            #agent-glide-right { right: -15px; }
-
-            .agent-card { flex-shrink: 0; padding: 10px 20px; background-color: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; cursor: pointer; transition: background-color .2s, transform .2s; color: #ddd; font-family: 'Merriweather', serif; }
-            .agent-card:hover { background-color: rgba(255,255,255,0.15); transform: translateY(-2px); }
-            
-            #agent-details-view { border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
-            .agent-details-content { padding: 1rem; background-color: rgba(0,0,0,0.3); flex-grow: 1; }
-            #agent-details-view[data-agent="Standard"] .agent-details-content { background-image: radial-gradient(rgba(200, 200, 200, 0.05) 1px, transparent 1px); background-size: 15px 15px; }
-            #agent-details-view[data-agent="Quick"] .agent-details-content { background-image: linear-gradient(rgba(200,200,200,0.05) 1px, transparent 1px), linear-gradient(to right, rgba(200,200,200,0.05) 1px, transparent 1px); background-size: 20px 20px; }
-            #agent-details-view[data-agent="Analysis"] .agent-details-content { background: linear-gradient(135deg, rgba(30, 64, 175, 0) 40%, rgba(30, 64, 175, 0.1) 100%), repeating-linear-gradient(-45deg, transparent, transparent 5px, rgba(255,255,255,0.02) 5px, rgba(255,255,255,0.02) 10px); }
-            #agent-details-view[data-agent="Descriptive"] .agent-details-content { background-color: rgba(120, 53, 15, 0.1); background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMCIgaGVpZ2h0PSIzMCI+PHJlY3Qgd2lkdGg9IjMwIiBoZWlnaHQ9IjMwIiBmaWxsPSJ0cmFuc3BhcmVudCIvPjxwYXRoIGQ9Ik0zIDNoMjR2MjRIM3ptMjUgMGgydjJoLTJ6bTAgM2gydjJoLTJ6bTAgM2gydjJoLTJ6bTAgM2gydjJoLTJ6bTAgM2gydjJoLTJ6bTAgM2gydjJoLTJ6bTAgM2gydjJoLTJ6bTAgM2gydjJoLTJ6TTIgMmgydjJoLTJ6bTMgMGgydjJoLTJ6bTMgMGgydjJoLTJ6bTMgMGgydjJoLTJ6bTMgMGgydjJoLTJ6bTMgMGgydjJoLTJ6bTMgMGgydjJoLTJ6bTMgMGgydjJoLTJ6IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDMpIiBmaWxsLW9wYWNpdHk9IjAuNSIvPjwvc3ZnPg=='); }
-            #agent-details-view[data-agent="Creative"] .agent-details-content { background: radial-gradient(circle at 50% 50%, rgba(126, 34, 206, 0.15), transparent 70%); }
-            #agent-details-view[data-agent="Technical"] .agent-details-content { background-image: linear-gradient(45deg, rgba(255,255,255,0.03) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.03) 75%, rgba(255,255,255,0.03)), linear-gradient(-45deg, rgba(255,255,255,0.03) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.03) 75%, rgba(255,255,255,0.03)); background-size: 20px 20px; }
-            #agent-details-view[data-agent="Emotional"] .agent-details-content { background-image: radial-gradient(circle, rgba(217, 70, 239, 0.08) 10%, transparent 11%), radial-gradient(circle, rgba(217, 70, 239, 0.08) 10%, transparent 11%); background-size: 30px 30px; background-position: 0 0, 15px 15px; }
-            #agent-details-view[data-agent="Experimental"] .agent-details-content { background: repeating-conic-gradient(rgba(255,255,255,0.05) 0% 25%, transparent 0% 50%) 50% / 30px 30px; }
-            /* ADDED: Custom agent details view style */
-            #agent-details-view[data-agent="Custom"] .agent-details-content { 
-                background: linear-gradient(135deg, var(--ai-custom-color) 0%, transparent 70%);
+            /* NEW: Settings Menu Styles */
+            #ai-settings-menu { 
+                position: absolute; bottom: calc(100% + 10px); left: 0; right: 0; width: 100%; 
+                z-index: 1; background: rgb(20, 20, 22); 
+                border: 1px solid rgba(255,255,255,0.2); border-radius: 16px; 
+                box-shadow: 0 5px 25px rgba(0,0,0,0.5); padding: 15px; 
+                opacity: 0; visibility: hidden; transform: translateY(20px); 
+                transition: all .3s cubic-bezier(.4,0,.2,1); 
+                overflow: hidden; 
             }
+            #ai-settings-menu.active { opacity: 1; visibility: visible; transform: translateY(0); }
+            #ai-settings-menu .menu-header { font-size: 0.9em; color: #aaa; text-transform: uppercase; margin-bottom: 20px; text-align: center; font-family: 'Merriweather', serif; }
+            
+            .setting-group {
+                padding: 15px; margin-bottom: 15px;
+                border: 1px solid rgba(255,255,255,0.1);
+                border-radius: 10px;
+                background: rgba(0,0,0,0.2);
+            }
+            .setting-group h3 {
+                color: var(--ai-custom-color);
+                margin-top: 0; margin-bottom: 10px;
+                font-size: 1.1em;
+            }
+            .setting-row {
+                display: flex; justify-content: space-between; align-items: center;
+                padding: 5px 0;
+            }
+            .setting-row label { color: #ddd; font-size: 0.95em; }
+            .setting-note { color: #888; font-size: 0.8em; margin-top: 5px; margin-bottom: 0; line-height: 1.4; }
+            
+            #agent-color-picker { width: 40px; height: 30px; border: 1px solid #555; border-radius: 4px; padding: 0; cursor: pointer; }
 
-            #agent-details-view h3 { margin-top: 0; margin-bottom: 10px; color: #fff; text-align: center; font-family: 'Merriweather', serif; }
-            #agent-details-view p { color: #ccc; font-size: 0.95em; line-height: 1.6; text-align: center; margin-bottom: 20px; min-height: 50px; }
-            .agent-menu-footer { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.4); padding: 0.5rem; }
-            #agent-menu-back-btn, #agent-menu-select-btn { background-color: rgba(100, 100, 100, 0.5); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,.8); font-size: 1em; cursor: pointer; transition: all .3s ease; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; }
-            #agent-menu-back-btn:hover, #agent-menu-select-btn:hover { background-color: rgba(120, 120, 120, 0.7); }
-            #agent-menu-select-btn { background-color: rgba(67, 56, 202, 0.6); }
-            #agent-menu-select-btn:hover { background-color: rgba(79, 70, 229, 0.7); }
+            .action-button {
+                width: 100%; padding: 10px; margin-top: 10px;
+                background-color: var(--ai-red); color: white;
+                border: none; border-radius: 8px;
+                cursor: pointer; font-size: 1em; font-weight: bold;
+                transition: background-color 0.2s;
+            }
+            .action-button:hover { background-color: #c23321; }
+            .action-button i { margin-right: 8px; }
 
             #ai-attachment-preview { display: none; flex-direction: row; gap: 10px; padding: 0; max-height: 0; border-bottom: 1px solid transparent; overflow-x: auto; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
             #ai-input-wrapper.has-attachments #ai-attachment-preview { max-height: 100px; padding: 10px 15px; }
@@ -1094,28 +863,19 @@
             .ai-message-bubble ul, .ai-message-bubble ol { list-style-position: inside; }
 
             @keyframes glow { 0%,100% { box-shadow: 0 0 5px rgba(255,255,255,.15), 0 0 10px rgba(255,255,255,.1); } 50% { box-shadow: 0 0 10px rgba(255,255,255,.25), 0 0 20px rgba(255,255,255,.2); } }
-            @keyframes gemini-glow { 0%,100% { box-shadow: 0 0 8px 2px var(--ai-blue); } 25% { box-shadow: 0 0 8px 2px var(--ai-green); } 50% { box-shadow: 0 0 8px 2px var(--ai-yellow); } 75% { box-shadow: 0 0 8px 2px var(--ai-red); } }
-            /* ADDED: Custom gemini-glow animation */
+            
+            /* Custom glow now drives the gemini-response animation */
             @keyframes custom-gemini-glow { 0%,100% { box-shadow: 0 0 8px 2px var(--ai-custom-color); } 50% { box-shadow: 0 0 12px 3px var(--ai-custom-color); } }
+            
             @keyframes spin { to { transform: rotate(360deg); } }
             @keyframes message-pop-in { 0% { opacity: 0; transform: translateY(10px) scale(.98); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+            /* Brand title pulse uses the default Google colors for branding */
             @keyframes brand-title-pulse { 0%, 100% { text-shadow: 0 0 7px var(--ai-blue); } 25% { text-shadow: 0 0 7px var(--ai-green); } 50% { text-shadow: 0 0 7px var(--ai-yellow); } 75% { text-shadow: 0 0 7px var(--ai-red); } }
             @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
-            @keyframes experimental-bg-pan { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-            @keyframes experimental-title-color { 0%,100% { color: #ee7752; } 25% { color: #e73c7e; } 50% { color: #23a6d5; } 75% { color: #23d5ab; } }
         `;
     document.head.appendChild(style);}
 
-    // MODIFIED: Removed automatic activateAI() call and added keydown listener
     document.addEventListener('DOMContentLoaded', async () => {
-        // ADDED: Re-attaches the shortcut logic
         document.addEventListener('keydown', handleKeyDown);
-
-        // REMOVED: The block that automatically calls activateAI().
-        // Activation now requires the Ctrl + \ shortcut.
-        const isAuthorized = await isUserAuthorized();
-        if (isAuthorized) {
-            // Placeholder: The AI will be activated by the user's Ctrl + \ action
-        }
     });
 })();
