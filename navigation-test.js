@@ -6,100 +6,56 @@
  * and advanced file previews. This version includes a character limit,
  * smart paste handling, and refined animations.
  *
- * Updated with centered welcome text, left-aligned chat UI, and expanded LaTeX shortcuts.
- *
- * MODIFIED: AI Mode rebranded to AI Agent. Subject menu replaced by a sliding horizontal
- * Category Selector with a two-step selection flow (wheel and detail view).
+ * Updated with centered welcome text, left-aligned chat UI, expanded LaTeX shortcuts,
+ * simplified attachment button, increased character limit with simplified display,
+ * smart paste to file, increased file attachment limit (10 files),
+ * fixed "Network 400" error handling for attachments,
+ * new paste-to-file logic for >1000 chars or exceeding 10K limit,
+ * dynamic numbering for pasted text files,
+ * on-click preview for attached files, and improved message padding/alignment.
  */
 (function() {
     // --- CONFIGURATION ---
     const API_KEY = 'AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro'; 
     const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
     const MAX_INPUT_HEIGHT = 200;
-    const CHAR_LIMIT = 500;
+    const CHAR_LIMIT = 10000; // Updated character limit
+    const PASTE_TO_FILE_THRESHOLD = 1000; // NEW: Threshold for converting large pastes to files
+    const MAX_ATTACHMENTS_PER_MESSAGE = 10; // New limit for total attachments per message
 
     // --- ICONS (for event handlers) ---
     const copyIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
     const checkIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="check-icon"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+    // New attachment icon
+    const attachmentIconSVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.2a2 2 0 0 1-2.83-2.83l8.49-8.49"></path></svg>`;
 
     // --- STATE MANAGEMENT ---
     let isAIActive = false;
     let isRequestPending = false;
-    let isCategorySelectorOpen = false; // Updated state variable name
-    let categorySelectorState = 'wheel'; // 'wheel' or 'detail'
-    let selectedAgentForDetail = 'Standard';
     let currentAIRequestController = null;
-    let currentSubject = 'Standard'; // Updated default subject
+    let currentSubject = 'General';
     let chatHistory = [];
     let attachedFiles = [];
 
-    // --- AGENT CONFIGURATION ---
-    const AGENT_CATEGORIES = {
-        'Quick': {
-            icon: '⚡',
-            description: 'Provides brief, direct answers. Ideal for rapid fact-checking and simple requests.',
-            instruction: 'You are an AI Agent focused on providing the quickest, most direct, and concise answer possible. Do not elaborate unless explicitly asked.'
-        },
-        'Standard': {
-            icon: '📚',
-            description: 'The default, balanced agent. Offers comprehensive, helpful, and polite responses.',
-            instruction: 'You are a helpful and comprehensive AI assistant. Adopt a friendly and standard tone.'
-        },
-        'Analysis': {
-            icon: '🔬',
-            description: 'Analyzes information deeply, breaking down complex topics and data structures. Excels at problem-solving and critique.',
-            instruction: 'You are a deep analysis expert. Your responses must break down the core components of the request, focusing on structure, relationships, and hidden patterns. Use structured formats like lists and tables and prioritize deep, objective reasoning.'
-        },
-        'Descriptive': {
-            icon: '🖼️',
-            description: 'Focuses on creating detailed, vivid descriptions and explanations, making concepts clear and memorable.',
-            instruction: 'You are an AI Agent with a highly descriptive and informative style. Use rich, evocative language to paint a clear mental picture of the concepts you explain.'
-        },
-        'Creative': {
-            icon: '✨',
-            description: 'Excels at brainstorming, storytelling, poetry, and generating unique, imaginative content.',
-            instruction: 'You are an AI Agent specialized in creative output. Generate content that is imaginative, original, and pushes the boundaries of conventional thought. Adopt a playful, inspiring, or artistic tone.'
-        },
-        'Technical': {
-            icon: '💻',
-            description: 'Expert in coding, debugging, systems design, and mathematical precision. Provide runnable solutions.',
-            instruction: 'You are an expert programmer, software architect, and mathematician. Provide complete, runnable code and mathematically precise explanations. Your tone is formal and precise.'
-        },
-        'Emotional': {
-            icon: '❤️',
-            description: 'Employs a human-like, empathetic tone, focusing on reflection, well-being, and gentle advice.',
-            instruction: 'You are an AI Agent specialized in empathetic and emotional communication. Respond in a warm, understanding, and reflective tone, prioritizing the emotional context of the user\'s query.'
-        },
-        'Experimental': {
-            icon: '🧪',
-            description: 'A wild card. Generates unpredictable, novel, or provocative responses. Caution advised.',
-            instruction: 'You are an experimental, unconventional AI Agent. Your responses should be unpredictable, novel, and thought-provoking. Break conventional response patterns and explore new stylistic avenues.'
-        }
-    };
-
-
-    // --- EXPANDED SYMBOL MAP (KEPT FOR LATEX FEATURE) ---
+    // --- EXPANDED SYMBOL MAP (Syntax corrected) ---
     const latexSymbolMap = {
         '\\alpha':'α','\\beta':'β','\\gamma':'γ','\\delta':'δ','\\epsilon':'ε','\\zeta':'ζ','\\eta':'η','\\theta':'θ','\\iota':'ι','\\kappa':'κ','\\lambda':'λ','\\mu':'μ','\\nu':'ν','\\xi':'ξ','\\omicron':'ο','\\pi':'π','\\rho':'ρ','\\sigma':'σ','\\tau':'τ','\\upsilon':'υ','\\phi':'φ','\\chi':'χ','\\psi':'ψ','\\omega':'ω','\\Gamma':'Γ','\\Delta':'Δ','\\Theta':'Θ','\\Lambda':'Λ','\\Xi':'Ξ','\\Pi':'Π','\\Sigma':'Σ','\\Upsilon':'Υ','\\Phi':'Φ','\\Psi':'Ψ','\\Omega':'Ω','\\pm':'±','\\times':'×','\\div':'÷','\\cdot':'·','\\ast':'∗','\\cup':'∪','\\cap':'∩','\\in':'∈','\\notin':'∉','\\subset':'⊂','\\supset':'⊃','\\subseteq':'⊆','\\supseteq':'⊇','\\ne':'≠','\\neq':'≠','\\le':'≤','\\leq':'≤','\\ge':'≥','\\geq':'≥','\\approx':'≈','\\equiv':'≡','\\sim':'∼','\\ll':'≪','\\gg':'≫','\\propto':'∝','\\leftarrow':'←','\\rightarrow':'→','\\to':'→','\\uparrow':'↑','\\downarrow':'↓','\\leftrightarrow':'↔','\\mapsto':'↦','\\Leftarrow':'⇐','\\Rightarrow':'⇒','\\implies':'⇒','\\Leftrightarrow':'⇔','\\iff':'⇔','\\forall':'∀','\\exists':'∃','\\nabla':'∇','\\partial':'∂','\\emptyset':'∅','\\infty':'∞','\\degree':'°','\\angle':'∠','\\hbar':'ħ','\\ell':'ℓ','\\therefore':'∴','\\because':'∵','\\bullet':'•','\\ldots':'…','\\dots':'…','\\prime':'′','\\hat':'^','\\oplus':'⊕','\\otimes':'⊗','\\perp':'⊥','\\sqrt':'√'
     };
 
-
-    // --- DAILY LIMITS CONFIGURATION ---
-    const DAILY_LIMITS = { images: 5 };
-
+    // --- DAILY LIMITS CONFIGURATION (image limits removed) ---
     const limitManager = {
         getToday: () => new Date().toLocaleDateString("en-US"),
         getUsage: () => {
             const usageData = JSON.parse(localStorage.getItem('aiUsageLimits')) || {};
             const today = limitManager.getToday();
             if (usageData.date !== today) {
-                return { date: today, images: 0 };
+                return { date: today };
             }
             return usageData;
         },
         saveUsage: (usageData) => { localStorage.setItem('aiUsageLimits', JSON.stringify(usageData)); },
-        canUpload: (type) => { const usage = limitManager.getUsage(); return (type in DAILY_LIMITS) ? ((usage[type] || 0) < DAILY_LIMITS[type]) : true; },
-        recordUpload: (type, count = 1) => { if (type in DAILY_LIMITS) { let usage = limitManager.getUsage(); usage[type] = (usage[type] || 0) + count; limitManager.saveUsage(usage); } }
+        canUpload: (type) => true,
+        recordUpload: (type, count = 1) => {}
     };
 
     async function isUserAuthorized() {
@@ -150,7 +106,7 @@
         
         const brandTitle = document.createElement('div');
         brandTitle.id = 'ai-brand-title';
-        const brandText = "4SP - AI AGENT"; // REBRANDING
+        const brandText = "4SP - AI MODE";
         brandText.split('').forEach(char => {
             const span = document.createElement('span');
             span.textContent = char;
@@ -160,11 +116,11 @@
         
         const persistentTitle = document.createElement('div');
         persistentTitle.id = 'ai-persistent-title';
-        persistentTitle.textContent = `AI Agent - ${currentSubject}`; // REBRANDING
+        persistentTitle.textContent = "AI Mode - General";
         
         const welcomeMessage = document.createElement('div');
         welcomeMessage.id = 'ai-welcome-message';
-        const welcomeHeader = chatHistory.length > 0 ? "Welcome Back" : "Welcome to AI Agent"; // REBRANDING
+        const welcomeHeader = chatHistory.length > 0 ? "Welcome Back" : "Welcome to AI Mode";
         welcomeMessage.innerHTML = `<h2>${welcomeHeader}</h2><p>This is a beta feature. To improve your experience, your general location (state or country) will be shared with your first message. You may be subject to message limits.</p>`;
         
         const closeButton = document.createElement('div');
@@ -188,18 +144,29 @@
         visualInput.oninput = handleContentEditableInput;
         visualInput.addEventListener('paste', handlePaste);
         
-        const actionToggle = document.createElement('button');
-        actionToggle.id = 'ai-action-toggle';
-        actionToggle.innerHTML = '<span class="icon-ellipsis">&#8942;</span><span class="icon-stop">■</span>';
-        actionToggle.onclick = handleActionToggleClick;
+        // New Attachment Button (replaces actionToggle)
+        const attachmentButton = document.createElement('button');
+        attachmentButton.id = 'ai-attachment-button';
+        attachmentButton.innerHTML = attachmentIconSVG; // Attachment icon
+        attachmentButton.title = 'Attach files';
+        attachmentButton.onclick = () => handleFileUpload(); // Calls a generalized file upload
+        
+        // Subject selection button
+        const subjectButton = document.createElement('button');
+        subjectButton.id = 'ai-subject-button';
+        subjectButton.innerHTML = '<span class="icon-ellipsis">&#8942;</span>'; // Three dots icon
+        subjectButton.title = 'Change topic';
+        subjectButton.onclick = toggleSubjectMenu;
+
 
         const charCounter = document.createElement('div');
         charCounter.id = 'ai-char-counter';
-        charCounter.textContent = `0 / ${CHAR_LIMIT}`;
+        charCounter.textContent = `0 / ${formatCharLimit(CHAR_LIMIT)}`; // Use formatted limit
 
         inputWrapper.appendChild(attachmentPreviewContainer);
         inputWrapper.appendChild(visualInput);
-        inputWrapper.appendChild(actionToggle);
+        inputWrapper.appendChild(attachmentButton); // Add the new attachment button
+        inputWrapper.appendChild(subjectButton); // Add the new subject button
         
         container.appendChild(brandTitle);
         container.appendChild(persistentTitle);
@@ -207,7 +174,7 @@
         container.appendChild(closeButton);
         container.appendChild(responseContainer);
         container.appendChild(inputWrapper);
-        container.appendChild(createCategorySelector()); // New Category Selector
+        container.appendChild(createSubjectMenu()); // Create a separate menu for subjects
         container.appendChild(charCounter);
         
         document.body.appendChild(container);
@@ -238,9 +205,11 @@
             }, 500);
         }
         isAIActive = false;
-        isCategorySelectorOpen = false;
         isRequestPending = false;
         attachedFiles = [];
+        // Ensure subject menu is closed on deactivation
+        const subjectMenu = document.getElementById('ai-subject-menu');
+        if (subjectMenu) subjectMenu.classList.remove('active');
     }
     
     function renderChatHistory() {
@@ -289,24 +258,59 @@
 
         const lastMessageIndex = processedChatHistory.length - 1;
         const userParts = processedChatHistory[lastMessageIndex].parts;
-        const textPart = userParts.find(p => p.text);
-        if (textPart) {
-             textPart.text = firstMessageContext + textPart.text;
+        // Fix: Ensure firstMessageContext is added to the text part correctly
+        const textPartIndex = userParts.findIndex(p => p.text);
+        if (textPartIndex > -1) {
+             userParts[textPartIndex].text = firstMessageContext + userParts[textPartIndex].text;
         } else if (firstMessageContext) {
              userParts.unshift({ text: firstMessageContext.trim() });
         }
         
-        // Use new AGENT_CATEGORIES for system instruction
-        let systemInstruction = AGENT_CATEGORIES[currentSubject] ? AGENT_CATEGORIES[currentSubject].instruction : AGENT_CATEGORIES['Standard'].instruction;
+        let systemInstruction = 'You are a helpful and comprehensive AI assistant.';
+        switch (currentSubject) {
+            case 'Mathematics':
+                systemInstruction = 'You are a mathematics expert. Prioritize accuracy and provide detailed, step-by-step reasoning for all calculations and proofs. Double-check your work for correctness.';
+                break;
+            case 'Science':
+                systemInstruction = 'You are a science expert. Explain complex scientific concepts clearly and concisely, using analogies where helpful. Provide sources or references for claims where appropriate.';
+                break;
+            case 'History':
+                systemInstruction = 'You are a history expert. Provide detailed and chronologically accurate information. When discussing events, include context and the perspectives of different groups involved.';
+                break;
+            case 'English':
+                systemInstruction = 'You are an expert in English language and literature. Adopt a human-like, conversational, and slightly literary tone. Analyze texts with nuance, considering themes, character development, and authorial intent. Mirror the user\'s writing style in terms of formality.';
+                break;
+            case 'Programming':
+                systemInstruction = 'You are an expert programmer and software architect. Provide complete and runnable code examples. Do not use brevity or omit necessary parts of the code for simplicity. Explain the code clearly, covering its logic, structure, and potential edge cases.';
+                break;
+        }
 
         const payload = { contents: processedChatHistory, systemInstruction: { parts: [{ text: systemInstruction }] } };
         
         try {
             const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: currentAIRequestController.signal });
-            if (!response.ok) throw new Error(`Network response was not ok. Status: ${response.status}`);
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error("API Error Response:", errorData);
+                throw new Error(`Network response was not ok. Status: ${response.status}. Details: ${JSON.stringify(errorData)}`);
+            }
             const data = await response.json();
-            if (!data.candidates || data.candidates.length === 0) throw new Error("Invalid response from API.");
-            const text = data.candidates[0].content.parts[0].text;
+            if (!data.candidates || data.candidates.length === 0) {
+                 // Check for "promptFeedback" which indicates safety issues or empty response
+                if (data.promptFeedback && data.promptFeedback.blockReason) {
+                    throw new Error(`Content blocked due to: ${data.promptFeedback.blockReason}. Safety ratings: ${JSON.stringify(data.promptFeedback.safetyRatings)}`);
+                }
+                throw new Error("Invalid response from API: No candidates or empty candidates array.");
+            }
+            
+            // Fix: Check if content.parts[0].text exists before accessing
+            const text = data.candidates[0].content.parts[0]?.text || '';
+            if (!text) {
+                console.warn("AI response had no text part, but was not blocked. Possibly empty generation.");
+                responseBubble.innerHTML = `<div class="ai-error">The AI generated an empty response. Please try again or rephrase.</div>`;
+                return;
+            }
+
             chatHistory.push({ role: "model", parts: [{ text: text }] });
             
             const contentHTML = `<div class="ai-response-content">${parseGeminiResponse(text)}</div>`;
@@ -321,12 +325,15 @@
 
         } catch (error) {
             if (error.name === 'AbortError') { responseBubble.innerHTML = `<div class="ai-error">Message generation stopped.</div>`; } 
-            else { console.error('AI API Error:', error); responseBubble.innerHTML = `<div class="ai-error">Sorry, an error occurred.</div>`; }
+            else { 
+                console.error('AI API Error:', error); 
+                responseBubble.innerHTML = `<div class="ai-error">Sorry, an error occurred: ${error.message || "Unknown error"}.</div>`; 
+            }
         } finally {
             isRequestPending = false;
             currentAIRequestController = null;
-            const actionToggle = document.getElementById('ai-action-toggle');
-            if (actionToggle) { actionToggle.classList.remove('generating'); }
+            const inputWrapper = document.getElementById('ai-input-wrapper');
+            if (inputWrapper) { inputWrapper.classList.remove('waiting'); }
             
             setTimeout(() => {
                 responseBubble.classList.remove('loading');
@@ -334,148 +341,42 @@
                 if(responseContainer) responseContainer.scrollTop = responseContainer.scrollHeight;
             }, 300);
 
-            document.getElementById('ai-input-wrapper').classList.remove('waiting');
             const editor = document.getElementById('ai-input');
             if(editor) { editor.contentEditable = true; editor.focus(); }
         }
     }
 
-    function handleActionToggleClick(e) { e.stopPropagation(); if (isRequestPending) { stopGeneration(); } else { toggleCategorySelector(); } }
-    function stopGeneration(){if(currentAIRequestController){currentAIRequestController.abort();}}
-    
-    function toggleCategorySelector() {
-        isCategorySelectorOpen = !isCategorySelectorOpen;
-        const selector = document.getElementById('ai-category-selector');
-        const toggleBtn = document.getElementById('ai-action-toggle');
-        const inputWrapper = document.getElementById('ai-input-wrapper');
-        
-        if (isCategorySelectorOpen) {
-            categorySelectorState = 'wheel';
-            renderCategorySelector();
-        } else {
-            categorySelectorState = 'wheel';
-        }
-        
-        selector.classList.toggle('active', isCategorySelectorOpen);
-        toggleBtn.classList.toggle('active', isCategorySelectorOpen);
-        inputWrapper.classList.toggle('selector-open', isCategorySelectorOpen);
-    }
-    
-    function selectAgent(agentName) {
-        currentSubject = agentName;
-        chatHistory = [];
-        const container = document.getElementById('ai-container');
-        if (container) {
-            container.dataset.subject = agentName;
+    // New function to handle the single attachment button click
+    function handleFileUpload() {
+        if (attachedFiles.length >= MAX_ATTACHMENTS_PER_MESSAGE) {
+            alert(`You can attach a maximum of ${MAX_ATTACHMENTS_PER_MESSAGE} files per message.`);
+            return;
         }
 
-        const persistentTitle = document.getElementById('ai-persistent-title');
-        if (persistentTitle) { persistentTitle.textContent = `AI Agent - ${agentName}`; }
-        
-        toggleCategorySelector();
-        // Reset welcome message and history rendering
-        const welcomeMessage = document.getElementById('ai-welcome-message');
-        if (welcomeMessage) {
-            welcomeMessage.querySelector('h2').textContent = "Welcome to AI Agent";
-            document.getElementById('ai-response-container').innerHTML = '';
-            container.classList.remove('chat-active');
-        }
-    }
-    
-    function handleAgentClick(agentName) {
-        selectedAgentForDetail = agentName;
-        categorySelectorState = 'detail';
-        renderCategorySelector();
-    }
-    
-    function renderCategorySelector() {
-        const selector = document.getElementById('ai-category-selector');
-        if (!selector) return;
-        selector.innerHTML = '';
-        selector.classList.remove('detail-view-active');
-        
-        if (categorySelectorState === 'wheel') {
-            const wheelContent = document.createElement('div');
-            wheelContent.className = 'category-wheel';
-            
-            Object.keys(AGENT_CATEGORIES).forEach(name => {
-                const agent = AGENT_CATEGORIES[name];
-                const button = document.createElement('button');
-                button.textContent = agent.icon;
-                button.dataset.agent = name;
-                button.title = name;
-                button.className = 'agent-wheel-btn';
-                if (name === currentSubject) button.classList.add('active');
-                if (name === 'Experimental') button.classList.add('experimental-theme');
-                button.onclick = () => handleAgentClick(name);
-                wheelContent.appendChild(button);
-            });
-            selector.appendChild(wheelContent);
-            
-        } else if (categorySelectorState === 'detail') {
-            const agentName = selectedAgentForDetail;
-            const agent = AGENT_CATEGORIES[agentName];
-            
-            const detailView = document.createElement('div');
-            detailView.className = 'category-detail';
-            
-            detailView.innerHTML = `
-                <h2>${agent.icon} ${agentName} Agent</h2>
-                <p>${agent.description}</p>
-            `;
-            
-            const controls = document.createElement('div');
-            controls.className = 'detail-controls';
-            
-            const backButton = document.createElement('button');
-            backButton.className = 'detail-back-btn';
-            backButton.innerHTML = `<span class="icon-back">⏴</span> Go Back`;
-            backButton.onclick = () => { categorySelectorState = 'wheel'; renderCategorySelector(); };
-            
-            const selectButton = document.createElement('button');
-            selectButton.className = 'detail-select-btn';
-            selectButton.innerHTML = `Select Agent <span class="icon-select">⏵</span>`;
-            selectButton.onclick = () => selectAgent(agentName);
-            
-            controls.appendChild(backButton);
-            controls.appendChild(selectButton);
-            detailView.appendChild(controls);
-            
-            selector.appendChild(detailView);
-            selector.classList.add('detail-view-active');
-        }
-    }
-
-    function createCategorySelector() {
-        const selector = document.createElement('div');
-        selector.id = 'ai-category-selector';
-        renderCategorySelector(); // Initial render of the wheel
-        return selector;
-    }
-
-    
-    function handleFileUpload(fileType) {
         const input = document.createElement('input');
         input.type = 'file';
-        const typeMap = {'photo':'image/*','file':'*'};
-        input.accept = typeMap[fileType] || '*';
-        if (fileType === 'photo') { input.multiple = true; }
+        input.multiple = true; // Allow multiple file selection
+        input.accept = 'image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain'; // Allowed file types
+        
         input.onchange = (event) => {
             const files = Array.from(event.target.files);
             if (!files || files.length === 0) return;
+
+            const filesToProcess = files.filter(file => {
+                if (attachedFiles.length >= MAX_ATTACHMENTS_PER_MESSAGE) {
+                    alert(`Cannot attach more than ${MAX_ATTACHMENTS_PER_MESSAGE} files. Skipping: ${file.name}`);
+                    return false;
+                }
+                return true;
+            });
+
             const currentTotalSize = attachedFiles.reduce((sum, file) => sum + (file.inlineData ? atob(file.inlineData.data).length : 0), 0);
-            const newFilesSize = files.reduce((sum, file) => sum + file.size, 0);
-            if (currentTotalSize + newFilesSize > (4 * 1024 * 1024)) { // Example: 4MB limit
-                alert(`Upload failed: Total size of attachments would exceed the 4MB limit per message.`);
+            const newFilesSize = filesToProcess.reduce((sum, file) => sum + file.size, 0);
+            if (currentTotalSize + newFilesSize > (4 * 1024 * 1024)) { // Example: 4MB limit for total attachments
+                alert(`Upload failed: Total size of attachments would exceed the 4MB limit per message. (Current: ${formatBytes(currentTotalSize)}, Adding: ${formatBytes(newFilesSize)})`);
                 return;
             }
-            let filesToProcess = [...files];
-            const usage = limitManager.getUsage();
-            const remainingSlots = DAILY_LIMITS.images - (usage.images || 0);
-            if (fileType === 'photo' && filesToProcess.length > remainingSlots) {
-                alert(`You can only upload ${remainingSlots} more image(s) today.`);
-                filesToProcess = filesToProcess.slice(0, remainingSlots);
-            }
+            
             filesToProcess.forEach(file => {
                 const tempId = `file-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
                 attachedFiles.push({ tempId, file, isLoading: true });
@@ -490,6 +391,7 @@
                         item.isLoading = false;
                         item.inlineData = { mimeType: file.type, data: base64Data };
                         item.fileName = file.name;
+                        item.fileContent = e.target.result; // Store content for preview
                         delete item.file;
                         delete item.tempId;
                         renderAttachments();
@@ -497,9 +399,36 @@
                 };
                 reader.readAsDataURL(file);
             });
-            if (fileType === 'photo') { limitManager.recordUpload('images', filesToProcess.length); }
         };
         input.click();
+    }
+    
+    // Toggle subject menu (was action menu)
+    function toggleSubjectMenu(){
+        const menu = document.getElementById('ai-subject-menu');
+        const toggleBtn = document.getElementById('ai-subject-button');
+        const isMenuOpen = menu.classList.toggle('active');
+        toggleBtn.classList.toggle('active', isMenuOpen);
+
+        if (isMenuOpen) {
+            const btnRect = toggleBtn.getBoundingClientRect();
+            menu.style.bottom = `${window.innerHeight - btnRect.top}px`;
+            menu.style.right = `${window.innerWidth - btnRect.right}px`;
+        }
+    }
+    
+    function selectSubject(subject){
+        currentSubject=subject;
+        chatHistory = [];
+        const persistentTitle = document.getElementById('ai-persistent-title');
+        if (persistentTitle) { persistentTitle.textContent = `AI Mode - ${subject}`; }
+        document.getElementById('ai-container').dataset.subject = subject;
+
+        const menu=document.getElementById('ai-subject-menu');
+        menu.querySelectorAll('button[data-subject]').forEach(b=>b.classList.remove('active'));
+        const activeBtn=menu.querySelector(`button[data-subject="${subject}"]`);
+        if(activeBtn)activeBtn.classList.add('active');
+        toggleSubjectMenu(); // Close menu after selection
     }
     
     function renderAttachments() {
@@ -536,6 +465,7 @@
                 } else {
                     previewHTML = `<span class="file-icon">📄</span>`;
                 }
+                fileCard.onclick = () => showFilePreview(file); // Add click handler for preview
             }
 
             if (fileExt.length > 5) fileExt = 'FILE';
@@ -562,7 +492,8 @@
                 }
             }, 0);
 
-            fileCard.querySelector('.remove-attachment-btn').onclick = () => {
+            fileCard.querySelector('.remove-attachment-btn').onclick = (e) => {
+                e.stopPropagation(); // Prevent card click from firing
                 attachedFiles.splice(index, 1);
                 renderAttachments();
             };
@@ -570,11 +501,84 @@
         });
     }
 
-    /* NOTE: Old createActionMenu removed as it combined subjects and attachments.
-             The new createCategorySelector handles only categories. Attachment buttons 
-             are now only available if the user adds them to the main input area. 
-    function createActionMenu() { ... }
-    */
+    // Function to show file preview modal
+    function showFilePreview(file) {
+        if (!file.fileContent) {
+            alert("File content not available for preview.");
+            return;
+        }
+
+        const previewModal = document.createElement('div');
+        previewModal.id = 'ai-preview-modal';
+        previewModal.innerHTML = `
+            <div class="modal-content">
+                <span class="close-button">&times;</span>
+                <h3>${escapeHTML(file.fileName)}</h3>
+                <div class="preview-area"></div>
+            </div>
+        `;
+        document.body.appendChild(previewModal);
+
+        const previewArea = previewModal.querySelector('.preview-area');
+        if (file.inlineData.mimeType.startsWith('image/')) {
+            previewArea.innerHTML = `<img src="${file.fileContent}" alt="${file.fileName}" style="max-width: 100%; max-height: 80vh; object-fit: contain;">`;
+        } else if (file.inlineData.mimeType.startsWith('text/')) {
+            // Fetch text content if it's a text file
+            fetch(file.fileContent)
+                .then(response => response.text())
+                .then(text => {
+                    previewArea.innerHTML = `<pre style="white-space: pre-wrap; word-break: break-all; max-height: 70vh; overflow-y: auto; background-color: #222; padding: 10px; border-radius: 5px;">${escapeHTML(text)}</pre>`;
+                })
+                .catch(error => {
+                    console.error("Error reading text file for preview:", error);
+                    previewArea.innerHTML = `<p>Could not load text content for preview.</p>`;
+                });
+        } else {
+            previewArea.innerHTML = `<p>Preview not available for this file type. You can download it to view.</p>
+                                     <a href="${file.fileContent}" download="${file.fileName}" class="download-button">Download File</a>`;
+        }
+
+        previewModal.querySelector('.close-button').onclick = () => {
+            previewModal.remove();
+        };
+        previewModal.addEventListener('click', (e) => {
+            if (e.target === previewModal) {
+                previewModal.remove();
+            }
+        });
+    }
+
+    // Modified to create a subject-only menu
+    function createSubjectMenu() {
+        const menu = document.createElement('div');
+        menu.id = 'ai-subject-menu'; // New ID for subject menu
+        const subjects = ['General','Mathematics','Science','History','English','Programming'];
+        
+        const subjectHeader = document.createElement('div');
+        subjectHeader.className = 'menu-header';
+        subjectHeader.textContent = 'Focus Topic';
+        menu.appendChild(subjectHeader);
+        subjects.forEach(subject => {
+            const button = document.createElement('button');
+            button.textContent = subject;
+            button.dataset.subject = subject;
+            if (subject === 'General') button.classList.add('active');
+            button.onclick = () => selectSubject(subject);
+            menu.appendChild(button);
+        });
+        return menu;
+    }
+
+    function formatCharCount(count) {
+        if (count >= 1000) {
+            return (count / 1000).toFixed(count % 1000 === 0 ? 0 : 1) + 'K';
+        }
+        return count.toString();
+    }
+
+    function formatCharLimit(limit) {
+        return (limit / 1000).toFixed(0) + 'K';
+    }
 
     function handleContentEditableInput(e) {
         const editor = e.target;
@@ -582,11 +586,14 @@
         
         const counter = document.getElementById('ai-char-counter');
         if (counter) {
-            counter.textContent = `${charCount} / ${CHAR_LIMIT}`;
+            counter.textContent = `${formatCharCount(charCount)} / ${formatCharLimit(CHAR_LIMIT)}`;
             counter.classList.toggle('limit-exceeded', charCount > CHAR_LIMIT);
         }
 
         if (charCount > CHAR_LIMIT) {
+            // Trim content if over limit (this is a soft enforcement, allowing paste to exceed temporarily)
+            editor.innerText = editor.innerText.substring(0, CHAR_LIMIT);
+            // Re-position cursor to the end
             const selection = window.getSelection();
             const range = document.createRange();
             range.selectNodeContents(editor);
@@ -602,24 +609,45 @@
     
     function handlePaste(e) {
         e.preventDefault();
-        const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+        const pastedText = (e.clipboardData || window.clipboardData).getData('text/plain');
         const currentText = e.target.innerText;
+        const totalLengthIfPasted = currentText.length + pastedText.length;
 
-        if (currentText.length + pastedText.length > CHAR_LIMIT) {
-            let filename = 'paste.txt';
-            let counter = 2;
+        // NEW: Paste to file if over 1000 chars OR if it exceeds the CHAR_LIMIT
+        if (pastedText.length > PASTE_TO_FILE_THRESHOLD || totalLengthIfPasted > CHAR_LIMIT) {
+            let filenameBase = 'paste';
+            let filename = `${filenameBase}.txt`;
+            let counter = 1;
+            // Ensure unique filename
             while (attachedFiles.some(f => f.fileName === filename)) {
-                filename = `paste${counter++}.txt`;
+                filename = `${filenameBase}(${counter++}).txt`;
             }
-            // Use encodeURIComponent to handle special characters before btoa
-            const base64Data = btoa(unescape(encodeURIComponent(pastedText)));
-            attachedFiles.push({
-                inlineData: { mimeType: 'text/plain', data: base64Data },
-                fileName: filename
-            });
-            renderAttachments();
+            
+            // Use TextEncoder to handle various character encodings correctly for Base64
+            const encoder = new TextEncoder();
+            const encoded = encoder.encode(pastedText);
+            const base64Data = btoa(String.fromCharCode.apply(null, encoded));
+
+            if (attachedFiles.length < MAX_ATTACHMENTS_PER_MESSAGE) {
+                // Read as DataURL for preview purposes
+                const reader = new FileReader();
+                reader.onloadend = (event) => {
+                    attachedFiles.push({
+                        inlineData: { mimeType: 'text/plain', data: base64Data },
+                        fileName: filename,
+                        fileContent: event.target.result // Store Data URL for preview
+                    });
+                    renderAttachments();
+                };
+                reader.readAsDataURL(new Blob([pastedText], {type: 'text/plain'}));
+            } else {
+                alert(`Cannot attach more than ${MAX_ATTACHMENTS_PER_MESSAGE} files. Text was too large to paste directly.`);
+            }
         } else {
+            // Otherwise, paste normally
             document.execCommand('insertText', false, pastedText);
+            // Manually trigger input handler to update character count and height
+            handleContentEditableInput({target: e.target});
         }
     }
 
@@ -633,7 +661,9 @@
 
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            if (isCategorySelectorOpen) { toggleCategorySelector(); }
+            // Close subject menu if open
+            const subjectMenu = document.getElementById('ai-subject-menu');
+            if (subjectMenu && subjectMenu.classList.contains('active')) { subjectMenu.classList.remove('active'); }
             
             if (attachedFiles.some(f => f.isLoading)) {
                 alert("Please wait for files to finish uploading before sending.");
@@ -643,7 +673,6 @@
             if (isRequestPending) return;
             
             isRequestPending = true;
-            document.getElementById('ai-action-toggle').classList.add('generating');
             document.getElementById('ai-input-wrapper').classList.add('waiting');
             const parts = [];
             if (query) parts.push({ text: query });
@@ -691,6 +720,14 @@
     
     function fadeOutWelcomeMessage(){const container=document.getElementById("ai-container");if(container&&!container.classList.contains("chat-active")){container.classList.add("chat-active")}}
     function escapeHTML(str){const p=document.createElement("p");p.textContent=str;return p.innerHTML}
+    function formatBytes(bytes, decimals = 2) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    }
     function parseGeminiResponse(text) {
         let html = text;
         const codeBlocks = [];
@@ -720,9 +757,15 @@
                    .replace(/^# (.*$)/gm, "<h1>$1</h1>");
         html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
                    .replace(/\*(.*?)\*/g, "<em>$1</em>");
+        // NEW: Improved list item and padding handling
         html = html.replace(/^(?:\*|-)\s(.*$)/gm, "<li>$1</li>");
-        html = html.replace(/(<\/li>\s*<li>)/g, "</li><li>")
-                   .replace(/((<li>.*<\/li>)+)/gs, "<ul>$1</ul>");
+        // Ensure ul/ol tags are correctly wrapped and remove extra <br> after lists
+        html = html.replace(/((?:<br>)?\s*<li>.*<\/li>(\s*<br>)*)+/gs, (match) => {
+            const listItems = match.replace(/<br>/g, '').trim(); // Remove all br for cleaner processing
+            return `<ul>${listItems}</ul>`;
+        });
+        html = html.replace(/(<\/li>\s*<li>)/g, "</li><li>"); // Clean up multiple <li> in the same list
+
         html = html.replace(/\n/g, "<br>");
         html = html.replace(/%%CODE_BLOCK%%/g, () => codeBlocks.shift());
         
@@ -744,40 +787,17 @@
             :root { --ai-red: #ea4335; --ai-blue: #4285f4; --ai-green: #34a853; --ai-yellow: #fbbc05; }
             #ai-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0,0,0,0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); z-index: 2147483647; opacity: 0; transition: opacity 0.5s, background 0.5s, backdrop-filter 0.5s; font-family: 'Lora', serif; display: flex; flex-direction: column; justify-content: flex-end; padding: 0; box-sizing: border-box; overflow: hidden; }
             #ai-container.active { opacity: 1; background-color: rgba(0, 0, 0, 0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
-            
-            /* Theme Colors based on Subject */
-            #ai-container[data-subject="Standard"] { background: rgba(0, 0, 0, 0.8); }
-            #ai-container[data-subject="Quick"] { background: linear-gradient(rgba(150, 40, 40, 0.2), rgba(150, 40, 40, 0.2)), rgba(10, 10, 15, 0.75); }
-            #ai-container[data-subject="Analysis"] { background: linear-gradient(rgba(40, 130, 80, 0.15), rgba(40, 130, 80, 0.15)), rgba(10, 10, 15, 0.75); }
-            #ai-container[data-subject="Descriptive"] { background: linear-gradient(rgba(140, 90, 30, 0.2), rgba(140, 90, 30, 0.2)), rgba(10, 10, 15, 0.75); }
-            #ai-container[data-subject="Creative"] { background: linear-gradient(rgba(50, 80, 160, 0.2), rgba(50, 80, 160, 0.2)), rgba(10, 10, 15, 0.75); }
-            #ai-container[data-subject="Technical"] { background: linear-gradient(rgba(40, 100, 150, 0.2), rgba(40, 100, 150, 0.2)), rgba(10, 10, 15, 0.75); }
-            #ai-container[data-subject="Emotional"] { background: linear-gradient(rgba(180, 50, 100, 0.2), rgba(180, 50, 100, 0.2)), rgba(10, 10, 15, 0.75); }
-            
-            /* EXPERIMENTAL RAINBOW THEME */
-            #ai-container[data-subject="Experimental"] { 
-                animation: rainbow-glisten 15s linear infinite;
-            }
-
+            #ai-container[data-subject="General"] { background: rgba(0, 0, 0, 0.8); }
+            #ai-container[data-subject="Mathematics"] { background: linear-gradient(rgba(150, 40, 40, 0.2), rgba(150, 40, 40, 0.2)), rgba(10, 10, 15, 0.75); }
+            #ai-container[data-subject="Science"] { background: linear-gradient(rgba(40, 130, 80, 0.15), rgba(40, 130, 80, 0.15)), rgba(10, 10, 15, 0.75); }
+            #ai-container[data-subject="History"] { background: linear-gradient(rgba(140, 90, 30, 0.2), rgba(140, 90, 30, 0.2)), rgba(10, 10, 15, 0.75); }
+            #ai-container[data-subject="English"] { background: linear-gradient(rgba(50, 80, 160, 0.2), rgba(50, 80, 160, 0.2)), rgba(10, 10, 15, 0.75); }
+            #ai-container[data-subject="Programming"] { background: linear-gradient(rgba(40, 100, 150, 0.2), rgba(40, 100, 150, 0.2)), rgba(10, 10, 15, 0.75); }
             #ai-container.deactivating, #ai-container.deactivating > * { transition: opacity 0.4s, transform 0.4s; }
             #ai-container.deactivating { opacity: 0 !important; background-color: rgba(0,0,0,0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); }
-            
-            #ai-persistent-title, #ai-brand-title { position: absolute; top: 28px; left: 30px; font-family: 'Lora', serif; font-size: 18px; font-weight: bold; color: white; opacity: 0; transition: opacity 0.5s 0.2s, color 0.5s; animation: none; }
+            #ai-persistent-title, #ai-brand-title { position: absolute; top: 28px; left: 30px; font-family: 'Lora', serif; font-size: 18px; font-weight: bold; color: white; opacity: 0; transition: opacity 0.5s 0.2s; animation: title-pulse 4s linear infinite; }
             #ai-container.chat-active #ai-persistent-title { opacity: 1; }
             #ai-container:not(.chat-active) #ai-brand-title { opacity: 1; }
-
-            /* Agent-Specific Title Coloring */
-            #ai-container[data-subject="Standard"] #ai-persistent-title { color: #fff; }
-            #ai-container[data-subject="Quick"] #ai-persistent-title { color: var(--ai-red); }
-            #ai-container[data-subject="Analysis"] #ai-persistent-title { color: var(--ai-green); }
-            #ai-container[data-subject="Descriptive"] #ai-persistent-title { color: var(--ai-yellow); }
-            #ai-container[data-subject="Creative"] #ai-persistent-title { color: var(--ai-blue); }
-            #ai-container[data-subject="Technical"] #ai-persistent-title { color: #0ff; }
-            #ai-container[data-subject="Emotional"] #ai-persistent-title { color: #f0f; }
-            #ai-container[data-subject="Experimental"] #ai-persistent-title { 
-                animation: title-pulse 4s linear infinite;
-            }
-
             #ai-welcome-message { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; color: rgba(255,255,255,.5); opacity: 1; transition: opacity .5s, transform .5s; width: 100%; }
             #ai-container.chat-active #ai-welcome-message { opacity: 0; pointer-events: none; transform: translate(-50%,-50%) scale(0.95); }
             #ai-welcome-message h2 { font-family: 'Merriweather', serif; font-size: 2.2em; margin: 0; color: #fff; }
@@ -786,108 +806,112 @@
             #ai-char-counter { position: fixed; bottom: 15px; right: 30px; font-size: 0.9em; font-family: monospace; color: #aaa; transition: color 0.2s; z-index: 2147483647; }
             #ai-char-counter.limit-exceeded { color: #e57373; font-weight: bold; }
             #ai-response-container { flex: 1 1 auto; overflow-y: auto; width: 100%; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; padding: 60px 20px 20px 20px; -webkit-mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%); mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%);}
-            .ai-message-bubble { background: rgba(15,15,18,.8); border: 1px solid rgba(255,255,255,.1); border-radius: 16px; padding: 12px 18px; color: #e0e0e0; backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); animation: message-pop-in .5s cubic-bezier(.4,0,.2,1) forwards; max-width: 90%; line-height: 1.6; overflow-wrap: break-word; transition: opacity 0.3s ease-in-out; align-self: flex-start; }
-            .user-message { background: rgba(40,45,50,.8); }
+            .ai-message-bubble { background: rgba(15,15,18,.8); border: 1px solid rgba(255,255,255,.1); border-radius: 16px; padding: 12px 18px; color: #e0e0e0; backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); animation: message-pop-in .5s cubic-bezier(.4,0,.2,1) forwards; max-width: 90%; line-height: 1.6; overflow-wrap: break-word; transition: opacity 0.3s ease-in-out; align-self: flex-start; text-align: left; }
+            .user-message { background: rgba(40,45,50,.8); align-self: flex-end; }
             .gemini-response { animation: glow 4s infinite; }
             .gemini-response.loading { display: flex; justify-content: center; align-items: center; min-height: 60px; max-width: 100px; padding: 15px; background: rgba(15,15,18,.8); animation: gemini-glow 4s linear infinite; }
-            
-            #ai-input-wrapper { 
-                display: flex; flex-direction: column; flex-shrink: 0; position: relative; z-index: 2; 
-                transition: all .4s cubic-bezier(.4,0,.2,1); margin: 15px auto; width: 90%; 
-                max-width: 720px; border-radius: 20px; background: rgba(10,10,10,.7); 
-                backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); 
-                border: 1px solid rgba(255,255,255,.2); 
-            }
-            #ai-input-wrapper.selector-open {
-                border-radius: 20px; /* Keep border-radius consistent */
-            }
+            #ai-input-wrapper { display: flex; flex-direction: column; flex-shrink: 0; position: relative; z-index: 2; transition: all .4s cubic-bezier(.4,0,.2,1); margin: 15px auto; width: 90%; max-width: 720px; border-radius: 20px; background: rgba(10,10,10,.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,.2); }
             #ai-input-wrapper::before, #ai-input-wrapper::after { content: ''; position: absolute; top: -1px; left: -1px; right: -1px; bottom: -1px; border-radius: 21px; z-index: -1; transition: opacity 0.5s ease-in-out; }
             #ai-input-wrapper::before { animation: glow 3s infinite; opacity: 1; }
-            #ai-input-wrapper::after { animation: gemini-glow 4s linear infinite; opacity: 0; }
             #ai-input-wrapper.waiting::before { opacity: 0; }
             #ai-input-wrapper.waiting::after { opacity: 1; }
-            #ai-input { min-height: 48px; max-height: ${MAX_INPUT_HEIGHT}px; overflow-y: hidden; color: #fff; font-size: 1.1em; padding: 13px 45px 13px 20px; box-sizing: border-box; word-wrap: break-word; outline: 0; text-align: left; }
+            #ai-input { min-height: 48px; max-height: ${MAX_INPUT_HEIGHT}px; overflow-y: hidden; color: #fff; font-size: 1.1em; padding: 13px 60px 13px 60px; /* Adjusted padding for buttons */ box-sizing: border-box; word-wrap: break-word; outline: 0; text-align: left; }
             #ai-input:empty::before { content: 'Ask a question or describe your files...'; color: rgba(255, 255, 255, 0.4); pointer-events: none; }
-            #ai-action-toggle { position: absolute; right: 10px; bottom: 7px; transform: translateY(0); background: 0 0; border: none; color: rgba(255,255,255,.5); font-size: 24px; cursor: pointer; padding: 5px; line-height: 1; z-index: 3; transition: all .3s ease; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-            #ai-action-toggle .icon-ellipsis, #ai-action-toggle .icon-stop { transition: opacity 0.3s, transform 0.3s; position: absolute; }
-            #ai-action-toggle .icon-stop { opacity: 0; transform: scale(0.5); font-size: 14px; }
-            #ai-action-toggle.generating { background-color: #581e1e; border: 1px solid #a12832; color: #ff8a80; border-radius: 8px; }
-            #ai-action-toggle.generating .icon-ellipsis { opacity: 0; transform: scale(0.5); }
-            #ai-action-toggle.generating .icon-stop { opacity: 1; transform: scale(1); }
             
-            /* New Category Selector */
-            #ai-category-selector {
-                position: absolute; bottom: 0; left: 50%; transform: translate(-50%, 100%); 
-                width: 90%; max-width: 720px; box-sizing: border-box; 
-                z-index: 1; opacity: 0; 
-                transition: transform 0.4s cubic-bezier(.4,0,.2,1), opacity 0.4s;
-                background: rgba(10, 10, 10, 0.7); 
-                backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); 
-                border-top: 1px solid rgba(255, 255, 255, 0.2); 
-                border-radius: 20px 20px 0 0;
-                padding: 10px 0;
-                display: flex; justify-content: flex-start; align-items: center;
-                min-height: 80px;
+            /* New Attachment Button Styles */
+            #ai-attachment-button {
+                position: absolute;
+                left: 10px; /* Positioned on the left */
+                bottom: 7px;
+                background-color: rgba(100, 100, 100, 0.5); /* Greyish background */
+                border: 1px solid rgba(255,255,255,0.2);
+                color: rgba(255,255,255,.8);
+                font-size: 18px; /* Slightly smaller icon */
+                cursor: pointer;
+                padding: 5px;
+                line-height: 1;
+                z-index: 3;
+                transition: all .3s ease;
+                border-radius: 8px; /* Squared corners like stop button */
+                width: 38px; /* Adjusted size */
+                height: 38px; /* Adjusted size */
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
-            #ai-category-selector.active {
-                opacity: 1;
-                transform: translate(-50%, -100px); /* Slides up to sit above the input bar */
+            #ai-attachment-button:hover {
+                background-color: rgba(120, 120, 120, 0.7);
             }
-            #ai-category-selector.detail-view-active {
-                align-items: flex-start;
-                min-height: 150px;
+            #ai-attachment-button svg {
+                stroke: currentColor;
             }
 
-            /* Horizontal Wheel */
-            .category-wheel {
-                display: flex; overflow-x: auto; padding: 0 20px;
-                scroll-snap-type: x mandatory;
-                gap: 12px; width: 100%;
+            /* Subject Button (replaces the original actionToggle for menu) */
+            #ai-subject-button {
+                position: absolute;
+                right: 10px; /* Positioned on the right */
+                bottom: 7px;
+                background: rgba(100, 100, 100, 0.5); /* Greyish background */
+                border: 1px solid rgba(255,255,255,0.2);
+                color: rgba(255,255,255,.5);
+                font-size: 24px;
+                cursor: pointer;
+                padding: 5px;
+                line-height: 1;
+                z-index: 3;
+                transition: all .3s ease;
+                border-radius: 8px; /* Squared corners */
+                width: 38px;
+                height: 38px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
-            .category-wheel::-webkit-scrollbar { height: 0; }
-
-            .agent-wheel-btn {
-                background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); 
-                color: #ddd; font-size: 1.5em; width: 60px; height: 60px; border-radius: 50%;
-                cursor: pointer; flex-shrink: 0;
-                transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s;
-                scroll-snap-align: center;
-                display: flex; align-items: center; justify-content: center;
+            #ai-subject-button:hover {
+                 background-color: rgba(120, 120, 120, 0.7);
             }
-            .agent-wheel-btn:hover { transform: scale(1.05); background: rgba(255,255,255,0.1); }
-            .agent-wheel-btn.active { box-shadow: 0 0 0 3px var(--ai-blue); }
-            .agent-wheel-btn.experimental-theme { animation: gemini-glow 4s linear infinite; }
-
-
-            /* Category Detail View */
-            .category-detail {
-                width: 100%; padding: 10px 25px 50px 25px; 
-                color: #fff; text-align: left;
-                animation: detail-fade-in 0.3s ease-out forwards;
-                position: relative;
+            #ai-subject-button.active {
+                background-color: rgba(150, 150, 150, 0.8);
+                color: white;
             }
-            .category-detail h2 { font-family: 'Merriweather', serif; font-size: 1.5em; margin-bottom: 5px; }
-            .category-detail p { font-size: 0.9em; color: #ccc; line-height: 1.4; }
-            .detail-controls {
-                position: absolute; bottom: 10px; left: 0; right: 0; 
-                display: flex; justify-content: space-between; padding: 0 20px;
-            }
-            .detail-controls button {
-                background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2);
-                color: #fff; font-size: 0.85em; padding: 6px 15px; border-radius: 18px;
-                cursor: pointer; transition: background-color 0.2s, transform 0.2s;
-                display: flex; align-items: center; gap: 5px;
-            }
-            .detail-controls button:hover { background: rgba(0,0,0,0.6); transform: translateY(-1px); }
-            .detail-select-btn { background: var(--ai-blue); border-color: var(--ai-blue); font-weight: bold; }
-            .detail-select-btn:hover { background: #5a9bff; border-color: #5a9bff; }
-            .detail-back-btn { background: rgba(100,100,100,0.5); }
 
+            /* New Subject Menu Styles (ai-action-menu is now ai-subject-menu) */
+            #ai-subject-menu { 
+                position: fixed; 
+                background: rgba(20, 20, 22, 0.7); 
+                backdrop-filter: blur(18px); 
+                -webkit-backdrop-filter: blur(18px); 
+                border: 1px solid rgba(255,255,255,0.2); 
+                border-radius: 12px; 
+                box-shadow: 0 5px 25px rgba(0,0,0,0.5); 
+                display: flex; 
+                flex-direction: column; 
+                gap: 5px; 
+                padding: 8px; 
+                z-index: 2147483647; 
+                opacity: 0; 
+                visibility: hidden; 
+                transform: translateY(10px) scale(.95); 
+                transition: all .25s cubic-bezier(.4,0,.2,1); 
+                transform-origin: bottom right; 
+            }
+            #ai-subject-menu.active { opacity: 1; visibility: visible; transform: translateY(-5px); }
+            #ai-subject-menu button { background: rgba(255,255,255,0.05); border: none; color: #ddd; font-family: 'Merriweather', serif; font-size: 1em; padding: 10px 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 12px; text-align: left; transition: background-color 0.2s, filter 0.2s, box-shadow 0.2s; }
+            #ai-subject-menu button[data-subject] { justify-content: center; }
+            #ai-subject-menu button[data-subject="General"] { background-color: rgba(55, 65, 81, 0.7); }
+            #ai-subject-menu button[data-subject="Mathematics"] { background-color: rgba(127, 29, 29, 0.7); }
+            #ai-subject-menu button[data-subject="Science"] { background-color: rgba(22, 101, 52, 0.7); }
+            #ai-subject-menu button[data-subject="History"] { background-color: rgba(120, 53, 15, 0.7); }
+            #ai-subject-menu button[data-subject="English"] { background-color: rgba(30, 64, 175, 0.7); }
+            #ai-subject-menu button[data-subject="Programming"] { background-color: rgba(12, 74, 110, 0.7); }
+            #ai-subject-menu button:hover { filter: brightness(1.2); }
+            #ai-subject-menu button[data-subject].active { filter: brightness(1.2); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.8); }
+            #ai-subject-menu hr { border: none; height: 1px; background-color: rgba(255,255,255,0.1); margin: 5px 10px; }
+            #ai-subject-menu .menu-header { font-size: 0.8em; color: #888; text-transform: uppercase; padding: 10px 15px 5px; cursor: default; }
 
-            /* Attachment Preview (original styles kept) */
-            #ai-attachment-preview { display: none; flex-direction: row; gap: 10px; padding: 0; max-height: 0; border-bottom: 1px solid transparent; overflow-x: auto; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s; }
+            #ai-attachment-preview { display: none; flex-direction: row; gap: 10px; padding: 0; max-height: 0; border-bottom: 1px solid transparent; overflow-x: auto; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
             #ai-input-wrapper.has-attachments #ai-attachment-preview { max-height: 100px; padding: 10px 15px; }
-            .attachment-card { position: relative; border-radius: 8px; overflow: hidden; background: #333; height: 80px; width: 80px; flex-shrink: 0; display: flex; justify-content: center; align-items: center; transition: filter 0.3s; }
+            .attachment-card { position: relative; border-radius: 8px; overflow: hidden; background: #333; height: 80px; width: 80px; flex-shrink: 0; display: flex; justify-content: center; align-items: center; transition: filter 0.3s; cursor: pointer; }
             .attachment-card.loading { filter: grayscale(80%) brightness(0.7); }
             .attachment-card.loading .file-icon { opacity: 0.3; }
             .attachment-card.loading .ai-loader { position: absolute; z-index: 2; }
@@ -910,23 +934,27 @@
             .code-block-wrapper pre::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
             .code-block-wrapper code { font-family: 'Menlo', 'Consolas', monospace; font-size: 0.9em; color: #f0f0f0; }
             
-            /* Keyframes */
+            /* File Preview Modal Styles */
+            #ai-preview-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.8); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index: 2147483648; display: flex; justify-content: center; align-items: center; }
+            #ai-preview-modal .modal-content { background: #1a1a1e; border-radius: 12px; padding: 20px; box-shadow: 0 5px 30px rgba(0,0,0,0.7); max-width: 90vw; max-height: 90vh; display: flex; flex-direction: column; position: relative; }
+            #ai-preview-modal .close-button { position: absolute; top: 10px; right: 15px; color: #ccc; font-size: 30px; cursor: pointer; }
+            #ai-preview-modal h3 { color: #fff; margin-top: 0; margin-bottom: 15px; text-align: center; }
+            #ai-preview-modal .preview-area { flex-grow: 1; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+            #ai-preview-modal .download-button { display: inline-block; padding: 10px 20px; background-color: var(--ai-blue); color: #fff; text-decoration: none; border-radius: 8px; margin-top: 20px; }
+
+            /* Fix for message padding/alignment */
+            .ai-message-bubble p { margin: 0; padding: 0; text-align: left; }
+            .ai-message-bubble ul { margin: 0; padding-left: 20px; text-align: left; }
+            .ai-message-bubble li { margin-bottom: 5px; }
+            .ai-message-bubble ul, .ai-message-bubble ol { list-style-position: inside; }
+
+
             @keyframes glow { 0%,100% { box-shadow: 0 0 5px rgba(255,255,255,.15), 0 0 10px rgba(255,255,255,.1); } 50% { box-shadow: 0 0 10px rgba(255,255,255,.25), 0 0 20px rgba(255,255,255,.2); } }
             @keyframes gemini-glow { 0%,100% { box-shadow: 0 0 8px 2px var(--ai-blue); } 25% { box-shadow: 0 0 8px 2px var(--ai-green); } 50% { box-shadow: 0 0 8px 2px var(--ai-yellow); } 75% { box-shadow: 0 0 8px 2px var(--ai-red); } }
             @keyframes spin { to { transform: rotate(360deg); } }
             @keyframes message-pop-in { 0% { opacity: 0; transform: translateY(10px) scale(.98); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
             @keyframes title-pulse { 0%, 100% { text-shadow: 0 0 7px var(--ai-blue); } 25% { text-shadow: 0 0 7px var(--ai-green); } 50% { text-shadow: 0 0 7px var(--ai-yellow); } 75% { text-shadow: 0 0 7px var(--ai-red); } }
             @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
-            @keyframes detail-fade-in { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } }
-            
-            /* Experimental Background Animation - Rainbow Glisten */
-            @keyframes rainbow-glisten {
-                0% { background: linear-gradient(135deg, rgba(255,0,0,0.2), rgba(0,255,0,0.2), rgba(0,0,255,0.2)), rgba(10, 10, 15, 0.75); }
-                25% { background: linear-gradient(135deg, rgba(255,255,0,0.2), rgba(0,255,255,0.2), rgba(255,0,255,0.2)), rgba(10, 10, 15, 0.75); }
-                50% { background: linear-gradient(135deg, rgba(0,255,0,0.2), rgba(0,0,255,0.2), rgba(255,0,0,0.2)), rgba(10, 10, 15, 0.75); }
-                75% { background: linear-gradient(135deg, rgba(0,255,255,0.2), rgba(255,0,255,0.2), rgba(255,255,0,0.2)), rgba(10, 10, 15, 0.75); }
-                100% { background: linear-gradient(135deg, rgba(255,0,0,0.2), rgba(0,255,0,0.2), rgba(0,0,255,0.2)), rgba(10, 10, 15, 0.75); }
-            }
         `;
     document.head.appendChild(style);}
     document.addEventListener('keydown', handleKeyDown);
