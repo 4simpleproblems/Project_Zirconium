@@ -10,6 +10,8 @@
  * UPDATED: Ensured Ctrl + \ shortcut for activation/deactivation is fully functional.
  * NEW: Added KaTeX for high-quality rendering of mathematical formulas and equations.
  * REPLACED: Plotly.js has been replaced with a custom, theme-aware graphing engine for better integration.
+ * MODIFIED: Renamed and extended custom graphing engine to handle 'chart' blocks, supporting Line/Scatter, Bar, and Pie charts.
+ * NEW: Implemented a custom 'table' block renderer for structured data display.
  */
 (function() {
     // --- CONFIGURATION ---
@@ -110,34 +112,41 @@
     }
 
     /**
-     * Renders interactive graphs using a custom canvas engine.
-     * @param {HTMLElement} container The parent element to search for graph placeholders.
+     * Renders interactive charts (Line, Scatter, Bar, Pie) using a custom canvas engine.
+     * Replaces the original renderGraphs.
+     * @param {HTMLElement} container The parent element to search for chart placeholders.
      */
-    function renderGraphs(container) {
-        container.querySelectorAll('.custom-graph-placeholder').forEach(placeholder => {
+    function renderCharts(container) {
+        // Search for both old graph and new chart placeholders
+        container.querySelectorAll('.custom-graph-placeholder, .custom-chart-placeholder').forEach(placeholder => {
             try {
-                const graphData = JSON.parse(placeholder.dataset.graphData);
+                // Placeholder dataset is either 'graphData' (legacy) or 'chartData' (new)
+                const dataAttr = placeholder.dataset.graphData || placeholder.dataset.chartData;
+                const chartData = JSON.parse(dataAttr);
                 const canvas = placeholder.querySelector('canvas');
                 if (canvas) {
-                    const draw = () => drawCustomGraph(canvas, graphData);
+                    // Call the new unified drawing function
+                    const draw = () => drawCustomChart(canvas, chartData, placeholder.classList.contains('custom-chart-placeholder') ? 'chart' : 'graph');
                     // Use ResizeObserver to redraw the canvas when its container size changes
                     const observer = new ResizeObserver(debounce(draw, 100));
                     observer.observe(placeholder);
                     draw(); // Initial draw
                 }
             } catch (e) {
-                console.error("Custom graph rendering error:", e);
-                placeholder.textContent = `[Graph Error] Invalid graph data provided.`;
+                console.error("Custom chart rendering error:", e);
+                placeholder.textContent = `[Chart Error] Invalid chart/graph data provided.`;
             }
         });
     }
 
     /**
-     * Custom graphing function using HTML Canvas.
+     * Custom charting function using HTML Canvas.
+     * Replaces the original drawCustomGraph.
      * @param {HTMLCanvasElement} canvas The canvas element to draw on.
-     * @param {object} graphData The data and layout configuration for the graph.
+     * @param {object} chartData The data and layout configuration for the chart.
+     * @param {string} typeHint A hint for the chart type if not explicitly set in layout.
      */
-    function drawCustomGraph(canvas, graphData) {
+    function drawCustomChart(canvas, chartData, typeHint = 'graph') {
         const ctx = canvas.getContext('2d');
         const dpr = window.devicePixelRatio || 1;
         const rect = canvas.getBoundingClientRect();
@@ -148,8 +157,153 @@
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        const layout = graphData.layout || {};
-        const data = graphData.data || [];
+        const layout = chartData.layout || {};
+        const data = chartData.data || [];
+        
+        // --- PIE CHART LOGIC (NEW) ---
+        if (layout.type === 'pie' || typeHint === 'pie') {
+            if (data.length === 0 || !data[0].values) {
+                ctx.fillStyle = '#ccc';
+                ctx.font = '14px Lora';
+                ctx.textAlign = 'center';
+                ctx.fillText('No data for Pie Chart', rect.width / 2, rect.height / 2);
+                return;
+            }
+            
+            const trace = data[0];
+            const values = trace.values || [];
+            const labels = trace.labels || [];
+            // Use a consistent set of colors for the custom engine
+            const colors = trace.marker?.colors || ['#4285f4', '#34a853', '#fbbc05', '#ea4335', '#999', '#795548', '#8bc34a', '#ff9800']; 
+            const total = values.reduce((sum, v) => sum + v, 0);
+            
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            // Adjust radius to leave room for labels
+            const radius = Math.min(centerX, centerY) * 0.7; 
+            let startAngle = 0;
+
+            ctx.font = '14px Lora';
+            
+            values.forEach((value, i) => {
+                if (value <= 0) return;
+                const sliceAngle = (value / total) * 2 * Math.PI;
+                const endAngle = startAngle + sliceAngle;
+                
+                // Draw slice
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                ctx.closePath();
+                ctx.fill();
+
+                // Add label (midpoint of the slice)
+                const midAngle = startAngle + sliceAngle / 2;
+                const labelRadius = radius * 0.7; // Position inside the slice
+                const textX = centerX + Math.cos(midAngle) * labelRadius;
+                const textY = centerY + Math.sin(midAngle) * labelRadius;
+                
+                ctx.fillStyle = '#fff';
+                ctx.textAlign = 'center';
+                const percentage = (value / total) * 100;
+                if (percentage > 5) { // Only label large slices
+                    ctx.fillText(`${labels[i] ? labels[i] + ' ' : ''}${percentage.toFixed(0)}%`, textX, textY + 4);
+                }
+                
+                startAngle = endAngle;
+            });
+
+            // Draw title
+            if (layout.title) {
+                ctx.fillStyle = '#fff';
+                ctx.font = '18px Merriweather';
+                ctx.textAlign = 'center';
+                ctx.fillText(layout.title, rect.width / 2, 30);
+            }
+            return; 
+        }
+        
+        // --- BAR CHART LOGIC (NEW) ---
+        if (layout.type === 'bar') {
+            const trace = data[0] || { x: [], y: [] };
+            if (trace.x.length === 0 || trace.y.length === 0) return;
+            
+            const padding = { top: 50, right: 30, bottom: 50, left: 60 };
+            const graphWidth = rect.width - padding.left - padding.right;
+            const graphHeight = rect.height - padding.top - padding.bottom;
+            
+            let minX = 0, maxX = trace.x.length - 1, minY = 0, maxY = -Infinity;
+            trace.y.forEach(val => { maxY = Math.max(maxY, val); });
+            
+            const yRange = maxY - minY || 1;
+            maxY += yRange * 0.1; // Add buffer to top
+            
+            const mapY = y => padding.top + graphHeight - ((y - minY) / (maxY - minY)) * graphHeight;
+            
+            const numBars = trace.x.length;
+            const barWidth = (graphWidth / numBars) * 0.7;
+            const colors = trace.marker?.colors || ['#4285f4', '#34a853', '#fbbc05', '#ea4335', '#ccc']; 
+            
+            // Draw axes and labels
+            ctx.fillStyle = '#ccc';
+            ctx.font = '12px Lora';
+            ctx.textAlign = 'center';
+
+            // Draw Y-axis ticks
+            const yTickCount = Math.max(2, Math.floor(graphHeight / 50));
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= yTickCount; i++) {
+                const val = minY + (i / yTickCount) * (maxY - minY);
+                const y = mapY(val);
+                ctx.beginPath();
+                ctx.moveTo(padding.left, y);
+                ctx.lineTo(padding.left + graphWidth, y);
+                ctx.stroke();
+                ctx.fillText(val.toFixed(1), padding.left - 35, y + 4);
+            }
+            
+            // Draw bars
+            trace.y.forEach((val, i) => {
+                const xCenter = padding.left + ((i + 0.5) / numBars) * graphWidth;
+                const x = xCenter - barWidth / 2;
+                const y = mapY(val);
+                const height = mapY(minY) - y;
+
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.fillRect(x, y, barWidth, height);
+                
+                // Draw X-axis label
+                ctx.fillStyle = '#ccc';
+                ctx.fillText(trace.x[i], xCenter, padding.top + graphHeight + 20);
+                
+                // Draw value label above bar
+                ctx.fillText(val.toFixed(1), xCenter, y - 5);
+            });
+
+            // Draw Y-axis title
+            ctx.font = 'bold 14px Lora';
+            ctx.save();
+            ctx.rotate(-Math.PI / 2);
+            if(layout.yaxis?.title) ctx.fillText(layout.yaxis.title, -(padding.top + graphHeight / 2), 20);
+            ctx.restore();
+
+            // Draw X-axis title
+            if(layout.xaxis?.title) ctx.fillText(layout.xaxis.title, padding.left + graphWidth / 2, rect.height - 10);
+            
+            // Draw Title
+            if (layout.title) {
+                ctx.fillStyle = '#fff';
+                ctx.font = '18px Merriweather';
+                ctx.fillText(layout.title, rect.width / 2, padding.top / 2 + 5);
+            }
+            
+            return;
+        }
+        
+        // --- FALLBACK LINE/SCATTER LOGIC (Original drawCustomGraph content) ---
+        // This is the original logic for line/scatter plots
         
         const padding = { top: 50, right: 30, bottom: 50, left: 60 };
         const graphWidth = rect.width - padding.left - padding.right;
@@ -422,7 +576,7 @@
                 });
 
                 renderKaTeX(bubble);
-                renderGraphs(bubble);
+                renderCharts(bubble); // Updated function name
             } else {
                 let bubbleContent = ''; let textContent = ''; let fileCount = 0;
                 message.parts.forEach(part => {
@@ -449,8 +603,51 @@ User Profile: Nickname: ${user}, Age: ${userAge}, Gender: ${userGender}, Favorit
 Adapt your persona and tone for each turn.
 
 Formatting Rules:
+- For tables, use a 'table' block. Structure the content using pipe separators (Markdown table format). The first line should be the header row, followed by an optional separator line (e.g., |---|---|), then the data rows. Example:
+\`\`\`table
+| Item | Quantity | Price |
+|---|---|---|
+| Apples | 12 | 1.00 |
+| Bananas | 5 | 0.50 |
+\`\`\`
+- For visualizations, use a 'chart' block (preferred) or the legacy 'graph' block. Provide the data and layout as a JSON object. The chart engine supports 'scatter' (default/line), 'bar', and 'pie' charts. Use \`"layout": {"type": "pie"}\` for pie charts, and \`"layout": {"type": "bar"}\` for bar charts. For pie charts, use the \`"values"\` and \`"labels"\` properties in the data array. Example for Pie Chart:
+\`\`\`chart
+{
+  "data": [
+    {
+      "values": [30, 70],
+      "labels": ["Segment A", "Segment B"],
+      "type": "pie",
+      "name": "Market Share"
+    }
+  ],
+  "layout": {
+    "title": "Monthly Sales Distribution",
+    "type": "pie"
+  }
+}
+\`\`\`
+Example for Bar Chart:
+\`\`\`chart
+{
+  "data": [
+    {
+      "x": ["Q1", "Q2", "Q3", "Q4"],
+      "y": [100, 150, 80, 200],
+      "type": "bar",
+      "name": "Revenue"
+    }
+  ],
+  "layout": {
+    "title": "Quarterly Revenue",
+    "xaxis": {"title": "Quarter"},
+    "yaxis": {"title": "Units Sold"},
+    "type": "bar"
+  }
+}
+\`\`\`
 - For math, use KaTeX. Inline math uses single \`$\`, and display math uses double \`$$\`. Use \\le for <= and \\ge for >=.
-- For graphs, use a 'graph' block. Provide the data and layout as a JSON object that the custom graph engine can understand. Example:
+- For graphs (legacy), use a 'graph' block (defaults to scatter/line). Example (same as original):
 \`\`\`graph
 {
   "data": [
@@ -474,8 +671,8 @@ Formatting Rules:
 
         const lowerQuery = query.toLowerCase();
 
-        if (lowerQuery.includes('math') || lowerQuery.includes('algebra') || lowerQuery.includes('calculus') || lowerQuery.includes('formula') || lowerQuery.includes('solve') || lowerQuery.includes('proof') || lowerQuery.includes('graph')) {
-            instruction += `\n\n**Current Persona: Technical Expert.** Respond with extreme clarity, professionalism, and precision. Focus on step-by-step logic, equations, and definitive answers. Use a formal, neutral tone. Use KaTeX and custom graphs where appropriate.`;
+        if (lowerQuery.includes('math') || lowerQuery.includes('algebra') || lowerQuery.includes('calculus') || lowerQuery.includes('formula') || lowerQuery.includes('solve') || lowerQuery.includes('proof') || lowerQuery.includes('graph') || lowerQuery.includes('chart') || lowerQuery.includes('table')) {
+            instruction += `\n\n**Current Persona: Technical Expert.** Respond with extreme clarity, professionalism, and precision. Focus on step-by-step logic, equations, and definitive answers. Use a formal, neutral tone. Use KaTeX, custom charts/graphs, and tables where appropriate.`;
         } else if (lowerQuery.includes('code') || lowerQuery.includes('javascript') || lowerQuery.includes('python') || lowerQuery.includes('html') || lowerQuery.includes('debug')) {
             instruction += `\n\n**Current Persona: Coding Specialist.** Provide complete, runnable code examples. Explain technical concepts clearly, covering logic, structure, and edge cases. Be thorough and objective.`;
         } else if (lowerQuery.includes('ex') || lowerQuery.includes('breakup') || lowerQuery.includes('hate') || lowerQuery.includes('awful') || lowerQuery.includes('trash talk') || lowerQuery.includes('roast')) {
@@ -564,7 +761,7 @@ Formatting Rules:
                 responseBubble.style.opacity = '1';
 
                 renderKaTeX(responseBubble);
-                renderGraphs(responseBubble);
+                renderCharts(responseBubble); // Updated function call
             }, 300);
 
         } catch (error) {
@@ -1076,7 +1273,83 @@ Formatting Rules:
             return key;
         };
     
-        // 1. Extract graph blocks (most specific)
+        // 1. Extract table blocks (NEW)
+        html = html.replace(/```table\n([\s\S]*?)```/g, (match, tableString) => {
+            const lines = tableString.trim().split('\n').filter(line => line.trim().length > 0);
+            if (lines.length === 0) return addPlaceholder('');
+
+            let tableHTML = '<table class="ai-custom-table">';
+            let headerCells = [];
+            let bodyRows = 0;
+            
+            // Process Header (First line starting with |)
+            const headerLine = lines.find(line => line.startsWith('|'));
+            if (headerLine) {
+                headerCells = headerLine.split('|').map(h => h.trim()).filter(h => h.length > 0);
+                tableHTML += '<thead><tr>' + headerCells.map(h => `<th>${escapeHTML(h)}</th>`).join('') + '</tr></thead>';
+            }
+            
+            // Skip separator line if present (e.g., |---|---|) and process body
+            let bodyLines = lines.slice(headerLine ? lines.indexOf(headerLine) + 1 : 0);
+            if (bodyLines.length > 0 && bodyLines[0].includes('---')) {
+                bodyLines = bodyLines.slice(1);
+            }
+            
+            // Process Body
+            tableHTML += '<tbody>';
+            bodyLines.forEach(line => {
+                if (line.startsWith('|')) {
+                    const cells = line.split('|').map(c => c.trim()).filter(c => c.length > 0);
+                    // Pad or truncate cells to match header count for consistency
+                    const validCells = cells.slice(0, headerCells.length);
+                    tableHTML += '<tr>' + validCells.map(c => `<td>${escapeHTML(c)}</td>`).join('') + '</tr>';
+                    bodyRows++;
+                }
+            });
+            tableHTML += '</tbody></table>';
+
+            const content = `
+                <div class="table-block-wrapper">
+                    <div class="table-block-header">
+                        <span class="table-metadata">${bodyRows} rows &middot; ${headerCells.length} columns</span>
+                    </div>
+                    <div class="table-content-area">
+                        ${tableHTML}
+                    </div>
+                </div>
+            `;
+            return addPlaceholder(content);
+        });
+
+        // 2. Extract chart blocks (NEW - Preferred for Bar/Pie)
+        html = html.replace(/```chart\n([\s\S]*?)```/g, (match, jsonString) => {
+            let metadata = 'Chart';
+            let escapedData = '';
+            try {
+                const chartData = JSON.parse(jsonString);
+                escapedData = escapeHTML(jsonString);
+                const layoutType = chartData.layout?.type || 'scatter';
+                metadata = `${layoutType.charAt(0).toUpperCase() + layoutType.slice(1)} Chart`;
+                const trace = chartData.data && chartData.data[0];
+                if (trace && trace.name) {
+                    metadata += ` - ${trace.name}`;
+                }
+            } catch(e) { /* Ignore parsing errors */ }
+
+            const content = `
+                <div class="chart-block-wrapper">
+                    <div class="chart-block-header">
+                        <span class="chart-metadata">${metadata}</span>
+                    </div>
+                    <div class="custom-chart-placeholder" data-chart-data='${escapedData}'>
+                        <canvas class="chart-canvas"></canvas>
+                    </div>
+                </div>
+            `;
+            return addPlaceholder(content);
+        });
+
+        // 3. Extract graph blocks (Original - Retained for compatibility)
         html = html.replace(/```graph\n([\s\S]*?)```/g, (match, jsonString) => {
             let metadata = 'Graph';
             try {
@@ -1110,7 +1383,7 @@ Formatting Rules:
             return addPlaceholder(content);
         });
 
-        // 2. Extract general code blocks
+        // 4. Extract general code blocks (Moved down)
         html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
             const trimmedCode = code.trim();
             const lines = trimmedCode.split('\n').length;
@@ -1129,7 +1402,7 @@ Formatting Rules:
             return addPlaceholder(content);
         });
 
-        // 3. Extract KaTeX blocks BEFORE escaping general HTML
+        // 5. Extract KaTeX blocks BEFORE escaping general HTML
         // Display mode: $$...$$
         html = html.replace(/\$\$([\s\S]*?)\$\$/g, (match, formula) => {
             const content = `<div class="latex-render" data-tex="${escapeHTML(formula)}" data-display-mode="true"></div>`;
@@ -1141,10 +1414,10 @@ Formatting Rules:
              return addPlaceholder(content);
         });
 
-        // 4. Escape the rest of the HTML
+        // 6. Escape the rest of the HTML
         html = escapeHTML(html);
 
-        // 5. Apply markdown styling
+        // 7. Apply markdown styling
         html = html.replace(/^### (.*$)/gm, "<h3>$1</h3>")
                    .replace(/^## (.*$)/gm, "<h2>$1</h2>")
                    .replace(/^# (.*$)/gm, "<h1>$1</h1>");
@@ -1160,7 +1433,7 @@ Formatting Rules:
         
         html = html.replace(/\n/g, "<br>");
         
-        // 6. Restore placeholders
+        // 8. Restore placeholders
         html = html.replace(/%%PLACEHOLDER_\d+%%/g, (match) => placeholders[match] || '');
         
         return html;
@@ -1227,7 +1500,7 @@ Formatting Rules:
             .gemini-response.loading { display: flex; justify-content: center; align-items: center; min-height: 60px; max-width: 100px; padding: 15px; background: rgba(15,15,18,.8); animation: gemini-glow 4s linear infinite; }
             
             #ai-compose-area { position: relative; flex-shrink: 0; z-index: 2; margin: 15px auto; width: 90%; max-width: 720px; }
-            #ai-input-wrapper { position: relative; z-index: 2; width: 100%; display: flex; flex-direction: column; border-radius: 20px; background: rgba(10,10,10,.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,.2); transition: all .4s cubic-bezier(.4,0,.2,1); }
+            #ai-input-wrapper { position: relative; flex-shrink: 0; z-index: 2; width: 100%; display: flex; flex-direction: column; border-radius: 20px; background: rgba(10,10,10,.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,.2); transition: all .4s cubic-bezier(.4,0,.2,1); }
             #ai-input-wrapper::before, #ai-input-wrapper::after { content: ''; position: absolute; top: -1px; left: -1px; right: -1px; bottom: -1px; border-radius: 21px; z-index: -1; transition: opacity 0.5s ease-in-out; }
             #ai-input-wrapper::before { animation: glow 3s infinite; opacity: 1; }
             #ai-input-wrapper.waiting::before { opacity: 0; }
@@ -1258,7 +1531,7 @@ Formatting Rules:
             #settings-save-button { width: 100%; padding: 10px; background: #4285f4; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; margin-top: 10px; transition: background 0.2s; }
             #settings-save-button:hover { background: #3c77e6; }
 
-            /* Attachments, Code Blocks, Graphs, LaTeX */
+            /* Attachments, Code Blocks, Graphs, Charts, Tables, LaTeX */
             #ai-attachment-preview { display: none; flex-direction: row; gap: 10px; padding: 0; max-height: 0; border-bottom: 1px solid transparent; overflow-x: auto; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
             #ai-input-wrapper.has-attachments #ai-attachment-preview { max-height: 100px; padding: 10px 15px; }
             .attachment-card { position: relative; border-radius: 8px; overflow: hidden; background: #333; height: 80px; width: 80px; flex-shrink: 0; display: flex; justify-content: center; align-items: center; transition: filter 0.3s; cursor: pointer; }
@@ -1274,9 +1547,13 @@ Formatting Rules:
 
             .ai-loader { width: 25px; height: 25px; border-radius: 50%; animation: spin 1s linear infinite; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; }
             
-            .code-block-wrapper, .graph-block-wrapper { background-color: rgba(42, 42, 48, 0.8); border-radius: 8px; margin: 10px 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
-            .code-block-header, .graph-block-header { display: flex; justify-content: flex-end; align-items: center; padding: 6px 12px; background-color: rgba(0,0,0,0.2); }
-            .code-metadata, .graph-metadata { font-size: 0.8em; color: #aaa; margin-right: auto; font-family: monospace; }
+            .code-block-wrapper, .graph-block-wrapper, .chart-block-wrapper, .table-block-wrapper { 
+                background-color: rgba(42, 42, 48, 0.8); border-radius: 8px; margin: 10px 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); 
+            }
+            .code-block-header, .graph-block-header, .chart-block-header, .table-block-header { 
+                display: flex; justify-content: flex-end; align-items: center; padding: 6px 12px; background-color: rgba(0,0,0,0.2); 
+            }
+            .code-metadata, .graph-metadata, .chart-metadata, .table-metadata { font-size: 0.8em; color: #aaa; margin-right: auto; font-family: monospace; }
             .copy-code-btn { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; border-radius: 6px; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s; }
             .copy-code-btn:hover { background: rgba(255, 255, 255, 0.2); }
             .copy-code-btn:disabled { cursor: default; background: rgba(25, 103, 55, 0.5); }
@@ -1285,8 +1562,16 @@ Formatting Rules:
             .code-block-wrapper pre::-webkit-scrollbar { height: 8px; }
             .code-block-wrapper pre::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
             .code-block-wrapper code { font-family: 'Menlo', 'Consolas', monospace; font-size: 0.9em; color: #f0f0f0; }
-            .custom-graph-placeholder { min-height: 400px; position: relative; padding: 10px; }
-            .graph-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+            
+            .custom-graph-placeholder, .custom-chart-placeholder { min-height: 400px; position: relative; padding: 10px; }
+            .graph-canvas, .chart-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+            /* Table-specific styles (NEW) */
+            .ai-custom-table { width: 100%; border-collapse: collapse; margin: 0; }
+            .ai-custom-table th, .ai-custom-table td { padding: 10px 12px; border: 1px solid rgba(255,255,255,0.1); text-align: left; }
+            .ai-custom-table th { background-color: rgba(0,0,0,0.1); font-weight: bold; color: #fff; }
+            .ai-custom-table td { color: #ccc; }
+            .table-content-area { overflow-x: auto; padding: 0 10px 10px; }
 
             .latex-render { display: inline-block; } /* default to inline */
             .ai-response-content div.latex-render { display: block; margin: 10px 0; text-align: center; } /* for display mode */
