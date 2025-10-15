@@ -96,7 +96,11 @@
             try {
                 katex.render(mathText, element, {
                     throwOnError: false,
-                    displayMode: displayMode
+                    displayMode: displayMode,
+                    macros: {
+                        "\\le": "\\leqslant",
+                        "\\ge": "\\geqslant"
+                    }
                 });
             } catch (e) {
                 console.error("KaTeX rendering error:", e);
@@ -122,8 +126,8 @@
                     paper_bgcolor: 'rgba(0,0,0,0)',
                     plot_bgcolor: 'rgba(255,255,255,0.05)',
                     font: { color: '#ccc' },
-                    xaxis: { gridcolor: 'rgba(255,255,255,0.1)' },
-                    yaxis: { gridcolor: 'rgba(255,255,255,0.1)' }
+                    xaxis: { ...(graphData.layout?.xaxis || {}), gridcolor: 'rgba(255,255,255,0.1)' },
+                    yaxis: { ...(graphData.layout?.yaxis || {}), gridcolor: 'rgba(255,255,255,0.1)' }
                 };
                 Plotly.newPlot(element, graphData.data, layout, {responsive: true});
             } catch (e) {
@@ -340,7 +344,7 @@ User Profile: Nickname: ${user}, Age: ${userAge}, Gender: ${userGender}, Favorit
 Adapt your persona and tone for each turn.
 
 Formatting Rules:
-- For math, use KaTeX. Inline math uses single \`$\`, and display math uses double \`$$\`.
+- For math, use KaTeX. Inline math uses single \`$\`, and display math uses double \`$$\`. Use \\le for <= and \\ge for >=.
 - For graphs, use a 'graph' block. Provide the data and layout as a JSON object that Plotly.js can understand. Example:
 \`\`\`graph
 {
@@ -356,12 +360,9 @@ Formatting Rules:
   ],
   "layout": {
     "title": "Graph of y = x - 1",
-    "xaxis": {"title": "x", "gridcolor": "#ccc"},
-    "yaxis": {"title": "y", "gridcolor": "#ccc"},
-    "hovermode": "closest",
-    "plot_bgcolor": "#f8f8f8",
-    "paper_bgcolor": "#fff",
-    "margin": {"l": 50, "r": 50, "b": 50, "t": 50}
+    "xaxis": {"title": "x"},
+    "yaxis": {"title": "y"},
+    "hovermode": "closest"
   }
 }
 \`\`\`
@@ -971,7 +972,39 @@ Formatting Rules:
             return key;
         };
     
-        // 1. Extract code blocks
+        // 1. Extract graph blocks (most specific)
+        html = html.replace(/```graph\n([\s\S]*?)```/g, (match, jsonString) => {
+            let metadata = 'Graph';
+            try {
+                const graphData = JSON.parse(jsonString);
+                const trace = graphData.data && graphData.data[0];
+                if (trace && trace.x && trace.y && trace.x.length >= 2 && trace.y.length >= 2) {
+                    const [x1, x2] = trace.x.slice(0, 2);
+                    const [y1, y2] = trace.y.slice(0, 2);
+                    if (x2 - x1 !== 0) {
+                        const slope = (y2 - y1) / (x2 - x1);
+                        if (isFinite(slope)) {
+                            const yIntercept = y1 - slope * x1;
+                            const xIntercept = slope !== 0 ? -yIntercept / slope : Infinity;
+                            metadata = `Slope: ${slope.toFixed(2)} &middot; Y-Int: (0, ${yIntercept.toFixed(2)}) &middot; X-Int: (${isFinite(xIntercept) ? xIntercept.toFixed(2) : 'N/A'}, 0)`;
+                        }
+                    }
+                }
+            } catch(e) { /* Ignore parsing errors */ }
+
+            const escapedData = escapeHTML(jsonString);
+            const content = `
+                <div class="graph-block-wrapper">
+                    <div class="graph-block-header">
+                        <span class="graph-metadata">${metadata}</span>
+                    </div>
+                    <div class="plotly-graph-placeholder" data-graph-data='${escapedData}'></div>
+                </div>
+            `;
+            return addPlaceholder(content);
+        });
+
+        // 2. Extract general code blocks
         html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
             const trimmedCode = code.trim();
             const lines = trimmedCode.split('\n').length;
@@ -990,41 +1023,7 @@ Formatting Rules:
             return addPlaceholder(content);
         });
 
-        // 2. Extract graph blocks
-        html = html.replace(/```graph\n([\s\S]*?)```/g, (match, jsonString) => {
-            let metadata = 'Graph';
-            try {
-                const graphData = JSON.parse(jsonString);
-                // Check for a simple two-point line to calculate slope and intercepts
-                const trace = graphData.data && graphData.data[0];
-                if (trace && trace.x && trace.y && trace.x.length === 2 && trace.y.length === 2) {
-                    const [x1, x2] = trace.x;
-                    const [y1, y2] = trace.y;
-                    const slope = (y2 - y1) / (x2 - x1);
-                    if (isFinite(slope)) {
-                        const yIntercept = y1 - slope * x1;
-                        const xIntercept = slope !== 0 ? -yIntercept / slope : Infinity;
-                        metadata = `Slope: ${slope.toFixed(2)} &middot; Y-Int: (${0}, ${yIntercept.toFixed(2)}) &middot; X-Int: (${xIntercept.toFixed(2)}, ${0})`;
-                    }
-                }
-            } catch(e) { /* Ignore parsing errors, will show default metadata */ }
-
-            const escapedData = escapeHTML(jsonString);
-            const content = `
-                <div class="graph-block-wrapper">
-                    <div class="graph-block-header">
-                        <span class="graph-metadata">${metadata}</span>
-                    </div>
-                    <div class="plotly-graph-placeholder" data-graph-data='${escapedData}'></div>
-                </div>
-            `;
-            return addPlaceholder(content);
-        });
-
-        // 3. Escape the rest of the HTML to prevent conflicts
-        html = escapeHTML(html);
-
-        // 4. Process math formulas on the escaped HTML
+        // 3. Extract KaTeX blocks BEFORE escaping general HTML
         // Display mode: $$...$$
         html = html.replace(/\$\$([\s\S]*?)\$\$/g, (match, formula) => {
             const content = `<div class="latex-render" data-tex="${escapeHTML(formula)}" data-display-mode="true"></div>`;
@@ -1035,6 +1034,9 @@ Formatting Rules:
             const content = `<span class="latex-render" data-tex="${escapeHTML(formula)}" data-display-mode="false"></span>`;
              return addPlaceholder(content);
         });
+
+        // 4. Escape the rest of the HTML
+        html = escapeHTML(html);
 
         // 5. Apply markdown styling
         html = html.replace(/^### (.*$)/gm, "<h3>$1</h3>")
@@ -1177,7 +1179,7 @@ Formatting Rules:
             .code-block-wrapper pre::-webkit-scrollbar { height: 8px; }
             .code-block-wrapper pre::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
             .code-block-wrapper code { font-family: 'Menlo', 'Consolas', monospace; font-size: 0.9em; color: #f0f0f0; }
-            .plotly-graph-placeholder { min-height: 300px; }
+            .plotly-graph-placeholder { min-height: 400px; }
 
             .latex-render { display: inline-block; } /* default to inline */
             .ai-response-content div.latex-render { display: block; margin: 10px 0; text-align: center; } /* for display mode */
