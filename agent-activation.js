@@ -344,8 +344,25 @@ Formatting Rules:
 - For graphs, use a 'graph' block. Provide the data and layout as a JSON object that Plotly.js can understand. Example:
 \`\`\`graph
 {
-  "data": [{"x": [0, 1, 2], "y": [2, 3, 5], "type": "scatter", "mode": "lines+markers"}],
-  "layout": {"title": "My Data"}
+  "data": [
+    {
+      "x": [-2, -1, 0, 1, 2, 3],
+      "y": [-3, -2, -1, 0, 1, 2],
+      "type": "scatter",
+      "mode": "lines+markers",
+      "name": "y = x - 1",
+      "line": {"color": "#ff0000"}
+    }
+  ],
+  "layout": {
+    "title": "Graph of y = x - 1",
+    "xaxis": {"title": "x", "gridcolor": "#ccc"},
+    "yaxis": {"title": "y", "gridcolor": "#ccc"},
+    "hovermode": "closest",
+    "plot_bgcolor": "#f8f8f8",
+    "paper_bgcolor": "#fff",
+    "margin": {"l": 50, "r": 50, "b": 50, "t": 50}
+  }
 }
 \`\`\`
 `;
@@ -1192,3 +1209,4 @@ Formatting Rules:
         loadUserSettings();
     });
 })();
+
