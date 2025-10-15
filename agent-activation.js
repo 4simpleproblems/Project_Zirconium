@@ -10,11 +10,12 @@
  * UPDATED: Ensured Ctrl + \ shortcut for activation/deactivation is fully functional.
  * NEW: Added KaTeX for high-quality rendering of mathematical formulas and equations.
  * REPLACED: Plotly.js has been replaced with a custom, theme-aware graphing engine for better integration.
+ * UPDATED: Graphing engine now features intelligent tick scaling, dark-theme line styling (white default, red glow), and advanced point/intersection hover interactivity.
  */
 (function() {
     // --- CONFIGURATION ---
     const API_KEY = 'AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro'; 
-    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${API_KEY}`;
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
     const MAX_INPUT_HEIGHT = 200;
     const CHAR_LIMIT = 10000;
     const PASTE_TO_FILE_THRESHOLD = 1000;
@@ -133,7 +134,34 @@
     }
 
     /**
-     * Custom graphing function using HTML Canvas.
+     * Calculates a "nice" tick interval for an axis, based on the data range and desired number of ticks.
+     * This is crucial for intelligent, whole-number-based counting (e.g., 0.25 for a slope of 0.25).
+     * @param {number} range The total data range (max - min).
+     * @param {number} maxTicks The maximum number of ticks desired.
+     * @returns {number} A "nice" step size for the axis labels.
+     */
+    function getNiceInterval(range, maxTicks) {
+        if (range === 0) return 1;
+        const minStep = range / maxTicks;
+        const exponent = Math.floor(Math.log10(minStep));
+        const fraction = minStep / Math.pow(10, exponent);
+        
+        let niceFraction;
+        // Prioritize 1, 2, 5, and their fractions/multiples (0.1, 0.2, 0.25, 0.5, 1, 2, 5, etc.)
+        if (fraction <= 0.1) niceFraction = 0.1;
+        else if (fraction <= 0.2) niceFraction = 0.2;
+        else if (fraction <= 0.25) niceFraction = 0.25; // Explicitly supports 1/4ths
+        else if (fraction <= 0.5) niceFraction = 0.5;
+        else if (fraction <= 1) niceFraction = 1;
+        else if (fraction <= 2) niceFraction = 2;
+        else niceFraction = 5;
+        
+        return niceFraction * Math.pow(10, exponent);
+    }
+
+    /**
+     * Custom graphing function using HTML Canvas, now with intelligent dark-theme
+     * styling, dynamic tick intervals, coordinate hover, and intersection detection.
      * @param {HTMLCanvasElement} canvas The canvas element to draw on.
      * @param {object} graphData The data and layout configuration for the graph.
      */
@@ -142,6 +170,7 @@
         const dpr = window.devicePixelRatio || 1;
         const rect = canvas.getBoundingClientRect();
         
+        // Set canvas dimensions based on DPI for sharp rendering
         canvas.width = rect.width * dpr;
         canvas.height = rect.height * dpr;
         ctx.scale(dpr, dpr);
@@ -151,84 +180,148 @@
         const layout = graphData.layout || {};
         const data = graphData.data || [];
         
-        const padding = { top: 50, right: 30, bottom: 50, left: 60 };
-        const graphWidth = rect.width - padding.left - padding.right;
-        const graphHeight = rect.height - padding.top - padding.bottom;
+        const PADDING = { top: 50, right: 30, bottom: 50, left: 60 };
+        const graphWidth = rect.width - PADDING.left - PADDING.right;
+        const graphHeight = rect.height - PADDING.top - PADDING.bottom;
 
-        // Determine data range
+        // --- 1. Determine Data Range and Buffering ---
         let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
         data.forEach(trace => {
             trace.x.forEach(val => { minX = Math.min(minX, val); maxX = Math.max(maxX, val); });
             trace.y.forEach(val => { minY = Math.min(minY, val); maxY = Math.max(maxY, val); });
         });
         
-        // Add buffer to range
         const xRange = maxX - minX || 1;
         const yRange = maxY - minY || 1;
+        
+        // Add 10% buffer to the range
         minX -= xRange * 0.1;
         maxX += xRange * 0.1;
         minY -= yRange * 0.1;
         maxY += yRange * 0.1;
 
-        const mapX = x => padding.left + ((x - minX) / (maxX - minX)) * graphWidth;
-        const mapY = y => padding.top + graphHeight - ((y - minY) / (maxY - minY)) * graphHeight;
-
-        // Draw grid lines
-        const gridColor = 'rgba(255, 255, 255, 0.1)';
-        ctx.strokeStyle = gridColor;
-        ctx.lineWidth = 1;
-        const xTickCount = Math.max(2, Math.floor(graphWidth / 80));
-        const yTickCount = Math.max(2, Math.floor(graphHeight / 50));
-
-        for (let i = 0; i <= xTickCount; i++) {
-            const x = padding.left + (i / xTickCount) * graphWidth;
-            ctx.beginPath();
-            ctx.moveTo(x, padding.top);
-            ctx.lineTo(x, padding.top + graphHeight);
-            ctx.stroke();
-        }
-        for (let i = 0; i <= yTickCount; i++) {
-            const y = padding.top + (i / yTickCount) * graphHeight;
-            ctx.beginPath();
-            ctx.moveTo(padding.left, y);
-            ctx.lineTo(padding.left + graphWidth, y);
-            ctx.stroke();
+        // --- 2. Scaling Functions (Maps data coordinates to canvas pixels) ---
+        const mapX = x => PADDING.left + ((x - minX) / (maxX - minX)) * graphWidth;
+        const mapY = y => PADDING.top + graphHeight - ((y - minY) / (maxY - minY)) * graphHeight;
+        const inverseMapX = px => minX + (px - PADDING.left) * (maxX - minX) / graphWidth;
+        const inverseMapY = py => minY + (PADDING.top + graphHeight - py) * (maxY - minY) / graphHeight;
+        
+        // --- 3. Intelligent Tick Generation ---
+        const xTickCountGuess = Math.max(2, Math.floor(graphWidth / 80));
+        const yTickCountGuess = Math.max(2, Math.floor(graphHeight / 50));
+        
+        const xStep = getNiceInterval(maxX - minX, xTickCountGuess);
+        const yStep = getNiceInterval(maxY - minY, yTickCountGuess);
+        
+        const xTicks = [];
+        let currentX = Math.ceil(minX / xStep) * xStep;
+        while (currentX <= maxX) {
+            // Rounding to fix floating point issues
+            xTicks.push(Math.round(currentX / xStep) * xStep);
+            currentX += xStep;
         }
 
-        // Draw axes and labels
-        ctx.fillStyle = '#ccc';
-        ctx.font = '12px Lora';
-        for (let i = 0; i <= xTickCount; i++) {
-            const val = minX + (i / xTickCount) * (maxX - minX);
-            ctx.fillText(val.toFixed(1), mapX(val), padding.top + graphHeight + 20);
-        }
-        for (let i = 0; i <= yTickCount; i++) {
-            const val = minY + (i / yTickCount) * (maxY - minY);
-            ctx.fillText(val.toFixed(1), padding.left - 35, mapY(val) + 4);
+        const yTicks = [];
+        let currentY = Math.ceil(minY / yStep) * yStep;
+        while (currentY <= maxY) {
+            yTicks.push(Math.round(currentY / yStep) * yStep);
+            currentY += yStep;
         }
         
+        const GRID_COLOR = 'rgba(255, 255, 255, 0.1)';
+        const AXIS_LABEL_COLOR = '#ccc';
+        // Determine decimal places for tick labels based on step size
+        const TICK_DECIMALS_X = xStep < 1 ? 2 : (xStep % 1 === 0 ? 0 : 1);
+        const TICK_DECIMALS_Y = yStep < 1 ? 2 : (yStep % 1 === 0 ? 0 : 1);
+
+        // --- 4. Draw Grid Lines ---
+        ctx.strokeStyle = GRID_COLOR;
+        ctx.lineWidth = 1;
+        
+        xTicks.forEach(val => {
+            const x = mapX(val);
+            ctx.beginPath();
+            ctx.moveTo(x, PADDING.top);
+            ctx.lineTo(x, PADDING.top + graphHeight);
+            ctx.stroke();
+        });
+
+        yTicks.forEach(val => {
+            const y = mapY(val);
+            ctx.beginPath();
+            ctx.moveTo(PADDING.left, y);
+            ctx.lineTo(PADDING.left + graphWidth, y);
+            ctx.stroke();
+        });
+
+        // --- 5. Draw Axes and Labels ---
+        ctx.fillStyle = AXIS_LABEL_COLOR;
+        ctx.font = '12px Lora';
+        ctx.textAlign = 'center';
+        
+        // X-Axis Labels
+        xTicks.forEach(val => {
+            ctx.fillText(val.toFixed(TICK_DECIMALS_X), mapX(val), PADDING.top + graphHeight + 20);
+        });
+
+        // Y-Axis Labels
+        ctx.textAlign = 'right';
+        yTicks.forEach(val => {
+            ctx.fillText(val.toFixed(TICK_DECIMALS_Y), PADDING.left - 10, mapY(val) + 4);
+        });
+        
+        // Axis Titles
         ctx.font = 'bold 14px Lora';
         ctx.textAlign = 'center';
-        if(layout.xaxis?.title) ctx.fillText(layout.xaxis.title, padding.left + graphWidth / 2, rect.height - 10);
+        if(layout.xaxis?.title) ctx.fillText(layout.xaxis.title, PADDING.left + graphWidth / 2, rect.height - 10);
         ctx.save();
         ctx.rotate(-Math.PI / 2);
-        if(layout.yaxis?.title) ctx.fillText(layout.yaxis.title, -(padding.top + graphHeight / 2), 20);
+        if(layout.yaxis?.title) ctx.fillText(layout.yaxis.title, -(PADDING.top + graphHeight / 2), 20);
         ctx.restore();
 
 
-        // Draw data lines and markers
+        // --- 6. Draw Data Lines and Markers ---
         data.forEach(trace => {
-            ctx.strokeStyle = trace.line?.color || '#4285f4';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(mapX(trace.x[0]), mapY(trace.y[0]));
-            for (let i = 1; i < trace.x.length; i++) {
-                ctx.lineTo(mapX(trace.x[i]), mapY(trace.y[i]));
+            // Default color is white for dark theme (Req #1)
+            let traceColor = trace.line?.color || '#FFFFFF'; 
+            let isRedTinted = false;
+            
+            // Red Tinted Line Logic: Check if the color is a red variant (Req #5)
+            if (traceColor.toLowerCase().includes('red') || traceColor.match(/^#f[0-9a-f]{5}|#ff[0-9a-f]{4}|#f00$/i)) {
+                traceColor = '#ffb3b3'; // White line tinted red (light red for dark background)
+                isRedTinted = true;
+            } else if (traceColor === '#4285f4') {
+                // Change the old blue default to a better dark-theme blue for better visibility
+                traceColor = '#80b3ff'; 
             }
-            ctx.stroke();
 
-            if (trace.mode && trace.mode.includes('markers')) {
-                ctx.fillStyle = trace.line?.color || '#4285f4';
+            ctx.strokeStyle = traceColor;
+            ctx.lineWidth = 2;
+            
+            // Apply glow effect for red-tinted lines (Req #5)
+            if (isRedTinted) {
+                ctx.shadowColor = 'rgba(255, 0, 0, 0.8)'; // Red glow
+                ctx.shadowBlur = 10;
+            } else {
+                ctx.shadowBlur = 0; // Clear shadow/glow for all other lines
+            }
+
+            // Draw Line
+            if (trace.x && trace.x.length > 0) {
+                ctx.beginPath();
+                ctx.moveTo(mapX(trace.x[0]), mapY(trace.y[0]));
+                for (let i = 1; i < trace.x.length; i++) {
+                    ctx.lineTo(mapX(trace.x[i]), mapY(trace.y[i]));
+                }
+                ctx.stroke();
+            }
+
+            // Remove glow for markers and subsequent traces
+            ctx.shadowBlur = 0;
+
+            // Draw Markers
+            if (trace.mode && trace.mode.includes('markers') && trace.x && trace.x.length > 0) {
+                ctx.fillStyle = traceColor;
                 for (let i = 0; i < trace.x.length; i++) {
                     ctx.beginPath();
                     ctx.arc(mapX(trace.x[i]), mapY(trace.y[i]), 4, 0, 2 * Math.PI);
@@ -237,12 +330,119 @@
             }
         });
         
-        // Draw title
+        // --- 7. Draw Title ---
         if (layout.title) {
             ctx.fillStyle = '#fff';
             ctx.font = '18px Merriweather';
             ctx.textAlign = 'center';
-            ctx.fillText(layout.title, rect.width / 2, padding.top / 2 + 5);
+            ctx.fillText(layout.title, rect.width / 2, PADDING.top / 2 + 5);
+        }
+        
+        // --- 8. Hover Interactivity (NEW) ---
+        const TOOLTIP_COLOR = '#fff';
+        const TOOLTIP_BG = 'rgba(0, 0, 0, 0.8)';
+        const TOOLTIP_FONT = '14px Lora';
+        const MARKER_HOVER_RADIUS = 8;
+        
+        // Clear previous listeners by directly setting properties to null
+        canvas.onmousemove = null; 
+        canvas.onmouseleave = null;
+
+        if (rect.width > 0 && rect.height > 0) {
+            canvas.onmousemove = (e) => {
+                // To clear the previous tooltip, we must redraw the entire static graph.
+                // We recursively call drawCustomGraph but temporarily null the listeners to prevent an infinite loop.
+                const originalMouseMove = canvas.onmousemove;
+                const originalMouseLeave = canvas.onmouseleave;
+                canvas.onmousemove = null;
+                canvas.onmouseleave = null;
+                drawCustomGraph(canvas, graphData);
+                
+                // Scale mouse coordinates back to CSS pixels
+                const mouseX = e.offsetX / dpr; 
+                const mouseY = e.offsetY / dpr;
+
+                let nearestPoint = null;
+                let minDistanceSq = Infinity;
+                
+                // Find the nearest data point or intersection
+                data.forEach(trace => {
+                    if (trace.x && trace.y) {
+                        for (let i = 0; i < trace.x.length; i++) {
+                            const px = mapX(trace.x[i]);
+                            const py = mapY(trace.y[i]);
+                            // Check if coordinate is within the graphing area bounds
+                            if (px < PADDING.left || px > PADDING.left + graphWidth || py < PADDING.top || py > PADDING.top + graphHeight) continue;
+
+                            const distanceSq = (mouseX - px) ** 2 + (mouseY - py) ** 2;
+                            
+                            if (distanceSq < minDistanceSq && distanceSq <= MARKER_HOVER_RADIUS ** 2) {
+                                minDistanceSq = distanceSq;
+                                nearestPoint = {
+                                    x: trace.x[i],
+                                    y: trace.y[i],
+                                    px: px,
+                                    py: py,
+                                    // Check for customData that marks intersections (Req #6)
+                                    isIntersection: trace.customData && trace.customData[i] && trace.customData[i].isIntersection
+                                };
+                            }
+                        }
+                    }
+                });
+                
+                // Draw the tooltip if a point is found
+                if (nearestPoint) {
+                    const labelText = nearestPoint.isIntersection ? "Intersection" : "Point";
+                    const xVal = nearestPoint.x.toFixed(TICK_DECIMALS_X);
+                    const yVal = nearestPoint.y.toFixed(TICK_DECIMALS_Y);
+                    
+                    const coordsText = `(${xVal}, ${yVal})`;
+                    const textLines = nearestPoint.isIntersection ? [labelText, coordsText] : [coordsText];
+                    
+                    // Highlight the hovered marker
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.beginPath();
+                    ctx.arc(nearestPoint.px, nearestPoint.py, 6, 0, 2 * Math.PI);
+                    ctx.fill();
+
+                    // Draw Tooltip Box
+                    ctx.font = TOOLTIP_FONT;
+                    ctx.textAlign = 'left';
+                    
+                    const lineHeights = 20;
+                    const textWidths = textLines.map(line => ctx.measureText(line).width);
+                    const maxWidth = Math.max(...textWidths) + 20; // 10px padding on each side
+                    const totalHeight = textLines.length * lineHeights + 10; // 5px padding top/bottom
+                    
+                    let tipX = nearestPoint.px + 15;
+                    let tipY = nearestPoint.py - totalHeight - 15;
+                    
+                    // Adjust position if it goes off-screen
+                    if (tipX + maxWidth > rect.width) tipX = nearestPoint.px - maxWidth - 15;
+                    if (tipY < 0) tipY = nearestPoint.py + 15;
+                    
+                    // Draw box
+                    ctx.fillStyle = TOOLTIP_BG;
+                    ctx.fillRect(tipX, tipY, maxWidth, totalHeight);
+                    
+                    // Draw text
+                    ctx.fillStyle = TOOLTIP_COLOR;
+                    textLines.forEach((line, index) => {
+                        ctx.fillText(line, tipX + 10, tipY + lineHeights * (index + 1) - 5);
+                    });
+                }
+                
+                // Re-attach the listeners now that the drawing is complete
+                canvas.onmousemove = originalMouseMove;
+                canvas.onmouseleave = originalMouseLeave;
+            };
+            
+            // Set up mouse leave to clear tooltip
+            canvas.onmouseleave = () => {
+                // Redraw to clear the tooltip when the mouse leaves
+                drawCustomGraph(canvas, graphData); 
+            };
         }
     }
 
@@ -1172,7 +1372,7 @@ Formatting Rules:
         if (!document.getElementById('ai-katex-styles')) {
             const katexStyles = document.createElement('link');
             katexStyles.id = 'ai-katex-styles';
-            katexStyles.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css';
+            katexStyles.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.js';
             katexStyles.rel = 'stylesheet';
             document.head.appendChild(katexStyles);
         }
@@ -1318,4 +1518,3 @@ Formatting Rules:
         loadUserSettings();
     });
 })();
-
