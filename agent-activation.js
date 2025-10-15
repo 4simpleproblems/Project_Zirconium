@@ -14,7 +14,7 @@
 (function() {
     // --- CONFIGURATION ---
     const API_KEY = 'AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro'; 
-    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${API_KEY}`;
     const MAX_INPUT_HEIGHT = 200;
     const CHAR_LIMIT = 10000;
     const PASTE_TO_FILE_THRESHOLD = 1000;
