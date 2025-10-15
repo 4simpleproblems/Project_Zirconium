@@ -9,7 +9,7 @@
  * UPDATED: AI container does not load on DOMContentLoaded; requires Ctrl + \ shortcut.
  * UPDATED: Ensured Ctrl + \ shortcut for activation/deactivation is fully functional.
  * NEW: Added KaTeX for high-quality rendering of mathematical formulas and equations.
- * NEW: Added a graphing mode using Plotly.js for interactive data visualization.
+ * REPLACED: Plotly.js has been replaced with a custom, theme-aware graphing engine for better integration.
  */
 (function() {
     // --- CONFIGURATION ---
@@ -110,31 +110,140 @@
     }
 
     /**
-     * Renders interactive graphs using Plotly.js.
+     * Renders interactive graphs using a custom canvas engine.
      * @param {HTMLElement} container The parent element to search for graph placeholders.
      */
     function renderGraphs(container) {
-        if (typeof Plotly === 'undefined') {
-            console.warn("Plotly not loaded, skipping render.");
-            return;
-        }
-        container.querySelectorAll('.plotly-graph-placeholder').forEach(element => {
+        container.querySelectorAll('.custom-graph-placeholder').forEach(placeholder => {
             try {
-                const graphData = JSON.parse(element.dataset.graphData);
-                const layout = {
-                    ...(graphData.layout || {}),
-                    paper_bgcolor: 'rgba(0,0,0,0)',
-                    plot_bgcolor: 'rgba(255,255,255,0.05)',
-                    font: { color: '#ccc' },
-                    xaxis: { ...(graphData.layout?.xaxis || {}), gridcolor: 'rgba(255,255,255,0.1)' },
-                    yaxis: { ...(graphData.layout?.yaxis || {}), gridcolor: 'rgba(255,255,255,0.1)' }
-                };
-                Plotly.newPlot(element, graphData.data, layout, {responsive: true});
+                const graphData = JSON.parse(placeholder.dataset.graphData);
+                const canvas = placeholder.querySelector('canvas');
+                if (canvas) {
+                    const draw = () => drawCustomGraph(canvas, graphData);
+                    // Use ResizeObserver to redraw the canvas when its container size changes
+                    const observer = new ResizeObserver(debounce(draw, 100));
+                    observer.observe(placeholder);
+                    draw(); // Initial draw
+                }
             } catch (e) {
-                console.error("Plotly rendering error:", e);
-                element.textContent = `[Plotly Error] Invalid graph data provided.`;
+                console.error("Custom graph rendering error:", e);
+                placeholder.textContent = `[Graph Error] Invalid graph data provided.`;
             }
         });
+    }
+
+    /**
+     * Custom graphing function using HTML Canvas.
+     * @param {HTMLCanvasElement} canvas The canvas element to draw on.
+     * @param {object} graphData The data and layout configuration for the graph.
+     */
+    function drawCustomGraph(canvas, graphData) {
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const layout = graphData.layout || {};
+        const data = graphData.data || [];
+        
+        const padding = { top: 50, right: 30, bottom: 50, left: 60 };
+        const graphWidth = rect.width - padding.left - padding.right;
+        const graphHeight = rect.height - padding.top - padding.bottom;
+
+        // Determine data range
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        data.forEach(trace => {
+            trace.x.forEach(val => { minX = Math.min(minX, val); maxX = Math.max(maxX, val); });
+            trace.y.forEach(val => { minY = Math.min(minY, val); maxY = Math.max(maxY, val); });
+        });
+        
+        // Add buffer to range
+        const xRange = maxX - minX || 1;
+        const yRange = maxY - minY || 1;
+        minX -= xRange * 0.1;
+        maxX += xRange * 0.1;
+        minY -= yRange * 0.1;
+        maxY += yRange * 0.1;
+
+        const mapX = x => padding.left + ((x - minX) / (maxX - minX)) * graphWidth;
+        const mapY = y => padding.top + graphHeight - ((y - minY) / (maxY - minY)) * graphHeight;
+
+        // Draw grid lines
+        const gridColor = 'rgba(255, 255, 255, 0.1)';
+        ctx.strokeStyle = gridColor;
+        ctx.lineWidth = 1;
+        const xTickCount = Math.max(2, Math.floor(graphWidth / 80));
+        const yTickCount = Math.max(2, Math.floor(graphHeight / 50));
+
+        for (let i = 0; i <= xTickCount; i++) {
+            const x = padding.left + (i / xTickCount) * graphWidth;
+            ctx.beginPath();
+            ctx.moveTo(x, padding.top);
+            ctx.lineTo(x, padding.top + graphHeight);
+            ctx.stroke();
+        }
+        for (let i = 0; i <= yTickCount; i++) {
+            const y = padding.top + (i / yTickCount) * graphHeight;
+            ctx.beginPath();
+            ctx.moveTo(padding.left, y);
+            ctx.lineTo(padding.left + graphWidth, y);
+            ctx.stroke();
+        }
+
+        // Draw axes and labels
+        ctx.fillStyle = '#ccc';
+        ctx.font = '12px Lora';
+        for (let i = 0; i <= xTickCount; i++) {
+            const val = minX + (i / xTickCount) * (maxX - minX);
+            ctx.fillText(val.toFixed(1), mapX(val), padding.top + graphHeight + 20);
+        }
+        for (let i = 0; i <= yTickCount; i++) {
+            const val = minY + (i / yTickCount) * (maxY - minY);
+            ctx.fillText(val.toFixed(1), padding.left - 35, mapY(val) + 4);
+        }
+        
+        ctx.font = 'bold 14px Lora';
+        ctx.textAlign = 'center';
+        if(layout.xaxis?.title) ctx.fillText(layout.xaxis.title, padding.left + graphWidth / 2, rect.height - 10);
+        ctx.save();
+        ctx.rotate(-Math.PI / 2);
+        if(layout.yaxis?.title) ctx.fillText(layout.yaxis.title, -(padding.top + graphHeight / 2), 20);
+        ctx.restore();
+
+
+        // Draw data lines and markers
+        data.forEach(trace => {
+            ctx.strokeStyle = trace.line?.color || '#4285f4';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(mapX(trace.x[0]), mapY(trace.y[0]));
+            for (let i = 1; i < trace.x.length; i++) {
+                ctx.lineTo(mapX(trace.x[i]), mapY(trace.y[i]));
+            }
+            ctx.stroke();
+
+            if (trace.mode && trace.mode.includes('markers')) {
+                ctx.fillStyle = trace.line?.color || '#4285f4';
+                for (let i = 0; i < trace.x.length; i++) {
+                    ctx.beginPath();
+                    ctx.arc(mapX(trace.x[i]), mapY(trace.y[i]), 4, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            }
+        });
+        
+        // Draw title
+        if (layout.title) {
+            ctx.fillStyle = '#fff';
+            ctx.font = '18px Merriweather';
+            ctx.textAlign = 'center';
+            ctx.fillText(layout.title, rect.width / 2, padding.top / 2 + 5);
+        }
     }
 
 
@@ -253,11 +362,7 @@
         container.appendChild(composeArea);
         container.appendChild(charCounter);
         
-        // --- Add KaTeX and Plotly ---
-        const plotlyScript = document.createElement('script');
-        plotlyScript.src = 'https://cdn.plot.ly/plotly-2.12.1.min.js';
-        container.appendChild(plotlyScript);
-
+        // --- Add KaTeX ---
         const katexScript = document.createElement('script');
         katexScript.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.js';
         container.appendChild(katexScript);
@@ -345,7 +450,7 @@ Adapt your persona and tone for each turn.
 
 Formatting Rules:
 - For math, use KaTeX. Inline math uses single \`$\`, and display math uses double \`$$\`. Use \\le for <= and \\ge for >=.
-- For graphs, use a 'graph' block. Provide the data and layout as a JSON object that Plotly.js can understand. Example:
+- For graphs, use a 'graph' block. Provide the data and layout as a JSON object that the custom graph engine can understand. Example:
 \`\`\`graph
 {
   "data": [
@@ -361,8 +466,7 @@ Formatting Rules:
   "layout": {
     "title": "Graph of y = x - 1",
     "xaxis": {"title": "x"},
-    "yaxis": {"title": "y"},
-    "hovermode": "closest"
+    "yaxis": {"title": "y"}
   }
 }
 \`\`\`
@@ -371,7 +475,7 @@ Formatting Rules:
         const lowerQuery = query.toLowerCase();
 
         if (lowerQuery.includes('math') || lowerQuery.includes('algebra') || lowerQuery.includes('calculus') || lowerQuery.includes('formula') || lowerQuery.includes('solve') || lowerQuery.includes('proof') || lowerQuery.includes('graph')) {
-            instruction += `\n\n**Current Persona: Technical Expert.** Respond with extreme clarity, professionalism, and precision. Focus on step-by-step logic, equations, and definitive answers. Use a formal, neutral tone. Use KaTeX and Plotly graphs where appropriate.`;
+            instruction += `\n\n**Current Persona: Technical Expert.** Respond with extreme clarity, professionalism, and precision. Focus on step-by-step logic, equations, and definitive answers. Use a formal, neutral tone. Use KaTeX and custom graphs where appropriate.`;
         } else if (lowerQuery.includes('code') || lowerQuery.includes('javascript') || lowerQuery.includes('python') || lowerQuery.includes('html') || lowerQuery.includes('debug')) {
             instruction += `\n\n**Current Persona: Coding Specialist.** Provide complete, runnable code examples. Explain technical concepts clearly, covering logic, structure, and edge cases. Be thorough and objective.`;
         } else if (lowerQuery.includes('ex') || lowerQuery.includes('breakup') || lowerQuery.includes('hate') || lowerQuery.includes('awful') || lowerQuery.includes('trash talk') || lowerQuery.includes('roast')) {
@@ -998,7 +1102,9 @@ Formatting Rules:
                     <div class="graph-block-header">
                         <span class="graph-metadata">${metadata}</span>
                     </div>
-                    <div class="plotly-graph-placeholder" data-graph-data='${escapedData}'></div>
+                    <div class="custom-graph-placeholder" data-graph-data='${escapedData}'>
+                        <canvas class="graph-canvas"></canvas>
+                    </div>
                 </div>
             `;
             return addPlaceholder(content);
@@ -1179,7 +1285,8 @@ Formatting Rules:
             .code-block-wrapper pre::-webkit-scrollbar { height: 8px; }
             .code-block-wrapper pre::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
             .code-block-wrapper code { font-family: 'Menlo', 'Consolas', monospace; font-size: 0.9em; color: #f0f0f0; }
-            .plotly-graph-placeholder { min-height: 400px; }
+            .custom-graph-placeholder { min-height: 400px; position: relative; padding: 10px; }
+            .graph-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
 
             .latex-render { display: inline-block; } /* default to inline */
             .ai-response-content div.latex-render { display: block; margin: 10px 0; text-align: center; } /* for display mode */
