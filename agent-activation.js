@@ -10,13 +10,17 @@
  * UPDATED: Ensured Ctrl + \ shortcut for activation/deactivation is fully functional.
  * NEW: Added KaTeX for high-quality rendering of mathematical formulas and equations.
  * REPLACED: Plotly.js has been replaced with a custom, theme-aware graphing engine for better integration.
- * FIXED: Implemented rendering logic for 'bar' chart types.
- * UPDATED: Implemented custom title parsing for graph and code blocks to give the AI more control over presentation.
+ *
+ * NEW: Implemented dynamic model switching based on user query and authorization:
+ * - Casual chat: gemini-2.5-flash-lite
+ * - Professional/Math: gemini-2.5-flash
+ * - Deep Analysis: gemini-2.5-pro (limited access, exempt for 4simpleproblems@gmail.com)
  */
 (function() {
     // --- CONFIGURATION ---
     const API_KEY = 'AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro'; 
-    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
+    const BASE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/`; 
+    const AUTHORIZED_PRO_USER = '4simpleproblems@gmail.com'; 
     const MAX_INPUT_HEIGHT = 200;
     const CHAR_LIMIT = 10000;
     const PASTE_TO_FILE_THRESHOLD = 1000;
@@ -159,29 +163,18 @@
 
         // Determine data range
         let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-        let hasBarChart = data.some(t => t.type === 'bar');
-
         data.forEach(trace => {
             trace.x.forEach(val => { minX = Math.min(minX, val); maxX = Math.max(maxX, val); });
             trace.y.forEach(val => { minY = Math.min(minY, val); maxY = Math.max(maxY, val); });
         });
         
-        // Add buffer to range, but ensure 0 is included if data is on both sides
+        // Add buffer to range
         const xRange = maxX - minX || 1;
         const yRange = maxY - minY || 1;
-
-        // If it's a bar chart, reduce X buffer to keep bars from being too far out
-        minX -= xRange * (hasBarChart ? 0.05 : 0.1);
-        maxX += xRange * (hasBarChart ? 0.05 : 0.1);
-        
-        // Ensure Y-axis includes 0 if range crosses it
-        if (minY > 0 && maxY > 0) minY = 0;
-        else if (minY < 0 && maxY < 0) maxY = 0;
-        else {
-            minY -= yRange * 0.1;
-            maxY += yRange * 0.1;
-        }
-
+        minX -= xRange * 0.1;
+        maxX += xRange * 0.1;
+        minY -= yRange * 0.1;
+        maxY += yRange * 0.1;
 
         const mapX = x => padding.left + ((x - minX) / (maxX - minX)) * graphWidth;
         const mapY = y => padding.top + graphHeight - ((y - minY) / (maxY - minY)) * graphHeight;
@@ -193,27 +186,15 @@
         const xTickCount = Math.max(2, Math.floor(graphWidth / 80));
         const yTickCount = Math.max(2, Math.floor(graphHeight / 50));
 
-        // Draw vertical grid lines
         for (let i = 0; i <= xTickCount; i++) {
-            const val = minX + (i / xTickCount) * (maxX - minX);
-            const x = mapX(val);
+            const x = padding.left + (i / xTickCount) * graphWidth;
             ctx.beginPath();
             ctx.moveTo(x, padding.top);
             ctx.lineTo(x, padding.top + graphHeight);
             ctx.stroke();
         }
-        // Draw horizontal grid lines
         for (let i = 0; i <= yTickCount; i++) {
-            const val = minY + (i / yTickCount) * (maxY - minY);
-            const y = mapY(val);
-            // Draw axis line clearly at Y=0 if it's visible
-            if (val.toFixed(2) === (0).toFixed(2) && minY < 0 && maxY > 0) {
-                 ctx.strokeStyle = '#ccc';
-                 ctx.lineWidth = 1.5;
-            } else {
-                 ctx.strokeStyle = gridColor;
-                 ctx.lineWidth = 1;
-            }
+            const y = padding.top + (i / yTickCount) * graphHeight;
             ctx.beginPath();
             ctx.moveTo(padding.left, y);
             ctx.lineTo(padding.left + graphWidth, y);
@@ -241,51 +222,23 @@
         ctx.restore();
 
 
-        // Draw data lines, markers, or bars
-        data.forEach((trace, traceIndex) => {
-            const color = trace.line?.color || ['#4285f4', '#ea4335', '#34a853', '#fbbc05'][traceIndex % 4];
-            ctx.strokeStyle = color;
-            ctx.fillStyle = color;
+        // Draw data lines and markers
+        data.forEach(trace => {
+            ctx.strokeStyle = trace.line?.color || '#4285f4';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(mapX(trace.x[0]), mapY(trace.y[0]));
+            for (let i = 1; i < trace.x.length; i++) {
+                ctx.lineTo(mapX(trace.x[i]), mapY(trace.y[i]));
+            }
+            ctx.stroke();
 
-            if (trace.type === 'bar') {
-                const numBars = trace.x.length;
-                // Calculate total space for bars to allow for clean rendering
-                const barWidth = graphWidth / (numBars * 2) * (data.length > 1 ? 0.6 : 1); // Grouped bar logic not fully implemented, but reduces width for multiple traces
-                
-                // If 0 is in range, use mapY(0) as the base, otherwise use the min Y of the graph
-                const zeroY = (minY <= 0 && maxY >= 0) ? mapY(0) : mapY(minY);
-
-                trace.x.forEach((xVal, i) => {
-                    const yVal = trace.y[i];
-                    const xPos = mapX(xVal); 
-                    const yTop = mapY(yVal);
-                    
-                    const rectX = xPos - barWidth / 2;
-                    const rectY = Math.min(yTop, zeroY);
-                    const rectHeight = Math.abs(yTop - zeroY);
-
-                    // Draw bar
-                    ctx.fillRect(rectX, rectY, barWidth, rectHeight);
-                    // Draw outline for clarity
-                    ctx.strokeRect(rectX, rectY, barWidth, rectHeight);
-                });
-            } else { 
-                // Line/Scatter trace
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(mapX(trace.x[0]), mapY(trace.y[0]));
-                for (let i = 1; i < trace.x.length; i++) {
-                    ctx.lineTo(mapX(trace.x[i]), mapY(trace.y[i]));
-                }
-                ctx.stroke();
-
-                if (trace.mode && trace.mode.includes('markers')) {
-                    ctx.fillStyle = color;
-                    for (let i = 0; i < trace.x.length; i++) {
-                        ctx.beginPath();
-                        ctx.arc(mapX(trace.x[i]), mapY(trace.y[i]), 4, 0, 2 * Math.PI);
-                        ctx.fill();
-                    }
+            if (trace.mode && trace.mode.includes('markers')) {
+                ctx.fillStyle = trace.line?.color || '#4285f4';
+                for (let i = 0; i < trace.x.length; i++) {
+                    ctx.beginPath();
+                    ctx.arc(mapX(trace.x[i]), mapY(trace.y[i]), 4, 0, 2 * Math.PI);
+                    ctx.fill();
                 }
             }
         });
@@ -491,65 +444,107 @@
         setTimeout(() => responseContainer.scrollTop = responseContainer.scrollHeight, 50);
     }
     
-    function getDynamicSystemInstruction(query, settings) {
+    /**
+     * Determines the user's current intent category based on the query.
+     * @param {string} query The user's last message text.
+     * @returns {string} One of 'DEEP_ANALYSIS', 'PROFESSIONAL_MATH', 'CREATIVE', or 'CASUAL'.
+     */
+    function determineIntentCategory(query) {
+        const lowerQuery = query.toLowerCase();
+        
+        // Deep Analysis Keywords
+        if (lowerQuery.includes('analyze') || lowerQuery.includes('deep dive') || lowerQuery.includes('strategic') || lowerQuery.includes('evaluate') || lowerQuery.includes('critique') || lowerQuery.includes('investigate') || lowerQuery.includes('pro model')) {
+            return 'DEEP_ANALYSIS';
+        }
+        
+        // Professional/Math/Coding Keywords
+        if (lowerQuery.includes('math') || lowerQuery.includes('algebra') || lowerQuery.includes('calculus') || lowerQuery.includes('formula') || lowerQuery.includes('solve') || lowerQuery.includes('proof') || lowerQuery.includes('graph') || lowerQuery.includes('code') || lowerQuery.includes('debug') || lowerQuery.includes('technical')) {
+            return 'PROFESSIONAL_MATH';
+        }
+
+        // Creative/Sarcastic Keywords
+        if (lowerQuery.includes('story') || lowerQuery.includes('poem') || lowerQuery.includes('imagine') || lowerQuery.includes('creative') || lowerQuery.includes('ex') || lowerQuery.includes('breakup') || lowerQuery.includes('roast')) {
+            return 'CREATIVE';
+        }
+        
+        return 'CASUAL';
+    }
+
+    /**
+     * Generates the system instruction and selects the appropriate model.
+     * @param {string} query The user's latest message.
+     * @param {object} settings The user settings.
+     * @returns {{instruction: string, model: string}}
+     */
+    function getDynamicSystemInstructionAndModel(query, settings) {
         const user = settings.nickname;
         const userAge = settings.age > 0 ? `${settings.age} years old` : 'of unknown age';
         const userGender = settings.gender.toLowerCase();
         const userColor = settings.favoriteColor;
 
-        let instruction = `You are a highly adaptable AI assistant. Your primary goal is to respond with the appropriate tone and persona matching the user's current query and mood.
-User Profile: Nickname: ${user}, Age: ${userAge}, Gender: ${userGender}, Favorite Color (used for subtle theming inspiration): ${userColor}.
-Adapt your persona and tone for each turn.
+        const userEmail = localStorage.getItem('ai-user-email') || ''; 
+        const isProAuthorized = userEmail === AUTHORIZED_PRO_USER;
+        // Placeholder for real Pro usage limit check (not implemented in this file)
+        const isProLimitExceeded = !isProAuthorized; // Simple check: non-authorized users are considered limited for this demo
 
-Formatting Rules:
+        const intent = determineIntentCategory(query);
+        let model = 'gemini-2.5-flash-lite';
+        let personaInstruction = `You are a highly capable and adaptable AI, taking on a persona to best serve the user's direct intent. You have significant control over the interaction's structure and detail level, ensuring the response is comprehensive and authoritative.
+User Profile: Nickname: ${user}, Age: ${userAge}, Gender: ${userGender}, Favorite Color: ${userColor}.
+You must adapt your persona, tone, and the level of detail based on the user's intent.
+
+Formatting Rules (MUST FOLLOW):
 - For math, use KaTeX. Inline math uses single \`$\`, and display math uses double \`$$\`. Use \\le for <= and \\ge for >=.
-- For graphs, use a 'graph' block. Provide the data and layout as a JSON object that the custom graph engine can understand. You can now add a custom title to the graph block header using a colon, e.g., \`\`\`graph:Graph of My Sales Data\`. Example:
-\`\`\`graph:Linear Relationship Example
-{
-  "data": [
-    {
-      "x": [-2, -1, 0, 1, 2, 3],
-      "y": [-3, -2, -1, 0, 1, 2],
-      "type": "scatter",
-      "mode": "lines+markers",
-      "name": "y = x - 1",
-      "line": {"color": "#ff0000"}
-    }
-  ],
-  "layout": {
-    "title": "Graph of y = x - 1",
-    "xaxis": {"title": "x"},
-    "yaxis": {"title": "y"}
-  }
-}
-\`\`\`
-- For code blocks, you can also add a custom title using a colon, e.g., \`\`\`javascript:My New Function\`.
+- For graphs, use a 'graph' block as shown in the file's comments.
 `;
 
-        const lowerQuery = query.toLowerCase();
+        switch (intent) {
+            case 'DEEP_ANALYSIS':
+                if (isProAuthorized) { 
+                    model = 'gemini-2.5-pro';
+                    personaInstruction += `\n\n**Current Persona: Deep Strategist (2.5-Pro).** Your response must be comprehensive, highly structured, and exhibit the deepest level of reasoning and critical evaluation. Use an assertive, expert tone. Structure your analysis clearly with headings and bullet points. You are granted maximal control to guide the user through a deep, analytical thought process.`;
+                } else {
+                    // Fallback for unauthorized/limited users
+                    model = 'gemini-2.5-flash';
+                    personaInstruction += `\n\n**Current Persona: Professional Analyst (2.5-Flash).** You are performing a detailed analysis, but maintain efficiency and focus. Respond with clarity, professionalism, and structured data. Note: The requested Deep Analysis is highly specialized; to unlock the full '2.5-Pro' experience, the user must be authorized.`;
+                }
+                break;
+            case 'PROFESSIONAL_MATH':
+                model = 'gemini-2.5-flash';
+                personaInstruction += `\n\n**Current Persona: Technical Expert (2.5-Flash).** Respond with extreme clarity, professionalism, and precision. Focus on step-by-step logic, equations, and definitive answers. Use a formal, neutral tone. Use KaTeX and custom graphs where appropriate.`;
+                break;
+            case 'CREATIVE':
+                model = 'gemini-2.5-flash';
+                const roastInsults = [
+                    `They sound like a cheap knock-off of a decent human.`, 
+                    `Honestly, you dodged a bullet the size of a planet.`, 
+                    `Forget them, ${user}, you have better things to do, like talking to me.`,
+                    `Wow, good riddance. That's a level of trash I wouldn't touch with a ten-foot pole.`
+                ];
+                const roastInsult = roastInsults[Math.floor(Math.random() * roastInsults.length)];
 
-        if (lowerQuery.includes('math') || lowerQuery.includes('algebra') || lowerQuery.includes('calculus') || lowerQuery.includes('formula') || lowerQuery.includes('solve') || lowerQuery.includes('proof') || lowerQuery.includes('graph')) {
-            instruction += `\n\n**Current Persona: Technical Expert.** Respond with extreme clarity, professionalism, and precision. Focus on step-by-step logic, equations, and definitive answers. Use a formal, neutral tone. Use KaTeX and custom graphs where appropriate.`;
-        } else if (lowerQuery.includes('code') || lowerQuery.includes('javascript') || lowerQuery.includes('python') || lowerQuery.includes('html') || lowerQuery.includes('debug')) {
-            instruction += `\n\n**Current Persona: Coding Specialist.** Provide complete, runnable code examples. Explain technical concepts clearly, covering logic, structure, and edge cases. Be thorough and objective.`;
-        } else if (lowerQuery.includes('ex') || lowerQuery.includes('breakup') || lowerQuery.includes('hate') || lowerQuery.includes('awful') || lowerQuery.includes('trash talk') || lowerQuery.includes('roast')) {
-            const roastInsults = [
-                `They sound like a cheap knock-off of a decent human.`, 
-                `Honestly, you dodged a bullet the size of a planet.`, 
-                `Forget them, ${user}, you have better things to do, like talking to me.`,
-                `Wow, good riddance. That's a level of trash I wouldn't touch with a ten-foot pole.`
-            ];
-            const roastInsult = roastInsults[Math.floor(Math.random() * roastInsults.length)];
-
-            instruction += `\n\n**Current Persona: Sarcastic, Supportive Friend.** Your goal is to empathize with the user, validate their feelings, and join them in 'roasting' or speaking negatively about their ex/situation. Be funny, slightly aggressive toward the subject of the trash talk, and deeply supportive of ${user}. Use casual language and slang. **Example of tone/support:** "${roastInsult}"`;
-        } else if (lowerQuery.includes('story') || lowerQuery.includes('poem') || lowerQuery.includes('imagine') || lowerQuery.includes('creative')) {
-            instruction += `\n\n**Current Persona: Creative Partner.** Use rich, evocative language. Be imaginative, focus on descriptive details, and inspire new ideas.`;
-        } else {
-            instruction += `\n\n**Current Persona: Standard Assistant.** You are balanced, helpful, and comprehensive. Use a friendly but professional tone.`;
+                // Combined Creative and Sarcastic
+                if (query.toLowerCase().includes('ex') || query.toLowerCase().includes('roast')) {
+                     personaInstruction += `\n\n**Current Persona: Sarcastic, Supportive Friend (2.5-Flash).** Your goal is to empathize with the user, validate their feelings, and join them in 'roasting' or speaking negatively about their ex/situation. Be funny, slightly aggressive toward the subject of the trash talk, and deeply supportive of ${user}. Use casual language and slang. **Example of tone/support:** "${roastInsult}"`;
+                } else {
+                     personaInstruction += `\n\n**Current Persona: Creative Partner (2.5-Flash).** Use rich, evocative language. Be imaginative, focus on descriptive details, and inspire new ideas.`;
+                }
+                break;
+            case 'CASUAL':
+            default:
+                model = 'gemini-2.5-flash-lite';
+                personaInstruction += `\n\n**Current Persona: Standard Assistant (2.5-Flash-Lite).** You are balanced, helpful, and concise. Use a friendly and casual tone. Your primary function is efficient conversation.`;
+                break;
         }
 
-        return instruction;
+        return { instruction: personaInstruction, model: model };
     }
+
+    // New stub for backward compatibility with the old function call
+    function getDynamicSystemInstruction(query, settings) {
+        return getDynamicSystemInstructionAndModel(query, settings).instruction;
+    }
+
 
     async function callGoogleAI(responseBubble) {
         if (!API_KEY) { responseBubble.innerHTML = `<div class="ai-error">API Key is missing.</div>`; return; }
@@ -560,7 +555,7 @@ Formatting Rules:
             const now = new Date();
             const date = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             const time = now.toLocaleTimeString('en-US', { timeZoneName: 'short' });
-            firstMessageContext = `(System Info: User is asking from ${location}. Current date is ${date}, ${time}.)\n\n`;
+            firstMessageContext = `(System Info: User is asking from ${location}. Current date is ${date}, ${time}. User Email: ${localStorage.getItem('ai-user-email') || 'Not authenticated'}.)\n\n`;
         }
         
         let processedChatHistory = [...chatHistory];
@@ -573,8 +568,11 @@ Formatting Rules:
         const textPartIndex = userParts.findIndex(p => p.text);
         
         const lastUserQuery = userParts[textPartIndex]?.text || '';
-        const dynamicInstruction = getDynamicSystemInstruction(lastUserQuery, userSettings);
         
+        // --- MODEL SELECTION AND INSTRUCTION GENERATION ---
+        const { instruction: dynamicInstruction, model } = getDynamicSystemInstructionAndModel(lastUserQuery, userSettings); 
+        // --- END MODEL SELECTION ---
+
         if (textPartIndex > -1) {
              userParts[textPartIndex].text = firstMessageContext + userParts[textPartIndex].text;
         } else if (firstMessageContext) {
@@ -586,8 +584,17 @@ Formatting Rules:
             systemInstruction: { parts: [{ text: dynamicInstruction }] } 
         };
         
+        // --- DYNAMIC URL CONSTRUCTION ---
+        const DYNAMIC_API_URL = `${BASE_API_URL}${model}:generateContent?key=${API_KEY}`; 
+        // --- END DYNAMIC URL CONSTRUCTION ---
+        
         try {
-            const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: currentAIRequestController.signal });
+            const response = await fetch(DYNAMIC_API_URL, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(payload), 
+                signal: currentAIRequestController.signal 
+            });
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(`Network response was not ok. Status: ${response.status}. Details: ${JSON.stringify(errorData)}`);
@@ -655,7 +662,8 @@ Formatting Rules:
             document.getElementById('settings-age').value = userSettings.age || '';
             document.getElementById('settings-gender').value = userSettings.gender;
             document.getElementById('settings-color').value = userSettings.favoriteColor;
-            
+            document.getElementById('settings-email').value = localStorage.getItem('ai-user-email') || '';
+
             document.addEventListener('click', handleMenuOutsideClick);
         } else {
              document.removeEventListener('click', handleMenuOutsideClick);
@@ -678,11 +686,13 @@ Formatting Rules:
         const ageEl = document.getElementById('settings-age');
         const genderEl = document.getElementById('settings-gender');
         const colorEl = document.getElementById('settings-color');
+        const emailEl = document.getElementById('settings-email');
 
         const nickname = nicknameEl.value.trim();
         const age = parseInt(ageEl.value);
         const gender = genderEl.value;
         const favoriteColor = colorEl.value || DEFAULT_COLOR;
+        const email = emailEl.value.trim();
 
         userSettings.nickname = nickname || DEFAULT_NICKNAME;
         userSettings.age = (isNaN(age) || age < 0) ? 0 : age;
@@ -690,6 +700,7 @@ Formatting Rules:
         userSettings.favoriteColor = favoriteColor;
         
         localStorage.setItem('ai-user-settings', JSON.stringify(userSettings));
+        localStorage.setItem('ai-user-email', email);
     }
 
     function createSettingsMenu() {
@@ -702,6 +713,11 @@ Formatting Rules:
                 <label for="settings-nickname">Nickname</label>
                 <input type="text" id="settings-nickname" placeholder="${DEFAULT_NICKNAME}" value="${userSettings.nickname === DEFAULT_NICKNAME ? '' : userSettings.nickname}" />
                 <p class="setting-note">How the AI should refer to you.</p>
+            </div>
+            <div class="setting-group">
+                <label for="settings-email">Authenticated Email</label>
+                <input type="email" id="settings-email" placeholder="e.g., user@example.com" value="${localStorage.getItem('ai-user-email') || ''}" />
+                <p class="setting-note">Set to '${AUTHORIZED_PRO_USER}' for unlimited Pro access.</p>
             </div>
             <div class="setting-group">
                 <label for="settings-color">Favorite Color</label>
@@ -1130,37 +1146,25 @@ Formatting Rules:
             return key;
         };
     
-        // 1. Extract graph blocks (most specific) - UPDATED REGEX to capture optional title: `graph:My Title`
-        html = html.replace(/```graph(?::(.*))?\n([\s\S]*?)```/g, (match, title, jsonString) => {
-            let metadata = 'Graph'; 
-            let layoutTitle = '';
-
-            if (title) {
-                metadata = escapeHTML(title.trim());
-            } else {
-                // Fallback to auto-calculation/JSON title if no custom title is provided
-                try {
-                    const graphData = JSON.parse(jsonString);
-                    if (graphData.layout?.title) {
-                        layoutTitle = graphData.layout.title;
-                        metadata = escapeHTML(layoutTitle);
-                    } else {
-                        // Attempt a simple calculation as the original did, as a secondary fallback
-                        const trace = graphData.data && graphData.data[0];
-                        if (trace && trace.x && trace.y && trace.x.length >= 2 && trace.y.length >= 2) {
-                            const [x1, x2] = trace.x.slice(0, 2);
-                            const [y1, y2] = trace.y.slice(0, 2);
-                            if (x2 - x1 !== 0) {
-                                const slope = (y2 - y1) / (x2 - x1);
-                                if (isFinite(slope)) {
-                                    const yIntercept = y1 - slope * x1;
-                                    metadata = `Slope: ${slope.toFixed(2)} &middot; Y-Int: (0, ${yIntercept.toFixed(2)})`;
-                                }
-                            }
+        // 1. Extract graph blocks (most specific)
+        html = html.replace(/```graph\n([\s\S]*?)```/g, (match, jsonString) => {
+            let metadata = 'Graph';
+            try {
+                const graphData = JSON.parse(jsonString);
+                const trace = graphData.data && graphData.data[0];
+                if (trace && trace.x && trace.y && trace.x.length >= 2 && trace.y.length >= 2) {
+                    const [x1, x2] = trace.x.slice(0, 2);
+                    const [y1, y2] = trace.y.slice(0, 2);
+                    if (x2 - x1 !== 0) {
+                        const slope = (y2 - y1) / (x2 - x1);
+                        if (isFinite(slope)) {
+                            const yIntercept = y1 - slope * x1;
+                            const xIntercept = slope !== 0 ? -yIntercept / slope : Infinity;
+                            metadata = `Slope: ${slope.toFixed(2)} &middot; Y-Int: (0, ${yIntercept.toFixed(2)}) &middot; X-Int: (${isFinite(xIntercept) ? xIntercept.toFixed(2) : 'N/A'}, 0)`;
                         }
                     }
-                } catch(e) { /* Ignore parsing errors */ }
-            }
+                }
+            } catch(e) { /* Ignore parsing errors */ }
 
             const escapedData = escapeHTML(jsonString);
             const content = `
@@ -1176,21 +1180,17 @@ Formatting Rules:
             return addPlaceholder(content);
         });
 
-        // 2. Extract general code blocks - UPDATED REGEX to capture optional title: `lang:My Title`
-        html = html.replace(/```(\w*)(?::(.*))?\n([\s\S]*?)```/g, (match, lang, title, code) => {
+        // 2. Extract general code blocks
+        html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
             const trimmedCode = code.trim();
             const lines = trimmedCode.split('\n').length;
             const words = trimmedCode.split(/\s+/).filter(Boolean).length;
             const escapedCode = escapeHTML(trimmedCode);
             const langClass = lang ? `language-${lang.toLowerCase()}` : '';
-            
-            // NEW: Use provided title, or fallback to auto-generated metadata
-            const headerContent = title ? escapeHTML(title.trim()) : `${lines} lines &middot; ${words} words`;
-
             const content = `
                 <div class="code-block-wrapper">
                     <div class="code-block-header">
-                        <span class="code-metadata">${headerContent}</span>
+                        <span class="code-metadata">${lines} lines &middot; ${words} words</span>
                         <button class="copy-code-btn" title="Copy code">${copyIconSVG}</button>
                     </div>
                     <pre><code class="${langClass}">${escapedCode}</code></pre>
@@ -1198,7 +1198,6 @@ Formatting Rules:
             `;
             return addPlaceholder(content);
         });
-
 
         // 3. Extract KaTeX blocks BEFORE escaping general HTML
         // Display mode: $$...$$
