@@ -29,6 +29,16 @@
     const DEFAULT_NICKNAME = 'User';
     const DEFAULT_COLOR = '#4285f4'; // Google Blue
 
+    // --- 4SP PLATFORM KNOWLEDGE BASE ---
+    const FOUR_SP_HISTORY = `
+4SP (4simpleproblems) Platform History:
+- Version 1 (March 13, 2025 - Foundation): A small, chaotic experiment with a 20-sound soundboard, an autoclicker, and a request-a-sound page. It established the site's identity as an underground, student-made, tech-savvy hub for fun during school.
+- Version 2 (April 11, 2025 - Expansion and Community): Added significant depth, including a media page, playlists (beta), user-uploaded local soundboards, a growing library of games, and a proxy list to bypass school restrictions. It became a recognized student ecosystem, known for its chaotic variety and personality.
+- Version 3 (May 15, 2025 - A Visual Reinvention): Focused on a visual overhaul, shifting from cluttered boxes to a white, clean grid layout with sharp corners, inspired by modern tech design. It introduced the popular mini-game Slotz, giving the platform a mature, modern presentation.
+- Version 4 (August 23, 2025 - The Dashboard Era): The project's first major overhaul, transforming it into a unified dashboard experience with modular widgets (weather, time, battery, stopwatch, timer) and integrated apps (Notes, Calculator, Countdowns, Playlists). The Requests app introduced an upvote/downvote system and issue tracking. Security was enhanced with a panic key and tab disguise mode. The design featured the Impact font, inspired by Koyeb.
+- Version 5 (Project Zirconium - Slated for August 23, 2026 - Age of Integration): The most ambitious leap, drawing design inspiration from Vercel. It replaces the sidebar with a dynamic universal navigation bar (via navbar.js) and features a dark, simplified black theme using the Geist font. Headline features include the Combined Games Collection (4SP Games), a built-in Dictionary, the exclusive 4SP AI Agent (debuts here), Dailyphoto (a student social network), and Messenger V2 (group chats, read/unread indicators).
+`;
+
     // --- ICONS (for event handlers) ---
     const copyIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
     const checkIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="check-icon"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
@@ -477,20 +487,6 @@
      * @returns {{instruction: string, model: string}}
      */
     function getDynamicSystemInstructionAndModel(query, settings) {
-        
-        // --- START 4SP CONTEXT INJECTION ---
-        const FOUR_SP_HISTORY_INSTRUCTION = `
-You are the exclusive 4SP AI Agent, operating within the 4SP (4simpleproblems) student-made platform. You must be intimately familiar with the platform's history, ethos, and current state. Integrate this knowledge into your responses when relevant, maintaining a tone that is tech-savvy, supportive, and reflective of the platform's creative and rebellious spirit.
-
-**4SP Platform History & Identity:**
-- **V1 (March 13, 2025) - The Foundation:** Started as a small, chaotic experiment to entertain students, featuring a soundboard, autoclicker, and a request-a-sound page. Its core identity is that of an underground, student-made, tech-savvy hub.
-- **V2 (April 11, 2025) - Expansion:** Grew into a recognized student ecosystem, adding media, beta playlists, local soundboards, games, and a proxy list. Known for its messy, colorful variety.
-- **V3 (May 15, 2025) - Visual Reinvention:** Introduced a clean, modern, white grid layout with sharp corners, making the platform feel mature. Introduced the popular mini-game **Slotz**.
-- **V4 (August 23, 2025) - The Dashboard Era:** Transformed into a unified dashboard with modular widgets (weather, time, battery, stopwatch/timer) and integrated apps (Notes, Calculator, Countdowns, Playlists). The Requests app gained upvote/downvote/issue tracking. Added safety features like a panic key and tab disguise. Design was inspired by **Koyeb** and used the Impact font.
-- **V5 (Project Zirconium, Slated Aug 23, 2026) - Age of Integration (Current Development):** The most ambitious leap. Design inspired by **Vercel** (minimalism, dark theme, Geist font). Replaces the sidebar with a universal navigation bar via \`navbar.js\`. Headline features include the Combined Games Collection (\`4SP Games\`), a built-in **Dictionary**, the debut of *this* exclusive 4SP AI Agent (with hidden intelligence tools), **Dailyphoto** (a student social network), and **Messenger V2**. The goal is a full digital ecosystem: sleek, social, and secure.
-`;
-        // --- END 4SP CONTEXT INJECTION ---
-
         const user = settings.nickname;
         const userAge = settings.age > 0 ? `${settings.age} years old` : 'of unknown age';
         const userGender = settings.gender.toLowerCase();
@@ -503,10 +499,15 @@ You are the exclusive 4SP AI Agent, operating within the 4SP (4simpleproblems) s
 
         const intent = determineIntentCategory(query);
         let model = 'gemini-2.5-flash-lite';
-        
-        let personaInstruction = FOUR_SP_HISTORY_INSTRUCTION + `
-You are a highly capable and adaptable AI, taking on a persona to best serve the user's direct intent. You have significant control over the interaction's structure and detail level, ensuring the response is comprehensive and authoritative.
+        let personaInstruction = `You are a highly capable and adaptable AI, taking on a persona to best serve the user's direct intent. You have significant control over the interaction's structure and detail level, ensuring the response is comprehensive and authoritative.
 User Profile: Nickname: ${user}, Age: ${userAge}, Gender: ${userGender}, Favorite Color: ${userColor}.
+
+--- 4SP PLATFORM CONTEXT (MUST USE THIS KNOWLEDGE) ---
+You are currently running as the AI Agent on the 4SP (4simpleproblems) platform. You must be an expert on the platform's history, features, and identity.
+
+${FOUR_SP_HISTORY.trim()}
+
+------------------------------------------------------
 You must adapt your persona, tone, and the level of detail based on the user's intent.
 
 Formatting Rules (MUST FOLLOW):
@@ -840,7 +841,7 @@ Formatting Rules (MUST FOLLOW):
                 reader.onload = (e) => {
                     const base64Data = e.target.result.split(',')[1];
                     const dataUrl = e.target.result;
-
+                    
                     const itemIndex = attachedFiles.findIndex(f => f.tempId === tempId);
                     if (itemIndex > -1) {
                         const item = attachedFiles[itemIndex];
@@ -856,14 +857,12 @@ Formatting Rules (MUST FOLLOW):
                 reader.readAsDataURL(file);
             });
         };
-        
         input.click();
     }
-
+    
     function renderAttachments() {
         const previewContainer = document.getElementById('ai-attachment-preview');
         const inputWrapper = document.getElementById('ai-input-wrapper');
-
         if (attachedFiles.length === 0) {
             inputWrapper.classList.remove('has-attachments');
             previewContainer.innerHTML = '';
@@ -877,7 +876,7 @@ Formatting Rules (MUST FOLLOW):
         attachedFiles.forEach((file, index) => {
             const fileCard = document.createElement('div');
             fileCard.className = 'attachment-card';
-            
+
             let previewHTML = '';
             let fileExt = 'FILE';
             let fileName = '';
@@ -890,7 +889,7 @@ Formatting Rules (MUST FOLLOW):
             } else {
                 fileName = file.fileName;
                 fileExt = fileName.split('.').pop().toUpperCase();
-                
+
                 if (file.inlineData.mimeType.startsWith('image/')) {
                     previewHTML = `<img src="data:${file.inlineData.mimeType};base64,${file.inlineData.data}" alt="${fileName}" />`;
                 } else {
@@ -914,7 +913,7 @@ Formatting Rules (MUST FOLLOW):
 
             fileCard.innerHTML = `${previewHTML}<div class="file-info"></div>${fileTypeBadge}<button class="remove-attachment-btn" data-index="${index}">&times;</button>`;
             fileCard.querySelector('.file-info').appendChild(marqueeWrapper);
-
+            
             setTimeout(() => {
                 if (nameSpan.scrollWidth > marqueeWrapper.clientWidth) {
                     const marqueeDuration = fileName.length / 4;
@@ -929,7 +928,6 @@ Formatting Rules (MUST FOLLOW):
                 attachedFiles.splice(index, 1);
                 renderAttachments();
             };
-
             previewContainer.appendChild(fileCard);
         });
     }
@@ -950,16 +948,16 @@ Formatting Rules (MUST FOLLOW):
             </div>
         `;
         document.body.appendChild(previewModal);
-        
+
         const previewArea = previewModal.querySelector('.preview-area');
-        
+
         if (file.inlineData.mimeType.startsWith('image/')) {
             previewArea.innerHTML = `<img src="${file.fileContent}" alt="${file.fileName}" style="max-width: 100%; max-height: 80vh; object-fit: contain;">`;
         } else if (file.inlineData.mimeType.startsWith('text/')) {
-             fetch(file.fileContent)
+            fetch(file.fileContent)
                 .then(response => response.text())
                 .then(text => {
-                     previewArea.innerHTML = `<pre style="white-space: pre-wrap; word-break: break-all; max-height: 70vh; overflow-y: auto; background-color: #222; padding: 10px; border-radius: 5px;">${escapeHTML(text)}</pre>`;
+                    previewArea.innerHTML = `<pre style="white-space: pre-wrap; word-break: break-all; max-height: 70vh; overflow-y: auto; background-color: #222; padding: 10px; border-radius: 5px;">${escapeHTML(text)}</pre>`;
                 })
                 .catch(error => {
                     console.error("Error reading text file for preview:", error);
@@ -994,8 +992,8 @@ Formatting Rules (MUST FOLLOW):
     function handleContentEditableInput(e) {
         const editor = e.target;
         const charCount = editor.innerText.length;
-        
         const counter = document.getElementById('ai-char-counter');
+
         if (counter) {
             counter.textContent = `${formatCharCount(charCount)} / ${formatCharLimit(CHAR_LIMIT)}`;
             counter.classList.toggle('limit-exceeded', charCount > CHAR_LIMIT);
@@ -1003,848 +1001,1001 @@ Formatting Rules (MUST FOLLOW):
 
         if (charCount > CHAR_LIMIT) {
             editor.innerText = editor.innerText.substring(0, CHAR_LIMIT);
-            // Manually restore cursor to the end
-            const range = document.createRange();
-            const sel = window.getSelection();
-            range.selectNodeContents(editor);
-            range.collapse(false);
-            sel.removeAllRanges();
-            sel.addRange(range);
         }
-
-        // Auto-resize input
-        const style = window.getComputedStyle(editor);
-        const padding = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
-        const border = parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
-        const minHeight = parseFloat(style.minHeight);
         
-        editor.style.height = 'auto'; // Temporarily unset height
-        const newHeight = editor.scrollHeight + padding + border;
-        
-        if (newHeight > MAX_INPUT_HEIGHT) {
-            editor.style.height = `${MAX_INPUT_HEIGHT}px`;
-            editor.style.overflowY = 'auto';
-        } else if (newHeight > minHeight) {
-            editor.style.height = `${newHeight}px`;
-            editor.style.overflowY = 'hidden';
-        }
+        // Dynamic resizing (similar to a textarea)
+        editor.style.height = 'auto'; // Reset height
+        let newHeight = Math.min(editor.scrollHeight, MAX_INPUT_HEIGHT);
+        editor.style.height = `${newHeight}px`;
     }
-    
+
     function handlePaste(e) {
-        e.preventDefault();
-        let paste = (e.clipboardData || window.clipboardData).getData('text');
+        // Handle image paste
+        const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+        let isFilePasted = false;
         
-        const editor = e.target;
-        const charCount = editor.innerText.length;
-        const remainingSpace = CHAR_LIMIT - charCount;
-        
-        if (paste.length > remainingSpace) {
-             paste = paste.substring(0, remainingSpace);
-             alert(`Paste truncated. Only ${remainingSpace} characters could be added due to the ${formatCharLimit(CHAR_LIMIT)} character limit.`);
-        }
-        
-        // Insert paste text at cursor position
-        const selection = window.getSelection();
-        if (!selection.rangeCount) return;
-
-        selection.deleteFromDocument();
-        selection.getRangeAt(0).insertNode(document.createTextNode(paste));
-
-        // Move cursor to the end of the pasted text
-        selection.collapseToEnd();
-        
-        // Handle images/files in clipboard
-        const items = (e.clipboardData || window.clipboardData).items;
         for (let i = 0; i < items.length; i++) {
             const item = items[i];
             if (item.type.indexOf('image') !== -1) {
                 const file = item.getAsFile();
                 if (file) {
-                     const reader = new FileReader();
-                     reader.onload = (e) => {
-                        const base64Data = e.target.result.split(',')[1];
-                        const dataUrl = e.target.result;
-                        file.name = `Pasted Image ${Date.now()}.${file.type.split('/')[1] || 'png'}`;
-                        processFileLike(file, base64Data, dataUrl);
-                     };
-                     reader.readAsDataURL(file);
-                }
-            } else if (item.kind === 'file') {
-                 // For non-image files, only process if they are below the threshold or small enough
-                 const file = item.getAsFile();
-                 if (file && file.size < PASTE_TO_FILE_THRESHOLD) {
+                    e.preventDefault();
+                    isFilePasted = true;
+                    
+                    const tempId = `file-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+                    attachedFiles.push({ tempId, file, isLoading: true });
+                    renderAttachments();
+
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         const base64Data = e.target.result.split(',')[1];
                         const dataUrl = e.target.result;
-                        processFileLike(file, base64Data, dataUrl);
+                        
+                        const itemIndex = attachedFiles.findIndex(f => f.tempId === tempId);
+                        if (itemIndex > -1) {
+                            const item = attachedFiles[itemIndex];
+                            item.isLoading = false;
+                            item.inlineData = { mimeType: file.type, data: base64Data };
+                            item.fileName = 'Pasted Image';
+                            item.fileContent = dataUrl;
+                            delete item.file;
+                            delete item.tempId;
+                            renderAttachments();
+                        }
                     };
                     reader.readAsDataURL(file);
-                 }
+                }
             }
         }
         
-        // Manually trigger input handler for char count/resize update
-        handleContentEditableInput({ target: editor });
+        // Handle large text paste as file
+        if (!isFilePasted) {
+            const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+            if (pastedText.length >= PASTE_TO_FILE_THRESHOLD) {
+                e.preventDefault();
+                // Create a temporary File object for the long text
+                const textBlob = new Blob([pastedText], { type: 'text/plain' });
+                const longTextFile = new File([textBlob], `pasted_document_${Date.now()}.txt`, { type: 'text/plain' });
+
+                const tempId = `file-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+                attachedFiles.push({ tempId, file: longTextFile, isLoading: true });
+                renderAttachments();
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const base64Data = e.target.result.split(',')[1];
+                    const dataUrl = e.target.result;
+                    
+                    const itemIndex = attachedFiles.findIndex(f => f.tempId === tempId);
+                    if (itemIndex > -1) {
+                        const item = attachedFiles[itemIndex];
+                        item.isLoading = false;
+                        item.inlineData = { mimeType: 'text/plain', data: base64Data };
+                        item.fileName = longTextFile.name;
+                        item.fileContent = dataUrl;
+                        delete item.file;
+                        delete item.tempId;
+                        renderAttachments();
+                    }
+                };
+                reader.readAsDataURL(longTextFile);
+            }
+        }
     }
 
+
     function handleInputSubmission(e) {
+        const editor = e.target;
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            const editor = document.getElementById('ai-input');
-            const message = editor.innerText.trim();
+            const text = editor.innerText.trim();
+            const charCount = text.length;
             
-            if (isRequestPending) {
-                 alert("A request is already pending. Please wait.");
+            if (isRequestPending) return;
+
+            if (charCount > CHAR_LIMIT) {
+                alert(`Your message exceeds the character limit of ${formatCharLimit(CHAR_LIMIT)}. Please shorten it.`);
+                return;
+            }
+
+            if (text.length === 0 && attachedFiles.length === 0) {
+                 deactivateAI(); // Close if input is empty
                  return;
             }
 
-            if (message.length === 0 && attachedFiles.length === 0) {
-                alert("Please enter a message or attach a file.");
-                return;
-            }
-            
-            if (message.length > CHAR_LIMIT) {
-                alert(`Message exceeds the ${formatCharLimit(CHAR_LIMIT)} character limit.`);
-                return;
-            }
-
-            // 1. Add user message to history and UI
-            const userMessageParts = [];
-            if (message) { userMessageParts.push({ text: message }); }
-            
-            attachedFiles.forEach(file => {
-                 if (file.inlineData) userMessageParts.push({ inlineData: file.inlineData });
-            });
-            
-            chatHistory.push({ role: "user", parts: userMessageParts });
-
-            // Clear input and attachments
-            editor.innerHTML = '';
-            editor.style.height = '40px'; // Reset height
-            attachedFiles = [];
-            renderAttachments(); 
-            document.getElementById('ai-char-counter').textContent = `0 / ${formatCharLimit(CHAR_LIMIT)}`;
-            
-            const responseContainer = document.getElementById('ai-response-container');
-            if(responseContainer) responseContainer.classList.add('chat-active');
-            
-            renderChatHistory(); // Render the new user message
-
-            // 2. Prepare for Gemini response
-            isRequestPending = true;
+            // 1. Clear input and disable
             editor.contentEditable = false;
-            editor.blur(); // Remove focus
-            
+            editor.innerText = '';
+            editor.style.height = 'auto'; // Reset height
+            const charCounter = document.getElementById('ai-char-counter');
+            if (charCounter) { 
+                charCounter.textContent = `0 / ${formatCharLimit(CHAR_LIMIT)}`;
+                charCounter.classList.remove('limit-exceeded');
+            }
             const inputWrapper = document.getElementById('ai-input-wrapper');
             if (inputWrapper) { inputWrapper.classList.add('waiting'); }
 
-            const responseBubble = document.createElement('div');
-            responseBubble.className = 'ai-message-bubble gemini-response loading';
-            responseBubble.innerHTML = '<div class="ai-response-content"><div class="ai-loader-dots"><span></span><span></span><span></span></div></div>';
-            responseContainer.appendChild(responseBubble);
-            responseContainer.scrollTop = responseContainer.scrollHeight;
-            
-            // 3. Call API
-            callGoogleAI(responseBubble);
-        }
-    }
-
-    function handleCopyCode(e) {
-        const button = e.currentTarget;
-        const codeBlock = button.closest('.code-block').querySelector('code');
-        
-        if (codeBlock) {
-            const codeText = codeBlock.textContent || codeBlock.innerText;
-            navigator.clipboard.writeText(codeText).then(() => {
-                button.innerHTML = checkIconSVG;
-                button.classList.add('copied');
-                setTimeout(() => {
-                    button.innerHTML = copyIconSVG;
-                    button.classList.remove('copied');
-                }, 2000);
-            }).catch(err => {
-                console.error('Could not copy text: ', err);
-                alert('Failed to copy code.');
+            // 2. Prepare message parts
+            const userMessageParts = [];
+            if (text.length > 0) {
+                userMessageParts.push({ text: text });
+            }
+            attachedFiles.forEach(file => {
+                if (file.inlineData) {
+                    userMessageParts.push({ inlineData: file.inlineData });
+                }
             });
+
+            // 3. Update history (User message)
+            chatHistory.push({ role: "user", parts: userMessageParts });
+            
+            // 4. Reset attachments
+            attachedFiles = [];
+            renderAttachments();
+
+            // 5. Render chat history and loading bubble
+            renderChatHistory();
+
+            const responseContainer = document.getElementById('ai-response-container');
+            if (responseContainer) {
+                responseContainer.classList.add('chat-active'); // Ensure container shows
+            }
+            
+            const loadingBubble = document.createElement('div');
+            loadingBubble.className = 'ai-message-bubble gemini-response loading';
+            loadingBubble.innerHTML = `<div class="ai-loader-dots"><span></span><span></span><span></span></div>`;
+            responseContainer.appendChild(loadingBubble);
+            responseContainer.scrollTop = responseContainer.scrollHeight;
+
+            // 6. Call AI API
+            isRequestPending = true;
+            callGoogleAI(loadingBubble);
         }
     }
-
 
     /**
-     * Parses the raw Gemini response text, converting code fences and special blocks (e.g., graphs, KaTeX) into HTML.
-     * @param {string} text The raw text response from the Gemini API.
-     * @returns {string} The HTML string ready for injection.
+     * Takes the AI's markdown response and converts it to HTML, handling
+     * special blocks for code, KaTeX, and custom graphs.
+     * @param {string} markdownText The raw text response from the Gemini API.
+     * @returns {string} The HTML string.
      */
-    function parseGeminiResponse(text) {
-        // 1. Process Code Blocks
-        let html = text.replace(/```(.*?)\n([\s\S]*?)```/g, (match, lang, code) => {
-            const language = lang.trim() || 'plaintext';
-            const escapedCode = escapeHTML(code);
-            return `<div class="code-block"><button class="copy-code-btn" title="Copy code">${copyIconSVG}</button><pre><code class="language-${language}">${escapedCode}</code></pre></div>`;
+    function parseGeminiResponse(markdownText) {
+        let html = marked.parse(markdownText);
+        
+        // 1. Code Block Highlighting and Copy Button
+        html = html.replace(/<pre><code(?: class="lang-([^"]*)")?>([\s\S]*?)<\/code><\/pre>/gi, (match, lang, code) => {
+            const rawCode = code.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+            const language = lang || 'text';
+            return `
+                <div class="code-block-wrapper">
+                    <div class="code-header">
+                        <span class="code-language">${language.toUpperCase()}</span>
+                        <button class="copy-code-btn" data-code="${escapeHTML(rawCode)}">${copyIconSVG}<span class="copy-text">Copy</span></button>
+                    </div>
+                    <pre><code class="language-${language}">${code}</code></pre>
+                </div>
+            `;
+        });
+        
+        // 2. KaTeX Block Detection (Double-dollar notation)
+        html = html.replace(/<p>\s*\$\$(.*?)\$\$\s*<\/p>/gs, (match, tex) => {
+            const cleanTex = tex.replace(/\n/g, ' ').trim();
+            return `<div class="latex-render display-mode" data-tex="${escapeHTML(cleanTex)}" data-display-mode="true"></div>`;
         });
 
-        // 2. Process Custom Graph Blocks (assumes JSON format inside)
-        html = html.replace(/\[graph\]\s*([\s\S]*?)\s*\[\/graph\]/g, (match, graphJson) => {
+        // 3. KaTeX Inline Detection (Single-dollar notation) - Requires re-scanning HTML content
+        // This is complex to do robustly with regex on full HTML, so let's stick to inline code or a manual pre-processor if simple inline is required.
+        // For robustness, we stick to the default markdown processing for now, which is safe from KaTeX conflicts.
+
+        // 4. Custom Graph Block Detection
+        html = html.replace(/<pre><code(?: class="lang-graph")?>([\s\S]*?)<\/code><\/pre>/gi, (match, graphData) => {
+            // Unescape HTML entities that marked.js might have added
+            const rawData = graphData.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').trim();
+            
+            // Validate JSON and render placeholder
             try {
-                const trimmedJson = graphJson.trim();
-                JSON.parse(trimmedJson); // Validate JSON
-                // Use a placeholder that custom rendering functions can target
-                return `<div class="custom-graph-placeholder" data-graph-data='${trimmedJson}'><canvas></canvas></div>`;
+                JSON.parse(rawData);
+                return `
+                    <div class="custom-graph-placeholder" data-graph-data="${escapeHTML(rawData)}">
+                        <canvas width="400" height="300"></canvas>
+                        <p class="graph-caption">Interactive Graph</p>
+                    </div>
+                `;
             } catch (e) {
-                console.error("Failed to parse graph JSON:", e);
-                return `<p class="ai-error">[Graph Error] Malformed graph data. Details: ${escapeHTML(e.message)}</p>`;
+                return `<div class="ai-error">Error parsing graph data. Invalid JSON format.</div><pre><code>${graphData}</code></pre>`;
             }
         });
-
-        // 3. Process KaTeX Blocks for Display Mode ($$)
-        html = html.replace(/\$\$(.*?)\$\$/g, (match, formula) => {
-            const trimmedFormula = formula.trim();
-            // Use a specific class and data attributes for KaTeX rendering to occur post-injection
-            return `<div class="latex-render" data-tex="${escapeHTML(trimmedFormula)}" data-display-mode="true"></div>`;
-        });
-        
-        // 4. Process KaTeX Blocks for Inline Mode ($)
-        html = html.replace(/\$(.*?)\$/g, (match, formula) => {
-            const trimmedFormula = formula.trim();
-            if (trimmedFormula.length === 0) return match; // Avoid matching empty strings like '$$' which are handled by the block processor
-             // Use a specific class and data attributes for KaTeX rendering to occur post-injection
-            return `<span class="latex-render" data-tex="${escapeHTML(trimmedFormula)}" data-display-mode="false"></span>`;
-        });
-
-        // 5. Convert markdown to basic HTML (bold, italics, lists, paragraphs)
-        // Convert **bold** and *italics*
-        html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-        
-        // Convert blockquotes (lines starting with >)
-        html = html.replace(/^>\s?(.*)$/gm, '<blockquote><p>$1</p></blockquote>');
-
-        // Simple line break to paragraph conversion (if not inside a code/pre block)
-        html = html.split('\n\n').map(p => {
-             // If a paragraph contains a block element (like code-block, blockquote, or graph), don't wrap it in <p>
-            if (p.match(/<(div|blockquote|ul|ol|table|h[1-6]|hr|p)/i) || p.startsWith('<div class="code-block"')) {
-                // Also handle lists, which might not be separated by double newlines but should be wrapped
-                if (p.match(/^(\s*[\-\+\*]|\s*\d+\.)/m)) {
-                    return p;
-                }
-                return p;
-            }
-            let content = p.trim();
-            if (content.length === 0) return '';
-            
-            // Handle lists (markdown list items on separate lines)
-            const listMatch = content.match(/^(\s*[\-\+\*]|\s*\d+\.)/m);
-            if (listMatch) {
-                const listItems = content.split('\n').map(line => {
-                    const ulMatch = line.match(/^(\s*[\-\+\*]\s)(.*)/);
-                    const olMatch = line.match(/^(\s*\d+\.\s)(.*)/);
-                    if (ulMatch) return `<li>${ulMatch[2].trim()}</li>`;
-                    if (olMatch) return `<li>${olMatch[2].trim()}</li>`;
-                    return line;
-                }).join('');
-                
-                // Determine if it's an ordered or unordered list based on the first item
-                if (content.match(/^\s*\d+\./)) {
-                    return `<ol>${listItems}</ol>`;
-                } else {
-                    return `<ul>${listItems}</ul>`;
-                }
-            }
-            
-            // Convert remaining newlines to <br> within a paragraph
-            content = content.replace(/\n/g, '<br>');
-            return `<p>${content}</p>`;
-        }).join('');
-
 
         return html;
     }
 
-    // Utility to escape HTML entities
-    function escapeHTML(str) {
-        return str.replace(/[&<>"']/g, function(m) {
-            return {
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#39;'
-            }[m];
+    function handleCopyCode(e) {
+        const button = e.currentTarget;
+        const codeElement = button.closest('.code-block-wrapper').querySelector('code');
+        
+        // Get the inner text, which is already unescaped by parseGeminiResponse
+        const codeToCopy = codeElement.innerText;
+        
+        navigator.clipboard.writeText(codeToCopy).then(() => {
+            const originalText = button.querySelector('.copy-text').textContent;
+            button.innerHTML = checkIconSVG + '<span class="copy-text success-text">Copied!</span>';
+            setTimeout(() => {
+                button.innerHTML = copyIconSVG + `<span class="copy-text">${originalText}</span>`;
+            }, 2000);
+        }).catch(err => {
+            console.error('Could not copy text: ', err);
+            alert('Failed to copy code to clipboard.');
         });
     }
 
-    // Utility to format bytes
+    // Utility function to escape HTML for attributes
+    function escapeHTML(str) {
+        if (!str) return '';
+        return str.replace(/&/g, '&amp;')
+                  .replace(/</g, '&lt;')
+                  .replace(/>/g, '&gt;')
+                  .replace(/"/g, '&quot;')
+                  .replace(/'/g, '&#039;');
+    }
+    
+    // Utility function to format bytes for attachment size
     function formatBytes(bytes, decimals = 2) {
         if (bytes === 0) return '0 Bytes';
-
         const k = 1024;
         const dm = decimals < 0 ? 0 : decimals;
         const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-
         const i = Math.floor(Math.log(bytes) / Math.log(k));
-
         return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
     }
     
-    // Function to dynamically inject minimal styles for initial UI/fonts
+    // --- STYLES INJECTION ---
     function injectStyles() {
-        if (document.getElementById('ai-dynamic-styles')) return;
+        // Load Font Awesome (for settings gear)
+        if (!document.querySelector('link[href*="font-awesome"]')) {
+            const fontAwesomeLink = document.createElement('link');
+            fontAwesomeLink.rel = 'stylesheet';
+            fontAwesomeLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css';
+            document.head.appendChild(fontAwesomeLink);
+        }
 
-        // Load Font Awesome for the gear icon
-        const fontAwesome = document.createElement('link');
-        fontAwesome.rel = 'stylesheet';
-        fontAwesome.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css';
-        document.head.appendChild(fontAwesome);
-        
         // Load KaTeX CSS
-        const katexCSS = document.createElement('link');
-        katexCSS.rel = 'stylesheet';
-        katexCSS.id = 'ai-katex-styles';
-        katexCSS.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css';
-        document.head.appendChild(katexCSS);
+        if (!document.getElementById('ai-katex-styles')) {
+            const katexLink = document.createElement('link');
+            katexLink.id = 'ai-katex-styles';
+            katexLink.rel = 'stylesheet';
+            katexLink.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css';
+            document.head.appendChild(katexLink);
+        }
         
-        // Load custom fonts
-        const fonts = document.createElement('link');
-        fonts.rel = 'stylesheet';
-        fonts.id = 'ai-google-fonts';
-        fonts.href = 'https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Lora:wght@400;700&display=swap';
-        document.head.appendChild(fonts);
+        // Load Google Fonts (Lora, Merriweather)
+        if (!document.getElementById('ai-google-fonts')) {
+            const fontLink = document.createElement('link');
+            fontLink.id = 'ai-google-fonts';
+            fontLink.rel = 'stylesheet';
+            fontLink.href = 'https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400;1,700;1,900&display=swap';
+            document.head.appendChild(fontLink);
+        }
+
+        // Inject main styles
+        if (document.getElementById('ai-dynamic-styles')) return;
 
         const style = document.createElement('style');
         style.id = 'ai-dynamic-styles';
         style.textContent = `
             :root {
-                --ai-background: #111111;
-                --ai-foreground: #ffffff;
-                --ai-brand-color: #4285f4;
-                --ai-text-color: #e0e0e0;
-                --ai-border-color: #2a2a2a;
-                --ai-shadow-color: rgba(0, 0, 0, 0.4);
                 --ai-blue: #4285f4;
                 --ai-green: #34a853;
-                --ai-yellow: #fbbc04;
+                --ai-yellow: #fbbc05;
                 --ai-red: #ea4335;
-                --ai-loader-color: var(--ai-brand-color);
+                --ai-background: #1e1e1e;
+                --ai-text-color: #e0e0e0;
+                --ai-gemini-bubble: #2d2d2d;
+                --ai-user-bubble: ${userSettings.favoriteColor || DEFAULT_COLOR};
+                --ai-border-color: rgba(255, 255, 255, 0.1);
             }
+            
+            #ai-container * {
+                box-sizing: border-box;
+                font-family: 'Lora', serif;
+                transition: all 0.3s ease-in-out;
+            }
+            
             #ai-container {
                 position: fixed;
-                bottom: -100vh; /* Start off-screen */
+                bottom: 20px;
                 right: 20px;
-                width: 400px;
-                max-width: 90vw;
-                height: 500px;
+                width: min(500px, 90vw);
                 max-height: 90vh;
                 background-color: var(--ai-background);
-                border: 1px solid var(--ai-border-color);
+                color: var(--ai-text-color);
                 border-radius: 12px;
-                box-shadow: 0 4px 20px var(--ai-shadow-color);
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--ai-border-color);
                 display: flex;
                 flex-direction: column;
-                z-index: 10000;
-                transform: translateY(0);
-                transition: bottom 0.5s ease-out, opacity 0.5s ease-out;
+                z-index: 2147483647;
+                transform: translateY(100%) scale(0.9);
                 opacity: 0;
-                font-family: 'Lora', sans-serif;
-            }
-            #ai-container.active {
-                bottom: 20px;
-                opacity: 1;
-            }
-            #ai-container.deactivating {
-                bottom: -100vh;
-                opacity: 0;
-            }
-            #ai-brand-title {
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                text-align: center;
-                font-family: 'Merriweather', serif;
-                font-size: 1.5em;
-                padding: 10px 0;
-                color: var(--ai-foreground);
-                background: linear-gradient(90deg, var(--ai-blue), var(--ai-green), var(--ai-yellow), var(--ai-red));
-                background-clip: text;
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                letter-spacing: 1px;
-                border-top-left-radius: 10px;
-                border-top-right-radius: 10px;
-                animation: glow 4s infinite alternate;
                 pointer-events: none;
+                transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s ease-out;
             }
+            
+            #ai-container.active {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+                pointer-events: all;
+            }
+
+            #ai-container.deactivating {
+                transform: translateY(100%) scale(0.9);
+                opacity: 0;
+            }
+
+            /* Header and Branding */
+            #ai-brand-title {
+                display: none; /* Hidden for persistent title */
+            }
+
             #ai-persistent-title {
-                background-color: var(--ai-brand-color);
-                color: var(--ai-foreground);
-                padding: 10px 15px;
-                font-size: 1.1em;
-                font-weight: bold;
-                border-top-left-radius: 10px;
-                border-top-right-radius: 10px;
-                text-align: center;
+                padding: 15px;
+                font-family: 'Merriweather', serif;
+                font-weight: 700;
+                font-size: 1.1rem;
+                color: #ffffff;
+                text-align: left;
+                background: linear-gradient(90deg, var(--ai-blue), var(--ai-green));
+                border-radius: 12px 12px 0 0;
+                position: relative;
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
             }
+
             #ai-close-button {
                 position: absolute;
-                top: 10px;
+                top: 15px;
                 right: 15px;
-                color: var(--ai-foreground);
-                font-size: 1.5em;
-                cursor: pointer;
+                font-size: 1.5rem;
                 line-height: 1;
-                z-index: 10001;
-                transition: color 0.2s;
+                cursor: pointer;
+                color: #ffffff;
+                opacity: 0.8;
+                z-index: 10;
             }
+
             #ai-close-button:hover {
-                color: var(--ai-red);
+                opacity: 1;
             }
+
+            /* Welcome Message */
             #ai-welcome-message {
                 padding: 20px;
                 text-align: center;
-                color: var(--ai-text-color);
                 border-bottom: 1px solid var(--ai-border-color);
-                transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
-                max-height: 200px;
                 opacity: 1;
+                max-height: 150px;
+                overflow: hidden;
+                transition: max-height 0.4s ease-out, padding 0.4s ease-out, opacity 0.4s ease-out;
             }
+
             #ai-container.chat-active #ai-welcome-message {
                 max-height: 0;
-                padding-top: 0;
-                padding-bottom: 0;
+                padding: 0 20px;
                 opacity: 0;
-                overflow: hidden;
-                border-bottom: none;
             }
+
             #ai-welcome-message h2 {
-                margin: 0 0 10px 0;
                 font-family: 'Merriweather', serif;
-                color: var(--ai-foreground);
+                color: var(--ai-blue);
+                margin: 0 0 10px 0;
+                font-size: 1.2rem;
             }
+
             #ai-welcome-message p {
-                margin: 5px 0;
-                font-size: 0.9em;
+                margin: 0 0 8px 0;
+                font-size: 0.85rem;
+                color: #a0a0a0;
             }
+            
             .shortcut-tip {
-                font-style: italic;
-                color: #888;
-                font-size: 0.8em;
-                margin-top: 15px !important;
+                font-size: 0.75rem !important;
+                color: #6a6a6a !important;
             }
+
+            /* Response Container */
             #ai-response-container {
                 flex-grow: 1;
                 overflow-y: auto;
-                padding: 15px;
+                padding: 10px 15px;
                 display: flex;
                 flex-direction: column;
                 gap: 10px;
-            }
-            #ai-response-container::-webkit-scrollbar { width: 6px; }
-            #ai-response-container::-webkit-scrollbar-thumb { background-color: #555; border-radius: 3px; }
-            #ai-response-container::-webkit-scrollbar-track { background-color: var(--ai-background); }
-
-            #ai-compose-area {
-                border-top: 1px solid var(--ai-border-color);
-                padding: 10px;
-                position: relative;
-            }
-            #ai-input-wrapper {
-                display: flex;
-                align-items: flex-end;
-                background-color: #222;
-                border-radius: 8px;
-                border: 1px solid #333;
-                transition: all 0.2s;
-            }
-            #ai-input-wrapper.waiting {
-                border-color: var(--ai-brand-color);
-                box-shadow: 0 0 5px var(--ai-brand-color);
-                pointer-events: none;
+                scroll-behavior: smooth;
             }
             
-            #ai-attachment-preview {
-                display: none;
-                flex-wrap: nowrap;
-                overflow-x: auto;
-                padding: 5px 10px;
-                gap: 5px;
-                border-bottom: 1px solid #333;
-                -webkit-overflow-scrolling: touch;
-            }
-            #ai-input-wrapper.has-attachments #ai-input {
-                 border-top-left-radius: 0;
-                 border-top-right-radius: 0;
-            }
-
-            #ai-input {
-                flex-grow: 1;
-                min-height: 40px;
-                max-height: ${MAX_INPUT_HEIGHT}px;
-                color: var(--ai-foreground);
-                padding: 10px;
-                outline: none;
-                white-space: pre-wrap;
-                word-wrap: break-word;
-                font-size: 0.95em;
-                cursor: text;
-                line-height: 1.4;
-                overflow-y: hidden;
-            }
-            #ai-input-wrapper.waiting #ai-input {
-                color: #555;
+            #ai-response-container::-webkit-scrollbar {
+                width: 6px;
             }
             
-            #ai-attachment-button, #ai-settings-button {
-                background: none;
-                border: none;
-                color: var(--ai-text-color);
-                padding: 10px 10px 10px 5px;
-                cursor: pointer;
-                transition: color 0.2s;
+            #ai-response-container::-webkit-scrollbar-thumb {
+                background-color: var(--ai-user-bubble);
+                border-radius: 3px;
             }
-            #ai-attachment-button:hover { color: var(--ai-green); }
-            #ai-settings-button { padding-left: 5px; padding-right: 10px; }
-            #ai-settings-button:hover { color: var(--ai-brand-color); }
-            #ai-settings-button.active { color: var(--ai-brand-color); }
             
+            /* Message Bubbles */
             .ai-message-bubble {
-                padding: 10px;
-                border-radius: 12px;
                 max-width: 85%;
+                padding: 10px 15px;
+                border-radius: 18px;
                 line-height: 1.5;
-                font-size: 0.9em;
+                font-size: 0.9rem;
+                word-wrap: break-word;
+                white-space: pre-wrap;
+                position: relative;
                 opacity: 0;
-                transform: translateY(10px);
-                animation: message-pop-in 0.3s ease-out forwards;
+                animation: message-pop-in 0.4s ease-out forwards;
             }
-            .user-message {
-                align-self: flex-end;
-                background-color: var(--ai-brand-color);
-                color: var(--ai-foreground);
-                border-bottom-right-radius: 2px;
-            }
+            
             .gemini-response {
+                background-color: var(--ai-gemini-bubble);
+                border-top-left-radius: 4px;
                 align-self: flex-start;
-                background-color: #333333;
-                color: var(--ai-text-color);
-                border: 1px solid #444;
-                border-bottom-left-radius: 2px;
+                border: 1px solid rgba(255, 255, 255, 0.05);
             }
-            .ai-response-content {
-                text-align: left;
+            
+            .user-message {
+                background-color: var(--ai-user-bubble);
+                border-top-right-radius: 4px;
+                align-self: flex-end;
+                color: var(--ai-background);
             }
+
             .ai-error {
                 color: var(--ai-red);
                 font-weight: bold;
             }
-            .ai-message-bubble p { margin: 0; padding: 0; text-align: left; }
-            .ai-message-bubble ul, .ai-message-bubble ol { margin: 10px 0; padding-left: 20px; text-align: left; list-style-position: outside; }
-            .ai-message-bubble li { margin-bottom: 5px; }
-            .ai-message-bubble strong { color: var(--ai-foreground); }
-            
-            /* Code Block Styling */
-            .code-block {
-                position: relative;
-                margin: 10px 0;
+
+            /* Code Blocks */
+            .ai-response-content pre {
                 background-color: #000;
-                border-radius: 5px;
-                padding: 0;
-                overflow: hidden;
-            }
-            .code-block pre {
-                margin: 0;
-                padding: 15px;
+                padding: 10px;
+                border-radius: 6px;
                 overflow-x: auto;
-                font-size: 0.85em;
-                color: #f8f8f2;
+                margin: 10px 0;
+                position: relative;
+                font-family: monospace;
+                font-size: 0.8rem;
+                line-height: 1.3;
+                border: 1px solid rgba(255, 255, 255, 0.1);
             }
-            .code-block code {
-                display: block;
+            
+            .ai-response-content code {
+                white-space: pre-wrap;
             }
+
+            .code-block-wrapper {
+                margin: 10px 0;
+                border-radius: 6px;
+                overflow: hidden;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .code-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 5px 10px;
+                background-color: #222;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                font-size: 0.75rem;
+                color: #aaa;
+            }
+            
+            .code-block-wrapper pre {
+                margin: 0 !important;
+                border: none !important;
+                background-color: #111 !important;
+                padding: 10px !important;
+                font-size: 0.8rem;
+            }
+
             .copy-code-btn {
-                position: absolute;
-                top: 5px;
-                right: 5px;
-                background-color: rgba(255, 255, 255, 0.1);
-                color: #ddd;
+                background: none;
                 border: none;
-                padding: 5px 8px;
-                border-radius: 4px;
+                color: #aaa;
                 cursor: pointer;
-                font-size: 0.9em;
-                transition: background-color 0.2s, color 0.2s;
+                padding: 3px 8px;
+                border-radius: 4px;
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                transition: background-color 0.2s;
             }
+
             .copy-code-btn:hover {
-                background-color: rgba(255, 255, 255, 0.2);
-                color: var(--ai-brand-color);
+                background-color: #3a3a3a;
+                color: #fff;
             }
-            .copy-code-btn.copied {
-                background-color: var(--ai-green);
-                color: var(--ai-foreground);
+            
+            .copy-code-btn svg {
+                width: 14px;
+                height: 14px;
+            }
+
+            .success-text {
+                color: var(--ai-green);
+            }
+
+
+            /* KaTeX */
+            .latex-render {
+                margin: 10px 0;
+                padding: 5px;
+                overflow-x: auto;
+                text-align: center;
+            }
+
+            .latex-render .katex {
+                font-size: 1em;
+            }
+            
+            /* Custom Graphs */
+            .custom-graph-placeholder {
+                margin: 10px 0;
+                padding: 10px;
+                background-color: #111;
+                border-radius: 6px;
+                position: relative;
+                min-height: 300px;
+                display: flex;
+                flex-direction: column;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            
+            .custom-graph-placeholder canvas {
+                width: 100%;
+                flex-grow: 1;
+                min-height: 250px;
+            }
+            
+            .graph-caption {
+                text-align: center;
+                font-size: 0.75rem;
+                color: #888;
+                margin-top: 5px;
+            }
+
+
+            /* Compose Area */
+            #ai-compose-area {
+                padding: 10px 15px;
+                border-top: 1px solid var(--ai-border-color);
+                position: relative;
+            }
+            
+            #ai-input-wrapper {
+                display: flex;
+                align-items: flex-end;
+                padding: 8px;
+                border-radius: 8px;
+                background-color: #333;
+                border: 1px solid #555;
+            }
+            
+            #ai-input-wrapper.waiting {
+                box-shadow: 0 0 5px var(--ai-blue), inset 0 0 5px var(--ai-blue);
+                animation: gemini-glow 1s infinite alternate;
+            }
+            
+            #ai-input {
+                flex-grow: 1;
+                min-height: 20px;
+                max-height: ${MAX_INPUT_HEIGHT}px;
+                overflow-y: auto;
+                padding: 2px 5px;
+                margin-right: 10px;
+                color: var(--ai-text-color);
+                cursor: text;
+                white-space: pre-wrap;
+                word-break: break-word;
+                font-size: 0.9rem;
+                line-height: 1.4;
+            }
+            
+            #ai-input:focus {
+                outline: none;
+            }
+
+            #ai-input-wrapper button {
+                background: none;
+                border: none;
+                color: #aaa;
+                cursor: pointer;
+                padding: 0 5px;
+                opacity: 0.7;
+            }
+
+            #ai-input-wrapper button:hover {
+                opacity: 1;
+                color: var(--ai-blue);
+            }
+
+            #ai-settings-button {
+                color: #888;
+                font-size: 1.1rem;
+            }
+            
+            #ai-settings-button.active {
+                color: var(--ai-user-bubble);
+            }
+            
+            #ai-attachment-button {
+                 color: #888;
             }
 
             /* Attachment Preview */
-            .attachment-card {
-                position: relative;
-                flex-shrink: 0;
-                width: 70px;
-                height: 70px;
-                border: 1px solid #444;
-                border-radius: 6px;
-                overflow: hidden;
-                margin: 5px 0;
-                cursor: pointer;
-                background-color: #333;
-                transition: border-color 0.2s;
+            #ai-attachment-preview {
+                display: none;
+                flex-wrap: wrap;
+                gap: 5px;
+                padding-top: 5px;
+                padding-bottom: 8px;
+                border-top: 1px solid var(--ai-border-color);
+                margin: -8px 0 8px 0;
+                max-height: 100px;
+                overflow-y: auto;
             }
-            .attachment-card:hover { border-color: var(--ai-brand-color); }
-            .attachment-card img {
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-            }
-            .attachment-card .file-icon {
-                display: block;
-                text-align: center;
-                font-size: 2.5em;
-                line-height: 70px;
-                color: var(--ai-brand-color);
-            }
-            .attachment-card .file-name {
-                position: absolute;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                background-color: rgba(0, 0, 0, 0.7);
-                color: var(--ai-foreground);
-                font-size: 0.7em;
-                padding: 2px 4px;
-                white-space: nowrap;
-                overflow: hidden;
-            }
-            .attachment-card .file-name span {
-                display: inline-block;
-            }
-            .attachment-card .file-name.marquee span {
-                 animation: marquee 5s linear infinite;
-            }
-            .attachment-card .file-name.marquee span:last-child {
-                position: absolute;
-                left: 100%;
-                padding-left: 10px;
-            }
-            .file-type-badge {
-                position: absolute;
-                top: 2px;
-                left: 2px;
-                background-color: var(--ai-brand-color);
-                color: white;
-                font-size: 0.6em;
-                padding: 1px 4px;
-                border-radius: 3px;
-                font-weight: bold;
-            }
-            .remove-attachment-btn {
-                position: absolute;
-                top: -5px;
-                right: -5px;
-                background-color: var(--ai-red);
-                color: white;
-                border: 1px solid var(--ai-foreground);
-                border-radius: 50%;
-                width: 18px;
-                height: 18px;
-                line-height: 1;
-                font-size: 12px;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 10;
-                padding: 0;
+
+            #ai-input-wrapper.has-attachments {
+                flex-direction: column;
+                align-items: flex-start;
+                padding-top: 15px;
             }
             
-            /* Loading State */
-            .attachment-card.loading {
-                 background-color: #1a1a1a;
-                 opacity: 0.6;
-                 pointer-events: none;
+            #ai-input-wrapper.has-attachments #ai-attachment-preview {
+                display: flex;
+                width: 100%;
+                border-top: none;
+                margin: 0;
+                padding: 0 5px;
             }
-            .ai-loader {
+            
+            #ai-input-wrapper.has-attachments #ai-input {
+                margin-top: 10px;
+                width: 100%;
+                min-height: 40px;
+            }
+            
+            #ai-input-wrapper.has-attachments #ai-attachment-button,
+            #ai-input-wrapper.has-attachments #ai-settings-button {
                 position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
+                top: 10px;
+            }
+            
+            #ai-input-wrapper.has-attachments #ai-attachment-button {
+                right: 50px;
+            }
+            
+            #ai-input-wrapper.has-attachments #ai-settings-button {
+                right: 10px;
+            }
+
+            .attachment-card {
+                position: relative;
                 display: flex;
                 align-items: center;
+                background-color: #3a3a3a;
+                border-radius: 4px;
+                padding: 3px 8px;
+                font-size: 0.7rem;
+                border: 1px solid #555;
+                cursor: pointer;
+                overflow: hidden;
+                max-width: 100%;
+                height: 30px;
+            }
+            
+            .attachment-card:hover {
+                border-color: var(--ai-user-bubble);
+            }
+
+            .attachment-card img {
+                width: 24px;
+                height: 24px;
+                object-fit: cover;
+                border-radius: 2px;
+                margin-right: 5px;
+            }
+            
+            .attachment-card .file-icon {
+                font-size: 1.2rem;
+                margin-right: 5px;
+            }
+            
+            .attachment-card.loading {
+                background-color: #4a4a4a;
+                color: #bbb;
+            }
+
+            .attachment-card .file-info {
+                display: flex;
+                flex-direction: column;
                 justify-content: center;
-                background-color: rgba(0, 0, 0, 0.5);
-                z-index: 5;
+                overflow: hidden;
+                width: 80px;
+                margin-right: 5px;
             }
-            .ai-loader::after {
-                content: "";
-                width: 20px;
-                height: 20px;
-                border: 3px solid #ccc;
-                border-top-color: var(--ai-loader-color);
-                border-radius: 50%;
-                animation: spin 1s linear infinite;
+
+            .attachment-card .file-name {
+                white-space: nowrap;
+                overflow: hidden;
+                position: relative;
+                color: #bbb;
             }
-            .gemini-response.loading {
-                 pointer-events: none;
-                 border: 1px solid var(--ai-brand-color);
-                 animation: gemini-glow 4s infinite alternate;
+
+            .attachment-card .file-name.marquee span {
+                display: inline-block;
+                padding-left: 100%; /* Push the duplicate text off-screen initially */
+                animation: marquee linear infinite;
             }
+
+            .attachment-card .file-name.marquee {
+                width: 100%;
+            }
+
+            @keyframes marquee {
+                0%   { transform: translate(0, 0); }
+                100% { transform: translate(-100%, 0); }
+            }
+
+            .file-type-badge {
+                font-size: 0.6rem;
+                padding: 1px 4px;
+                background-color: var(--ai-blue);
+                color: #fff;
+                border-radius: 2px;
+                margin-left: 5px;
+            }
+            
+            .remove-attachment-btn {
+                background: none !important;
+                border: none !important;
+                color: #fff !important;
+                font-size: 0.9rem !important;
+                cursor: pointer;
+                padding: 0 5px !important;
+                opacity: 0.8 !important;
+            }
+            
+            .remove-attachment-btn:hover {
+                color: var(--ai-red) !important;
+            }
+            
+            .sent-attachments {
+                font-style: italic;
+                font-size: 0.75rem;
+                color: #ccc;
+                margin-top: 5px;
+                border-top: 1px dashed rgba(255, 255, 255, 0.1);
+                padding-top: 5px;
+            }
+
+            /* Loader */
             .ai-loader-dots {
                 display: flex;
                 gap: 5px;
-                align-items: center;
-                justify-content: center;
-                height: 100%;
             }
+
             .ai-loader-dots span {
+                display: block;
                 width: 8px;
                 height: 8px;
-                background-color: var(--ai-brand-color);
                 border-radius: 50%;
-                display: inline-block;
-                animation: loading-dot 1.4s infinite ease-in-out both;
+                background-color: #ccc;
+                animation: wave 1.5s infinite ease-in-out;
             }
-            .ai-loader-dots span:nth-child(1) { animation-delay: -0.32s; }
-            .ai-loader-dots span:nth-child(2) { animation-delay: -0.16s; }
-            .ai-loader-dots span:nth-child(3) { animation-delay: 0s; }
 
-            #ai-char-counter {
-                text-align: right;
-                padding: 5px 10px;
-                font-size: 0.75em;
-                color: #888;
+            .ai-loader-dots span:nth-child(1) { animation-delay: 0s; }
+            .ai-loader-dots span:nth-child(2) { animation-delay: 0.2s; }
+            .ai-loader-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+            @keyframes wave {
+                0%, 60%, 100% { transform: initial; }
+                30% { transform: translateY(-5px); }
             }
+            
+            /* Char Counter */
+            #ai-char-counter {
+                font-size: 0.7rem;
+                color: #aaa;
+                text-align: right;
+                padding: 0 15px 5px 0;
+            }
+            
             #ai-char-counter.limit-exceeded {
                 color: var(--ai-red);
                 font-weight: bold;
             }
-            
+
             /* Settings Menu */
             #ai-settings-menu {
                 position: absolute;
-                bottom: calc(100% + 10px);
-                right: 0;
-                width: 100%;
-                background-color: #222;
-                border: 1px solid #444;
+                bottom: 100%;
+                right: 15px;
+                width: 250px;
+                background-color: var(--ai-gemini-bubble);
                 border-radius: 8px;
                 padding: 15px;
-                box-shadow: 0 4px 10px var(--ai-shadow-color);
-                z-index: 999;
+                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+                transform: scale(0.9);
                 opacity: 0;
-                transform: translateY(10px);
                 pointer-events: none;
-                transition: opacity 0.3s, transform 0.3s;
-                color: var(--ai-text-color);
+                transform-origin: bottom right;
+                z-index: 100;
             }
+
             #ai-settings-menu.active {
+                transform: scale(1);
                 opacity: 1;
-                transform: translateY(0);
                 pointer-events: all;
             }
+
             .menu-header {
-                font-family: 'Merriweather', serif;
-                font-size: 1.1em;
-                margin-bottom: 15px;
-                color: var(--ai-foreground);
-                border-bottom: 1px dashed #444;
-                padding-bottom: 8px;
-            }
-            .setting-group {
+                font-size: 1rem;
+                font-weight: bold;
                 margin-bottom: 10px;
+                color: var(--ai-blue);
+                border-bottom: 1px solid var(--ai-border-color);
+                padding-bottom: 5px;
+                font-family: 'Merriweather', serif;
             }
-            .setting-group label {
-                display: block;
-                font-size: 0.9em;
-                margin-bottom: 3px;
-                color: var(--ai-foreground);
+
+            .setting-group {
+                margin-bottom: 15px;
             }
-            .setting-group input:not([type="color"]), .setting-group select {
-                width: 100%;
-                padding: 8px;
-                border: 1px solid #555;
-                border-radius: 4px;
-                background-color: #333;
-                color: var(--ai-foreground);
-                box-sizing: border-box;
-            }
-             .setting-group-split {
+            
+            .setting-group-split {
                 display: flex;
-                gap: 10px;
+                gap: 15px;
             }
+            
             .setting-group-split .setting-group {
                 flex: 1;
             }
-            .setting-note {
-                font-size: 0.75em;
-                color: #888;
-                margin-top: 2px;
+
+            #ai-settings-menu label {
+                display: block;
+                font-size: 0.8rem;
+                margin-bottom: 5px;
+                color: #ccc;
             }
+
+            #ai-settings-menu input, 
+            #ai-settings-menu select {
+                width: 100%;
+                padding: 8px;
+                border: 1px solid #444;
+                border-radius: 4px;
+                background-color: #333;
+                color: var(--ai-text-color);
+                font-size: 0.85rem;
+                box-sizing: border-box;
+            }
+            
+            #ai-settings-menu input[type="color"] {
+                height: 35px;
+                padding: 0;
+            }
+
+            .setting-note {
+                font-size: 0.7rem;
+                color: #888;
+                margin-top: 4px;
+                margin-bottom: 0;
+            }
+
             #settings-save-button {
                 width: 100%;
                 padding: 10px;
-                background-color: var(--ai-brand-color);
-                color: white;
+                background-color: var(--ai-blue);
+                color: #fff;
                 border: none;
                 border-radius: 4px;
                 cursor: pointer;
-                margin-top: 15px;
+                font-size: 0.9rem;
                 font-weight: bold;
-                transition: background-color 0.2s;
-            }
-            #settings-save-button:hover {
-                background-color: #3875d9;
-            }
-            
-            /* KaTeX Styling */
-            .katex { font-size: 0.95em; }
-            .katex-display { margin: 1em 0; padding: 0.5em 0; overflow-x: auto; overflow-y: hidden; }
-            .latex-render { color: var(--ai-foreground); }
-            
-            /* Custom Graph Styling */
-            .custom-graph-placeholder {
-                width: 100%;
-                min-height: 200px;
-                max-height: 300px;
-                margin: 10px 0;
-                border: 1px solid #444;
-                border-radius: 6px;
-                overflow: hidden;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background-color: #1a1a1a;
-            }
-            .custom-graph-placeholder canvas {
-                display: block;
-                width: 100%;
-                height: 100%;
+                margin-top: 10px;
             }
 
-            /* Keyframes */
+            #settings-save-button:hover {
+                background-color: #3b74db;
+            }
+
+            /* File Preview Modal */
+            #ai-preview-modal {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.8);
+                z-index: 2147483647;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+
+            .modal-content {
+                background-color: var(--ai-background);
+                padding: 20px;
+                border-radius: 8px;
+                max-width: 90%;
+                max-height: 90%;
+                overflow: auto;
+                position: relative;
+            }
+
+            .modal-content h3 {
+                color: var(--ai-blue);
+                margin-top: 0;
+                border-bottom: 1px solid var(--ai-border-color);
+                padding-bottom: 10px;
+            }
+
+            .modal-content .close-button {
+                position: absolute;
+                top: 10px;
+                right: 20px;
+                font-size: 2rem;
+                cursor: pointer;
+                color: #aaa;
+            }
+
+            .modal-content .close-button:hover {
+                color: var(--ai-red);
+            }
+
+            .preview-area {
+                padding: 10px 0;
+            }
+
+            .download-button {
+                display: inline-block;
+                padding: 10px 15px;
+                background-color: var(--ai-green);
+                color: #fff;
+                text-decoration: none;
+                border-radius: 4px;
+                margin-top: 10px;
+            }
+
+            .ai-message-bubble p { margin: 0; padding: 0; text-align: left; }
+            .ai-message-bubble ul, .ai-message-bubble ol { margin: 10px 0; padding-left: 20px; text-align: left; list-style-position: outside; }
+            .ai-message-bubble li { margin-bottom: 5px; }
+
             @keyframes glow { 0%,100% { box-shadow: 0 0 5px rgba(255,255,255,.15), 0 0 10px rgba(255,255,255,.1); } 50% { box-shadow: 0 0 10px rgba(255,255,255,.25), 0 0 20px rgba(255,255,255,.2); } }
             @keyframes gemini-glow { 0%,100% { box-shadow: 0 0 8px 2px var(--ai-blue); } 25% { box-shadow: 0 0 8px 2px var(--ai-green); } 50% { box-shadow: 0 0 8px 2px var(--ai-yellow); } 75% { box-shadow: 0 0 8px 2px var(--ai-red); } }
             @keyframes spin { to { transform: rotate(360deg); } }
-            @keyframes loading-dot {
-                0%, 80%, 100% { transform: scale(0); }
-                40% { transform: scale(1.0); }
-            }
             @keyframes message-pop-in { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } }
-            @keyframes marquee {
-                0% { transform: translateX(0); }
-                100% { transform: translateX(calc(-100% - 10px)); }
-            }
+
         `;
         document.head.appendChild(style);
     }
     
-    // Attach event listener for activation
-    document.addEventListener('keydown', handleKeyDown);
+    // --- INITIALIZATION ---
+    if (typeof marked === 'undefined') {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/marked/marked.min.js';
+        script.onload = () => {
+             // Set marked options for security and rendering
+             marked.setOptions({
+                gfm: true,
+                breaks: true,
+                sanitize: false, // Allow some HTML, but rely on the custom parser for safety
+                silent: true
+            });
+            window.addEventListener('keydown', handleKeyDown);
+        };
+        document.head.appendChild(script);
+    } else {
+        window.addEventListener('keydown', handleKeyDown);
+    }
+
 })();
