@@ -21,9 +21,9 @@
     const API_KEY = 'AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro'; 
     const BASE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/`; 
     const AUTHORIZED_PRO_USER = '4simpleproblems@gmail.com'; 
-    const MAX_INPUT_HEIGHT = 200;
+    const MAX_INPUT_HEIGHT = 180;
     const CHAR_LIMIT = 10000;
-    const PASTE_TO_FILE_THRESHOLD = 1000;
+    const PASTE_TO_FILE_THRESHOLD = 10000;
     const MAX_ATTACHMENTS_PER_MESSAGE = 10;
 
     const DEFAULT_NICKNAME = 'User';
@@ -533,7 +533,7 @@ Formatting Rules (MUST FOLLOW):
             case 'CASUAL':
             default:
                 model = 'gemini-2.5-flash-lite';
-                personaInstruction += `\n\n**Current Persona: Standard Assistant (2.5-Flash-Lite).** You are balanced, helpful, and concise. Use a friendly and casual tone. Your primary function is efficient conversation.`;
+                personaInstruction += `\n\n**Current Persona: Standard Assistant (2.5-Flash-Lite).** You are balanced, helpful, and concise. Use a friendly and casual tone. Your primary function is efficient conversation. Make sure to be highly concise, making sure to not write too much.`;
                 break;
         }
 
