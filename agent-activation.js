@@ -8,6 +8,8 @@
  * UPDATED: Implemented browser color selector for user favorite color.
  * UPDATED: AI container does not load on DOMContentLoaded; requires Ctrl + \ shortcut.
  * UPDATED: Ensured Ctrl + \ shortcut for activation/deactivation is fully functional.
+ * NEW: Added KaTeX for high-quality rendering of mathematical formulas and equations.
+ * NEW: Added a graphing mode using Plotly.js for interactive data visualization.
  */
 (function() {
     // --- CONFIGURATION ---
@@ -20,7 +22,6 @@
 
     const DEFAULT_NICKNAME = 'User';
     const DEFAULT_COLOR = '#4285f4'; // Google Blue
-    /* REMOVED: FAVORITE_COLORS array */
 
     // --- ICONS (for event handlers) ---
     const copyIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
@@ -80,18 +81,58 @@
         return location;
     }
 
-    function renderLatexDisplay(container) {
-        container.querySelectorAll('.latex-display').forEach(element => {
+    /**
+     * Renders mathematical formulas using KaTeX.
+     * @param {HTMLElement} container The parent element to search for formulas.
+     */
+    function renderKaTeX(container) {
+        if (typeof katex === 'undefined') {
+            console.warn("KaTeX not loaded, skipping render.");
+            return;
+        }
+        container.querySelectorAll('.latex-render').forEach(element => {
             const mathText = element.dataset.tex;
-            element.innerHTML = `
-                <div class="latex-fallback-box">
-                    <span class="latex-formula-text">$$${escapeHTML(mathText)}$$</span>
-                    <span class="latex-note">(Full rendering requires MathJax/KaTeX)</span>
-                </div>
-            `;
-            element.classList.add('latex-fallback-active');
+            const displayMode = element.dataset.displayMode === 'true';
+            try {
+                katex.render(mathText, element, {
+                    throwOnError: false,
+                    displayMode: displayMode
+                });
+            } catch (e) {
+                console.error("KaTeX rendering error:", e);
+                element.textContent = `[KaTeX Error] ${e.message}`;
+            }
         });
     }
+
+    /**
+     * Renders interactive graphs using Plotly.js.
+     * @param {HTMLElement} container The parent element to search for graph placeholders.
+     */
+    function renderGraphs(container) {
+        if (typeof Plotly === 'undefined') {
+            console.warn("Plotly not loaded, skipping render.");
+            return;
+        }
+        container.querySelectorAll('.plotly-graph-placeholder').forEach(element => {
+            try {
+                const graphData = JSON.parse(element.dataset.graphData);
+                const layout = {
+                    ...(graphData.layout || {}),
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    plot_bgcolor: 'rgba(255,255,255,0.05)',
+                    font: { color: '#ccc' },
+                    xaxis: { gridcolor: 'rgba(255,255,255,0.1)' },
+                    yaxis: { gridcolor: 'rgba(255,255,255,0.1)' }
+                };
+                Plotly.newPlot(element, graphData.data, layout, {responsive: true});
+            } catch (e) {
+                console.error("Plotly rendering error:", e);
+                element.textContent = `[Plotly Error] Invalid graph data provided.`;
+            }
+        });
+    }
+
 
     // --- END REPLACED/MODIFIED FUNCTIONS ---
 
@@ -133,7 +174,6 @@
         
         const container = document.createElement('div');
         container.id = 'ai-container';
-        // Removed: container.dataset.agent = currentAgent;
         
         const brandTitle = document.createElement('div');
         brandTitle.id = 'ai-brand-title';
@@ -183,7 +223,6 @@
         attachmentButton.title = 'Attach files';
         attachmentButton.onclick = () => handleFileUpload();
         
-        // NEW: Settings Button
         const settingsButton = document.createElement('button');
         settingsButton.id = 'ai-settings-button';
         settingsButton.innerHTML = '<i class="fa-solid fa-gear"></i>';
@@ -197,9 +236,9 @@
         inputWrapper.appendChild(attachmentPreviewContainer);
         inputWrapper.appendChild(visualInput);
         inputWrapper.appendChild(attachmentButton);
-        inputWrapper.appendChild(settingsButton); // Use new button
+        inputWrapper.appendChild(settingsButton);
         
-        composeArea.appendChild(createSettingsMenu()); // Use new menu
+        composeArea.appendChild(createSettingsMenu());
         composeArea.appendChild(inputWrapper);
 
         container.appendChild(brandTitle);
@@ -209,6 +248,15 @@
         container.appendChild(responseContainer);
         container.appendChild(composeArea);
         container.appendChild(charCounter);
+        
+        // --- Add KaTeX and Plotly ---
+        const plotlyScript = document.createElement('script');
+        plotlyScript.src = 'https://cdn.plot.ly/plotly-2.12.1.min.js';
+        container.appendChild(plotlyScript);
+
+        const katexScript = document.createElement('script');
+        katexScript.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.js';
+        container.appendChild(katexScript);
         
         document.body.appendChild(container);
 
@@ -235,6 +283,8 @@
                 if (styles) styles.remove();
                 const fonts = document.getElementById('ai-google-fonts');
                 if (fonts) fonts.remove();
+                 const katexCSS = document.getElementById('ai-katex-styles');
+                if(katexCSS) katexCSS.remove();
                 const fontAwesome = document.querySelector('link[href*="font-awesome"]');
                 if (fontAwesome) fontAwesome.remove();
             }, 500);
@@ -262,7 +312,8 @@
                     button.addEventListener('click', handleCopyCode);
                 });
 
-                renderLatexDisplay(bubble);
+                renderKaTeX(bubble);
+                renderGraphs(bubble);
             } else {
                 let bubbleContent = ''; let textContent = ''; let fileCount = 0;
                 message.parts.forEach(part => {
@@ -278,32 +329,34 @@
         setTimeout(() => responseContainer.scrollTop = responseContainer.scrollHeight, 50);
     }
     
-    /**
-     * Dynamically generates a system instruction based on the user's latest query
-     * and their stored settings.
-     */
     function getDynamicSystemInstruction(query, settings) {
         const user = settings.nickname;
         const userAge = settings.age > 0 ? `${settings.age} years old` : 'of unknown age';
         const userGender = settings.gender.toLowerCase();
         const userColor = settings.favoriteColor;
 
-        // Base instruction with user context
         let instruction = `You are a highly adaptable AI assistant. Your primary goal is to respond with the appropriate tone and persona matching the user's current query and mood.
 User Profile: Nickname: ${user}, Age: ${userAge}, Gender: ${userGender}, Favorite Color (used for subtle theming inspiration): ${userColor}.
-Adapt your persona and tone for each turn.`;
+Adapt your persona and tone for each turn.
 
-        // Tone analysis (simple keyword matching for demonstration)
+Formatting Rules:
+- For math, use KaTeX. Inline math uses single \`$\`, and display math uses double \`$$\`.
+- For graphs, use a 'graph' block. Provide the data and layout as a JSON object that Plotly.js can understand. Example:
+\`\`\`graph
+{
+  "data": [{"x": [0, 1, 2], "y": [2, 3, 5], "type": "scatter", "mode": "lines+markers"}],
+  "layout": {"title": "My Data"}
+}
+\`\`\`
+`;
+
         const lowerQuery = query.toLowerCase();
 
-        if (lowerQuery.includes('math') || lowerQuery.includes('algebra') || lowerQuery.includes('calculus') || lowerQuery.includes('formula') || lowerQuery.includes('solve') || lowerQuery.includes('proof')) {
-            // Math/Technical
-            instruction += `\n\n**Current Persona: Technical Expert.** Respond with extreme clarity, professionalism, and precision. Focus on step-by-step logic, equations, and definitive answers. Use a formal, neutral tone. Do not use slang or casual language.`;
+        if (lowerQuery.includes('math') || lowerQuery.includes('algebra') || lowerQuery.includes('calculus') || lowerQuery.includes('formula') || lowerQuery.includes('solve') || lowerQuery.includes('proof') || lowerQuery.includes('graph')) {
+            instruction += `\n\n**Current Persona: Technical Expert.** Respond with extreme clarity, professionalism, and precision. Focus on step-by-step logic, equations, and definitive answers. Use a formal, neutral tone. Use KaTeX and Plotly graphs where appropriate.`;
         } else if (lowerQuery.includes('code') || lowerQuery.includes('javascript') || lowerQuery.includes('python') || lowerQuery.includes('html') || lowerQuery.includes('debug')) {
-            // Coding
             instruction += `\n\n**Current Persona: Coding Specialist.** Provide complete, runnable code examples. Explain technical concepts clearly, covering logic, structure, and edge cases. Be thorough and objective.`;
         } else if (lowerQuery.includes('ex') || lowerQuery.includes('breakup') || lowerQuery.includes('hate') || lowerQuery.includes('awful') || lowerQuery.includes('trash talk') || lowerQuery.includes('roast')) {
-            // Emotional/Roasting (The friend persona)
             const roastInsults = [
                 `They sound like a cheap knock-off of a decent human.`, 
                 `Honestly, you dodged a bullet the size of a planet.`, 
@@ -314,10 +367,8 @@ Adapt your persona and tone for each turn.`;
 
             instruction += `\n\n**Current Persona: Sarcastic, Supportive Friend.** Your goal is to empathize with the user, validate their feelings, and join them in 'roasting' or speaking negatively about their ex/situation. Be funny, slightly aggressive toward the subject of the trash talk, and deeply supportive of ${user}. Use casual language and slang. **Example of tone/support:** "${roastInsult}"`;
         } else if (lowerQuery.includes('story') || lowerQuery.includes('poem') || lowerQuery.includes('imagine') || lowerQuery.includes('creative')) {
-            // Creative
             instruction += `\n\n**Current Persona: Creative Partner.** Use rich, evocative language. Be imaginative, focus on descriptive details, and inspire new ideas.`;
         } else {
-            // Default
             instruction += `\n\n**Current Persona: Standard Assistant.** You are balanced, helpful, and comprehensive. Use a friendly but professional tone.`;
         }
 
@@ -345,7 +396,6 @@ Adapt your persona and tone for each turn.`;
         const userParts = processedChatHistory[lastMessageIndex].parts;
         const textPartIndex = userParts.findIndex(p => p.text);
         
-        // --- DYNAMIC INSTRUCTION LOGIC ---
         const lastUserQuery = userParts[textPartIndex]?.text || '';
         const dynamicInstruction = getDynamicSystemInstruction(lastUserQuery, userSettings);
         
@@ -359,7 +409,6 @@ Adapt your persona and tone for each turn.`;
             contents: processedChatHistory, 
             systemInstruction: { parts: [{ text: dynamicInstruction }] } 
         };
-        // --- END DYNAMIC INSTRUCTION LOGIC ---
         
         try {
             const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: currentAIRequestController.signal });
@@ -392,7 +441,8 @@ Adapt your persona and tone for each turn.`;
                 });
                 responseBubble.style.opacity = '1';
 
-                renderLatexDisplay(responseBubble);
+                renderKaTeX(responseBubble);
+                renderGraphs(responseBubble);
             }, 300);
 
         } catch (error) {
@@ -425,13 +475,11 @@ Adapt your persona and tone for each turn.`;
         const isMenuOpen = menu.classList.toggle('active');
         toggleBtn.classList.toggle('active', isMenuOpen);
         if (isMenuOpen) {
-            // Ensure inputs reflect current state when opening
             document.getElementById('settings-nickname').value = userSettings.nickname === DEFAULT_NICKNAME ? '' : userSettings.nickname;
             document.getElementById('settings-age').value = userSettings.age || '';
             document.getElementById('settings-gender').value = userSettings.gender;
-            document.getElementById('settings-color').value = userSettings.favoriteColor; // Set color picker value
+            document.getElementById('settings-color').value = userSettings.favoriteColor;
             
-            // Attach a one-time handler to auto-save when menu is closed
             document.addEventListener('click', handleMenuOutsideClick);
         } else {
              document.removeEventListener('click', handleMenuOutsideClick);
@@ -443,7 +491,6 @@ Adapt your persona and tone for each turn.`;
         const button = document.getElementById('ai-settings-button');
         const composeArea = document.getElementById('ai-compose-area');
 
-        // Check if the click is outside the entire compose area (which contains the menu and button)
         if (menu.classList.contains('active') && !composeArea.contains(event.target) && event.target !== button && !button.contains(event.target)) {
             saveSettings();
             toggleSettingsMenu();
@@ -451,7 +498,6 @@ Adapt your persona and tone for each turn.`;
     }
 
     function saveSettings() {
-        // Read from DOM and update userSettings
         const nicknameEl = document.getElementById('settings-nickname');
         const ageEl = document.getElementById('settings-age');
         const genderEl = document.getElementById('settings-gender');
@@ -460,18 +506,15 @@ Adapt your persona and tone for each turn.`;
         const nickname = nicknameEl.value.trim();
         const age = parseInt(ageEl.value);
         const gender = genderEl.value;
-        const favoriteColor = colorEl.value || DEFAULT_COLOR; // Use color input value
+        const favoriteColor = colorEl.value || DEFAULT_COLOR;
 
         userSettings.nickname = nickname || DEFAULT_NICKNAME;
         userSettings.age = (isNaN(age) || age < 0) ? 0 : age;
         userSettings.gender = gender;
         userSettings.favoriteColor = favoriteColor;
         
-        // Save to localStorage
         localStorage.setItem('ai-user-settings', JSON.stringify(userSettings));
     }
-
-    /* REMOVED: renderColorWheel function */
 
     function createSettingsMenu() {
         const menu = document.createElement('div');
@@ -479,19 +522,16 @@ Adapt your persona and tone for each turn.`;
 
         menu.innerHTML = `
             <div class="menu-header">AI Agent Settings</div>
-
             <div class="setting-group">
                 <label for="settings-nickname">Nickname</label>
                 <input type="text" id="settings-nickname" placeholder="${DEFAULT_NICKNAME}" value="${userSettings.nickname === DEFAULT_NICKNAME ? '' : userSettings.nickname}" />
                 <p class="setting-note">How the AI should refer to you.</p>
             </div>
-
             <div class="setting-group">
                 <label for="settings-color">Favorite Color</label>
                 <input type="color" id="settings-color" value="${userSettings.favoriteColor}" />
                 <p class="setting-note">Subtly influences the AI's response style (e.g., in theming).</p>
             </div>
-
             <div class="setting-group-split">
                 <div class="setting-group">
                     <label for="settings-gender">Gender</label>
@@ -507,18 +547,14 @@ Adapt your persona and tone for each turn.`;
                     <input type="number" id="settings-age" placeholder="Optional" min="0" value="${userSettings.age || ''}" />
                 </div>
             </div>
-
             <button id="settings-save-button">Save</button>
         `;
 
-        // Add event listeners for inputs
         const saveButton = menu.querySelector('#settings-save-button');
         const inputs = menu.querySelectorAll('input, select');
         
-        // Use debounce for inputs to avoid excessive saves
         const debouncedSave = debounce(saveSettings, 500);
         inputs.forEach(input => {
-            // 'input' event for text/number/color inputs, 'change' for select
             input.addEventListener('input', debouncedSave);
             input.addEventListener('change', debouncedSave);
         });
@@ -530,11 +566,6 @@ Adapt your persona and tone for each turn.`;
 
         return menu;
     }
-    // --- END NEW SETTINGS MENU LOGIC ---
-
-    // Removed: processFileLike, handleFileUpload, toggleAgentMenu, showAgentDetails, goBackToAgentSelection, selectAgent, updateAgentWheelGliders, setupAgentWheelListeners
-
-    // Remaining utility functions (processFileLike, handleFileUpload, renderAttachments, showFilePreview, formatCharCount, handleContentEditableInput, handlePaste, handleInputSubmission, handleCopyCode, fadeOutWelcomeMessage, escapeHTML, formatBytes, parseGeminiResponse, escapeRegExp, injectStyles) remain mostly the same or slightly adjusted for code cleanup.
 
     function processFileLike(file, base64Data, dataUrl, tempId) {
         if (attachedFiles.length >= MAX_ATTACHMENTS_PER_MESSAGE) {
@@ -777,7 +808,6 @@ Adapt your persona and tone for each turn.`;
         const clipboardData = e.clipboardData || window.clipboardData;
         const pastedText = clipboardData.getData('text/plain');
         
-        // --- 1. Check for Image Data ---
         const items = clipboardData.items;
         for (let i = 0; i < items.length; i++) {
             if (items[i].type.indexOf("image") !== -1) {
@@ -796,7 +826,6 @@ Adapt your persona and tone for each turn.`;
             }
         }
         
-        // --- 2. Check for Text Data (Original Logic) ---
         const currentText = e.target.innerText;
         const totalLengthIfPasted = currentText.length + pastedText.length;
 
@@ -916,16 +945,23 @@ Adapt your persona and tone for each turn.`;
     
     function parseGeminiResponse(text) {
         let html = text;
-        const codeBlocks = [];
-
+        const placeholders = {};
+        let placeholderId = 0;
+    
+        const addPlaceholder = (content) => {
+            const key = `%%PLACEHOLDER_${placeholderId++}%%`;
+            placeholders[key] = content;
+            return key;
+        };
+    
+        // 1. Extract code blocks
         html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
             const trimmedCode = code.trim();
             const lines = trimmedCode.split('\n').length;
             const words = trimmedCode.split(/\s+/).filter(Boolean).length;
             const escapedCode = escapeHTML(trimmedCode);
             const langClass = lang ? `language-${lang.toLowerCase()}` : '';
-
-            codeBlocks.push(`
+            const content = `
                 <div class="code-block-wrapper">
                     <div class="code-block-header">
                         <span class="code-metadata">${lines} lines &middot; ${words} words</span>
@@ -933,22 +969,57 @@ Adapt your persona and tone for each turn.`;
                     </div>
                     <pre><code class="${langClass}">${escapedCode}</code></pre>
                 </div>
-            `);
-            return "%%CODE_BLOCK%%";
+            `;
+            return addPlaceholder(content);
         });
 
+        // 2. Extract graph blocks
+        html = html.replace(/```graph\n([\s\S]*?)```/g, (match, jsonString) => {
+            let metadata = 'Graph';
+            try {
+                const graphData = JSON.parse(jsonString);
+                // Check for a simple two-point line to calculate slope and intercepts
+                const trace = graphData.data && graphData.data[0];
+                if (trace && trace.x && trace.y && trace.x.length === 2 && trace.y.length === 2) {
+                    const [x1, x2] = trace.x;
+                    const [y1, y2] = trace.y;
+                    const slope = (y2 - y1) / (x2 - x1);
+                    if (isFinite(slope)) {
+                        const yIntercept = y1 - slope * x1;
+                        const xIntercept = slope !== 0 ? -yIntercept / slope : Infinity;
+                        metadata = `Slope: ${slope.toFixed(2)} &middot; Y-Int: (${0}, ${yIntercept.toFixed(2)}) &middot; X-Int: (${xIntercept.toFixed(2)}, ${0})`;
+                    }
+                }
+            } catch(e) { /* Ignore parsing errors, will show default metadata */ }
+
+            const escapedData = escapeHTML(jsonString);
+            const content = `
+                <div class="graph-block-wrapper">
+                    <div class="graph-block-header">
+                        <span class="graph-metadata">${metadata}</span>
+                    </div>
+                    <div class="plotly-graph-placeholder" data-graph-data='${escapedData}'></div>
+                </div>
+            `;
+            return addPlaceholder(content);
+        });
+
+        // 3. Escape the rest of the HTML to prevent conflicts
         html = escapeHTML(html);
 
-        const latexDisplayShortcuts = {
-            '\\frac{14 - 18}{0 - 2}': 'frac_placeholder_1',
-            '\\boxed{2}': 'boxed_placeholder_2'
-        };
-
-        Object.keys(latexDisplayShortcuts).forEach(tex => {
-            const regex = new RegExp('\\$' + escapeRegExp(tex) + '\\$', 'g');
-            html = html.replace(regex, `<div class="latex-display" data-tex="${escapeHTML(tex)}"></div>`);
+        // 4. Process math formulas on the escaped HTML
+        // Display mode: $$...$$
+        html = html.replace(/\$\$([\s\S]*?)\$\$/g, (match, formula) => {
+            const content = `<div class="latex-render" data-tex="${escapeHTML(formula)}" data-display-mode="true"></div>`;
+            return addPlaceholder(content);
+        });
+        // Inline mode: $...$
+        html = html.replace(/\$([^\s\$][^\$]*?[^\s\$])\$/g, (match, formula) => {
+            const content = `<span class="latex-render" data-tex="${escapeHTML(formula)}" data-display-mode="false"></span>`;
+             return addPlaceholder(content);
         });
 
+        // 5. Apply markdown styling
         html = html.replace(/^### (.*$)/gm, "<h3>$1</h3>")
                    .replace(/^## (.*$)/gm, "<h2>$1</h2>")
                    .replace(/^# (.*$)/gm, "<h1>$1</h1>");
@@ -964,17 +1035,23 @@ Adapt your persona and tone for each turn.`;
         
         html = html.replace(/\n/g, "<br>");
         
-        html = html.replace(/%%CODE_BLOCK%%/g, () => codeBlocks.shift());
+        // 6. Restore placeholders
+        html = html.replace(/%%PLACEHOLDER_\d+%%/g, (match) => placeholders[match] || '');
         
         return html;
-    }
-    
-    function escapeRegExp(string) {
-        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 
     function injectStyles() {
         if (document.getElementById('ai-dynamic-styles')) return;
+        
+        if (!document.getElementById('ai-katex-styles')) {
+            const katexStyles = document.createElement('link');
+            katexStyles.id = 'ai-katex-styles';
+            katexStyles.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css';
+            katexStyles.rel = 'stylesheet';
+            document.head.appendChild(katexStyles);
+        }
+
         if (!document.getElementById('ai-google-fonts')) {
             const googleFonts = document.createElement('link');
             googleFonts.id = 'ai-google-fonts';
@@ -993,27 +1070,23 @@ Adapt your persona and tone for each turn.`;
             :root { --ai-red: #ea4335; --ai-blue: #4285f4; --ai-green: #34a853; --ai-yellow: #fbbc05; }
             #ai-container { 
                 position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-                background-color: rgba(10, 10, 15, 0.95); /* Fixed Dark Background */
+                background-color: rgba(10, 10, 15, 0.95);
                 backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); 
                 z-index: 2147483647; opacity: 0; transition: opacity 0.5s, background 0.5s; 
                 font-family: 'Lora', serif; display: flex; flex-direction: column; 
                 justify-content: flex-end; padding: 0; box-sizing: border-box; overflow: hidden; 
             }
             #ai-container.active { opacity: 1; }
-            
             #ai-container.deactivating, #ai-container.deactivating > * { transition: opacity 0.4s, transform 0.4s; }
             #ai-container.deactivating { opacity: 0 !important; background-color: rgba(0,0,0,0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); }
-
             #ai-persistent-title, #ai-brand-title { 
                 position: absolute; top: 28px; left: 30px; font-family: 'Lora', serif; 
-                font-size: 18px; font-weight: bold; color: #FFFFFF; /* Fixed Title Color */
+                font-size: 18px; font-weight: bold; color: #FFFFFF;
                 opacity: 0; transition: opacity 0.5s 0.2s, color 0.5s; 
             }
             #ai-container.chat-active #ai-persistent-title { opacity: 1; }
             #ai-container:not(.chat-active) #ai-brand-title { opacity: 1; }
             #ai-brand-title span { animation: brand-title-pulse 4s linear infinite; }
-            /* Animation pulse is kept, but title color is static white/current color */
-
             #ai-welcome-message { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; color: rgba(255,255,255,.5); opacity: 1; transition: opacity .5s, transform .5s; width: 100%; }
             #ai-container.chat-active #ai-welcome-message { opacity: 0; pointer-events: none; transform: translate(-50%,-50%) scale(0.95); }
             #ai-welcome-message h2 { font-family: 'Merriweather', serif; font-size: 2.2em; margin: 0; color: #fff; }
@@ -1022,7 +1095,6 @@ Adapt your persona and tone for each turn.`;
             #ai-close-button { position: absolute; top: 20px; right: 30px; color: rgba(255,255,255,.7); font-size: 40px; cursor: pointer; transition: color .2s ease,transform .3s ease, opacity 0.4s; }
             #ai-char-counter { position: fixed; bottom: 15px; right: 30px; font-size: 0.9em; font-family: monospace; color: #aaa; transition: color 0.2s; z-index: 2147483647; }
             #ai-char-counter.limit-exceeded { color: #e57373; font-weight: bold; }
-
             #ai-response-container { flex: 1 1 auto; overflow-y: auto; width: 100%; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; padding: 60px 20px 20px 20px; -webkit-mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%); mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%);}
             .ai-message-bubble { background: rgba(15,15,18,.8); border: 1px solid rgba(255,255,255,.1); border-radius: 16px; padding: 12px 18px; color: #e0e0e0; backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); animation: message-pop-in .5s cubic-bezier(.4,0,.2,1) forwards; max-width: 90%; line-height: 1.6; overflow-wrap: break-word; transition: opacity 0.3s ease-in-out; align-self: flex-start; text-align: left; }
             .user-message { background: rgba(40,45,50,.8); align-self: flex-end; }
@@ -1038,16 +1110,13 @@ Adapt your persona and tone for each turn.`;
             #ai-input { min-height: 48px; max-height: ${MAX_INPUT_HEIGHT}px; overflow-y: hidden; color: #fff; font-size: 1.1em; padding: 13px 60px 13px 60px; box-sizing: border-box; word-wrap: break-word; outline: 0; text-align: left; }
             #ai-input:empty::before { content: 'Ask a question or describe your files...'; color: rgba(255, 255, 255, 0.4); pointer-events: none; }
             
-            #ai-attachment-button { position: absolute; left: 10px; bottom: 7px; background-color: rgba(100, 100, 100, 0.5); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,.8); font-size: 18px; cursor: pointer; padding: 5px; line-height: 1; z-index: 3; transition: all .3s ease; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; }
-            #ai-attachment-button:hover { background-color: rgba(120, 120, 120, 0.7); }
-            #ai-attachment-button svg { stroke: currentColor; }
-
-            /* Settings Button Style (Grey) */
-            #ai-settings-button { position: absolute; right: 10px; bottom: 7px; background: rgba(100, 100, 100, 0.5); border: 1px solid rgba(255,255,255,0.2); color: #ccc; font-size: 20px; cursor: pointer; padding: 5px; line-height: 1; z-index: 3; transition: all .3s ease; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; }
-            #ai-settings-button:hover { background-color: rgba(120, 120, 120, 0.7); color: #fff; }
+            #ai-attachment-button, #ai-settings-button { position: absolute; bottom: 7px; background-color: rgba(100, 100, 100, 0.5); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,.8); font-size: 18px; cursor: pointer; padding: 5px; line-height: 1; z-index: 3; transition: all .3s ease; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; }
+            #ai-attachment-button { left: 10px; }
+            #ai-settings-button { right: 10px; font-size: 20px; color: #ccc; }
+            #ai-attachment-button:hover, #ai-settings-button:hover { background-color: rgba(120, 120, 120, 0.7); color: #fff; }
             #ai-settings-button.active { background-color: rgba(150, 150, 150, 0.8); color: white; }
 
-            /* Settings Menu Style */
+            /* Settings Menu */
             #ai-settings-menu { position: absolute; bottom: calc(100% + 10px); right: 0; width: 350px; z-index: 1; background: rgb(20, 20, 22); border: 1px solid rgba(255,255,255,0.2); border-radius: 16px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); padding: 15px; opacity: 0; visibility: hidden; transform: translateY(20px); transition: all .3s cubic-bezier(.4,0,.2,1); overflow: hidden; }
             #ai-settings-menu.active { opacity: 1; visibility: visible; transform: translateY(0); }
             #ai-settings-menu .menu-header { font-size: 1.1em; color: #fff; text-transform: uppercase; margin-bottom: 15px; text-align: center; font-family: 'Merriweather', serif; }
@@ -1058,17 +1127,13 @@ Adapt your persona and tone for each turn.`;
             .setting-group input, .setting-group select { width: 100%; padding: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff; box-sizing: border-box; }
             .setting-group input:focus, .setting-group select:focus { outline: none; border-color: #4285f4; }
             .setting-note { font-size: 0.75em; color: #888; margin-top: 5px; }
-
-            /* Color Picker Styling */
             #settings-color { width: 100%; height: 40px; padding: 0; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; background: none; }
             #settings-color::-webkit-color-swatch-wrapper { padding: 0; }
             #settings-color::-webkit-color-swatch { border: 0; border-radius: 5px; }
-
             #settings-save-button { width: 100%; padding: 10px; background: #4285f4; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; margin-top: 10px; transition: background 0.2s; }
             #settings-save-button:hover { background: #3c77e6; }
 
-            /* Attachment Preview, Code Blocks, LaTeX - Existing Styles */
-
+            /* Attachments, Code Blocks, Graphs, LaTeX */
             #ai-attachment-preview { display: none; flex-direction: row; gap: 10px; padding: 0; max-height: 0; border-bottom: 1px solid transparent; overflow-x: auto; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
             #ai-input-wrapper.has-attachments #ai-attachment-preview { max-height: 100px; padding: 10px 15px; }
             .attachment-card { position: relative; border-radius: 8px; overflow: hidden; background: #333; height: 80px; width: 80px; flex-shrink: 0; display: flex; justify-content: center; align-items: center; transition: filter 0.3s; cursor: pointer; }
@@ -1083,9 +1148,10 @@ Adapt your persona and tone for each turn.`;
             .remove-attachment-btn { position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.5); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; z-index: 3; }
 
             .ai-loader { width: 25px; height: 25px; border-radius: 50%; animation: spin 1s linear infinite; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; }
-            .code-block-wrapper { background-color: rgba(42, 42, 48, 0.8); border-radius: 8px; margin: 10px 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
-            .code-block-header { display: flex; justify-content: flex-end; align-items: center; padding: 6px 12px; background-color: rgba(0,0,0,0.2); }
-            .code-metadata { font-size: 0.8em; color: #aaa; margin-right: auto; font-family: monospace; }
+            
+            .code-block-wrapper, .graph-block-wrapper { background-color: rgba(42, 42, 48, 0.8); border-radius: 8px; margin: 10px 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+            .code-block-header, .graph-block-header { display: flex; justify-content: flex-end; align-items: center; padding: 6px 12px; background-color: rgba(0,0,0,0.2); }
+            .code-metadata, .graph-metadata { font-size: 0.8em; color: #aaa; margin-right: auto; font-family: monospace; }
             .copy-code-btn { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; border-radius: 6px; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s; }
             .copy-code-btn:hover { background: rgba(255, 255, 255, 0.2); }
             .copy-code-btn:disabled { cursor: default; background: rgba(25, 103, 55, 0.5); }
@@ -1094,12 +1160,12 @@ Adapt your persona and tone for each turn.`;
             .code-block-wrapper pre::-webkit-scrollbar { height: 8px; }
             .code-block-wrapper pre::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
             .code-block-wrapper code { font-family: 'Menlo', 'Consolas', monospace; font-size: 0.9em; color: #f0f0f0; }
+            .plotly-graph-placeholder { min-height: 300px; }
 
-            .latex-fallback-active { display: block; margin: 10px 0; }
-            .latex-fallback-box { display: block; background: #1a1a1e; border: 1px solid #333; border-radius: 4px; padding: 12px; overflow-x: auto; text-align: center; }
-            .latex-formula-text { display: block; font-family: monospace; color: #f0f0f0; font-size: 1.1em; white-space: pre-wrap; word-break: break-all; }
-            .latex-note { display: block; font-size: 0.75em; color: #999; margin-top: 5px; }
-            
+            .latex-render { display: inline-block; } /* default to inline */
+            .ai-response-content div.latex-render { display: block; margin: 10px 0; text-align: center; } /* for display mode */
+            .katex { font-size: 1.1em !important; }
+
             #ai-preview-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.8); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index: 2147483648; display: flex; justify-content: center; align-items: center; }
             #ai-preview-modal .modal-content { background: #1a1a1e; border-radius: 12px; padding: 20px; box-shadow: 0 5px 30px rgba(0,0,0,0.7); max-width: 90vw; max-height: 90vh; display: flex; flex-direction: column; position: relative; }
             #ai-preview-modal .close-button { position: absolute; top: 10px; right: 15px; color: #ccc; font-size: 30px; cursor: pointer; }
@@ -1108,9 +1174,8 @@ Adapt your persona and tone for each turn.`;
             #ai-preview-modal .download-button { display: inline-block; padding: 10px 20px; background-color: var(--ai-blue); color: #fff; text-decoration: none; border-radius: 8px; margin-top: 20px; }
 
             .ai-message-bubble p { margin: 0; padding: 0; text-align: left; }
-            .ai-message-bubble ul { margin: 0; padding-left: 20px; text-align: left; }
+            .ai-message-bubble ul, .ai-message-bubble ol { margin: 10px 0; padding-left: 20px; text-align: left; list-style-position: outside; }
             .ai-message-bubble li { margin-bottom: 5px; }
-            .ai-message-bubble ul, .ai-message-bubble ol { list-style-position: inside; }
 
             @keyframes glow { 0%,100% { box-shadow: 0 0 5px rgba(255,255,255,.15), 0 0 10px rgba(255,255,255,.1); } 50% { box-shadow: 0 0 10px rgba(255,255,255,.25), 0 0 20px rgba(255,255,255,.2); } }
             @keyframes gemini-glow { 0%,100% { box-shadow: 0 0 8px 2px var(--ai-blue); } 25% { box-shadow: 0 0 8px 2px var(--ai-green); } 50% { box-shadow: 0 0 8px 2px var(--ai-yellow); } 75% { box-shadow: 0 0 8px 2px var(--ai-red); } }
@@ -1121,12 +1186,9 @@ Adapt your persona and tone for each turn.`;
         `;
     document.head.appendChild(style);}
     
-    // Attach the main keydown listener to the document
     document.addEventListener('keydown', handleKeyDown);
 
-    // Initial check on load: Only load settings, do not activate the UI.
     document.addEventListener('DOMContentLoaded', async () => {
-        loadUserSettings(); // Ensure settings are loaded even if the UI isn't active
-        // Removed: activateAI() call
+        loadUserSettings();
     });
 })();
