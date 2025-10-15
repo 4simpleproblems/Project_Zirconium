@@ -31,22 +31,22 @@
 
     // --- 4SP CONTEXT ---
     const FSP_HISTORY = `
-4SP (4simpleproblems) is the website hosting this AI Agent. Below is the detailed history of the platform's evolution:
+4SP (4simpleproblems) is the platform hosting this AI Agent. Its history is an evolution from a simple student project to a full digital ecosystem.
 
-**Version 1 — The Foundation of 4SP**
-The first version of 4SP, launched on March 13, 2025, was a small, chaotic experiment that set the tone for everything that followed. Its purpose was simple yet rebellious: to give students something fun to do during long, dull school days. The site consisted of just two pages—a playful **20-sound soundboard** and an **autoclicker**—plus a request-a-sound page that allowed users to shape what came next. Though humble, V1 embodied the creative spirit of the entire project. It was coded quickly, without the polish or structure of later versions, but its charm lay in that raw energy. 4SP immediately stood out to classmates who were tired of restrictive school networks and wanted a space that felt student-made, not corporate. That identity—an underground, tech-savvy hub made by and for students—was born here and would remain central to every update that followed.
+**Version 1 — The Foundation of 4SP (Launched March 13, 2025):**
+The first version of 4SP was a small, chaotic experiment primarily for fun during school. It included a playful 20-sound soundboard and an autoclicker, plus a request-a-sound page. Though humble, it established the identity of an underground, tech-savvy hub made by and for students who were tired of restrictive school networks.
 
-**Version 2 — Expansion and Community**
-If V1 was an experiment, Version 2 was the first real step toward building a platform. Released April 11th, 2025, V2 added a surprising amount of depth: a media page, **playlists (beta)**, user-uploaded local soundboards, a growing library of games, and a **proxy list** that helped students slip past school restrictions. There were also new sections for links, sound requests, feedback, account settings, and legal/policy documents—marking the moment when 4SP stopped being a random hobby and became a fully recognized student ecosystem. This version is remembered for its chaotic variety: it was messy, colorful, and full of personality. Users could do everything from testing custom sounds to sharing ideas for new tools, and each page carried the unmistakable feeling of being built by someone who actually understood what students wanted. V2’s success proved that 4SP wasn’t just a novelty—it was a living project with a growing community and purpose.
+**Version 2 — Expansion and Community (Released April 11, 2025):**
+V2 expanded significantly, adding depth with a media page, beta playlists, user-uploaded local soundboards, a growing library of games, and a proxy list to bypass school restrictions. It marked the transition from a hobby into a recognized student ecosystem, full of chaotic variety and personality.
 
-**Version 3 — A Visual Reinvention**
-V3, launched May 15, 2025, was the visual rebirth of 4SP. It didn’t add as many new pages as its predecessor, but it completely changed how the site looked and felt. Gone were the cluttered boxes and unrefined color schemes; in their place came a **white, clean grid layout with sharp corners**, inspired by modern tech design standards. This version focused on making 4SP feel mature and modern without losing its personality. It also introduced the now-beloved mini-game **Slotz**, which became a small sensation among users. V3’s visual overhaul was a statement: 4SP wasn’t just a fun side project anymore—it was a platform worthy of professional presentation. The update struck a balance between aesthetic discipline and youthful creativity, setting the design standard for every later version and inspiring the transition to an even more powerful dashboard system in V4.
+**Version 3 — A Visual Reinvention (Launched May 15, 2025):**
+A complete visual overhaul, moving from cluttered boxes to a white, clean grid layout with sharp corners, inspired by modern tech design. It introduced the now-beloved mini-game **Slotz** and set a design standard for professional presentation, striking a balance between aesthetic discipline and youthful creativity.
 
-**Version 4 — The Dashboard Era**
-The launch of 4SP V4 on August 23, 2025 marked the project’s first major overhaul. The site transformed from a loose collection of pages into a unified **dashboard** experience complete with modular widgets and integrated apps. Students could check weather, time, and battery, run a stopwatch or timer, or use quick shortcuts—all within one sleek, modern layout. Entire apps like **Notes**, **Calculator**, **Countdowns**, and **Playlists** became part of the ecosystem. The new **Requests** app merged sound and feedback submissions, introducing a full upvote/downvote system and issue tracking for user ideas. V4 also added a **Settings** page with privacy-oriented tools like a **panic key** and **tab disguise mode**, showing how seriously the project took user safety in restricted environments. The design was heavily inspired by Koyeb, featuring the **Impact font** and a futuristic interface. V4 proved 4SP could be both functional and fun—a serious student toolkit with the heart of a playground.
+**Version 4 — The Dashboard Era (Launched August 23, 2025):**
+The first major overhaul, transforming the site into a unified **dashboard** experience with modular widgets and integrated apps (Notes, Calculator, Countdowns, Playlists). V4 also added a privacy-focused Settings page with a panic key and tab disguise. The design was heavily inspired by Koyeb, featuring the Impact font, proving 4SP could be both a serious student toolkit and a playground.
 
-**Version 5 — Project Zirconium and the Age of Integration (Slated for August 23, 2026)**
-Now in development, 4SP V5 (Project Zirconium) represents the most ambitious leap yet. It draws design inspiration from Vercel, blending minimalism with power. The traditional sidebar layout is replaced with a **universal navigation bar** loaded dynamically via navbar.js, making the entire experience feel app-like and cohesive. The **dark, simplified black theme** and **Geist font** give the platform a professional, unified identity. Among its headline features are the **Combined Games Collection (4SP Games)**—where titles like StrongdogXP and GN – Math can be sorted by category—and a built-in **Dictionary** for quick lookups during study sessions. The exclusive **4SP AI Agent** debuts here, offering hidden intelligence tools accessible through secret shortcuts. V5 also introduces **Dailyphoto**, a student-friendly social network with post limits, friends, comments, and hearts, plus **Messenger V2**, featuring group chats, read/unread indicators, and smooth message management. With these tools—and possible future additions like a proxy—V5 fuses creativity, practicality, and connection. It completes the evolution from a soundboard for bored students into a full digital ecosystem: sleek, social, secure, and unmistakably 4SP.
+**Version 5 — Project Zirconium and the Age of Integration (Slated for August 23, 2026):**
+Currently in development (Project Zirconium), drawing design inspiration from Vercel. Key features include a universal navigation bar, a dark black theme, the **Combined Games Collection (4SP Games)**, a built-in **Dictionary**, the debut of the exclusive **4SP AI Agent** (this one), **Dailyphoto** (a student social network), and **Messenger V2** (with group chats). It completes the evolution from a simple soundboard into a sleek, social, and secure full digital ecosystem.
 `;
     // --- END 4SP CONTEXT ---
 
@@ -898,11 +898,13 @@ Formatting Rules (MUST FOLLOW):
             } else {
                 fileName = file.fileName;
                 fileExt = fileName.split('.').pop().toUpperCase();
+                
                 if (file.inlineData.mimeType.startsWith('image/')) {
                     previewHTML = `<img src="data:${file.inlineData.mimeType};base64,${file.inlineData.data}" alt="${fileName}" />`;
                 } else {
                     previewHTML = `<span class="file-icon">📄</span>`;
                 }
+
                 fileCard.onclick = () => showFilePreview(file);
             }
 
@@ -915,7 +917,6 @@ Formatting Rules (MUST FOLLOW):
 
             const nameSpan = document.createElement('span');
             nameSpan.textContent = fileName;
-            
             const marqueeWrapper = document.createElement('div');
             marqueeWrapper.className = 'file-name';
             marqueeWrapper.appendChild(nameSpan);
@@ -960,6 +961,7 @@ Formatting Rules (MUST FOLLOW):
         document.body.appendChild(previewModal);
 
         const previewArea = previewModal.querySelector('.preview-area');
+
         if (file.inlineData.mimeType.startsWith('image/')) {
             previewArea.innerHTML = `<img src="${file.fileContent}" alt="${file.fileName}" style="max-width: 100%; max-height: 80vh; object-fit: contain;">`;
         } else if (file.inlineData.mimeType.startsWith('text/')) {
@@ -973,8 +975,10 @@ Formatting Rules (MUST FOLLOW):
                     previewArea.innerHTML = `<p>Could not load text content for preview.</p>`;
                 });
         } else {
-            previewArea.innerHTML = `<p>Preview not available for this file type. You can download it to view.</p> <a href="${file.fileContent}" download="${file.fileName}" class="download-button">Download File</a>`;
+            previewArea.innerHTML = `<p>Preview not available for this file type. You can download it to view.</p>
+                <a href="${file.fileContent}" download="${file.fileName}" class="download-button">Download File</a>`;
         }
+
 
         previewModal.querySelector('.close-button').onclick = () => {
             previewModal.remove();
@@ -1002,29 +1006,30 @@ Formatting Rules (MUST FOLLOW):
         const editor = e.target;
         const charCount = editor.innerText.length;
         const counter = document.getElementById('ai-char-counter');
+        
         if (counter) {
             counter.textContent = `${formatCharCount(charCount)} / ${formatCharLimit(CHAR_LIMIT)}`;
             counter.classList.toggle('limit-exceeded', charCount > CHAR_LIMIT);
         }
-
+        
         // Dynamic resizing logic for the input box
         editor.style.height = 'auto';
         const newHeight = Math.min(editor.scrollHeight, MAX_INPUT_HEIGHT);
         editor.style.height = `${newHeight}px`;
-        
+
         // Reset scroll if content fits and no attachments
         if (newHeight < MAX_INPUT_HEIGHT && attachedFiles.length === 0) {
             editor.scrollTop = 0;
         }
     }
-
+    
     function handlePaste(e) {
         // Prevent default paste action to handle files and large text
-        e.preventDefault();
-
+        e.preventDefault(); 
+        
         const text = e.clipboardData.getData('text/plain');
         const editor = document.getElementById('ai-input');
-        
+
         // Check for images/files
         if (e.clipboardData.files.length > 0) {
             const files = Array.from(e.clipboardData.files);
@@ -1033,7 +1038,7 @@ Formatting Rules (MUST FOLLOW):
                 if (file.type.startsWith('image/') || file.type === 'application/pdf') {
                     const reader = new FileReader();
                     const tempId = `paste-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-
+                    
                     // Add loading card first
                     attachedFiles.push({ tempId, file, isLoading: true });
                     renderAttachments();
@@ -1058,735 +1063,883 @@ Formatting Rules (MUST FOLLOW):
                 }
             });
         }
-
-        // Handle text content (after files, to ensure cursor is positioned correctly)
+        
+        // Handle text content
         if (text) {
-            // If text is very long, treat it as a file/paste-to-file, otherwise paste inline
-            if (text.length > PASTE_TO_FILE_THRESHOLD) {
-                // Create a file-like object for large text
-                const blob = new Blob([text], { type: 'text/plain' });
-                const file = new File([blob], `Pasted_Text_${Date.now()}.txt`, { type: 'text/plain' });
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    const base64Data = event.target.result.split(',')[1];
-                    const dataUrl = event.target.result;
-                    // Note: file.name is the generated name above
-                    processFileLike(file, base64Data, dataUrl);
-                };
-                reader.readAsDataURL(file);
-
-                // Insert a placeholder to show text was captured
-                document.execCommand('insertText', false, `[${formatCharCount(text.length)} characters pasted as file]`);
-
-            } else {
-                document.execCommand('insertText', false, text);
-            }
+            document.execCommand('insertText', false, text);
         }
 
+        // Trigger input handler for resizing and counting
         handleContentEditableInput({ target: editor });
     }
 
-    function formatBytes(bytes, decimals = 2) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const dm = decimals < 0 ? 0 : decimals;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-    }
-    
     function handleInputSubmission(e) {
+        // Check for Shift + Enter (new line)
+        if (e.key === 'Enter' && e.shiftKey) {
+            return; 
+        }
+
+        // Check for Enter (submission)
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             submitMessage();
         }
     }
-
-    function extractCodeBlocks(text) {
-        const parts = text.split(/```(\w+)?\n([\s\S]*?)```/g);
-        let result = '';
-        for (let i = 0; i < parts.length; i++) {
-            if (i % 3 === 0) { // Text part
-                result += parts[i];
-            } else if (i % 3 === 2) { // Code part
-                const language = parts[i - 1] || 'plaintext';
-                const code = parts[i].trim();
-                const escapedCode = escapeHTML(code);
-                result += `
-<div class="code-block-container">
-    <div class="code-header">
-        <span class="code-language">${language}</span>
-        <button class="copy-code-btn" data-code="${btoa(code)}">${copyIconSVG}Copy</button>
-    </div>
-    <pre><code class="language-${language}">${escapedCode}</code></pre>
-</div>
-                `;
-            }
-        }
-        return result;
-    }
-
-    function extractMathBlocks(text) {
-        // Find display math blocks: $$...$$
-        const displayReplaced = text.replace(/\$\$([\s\S]*?)\$\$/g, (match, math) => {
-            const trimmedMath = math.trim();
-            return `
-<div class="latex-render display-math" data-tex="${escapeHTML(trimmedMath)}" data-display-mode="true">
-    <div class="placeholder-math-text">$$${escapeHTML(trimmedMath)}$$</div>
-</div>
-`;
-        });
-
-        // Find inline math blocks: $...$ (ignoring escaped \$)
-        const inlineReplaced = displayReplaced.replace(/(?<!\\)\$([^$\n]+?)(?<!\\)\$/g, (match, math) => {
-            const trimmedMath = math.trim();
-            return `<span class="latex-render inline-math" data-tex="${escapeHTML(trimmedMath)}" data-display-mode="false">
-            <span class="placeholder-math-text-inline">$${escapeHTML(trimmedMath)}$</span>
-            </span>`;
-        });
-
-        // Remove backslash escapes from remaining dollar signs
-        return inlineReplaced.replace(/\\$/g, '$');
-    }
-
-    function extractGraphBlocks(text) {
-        return text.replace(/```graph\n([\s\S]*?)```/g, (match, jsonString) => {
-            try {
-                const graphData = JSON.parse(jsonString.trim());
-                const title = graphData.layout?.title || 'Generated Graph';
-                const escapedJson = escapeHTML(jsonString.trim());
-                
-                // Canvas size is set by CSS
-                return `
-<div class="custom-graph-placeholder" data-graph-data='${escapedJson}'>
-    <div class="graph-title">${escapeHTML(title)}</div>
-    <canvas></canvas>
-</div>
-`;
-            } catch (e) {
-                console.error("Failed to parse graph JSON:", e);
-                return `<div class="ai-error-inline">Graph Error: Invalid JSON data.</div>`;
-            }
-        });
-    }
-
+    
     function parseGeminiResponse(text) {
-        // 1. Convert markdown to basic HTML (bold, italics, lists, headers)
-        let html = text;
+        if (!text) return '';
 
-        // Escape HTML entities before processing markdown and code blocks
-        html = html.replace(/&/g, '&amp;')
-                   .replace(/</g, '&lt;')
-                   .replace(/>/g, '&gt;')
-                   .replace(/"/g, '&quot;')
-                   .replace(/'/g, '&#39;');
-
-        // 2. Extract and format code blocks first to protect their contents
-        html = extractCodeBlocks(html);
-
-        // 3. Extract and format graph blocks
-        html = extractGraphBlocks(html);
-
-        // 4. Extract and format math blocks
-        html = extractMathBlocks(html);
+        // 1. Replace code blocks with proper markdown (handling triple backticks inside triple backticks)
+        text = text.replace(/```(.*?)\n([\s\S]*?)\n```/g, (match, language, code) => {
+            // Escape any HTML in the code block content
+            const escapedCode = escapeHTML(code);
+            const lang = language.trim() || 'plaintext';
+            
+            // Generate a unique ID for the copy button
+            const copyId = `code-block-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+            
+            return `<div class="code-block-wrapper">
+                <div class="code-block-header">
+                    <span class="code-language">${lang}</span>
+                    <button class="copy-code-btn" data-copy-target="${copyId}">
+                        ${copyIconSVG} <span>Copy</span>
+                    </button>
+                </div>
+                <pre><code id="${copyId}" class="language-${lang}">${escapedCode.trim()}</code></pre>
+            </div>`;
+        });
         
-        // 5. Basic Markdown to HTML conversion (excluding code/math areas)
-        // **bold**
-        html = html.replace(/\*\*([^\*]+?)\*\*/g, '<strong>$1</strong>');
-        // *italics*
-        html = html.replace(/\*([^\*]+?)\*/g, '<em>$1</em>');
-        // _italics_
-        html = html.replace(/_([^_]+?)_/g, '<em>$1</em>');
-        // Headers (#, ##, ###)
-        html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
-        html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-        html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-        // Convert newlines to <br> but avoid double-br for paragraphs
-        html = html.replace(/\n\n/g, '</p><p>');
-        html = html.replace(/\n/g, '<br>');
+        // 2. Replace KaTeX math blocks: $$...$$ for display, $...$ for inline
+        text = text.replace(/\$\$(.*?)\$\$/gs, (match, math) => {
+            // Remove leading/trailing newlines in display math
+            const trimmedMath = math.trim(); 
+            return `<div class="latex-render" data-tex="${escapeHTML(trimmedMath)}" data-display-mode="true"></div>`;
+        });
+        text = text.replace(/\$(.*?)\$/g, (match, math) => {
+            // Inline math
+            return `<span class="latex-render" data-tex="${escapeHTML(math.trim())}" data-display-mode="false"></span>`;
+        });
+        
+        // 3. Replace Custom Graph blocks
+        text = text.replace(/```graph\n([\s\S]*?)\n```/g, (match, jsonString) => {
+            try {
+                // Ensure the JSON is valid and escape it for the data attribute
+                JSON.parse(jsonString);
+                const escapedJson = escapeHTML(jsonString.trim());
+                return `<div class="custom-graph-placeholder" data-graph-data="${escapedJson}">
+                    <canvas class="custom-graph-canvas"></canvas>
+                    <div class="graph-label">Interactive Custom Graph</div>
+                </div>`;
+            } catch (e) {
+                return `<div class="ai-error">Graph Error: Invalid JSON format.</div>`;
+            }
+        });
 
-        // 6. Wrap in paragraph tags
-        html = `<p>${html}</p>`;
 
-        return html;
-    }
+        // 4. Basic Markdown to HTML (for remaining text)
+        // Headings (##, ###)
+        text = text.replace(/^###\s*(.*)$/gm, '<h4>$1</h4>');
+        text = text.replace(/^##\s*(.*)$/gm, '<h3>$1</h3>');
+        text = text.replace(/^#\s*(.*)$/gm, '<h2>$1</h2>');
+        
+        // Bold/Italic
+        text = text.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
+        text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        
+        // Lists (must be before line breaks to wrap items)
+        text = text.replace(/^(-|\*)\s*(.*(?:\n\1\s*.*)*)/gm, (match) => {
+            let listContent = match.replace(/^(-|\*)\s*/gm, '<li>');
+            listContent = listContent.replace(/\n/g, '</li>');
+            // Check if it is already wrapped in a list and avoid double wrapping
+            if (listContent.startsWith('<li>') && listContent.endsWith('</li>')) {
+                 return `<ul>${listContent}</ul>`;
+            }
+            return listContent;
+        });
 
-    function escapeHTML(str) {
-        return str.replace(/&/g, '&amp;')
-                  .replace(/</g, '&lt;')
-                  .replace(/>/g, '&gt;')
-                  .replace(/"/g, '&quot;')
-                  .replace(/'/g, '&#39;');
+        // Numbered Lists
+        text = text.replace(/^(\d+\.)\s*(.*(?:\n\d+\.\s*.*)*)/gm, (match) => {
+            let listContent = match.replace(/^\d+\.\s*/gm, '<li>');
+            listContent = listContent.replace(/\n/g, '</li>');
+            if (listContent.startsWith('<li>') && listContent.endsWith('</li>')) {
+                return `<ol>${listContent}</ol>`;
+            }
+            return listContent;
+        });
+        
+        // Replace single newlines with <br> and double newlines with <p></p>
+        // Note: This needs careful ordering to avoid breaking pre-formatted blocks
+        text = text.split('\n\n').map(p => {
+             // Do not wrap code, lists, or math blocks in <p>
+            if (p.includes('<pre>') || p.includes('<div class="code-block-wrapper') || p.includes('<div class="latex-render') || p.includes('<ul') || p.includes('<ol') || p.includes('<h')) {
+                return p; 
+            }
+            // Replace single newlines within paragraphs with <br>
+            let paragraphContent = p.replace(/\n/g, '<br>');
+            return `<p>${paragraphContent}</p>`;
+        }).join('');
+
+        return text;
     }
     
-    function handleCopyCode(e) {
-        const button = e.currentTarget;
-        const encodedCode = button.getAttribute('data-code');
-        
-        if (!encodedCode) return;
-        
-        const code = atob(encodedCode);
-        
-        navigator.clipboard.writeText(code).then(() => {
-            const originalHTML = button.innerHTML;
-            button.innerHTML = `${checkIconSVG}Copied!`;
-            button.classList.add('copied');
-            
-            setTimeout(() => {
-                button.innerHTML = originalHTML;
-                button.classList.remove('copied');
-            }, 2000);
-        }).catch(err => {
-            console.error('Failed to copy text: ', err);
-            alert('Failed to copy code to clipboard.');
+    function escapeHTML(str) {
+        return str.replace(/[&<>"']/g, function(m) {
+            return {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            }[m];
         });
     }
 
-    async function submitMessage() {
-        if (isRequestPending) return;
+    function handleCopyCode(e) {
+        const button = e.currentTarget;
+        const targetId = button.dataset.copyTarget;
+        const codeElement = document.getElementById(targetId);
+        
+        if (codeElement) {
+            const codeToCopy = codeElement.innerText;
+            navigator.clipboard.writeText(codeToCopy).then(() => {
+                const originalText = button.innerHTML;
+                button.innerHTML = `${checkIconSVG} <span>Copied!</span>`;
+                button.classList.add('copied');
+                
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                console.error('Could not copy text: ', err);
+            });
+        }
+    }
+    
+    function formatBytes(bytes, decimals = 2) {
+        if (bytes === 0) return '0 Bytes';
 
-        const inputEditor = document.getElementById('ai-input');
-        const query = inputEditor.innerText.trim();
-        const charCount = query.length;
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
 
-        if (charCount > CHAR_LIMIT) {
-            alert(`Your message exceeds the character limit of ${formatCharLimit(CHAR_LIMIT)}.`);
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    }
+    
+    function submitMessage() {
+        const editor = document.getElementById('ai-input');
+        const queryText = editor.innerText.trim();
+        const charCount = queryText.length;
+        
+        if (isRequestPending || (queryText.length === 0 && attachedFiles.length === 0)) {
             return;
         }
 
-        if (!query && attachedFiles.length === 0) return;
-        
-        // 1. Prepare chat history parts
-        let userMessageParts = [];
-        if (query) {
-            userMessageParts.push({ text: query });
+        if (charCount > CHAR_LIMIT) {
+            alert(`Your message exceeds the maximum limit of ${formatCharLimit(CHAR_LIMIT)} characters.`);
+            return;
         }
-        attachedFiles.forEach(file => {
-            if (file.inlineData) {
-                userMessageParts.push({ inlineData: file.inlineData });
-            }
-        });
-
-        // 2. Clear input and state
-        inputEditor.innerHTML = '';
-        inputEditor.style.height = 'auto'; // Reset height
-        attachedFiles = [];
-        renderAttachments();
-        handleContentEditableInput({ target: inputEditor });
-
-        // 3. Add message to history
-        chatHistory.push({ role: "user", parts: userMessageParts });
-
-        // 4. Update UI
-        const responseContainer = document.getElementById('ai-response-container');
-        if (responseContainer) {
-            const welcome = document.getElementById('ai-welcome-message');
-            if (welcome) welcome.style.display = 'none';
-
-            const container = document.getElementById('ai-container');
-            if (container) container.classList.add('chat-active');
-        }
-        renderChatHistory(); // Render user message
-
-        // 5. Create loading bubble and set state
-        const loadingBubble = document.createElement('div');
-        loadingBubble.className = 'ai-message-bubble gemini-response loading';
-        loadingBubble.innerHTML = `<div class="ai-loader"></div>`;
-        responseContainer.appendChild(loadingBubble);
-        responseContainer.scrollTop = responseContainer.scrollHeight;
 
         isRequestPending = true;
-        inputEditor.contentEditable = false;
+        
+        // Construct the user message parts, including text and attached files
+        let userMessageParts = [];
+        if (queryText.length > 0) {
+            userMessageParts.push({ text: queryText });
+        }
+        
+        attachedFiles.forEach(file => {
+            if (file.inlineData && file.inlineData.data) {
+                 userMessageParts.push({ inlineData: file.inlineData });
+            }
+        });
+        
+        // Add user message to history
+        const userMessage = { role: "user", parts: userMessageParts };
+        chatHistory.push(userMessage);
+
+        // Clear input and attachments
+        editor.innerText = '';
+        editor.style.height = 'auto'; 
+        document.getElementById('ai-char-counter').textContent = `0 / ${formatCharLimit(CHAR_LIMIT)}`;
+        attachedFiles = [];
+        renderAttachments(); 
+
+        // Add user message bubble to UI
+        const responseContainer = document.getElementById('ai-response-container');
+        const userBubble = document.createElement('div');
+        userBubble.className = 'ai-message-bubble user-message';
+        let userBubbleContent = '';
+        if (queryText) userBubbleContent += `<p>${escapeHTML(queryText)}</p>`;
+        if (userMessageParts.length > (queryText ? 1 : 0)) {
+            const fileCount = userMessageParts.length - (queryText ? 1 : 0);
+            userBubbleContent += `<div class="sent-attachments">${fileCount} file(s) sent</div>`;
+        }
+        userBubble.innerHTML = userBubbleContent;
+        responseContainer.appendChild(userBubble);
+        
+        // Add gemini loading bubble
+        const geminiBubble = document.createElement('div');
+        geminiBubble.className = 'ai-message-bubble gemini-response loading';
+        geminiBubble.innerHTML = `<div class="ai-loader-dots"><span></span><span></span><span></span></div>`;
+        responseContainer.appendChild(geminiBubble);
+
+        // Scroll to the bottom and show chat container
+        document.getElementById('ai-container').classList.add('chat-active');
+        responseContainer.scrollTop = responseContainer.scrollHeight;
+
         const inputWrapper = document.getElementById('ai-input-wrapper');
         if (inputWrapper) { inputWrapper.classList.add('waiting'); }
+        editor.contentEditable = false; 
 
-        // 6. Call API
-        await callGoogleAI(loadingBubble);
-        responseContainer.scrollTop = responseContainer.scrollHeight;
+        // Call AI API
+        callGoogleAI(geminiBubble);
     }
 
-    /**
-     * Injects CSS styles dynamically.
-     */
+
+    // --- INITIALIZATION ---
+    document.addEventListener('keydown', handleKeyDown);
+    if (typeof window.initPanicKeyBlocker === 'function') { window.initPanicKeyBlocker(handleKeyDown); } // Integrate with existing panic key system
+
+    // Function to inject required styles and fonts
     function injectStyles() {
         if (!document.getElementById('ai-dynamic-styles')) {
-            // Load Font Awesome for the gear icon
-            const fontAwesomeLink = document.createElement('link');
-            fontAwesomeLink.rel = 'stylesheet';
-            fontAwesomeLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css';
-            document.head.appendChild(fontAwesomeLink);
-            
-            // Load KaTeX CSS
-            const katexCSSLink = document.createElement('link');
-            katexCSSLink.rel = 'stylesheet';
-            katexCSSLink.id = 'ai-katex-styles';
-            katexCSSLink.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css';
-            document.head.appendChild(katexCSSLink);
-
-            // Load Google Fonts
-            const googleFonts = document.createElement('link');
-            googleFonts.id = 'ai-google-fonts';
-            googleFonts.rel = 'stylesheet';
-            googleFonts.href = 'https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Lora:wght@400;700&display=swap';
-            document.head.appendChild(googleFonts);
-            
             const style = document.createElement('style');
             style.id = 'ai-dynamic-styles';
+            // Custom CSS to ensure proper display and theming (assuming a dark/futuristic theme based on comments)
             style.textContent = `
-                /* --- BASE CONTAINER --- */
+                :root {
+                    --ai-background-color: #0d1117; /* Dark background, similar to GitHub dark */
+                    --ai-foreground-color: #ffffff;
+                    --ai-primary-color: #4285f4; /* Google Blue */
+                    --ai-secondary-color: #30363d;
+                    --ai-border-color: #21262d;
+                    --ai-blue: #4285f4;
+                    --ai-green: #34a853;
+                    --ai-yellow: #fbbc05;
+                    --ai-red: #ea4335;
+                }
+
+                /* --- FONT INJECTION (Google Fonts - Merriweather and Lora) --- */
+                @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&family=Lora:ital,wght@0,400;0,700;1,400&display=swap');
+                
+                /* --- FONT AWESOME (for settings gear) --- */
+                @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css');
+                
+                /* --- KATEX CSS --- */
+                @import url('https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css');
+                
                 #ai-container {
                     position: fixed;
-                    bottom: 0;
+                    top: 0;
                     right: 0;
-                    width: 100%;
-                    max-width: 450px;
-                    height: 100%;
-                    max-height: 0;
-                    background: #1e1e1e;
-                    border: 1px solid #333;
-                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-                    z-index: 10000;
+                    width: 0;
+                    height: 100vh;
+                    background-color: var(--ai-background-color);
+                    color: var(--ai-foreground-color);
+                    font-family: 'Lora', sans-serif;
+                    box-shadow: -5px 0 15px rgba(0, 0, 0, 0.5);
+                    z-index: 99999;
                     display: flex;
                     flex-direction: column;
-                    transition: max-height 0.5s ease-out, transform 0.5s ease-out;
-                    transform: translateY(100%);
-                    font-family: 'Lora', Georgia, serif;
-                    color: #fff;
-                    border-top-left-radius: 12px;
-                    border-top-right-radius: 12px;
+                    transition: width 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+                    overflow: hidden;
+                    border-left: 1px solid var(--ai-border-color);
+                    opacity: 0;
                 }
-
+                
                 #ai-container.active {
-                    max-height: 80%;
-                    transform: translateY(0);
+                    width: 420px;
+                    opacity: 1;
+                    pointer-events: all;
                 }
-
+                
                 #ai-container.deactivating {
-                    max-height: 0;
-                    transform: translateY(100%);
+                    width: 0;
+                    opacity: 0;
+                    box-shadow: none;
                 }
 
-                /* --- BRANDING / HEADER --- */
                 #ai-brand-title {
                     position: absolute;
-                    top: 15px;
-                    left: 20px;
-                    font-family: 'Merriweather', serif;
-                    font-size: 18px;
-                    font-weight: 700;
-                    color: #fff;
-                    opacity: 0;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%) rotate(90deg);
+                    font-family: 'Impact', sans-serif; /* Inspired by V4/Koyeb */
+                    font-size: 5rem;
+                    color: rgba(255, 255, 255, 0.05);
                     pointer-events: none;
-                    transition: opacity 0.5s;
+                    user-select: none;
+                    letter-spacing: 5px;
+                    white-space: nowrap;
+                    transition: opacity 0.3s, transform 0.5s;
                 }
-                #ai-brand-title span:nth-child(1) { color: #4285f4; }
-                #ai-brand-title span:nth-child(2) { color: #db4437; }
-                #ai-brand-title span:nth-child(3) { color: #f4b400; }
-                #ai-brand-title span:nth-child(4) { color: #0f9d58; }
+                
+                #ai-container.chat-active #ai-brand-title {
+                    opacity: 0;
+                    transform: translate(-50%, -50%) rotate(90deg) scale(0.5);
+                }
 
                 #ai-persistent-title {
-                    padding: 15px 50px 15px 20px;
+                    padding: 15px 20px;
                     font-family: 'Merriweather', serif;
-                    font-size: 18px;
                     font-weight: 700;
-                    color: #fff;
-                    background-color: #282828;
-                    border-top-left-radius: 12px;
-                    border-top-right-radius: 12px;
-                    border-bottom: 1px solid #333;
-                    transition: opacity 0.3s;
+                    font-size: 1.2rem;
+                    text-align: center;
+                    border-bottom: 1px solid var(--ai-border-color);
+                    background-color: var(--ai-secondary-color);
+                    color: var(--ai-primary-color);
                 }
-                #ai-container.chat-active #ai-persistent-title {
-                    opacity: 1;
-                }
-
+                
                 #ai-welcome-message {
                     padding: 20px;
                     text-align: center;
-                    color: #ccc;
-                    flex-shrink: 0;
-                    transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
-                }
-                #ai-welcome-message h2 {
-                    margin-top: 0;
-                    color: #f4b400;
-                    font-family: 'Merriweather', serif;
-                    font-weight: 700;
-                    font-size: 1.5em;
-                }
-                #ai-welcome-message p {
-                    font-size: 0.9em;
-                    margin-bottom: 5px;
-                    line-height: 1.4;
-                }
-                .shortcut-tip {
-                    color: #555;
-                    font-size: 0.8em;
-                    margin-top: 10px;
-                }
-                #ai-welcome-message.hidden {
-                    max-height: 0;
-                    opacity: 0;
-                    padding: 0 20px;
+                    border-bottom: 1px solid var(--ai-border-color);
+                    transition: max-height 0.3s ease-out, opacity 0.3s ease-out, padding 0.3s;
                     overflow: hidden;
                 }
+                
+                #ai-container.chat-active #ai-welcome-message {
+                    max-height: 0;
+                    padding-top: 0;
+                    padding-bottom: 0;
+                    opacity: 0;
+                    border-bottom: none;
+                }
 
-                /* --- CLOSE BUTTON --- */
+                #ai-welcome-message h2 {
+                    margin: 0 0 10px 0;
+                    font-size: 1.5rem;
+                    color: var(--ai-primary-color);
+                    font-weight: 700;
+                }
+                
+                #ai-welcome-message p {
+                    margin: 5px 0;
+                    font-size: 0.9rem;
+                    line-height: 1.4;
+                    color: #aaa;
+                }
+
+                #ai-welcome-message .shortcut-tip {
+                    font-size: 0.8rem;
+                    color: var(--ai-red);
+                    font-style: italic;
+                    margin-top: 10px;
+                    display: block;
+                }
+
                 #ai-close-button {
                     position: absolute;
                     top: 15px;
                     right: 15px;
-                    font-size: 24px;
-                    color: #ccc;
+                    font-size: 1.5rem;
                     cursor: pointer;
+                    color: #999;
                     line-height: 1;
-                    padding: 0 5px;
                     transition: color 0.2s;
-                    z-index: 10001;
-                }
-                #ai-close-button:hover {
-                    color: #fff;
-                }
-
-                /* --- RESPONSE AREA --- */
-                #ai-response-container {
-                    flex-grow: 1;
-                    padding: 15px;
-                    overflow-y: auto;
-                    scrollbar-width: thin;
-                    scrollbar-color: #555 #1e1e1e;
-                }
-                #ai-response-container::-webkit-scrollbar {
-                    width: 8px;
-                }
-                #ai-response-container::-webkit-scrollbar-thumb {
-                    background-color: #555;
-                    border-radius: 4px;
-                }
-                #ai-response-container::-webkit-scrollbar-track {
-                    background-color: #1e1e1e;
-                }
-
-                .ai-message-bubble {
-                    max-width: 90%;
-                    padding: 10px 15px;
-                    margin: 8px 0;
-                    border-radius: 18px;
-                    line-height: 1.5;
-                    font-size: 0.95em;
-                    word-wrap: break-word;
-                    opacity: 0;
-                    animation: message-pop-in 0.3s ease-out forwards;
-                }
-                .ai-message-bubble:nth-child(1) { animation-delay: 0.1s; }
-                .ai-message-bubble:nth-child(2) { animation-delay: 0.2s; }
-                .ai-message-bubble:nth-child(3) { animation-delay: 0.3s; }
-                .ai-message-bubble:nth-child(4) { animation-delay: 0.4s; }
-                .ai-message-bubble:nth-child(5) { animation-delay: 0.5s; }
-
-                .user-message {
-                    background-color: #4285f4;
-                    color: #fff;
-                    margin-left: auto;
-                    border-bottom-right-radius: 4px;
-                    font-weight: 500;
-                    text-align: right;
-                }
-
-                .gemini-response {
-                    background-color: #333;
-                    color: #ccc;
-                    margin-right: auto;
-                    border-bottom-left-radius: 4px;
-                    text-align: left;
-                }
-
-                /* Response content styling */
-                .ai-response-content {
-                    font-size: 1em;
-                }
-                .ai-response-content p {
-                    margin: 0;
-                    padding: 0;
-                    text-align: left;
-                }
-                .ai-response-content p + p {
-                    margin-top: 10px;
-                }
-                .ai-response-content h1, .ai-response-content h2, .ai-response-content h3 {
-                    margin-top: 1em;
-                    margin-bottom: 0.5em;
-                    color: #fff;
-                    font-family: 'Merriweather', serif;
-                    font-weight: 700;
-                }
-                .ai-response-content h1 { font-size: 1.4em; }
-                .ai-response-content h2 { font-size: 1.2em; }
-                .ai-response-content h3 { font-size: 1.1em; }
-
-                /* List Styling */
-                .ai-response-content ul, .ai-response-content ol {
-                    margin: 10px 0 10px 20px;
-                    padding: 0;
-                }
-                .ai-response-content li {
-                    margin-bottom: 5px;
-                }
-
-                /* Loader */
-                .ai-loader {
-                    display: flex;
-                    align-items: center;
-                    justify-content: flex-start;
+                    width: 20px;
                     height: 20px;
                 }
-                .ai-loader::before, .ai-loader::after, .ai-loader div {
-                    content: '';
-                    width: 8px;
-                    height: 8px;
-                    margin: 0 2px;
-                    background-color: #fff;
-                    border-radius: 50%;
-                    display: inline-block;
-                    animation: bounce 1.4s infinite ease-in-out both;
-                }
-                .ai-loader div {
-                    animation-delay: -0.32s;
-                }
-                .ai-loader::after {
-                    animation-delay: -0.16s;
+                
+                #ai-close-button:hover {
+                    color: var(--ai-red);
                 }
 
-                .ai-error {
-                    color: #db4437;
-                    font-weight: 700;
-                    background-color: #440000;
-                    padding: 5px;
-                    border-radius: 8px;
-                    text-align: center;
-                }
-                .ai-error-inline {
-                    color: #db4437;
-                    font-weight: 700;
-                }
-
-                /* --- COMPOSE AREA --- */
-                #ai-compose-area {
-                    flex-shrink: 0;
-                    padding: 10px;
-                    background-color: #282828;
-                    border-top: 1px solid #333;
+                #ai-response-container {
+                    flex-grow: 1;
+                    padding: 10px 15px;
+                    overflow-y: auto;
+                    scroll-behavior: smooth;
                     position: relative;
+                }
+                
+                #ai-compose-area {
+                    padding: 15px;
+                    border-top: 1px solid var(--ai-border-color);
+                    position: relative;
+                    min-height: 60px;
                 }
 
                 #ai-input-wrapper {
                     display: flex;
                     align-items: flex-end;
-                    background-color: #333;
-                    border-radius: 20px;
-                    padding: 8px 10px;
-                    transition: box-shadow 0.2s, background-color 0.2s;
+                    background-color: var(--ai-secondary-color);
+                    border-radius: 12px;
+                    border: 2px solid var(--ai-border-color);
+                    transition: border-color 0.2s;
+                    padding: 8px 8px 8px 12px;
+                    position: relative;
                 }
+
+                #ai-input-wrapper:focus-within {
+                    border-color: var(--ai-primary-color);
+                }
+                
                 #ai-input-wrapper.waiting {
-                    opacity: 0.7;
+                    opacity: 0.6;
                     pointer-events: none;
                 }
 
                 #ai-input {
                     flex-grow: 1;
-                    min-height: 20px;
+                    min-height: 24px;
                     max-height: ${MAX_INPUT_HEIGHT}px;
                     overflow-y: auto;
-                    color: #fff;
-                    caret-color: #4285f4;
+                    padding-right: 10px;
+                    border: none;
                     outline: none;
-                    padding: 5px 8px;
-                    margin-right: 5px;
+                    background: transparent;
+                    color: var(--ai-foreground-color);
+                    font-size: 0.95rem;
+                    line-height: 1.4;
+                    resize: none;
                     white-space: pre-wrap;
                     word-wrap: break-word;
-                    font-size: 0.95em;
-                    line-height: 1.4;
-                    scrollbar-width: none; /* Firefox */
-                }
-                #ai-input:empty:before {
-                    content: "Ask me anything...";
-                    color: #888;
-                }
-                #ai-input:focus {
-                    outline: none;
+                    cursor: text;
+                    /* Hide scrollbar for aesthetics */
+                    -ms-overflow-style: none;
+                    scrollbar-width: none;
                 }
                 #ai-input::-webkit-scrollbar {
-                    display: none; /* Chrome, Safari, Opera */
+                    display: none;
                 }
 
                 #ai-attachment-button, #ai-settings-button {
                     background: none;
                     border: none;
-                    color: #ccc;
+                    color: #999;
                     cursor: pointer;
-                    padding: 0 5px;
-                    transition: color 0.2s, transform 0.2s;
+                    padding: 5px;
+                    margin-left: 5px;
+                    transition: color 0.2s;
                     line-height: 1;
-                    height: 20px;
-                    width: 20px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    flex-shrink: 0;
                 }
-                #ai-attachment-button:hover, #ai-settings-button:hover {
-                    color: #fff;
+                
+                #ai-attachment-button:hover, #ai-settings-button:hover, #ai-settings-button.active {
+                    color: var(--ai-primary-color);
                 }
-                #ai-settings-button.active i {
-                    color: #f4b400;
-                    transform: rotate(90deg);
+
+                #ai-char-counter {
+                    font-size: 0.7rem;
+                    color: #999;
+                    text-align: right;
+                    padding: 5px 15px 0 0;
+                    transition: color 0.2s;
+                }
+                
+                #ai-char-counter.limit-exceeded {
+                    color: var(--ai-red);
+                    font-weight: bold;
+                }
+                
+                /* --- MESSAGE BUBBLES --- */
+                .ai-message-bubble {
+                    padding: 10px 15px;
+                    border-radius: 15px;
+                    margin-bottom: 12px;
+                    max-width: 85%;
+                    word-wrap: break-word;
+                    font-size: 0.9rem;
+                    line-height: 1.4;
+                    opacity: 0;
+                    transform: translateY(10px);
+                    animation: message-pop-in 0.3s ease-out forwards;
+                }
+
+                .user-message {
+                    background-color: var(--ai-primary-color);
+                    color: var(--ai-foreground-color);
+                    margin-left: auto;
+                    border-bottom-right-radius: 4px;
+                }
+
+                .gemini-response {
+                    background-color: var(--ai-secondary-color);
+                    color: var(--ai-foreground-color);
+                    margin-right: auto;
+                    border: 1px solid var(--ai-border-color);
+                    border-bottom-left-radius: 4px;
+                    animation: message-pop-in 0.3s ease-out 0.1s forwards; /* Slight delay for Gemini */
+                }
+                
+                .gemini-response:empty {
+                    padding: 0;
+                    margin-bottom: 0;
+                }
+                
+                .ai-response-content {
+                    /* Style for content within the bubble */
+                }
+                
+                .ai-response-content h2, .ai-response-content h3, .ai-response-content h4 {
+                    margin-top: 15px;
+                    margin-bottom: 5px;
+                    font-family: 'Merriweather', serif;
+                    font-weight: 700;
+                    color: var(--ai-primary-color);
+                }
+                
+                .ai-response-content h2 { font-size: 1.2rem; }
+                .ai-response-content h3 { font-size: 1.1rem; }
+                .ai-response-content h4 { font-size: 1rem; }
+
+                .ai-message-bubble p { margin: 10px 0; padding: 0; text-align: left; }
+                .ai-message-bubble ul, .ai-message-bubble ol { margin: 10px 0; padding-left: 20px; text-align: left; list-style-position: outside; }
+                .ai-message-bubble li { margin-bottom: 5px; }
+                
+                /* Remove margins for the first/last elements within the bubble */
+                .ai-response-content > :first-child { margin-top: 0; }
+                .ai-response-content > :last-child { margin-bottom: 0; }
+                
+                /* --- LOADER --- */
+                .gemini-response.loading {
+                    min-height: 20px;
+                    display: flex;
+                    align-items: center;
+                }
+                .ai-loader-dots {
+                    display: flex;
+                    align-items: center;
+                    height: 10px;
+                }
+                .ai-loader-dots span {
+                    display: block;
+                    width: 6px;
+                    height: 6px;
+                    background: var(--ai-primary-color);
+                    border-radius: 50%;
+                    margin: 0 3px;
+                    animation: bounce 1.2s infinite ease-in-out;
+                }
+                .ai-loader-dots span:nth-child(2) {
+                    animation-delay: -1.0s;
+                }
+                .ai-loader-dots span:nth-child(3) {
+                    animation-delay: -0.8s;
+                }
+
+                /* --- CODE BLOCKS --- */
+                .code-block-wrapper {
+                    margin: 15px 0;
+                    border-radius: 8px;
+                    border: 1px solid var(--ai-border-color);
+                    background-color: #161b22; /* Slightly lighter than container for contrast */
+                    overflow: hidden;
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+                }
+                
+                .code-block-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 8px 12px;
+                    background-color: #21262d;
+                    border-bottom: 1px solid var(--ai-border-color);
+                }
+                
+                .code-language {
+                    font-family: monospace;
+                    font-size: 0.8rem;
+                    color: #8b949e;
+                    text-transform: uppercase;
+                }
+                
+                .copy-code-btn {
+                    display: flex;
+                    align-items: center;
+                    gap: 5px;
+                    background: none;
+                    border: none;
+                    color: #8b949e;
+                    font-size: 0.8rem;
+                    cursor: pointer;
+                    transition: color 0.2s;
+                }
+                
+                .copy-code-btn:hover {
+                    color: var(--ai-foreground-color);
+                }
+                
+                .copy-code-btn span {
+                    line-height: 1;
+                }
+                
+                .copy-code-btn.copied {
+                    color: var(--ai-green);
+                }
+
+                .code-block-wrapper pre {
+                    margin: 0;
+                    padding: 15px;
+                    overflow-x: auto;
+                    font-size: 0.85rem;
+                    line-height: 1.4;
+                    white-space: pre-wrap;
+                    word-wrap: break-word;
+                }
+                
+                .code-block-wrapper code {
+                    font-family: 'Consolas', 'Monaco', monospace;
+                }
+                
+                /* --- KATEX STYLING --- */
+                .latex-render {
+                    /* Inherit text styling */
+                }
+                .katex-display {
+                    margin: 10px 0 !important;
+                    overflow-x: auto;
+                    overflow-y: hidden;
+                    padding: 5px 0;
+                }
+                
+                /* --- CUSTOM GRAPH STYLING --- */
+                .custom-graph-placeholder {
+                    position: relative;
+                    width: 100%;
+                    padding-bottom: 75%; /* 4:3 Aspect Ratio */
+                    margin: 15px 0;
+                    background-color: #161b22;
+                    border-radius: 8px;
+                    overflow: hidden;
+                    border: 1px solid var(--ai-border-color);
+                }
+
+                .custom-graph-canvas {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    display: block;
+                }
+                
+                .graph-label {
+                    position: absolute;
+                    bottom: 5px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    font-size: 0.7rem;
+                    color: #8b949e;
+                    background-color: rgba(0, 0, 0, 0.5);
+                    padding: 2px 6px;
+                    border-radius: 4px;
                 }
 
                 /* --- ATTACHMENTS PREVIEW --- */
                 #ai-attachment-preview {
                     display: flex;
-                    gap: 5px;
-                    overflow-x: auto;
-                    padding-bottom: 5px;
+                    flex-wrap: wrap;
+                    gap: 8px;
+                    padding-bottom: 8px;
                     margin-bottom: 5px;
-                    align-items: center;
-                    background-color: #282828;
-                    padding: 8px;
-                    border-radius: 12px;
-                    margin-bottom: 5px;
+                    max-height: 100px;
+                    overflow-y: auto;
+                    border-bottom: 1px dashed var(--ai-border-color);
+                    margin-right: 5px;
+                    margin-left: 5px;
                 }
+                
+                #ai-input-wrapper:not(.has-attachments) #ai-attachment-preview {
+                    border-bottom: none;
+                    padding-bottom: 0;
+                    margin-bottom: 0;
+                }
+
                 .attachment-card {
                     position: relative;
-                    min-width: 60px;
-                    height: 60px;
-                    border-radius: 8px;
+                    width: 50px;
+                    height: 50px;
+                    background-color: #21262d;
+                    border-radius: 6px;
                     overflow: hidden;
-                    border: 2px solid #555;
+                    border: 1px solid var(--ai-border-color);
                     cursor: pointer;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    background-color: #444;
+                    transition: all 0.2s;
                     flex-shrink: 0;
-                    transition: border-color 0.2s;
                 }
+                
                 .attachment-card:hover {
-                    border-color: #4285f4;
+                    border-color: var(--ai-primary-color);
                 }
+
                 .attachment-card img {
                     width: 100%;
                     height: 100%;
                     object-fit: cover;
                 }
+                
                 .attachment-card .file-icon {
-                    font-size: 24px;
-                }
-                .attachment-card .remove-attachment-btn {
-                    position: absolute;
-                    top: -5px;
-                    right: -5px;
-                    background: #db4437;
-                    color: #fff;
-                    border: none;
-                    border-radius: 50%;
-                    width: 18px;
-                    height: 18px;
+                    font-size: 1.5rem;
+                    color: var(--ai-primary-color);
                     line-height: 1;
-                    cursor: pointer;
-                    font-size: 14px;
-                    opacity: 0;
-                    transition: opacity 0.2s;
                 }
-                .attachment-card:hover .remove-attachment-btn {
-                    opacity: 1;
-                }
-                .attachment-card.loading {
-                    border-color: #f4b400;
-                    pointer-events: none;
-                }
-                .attachment-card .ai-loader {
-                    position: absolute;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                }
+
                 .attachment-card .file-info {
                     position: absolute;
                     bottom: 0;
                     left: 0;
                     right: 0;
-                    background: rgba(0, 0, 0, 0.7);
+                    background-color: rgba(0, 0, 0, 0.7);
                     color: #fff;
-                    font-size: 0.7em;
+                    font-size: 0.7rem;
                     padding: 2px 5px;
+                    text-align: center;
                     white-space: nowrap;
                     overflow: hidden;
                     text-overflow: ellipsis;
                 }
-                .attachment-card .file-type-badge {
-                    position: absolute;
-                    top: 2px;
-                    left: 2px;
-                    background: #4285f4;
-                    color: #fff;
-                    font-size: 0.6em;
-                    padding: 1px 4px;
-                    border-radius: 3px;
-                    font-weight: bold;
-                }
+                
                 .file-name {
                     overflow: hidden;
                     white-space: nowrap;
+                    position: relative;
                 }
-                .file-name.marquee span {
+                
+                .file-name span {
                     display: inline-block;
-                    padding-right: 0.5em; /* Space between duplicates */
-                    animation: marquee linear infinite;
+                }
+                
+                .file-name.marquee span:first-child {
+                    padding-right: 1em; /* Space between repeating text */
+                }
+                
+                .file-name.marquee span {
+                    animation: marquee var(--marquee-duration, 5s) linear infinite;
                 }
 
-                /* File Preview Modal */
+                .file-type-badge {
+                    position: absolute;
+                    top: 2px;
+                    left: 2px;
+                    background-color: var(--ai-primary-color);
+                    color: #fff;
+                    font-size: 0.6rem;
+                    padding: 1px 3px;
+                    border-radius: 3px;
+                    font-weight: bold;
+                }
+
+                .remove-attachment-btn {
+                    position: absolute;
+                    top: -5px;
+                    right: -5px;
+                    background-color: var(--ai-red);
+                    color: white;
+                    border: 1px solid var(--ai-background-color);
+                    border-radius: 50%;
+                    width: 15px;
+                    height: 15px;
+                    line-height: 1;
+                    padding: 0;
+                    font-size: 0.8rem;
+                    cursor: pointer;
+                    z-index: 10;
+                    opacity: 0.8;
+                }
+                
+                .remove-attachment-btn:hover {
+                    opacity: 1;
+                }
+                
+                .attachment-card.loading {
+                    pointer-events: none;
+                }
+                .attachment-card .ai-loader {
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.6);
+                    position: absolute;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .attachment-card .ai-loader:after {
+                    content: "";
+                    width: 15px;
+                    height: 15px;
+                    border: 2px solid #fff;
+                    border-top-color: var(--ai-primary-color);
+                    border-radius: 50%;
+                    animation: spin 0.6s linear infinite;
+                }
+                
+                .sent-attachments {
+                    font-size: 0.75rem;
+                    color: rgba(255, 255, 255, 0.7);
+                    margin-top: 5px;
+                    font-style: italic;
+                }
+                
+                /* --- MODAL PREVIEW --- */
                 #ai-preview-modal {
                     position: fixed;
                     top: 0;
                     left: 0;
                     width: 100%;
                     height: 100%;
-                    background: rgba(0, 0, 0, 0.9);
-                    z-index: 10002;
+                    background-color: rgba(0, 0, 0, 0.9);
+                    z-index: 100000;
                     display: flex;
-                    align-items: center;
                     justify-content: center;
+                    align-items: center;
                 }
+
                 .modal-content {
-                    background: #1e1e1e;
+                    background-color: var(--ai-background-color);
+                    color: var(--ai-foreground-color);
                     padding: 20px;
                     border-radius: 10px;
                     max-width: 90%;
                     max-height: 90%;
-                    overflow: auto;
                     position: relative;
-                    color: #fff;
+                    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
                 }
+                
                 .modal-content h3 {
                     margin-top: 0;
-                    color: #f4b400;
+                    margin-bottom: 10px;
+                    border-bottom: 1px solid var(--ai-border-color);
+                    padding-bottom: 5px;
+                    color: var(--ai-primary-color);
                 }
+
                 .modal-content .close-button {
                     position: absolute;
                     top: 10px;
                     right: 15px;
-                    font-size: 30px;
+                    font-size: 2rem;
                     cursor: pointer;
-                    color: #ccc;
+                    color: #fff;
                 }
+                
+                .modal-content .preview-area {
+                    max-height: 80vh;
+                    overflow: auto;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                }
+                
                 .download-button {
                     display: inline-block;
-                    margin-top: 15px;
                     padding: 10px 20px;
-                    background-color: #4285f4;
-                    color: #fff;
+                    margin-top: 10px;
+                    background-color: var(--ai-primary-color);
+                    color: white;
                     text-decoration: none;
                     border-radius: 5px;
+                    text-align: center;
                 }
 
 
@@ -1794,189 +1947,107 @@ Formatting Rules (MUST FOLLOW):
                 #ai-settings-menu {
                     position: absolute;
                     bottom: 100%;
-                    right: 10px;
+                    right: 0;
                     width: 300px;
-                    background: #333;
+                    background-color: var(--ai-secondary-color);
+                    border: 1px solid var(--ai-border-color);
                     border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
                     padding: 15px;
-                    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
                     transform: translateY(10px);
                     opacity: 0;
                     pointer-events: none;
-                    transition: all 0.2s ease-out;
-                    z-index: 9999;
-                    border: 1px solid #444;
+                    transition: all 0.3s cubic-bezier(0.17, 0.84, 0.44, 1);
+                    z-index: 100;
+                    margin-bottom: 10px;
                 }
+                
                 #ai-settings-menu.active {
-                    transform: translateY(-5px);
+                    transform: translateY(0);
                     opacity: 1;
                     pointer-events: all;
                 }
+
                 .menu-header {
-                    font-family: 'Merriweather', serif;
-                    font-size: 1.2em;
-                    font-weight: 700;
-                    color: #f4b400;
+                    font-size: 1.1rem;
+                    font-weight: bold;
+                    color: var(--ai-primary-color);
                     margin-bottom: 15px;
-                    border-bottom: 1px solid #444;
-                    padding-bottom: 8px;
+                    padding-bottom: 5px;
+                    border-bottom: 1px solid var(--ai-border-color);
                 }
+
                 .setting-group {
-                    margin-bottom: 12px;
+                    margin-bottom: 15px;
                 }
+                
                 .setting-group-split {
                     display: flex;
                     gap: 10px;
                 }
-                .setting-group-split .setting-group {
-                    flex: 1;
+                
+                .setting-group-split > .setting-group {
+                    flex-basis: 50%;
                 }
-                #ai-settings-menu label {
+
+                .setting-group label {
                     display: block;
-                    font-size: 0.9em;
-                    margin-bottom: 3px;
+                    font-size: 0.85rem;
                     color: #ccc;
+                    margin-bottom: 5px;
+                    font-weight: bold;
                 }
-                #ai-settings-menu input, #ai-settings-menu select {
+
+                .setting-group input, .setting-group select {
                     width: 100%;
                     padding: 8px;
-                    border: 1px solid #555;
-                    background-color: #444;
-                    color: #fff;
-                    border-radius: 4px;
+                    border: 1px solid var(--ai-border-color);
+                    border-radius: 5px;
+                    background-color: var(--ai-background-color);
+                    color: var(--ai-foreground-color);
+                    font-size: 0.9rem;
                     box-sizing: border-box;
+                    transition: border-color 0.2s;
+                    -webkit-appearance: none;
+                    -moz-appearance: none;
+                    appearance: none;
                 }
-                #ai-settings-menu input[type="color"] {
-                    height: 34px;
+                
+                .setting-group input:focus, .setting-group select:focus {
+                    outline: none;
+                    border-color: var(--ai-primary-color);
+                }
+                
+                /* Specific color input size */
+                #settings-color {
+                    height: 35px;
                     padding: 0;
+                    cursor: pointer;
                 }
+
                 .setting-note {
-                    font-size: 0.75em;
-                    color: #888;
-                    margin-top: 2px;
+                    font-size: 0.7rem;
+                    color: #8b949e;
+                    margin-top: 5px;
                     margin-bottom: 0;
                 }
+
                 #settings-save-button {
                     width: 100%;
                     padding: 10px;
-                    background-color: #4285f4;
-                    color: #fff;
+                    background-color: var(--ai-primary-color);
+                    color: white;
                     border: none;
                     border-radius: 5px;
                     cursor: pointer;
-                    margin-top: 10px;
-                    font-weight: 700;
+                    font-size: 1rem;
+                    font-weight: bold;
                     transition: background-color 0.2s;
+                    margin-top: 10px;
                 }
+                
                 #settings-save-button:hover {
-                    background-color: #3b78e7;
-                }
-
-                /* --- CODE BLOCK STYLING --- */
-                .code-block-container {
-                    background-color: #222;
-                    border-radius: 8px;
-                    margin: 15px 0;
-                    overflow: hidden;
-                    border: 1px solid #444;
-                }
-                .code-header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    padding: 5px 10px;
-                    background-color: #333;
-                    border-bottom: 1px solid #444;
-                    font-size: 0.8em;
-                    color: #ccc;
-                }
-                .copy-code-btn {
-                    background: none;
-                    border: none;
-                    color: #4285f4;
-                    cursor: pointer;
-                    font-size: 1em;
-                    display: flex;
-                    align-items: center;
-                    gap: 5px;
-                    transition: color 0.2s;
-                    font-family: inherit;
-                }
-                .copy-code-btn:hover {
-                    color: #fff;
-                }
-                .copy-code-btn.copied {
-                    color: #0f9d58;
-                }
-                .copy-code-btn svg {
-                    width: 14px;
-                    height: 14px;
-                }
-                .code-block-container pre {
-                    margin: 0;
-                    padding: 10px;
-                    overflow-x: auto;
-                    color: #f8f8f2;
-                    font-family: monospace;
-                    font-size: 0.9em;
-                }
-
-                /* --- MATH BLOCK STYLING --- */
-                .latex-render.display-math {
-                    margin: 10px 0;
-                    padding: 10px;
-                    background-color: #222;
-                    border: 1px solid #444;
-                    border-radius: 6px;
-                    overflow-x: auto;
-                    text-align: center;
-                }
-                .latex-render.inline-math {
-                    display: inline-block;
-                    margin: 0 2px;
-                    vertical-align: middle;
-                }
-                .placeholder-math-text, .placeholder-math-text-inline {
-                    font-family: monospace;
-                    font-size: 0.9em;
-                    color: #f4b400;
-                }
-
-                /* --- GRAPH STYLING --- */
-                .custom-graph-placeholder {
-                    width: 100%;
-                    height: 300px; 
-                    background-color: #1e1e1e;
-                    border: 1px solid #4285f4;
-                    border-radius: 8px;
-                    margin: 15px 0;
-                    overflow: hidden;
-                    position: relative;
-                }
-                .custom-graph-placeholder canvas {
-                    width: 100%;
-                    height: 100%;
-                    display: block;
-                }
-                .graph-title {
-                    position: absolute;
-                    top: 10px;
-                    width: 100%;
-                    text-align: center;
-                    font-family: 'Merriweather', serif;
-                    font-size: 1.1em;
-                    font-weight: 700;
-                    color: #fff;
-                }
-
-                /* --- SENT ATTACHMENTS --- */
-                .sent-attachments {
-                    font-size: 0.8em;
-                    color: #ccc;
-                    margin-top: 5px;
-                    padding-top: 5px;
-                    border-top: 1px solid rgba(255, 255, 255, 0.2);
-                    text-align: right;
+                    background-color: #3b78e7; /* Slightly darker blue */
                 }
 
 
