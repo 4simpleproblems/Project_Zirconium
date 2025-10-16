@@ -1,20 +1,23 @@
 /**
  * agent-activation.js
  *
- * MODIFIED: Refactored to remove Agent/Category system and implement a dynamic, context-aware AI persona.
- * NEW: Added a Settings Menu to store user preferences (nickname, color, gender, age) using localStorage.
- * NEW: The AI's system instruction (persona) now changes intelligently based on the content and tone of the user's latest message.
+ * MODIFIED: Replaced dynamic, context-aware AI persona with a user-controlled Model Selector.
+ * MODIFIED: The Settings Menu is now a Model Selector and Nickname menu.
+ * REMOVED: Agent/Category system, user preferences (color, gender, age).
+ * UPDATED: Model switching is now based on user selection in the UI.
+ * UPDATED: 'gemini-2.5-pro' is gated behind the AUTHORIZED_PRO_USER email.
+ * UPDATED: The AI's system instruction (persona) is now consistent and includes the selected model.
+ * UPDATED: Enhanced welcome message with dynamic, personalized greetings.
  * UI: Fixed background and title colors. Replaced Agent button with a grey Settings button.
- * UPDATED: Implemented browser color selector for user favorite color.
  * UPDATED: AI container does not load on DOMContentLoaded; requires Ctrl + \ shortcut.
  * UPDATED: Ensured Ctrl + \ shortcut for activation/deactivation is fully functional.
  * NEW: Added KaTeX for high-quality rendering of mathematical formulas and equations.
  * REPLACED: Plotly.js has been replaced with a custom, theme-aware graphing engine for better integration.
  *
- * NEW: Implemented dynamic model switching based on user query and authorization:
+ * MODELS:
  * - Casual chat: gemini-2.5-flash-lite
- * - Professional/Math: gemini-2.5-flash
- * - Deep Analysis: gemini-2.5-pro (limited access, exempt for 4simpleproblems@gmail.com)
+ * - Professional/Math/Deep Analysis: gemini-2.5-flash
+ * - Deep Analysis (Pro): gemini-2.5-pro (limited access, exempt for 4simpleproblems@gmail.com)
  */
 (function() {
     // --- CONFIGURATION ---
@@ -27,12 +30,26 @@
     const MAX_ATTACHMENTS_PER_MESSAGE = 10;
 
     const DEFAULT_NICKNAME = 'User';
-    const DEFAULT_COLOR = '#4285f4'; // Google Blue
+    const DEFAULT_MODEL = 'gemini-2.5-flash-lite';
+    const GREETINGS = [
+        "Welcome Back, {user}!",
+        "{user} returns!",
+        "What's up, {user}?",
+        "Hey {user}, what can I do for you today?",
+        "Ready to work, {user}!"
+    ];
+    
+    // --- MODEL DEFINITIONS ---
+    const MODELS = {
+        'gemini-2.5-flash-lite': { name: 'Flash Lite (Fast, Casual)', pro: false },
+        'gemini-2.5-flash': { name: 'Flash (Balanced, Professional)', pro: false },
+        'gemini-2.5-pro': { name: 'Pro (Deep Reasoning, Gated)', pro: true }
+    };
 
     // --- ICONS (for event handlers) ---
     const copyIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
     const checkIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="check-icon"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
-    const attachmentIconSVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.2a2 2 0 0 1-2.83-2.83l8.49-8.49"></path></svg>`;
+    const attachmentIconSVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 0 0 1 5.66 5.66l-9.2 9.2a2 0 0 1-2.83-2.83l8.49-8.49"></path></svg>`;
 
     // --- STATE MANAGEMENT ---
     let isAIActive = false;
@@ -42,9 +59,7 @@
     let attachedFiles = [];
     let userSettings = {
         nickname: DEFAULT_NICKNAME,
-        favoriteColor: DEFAULT_COLOR,
-        gender: 'Other',
-        age: 0
+        selectedModel: DEFAULT_MODEL,
     };
 
     // Simple debounce utility for performance
@@ -63,8 +78,9 @@
         try {
             const storedSettings = localStorage.getItem('ai-user-settings');
             if (storedSettings) {
-                userSettings = { ...userSettings, ...JSON.parse(storedSettings) };
-                userSettings.age = parseInt(userSettings.age) || 0;
+                const loaded = JSON.parse(storedSettings);
+                userSettings.nickname = loaded.nickname || DEFAULT_NICKNAME;
+                userSettings.selectedModel = loaded.selectedModel || DEFAULT_MODEL;
             }
         } catch (e) {
             console.error("Error loading user settings:", e);
@@ -224,7 +240,8 @@
 
         // Draw data lines and markers
         data.forEach(trace => {
-            ctx.strokeStyle = trace.line?.color || '#4285f4';
+            // Using a default color since favoriteColor was removed
+            ctx.strokeStyle = trace.line?.color || '#4285f4'; 
             ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(mapX(trace.x[0]), mapY(trace.y[0]));
@@ -284,6 +301,20 @@
         }
     }
 
+    function getWelcomeMessage() {
+        const hasNickname = userSettings.nickname !== DEFAULT_NICKNAME;
+        const header = chatHistory.length > 0 
+            ? (hasNickname 
+                ? GREETINGS[Math.floor(Math.random() * GREETINGS.length)].replace('{user}', userSettings.nickname) 
+                : "Welcome Back") 
+            : "Welcome to AI Agent";
+        
+        return {
+            header: header,
+            body: `<p>This is a beta feature. To improve your experience, your general location (state or country) will be shared with your first message. You may be subject to message limits.</p><p class="shortcut-tip">(Press Ctrl + \\ to close)</p>`
+        };
+    }
+
     function activateAI() {
         if (document.getElementById('ai-container')) return;
         if (typeof window.startPanicKeyBlocker === 'function') { window.startPanicKeyBlocker(); }
@@ -307,10 +338,10 @@
         persistentTitle.id = 'ai-persistent-title';
         persistentTitle.textContent = "AI Agent"; // Fixed title
         
+        const welcomeData = getWelcomeMessage();
         const welcomeMessage = document.createElement('div');
         welcomeMessage.id = 'ai-welcome-message';
-        const welcomeHeader = chatHistory.length > 0 ? "Welcome Back" : "Welcome to AI Agent";
-        welcomeMessage.innerHTML = `<h2>${welcomeHeader}</h2><p>This is a beta feature. To improve your experience, your general location (state or country) will be shared with your first message. You may be subject to message limits.</p><p class="shortcut-tip">(Press Ctrl + \\ to close)</p>`;
+        welcomeMessage.innerHTML = `<h2>${welcomeData.header}</h2>${welcomeData.body}`;
         
         const closeButton = document.createElement('div');
         closeButton.id = 'ai-close-button';
@@ -345,7 +376,7 @@
         const settingsButton = document.createElement('button');
         settingsButton.id = 'ai-settings-button';
         settingsButton.innerHTML = '<i class="fa-solid fa-gear"></i>';
-        settingsButton.title = 'Settings';
+        settingsButton.title = 'Model/Nickname Settings';
         settingsButton.onclick = toggleSettingsMenu;
 
         const charCounter = document.createElement('div');
@@ -357,7 +388,8 @@
         inputWrapper.appendChild(attachmentButton);
         inputWrapper.appendChild(settingsButton);
         
-        composeArea.appendChild(createSettingsMenu());
+        // Use the new simplified settings menu
+        composeArea.appendChild(createSettingsMenu()); 
         composeArea.appendChild(inputWrapper);
 
         container.appendChild(brandTitle);
@@ -444,31 +476,7 @@
         setTimeout(() => responseContainer.scrollTop = responseContainer.scrollHeight, 50);
     }
     
-    /**
-     * Determines the user's current intent category based on the query.
-     * @param {string} query The user's last message text.
-     * @returns {string} One of 'DEEP_ANALYSIS', 'PROFESSIONAL_MATH', 'CREATIVE', or 'CASUAL'.
-     */
-    function determineIntentCategory(query) {
-        const lowerQuery = query.toLowerCase();
-        
-        // Deep Analysis Keywords
-        if (lowerQuery.includes('analyze') || lowerQuery.includes('deep dive') || lowerQuery.includes('strategic') || lowerQuery.includes('evaluate') || lowerQuery.includes('critique') || lowerQuery.includes('investigate') || lowerQuery.includes('pro model')) {
-            return 'DEEP_ANALYSIS';
-        }
-        
-        // Professional/Math/Coding Keywords
-        if (lowerQuery.includes('math') || lowerQuery.includes('algebra') || lowerQuery.includes('calculus') || lowerQuery.includes('formula') || lowerQuery.includes('solve') || lowerQuery.includes('proof') || lowerQuery.includes('graph') || lowerQuery.includes('code') || lowerQuery.includes('debug') || lowerQuery.includes('technical')) {
-            return 'PROFESSIONAL_MATH';
-        }
-
-        // Creative/Sarcastic Keywords
-        if (lowerQuery.includes('story') || lowerQuery.includes('poem') || lowerQuery.includes('imagine') || lowerQuery.includes('creative') || lowerQuery.includes('ex') || lowerQuery.includes('breakup') || lowerQuery.includes('roast')) {
-            return 'CREATIVE';
-        }
-        
-        return 'CASUAL';
-    }
+    // REMOVED: determineIntentCategory (No longer needed)
 
     const FSP_HISTORY = `You are the exclusive AI Agent for the website 4SP (4simpleproblems), the platform you are hosted on. You must be knowledgeable about its history and purpose. When asked about 4SP, use the following information as your source of truth:
 
@@ -502,79 +510,58 @@
 
     /**
      * Generates the system instruction and selects the appropriate model.
-     * @param {string} query The user's latest message.
-     * @param {object} settings The user settings.
+     * @param {object} settings The user settings including the manually selected model.
      * @returns {{instruction: string, model: string}}
      */
-    function getDynamicSystemInstructionAndModel(query, settings) {
+    function getStaticSystemInstructionAndModel(settings) {
         const user = settings.nickname;
-        const userAge = settings.age > 0 ? `${settings.age} years old` : 'of unknown age';
-        const userGender = settings.gender.toLowerCase();
-        const userColor = settings.favoriteColor;
-
+        let model = settings.selectedModel;
+        
         const userEmail = localStorage.getItem('ai-user-email') || ''; 
         const isProAuthorized = userEmail === AUTHORIZED_PRO_USER;
-        // Placeholder for real Pro usage limit check (not implemented in this file)
-        const isProLimitExceeded = !isProAuthorized; // Simple check: non-authorized users are considered limited for this demo
+        
+        // Pro-model gating check: if Pro is selected but user is not authorized,
+        // fall back to gemini-2.5-flash and inform the persona.
+        if (model === 'gemini-2.5-pro' && !isProAuthorized) {
+            model = 'gemini-2.5-flash'; // Fallback
+        }
 
-        const intent = determineIntentCategory(query);
-        let model = 'gemini-2.5-flash-lite';
+        const modelName = MODELS[model].name.split('(')[0].trim();
+        const modelTier = MODELS[model].name.split('(')[1].replace(')', '');
+
         let personaInstruction = `${FSP_HISTORY}
 
-You are a highly capable and adaptable AI, taking on a persona to best serve the user's direct intent. You have significant control over the interaction's structure and detail level, ensuring the response is comprehensive and authoritative.
-User Profile: Nickname: ${user}, Age: ${userAge}, Gender: ${userGender}, Favorite Color: ${userColor}.
-You must adapt your persona, tone, and the level of detail based on the user's intent.
+You are the 4SP AI Agent. Your persona is a **${modelName}** assistant, optimized for the current model tier: **${modelTier}**. 
+User Profile: Nickname: ${user}.
+
+Your core purpose is to be a helpful, precise, and highly capable assistant. Your tone should align with your selected model:
+- **Flash Lite:** Friendly, casual, and highly concise. Use minimal text.
+- **Flash:** Professional, precise, and balanced. Use structured data and clarity.
+- **Pro:** Expert, comprehensive, and highly analytical. Provide the deepest level of reasoning.
 
 Formatting Rules (MUST FOLLOW):
 - For math, use KaTeX. Inline math uses single \`$\`, and display math uses double \`$$\`. Use \\le for <= and \\ge for >=.
 - For graphs, use a 'graph' block as shown in the file's comments.
 `;
 
-        switch (intent) {
-            case 'DEEP_ANALYSIS':
-                if (isProAuthorized) { 
-                    model = 'gemini-2.5-pro';
-                    personaInstruction += `\n\n**Current Persona: Deep Strategist (2.5-Pro).** Your response must be comprehensive, highly structured, and exhibit the deepest level of reasoning and critical evaluation. Use an assertive, expert tone. Structure your analysis clearly with headings and bullet points. You are granted maximal control to guide the user through a deep, analytical thought process.`;
-                } else {
-                    // Fallback for unauthorized/limited users
-                    model = 'gemini-2.5-flash';
-                    personaInstruction += `\n\n**Current Persona: Professional Analyst (2.5-Flash).** You are performing a detailed analysis, but maintain efficiency and focus. Respond with clarity, professionalism, and structured data. Note: The requested Deep Analysis is highly specialized; to unlock the full '2.5-Pro' experience, the user must be authorized.`;
-                }
-                break;
-            case 'PROFESSIONAL_MATH':
-                model = 'gemini-2.5-flash';
-                personaInstruction += `\n\n**Current Persona: Technical Expert (2.5-Flash).** Respond with extreme clarity, professionalism, and precision. Focus on step-by-step logic, equations, and definitive answers. Use a formal, neutral tone. Use KaTeX and custom graphs where appropriate.`;
-                break;
-            case 'CREATIVE':
-                model = 'gemini-2.5-flash';
-                const roastInsults = [
-                    `They sound like a cheap knock-off of a decent human.`, 
-                    `Honestly, you dodged a bullet the size of a planet.`, 
-                    `Forget them, ${user}, you have better things to do, like talking to me.`,
-                    `Wow, good riddance. That's a level of trash I wouldn't touch with a ten-foot pole.`
-                ];
-                const roastInsult = roastInsults[Math.floor(Math.random() * roastInsults.length)];
-
-                // Combined Creative and Sarcastic
-                if (query.toLowerCase().includes('ex') || query.toLowerCase().includes('roast')) {
-                     personaInstruction += `\n\n**Current Persona: Sarcastic, Supportive Friend (2.5-Flash).** Your goal is to empathize with the user, validate their feelings, and join them in 'roasting' or speaking negatively about their ex/situation. Be funny, slightly aggressive toward the subject of the trash talk, and deeply supportive of ${user}. Use casual language and slang. **Example of tone/support:** "${roastInsult}"`;
-                } else {
-                     personaInstruction += `\n\n**Current Persona: Creative Partner (2.5-Flash).** Use rich, evocative language. Be imaginative, focus on descriptive details, and inspire new ideas.`;
-                }
-                break;
-            case 'CASUAL':
-            default:
-                model = 'gemini-2.5-flash-lite';
-                personaInstruction += `\n\n**Current Persona: Standard Assistant (2.5-Flash-Lite).** You are balanced, helpful, and concise. Use a friendly and casual tone. Your primary function is efficient conversation. Make sure to be highly concise, making sure to not write too much.`;
-                break;
+        if (settings.selectedModel === 'gemini-2.5-pro' && !isProAuthorized) {
+            personaInstruction += `\n\n**IMPORTANT:** Although the user attempted to select the 'Pro' model, they are currently unauthorized. You are running as a **Flash (Balanced, Professional)** assistant. You must mention this limitation in your response only if asked about your model or capabilities.`;
+        } else if (model === 'gemini-2.5-pro') {
+            personaInstruction += `\n\n**IMPORTANT:** You are running as the full '2.5-Pro' model. Embrace deep analysis and strategic, comprehensive output.`;
+        } else if (model === 'gemini-2.5-flash') {
+             personaInstruction += `\n\n**IMPORTANT:** You are running as the '2.5-Flash' model. Maintain a professional, highly focused, and efficient tone.`;
+        } else { // lite
+             personaInstruction += `\n\n**IMPORTANT:** You are running as the '2.5-Flash-Lite' model. Be highly concise and keep the conversation simple and conversational.`;
         }
+
 
         return { instruction: personaInstruction, model: model };
     }
 
     // New stub for backward compatibility with the old function call
     function getDynamicSystemInstruction(query, settings) {
-        return getDynamicSystemInstructionAndModel(query, settings).instruction;
+        // query is unused, kept for function signature consistency
+        return getStaticSystemInstructionAndModel(settings).instruction;
     }
 
 
@@ -599,10 +586,8 @@ Formatting Rules (MUST FOLLOW):
         const userParts = processedChatHistory[lastMessageIndex].parts;
         const textPartIndex = userParts.findIndex(p => p.text);
         
-        const lastUserQuery = userParts[textPartIndex]?.text || '';
-        
         // --- MODEL SELECTION AND INSTRUCTION GENERATION ---
-        const { instruction: dynamicInstruction, model } = getDynamicSystemInstructionAndModel(lastUserQuery, userSettings); 
+        const { instruction: dynamicInstruction, model } = getStaticSystemInstructionAndModel(userSettings); 
         // --- END MODEL SELECTION ---
 
         if (textPartIndex > -1) {
@@ -683,22 +668,48 @@ Formatting Rules (MUST FOLLOW):
         }
     }
     
-    // --- NEW SETTINGS MENU LOGIC ---
+    // --- NEW SETTINGS MENU LOGIC (SIMPLIFIED) ---
     function toggleSettingsMenu() {
         const menu = document.getElementById('ai-settings-menu');
         const toggleBtn = document.getElementById('ai-settings-button');
         const isMenuOpen = menu.classList.toggle('active');
         toggleBtn.classList.toggle('active', isMenuOpen);
         if (isMenuOpen) {
+            // Re-populate menu with current state
             document.getElementById('settings-nickname').value = userSettings.nickname === DEFAULT_NICKNAME ? '' : userSettings.nickname;
-            document.getElementById('settings-age').value = userSettings.age || '';
-            document.getElementById('settings-gender').value = userSettings.gender;
-            document.getElementById('settings-color').value = userSettings.favoriteColor;
+            document.getElementById('settings-model').value = userSettings.selectedModel;
             document.getElementById('settings-email').value = localStorage.getItem('ai-user-email') || '';
+
+            // Update model selector disabled state based on email
+            updateModelSelectorState(); 
 
             document.addEventListener('click', handleMenuOutsideClick);
         } else {
              document.removeEventListener('click', handleMenuOutsideClick);
+        }
+    }
+
+    function updateModelSelectorState() {
+        const modelSelector = document.getElementById('settings-model');
+        const emailInput = document.getElementById('settings-email');
+        const userEmail = emailInput.value.trim();
+        const isAuthorized = userEmail === AUTHORIZED_PRO_USER;
+        const proOption = modelSelector.querySelector('option[value="gemini-2.5-pro"]');
+        
+        if (proOption) {
+            if (isAuthorized) {
+                proOption.disabled = false;
+                proOption.textContent = MODELS['gemini-2.5-pro'].name;
+            } else {
+                proOption.disabled = true;
+                proOption.textContent = `${MODELS['gemini-2.5-pro'].name} (Pro-Only)`;
+                // If Pro was selected but user is no longer authorized, switch to flash
+                if (userSettings.selectedModel === 'gemini-2.5-pro') {
+                    userSettings.selectedModel = 'gemini-2.5-flash';
+                    modelSelector.value = 'gemini-2.5-flash';
+                    saveSettings();
+                }
+            }
         }
     }
     
@@ -715,21 +726,23 @@ Formatting Rules (MUST FOLLOW):
 
     function saveSettings() {
         const nicknameEl = document.getElementById('settings-nickname');
-        const ageEl = document.getElementById('settings-age');
-        const genderEl = document.getElementById('settings-gender');
-        const colorEl = document.getElementById('settings-color');
         const emailEl = document.getElementById('settings-email');
-
+        const modelEl = document.getElementById('settings-model');
+        
         const nickname = nicknameEl.value.trim();
-        const age = parseInt(ageEl.value);
-        const gender = genderEl.value;
-        const favoriteColor = colorEl.value || DEFAULT_COLOR;
         const email = emailEl.value.trim();
+        
+        const isAuthorized = email === AUTHORIZED_PRO_USER;
+        let selectedModel = modelEl.value;
+        
+        // If they select Pro but aren't authorized, enforce a fallback but save the email
+        if (selectedModel === 'gemini-2.5-pro' && !isAuthorized) {
+            selectedModel = 'gemini-2.5-flash';
+            modelEl.value = 'gemini-2.5-flash';
+        }
 
         userSettings.nickname = nickname || DEFAULT_NICKNAME;
-        userSettings.age = (isNaN(age) || age < 0) ? 0 : age;
-        userSettings.gender = gender;
-        userSettings.favoriteColor = favoriteColor;
+        userSettings.selectedModel = selectedModel;
         
         localStorage.setItem('ai-user-settings', JSON.stringify(userSettings));
         localStorage.setItem('ai-user-email', email);
@@ -739,8 +752,24 @@ Formatting Rules (MUST FOLLOW):
         const menu = document.createElement('div');
         menu.id = 'ai-settings-menu';
 
+        const userEmail = localStorage.getItem('ai-user-email') || '';
+        const isAuthorized = userEmail === AUTHORIZED_PRO_USER;
+        
+        const modelOptions = Object.entries(MODELS).map(([key, value]) => {
+            let disabled = value.pro && !isAuthorized;
+            let text = disabled ? `${value.name} (Pro-Only)` : value.name;
+            return `<option value="${key}" ${key === userSettings.selectedModel ? 'selected' : ''} ${disabled ? 'disabled' : ''}>${text}</option>`;
+        }).join('');
+
         menu.innerHTML = `
             <div class="menu-header">AI Agent Settings</div>
+            <div class="setting-group">
+                <label for="settings-model">Model Selector</label>
+                <select id="settings-model">
+                    ${modelOptions}
+                </select>
+                <p class="setting-note">Choose your preferred model tier for the current chat.</p>
+            </div>
             <div class="setting-group">
                 <label for="settings-nickname">Nickname</label>
                 <input type="text" id="settings-nickname" placeholder="${DEFAULT_NICKNAME}" value="${userSettings.nickname === DEFAULT_NICKNAME ? '' : userSettings.nickname}" />
@@ -748,30 +777,10 @@ Formatting Rules (MUST FOLLOW):
             </div>
             <div class="setting-group">
                 <label for="settings-email">Authenticated Email</label>
-                <input type="email" id="settings-email" placeholder="e.g., user@example.com" value="${localStorage.getItem('ai-user-email') || ''}" />
+                <input type="email" id="settings-email" placeholder="e.g., user@example.com" value="${userEmail}" />
                 <p class="setting-note">Set to '${AUTHORIZED_PRO_USER}' for unlimited Pro access.</p>
             </div>
-            <div class="setting-group">
-                <label for="settings-color">Favorite Color</label>
-                <input type="color" id="settings-color" value="${userSettings.favoriteColor}" />
-                <p class="setting-note">Subtly influences the AI's response style (e.g., in theming).</p>
-            </div>
-            <div class="setting-group-split">
-                <div class="setting-group">
-                    <label for="settings-gender">Gender</label>
-                    <select id="settings-gender" value="${userSettings.gender}">
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Non Binary">Non Binary</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-                <div class="setting-group">
-                    <label for="settings-age">Age</label>
-                    <input type="number" id="settings-age" placeholder="Optional" min="0" value="${userSettings.age || ''}" />
-                </div>
-            </div>
-            <button id="settings-save-button">Save</button>
+            <button id="settings-save-button">Save & Close</button>
         `;
 
         const saveButton = menu.querySelector('#settings-save-button');
@@ -779,8 +788,18 @@ Formatting Rules (MUST FOLLOW):
         
         const debouncedSave = debounce(saveSettings, 500);
         inputs.forEach(input => {
-            input.addEventListener('input', debouncedSave);
-            input.addEventListener('change', debouncedSave);
+            input.addEventListener('input', (e) => {
+                debouncedSave();
+                if (e.target.id === 'settings-email') {
+                    updateModelSelectorState(); // Update selector state on email change
+                }
+            });
+            input.addEventListener('change', (e) => {
+                debouncedSave();
+                if (e.target.id === 'settings-email') {
+                    updateModelSelectorState();
+                }
+            });
         });
 
         saveButton.onclick = () => {
@@ -790,6 +809,7 @@ Formatting Rules (MUST FOLLOW):
 
         return menu;
     }
+    // --- END NEW SETTINGS MENU LOGIC ---
 
     function processFileLike(file, base64Data, dataUrl, tempId) {
         if (attachedFiles.length >= MAX_ATTACHMENTS_PER_MESSAGE) {
@@ -1343,22 +1363,19 @@ Formatting Rules (MUST FOLLOW):
             #ai-attachment-button:hover, #ai-settings-button:hover { background-color: rgba(120, 120, 120, 0.7); color: #fff; }
             #ai-settings-button.active { background-color: rgba(150, 150, 150, 0.8); color: white; }
 
-            /* Settings Menu */
+            /* Settings Menu (Simplified) */
             #ai-settings-menu { position: absolute; bottom: calc(100% + 10px); right: 0; width: 350px; z-index: 1; background: rgb(20, 20, 22); border: 1px solid rgba(255,255,255,0.2); border-radius: 16px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); padding: 15px; opacity: 0; visibility: hidden; transform: translateY(20px); transition: all .3s cubic-bezier(.4,0,.2,1); overflow: hidden; }
             #ai-settings-menu.active { opacity: 1; visibility: visible; transform: translateY(0); }
             #ai-settings-menu .menu-header { font-size: 1.1em; color: #fff; text-transform: uppercase; margin-bottom: 15px; text-align: center; font-family: 'Merriweather', serif; }
             .setting-group { margin-bottom: 15px; }
-            .setting-group-split { display: flex; gap: 15px; }
-            .setting-group-split .setting-group { flex: 1; }
             .setting-group label { display: block; color: #ccc; font-size: 0.9em; margin-bottom: 5px; font-weight: bold; }
             .setting-group input, .setting-group select { width: 100%; padding: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff; box-sizing: border-box; }
             .setting-group input:focus, .setting-group select:focus { outline: none; border-color: #4285f4; }
             .setting-note { font-size: 0.75em; color: #888; margin-top: 5px; }
-            #settings-color { width: 100%; height: 40px; padding: 0; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; background: none; }
-            #settings-color::-webkit-color-swatch-wrapper { padding: 0; }
-            #settings-color::-webkit-color-swatch { border: 0; border-radius: 5px; }
             #settings-save-button { width: 100%; padding: 10px; background: #4285f4; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; margin-top: 10px; transition: background 0.2s; }
             #settings-save-button:hover { background: #3c77e6; }
+            .setting-group select option:disabled { color: #888; background-color: #333; }
+
 
             /* Attachments, Code Blocks, Graphs, LaTeX */
             #ai-attachment-preview { display: none; flex-direction: row; gap: 10px; padding: 0; max-height: 0; border-bottom: 1px solid transparent; overflow-x: auto; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
