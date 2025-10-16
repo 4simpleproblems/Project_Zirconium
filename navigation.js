@@ -32,7 +32,8 @@ const PAGE_CONFIG_URL = '../page-identification.json';
 
 // --- AI Agent Configuration ---
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=";
-const PRIVILEGED_EMAIL = '4simpleproblems@gmail.com';
+// UPDATED: Changed the email to a placeholder value to disable the AI UI feature for ALL users.
+const PRIVILEGED_EMAIL = 'ai-feature-is-disabled@placeholder.com'; 
 const AGENT_CATEGORIES = {
     'Quick': "You are a Quick Agent. Respond in a single, concise paragraph (max 3 sentences). Prioritize speed and direct answers.",
     'Standard': "You are a Standard Agent. Provide balanced, helpful, and moderately detailed responses, suitable for general inquiries.",
@@ -448,6 +449,7 @@ let currentAgent = 'Standard'; // Default agent
                 `<option value="${key}" ${key === currentAgent ? 'selected' : ''}>${key}</option>`
             ).join('');
 
+            // The aiAgentButton variable is now empty because isPrivilegedUser will be false
             const aiAgentButton = isPrivilegedUser ? `
                 <div class="relative flex-shrink-0 mr-4">
                     <button id="ai-toggle" title="AI Agent (Ctrl+A)" class="w-8 h-8 rounded-full border border-indigo-600 bg-indigo-700/50 flex items-center justify-center text-indigo-300 hover:bg-indigo-600 hover:text-white transition">
@@ -533,6 +535,7 @@ let currentAgent = 'Standard'; // Default agent
             `;
 
             // --- Append AI Modal HTML to the Body ---
+            // This block will now effectively be skipped since isPrivilegedUser is false.
             if (isPrivilegedUser) {
                 let aiModal = document.getElementById('ai-modal');
                 if (!aiModal) {
@@ -577,6 +580,7 @@ let currentAgent = 'Standard'; // Default agent
         };
 
         // --- NEW: AI GENERATIVE MODEL API CALL LOGIC (Using standard fetch/retry) ---
+        // This entire block of code is functionally disabled because renderNavbar sets isPrivilegedUser to false.
         
         /**
          * Exponential backoff retry logic for the API call.
@@ -732,6 +736,7 @@ let currentAgent = 'Standard'; // Default agent
             }
 
             // --- AI Agent Listeners (Only for privileged user) ---
+            // This entire block is functionally disabled because setupEventListeners is called with isPrivilegedUser: false.
             if (isPrivilegedUser) {
                 const aiModal = document.getElementById('ai-modal');
                 const aiToggleButton = document.getElementById('ai-toggle');
