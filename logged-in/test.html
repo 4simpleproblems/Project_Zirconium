@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - Messenger V2.7 (Hybrid Sync)</title>
+    <title>4SP - Messenger V2.8 (Fixed)</title>
     <meta name="description" content="A secure, peer-to-peer messenger with group chat functionality, image sharing, and hybrid message storage.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -580,6 +580,10 @@
             if (!isUnique) throw new Error("Failed to generate a unique ID after multiple attempts.");
             return publicId;
         }
+        
+        function getDmChatId(uid1, uid2) {
+            return [uid1, uid2].sort().join('_');
+        }
 
         function isAtBottom() { return (dom.messagesContainer.scrollHeight - dom.messagesContainer.scrollTop - dom.messagesContainer.clientHeight) <= 5; }
         function scrollToBottom(smooth = false) { dom.messagesContainer.scrollTo({ top: dom.messagesContainer.scrollHeight, behavior: smooth ? 'smooth' : 'auto' }); dom.scrollToBottomBtn.classList.add('hidden'); }
@@ -667,7 +671,6 @@
                 ${isRead ? '<i class="fas fa-eye" title="Read"></i>' : '<i class="fas fa-eye-slash" title="Delivered"></i>'}
             </div>` : '';
             
-            const messageSide = isMe ? 'ml-auto' : 'mr-auto';
             const horizontalAlignment = isMe ? 'items-end' : 'items-start';
 
             wrapper.innerHTML = `
@@ -887,7 +890,7 @@
                     const myPublicId = currentUserData.publicId;
                     batch.update(friendUserRef, { [`friends.${currentUser.uid}`]: myPublicId });
                     
-                    const chatId = [currentUser.uid, friendUid].sort().join('_');
+                    const chatId = getDmChatId(currentUser.uid, friendUid);
                     const chatRef = doc(db, 'chats', chatId);
                     batch.set(chatRef, { members: [currentUser.uid, friendUid], isGroup: false, lastMessage: { text: 'You are now connected!', timestamp: serverTimestamp(), sender: 'system' } }, { merge: true });
                     batch.set(doc(collection(chatRef, 'messages')), { senderId: 'system', text: 'You are now friends! Say hello.', timestamp: serverTimestamp() });
@@ -900,60 +903,197 @@
             }
         }
 
-        async function handleUnfriend(friendUid, friendName) { /* ... same as previous file ... */ }
-        async function handleBlockUser(friendUid, friendName) { /* ... same as previous file ... */ }
-        async function handleUnblockUser(blockedUid, blockedName) { /* ... same as previous file ... */ }
-        function renderBlockedUsers() { /* ... same as previous file ... */ }
-        async function handleDeleteChat(chatId, isGroup) { /* ... same as previous file ... */ }
-        async function renderGroupMemberSelection() { /* ... same as previous file ... */ }
-        function openGroupModal() { dom.createGroupModal.classList.remove('hidden', 'opacity-0'); renderGroupMemberSelection(); }
-        function closeGroupModal() { dom.createGroupModal.classList.add('opacity-0'); setTimeout(() => dom.createGroupModal.classList.add('hidden'), 300); }
-        async function handleCreateGroup(e) { /* ... same as previous file ... */ }
-        function renderChatItemHtml(chatDoc, chatName, iconClass, partnerId) { /* ... same as previous file ... */ }
-        
-        function listenToChats(uid) {
-            unsubscribeChats();
-            const q = query(collection(db, 'chats'), where('members', 'array-contains', uid), orderBy('lastMessage.timestamp', 'desc'));
-            
-            unsubscribeChats = onSnapshot(q, async (snapshot) => {
-                if (currentTab !== 'chats') return; 
-                
-                if (snapshot.empty) {
-                    dom.activeListItems.innerHTML = '<p class="p-4 text-center text-gray-500">No active chats. Start one!</p>';
-                    return;
-                }
-                
-                let chatsHtml = '';
-                for (const chatDoc of snapshot.docs) {
-                    const chatData = chatDoc.data();
-                    let chatName, iconClass, partnerId = null;
-                    
-                    if (chatData.isGroup) {
-                        chatName = chatData.name;
-                        iconClass = 'fas fa-users text-indigo-400';
-                    } else {
-                        partnerId = chatData.members.find(id => id !== uid);
-                        if (!partnerId) continue;
-                        const friendPublicId = currentUserData.friends ? currentUserData.friends[partnerId] : '...';
-                        chatName = getFriendNickname(partnerId, friendPublicId || 'Friend');
-                        iconClass = 'fas fa-user text-green-400';
+        async function handleUnfriend(friendUid, friendName) {
+            try {
+                const batch = writeBatch(db);
+                const myUserRef = doc(db, 'users', currentUser.uid);
+                const friendUserRef = doc(db, 'users', friendUid);
+                const chatId = getDmChatId(currentUser.uid, friendUid);
+                const chatRef = doc(db, 'chats', chatId);
+                batch.update(myUserRef, { [`friends.${friendUid}`]: deleteField() });
+                setFriendNickname(friendUid, null);
+                batch.update(friendUserRef, { [`friends.${currentUser.uid}`]: deleteField() }); 
+                batch.delete(chatRef); 
+                await batch.commit();
+                if (currentChat.partnerId === friendUid) closeChat();
+                showMessage(dom.cooldownTimer, `${escapeHtml(friendName)} has been unfriended.`, 'success');
+            } catch (error) {
+                 console.error("Error unfriending user:", error);
+                 showMessage(dom.cooldownTimer, 'Failed to unfriend user.', 'error');
+            }
+        }
+
+        async function handleBlockUser(friendUid, friendName) {
+            showConfirmModal({
+                title: `Block ${escapeHtml(friendName)}?`,
+                body: "This will remove them as a friend and delete your chat history. They won't be notified.",
+                onConfirm: async () => {
+                    try {
+                        const batch = writeBatch(db);
+                        const myUserRef = doc(db, 'users', currentUser.uid);
+                        const chatId = getDmChatId(currentUser.uid, friendUid);
+                        const chatRef = doc(db, 'chats', chatId);
+                        batch.update(myUserRef, { blocked: arrayUnion(friendUid), [`friends.${friendUid}`]: deleteField() });
+                        setFriendNickname(friendUid, null);
+                        batch.delete(chatRef);
+                        await batch.commit();
+                        if (currentChat.partnerId === friendUid) closeChat();
+                        showMessage(dom.cooldownTimer, `${escapeHtml(friendName)} has been blocked.`, 'success');
+                    } catch (error) {
+                         console.error("Error blocking user:", error);
+                         showMessage(dom.cooldownTimer, 'Failed to block user.', 'error');
                     }
-                    chatsHtml += renderChatItemHtml(chatDoc, chatName, iconClass, partnerId);
                 }
-                
-                dom.activeListItems.innerHTML = chatsHtml;
-                if (currentChat.id) {
-                     const activeEl = dom.activeListItems.querySelector(`[data-list-chat-id="${currentChat.id}"]`);
-                     if(activeEl) activeEl.classList.add('active');
-                }
-            }, (error) => {
-                 console.error("Error listening to chats:", error);
-                 dom.activeListItems.innerHTML = `<p class="p-4 text-center text-red-400">Failed to load chats.</p>`;
             });
         }
-        
-        async function renderFriends() { /* ... same as previous file ... */ }
 
+        async function handleUnblockUser(blockedUid, blockedName) {
+            try {
+                await updateDoc(doc(db, 'users', currentUser.uid), { blocked: arrayRemove(blockedUid) });
+                showMessage(dom.cooldownTimer, `${escapeHtml(blockedName)} has been unblocked.`, 'success');
+            } catch (error) {
+                console.error("Error unblocking user:", error);
+                showMessage(dom.cooldownTimer, `Failed to unblock user.`, 'error');
+            }
+        }
+
+        function renderBlockedUsers() {
+             const blockedUids = currentUserData.blocked || [];
+             dom.blockedUsersList.innerHTML = '';
+             if (blockedUids.length === 0) {
+                 dom.blockedUsersList.innerHTML = '<p class="text-gray-500 text-sm p-2">You have not blocked any users.</p>';
+                 return;
+             }
+             blockedUids.forEach(async uid => {
+                 const userDoc = await getDoc(doc(db, 'users', uid));
+                 const publicId = userDoc.exists() ? userDoc.data().publicId : uid.substring(0,8);
+                 const name = getFriendNickname(uid, publicId);
+                 const item = document.createElement('div');
+                 item.className = 'flex justify-between items-center p-2 rounded-md bg-gray-900';
+                 item.innerHTML = `
+                    <span class="text-sm">${escapeHtml(name)} (${escapeHtml(publicId)})</span>
+                    <button class="unblock-btn text-green-400 hover:text-green-300 transition p-1" data-uid="${uid}" data-name="${escapeHtml(name)}">Unblock</button>`;
+                 dom.blockedUsersList.appendChild(item);
+                 item.querySelector('.unblock-btn').onclick = () => handleUnblockUser(uid, name);
+             });
+        }
+
+        async function handleDeleteChat(chatId, isGroup) {
+             if (isGroup) {
+                 showConfirmModal({
+                     title: 'Leave Group?', body: 'You will be removed from this group chat.',
+                     onConfirm: async () => {
+                         try {
+                             const chatRef = doc(db, 'chats', chatId);
+                             await updateDoc(chatRef, {
+                                 members: arrayRemove(currentUser.uid),
+                                 lastMessage: { text: `${currentUserData.publicId} left.`, timestamp: serverTimestamp(), sender: 'system' }
+                             });
+                             await setDoc(doc(collection(db, 'chats', chatId, 'messages')), { senderId: 'system', text: `${currentUserData.publicId} left the group.`, timestamp: serverTimestamp() });
+                             closeChat();
+                             showMessage(dom.cooldownTimer, 'You left the group.', 'success');
+                         } catch (error) { showMessage(dom.cooldownTimer, 'Failed to leave group.', 'error'); }
+                     }
+                 });
+             } else {
+                 showConfirmModal({
+                     title: `Delete Chat with ${escapeHtml(currentChat.name)}?`, body: `This will unfriend them and delete the chat history.`,
+                     onConfirm: () => handleUnfriend(currentChat.partnerId, currentChat.name)
+                 });
+             }
+        }
+
+        async function renderGroupMemberSelection() {
+            dom.groupMembersList.innerHTML = '';
+            const friendUIDs = Object.keys(currentUserData.friends || {});
+            if (friendUIDs.length === 0) {
+                dom.groupMembersList.innerHTML = '<p class="text-gray-500 text-center">Add friends to create a group.</p>';
+                return;
+            }
+            friendUIDs.forEach(uid => {
+                const publicId = currentUserData.friends[uid];
+                const item = document.createElement('label');
+                item.className = 'flex items-center space-x-3 p-2 rounded-md cursor-pointer hover:bg-gray-800 transition';
+                item.innerHTML = `
+                    <input type="checkbox" name="group-member" value="${uid}" class="text-indigo-600 bg-gray-700 border-gray-600 rounded">
+                    <span>${escapeHtml(getFriendNickname(uid, publicId))}</span>`;
+                dom.groupMembersList.appendChild(item);
+            });
+        }
+
+        async function handleCreateGroup(e) {
+            e.preventDefault();
+            const groupName = dom.groupNameInput.value.trim();
+            const selectedMembers = Array.from(dom.groupMembersList.querySelectorAll('input:checked')).map(i => i.value);
+            if (!groupName || selectedMembers.length === 0) return alert('Group name and at least one member are required.');
+            if (selectedMembers.length >= GC_MAX_USERS) return alert(`Groups are limited to ${GC_MAX_USERS} members.`);
+            
+            const allMembers = [currentUser.uid, ...selectedMembers];
+            try {
+                const chatRef = doc(collection(db, 'chats'));
+                await setDoc(chatRef, { name: groupName, members: allMembers, isGroup: true, admin: currentUser.uid, createdAt: serverTimestamp(), lastMessage: { text: `Group created by ${currentUserData.publicId}.`, timestamp: serverTimestamp(), sender: 'system' } });
+                await setDoc(doc(collection(chatRef, 'messages')), { senderId: 'system', text: `Group created by ${currentUserData.publicId}.`, timestamp: serverTimestamp() });
+                closeGroupModal();
+                showMessage(dom.addFriendMessage, `Group "${escapeHtml(groupName)}" created.`, 'success');
+                openChat(chatRef.id, 'group', groupName, null, allMembers);
+            } catch (error) { showMessage(dom.addFriendMessage, 'Failed to create group.', 'error'); }
+        }
+
+        function renderChatItemHtml(chatDoc, chatName, iconClass, partnerId) {
+            const chatId = chatDoc.id;
+            const chatData = chatDoc.data();
+            const safeChatName = escapeHtml(chatName);
+            const safeLastMessage = escapeHtml(chatData.lastMessage?.text || 'No messages yet');
+            const membersString = chatData.isGroup ? chatData.members.join(',') : '';
+
+            const chatOpenArea = `<div data-action="open-chat" data-chat-id="${chatId}" data-chat-type="${chatData.isGroup ? 'group' : 'dm'}" data-chat-name="${safeChatName}" data-partner-id="${partnerId || ''}" data-members="${membersString}" 
+                                class="flex items-center gap-3 overflow-hidden flex-grow cursor-pointer py-1">
+                                    <i class="${iconClass} text-lg w-6 text-center flex-shrink-0"></i>
+                                    <div class="flex flex-col overflow-hidden flex-grow">
+                                        <span class="font-semibold whitespace-nowrap">${safeChatName}</span>
+                                        <p class="text-sm text-gray-500 truncate">${safeLastMessage}</p>
+                                    </div>
+                                </div>`;
+
+            const actionButton = `<button class="delete-chat-btn text-red-500 hover:text-red-400 transition p-1" data-id="${chatId}" data-is-group="${chatData.isGroup}" title="${chatData.isGroup ? 'Leave Group' : 'Delete Chat'}"><i class="fas fa-${chatData.isGroup ? 'sign-out-alt' : 'trash'}"></i></button>`;
+
+            return `<div class="compact-list-item flex items-center justify-between gap-4" data-list-chat-id="${chatId}">
+                        ${chatOpenArea}
+                        <div class="flex-shrink-0 ml-2">${actionButton}</div>
+                    </div>`;
+        }
+        
+        async function renderFriends() {
+            if (currentTab !== 'friends') return;
+            const friendUIDs = Object.keys(currentUserData.friends || {});
+            if (friendUIDs.length === 0) {
+                dom.activeListItems.innerHTML = '<p class="p-4 text-center text-gray-500">You have no friends yet.</p>';
+                return;
+            }
+            let friendsHtml = '';
+            friendUIDs.forEach(uid => {
+                const publicId = currentUserData.friends[uid];
+                const displayLabel = getFriendNickname(uid, publicId);
+                const safeLabel = escapeHtml(displayLabel);
+                const chatId = getDmChatId(currentUser.uid, uid);
+                friendsHtml += `
+                    <div class="compact-list-item flex items-center justify-between gap-4">
+                        <div data-action="open-chat" data-chat-id="${chatId}" data-chat-type="dm" data-chat-name="${safeLabel}" data-partner-id="${uid}" class="flex items-center gap-3 overflow-hidden flex-grow cursor-pointer">
+                            <i class="fas fa-user-circle text-2xl text-green-400"></i>
+                            <div class="flex flex-col overflow-hidden">
+                                <span class="font-semibold whitespace-nowrap">${safeLabel}</span>
+                                <span class="text-xs text-gray-500 font-mono">Code: ${escapeHtml(publicId)}</span>
+                            </div>
+                        </div>
+                        <div class="flex-shrink-0 space-x-2">
+                            <button class="edit-friend-nickname-btn" data-uid="${uid}" data-current-label="${safeLabel}"><i class="fas fa-tag"></i></button>
+                            <button class="unfriend-btn" data-uid="${uid}" data-name="${safeLabel}"><i class="fas fa-user-minus"></i></button>
+                            <button class="block-friend-btn" data-uid="${uid}" data-name="${safeLabel}"><i class="fas fa-user-slash"></i></button>
+                        </div>
+                    </div>`;
+            });
+            dom.activeListItems.innerHTML = friendsHtml;
+        }
 
         // =========================================================================
         // CHAT VIEW & UI MANAGEMENT
@@ -1017,6 +1157,7 @@
             if (openChatEl) {
                 const { chatId, chatType, chatName, partnerId, members } = openChatEl.dataset;
                 openChat(chatId, chatType, chatName, partnerId || null, members ? members.split(',') : []);
+                return;
             }
              const deleteBtn = e.target.closest('.delete-chat-btn');
              const unfriendBtn = e.target.closest('.unfriend-btn');
@@ -1091,6 +1232,11 @@
             const isFriendsTab = tabName === 'friends';
             dom.addFriendSection.style.display = isFriendsTab ? 'block' : 'none';
             dom.groupChatControls.style.display = isFriendsTab ? 'none' : 'flex';
+            
+            dom.addFriendSection.classList.toggle('fade-in', isFriendsTab);
+            dom.addFriendSection.classList.toggle('fade-out', !isFriendsTab);
+            dom.groupChatControls.classList.toggle('fade-in', !isFriendsTab);
+            dom.groupChatControls.classList.toggle('fade-out', isFriendsTab);
 
             if (tabName === 'chats') listenToChats(currentUser.uid);
             else if (tabName === 'friends') { unsubscribeChats(); renderFriends(); }
