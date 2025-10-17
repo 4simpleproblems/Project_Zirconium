@@ -2,7 +2,7 @@
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width-device-width, initial-scale=1.0">
     <title>4SP - Messenger V2.8 (Fixed)</title>
     <meta name="description" content="A secure, peer-to-peer messenger with group chat functionality, image sharing, and hybrid message storage.">
 
@@ -526,16 +526,44 @@
             setTimeout(() => { if (element.textContent === text) element.textContent = ''; }, duration);
         }
 
+        // --- Modal Control Functions ---
+        function showModal(modalElement) {
+            modalElement.classList.remove('hidden');
+            setTimeout(() => modalElement.classList.remove('opacity-0'), 10);
+        }
+        function hideModal(modalElement) {
+            modalElement.classList.add('opacity-0');
+            setTimeout(() => modalElement.classList.add('hidden'), 300);
+        }
+
+        function openGroupModal() {
+            dom.groupNameInput.value = '';
+            renderGroupMemberSelection();
+            showModal(dom.createGroupModal);
+        }
+
+        function closeGroupModal() {
+            hideModal(dom.createGroupModal);
+        }
+        
+        function showSettingsModal() {
+            renderBlockedUsers(); 
+            showModal(dom.settingsModal);
+        }
+
+        function closeSettingsModal() {
+            hideModal(dom.settingsModal);
+        }
+
         function showConfirmModal({ title, body, onConfirm }) {
             dom.confirmModal.title.textContent = title;
             dom.confirmModal.body.textContent = body;
             const yesHandler = () => { onConfirm(); hideConfirmModal(); };
             dom.confirmModal.yesBtn.onclick = yesHandler;
             dom.confirmModal.noBtn.onclick = hideConfirmModal;
-            dom.confirmModal.backdrop.classList.remove('hidden', 'opacity-0');
-            setTimeout(() => dom.confirmModal.backdrop.classList.remove('opacity-0'), 10);
+            showModal(dom.confirmModal.backdrop);
         }
-        function hideConfirmModal() { dom.confirmModal.backdrop.classList.add('opacity-0'); setTimeout(() => dom.confirmModal.backdrop.classList.add('hidden'), 300); }
+        function hideConfirmModal() { hideModal(dom.confirmModal.backdrop); }
 
         function formatCharCount(num) {
             if (num < 1000) return num.toString();
@@ -667,7 +695,7 @@
             wrapper.dataset.messageId = message.id;
             wrapper.dataset.senderId = message.senderId;
 
-            const readIndicatorHtml = isMe && message.senderId !== 'system' ? `<div class="message-read-indicator text-xs self-end mb-1 mr-1">
+            const readIndicatorHtml = isMe && message.senderId !== 'system' ? `<div class="message-read-indicator text-xs self-end mb-1 mr-1 ${isRead ? 'visible' : ''}">
                 ${isRead ? '<i class="fas fa-eye" title="Read"></i>' : '<i class="fas fa-eye-slash" title="Delivered"></i>'}
             </div>` : '';
             
@@ -692,17 +720,14 @@
             if (currentChat.type !== 'dm' || !currentChat.id || !document.hasFocus() || !currentChat.partnerId) return;
             
             const messagesRef = collection(db, 'chats', currentChat.id, 'messages');
-            const q = query(messagesRef, where('senderId', '==', currentChat.partnerId));
+            const q = query(messagesRef, where('senderId', '==', currentChat.partnerId), where('readBy', 'not-array-contains', currentUser.uid));
             const snapshot = await getDocs(q);
             
             const batch = writeBatch(db);
             let updatesMade = false;
             snapshot.forEach(doc => {
-                const data = doc.data();
-                if (!data.readBy || !data.readBy.includes(currentUser.uid)) {
-                    batch.update(doc.ref, { readBy: arrayUnion(currentUser.uid) });
-                    updatesMade = true;
-                }
+                batch.update(doc.ref, { readBy: arrayUnion(currentUser.uid) });
+                updatesMade = true;
             });
             if (updatesMade) {
                 await batch.commit();
@@ -768,7 +793,9 @@
             let messageText = dom.messageInput.value.trim();
             if (!messageText && attachedFiles.length === 0) return;
             
-            if (currentChat.type === 'group') {
+            const isGroup = currentChat.type === 'group';
+
+            if (isGroup) {
                 dom.sendBtn.disabled = true;
                 messageText = await filterProfanity(messageText);
             }
@@ -795,7 +822,7 @@
                 updateCharacterLimitDisplay();
                 dom.messageInput.focus();
 
-                if (currentChat.type === 'group') {
+                if (isGroup) {
                     let remaining = GC_MESSAGE_COOLDOWN_MS / 1000;
                     dom.cooldownTimer.textContent = `Wait ${remaining}s`;
                     chatCooldownInterval = setInterval(() => {
@@ -812,7 +839,7 @@
             } catch (error) {
                 console.error("Error sending message:", error);
                 showMessage(dom.cooldownTimer, 'Failed to send.', 'error');
-                if (currentChat.type === 'group') dom.sendBtn.disabled = false;
+                if (isGroup) dom.sendBtn.disabled = false;
             }
         }
         
@@ -950,6 +977,7 @@
         async function handleUnblockUser(blockedUid, blockedName) {
             try {
                 await updateDoc(doc(db, 'users', currentUser.uid), { blocked: arrayRemove(blockedUid) });
+                renderBlockedUsers(); // Re-render the list after unblocking
                 showMessage(dom.cooldownTimer, `${escapeHtml(blockedName)} has been unblocked.`, 'success');
             } catch (error) {
                 console.error("Error unblocking user:", error);
@@ -1010,6 +1038,8 @@
                 dom.groupMembersList.innerHTML = '<p class="text-gray-500 text-center">Add friends to create a group.</p>';
                 return;
             }
+            // Clear existing content, then re-add the loading text if data isn't instant
+            dom.groupMembersList.innerHTML = ''; 
             friendUIDs.forEach(uid => {
                 const publicId = currentUserData.friends[uid];
                 const item = document.createElement('label');
@@ -1039,6 +1069,47 @@
             } catch (error) { showMessage(dom.addFriendMessage, 'Failed to create group.', 'error'); }
         }
 
+        function listenToChats(uid) {
+            unsubscribeChats();
+            dom.activeListItems.innerHTML = '<p class="p-4 text-center text-gray-500">Loading chats...</p>';
+
+            const chatsRef = collection(db, 'chats');
+            const q = query(chatsRef, where('members', 'array-contains', uid), orderBy('lastMessage.timestamp', 'desc'));
+
+            unsubscribeChats = onSnapshot(q, (snapshot) => {
+                let chatsHtml = '';
+                if (snapshot.empty) {
+                    dom.activeListItems.innerHTML = '<p class="p-4 text-center text-gray-500">No active chats. Add friends to start!</p>';
+                    return;
+                }
+
+                snapshot.docs.forEach(doc => {
+                    const chatData = doc.data();
+                    let chatName, iconClass, partnerId = null;
+
+                    if (chatData.isGroup) {
+                        chatName = chatData.name || 'Group Chat';
+                        iconClass = 'fas fa-users text-purple-400';
+                    } else {
+                        partnerId = chatData.members.find(memberId => memberId !== uid);
+                        const publicId = currentUserData.friends[partnerId] || partnerId.substring(0, 8);
+                        chatName = getFriendNickname(partnerId, publicId);
+                        iconClass = 'fas fa-user text-green-400';
+                    }
+                    chatsHtml += renderChatItemHtml(doc, chatName, iconClass, partnerId);
+                });
+                dom.activeListItems.innerHTML = chatsHtml;
+
+                // Re-apply active class to current chat after re-rendering
+                if (currentChat.id) {
+                    dom.activeListItems.querySelector(`[data-list-chat-id="${currentChat.id}"]`)?.classList.add('active');
+                }
+            }, (error) => {
+                console.error("Error listening to chats:", error);
+                dom.activeListItems.innerHTML = '<p class="p-4 text-center text-red-400">Failed to load chats.</p>';
+            });
+        }
+        
         function renderChatItemHtml(chatDoc, chatName, iconClass, partnerId) {
             const chatId = chatDoc.id;
             const chatData = chatDoc.data();
@@ -1086,9 +1157,9 @@
                             </div>
                         </div>
                         <div class="flex-shrink-0 space-x-2">
-                            <button class="edit-friend-nickname-btn" data-uid="${uid}" data-current-label="${safeLabel}"><i class="fas fa-tag"></i></button>
-                            <button class="unfriend-btn" data-uid="${uid}" data-name="${safeLabel}"><i class="fas fa-user-minus"></i></button>
-                            <button class="block-friend-btn" data-uid="${uid}" data-name="${safeLabel}"><i class="fas fa-user-slash"></i></button>
+                            <button class="edit-friend-nickname-btn text-gray-400 hover:text-white transition" data-uid="${uid}" data-current-label="${safeLabel}" title="Edit Nickname"><i class="fas fa-tag"></i></button>
+                            <button class="unfriend-btn text-red-400 hover:text-red-500 transition" data-uid="${uid}" data-name="${safeLabel}" title="Unfriend"><i class="fas fa-user-minus"></i></button>
+                            <button class="block-friend-btn text-red-400 hover:text-red-500 transition" data-uid="${uid}" data-name="${safeLabel}" title="Block"><i class="fas fa-user-slash"></i></button>
                         </div>
                     </div>`;
             });
@@ -1145,8 +1216,9 @@
             const newLabel = prompt(`Set a local nickname for ${currentLabel} (leave blank to clear):`, getFriendNickname(partnerUid, ''));
             if (newLabel !== null) {
                 setFriendNickname(partnerUid, newLabel.trim());
+                // Re-render chat header and list item if the chat is open or tab is friends
                 if (currentChat.partnerId === partnerUid) {
-                    dom.chatHeader.textContent = getFriendNickname(partnerUid, currentChat.name);
+                    dom.chatHeader.textContent = getFriendNickname(partnerUid, currentUserData.friends[partnerUid]);
                 }
                 switchTab(currentTab);
             }
@@ -1187,9 +1259,10 @@
                 currentUser = user;
                 await setupUserDocument(user);
                 listenToUserDocument(user.uid);
-                switchTab('chats');
+                // After successful authentication and setup, hide loading screen
                 dom.loadingScreen.style.display = 'none';
                 dom.appUi.style.display = 'grid';
+                switchTab('chats');
             } else {
                 dom.loadingScreen.style.display = 'flex';
                 dom.appUi.style.display = 'none';
@@ -1214,7 +1287,7 @@
                 currentUserData = data;
                 dom.myIdDisplay.textContent = data.publicId || '...';
                 renderFriendRequests(data.pending_requests || []);
-                if (wasFirstLoad) listenToChats(uid);
+                if (wasFirstLoad) listenToChats(uid); // Start listening to chats only after user data is loaded on first run
                 if (currentTab === 'friends') renderFriends();
                 if (!dom.settingsModal.classList.contains('hidden')) renderBlockedUsers();
             });
@@ -1258,8 +1331,8 @@
             dom.messagesContainer.addEventListener('scroll', updateScrollButtonVisibility);
             dom.scrollToBottomBtn.addEventListener('click', () => scrollToBottom(true));
             dom.fileUploadInput.addEventListener('change', handleFileSelect);
-            dom.openSettingsBtn.onclick = () => { dom.settingsModal.classList.remove('hidden', 'opacity-0'); renderBlockedUsers(); };
-            dom.settingsModalCloseBtn.onclick = () => { dom.settingsModal.classList.add('opacity-0'); setTimeout(() => dom.settingsModal.classList.add('hidden'), 300); };
+            dom.openSettingsBtn.onclick = showSettingsModal; // Use the new showSettingsModal function
+            dom.settingsModalCloseBtn.onclick = closeSettingsModal; // Use the new closeSettingsModal function
             dom.messageInput.addEventListener('input', updateCharacterLimitDisplay);
             document.addEventListener('keydown', e => {
                 if (e.shiftKey && e.key === 'R' && document.activeElement !== dom.messageInput) {
@@ -1279,4 +1352,3 @@
     </script>
 </body>
 </html>
-
