@@ -10,6 +10,7 @@
  * 3. FIX: **Font Awesome Loading:** Ensured the Font Awesome CSS is fully loaded and applied BEFORE the navbar HTML, which contains the <i> tags, is rendered.
  * 4. USER REQUEST: Replaced Login/Signup links with a single "Authenticate" link pointing to /authentication.html.
  * 5. USER REQUEST: Updated logged-out button background to #010101 and icon color to #DADADA, using 'fa-solid fa-user'.
+ * 6. WIDESCREEN UPDATE: Removed max-width from the 'nav' element to allow it to fill the screen.
  *
  * --- INSTRUCTIONS ---
  * 1. ACTION REQUIRED: Paste your own Firebase project configuration into the `FIREBASE_CONFIG` object below.
@@ -142,7 +143,8 @@ const FIREBASE_CONFIG = {
                 background: #000000; /* Pure Black */
                 border-bottom: 1px solid rgb(31 41 55); height: 4rem; 
             }
-            .auth-navbar nav { max-width: 80rem; margin: auto; padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; }
+            /* WIDESCREEN UPDATE: Removed 'max-width: 80rem;' and 'margin: auto;' */
+            .auth-navbar nav { padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; }
             
             /* Updated to pure black and removed backdrop filter */
             .auth-menu-container { 
