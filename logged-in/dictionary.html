@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - DICTIONARY</title>
+    <title>4SP - Interactive Dictionary</title>
     <meta name="description" content="A simple interactive dictionary with search and definition display using dictionaryapi.dev.">
 
     <!-- Fonts, Icons, and Tailwind CSS -->
@@ -15,512 +15,360 @@
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,400..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Note: navigation.js and injector.js need to be in the parent directory as they use relative paths -->
-    <script src="../navigation.js"></script> 
+    <script src="../navigation.js"></script>
     <script src="../injector.js"></script>
 
     <style>
-        /* --- FONT & BASE STYLING (MATCHING navigation.js) --- */
-        :root {
-            /* Define dark theme colors for easy reuse */
-            --background-dark: #111827; /* Tailwind gray-900 */
-            --card-dark: #1f2937; /* Tailwind gray-800 */
-            --text-light: #f9fafb; /* Tailwind gray-50 */
-            --text-muted: #9ca3af; /* Tailwind gray-400 */
-            --indigo-600: #4f46e5;
-        }
-
+        /* --- FONT & BASE STYLING (MATCHING base-template.html) --- */
         body { 
             font-family: 'Geist', sans-serif; 
-            background-color: var(--background-dark); 
-            color: var(--text-light);
-            /* This margin is to offset the fixed navbar height (4rem) */
-            padding-top: 5rem; 
+            background-color: #070707; 
+            color: #c0c0c0; 
+            transition: all 0.3s ease;
+            font-weight: 300; 
             min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start; /* Align content to the top */
         }
         
-        /* Loading Screen Style */
+        h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
+            font-weight: 400 !important;
+        }
+
+        /* Styling for the main content container */
+        .page-container {
+            padding: 2rem 1rem;
+            max-width: 900px; /* Narrower for focus */
+            margin: 0 auto;
+        }
+
+        /* Placeholder content box replaced with a general dictionary card */
+        .dictionary-card {
+            background-color: #111111; 
+            border: 1px solid #252525; 
+            border-radius: 0.75rem; 
+            padding: 2rem; 
+            min-height: 70vh;
+        }
+
+        /* Standard loading screen style */
         #loading-screen {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: #000000;
-            z-index: 10000;
+            background-color: #070707;
             display: flex;
             justify-content: center;
             align-items: center;
-            flex-direction: column;
-            gap: 1rem;
+            z-index: 100;
         }
 
-        /* --- CARD AND CONTENT STYLING (New, matching component styles) --- */
-        .dictionary-container {
-            width: 100%;
-            max-width: 48rem; /* Set a comfortable max-width for content */
-            margin: 2rem auto;
-            padding: 2rem;
-            background-color: var(--card-dark);
-            border-radius: 1rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
-        }
-
-        /* Definition Card Styling */
-        .definition-card {
-            background-color: #111827; /* Inner dark background */
-            padding: 1.5rem;
-            border-radius: 0.75rem;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s ease;
-        }
-
-        /* Search Input and Button */
-        #search-input {
-            background-color: var(--background-dark);
-            border-color: #374151; /* gray-700 */
-            color: var(--text-light);
-            transition: all 0.3s;
-        }
-        #search-input:focus {
-            border-color: var(--indigo-600);
-            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.5); /* Indigo focus ring */
-        }
-        
-        /* Definition Title and Phonetic */
-        .word-title {
-            color: var(--indigo-600);
-            font-weight: 700;
-            font-size: 2rem;
-        }
-
-        .phonetic-text {
+        /* --- CUSTOM DICTIONARY STYLING --- */
+        .pronunciation-text {
+            /* Special font for pronunciation */
             font-family: 'Playfair Display', serif;
             font-style: italic;
-            color: var(--text-muted);
+            color: #9ca3af; /* Initial muted gray for visibility */
+            transition: color 0.2s ease;
+            cursor: help; 
         }
 
-        /* Part of Speech Styling */
-        .part-of-speech {
-            font-weight: 600;
-            color: var(--text-light);
-            margin-bottom: 0.5rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding-bottom: 0.25rem;
+        .pronunciation-text:hover {
+            /* Cyan color on hover */
+            color: #06b6d4; /* Tailwind cyan-500 equivalent */
         }
-
-        /* Definition List */
-        .definition-list li {
-            margin-bottom: 1rem;
-            padding-left: 1.5rem;
-            position: relative;
-        }
-
-        /* Custom bullet point */
-        .definition-list li::before {
-            content: '•';
-            color: var(--indigo-600);
-            font-weight: 800;
-            position: absolute;
-            left: 0;
-            top: 0;
-            font-size: 1.25rem;
-        }
-
-        /* Example Text */
-        .example-text {
-            color: var(--text-muted);
-            font-style: italic;
-            margin-top: 0.5rem;
-            padding-left: 0.5rem;
-            border-left: 3px solid rgba(79, 70, 229, 0.5);
-        }
-
-        /* Synonym/Antonym Tags */
-        .tag {
-            display: inline-block;
-            padding: 0.25rem 0.6rem;
-            margin: 0.25rem;
-            border-radius: 9999px;
-            font-size: 0.8rem;
-            background-color: rgba(79, 70, 229, 0.2); /* Indigo tint */
-            color: var(--indigo-600);
+        
+        .highlighted-word {
+            /* Styling for clickable words within the definition text */
+            text-decoration: underline;
+            text-decoration-color: #06b6d480; /* semi-transparent cyan */
+            text-underline-offset: 3px;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: background-color 0.15s ease;
         }
-        .tag:hover {
-            background-color: rgba(79, 70, 229, 0.4);
+        
+        .highlighted-word:hover {
+            background-color: #06b6d420; /* light cyan background on hover */
+            border-radius: 4px;
         }
-
-        /* Audio Button */
-        #audio-button {
-            transition: background-color 0.2s, transform 0.1s;
-        }
-        #audio-button:hover {
-            background-color: var(--indigo-600);
-            transform: translateY(-1px);
-        }
-
     </style>
-    
-    <!-- Global variables must be defined before use -->
-    <script>
-        const __app_id = typeof __app_id !== 'undefined' ? __app_id : 'default-dictionary-app';
-        const __firebase_config = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
-        const __initial_auth_token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-    </script>
 </head>
 <body>
-    
-    <!-- Loading Screen (Always visible initially) -->
-    <div id="loading-screen" class="hidden">
-        <i class="fas fa-spinner fa-spin text-indigo-500 text-4xl"></i>
-        <p class="text-gray-400">Loading essential services...</p>
+
+    <!-- Loading Screen (Shown until authentication check is complete) -->
+    <div id="loading-screen">
+        <p class="text-xl text-gray-400">Verifying authentication...</p>
     </div>
 
-    <!-- Page Content (Hidden until authenticated) -->
-    <div id="page-content" class="hidden w-full">
-        <div class="dictionary-container">
-            <h1 class="text-3xl font-bold mb-6 text-center text-white">Interactive Dictionary</h1>
-            
-            <!-- Search Bar -->
-            <div class="flex space-x-3 mb-8">
-                <input type="text" id="search-input" placeholder="Search for a word..."
-                       class="flex-grow p-3 rounded-lg border focus:outline-none"
-                       value="developer"> <!-- Default search term -->
-                <button id="search-button"
-                        class="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-3 px-5 rounded-lg transition duration-200 shadow-md hover:shadow-lg">
-                    <i class="fa-solid fa-magnifying-glass"></i>
+    <!-- Main Page Content (Hidden until authenticated) -->
+    <main id="page-content" class="page-container hidden">
+        <div class="dictionary-card shadow-xl">
+            <h1 class="text-3xl font-bold text-white mb-6 text-center">Interactive Lexicon</h1>
+
+            <!-- Search Bar (Integrated, rounded-xl input, button inside) -->
+            <div class="relative mb-8">
+                <!-- Input Field (Rounded-xl) -->
+                <input 
+                    type="text"
+                    id="search-input"
+                    placeholder="Type a word and press Enter or click the Search icon..."
+                    class="w-full p-4 pl-12 pr-20 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-150"
+                    autocomplete="off"
+                />
+                <!-- Book Icon inside input -->
+                <i class="fas fa-book absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                
+                <!-- Search Button (Squircle, integrated, right side, using fa-paper-plane) -->
+                <button 
+                    id="search-button" 
+                    class="absolute right-2 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-[1rem] shadow-md transition duration-150 active:scale-[.98] flex items-center justify-center"
+                    title="Search Dictionary">
+                    <!-- Send Message Icon -->
+                    <i class="fas fa-paper-plane text-lg"></i>
                 </button>
             </div>
 
-            <!-- Definition Display Area -->
-            <div id="definition-output" class="min-h-[10rem] flex items-center justify-center">
-                <p class="text-gray-500 italic">Enter a word above to see its definition.</p>
+            <!-- Definition Display -->
+            <div id="definition-output" class="p-6 bg-zinc-900 border border-zinc-800 rounded-lg min-h-[30vh]">
+                <p class="text-lg text-gray-400 text-center">
+                    Enter a word above and hit **Search** or **Enter** to look up its definition, pronunciation, and synonyms using the dictionary API.
+                </p>
             </div>
+            
         </div>
-    </div>
+    </main>
 
-    <!-- Firebase and Application Logic -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // --- Firebase Core Imports ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        
+        // --- CONFIGURATION IMPORT ---
+        // NOTE: This assumes you have a firebase-config.js file one level up (../)
+        import { firebaseConfig } from "../firebase-config.js"; 
+        
+        // --- Canvas Global Variables (MANDATORY USE) ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const rawFirebaseConfig = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        let config = firebaseConfig;
+        if (rawFirebaseConfig) {
+            try {
+                config = JSON.parse(rawFirebaseConfig);
+            } catch (e) {
+                console.error("Failed to parse __firebase_config:", e);
+            }
+        }
 
-        // Global constants and initializations
-        const DICTIONARY_API_URL = "https://api.dictionaryapi.dev/api/v2/entries/en/";
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const initialAuthToken = __initial_auth_token;
+        // --- Initialize Firebase ---
+        const app = initializeApp(config);
+        const auth = getAuth(app);
 
-        // UI elements
+        // --- DOM Elements ---
         const loadingScreen = document.getElementById('loading-screen');
         const pageContent = document.getElementById('page-content');
         const searchInput = document.getElementById('search-input');
         const searchButton = document.getElementById('search-button');
         const definitionOutput = document.getElementById('definition-output');
-
-        // Initial setup
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        // --- Utility Functions ---
-
-        /**
-         * Converts base64 PCM audio data to a playable WAV Blob.
-         * @param {string} audioDataBase64 - Base64 encoded PCM audio data.
-         * @param {number} sampleRate - The sample rate (e.g., 24000).
-         * @returns {Blob} - A Blob object containing the WAV file data.
-         */
-        const base64ToWavBlob = (audioDataBase64, sampleRate) => {
-            const audioData = atob(audioDataBase64);
-            const pcm16 = new Int16Array(audioData.length / 2);
-
-            for (let i = 0; i < pcm16.length; i++) {
-                // PCM data is little-endian signed 16-bit
-                const low = audioData.charCodeAt(2 * i);
-                const high = audioData.charCodeAt(2 * i + 1);
-                pcm16[i] = (high << 8) | low;
-            }
-            
-            const buffer = pcm16.buffer;
-            
-            const numChannels = 1;
-            const bitsPerSample = 16;
-            const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
-            const blockAlign = numChannels * (bitsPerSample / 8);
-            
-            // WAV header size is 44 bytes
-            const wavData = new ArrayBuffer(44 + buffer.byteLength);
-            const view = new DataView(wavData);
-            
-            // RIFF chunk
-            writeString(view, 0, 'RIFF'); // Chunk ID
-            view.setUint32(4, 36 + buffer.byteLength, true); // Chunk Size
-            writeString(view, 8, 'WAVE'); // Format
-
-            // FMT sub-chunk
-            writeString(view, 12, 'fmt '); // Sub-chunk 1 ID
-            view.setUint32(16, 16, true); // Sub-chunk 1 Size (16 for PCM)
-            view.setUint16(20, 1, true); // Audio Format (1 for PCM)
-            view.setUint16(22, numChannels, true); // Num Channels
-            view.setUint32(24, sampleRate, true); // Sample Rate
-            view.setUint32(28, byteRate, true); // Byte Rate
-            view.setUint16(32, blockAlign, true); // Block Align
-            view.setUint16(34, bitsPerSample, true); // Bits Per Sample
-
-            // DATA sub-chunk
-            writeString(view, 36, 'data'); // Sub-chunk 2 ID
-            view.setUint32(40, buffer.byteLength, true); // Sub-chunk 2 Size
-
-            // Write PCM data
-            const pcmView = new Int16Array(wavData, 44);
-            pcmView.set(pcm16);
-            
-            return new Blob([view], { type: 'audio/wav' });
-        };
         
-        /** Helper function to write a string into a DataView */
-        function writeString(view, offset, str) {
-            for (let i = 0; i < str.length; i++) {
-                view.setUint8(offset + i, str.charCodeAt(i));
-            }
-        }
-
+        // --- DICTIONARY API LOGIC ---
+        
         /**
-         * Fetches audio for a given word using Gemini TTS API.
-         * @param {string} word - The word to synthesize.
-         * @returns {Promise<string|null>} - A promise that resolves to an audio URL or null on failure.
-         */
-        async function fetchAudio(word) {
-            const prompt = `Say the word: ${word}`;
-            const payload = {
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: {
-                    responseModalities: ["AUDIO"],
-                    speechConfig: {
-                        voiceConfig: {
-                            prebuiltVoiceConfig: { voiceName: "Achird" }
-                        }
-                    }
-                },
-                model: "gemini-2.5-flash-preview-tts"
-            };
-
-            const apiKey = "";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
-
-            for (let attempt = 0; attempt < 3; attempt++) {
-                try {
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (!response.ok) throw new Error(`API returned status ${response.status}`);
-                    
-                    const result = await response.json();
-                    const part = result?.candidates?.[0]?.content?.parts?.[0];
-                    const audioData = part?.inlineData?.data;
-                    const mimeType = part?.inlineData?.mimeType;
-
-                    if (audioData && mimeType && mimeType.startsWith("audio/L16")) {
-                        // Extract sample rate from the mimeType, e.g., audio/L16;rate=24000
-                        const rateMatch = mimeType.match(/rate=(\d+)/);
-                        const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
-                        
-                        const wavBlob = base64ToWavBlob(audioData, sampleRate);
-                        return URL.createObjectURL(wavBlob);
-                    } else {
-                        console.warn("TTS API response missing audio data or mimeType:", result);
-                        return null; // Stop retrying if response structure is bad
-                    }
-
-                } catch (error) {
-                    console.error(`TTS API attempt ${attempt + 1} failed:`, error);
-                    if (attempt < 2) {
-                        // Exponential backoff: 1s, 2s
-                        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
-                    }
-                }
-            }
-            return null;
-        }
-
-        /**
-         * Renders the definition in the output area.
-         * @param {Array} data - Array of definition objects from the API.
-         * @param {string} word - The word that was searched.
-         */
-        function renderDefinition(data, word) {
-            if (!data || data.length === 0) {
-                definitionOutput.innerHTML = `
-                    <div class="text-center p-8 bg-gray-900 rounded-lg w-full">
-                        <p class="text-xl font-semibold text-red-400 mb-2">Word Not Found</p>
-                        <p class="text-gray-400">Sorry, we couldn't find an entry for "<strong>${word}</strong>".</p>
-                        <p class="text-xs text-gray-600 mt-2">Please check the spelling and try again.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            const entry = data[0]; // Use the first available entry
-
-            let html = `
-                <div class="w-full">
-                    <!-- Header: Word, Phonetic, Audio -->
-                    <div class="flex items-center justify-between mb-4 pb-2 border-b border-gray-700">
-                        <div>
-                            <h2 class="word-title">${entry.word}</h2>
-                            <p class="phonetic-text text-lg mt-1">${entry.phonetic || ''}</p>
-                        </div>
-                        <button id="audio-button" data-word="${entry.word}"
-                                class="bg-indigo-500 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg">
-                            <i class="fa-solid fa-volume-high"></i>
-                        </button>
-                    </div>
-
-                    <!-- Meanings -->
-                    <div class="space-y-6">
-            `;
-
-            entry.meanings.forEach(meaning => {
-                html += `
-                    <div class="definition-card">
-                        <h3 class="part-of-speech text-indigo-400 text-lg">${meaning.partOfSpeech}</h3>
-                        <ul class="definition-list list-none space-y-3 pl-0">
-                `;
-
-                meaning.definitions.slice(0, 3).forEach((def, index) => { // Limit to 3 definitions per part of speech
-                    html += `
-                        <li class="text-gray-300">
-                            <p class="font-medium">${def.definition}</p>
-                            ${def.example ? `<p class="example-text text-sm mt-1">Example: ${def.example}</p>` : ''}
-                        </li>
-                    `;
-                });
-
-                html += `
-                        </ul>
-                        <!-- Synonyms/Antonyms -->
-                        ${meaning.synonyms && meaning.synonyms.length > 0 ? `
-                            <p class="text-sm text-gray-400 mt-4 mb-1">Synonyms:</p>
-                            <div class="flex flex-wrap">
-                                ${meaning.synonyms.slice(0, 5).map(s => `<span class="tag" data-word="${s}">${s}</span>`).join('')}
-                            </div>
-                        ` : ''}
-                        ${meaning.antonyms && meaning.antonyms.length > 0 ? `
-                            <p class="text-sm text-gray-400 mt-4 mb-1">Antonyms:</p>
-                            <div class="flex flex-wrap">
-                                ${meaning.antonyms.slice(0, 5).map(a => `<span class="tag" data-word="${a}">${a}</span>`).join('')}
-                            </div>
-                        ` : ''}
-                    </div>
-                `;
-            });
-
-            html += `
-                    </div>
-                </div>
-            `;
-
-            definitionOutput.innerHTML = html;
-        }
-
-        /**
-         * Fetches definition data from the external API.
-         * @param {string} word - The word to search for.
+         * Fetches the definition for a given word using the dictionaryapi.dev API.
+         * @param {string} word The word to look up.
          */
         async function fetchDefinition(word) {
-            definitionOutput.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin text-indigo-500 text-3xl"></i><p class="text-gray-400 mt-2">Searching...</p></div>';
+            const trimmedWord = word.trim().toLowerCase();
+            if (!trimmedWord) return;
+
+            // 1. Set loading state and clear input field
+            definitionOutput.innerHTML = `
+                <p class="text-xl text-cyan-400 text-center flex items-center justify-center space-x-2">
+                    <i class="fas fa-spinner fa-spin mr-2"></i><span>Searching for '${trimmedWord}'...</span>
+                </p>
+            `;
+            searchInput.value = trimmedWord; // Set the input field to the word being searched
 
             try {
-                const response = await fetch(`${DICTIONARY_API_URL}${word}`);
-                const data = await response.json();
+                const url = `https://api.dictionaryapi.dev/api/v2/entries/en/${trimmedWord}`;
+                const response = await fetch(url);
 
-                if (response.ok && Array.isArray(data)) {
-                    renderDefinition(data, word);
-                } else if (!response.ok && data.title) {
-                    // API returns a custom JSON error object if word is not found (status 404)
-                    renderDefinition(null, word); 
-                } else {
-                    throw new Error("API returned an unexpected response structure.");
+                if (!response.ok) {
+                    // API returns 404 for words not found
+                    if (response.status === 404) {
+                        definitionOutput.innerHTML = `
+                            <p class="text-xl text-red-400 text-center">
+                                Sorry, we couldn't find a definition for <strong>"${trimmedWord}"</strong>. Please check the spelling.
+                            </p>
+                        `;
+                    } else {
+                        // Handle other HTTP errors
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return;
                 }
+
+                const data = await response.json();
+                displayDefinition(trimmedWord, data);
+
             } catch (error) {
-                console.error("Error fetching definition:", error);
+                console.error("Fetch error:", error);
                 definitionOutput.innerHTML = `
-                    <div class="text-center p-8 bg-gray-900 rounded-lg w-full">
-                        <p class="text-xl font-semibold text-red-500 mb-2">Network Error</p>
-                        <p class="text-gray-400">Could not reach the dictionary service. Please check your connection.</p>
-                    </div>
+                    <p class="text-xl text-red-400 text-center">
+                        An unexpected error occurred while fetching the definition. Please try again later.
+                    </p>
                 `;
             }
         }
 
-        // --- Event Listeners ---
-
-        // Search button click
-        searchButton.addEventListener('click', () => {
-            const word = searchInput.value.trim();
-            if (word) {
-                fetchDefinition(word);
-            }
-        });
-
-        // Search input Enter key press
-        searchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                searchButton.click();
-            }
-        });
-
-        // Delegation for audio button and synonym/antonym tags
-        definitionOutput.addEventListener('click', async (e) => {
-            let target = e.target;
+        /**
+         * Replaces standalone words (3+ chars) in the definition text with clickable spans.
+         * Excludes common function words.
+         * @param {string} text The definition text.
+         * @returns {string} The text with clickable links.
+         */
+        function highlightDefinitionText(text) {
+            // List of common short words to exclude from linking
+            const commonWords = ['the', 'and', 'but', 'not', 'for', 'with', 'from', 'that', 'this', 'have', 'when', 'what', 'which', 'will', 'was', 'are', 'you', 'can', 'one', 'use', 'any', 'all', 'out', 'into', 'upon', 'like', 'than', 'only', 'much'];
             
-            // Handle audio playback
-            if (target.id === 'audio-button' || target.closest('#audio-button')) {
-                const button = target.closest('#audio-button');
-                const word = button.getAttribute('data-word');
-
-                if (word) {
-                    button.disabled = true;
-                    button.classList.add('opacity-50');
-
-                    // If audio URL already exists, use it
-                    let audioUrl = button.getAttribute('data-audio-url');
-                    
-                    if (!audioUrl) {
-                        audioUrl = await fetchAudio(word);
-                        button.setAttribute('data-audio-url', audioUrl || '');
-                    }
-
-                    if (audioUrl) {
-                        const audio = new Audio(audioUrl);
-                        audio.play().catch(err => console.error("Audio playback failed:", err));
-                    }
-                    
-                    button.disabled = false;
-                    button.classList.remove('opacity-50');
+            // Regex to find standalone words (alphabetic characters, 3+ chars) surrounded by non-word chars
+            return text.replace(/\b([a-zA-Z]{3,})\b/g, (match) => {
+                if (commonWords.includes(match.toLowerCase())) {
+                    return match;
                 }
+
+                // Wrap the word in a clickable span. Using `data-word` attribute for lookup.
+                return `<span 
+                            class="highlighted-word text-cyan-400 hover:text-cyan-200 cursor-pointer font-medium" 
+                            data-word="${match.toLowerCase()}">${match}</span>`;
+            });
+        }
+
+
+        /**
+         * Renders the definition data onto the page, with updated styling for definitions and synonyms.
+         * @param {string} word The word being displayed.
+         * @param {Array<Object>} data The array of definition objects from the API.
+         */
+        function displayDefinition(word, data) {
+            if (!data || data.length === 0) {
+                definitionOutput.innerHTML = `<p class="text-xl text-red-400 text-center">No definition data available for "${word}".</p>`;
                 return;
             }
 
-            // Handle tag click for new search
+            const entry = data[0];
+            // Find the best phonetic representation or default to 'N/A'
+            const phoneticText = entry.phonetic || entry.phonetics?.find(p => p.text)?.text || 'N/A';
+            
+            let htmlContent = `
+                <div class="space-y-6">
+                    <h2 class="text-4xl font-semibold text-cyan-400 capitalize mb-1">${word}</h2>
+                    <p class="text-xl text-gray-400">
+                        <span class="pronunciation-text" title="Pronunciation">${phoneticText}</span>
+                    </p>
+                    <hr class="border-zinc-700" />
+            `;
+            
+            // Iterate through all parts of speech (meanings)
+            entry.meanings.forEach(meaning => {
+                htmlContent += `
+                    <div class="space-y-4 mb-8">
+                        <h3 class="text-2xl font-semibold text-indigo-300 border-l-4 border-indigo-500 pl-3">
+                            ${meaning.partOfSpeech.charAt(0).toUpperCase() + meaning.partOfSpeech.slice(1)}
+                        </h3>
+                        
+                        <!-- Definitions Section Header and Numbered List -->
+                        <div class="ml-4">
+                            <h4 class="text-xl font-medium text-white mb-2 pb-1 border-b border-zinc-700">Definitions</h4>
+                            <ol class="list-decimal list-inside space-y-3 pl-4">
+                `;
+
+                // Display up to 3 definitions for brevity
+                meaning.definitions.slice(0, 3).forEach((def) => { 
+                    // Apply highlighting to the definition text
+                    const highlightedDefinition = highlightDefinitionText(def.definition);
+                    
+                    htmlContent += `
+                        <li>
+                            <div class="space-y-1">
+                                <p class="text-gray-300">${highlightedDefinition}</p>
+                    `;
+                    
+                    // Conditionally add a separator line and use smaller text for the example
+                    if (def.example) {
+                        htmlContent += `
+                            <hr class="border-zinc-800 mt-2 mb-1 w-full" /> 
+                            <p class="text-sm text-gray-500 italic">e.g. "${def.example}"</p>
+                        `;
+                    }
+                    
+                    htmlContent += `</div></li>`;
+                });
+
+                htmlContent += `</ol></div>`; // Close definitions ol and surrounding div
+                
+                // Display synonyms if available with special pill-shaped styling
+                if (meaning.synonyms && meaning.synonyms.length > 0) {
+                    // Mapping synonyms into less rounded, clickable pill-shaped span tags
+                    const synonymTags = meaning.synonyms.slice(0, 5).map(s => 
+                        `<span 
+                            class="px-3 py-1 bg-zinc-700 text-cyan-200 rounded-lg text-sm font-semibold cursor-pointer hover:bg-zinc-600 transition synonym-tag"
+                            data-word="${s}"
+                        >${s}</span>`
+                    ).join(' ');
+
+                    htmlContent += `
+                        <div class="ml-4 pt-4 p-3 bg-zinc-800 border border-cyan-700 rounded-lg shadow-inner">
+                            <p class="text-lg text-white font-bold mb-2">Synonyms:</p>
+                            <p class="flex flex-wrap gap-2">${synonymTags}</p>
+                        </div>
+                    `;
+                }
+
+                htmlContent += `</div>`; // Close meaning div
+            });
+
+            htmlContent += `</div>`; // Close space-y-6 div
+            definitionOutput.innerHTML = htmlContent;
+        }
+
+        // --- EVENT HANDLERS ---
+        
+        /** Handler for Enter key press in the search box */
+        function handleInputKeyDown(event) {
+            if (event.key === 'Enter') {
+                handleSearchClick();
+            }
+        }
+        
+        /** Handler for Search button click */
+        function handleSearchClick() {
+            const query = searchInput.value.trim().toLowerCase();
+            if (query) {
+                fetchDefinition(query);
+            } else {
+                definitionOutput.innerHTML = `<p class="text-lg text-gray-400 text-center">Please enter a word to search.</p>`;
+            }
+        }
+
+
+        // --- EVENT LISTENERS ---
+        searchInput.addEventListener('keydown', handleInputKeyDown);
+        searchButton.addEventListener('click', handleSearchClick);
+
+        // --- Event Delegation for Clickable Words (Synonyms and Definition Highlights) ---
+        definitionOutput.addEventListener('click', (event) => {
+            const target = event.target;
             let wordToSearch = null;
-            if (target.classList.contains('tag')) {
+
+            if (target.classList.contains('synonym-tag')) {
+                wordToSearch = target.getAttribute('data-word');
+            } else if (target.classList.contains('highlighted-word')) {
                 wordToSearch = target.getAttribute('data-word');
             }
             
             if (wordToSearch) {
-                // Update the input field
-                searchInput.value = wordToSearch;
                 // Perform the new search
                 fetchDefinition(wordToSearch);
             }
@@ -547,11 +395,8 @@
                 console.log("User authenticated. UID:", user.uid);
                 
                 // Hide loading screen and show content
-                loadingScreen.classList.add('hidden');
+                loadingScreen.style.display = 'none';
                 pageContent.classList.remove('hidden');
-
-                // Initial search on load with the default value
-                fetchDefinition(searchInput.value.trim());
 
             } else {
                 // User is NOT authenticated. Redirect to login/index page.
@@ -561,9 +406,6 @@
         });
 
         // 2. Start the authentication process on load
-        // Initial setup for the loading screen before auth begins
-        loadingScreen.classList.remove('hidden');
-        pageContent.classList.add('hidden');
         initializeAuth();
         
     </script>
