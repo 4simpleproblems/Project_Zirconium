@@ -42,6 +42,33 @@
             padding: 1rem; /* Increased padding */
             box-sizing: border-box;
         }
+        @media (max-width: 1024px) {
+             .messenger-container {
+                grid-template-columns: 1fr;
+                gap: 0;
+             }
+             .left-panel {
+                display: none; /* Hide left panel on smaller screens by default, rely on back button */
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                z-index: 30;
+                height: 100vh;
+                border-radius: 0;
+             }
+             .left-panel.active {
+                display: flex;
+             }
+             #chat-view {
+                border-radius: 0;
+             }
+             #back-to-chats-btn {
+                display: flex !important; /* Always show back button on mobile */
+             }
+             
+        }
+
 
         /* Panel Styling */
         .left-panel, .right-panel { 
@@ -133,7 +160,7 @@
         /* Modal & Lightbox Styling (Updated for image expansion) */
         .modal-backdrop {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.85); /* Darkened background */
+            background-color: rgba(0, 0, 0, 0.9); /* Darkened background */
             display: flex;
             z-index: 50; transition: opacity 0.3s ease;
         }
@@ -170,7 +197,7 @@
             padding: 1rem; position: relative;
         }
         .chat-messages > .message-wrapper { 
-            margin-bottom: 1rem;
+            margin-bottom: 0.5rem; /* Tighter spacing */
             max-width: 85%; /* Enforce width for better look */
         }
         
@@ -223,7 +250,7 @@
         .message-read-indicator .fa-eye { color: #4f46e5; }
         .message-read-indicator .fa-eye-slash { color: #6b7280; }
         
-        /* Message Expansion */
+        /* Message Expansion/Truncation */
         .message-truncated .message-content {
             max-height: 4.5em; /* Approximately 3 lines for truncation */
             overflow: hidden;
@@ -269,6 +296,24 @@
         }
         #file-menu button:hover {
             background-color: #252525;
+        }
+        
+        /* Reactions/Context Menu (Simple implementation) */
+        .message-options {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            display: none; /* Hidden by default */
+            z-index: 10;
+        }
+        .message-wrapper:hover .message-options {
+            display: flex;
+        }
+        .message-wrapper.justify-end .message-options {
+            left: -32px; /* Position to the left of my message */
+        }
+        .message-wrapper.justify-start .message-options {
+            right: -32px; /* Position to the right of partner's message */
         }
 
     </style>
@@ -330,7 +375,7 @@
     </div>
     <main id="app-ui" class="messenger-container" style="display: none;">
         
-        <aside class="left-panel">
+        <aside class="left-panel" id="left-panel">
             <div class="mb-4 border-b border-gray-800 pb-4 flex justify-between items-start">
                 <div>
                     <div id="current-time-display" class="text-3xl font-bold text-left text-indigo-400 mb-2 font-mono">--:--:--</div>
@@ -383,7 +428,7 @@
         <section id="chat-view" class="right-panel hidden relative">
             <header class="pb-3 border-b border-gray-800 flex items-center justify-between flex-shrink-0">
                 <div class="flex items-center gap-3">
-                    <button id="back-to-chats-btn" class="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-800 transition-colors">
+                    <button id="back-to-chats-btn" class="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-800 transition-colors lg:hidden" style="display:none;" title="Back to Chats">
                         <i class="fas fa-arrow-left"></i>
                     </button>
                     <h1 id="chat-header" class="text-2xl font-bold">Select a Chat</h1>
@@ -420,7 +465,7 @@
             <footer class="pt-4 border-t border-gray-800 flex-shrink-0">
                 <div id="file-preview-container" class="hidden"></div>
                 <form id="message-form" class="flex gap-3 items-end">
-                    <button type="button" id="open-file-menu-btn" class="w-12 h-12 flex items-center justify-center bg-gray-800 text-gray-400 rounded-lg hover:bg-gray-700 transition cursor-pointer flex-shrink-0" title="Attach Images">
+                    <button type="button" id="open-file-menu-btn" class="w-12 h-12 flex items-center justify-center bg-gray-800 text-gray-400 rounded-lg hover:bg-gray-700 transition cursor-pointer flex-shrink-0 relative" title="Attach Files">
                         <i class="fas fa-paperclip"></i>
                     </button>
                     <input type="file" id="file-upload-input" multiple accept="image/*" class="hidden">
@@ -449,12 +494,11 @@
         // --- Firebase Core Imports ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        // NOTE: The entire Firebase import list is huge, I'll keep the required ones for brevity.
         import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, query, where, getDocs, serverTimestamp, arrayUnion, arrayRemove, writeBatch, deleteField, deleteDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         // --- Firebase Configuration ---
         const firebaseConfig = {
-            apiKey: "AIzaSyASqfiYUPf7xY4wgZ0hLl8_Z0ZkBiwFUO8",
+            apiKey: "AIzaSyASqfiYUPf7xY4wgZ0hLl8_Z0ZkBiwFUO8", // <<<<<<< CHANGE THIS TO YOUR REAL KEY
             authDomain: "theamericanmessenger-0.firebaseapp.com",
             databaseURL: "https://theamericanmessenger-0-default-rtdb.firebaseio.com",
             projectId: "theamericanmessenger-0",
@@ -499,10 +543,16 @@
         const NICKNAME_STORAGE_KEY = 'messengerNicknames';
         const GROUP_NICKNAME_STORAGE_KEY = 'messengerGroupNicknames';
         
+        // **DATABASE/CACHE CONSTANTS**
+        const MESSAGE_CACHE_LIMIT_DM = 10; // saves last 10 messages to database
+        const MESSAGE_CACHE_LIMIT_GC = 25; // saves last 25 for group chats
+        // ------------------------------------
+
         const dom = {
             loadingScreen: document.getElementById('loading-screen'),
             loadingText: document.getElementById('loading-text'), 
             appUi: document.getElementById('app-ui'),
+            leftPanel: document.getElementById('left-panel'),
             currentTimeDisplay: document.getElementById('current-time-display'),
             myIdDisplay: document.getElementById('my-id-display'), 
             chatsTabBtn: document.getElementById('chats-tab-btn'),
@@ -521,7 +571,7 @@
             blockUserBtn: document.getElementById('block-user-btn'),
             editGroupNameBtn: document.getElementById('edit-group-name-btn'),
             manageGroupNicknamesBtn: document.getElementById('manage-group-nicknames-btn'),
-            clearChatBtn: document.getElementById('clear-chat-btn'), // New button
+            clearChatBtn: document.getElementById('clear-chat-btn'),
             messagesContainer: document.getElementById('messages-container'),
             messageForm: document.getElementById('message-form'),
             messageInput: document.getElementById('message-input'),
@@ -529,12 +579,12 @@
             cooldownTimer: document.getElementById('cooldown-timer'),
             scrollToBottomBtn: document.getElementById('scroll-to-bottom-btn'), 
             // File Uploads
-            openFileMenuBtn: document.getElementById('open-file-menu-btn'), // New button
-            fileMenu: document.getElementById('file-menu'), // New menu
-            fileMenuImageBtn: document.getElementById('file-menu-image-btn'), // New button
-            fileMenuCameraBtn: document.getElementById('file-menu-camera-btn'), // New button
+            openFileMenuBtn: document.getElementById('open-file-menu-btn'),
+            fileMenu: document.getElementById('file-menu'),
+            fileMenuImageBtn: document.getElementById('file-menu-image-btn'),
+            fileMenuCameraBtn: document.getElementById('file-menu-camera-btn'),
             fileUploadInput: document.getElementById('file-upload-input'),
-            cameraCaptureInput: document.getElementById('camera-capture-input'), // New input
+            cameraCaptureInput: document.getElementById('camera-capture-input'),
             filePreviewContainer: document.getElementById('file-preview-container'),
             charLimitDisplay: document.getElementById('char-limit-display'),
             // Modals
@@ -596,7 +646,9 @@
         // --- Modal & Lightbox Control ---
         function showModal(modalElement) { modalElement.classList.remove('hidden'); setTimeout(() => modalElement.classList.remove('opacity-0'), 10); }
         function hideModal(modalElement) { modalElement.classList.add('opacity-0'); setTimeout(() => modalElement.classList.add('hidden'), 300); }
+        
         function showLightbox(src) { dom.lightboxImage.src = src; showModal(dom.imageLightbox); }
+        
         function openGroupModal() { dom.groupNameInput.value = ''; renderGroupMemberSelection(); showModal(dom.createGroupModal); }
         function closeGroupModal() { hideModal(dom.createGroupModal); }
         function showSettingsModal() { renderBlockedUsers(); showModal(dom.settingsModal); }
@@ -617,8 +669,23 @@
         function toggleFileMenu(e) {
             e.preventDefault();
             const rect = dom.openFileMenuBtn.getBoundingClientRect();
+            // Calculate bottom position relative to viewport
+            const menuTop = rect.top;
+            const menuHeight = dom.fileMenu.offsetHeight || 150; // Estimate height if hidden
+            let bottom = window.innerHeight - menuTop + 10;
+            
+            // Adjust if menu would go off-screen at the bottom
+            if (menuTop - menuHeight < 0) {
+                // If there's not enough room at the top, place it below (default bottom position is above)
+                bottom = window.innerHeight - (rect.bottom + 10);
+                dom.fileMenu.style.bottom = 'auto';
+                dom.fileMenu.style.top = `${rect.bottom + 10}px`;
+            } else {
+                dom.fileMenu.style.top = 'auto';
+                dom.fileMenu.style.bottom = `${bottom}px`;
+            }
+
             dom.fileMenu.style.left = `${rect.left}px`;
-            dom.fileMenu.style.bottom = `${window.innerHeight - rect.top + 10}px`;
             dom.fileMenu.classList.toggle('hidden');
         }
         
@@ -681,6 +748,12 @@
             for (const file of files) {
                 if (attachedFiles.length >= maxFiles) { showMessage(dom.cooldownTimer, `Max ${maxFiles} images allowed.`, 'error'); break; }
                 if (!file.type.startsWith('image/')) { showMessage(dom.cooldownTimer, 'Only image files are supported.', 'error'); continue; }
+                
+                if (attachedFiles.length >= 2) {
+                    showMessage(dom.cooldownTimer, 'Max 2 images for reaction/single message attachment.', 'error');
+                    break;
+                }
+                
                 const dataUrl = await compressImage(file);
                 attachedFiles.push({ name: file.name, type: 'image', dataURL: dataUrl });
             }
@@ -715,7 +788,16 @@
         }
 
         function renderMessage(message) {
-            if (message.senderId === 'system') return null; // Ignore system messages
+            if (message.senderId === 'system' || message.deleted) {
+                if (message.senderId === 'system') {
+                    const timeString = message.timestamp?.toDate ? new Date(message.timestamp.toDate()).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '...';
+                    const systemEl = document.createElement('div');
+                    systemEl.className = 'text-center text-xs text-gray-500 my-2';
+                    systemEl.innerHTML = `<span>${escapeHtml(message.text)} (${timeString})</span>`;
+                    return systemEl;
+                }
+                return null;
+            }
 
             const isMe = message.senderId === currentUser.uid;
             let senderName;
@@ -730,24 +812,22 @@
             
             const timeString = message.timestamp?.toDate ? new Date(message.timestamp.toDate()).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : (message.isoTimestamp ? new Date(message.isoTimestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '...');
             const isRead = currentChat.type === 'dm' && message.readBy?.includes(currentChat.partnerId);
-            const canEditOrDelete = isMe && !message.deleted && message.text; // Only allow edit/delete for my own text messages (simplified)
+            const isStillInDatabase = !message.isoTimestamp; // Simplistic check: if it has a server timestamp, it's still in the DB. Local cache will have isoTimestamp.
+            const canEditOrDelete = isMe && isStillInDatabase && message.text; 
 
-            const filesHtml = (message.files || []).map(f => `
-                <div class="p-1 bg-gray-900 rounded-lg max-w-full overflow-hidden mb-2">
+            // Reaction Images (Placeholder for 2 images)
+            const filesHtml = (message.files || []).slice(0, 2).map(f => `
+                <div class="p-1 bg-gray-900 rounded-lg max-w-full overflow-hidden mb-2 ${message.files.length > 1 ? 'w-48 inline-block mr-2' : ''}">
                     <img src="${escapeHtml(f.dataURL)}" class="max-h-60 object-contain rounded-md cursor-pointer" onclick="showLightbox('${escapeHtml(f.dataURL)}')">
                 </div>`).join('');
             
             let messageText = message.text || '';
             const isTruncated = messageText.length > MESSAGE_TRUNCATE_LENGTH;
-            let displayMessage = messageText;
-            if (isTruncated) {
-                // We'll let the CSS handle the initial visual truncation and use the button to toggle the class
-                // The full text is kept in the element to avoid re-rendering
-            }
+            // The full text is kept in the element to let CSS handle initial truncation
             
             const contentHtml = message.text ? `
                 <div class="message-content whitespace-pre-wrap">
-                    ${linkify(escapeHtml(displayMessage))}
+                    ${linkify(escapeHtml(messageText))}
                 </div>
                 ${isTruncated ? `<button class="expand-text-btn text-xs text-indigo-300 hover:text-indigo-200 mt-1" data-action="toggle-expand">...Show More</button>` : ''}
                 ` : '';
@@ -759,14 +839,18 @@
             if (!isMe && !message.readBy?.includes(currentUser.uid)) {
                 wrapper.dataset.isUnread = "true";
             }
-
-            // Simplified Reaction/Context Menu
-            const contextMenu = canEditOrDelete ? `
-                <div class="dropdown-menu absolute hidden right-0 bottom-full bg-gray-900 border border-gray-800 rounded-md shadow-lg p-1 mb-1">
-                    <button class="menu-item delete-message-btn w-full text-left text-sm p-1 rounded hover:bg-red-800/50" data-id="${message.id}"><i class="fas fa-trash mr-2"></i>Delete</button>
-                    <button class="menu-item edit-message-btn w-full text-left text-sm p-1 rounded hover:bg-indigo-800/50" data-id="${message.id}" data-text="${escapeHtml(message.text)}"><i class="fas fa-pencil-alt mr-2"></i>Edit</button>
+            
+            // Simplified Reactions/Context Menu
+            const optionsMenu = `
+                <div class="message-options flex gap-1 ${isMe ? 'order-first' : 'order-last'}">
+                    <button class="w-6 h-6 bg-gray-900/70 text-gray-400 rounded-full hover:bg-gray-700 transition text-xs" title="React with Thumbs Up"><i class="far fa-thumbs-up"></i></button>
+                    <button class="w-6 h-6 bg-gray-900/70 text-gray-400 rounded-full hover:bg-gray-700 transition text-xs" title="React with Heart"><i class="far fa-heart"></i></button>
+                    ${canEditOrDelete ? `
+                        <button class="delete-message-btn w-6 h-6 bg-gray-900/70 text-red-400 rounded-full hover:bg-red-700 hover:text-white transition text-xs" data-id="${message.id}" title="Delete Message"><i class="fas fa-trash-alt"></i></button>
+                        <button class="edit-message-btn w-6 h-6 bg-gray-900/70 text-indigo-400 rounded-full hover:bg-indigo-700 hover:text-white transition text-xs" data-id="${message.id}" data-text="${escapeHtml(message.text)}" title="Edit Message"><i class="fas fa-edit"></i></button>
+                    ` : ''}
                 </div>
-            ` : '';
+            `;
 
 
             const readIndicatorHtml = isMe ? `<div class="message-read-indicator text-xs self-end mb-1 mr-1 ${isRead ? 'visible' : ''}">
@@ -775,15 +859,17 @@
             
             wrapper.innerHTML = `
                 ${!isMe ? readIndicatorHtml : ''}
+                ${isMe ? optionsMenu : ''}
                 <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'}">
                     <span class="text-xs ${isMe ? 'text-gray-500' : 'text-indigo-400'} mb-1 font-semibold">${escapeHtml(senderName)}</span>
                     <div class="p-3 rounded-xl ${isMe ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-gray-800 text-gray-200 rounded-tl-none'} shadow-lg break-words max-w-full relative">
                         ${filesHtml}
                         ${contentHtml}
-                        ${contextMenu}
+                        ${message.edited ? `<p class="text-[10px] text-gray-400 mt-1">${isMe ? 'Edited' : `${senderName} edited`}</p>` : ''}
                     </div>
                     <span class="text-xs text-gray-600 mt-1">${timeString}</span>
                 </div>
+                ${!isMe ? optionsMenu : ''}
                 ${isMe ? readIndicatorHtml : ''}
             `;
             
@@ -792,36 +878,32 @@
                 wrapper.querySelector('[data-action="toggle-expand"]').addEventListener('click', () => toggleMessageExpansion(wrapper));
             }
 
-            // Simple context menu logic: show menu on click for now
-            if (canEditOrDelete) {
-                 wrapper.querySelector('.p-3').addEventListener('click', (e) => {
-                    if (e.target.closest('.menu-item')) return;
-                    const menu = wrapper.querySelector('.dropdown-menu');
-                    menu.classList.toggle('hidden');
-                    // Hide if clicking outside later (needs a global document click listener, but leaving simple for now)
-                });
-            }
+            // Context menu listeners
+            const deleteBtn = wrapper.querySelector('.delete-message-btn');
+            if (deleteBtn) deleteBtn.onclick = () => handleDeleteMessage(deleteBtn.dataset.id);
+            const editBtn = wrapper.querySelector('.edit-message-btn');
+            if (editBtn) editBtn.onclick = () => handleEditMessage(editBtn.dataset.id, editBtn.dataset.text);
 
             return wrapper;
         }
         
         async function handleDeleteMessage(messageId) {
-            showConfirmModal({ title: 'Delete Message?', body: 'This message will be permanently deleted for all users.', onConfirm: async () => {
+            showConfirmModal({ title: 'Delete Message?', body: 'This message will be permanently deleted for all users. This cannot be undone.', onConfirm: async () => {
                 try {
                     const messageRef = doc(db, 'chats', currentChat.id, 'messages', messageId);
-                    // A simple delete for now. In a real app, you might use 'deleted: true' or a batch for safety.
-                    await deleteDoc(messageRef); 
+                    // Use update to mark as deleted instead of deleteDoc (safer, cleaner for chat history)
+                    await updateDoc(messageRef, { text: '[This message was deleted]', deleted: true, files: [] }); 
                     showMessage(dom.cooldownTimer, 'Message deleted.', 'success');
                 } catch (error) {
                     console.error("Error deleting message:", error);
-                    showMessage(dom.cooldownTimer, 'Failed to delete message.', 'error');
+                    showMessage(dom.cooldownTimer, 'Failed to delete message. (Only messages still in DB can be deleted)', 'error');
                 }
             }});
         }
 
         async function handleEditMessage(messageId, oldText) {
             const newText = prompt('Edit your message:', oldText);
-            if (newText === null || newText.trim() === oldText.trim()) return;
+            if (newText === null || newText.trim() === oldText.trim() || newText.trim().length === 0) return;
 
             try {
                 const messageRef = doc(db, 'chats', currentChat.id, 'messages', messageId);
@@ -829,12 +911,12 @@
                 showMessage(dom.cooldownTimer, 'Message edited.', 'success');
             } catch (error) {
                 console.error("Error editing message:", error);
-                showMessage(dom.cooldownTimer, 'Failed to edit message.', 'error');
+                showMessage(dom.cooldownTimer, 'Failed to edit message. (Only messages still in DB can be edited)', 'error');
             }
         }
         
         async function handleClearChat() {
-            showConfirmModal({ title: 'Clear Chat History?', body: 'This will only clear messages locally (from your device).', onConfirm: () => {
+            showConfirmModal({ title: 'Clear Chat History?', body: 'This will only clear messages locally (from your device). The messages will remain on the server and other devices.', onConfirm: () => {
                 delete localMessagesCache[currentChat.id];
                 saveMessagesToCache();
                 // Re-render the chat view to show it's empty
@@ -844,7 +926,7 @@
         }
 
         async function markMessageAsRead(messageId) {
-            if (!currentChat.id) return;
+            if (!currentChat.id || currentChat.type !== 'dm' || !currentChat.partnerId) return;
             const messageRef = doc(db, 'chats', currentChat.id, 'messages', messageId);
             await updateDoc(messageRef, { readBy: arrayUnion(currentUser.uid) }).catch(console.error);
         }
@@ -900,41 +982,54 @@
             unsubscribeMessages = onSnapshot(q, (snapshot) => {
                 const shouldScroll = isAtBottom() || !!dom.messagesContainer.querySelector('#messages-loading-state');
                 
-                dom.messagesContainer.innerHTML = ''; // Clear container to render fresh data
+                const existingMessageIds = new Set(Array.from(dom.messagesContainer.children).map(el => el.dataset.messageId).filter(id => id));
+                const messagesToCache = [];
+                let hasNewMessage = false;
 
-                if (snapshot.empty) {
-                     dom.messagesContainer.innerHTML = `<div class="flex justify-center items-center h-full"><p class="text-gray-500">Say something!</p></div>`;
-                }
+                snapshot.docChanges().forEach(change => {
+                    const data = { ...change.doc.data(), id: change.doc.id };
 
-                let messagesToCache = [];
-                snapshot.docs.forEach(doc => {
-                    const data = { ...doc.data(), id: doc.id };
-                    const messageElement = renderMessage(data);
-                    if (messageElement) {
-                        dom.messagesContainer.appendChild(messageElement);
-                        if (messageElement.dataset.isUnread) {
-                            messageObserver.observe(messageElement);
-                        }
-                        
-                        // Add context menu listeners *after* rendering
-                        const deleteBtn = messageElement.querySelector('.delete-message-btn');
-                        if (deleteBtn) deleteBtn.onclick = () => handleDeleteMessage(deleteBtn.dataset.id);
-                        const editBtn = messageElement.querySelector('.edit-message-btn');
-                        if (editBtn) editBtn.onclick = () => handleEditMessage(editBtn.dataset.id, editBtn.dataset.text);
-
-                    }
                     if (data.timestamp) {
-                        // Keep last 100 messages in local cache for quick loading
                         messagesToCache.push({ ...data, isoTimestamp: data.timestamp.toDate().toISOString() });
+                    }
+                    
+                    const existingEl = dom.messagesContainer.querySelector(`[data-message-id="${data.id}"]`) || dom.messagesContainer.querySelector(`div.text-center > span:contains('${data.text}')`); // Find system messages too
+                    
+                    if (change.type === "added" && !existingMessageIds.has(data.id)) {
+                         hasNewMessage = true;
+                         const messageElement = renderMessage(data);
+                         if (messageElement) {
+                             dom.messagesContainer.appendChild(messageElement);
+                             if (messageElement.dataset.isUnread) { messageObserver.observe(messageElement); }
+                         }
+                    } else if (change.type === "modified" && existingEl) {
+                        const newMessageElement = renderMessage(data);
+                        if (newMessageElement) {
+                            dom.messagesContainer.replaceChild(newMessageElement, existingEl);
+                            if (newMessageElement.dataset.isUnread) { messageObserver.observe(newMessageElement); }
+                        } else {
+                            existingEl.remove(); 
+                        }
+                    } else if (change.type === "removed" && existingEl) {
+                        existingEl.remove();
                     }
                 });
                 
-                // Save last 10 messages for DM, last 25 for GC (as per user request)
-                const cacheLimit = currentChat.type === 'group' ? 25 : 10;
+                // Remove loading state if it exists
+                const loadingState = dom.messagesContainer.querySelector('#messages-loading-state');
+                if (loadingState) loadingState.remove();
+
+                // If container is empty after processing, show default text
+                if (dom.messagesContainer.children.length === 0) {
+                     dom.messagesContainer.innerHTML = `<div class="flex justify-center items-center h-full"><p class="text-gray-500">Say something!</p></div>`;
+                }
+
+                // Save last X messages (user-defined cache limits)
+                const cacheLimit = currentChat.type === 'group' ? MESSAGE_CACHE_LIMIT_GC : MESSAGE_CACHE_LIMIT_DM;
                 localMessagesCache[chatId] = messagesToCache.slice(-cacheLimit);
                 saveMessagesToCache();
 
-                if (shouldScroll) scrollToBottom(true);
+                if (shouldScroll || hasNewMessage) scrollToBottom(true);
                 else updateScrollButtonVisibility();
                 
             }, (error) => {
@@ -961,7 +1056,7 @@
 
                 const message = {
                     senderId: currentUser.uid, text: messageText, timestamp: serverTimestamp(),
-                    files: attachedFiles, readBy: [currentUser.uid]
+                    files: attachedFiles, readBy: [currentUser.uid], deleted: false
                 };
                 batch.set(newMessageRef, message);
                 
@@ -998,71 +1093,549 @@
         // =========================================================================
         // FRIEND, BLOCK, GROUP, and CHAT MANAGEMENT
         // =========================================================================
-        
-        // ... (Friend and Block logic remains the same, not repeated for brevity) ...
-        
-        // Function definitions for handleAddFriend, renderFriendRequests, handleFriendRequestAction, 
-        // handleUnfriend, handleBlockUser, handleUnblockUser, renderBlockedUsers, 
-        // handleDeleteChat, renderGroupMemberSelection, handleCreateGroup, listenToChats, 
-        // renderChatItemHtml, renderFriends, handleManageGroupNicknames are assumed to be here.
-        
+
         async function handleAddFriend(e) {
-            // ... original implementation ...
+            if (e) e.preventDefault();
+            const publicId = dom.addFriendIdInput.value.trim().toLowerCase();
+            dom.addFriendIdInput.value = '';
+            if (publicId === currentUserData.publicId) { showMessage(dom.addFriendMessage, 'Cannot add yourself.', 'error'); return; }
+            if (currentUserData.friends && Object.values(currentUserData.friends).includes(publicId)) { showMessage(dom.addFriendMessage, 'You are already friends.', 'error'); return; }
+
+            try {
+                const q = query(collection(db, 'users'), where('publicId', '==', publicId));
+                const querySnapshot = await getDocs(q);
+                if (querySnapshot.empty) { showMessage(dom.addFriendMessage, 'User not found.', 'error'); return; }
+
+                const friendDoc = querySnapshot.docs[0];
+                const friendUid = friendDoc.id;
+
+                if (currentUserData.blocked.includes(friendUid)) { showMessage(dom.addFriendMessage, 'Unblock user first.', 'error'); return; }
+                
+                // Fetch friend's data to check if I am blocked
+                const friendData = friendDoc.data();
+                if (friendData.blocked?.includes(currentUser.uid)) { showMessage(dom.addFriendMessage, 'You are blocked by this user.', 'error'); return; }
+                
+                // Check if a request is already pending from either side
+                if ((currentUserData.pending_requests || []).includes(friendUid)) { showMessage(dom.addFriendMessage, 'Friend request from this user is pending. Accept it!', 'info'); return; }
+                if ((friendData.pending_requests || []).includes(currentUser.uid)) { showMessage(dom.addFriendMessage, 'Friend request already sent.', 'info'); return; }
+                
+                // Send request (add current user's UID to friend's pending_requests)
+                await updateDoc(doc(db, 'users', friendUid), { pending_requests: arrayUnion(currentUser.uid) });
+                showMessage(dom.addFriendMessage, 'Friend request sent.', 'success');
+
+            } catch (error) {
+                console.error("Error adding friend:", error);
+                showMessage(dom.addFriendMessage, 'Error sending request.', 'error');
+            }
         }
-        
+
         function renderFriendRequests(requests) {
-            // ... original implementation ...
+            if (!requests || requests.length === 0) {
+                dom.friendRequestsSection.innerHTML = '';
+                return;
+            }
+
+            const requestPromises = requests.map(reqUid => getDoc(doc(db, 'users', reqUid)));
+            Promise.all(requestPromises).then(snapshots => {
+                const requestUsers = snapshots.filter(d => d.exists()).map(doc => ({ uid: doc.id, publicId: doc.data().publicId }));
+                
+                const html = `
+                    <h3 class="text-lg font-bold text-yellow-400 mb-2">Friend Requests (${requestUsers.length})</h3>
+                    ${requestUsers.map(user => `
+                        <div class="flex items-center justify-between p-3 bg-gray-900 rounded-lg mb-2">
+                            <span class="font-mono">${escapeHtml(user.publicId)}</span>
+                            <div class="flex gap-2">
+                                <button class="text-green-400 hover:text-green-500 transition" data-action="accept" data-uid="${user.uid}" data-id="${user.publicId}" title="Accept"><i class="fas fa-check"></i></button>
+                                <button class="text-red-400 hover:text-red-500 transition" data-action="decline" data-uid="${user.uid}" data-id="${user.publicId}" title="Decline"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
+                    `).join('')}
+                `;
+                dom.friendRequestsSection.innerHTML = html;
+            }).catch(e => {
+                console.error("Error rendering requests:", e);
+                dom.friendRequestsSection.innerHTML = '<p class="text-red-400">Failed to load requests.</p>';
+            });
         }
-        
+
         async function handleFriendRequestAction(e) {
-            // ... original implementation ...
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+
+            const action = btn.dataset.action;
+            const friendUid = btn.dataset.uid;
+            const friendPublicId = btn.dataset.id;
+            
+            try {
+                const batch = writeBatch(db);
+                const myRef = doc(db, 'users', currentUser.uid);
+                const friendRef = doc(db, 'users', friendUid);
+
+                // 1. Remove request from my pending list
+                batch.update(myRef, { pending_requests: arrayRemove(friendUid) });
+
+                if (action === 'accept') {
+                    const chatId = getDmChatId(currentUser.uid, friendUid);
+                    const chatRef = doc(db, 'chats', chatId);
+
+                    // 2. Add as friend to both users' friend lists
+                    batch.update(myRef, { [`friends.${friendUid}`]: friendPublicId });
+                    batch.update(friendRef, { [`friends.${currentUser.uid}`]: currentUserData.publicId });
+
+                    // 3. Create/Ensure chat document exists
+                    batch.set(chatRef, { 
+                        type: 'dm',
+                        members: [currentUser.uid, friendUid],
+                        createdAt: serverTimestamp(),
+                        lastMessage: { text: `Chat started with ${currentUserData.publicId}`, timestamp: serverTimestamp(), sender: 'system' }
+                    }, { merge: true });
+
+                    await batch.commit();
+                    showMessage(dom.addFriendMessage, `Accepted request from ${friendPublicId}.`, 'success');
+                } else if (action === 'decline') {
+                    await batch.commit();
+                    showMessage(dom.addFriendMessage, `Declined request from ${friendPublicId}.`, 'info');
+                }
+
+            } catch (error) {
+                console.error(`Error ${action}ing friend request:`, error);
+                showMessage(dom.addFriendMessage, 'Error processing request.', 'error');
+            }
         }
-        
+
         async function handleUnfriend(friendUid, friendName) {
-            // ... original implementation ...
+            try {
+                const batch = writeBatch(db);
+                const myRef = doc(db, 'users', currentUser.uid);
+                const friendRef = doc(db, 'users', friendUid);
+                
+                // 1. Remove from my friends list
+                batch.update(myRef, { [`friends.${friendUid}`]: deleteField() });
+                
+                // 2. Remove from friend's friends list
+                batch.update(friendRef, { [`friends.${currentUser.uid}`]: deleteField() });
+                
+                // 3. Delete the DM chat document
+                const chatId = getDmChatId(currentUser.uid, friendUid);
+                batch.delete(doc(db, 'chats', chatId));
+
+                await batch.commit();
+                setFriendNickname(friendUid, ''); // Clear local nickname
+                showMessage(dom.cooldownTimer, `Unfriended ${friendName}.`, 'success');
+                if (currentChat.id === chatId) closeChat();
+                switchTab('friends');
+
+            } catch (error) {
+                console.error("Error unfriending:", error);
+                showMessage(dom.cooldownTimer, 'Failed to unfriend.', 'error');
+            }
         }
-        
+
         async function handleBlockUser(friendUid, friendName) {
-            // ... original implementation ...
+            showConfirmModal({ 
+                title: `Block ${friendName}?`, 
+                body: 'This will remove them as a friend, delete your DM chat, and prevent future contact.', 
+                onConfirm: async () => {
+                    try {
+                        const batch = writeBatch(db);
+                        const myRef = doc(db, 'users', currentUser.uid);
+                        
+                        // 1. Add to my blocked list
+                        batch.update(myRef, { blocked: arrayUnion(friendUid) });
+                        
+                        // 2. If they are a friend, remove them
+                        if (currentUserData.friends?.[friendUid]) {
+                            batch.update(myRef, { [`friends.${friendUid}`]: deleteField() });
+                            
+                            // 3. Remove me from their friend list
+                            const friendRef = doc(db, 'users', friendUid);
+                            batch.update(friendRef, { [`friends.${currentUser.uid}`]: deleteField() });
+                            
+                            // 4. Delete the DM chat
+                            const chatId = getDmChatId(currentUser.uid, friendUid);
+                            batch.delete(doc(db, 'chats', chatId));
+                        }
+
+                        // Remove any pending request from them
+                         batch.update(myRef, { pending_requests: arrayRemove(friendUid) });
+
+
+                        await batch.commit();
+                        setFriendNickname(friendUid, ''); // Clear local nickname
+                        showMessage(dom.cooldownTimer, `Blocked ${friendName}.`, 'success');
+                        if (currentChat.partnerId === friendUid) closeChat();
+                        switchTab('friends');
+                        
+                    } catch (error) {
+                        console.error("Error blocking user:", error);
+                        showMessage(dom.cooldownTimer, 'Failed to block user.', 'error');
+                    }
+                }
+            });
         }
-        
+
         async function handleUnblockUser(blockedUid, blockedName) {
-            // ... original implementation ...
+            try {
+                await updateDoc(doc(db, 'users', currentUser.uid), { blocked: arrayRemove(blockedUid) });
+                showMessage(dom.cooldownTimer, `Unblocked ${blockedName}.`, 'success');
+                showSettingsModal(); // Refresh the list
+            } catch (error) {
+                console.error("Error unblocking user:", error);
+                showMessage(dom.cooldownTimer, 'Failed to unblock user.', 'error');
+            }
         }
 
         function renderBlockedUsers() {
-            // ... original implementation ...
+            const blockedUids = currentUserData.blocked || [];
+            if (blockedUids.length === 0) {
+                dom.blockedUsersList.innerHTML = '<p class="text-gray-500 text-sm p-2 text-center">No users are blocked.</p>';
+                return;
+            }
+            
+            // Fetch public IDs of blocked users
+            const userPromises = blockedUids.map(uid => getDoc(doc(db, 'users', uid)).then(doc => ({ uid, publicId: doc.exists() ? doc.data().publicId : 'Unknown' })));
+            
+            Promise.all(userPromises).then(blockedUsers => {
+                dom.blockedUsersList.innerHTML = blockedUsers.map(user => `
+                    <div class="flex items-center justify-between p-2 bg-gray-900 rounded-lg">
+                        <span class="font-mono text-gray-400">${escapeHtml(user.publicId)}</span>
+                        <button class="text-indigo-400 hover:text-indigo-500 transition text-sm font-semibold" data-action="unblock" data-uid="${user.uid}" data-name="${user.publicId}">Unblock</button>
+                    </div>
+                `).join('');
+                
+                dom.blockedUsersList.querySelectorAll('[data-action="unblock"]').forEach(btn => {
+                    btn.onclick = () => handleUnblockUser(btn.dataset.uid, btn.dataset.name);
+                });
+            }).catch(e => {
+                console.error("Error rendering blocked users:", e);
+                dom.blockedUsersList.innerHTML = '<p class="text-red-400 p-2">Failed to load blocked users.</p>';
+            });
         }
-        
+
         async function handleDeleteChat(chatId, isGroup) {
-            // ... original implementation ...
+            showConfirmModal({
+                title: isGroup ? 'Leave and Delete Group?' : 'Delete DM Chat?',
+                body: isGroup ? 'You will leave this group. The chat history will be deleted for everyone, but the group remains for the other members.' : 'This will permanently delete the DM chat history for both users.',
+                onConfirm: async () => {
+                    try {
+                        if (isGroup) {
+                            // Group: Remove user from members list
+                            await updateDoc(doc(db, 'chats', chatId), { members: arrayRemove(currentUser.uid) });
+                            // Send a system message indicating the user left
+                            const chatRef = doc(db, 'chats', chatId);
+                             const newMessageRef = doc(collection(chatRef, 'messages'));
+                             await setDoc(newMessageRef, {
+                                senderId: 'system', text: `${currentUserData.publicId} left the group.`, timestamp: serverTimestamp()
+                             });
+                        } else {
+                            // DM: Delete the entire chat document
+                            await deleteDoc(doc(db, 'chats', chatId));
+                        }
+
+                        delete localMessagesCache[chatId];
+                        saveMessagesToCache();
+                        
+                        showMessage(dom.cooldownTimer, `${isGroup ? 'Left group' : 'Chat deleted'}.`, 'success');
+                        if (currentChat.id === chatId) closeChat();
+                        switchTab('chats');
+                    } catch (error) {
+                        console.error("Error deleting chat:", error);
+                        showMessage(dom.cooldownTimer, 'Failed to delete/leave chat.', 'error');
+                    }
+                }
+            });
         }
 
         async function renderGroupMemberSelection() {
-            // ... original implementation ...
+            dom.groupMembersList.innerHTML = '';
+            const friendUids = Object.keys(currentUserData.friends || {});
+            
+            if (friendUids.length === 0) {
+                dom.groupMembersList.innerHTML = '<p class="text-gray-500 text-center p-4">You must have friends to create a group chat.</p>';
+                return;
+            }
+            
+            const friendPromises = friendUids.map(uid => getDoc(doc(db, 'users', uid)));
+            
+            Promise.all(friendPromises).then(snapshots => {
+                const friends = snapshots.filter(d => d.exists() && !currentUserData.blocked.includes(d.id)).map(d => ({ 
+                    uid: d.id, 
+                    publicId: d.data().publicId, 
+                    label: getFriendNickname(d.id, d.data().publicId) 
+                }));
+                
+                dom.groupMembersList.innerHTML = `
+                    ${friends.map(friend => `
+                        <div class="flex items-center justify-between compact-list-item cursor-default">
+                            <label for="member-${friend.uid}" class="flex items-center flex-grow cursor-pointer">
+                                <input type="checkbox" id="member-${friend.uid}" name="member" value="${friend.uid}" class="w-4 h-4 text-indigo-600 bg-gray-900 border-gray-700 rounded focus:ring-indigo-500 mr-3">
+                                <span class="text-gray-300">${escapeHtml(friend.label)}</span>
+                                <span class="text-gray-500 text-xs ml-2 font-mono">(${escapeHtml(friend.publicId)})</span>
+                            </label>
+                        </div>
+                    `).join('')}
+                `;
+            });
         }
 
         async function handleCreateGroup(e) {
-            // ... original implementation ...
+            if (e) e.preventDefault();
+            
+            const groupName = dom.groupNameInput.value.trim();
+            const selectedMembers = Array.from(dom.groupMembersList.querySelectorAll('input[name="member"]:checked')).map(input => input.value);
+            
+            if (!groupName) { showMessage(dom.cooldownTimer, 'Group name is required.', 'error', 5000); return; }
+            if (selectedMembers.length === 0) { showMessage(dom.cooldownTimer, 'Select at least one member.', 'error', 5000); return; }
+            
+            const allMembers = [currentUser.uid, ...selectedMembers];
+            if (allMembers.length > GC_MAX_USERS) { showMessage(dom.cooldownTimer, `Group limit is ${GC_MAX_USERS} users.`, 'error', 5000); return; }
+
+            try {
+                const newChatRef = doc(collection(db, 'chats'));
+                
+                await setDoc(newChatRef, {
+                    type: 'group',
+                    name: groupName,
+                    owner: currentUser.uid,
+                    members: allMembers,
+                    createdAt: serverTimestamp(),
+                    lastMessage: { text: `Group "${groupName}" created by ${currentUserData.publicId}`, timestamp: serverTimestamp(), sender: 'system' }
+                });
+
+                closeGroupModal();
+                showMessage(dom.cooldownTimer, `Group "${groupName}" created!`, 'success', 5000);
+                switchTab('chats');
+                // Automatically open the new chat
+                setTimeout(() => openChat(newChatRef.id, 'group', groupName, null, allMembers), 500);
+
+            } catch (error) {
+                console.error("Error creating group:", error);
+                showMessage(dom.cooldownTimer, 'Failed to create group.', 'error', 5000);
+            }
+        }
+
+        async function handleEditGroupName() {
+            if (currentChat.type !== 'group') return;
+            const newName = prompt(`Enter new name for "${currentChat.name}":`, currentChat.name);
+            if (newName && newName.trim() !== currentChat.name && newName.trim().length > 0) {
+                try {
+                    const chatRef = doc(db, 'chats', currentChat.id);
+                    await updateDoc(chatRef, { name: newName.trim() });
+                    dom.chatHeader.textContent = newName.trim();
+                    // Send system message about the change
+                    const newMessageRef = doc(collection(chatRef, 'messages'));
+                    await setDoc(newMessageRef, {
+                        senderId: 'system', text: `${currentUserData.publicId} changed the group name to "${newName.trim()}"`, timestamp: serverTimestamp()
+                    });
+                    showMessage(dom.cooldownTimer, 'Group name updated.', 'success');
+                } catch (error) {
+                    console.error("Error updating group name:", error);
+                    showMessage(dom.cooldownTimer, 'Failed to update group name.', 'error');
+                }
+            }
+        }
+
+        async function handleManageGroupNicknames() {
+            if (currentChat.type !== 'group') return;
+
+            // Fetch friend data for all group members
+            const memberUids = currentChat.members;
+            const memberPromises = memberUids.map(uid => getDoc(doc(db, 'users', uid)));
+            const snapshots = await Promise.all(memberPromises);
+            
+            const membersData = snapshots.map(d => ({
+                uid: d.id,
+                publicId: d.data()?.publicId || 'Unknown',
+                currentNickname: getGroupNickname(currentChat.id, d.id) || getFriendNickname(d.id, d.data()?.publicId || 'Unknown')
+            }));
+            
+            const html = `
+                <h3 class="text-xl font-bold mb-4 text-white">Manage Nicknames for ${escapeHtml(currentChat.name)}</h3>
+                <p class="text-sm text-gray-500 mb-4">Set a local nickname for each group member. Only you will see these.</p>
+                <form id="group-nickname-form" class="flex flex-col gap-4">
+                    ${membersData.map(member => `
+                        <div class="flex flex-col">
+                            <label class="text-gray-300 font-semibold mb-1">${escapeHtml(member.publicId)}${member.uid === currentUser.uid ? ' (You)' : ''}</label>
+                            <input type="text" name="${member.uid}" placeholder="Nickname (e.g., ${escapeHtml(member.currentNickname)})" value="${getGroupNickname(currentChat.id, member.uid) || ''}" maxlength="50" class="bg-gray-900 border-gray-700 rounded-lg p-2">
+                        </div>
+                    `).join('')}
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold w-full mt-4">Save Nicknames</button>
+                </form>
+                <button id="group-nickname-modal-close-btn" class="mt-3 text-sm text-gray-400 hover:text-white w-full">Cancel</button>
+            `;
+            
+            const modal = document.createElement('div');
+            modal.className = 'modal-backdrop opacity-0';
+            modal.innerHTML = `<div class="modal-content max-w-sm">${html}</div>`;
+            document.body.appendChild(modal);
+            showModal(modal);
+
+            modal.querySelector('#group-nickname-modal-close-btn').onclick = () => hideModal(modal);
+            
+            modal.querySelector('#group-nickname-form').onsubmit = (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                
+                membersData.forEach(member => {
+                    const newNickname = formData.get(member.uid).trim();
+                    setGroupNickname(currentChat.id, member.uid, newNickname);
+                });
+                
+                hideModal(modal);
+                // Re-render chat list to reflect changes
+                if (currentChat.type === 'group') {
+                     // Since chat list depends on friend nicknames, refresh the view
+                     switchTab('chats');
+                     // Messages re-render on next message update
+                }
+                showMessage(dom.cooldownTimer, 'Group nicknames saved locally.', 'success');
+            };
+        }
+
+        function renderChatItemHtml(chatDoc, chatName, iconClass, partnerId, members) {
+            const isDM = chatDoc.type === 'dm';
+            const lastMessage = chatDoc.lastMessage || { text: 'Start a conversation!', sender: 'system' };
+            let previewText = lastMessage.text || '';
+            if (previewText.length > 30) previewText = previewText.substring(0, 30) + '...';
+            
+            const lastSenderName = lastMessage.sender === 'system' ? 'System' : 
+                                 (lastMessage.sender === currentUser.uid ? 'You' : 
+                                 (isDM ? getFriendNickname(partnerId, currentUserData.friends[partnerId] || 'Unknown') : 
+                                 getGroupNickname(chatDoc.id, lastMessage.sender) || currentUserData.friends[lastMessage.sender] || 'Member'));
+
+            const timeString = lastMessage.timestamp?.toDate ? new Date(lastMessage.timestamp.toDate()).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '...';
+
+            const membersString = (members || []).join(',');
+            
+            return `
+                <div class="compact-list-item flex items-start justify-between group ${chatDoc.id === currentChat.id ? 'active' : ''}" data-list-chat-id="${chatDoc.id}">
+                    <div class="flex items-center flex-grow min-w-0" data-action="open-chat" data-chat-id="${chatDoc.id}" data-chat-type="${chatDoc.type}" data-chat-name="${escapeHtml(chatName)}" data-partner-id="${partnerId || ''}" data-members="${membersString}">
+                        <i class="${iconClass} text-indigo-400 mr-4 text-xl flex-shrink-0"></i>
+                        <div class="flex flex-col min-w-0 flex-grow">
+                            <div class="flex justify-between items-center mb-0.5">
+                                <span class="font-semibold text-white truncate">${escapeHtml(chatName)}</span>
+                                <span class="text-xs text-gray-500 flex-shrink-0 ml-2">${timeString}</span>
+                            </div>
+                            <p class="text-sm text-gray-400 truncate">
+                                ${lastMessage.sender !== 'system' && !isDM ? `<span class="font-semibold text-gray-300 mr-1">${escapeHtml(lastSenderName)}:</span>` : ''}
+                                ${escapeHtml(previewText)}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ml-4">
+                        <button class="text-gray-500 hover:text-red-500 transition delete-chat-btn" data-id="${chatDoc.id}" data-is-group="${!isDM}" title="${isDM ? 'Delete Chat' : 'Leave Group'}">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
         }
 
         function listenToChats(uid) {
-            // ... original implementation ...
+            unsubscribeChats();
+            dom.activeListItems.innerHTML = '<p class="p-4 text-center text-gray-500">Loading chats...</p>';
+
+            const chatsRef = collection(db, 'chats');
+            const q = query(chatsRef, where('members', 'array-contains', uid));
+
+            // This is the main onSnapshot listener for the chat list
+            unsubscribeChats = onSnapshot(q, (snapshot) => {
+                const chatDocs = [];
+                snapshot.docs.forEach(doc => {
+                    const data = doc.data();
+                    // Filter out DMs where the partner is blocked by the current user
+                    if (data.type === 'dm') {
+                        const partnerId = data.members.find(member => member !== uid);
+                        if (currentUserData.blocked.includes(partnerId)) return;
+                    }
+                    // Filter out groups where user is no longer a member (safety check)
+                    if (data.type === 'group' && !data.members.includes(uid)) return;
+
+                    chatDocs.push({ ...data, id: doc.id });
+                });
+                
+                // Sort by last message timestamp (descending)
+                chatDocs.sort((a, b) => {
+                    const timeA = a.lastMessage?.timestamp?.toDate()?.getTime() || 0;
+                    const timeB = b.lastMessage?.timestamp?.toDate()?.getTime() || 0;
+                    return timeB - timeA;
+                });
+
+                if (chatDocs.length === 0) {
+                    dom.activeListItems.innerHTML = '<p class="p-4 text-center text-gray-500">You have no active chats. Add a friend or create a group!</p>';
+                    return;
+                }
+
+                const html = chatDocs.map(chatDoc => {
+                    const isDM = chatDoc.type === 'dm';
+                    let chatName, iconClass, partnerId = null;
+
+                    if (isDM) {
+                        partnerId = chatDoc.members.find(member => member !== uid);
+                        const partnerPublicId = currentUserData.friends[partnerId] || 'Unknown';
+                        chatName = getFriendNickname(partnerId, partnerPublicId);
+                        iconClass = 'fas fa-user';
+                    } else {
+                        chatName = chatDoc.name || 'Group Chat';
+                        iconClass = 'fas fa-users';
+                    }
+                    return renderChatItemHtml(chatDoc, chatName, iconClass, partnerId, chatDoc.members);
+                }).join('');
+
+                dom.activeListItems.innerHTML = html;
+            }, (error) => {
+                console.error("Error listening to chats:", error);
+                dom.activeListItems.innerHTML = '<p class="p-4 text-center text-red-400">Failed to load chats.</p>';
+            });
         }
-        
-        function renderChatItemHtml(chatDoc, chatName, iconClass, partnerId) {
-            // ... original implementation ...
-        }
-        
+
         async function renderFriends() {
-            // ... original implementation ...
+            unsubscribeChats(); // Ensure we stop listening to chats
+            dom.activeListItems.innerHTML = '<p class="p-4 text-center text-gray-500">Loading friends...</p>';
+            
+            const friendUids = Object.keys(currentUserData.friends || {});
+            if (friendUids.length === 0) {
+                dom.activeListItems.innerHTML = '<p class="p-4 text-center text-gray-500">You have no friends yet. Add one!</p>';
+                return;
+            }
+            
+            // Filter out friends who are also in the blocked list (shouldn't happen if block logic is correct, but safe check)
+            const activeFriends = friendUids.filter(uid => !currentUserData.blocked.includes(uid));
+            
+            const friendPromises = activeFriends.map(uid => getDoc(doc(db, 'users', uid)));
+            const friends = (await Promise.all(friendPromises)).map(d => ({ uid: d.id, publicId: d.data()?.publicId || 'Unknown' }));
+            
+            const html = friends.map(friend => {
+                const publicId = friend.publicId;
+                const currentLabel = getFriendNickname(friend.uid, publicId);
+                const chatId = getDmChatId(currentUser.uid, friend.uid);
+                
+                return `
+                    <div class="compact-list-item flex items-start justify-between group" data-list-chat-id="${chatId}">
+                        <div class="flex items-center flex-grow min-w-0">
+                            <i class="fas fa-user text-green-400 mr-4 text-xl flex-shrink-0"></i>
+                            <div class="flex flex-col min-w-0 flex-grow">
+                                <span class="font-semibold text-white truncate">${escapeHtml(currentLabel)}</span>
+                                <p class="text-sm text-gray-400 truncate font-mono">${escapeHtml(publicId)}</p>
+                            </div>
+                        </div>
+                        <div class="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ml-4 flex gap-2">
+                            <button class="text-gray-500 hover:text-indigo-500 transition edit-friend-nickname-btn" data-uid="${friend.uid}" data-current-label="${currentLabel}" title="Edit Nickname">
+                                <i class="fas fa-tag"></i>
+                            </button>
+                            <button class="text-gray-500 hover:text-yellow-500 transition block-friend-btn" data-uid="${friend.uid}" data-name="${currentLabel}" title="Block User">
+                                <i class="fas fa-user-slash"></i>
+                            </button>
+                            <button class="text-gray-500 hover:text-red-500 transition unfriend-btn" data-uid="${friend.uid}" data-name="${currentLabel}" title="Unfriend">
+                                <i class="fas fa-user-minus"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            dom.activeListItems.innerHTML = html;
         }
-
-        
-        async function handleManageGroupNicknames() {
-            // ... original implementation ...
-        }
-
 
         // =========================================================================
         // CHAT VIEW & UI MANAGEMENT
@@ -1086,13 +1659,19 @@
             dom.blockUserBtn.classList.toggle('hidden', type !== 'dm');
             dom.editGroupNameBtn.classList.toggle('hidden', type !== 'group');
             dom.manageGroupNicknamesBtn.classList.toggle('hidden', type !== 'group');
-            dom.clearChatBtn.classList.remove('hidden'); // Show clear chat button
+            dom.clearChatBtn.classList.remove('hidden'); 
             
             dom.activeListItems.querySelectorAll('.compact-list-item').forEach(el => el.classList.toggle('active', el.dataset.listChatId === chatId));
             dom.messagesContainer.innerHTML = '';
             dom.messageInput.focus();
             updateCharacterLimitDisplay();
             listenToMessages(chatId);
+            
+            // Mobile: Hide left panel
+            if (window.innerWidth < 1024) {
+                dom.leftPanel.classList.remove('active');
+                dom.chatView.classList.remove('hidden'); // Ensure chat view is visible
+            }
         }
 
         function closeChat() {
@@ -1114,6 +1693,12 @@
             clearInterval(chatCooldownInterval);
             dom.cooldownTimer.textContent = '';
             dom.sendBtn.disabled = false;
+            
+            // Mobile: Show left panel
+            if (window.innerWidth < 1024) {
+                 dom.leftPanel.classList.add('active');
+                 dom.chatView.classList.add('hidden');
+            }
         }
 
         function handleEditNickname(partnerUid, currentLabel) {
@@ -1151,7 +1736,7 @@
             updateTime();
             setInterval(updateTime, 1000); 
             setupEventListeners();
-            signInAnonymously(auth).catch(err => dom.loadingText.textContent = 'Authentication failed.');
+            signInAnonymously(auth).catch(err => dom.loadingText.textContent = 'Authentication failed. Check your Firebase config.');
             onAuthStateChanged(auth, handleAuthStateChange);
         }
 
@@ -1164,6 +1749,11 @@
                 dom.loadingScreen.style.display = 'none';
                 dom.appUi.style.display = 'grid';
                 switchTab('chats');
+                
+                 // Mobile view adjustment: if screen is small, only show left panel initially
+                if (window.innerWidth < 1024) {
+                    dom.leftPanel.classList.add('active');
+                }
             } else {
                 dom.loadingScreen.style.display = 'flex';
                 dom.appUi.style.display = 'none';
@@ -1181,6 +1771,7 @@
         
         function listenToUserDocument(uid) {
             unsubscribeUser();
+            // This is one of the important onSnapshot listeners (for user data updates)
             unsubscribeUser = onSnapshot(doc(db, 'users', uid), (doc) => {
                 const data = doc.data();
                 if (!data) return;
@@ -1189,8 +1780,14 @@
                 dom.myIdDisplay.textContent = data.publicId || '...';
                 renderFriendRequests(data.pending_requests || []);
                 if (wasFirstLoad) listenToChats(uid); // Start listening to chats only after user data is loaded on first run
-                if (currentTab === 'friends') renderFriends();
+                
+                // Refresh active list based on current tab
+                if (currentTab === 'chats') listenToChats(uid);
+                else if (currentTab === 'friends') renderFriends();
+                
                 if (!dom.settingsModal.classList.contains('hidden')) renderBlockedUsers();
+            }, (error) => {
+                 console.error("Error listening to user document:", error);
             });
         }
         
@@ -1219,22 +1816,22 @@
         function setupEventListeners() {
             dom.backToChatsBtn.addEventListener('click', closeChat);
             
-            // --- UPDATED INPUT BEHAVIOR ---
+            // --- INPUT BEHAVIOR (Enter to send, Shift+Enter for newline) ---
             dom.messageForm.addEventListener('submit', handleMessageSubmit); 
             dom.messageInput.addEventListener('keydown', e => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     handleMessageSubmit(); // Enter to send
                 }
-                // Shift + Enter is the default browser behavior for textarea newline, no need to block
             });
-            // -----------------------------
+            // ----------------------------------------------------------------------
             
             dom.addFriendForm.addEventListener('submit', handleAddFriend); 
             dom.friendRequestsSection.addEventListener('click', handleFriendRequestAction);
             dom.blockUserBtn.onclick = () => handleBlockUser(currentChat.partnerId, currentChat.name);
-            dom.clearChatBtn.onclick = handleClearChat; // New listener
+            dom.clearChatBtn.onclick = handleClearChat;
             dom.editLabelBtn.onclick = () => handleEditNickname(currentChat.partnerId, currentChat.name);
+            dom.editGroupNameBtn.onclick = handleEditGroupName;
             dom.manageGroupNicknamesBtn.onclick = handleManageGroupNicknames;
             dom.createGroupBtn.addEventListener('click', openGroupModal);
             dom.createGroupModalCloseBtn.addEventListener('click', closeGroupModal);
@@ -1245,14 +1842,14 @@
             dom.messagesContainer.addEventListener('scroll', updateScrollButtonVisibility);
             dom.scrollToBottomBtn.addEventListener('click', () => scrollToBottom(true));
             
-            // --- FILE MENU LOGIC ---
+            // --- FILE MENU/CAMERA LOGIC ---
             dom.openFileMenuBtn.addEventListener('click', toggleFileMenu);
-            dom.fileMenuImageBtn.addEventListener('click', () => dom.fileUploadInput.click());
-            dom.fileMenuCameraBtn.addEventListener('click', () => dom.cameraCaptureInput.click());
+            dom.fileMenuImageBtn.addEventListener('click', () => { dom.fileUploadInput.click(); dom.fileMenu.classList.add('hidden'); });
+            dom.fileMenuCameraBtn.addEventListener('click', () => { dom.cameraCaptureInput.click(); dom.fileMenu.classList.add('hidden'); });
 
             dom.fileUploadInput.addEventListener('change', handleFileSelect);
             dom.cameraCaptureInput.addEventListener('change', handleFileSelect);
-            // -----------------------
+            // -----------------------------
             
             dom.openSettingsBtn.onclick = showSettingsModal;
             dom.settingsModalCloseBtn.onclick = closeSettingsModal;
@@ -1272,6 +1869,7 @@
             document.addEventListener('click', (e) => {
                 // Hide file menu if clicking anywhere outside the menu/button
                 if (!dom.fileMenu.classList.contains('hidden') && 
+                    e.target !== dom.fileMenu &&
                     !dom.fileMenu.contains(e.target) && 
                     e.target !== dom.openFileMenuBtn && 
                     !dom.openFileMenuBtn.contains(e.target)) {
