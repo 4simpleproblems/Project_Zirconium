@@ -799,8 +799,8 @@ Formatting Rules (MUST FOLLOW):
         }
 
         const currentTotalSize = attachedFiles.reduce((sum, f) => sum + (f.inlineData ? atob(f.inlineData.data).length : 0), 0);
-        if (currentTotalSize + file.size > (4 * 1024 * 1024)) {
-            alert(`Upload failed: Total size of attachments would exceed the 4MB limit per message. (Current: ${formatBytes(currentTotalSize)}, Adding: ${formatBytes(file.size)})`);
+        if (currentTotalSize + file.size > (10 * 1024 * 1024)) {
+            alert(`Upload failed: Total size of attachments would exceed the 10MB limit per message. (Current: ${formatBytes(currentTotalSize)}, Adding: ${formatBytes(file.size)})`);
             return;
         }
 
