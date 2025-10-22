@@ -11,6 +11,7 @@
  * 2. CRITICAL CDN FIX (COMPLETE): Ensures the navigation bar renders by using stable Firebase Compat SDKs.
  * 3. RENDER PRIORITY: Ensures the navigation bar is rendered immediately after CSS injection, preventing the AI logic failure from blocking the UI.
  * 4. WIDESCREEN UPDATE: Removed max-width from the 'nav' element to allow it to fill the screen.
+ * 5. SCROLL GLIDER FIX (NEW): Scroll buttons are now visible by default (static) and use the 'hover' opacity (1.0) at all times, only fading out when not needed.
  */
 
 // =========================================================================
@@ -240,11 +241,15 @@ let currentAgent = 'Standard'; // Default agent
                 .tab-scroll-container::-webkit-scrollbar { display: none; }
                 .scroll-glide-button {
                     position: absolute; top: 0; height: 100%; width: 4rem; display: flex; align-items: center; justify-content: center; background: #000000; 
-                    color: white; font-size: 1.2rem; cursor: pointer; opacity: 0.8; transition: opacity 0.3s, background 0.3s; z-index: 10; pointer-events: auto;
+                    color: white; font-size: 1.2rem; cursor: pointer; 
+                    /* MODIFICATION: Always use hover opacity (1.0) as base opacity */
+                    opacity: 1; 
+                    transition: opacity 0.3s, background 0.3s; z-index: 10; pointer-events: auto;
                 }
-                .scroll-glide-button:hover { opacity: 1; }
+                /* REMOVED: .scroll-glide-button:hover { opacity: 1; } is no longer needed */
                 #glide-left { left: 0; background: linear-gradient(to right, #000000 50%, transparent); justify-content: flex-start; padding-left: 0.5rem; }
                 #glide-right { right: 0; background: linear-gradient(to left, #000000 50%, transparent); justify-content: flex-end; padding-right: 0.5rem; }
+                /* The hidden class now purely controls visibility based on need/scroll position */
                 .scroll-glide-button.hidden { opacity: 0 !important; pointer-events: none !important; }
                 .nav-tab { flex-shrink: 0; padding: 0.5rem 1rem; color: #9ca3af; font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; transition: all 0.2s; text-decoration: none; line-height: 1.5; display: flex; align-items: center; margin-right: 0.5rem; border: 1px solid transparent; }
                 .nav-tab:not(.active):hover { color: white; border-color: #d1d5db; background-color: rgba(79, 70, 229, 0.05); }
@@ -418,6 +423,7 @@ let currentAgent = 'Standard'; // Default agent
                 const isScrolledToLeft = container.scrollLeft < 5; 
                 const isScrolledToRight = container.scrollLeft + container.offsetWidth >= container.scrollWidth - 5; 
 
+                // Ensure the buttons are visible initially if there is overflow
                 leftButton.classList.remove('hidden');
                 rightButton.classList.remove('hidden');
 
@@ -428,6 +434,7 @@ let currentAgent = 'Standard'; // Default agent
                     rightButton.classList.add('hidden');
                 }
             } else {
+                // If there is no overflow, hide both buttons
                 leftButton.classList.add('hidden');
                 rightButton.classList.add('hidden');
             }
@@ -522,13 +529,15 @@ let currentAgent = 'Standard'; // Default agent
                         </a>
 
                         <div class="tab-wrapper">
-                            <button id="glide-left" class="scroll-glide-button hidden"><i class="fa-solid fa-chevron-left"></i></button>
+                            <!-- MODIFICATION: Removed 'hidden' class to show statically on load -->
+                            <button id="glide-left" class="scroll-glide-button"><i class="fa-solid fa-chevron-left"></i></button>
 
                             <div class="tab-scroll-container">
                                 ${tabsHtml}
                             </div>
                             
-                            <button id="glide-right" class="scroll-glide-button hidden"><i class="fa-solid fa-chevron-right"></i></button>
+                            <!-- MODIFICATION: Removed 'hidden' class to show statically on load -->
+                            <button id="glide-right" class="scroll-glide-button"><i class="fa-solid fa-chevron-right"></i></button>
                         </div>
 
                         ${user ? loggedInView(user, userData) : loggedOutView}
@@ -537,7 +546,7 @@ let currentAgent = 'Standard'; // Default agent
             `;
 
             // --- Append AI Modal HTML to the Body ---
-            // This block will now effectively be skipped since isPrivilegedUser is false.
+            // This block will now effectively be skipped since isPrivilegedUser is false
             if (isPrivilegedUser) {
                 let aiModal = document.getElementById('ai-modal');
                 if (!aiModal) {
@@ -578,6 +587,7 @@ let currentAgent = 'Standard'; // Default agent
                 tabContainer.scrollLeft = activeTab.offsetLeft - (tabContainer.offsetWidth / 2) + (activeTab.offsetWidth / 2);
             }
             
+            // Initial check to hide/show them correctly after load
             updateScrollGilders();
         };
 
