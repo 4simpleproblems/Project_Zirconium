@@ -134,13 +134,26 @@
         </div>
     </footer>
 
+    <script src="../firebase-config.js"></script>
+
     <script type="module" src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
     <script type="module" src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
 
     <script type="module">
-        // Import the configuration and required functions
-        import { app } from '../firebase-config.js';
+        // Import necessary functions. The 'getApp' function is key to finding the globally initialized app.
+        import { getApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
         import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js';
+
+        // Retrieve the default Firebase app instance that was initialized by firebase-config.js.
+        // This avoids the 'export' error.
+        let app;
+        try {
+            app = getApp();
+        } catch (e) {
+            console.error("Firebase App not initialized. Ensure firebase-config.js is loaded and calls initializeApp().", e);
+            // Optionally, prevent further execution if the app is not available
+            throw new Error("Cannot proceed: Firebase application is not available.");
+        }
 
         // Get the Firebase Auth instance
         const auth = getAuth(app);
@@ -160,14 +173,8 @@
                     authButton.href = '../logged-in/dashboard.html';
                     authButton.innerHTML = 'Go to Dashboard &rarr;';
                 }
-                
-                // You may also optionally redirect to the dashboard automatically here
-                // if you prefer that behavior:
-                // window.location.href = '../logged-in/dashboard.html'; 
-
             } else {
                 // User is signed out. Ensure the button is set to "Get Started Instantly"
-                // This is the default, but explicitly setting it prevents issues if the state changes after initial load
                 if (authButton) {
                     authButton.href = '../authentication.html';
                     authButton.innerHTML = 'Get Started Instantly &rarr;';
