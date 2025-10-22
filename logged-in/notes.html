@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - Notes App</title>
+    <title>4SP - NOTES</title>
     <meta name="description" content="A simple, password-encrypted note-taking application for the 4SP website.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -184,7 +184,10 @@
         const saveEncryptedBtn = document.getElementById('save-encrypted-btn');
         const loadFileBtn = document.getElementById('load-file-btn');
         const fileInput = document.getElementById('file-input');
-        
+
+        // Autosave Timer Reference
+        let autosaveTimer = null;
+        const AUTOSAVE_KEY = '4sp_note_content';
 
         // --- Utility Functions ---
 
@@ -205,6 +208,15 @@
             // Trims whitespace and splits by one or more whitespace characters (\s+).
             const words = content.trim().split(/\s+/).filter(word => word.length > 0);
             wordDisplay.textContent = words.length;
+        }
+        
+        /**
+         * Saves the current content of the textarea to localStorage.
+         */
+        function autosave() {
+            localStorage.setItem(AUTOSAVE_KEY, textarea.value);
+            // Optional: Visually confirm autosave, e.g., brief change to a 'Saved!' status
+            // console.log("Autosaved content."); 
         }
 
         /**
@@ -254,7 +266,7 @@
             }
         });
 
-        // 2. Save Encrypted .4spnote File
+        // 2. Save Encrypted .4spnote File (Ensures correct extension for later decryption)
         saveEncryptedBtn.addEventListener('click', () => {
             fileDropdown.classList.add('hidden'); // Close menu
             const content = textarea.value;
@@ -267,11 +279,12 @@
 
                     let filename = prompt("Enter a filename for your encrypted note:", 'my-secret-note.4spnote');
                     
-                    if (filename && !filename.endsWith('.4spnote')) {
-                         filename += '.4spnote';
-                    }
-
                     if (filename) {
+                        // FORCE THE .4SPNOTE EXTENSION
+                        if (!filename.endsWith('.4spnote')) {
+                             filename += '.4spnote';
+                        }
+
                         downloadFile(encrypted, filename, 'application/octet-stream');
                         alert(`Note encrypted and saved as '${filename}'!`);
                     }
@@ -301,6 +314,7 @@
                 const fileContent = e.target.result;
                 const filename = file.name;
                 
+                // CRITICAL: Only allow decryption if the file has the correct extension.
                 if (filename.endsWith('.4spnote')) {
                     // Handle Decryption
                     const password = prompt(`Enter the password to decrypt '${filename}':`);
@@ -312,9 +326,10 @@
                             if (decryptedText) {
                                 textarea.value = decryptedText;
                                 alert(`'${filename}' loaded and decrypted successfully!`);
+                                autosave(); // Autosave the loaded content
                             } else {
                                 alert("Decryption failed. Incorrect password or corrupted file.");
-                                textarea.value = fileContent; // Show raw encrypted content if decryption fails
+                                // Do NOT set textarea.value to the raw content, let the user decide.
                             }
                         } catch (err) {
                             alert("Decryption error: File content could be corrupted or an incorrect password was used.");
@@ -324,9 +339,10 @@
                         alert("File loading cancelled. Password required for decryption.");
                     }
                 } else {
-                    // Handle Standard Text Load
+                    // Handle Standard Text Load (any other file type)
                     textarea.value = fileContent;
                     alert(`'${filename}' loaded successfully!`);
+                    autosave(); // Autosave the loaded content
                 }
                 updateCounts();
             };
@@ -340,22 +356,37 @@
         });
 
 
-        // Listen for input changes to update the counter
-        textarea.addEventListener('input', updateCounts);
+        // Listen for input changes to update the counter AND trigger autosave
+        textarea.addEventListener('input', () => {
+            updateCounts();
+            
+            // Clear the previous timer
+            clearTimeout(autosaveTimer);
+            
+            // Set a new timer to run autosave after 1000ms (1 second)
+            autosaveTimer = setTimeout(autosave, 1000);
+        });
 
-        // Call once on load to initialize counts
-        window.addEventListener('load', updateCounts);
+        // Call once on load to initialize counts AND load from local storage
+        window.addEventListener('load', () => {
+            // Load content from localStorage if available
+            const savedContent = localStorage.getItem(AUTOSAVE_KEY);
+            if (savedContent !== null) {
+                textarea.value = savedContent;
+            }
+            updateCounts();
+        });
 
-        
+
         // --- AUTHENTICATION/REDIRECT LOGIC ---
 
         // Mocking auth for a simple page (Fixed previously by renaming 'auth' to 'mockAuth')
         const mockAuth = { onAuthStateChanged: (cb) => cb(true) }; 
         const initialAuthToken = null; 
-        
+
         const loadingScreen = document.getElementById('loading-screen');
         const pageContent = document.getElementById('page-content');
-        
+
         // --- Core Authentication and Redirection Logic (Kicks to ../index.html if logged out) ---
         async function initializeAuth() {
             // Simulate an authentication check
@@ -375,7 +406,6 @@
         setTimeout(() => {
             initializeAuth();
         }, 100); 
-        
     </script>
 </body>
 </html>
