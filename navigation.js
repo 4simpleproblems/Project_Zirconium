@@ -11,7 +11,9 @@
  * 2. CRITICAL CDN FIX (COMPLETE): Ensures the navigation bar renders by using stable Firebase Compat SDKs.
  * 3. RENDER PRIORITY: Ensures the navigation bar is rendered immediately after CSS injection, preventing the AI logic failure from blocking the UI.
  * 4. WIDESCREEN UPDATE: Removed max-width from the 'nav' element to allow it to fill the screen.
- * 5. SCROLL GLIDER FIX (NEW): Scroll buttons are now visible by default (static) and use the 'hover' opacity (1.0) at all times, only fading out when not needed.
+ * 5. SCROLL GLIDER FIX: Scroll buttons are now visible by default (static) and use the 'hover' opacity (1.0) at all times, only fading out when not needed.
+ * 6. LOGOUT REDIRECT (NEW): If a user is logged out, they are automatically redirected to '../../index.html' unless they are already on an entry page.
+ * 7. SETTINGS REMOVAL (NEW): The 'Settings' link has been removed from the authenticated user menu.
  */
 
 // =========================================================================
@@ -507,10 +509,6 @@ let currentAgent = 'Standard'; // Default agent
                                 <i class="fa-solid fa-house-user"></i>
                                 Dashboard
                             </a>
-                            <a href="/logged-in/settings.html" class="auth-menu-link">
-                                <i class="fa-solid fa-gear"></i>
-                                Settings
-                            </a>
                             <button id="logout-button" class="auth-menu-button text-red-400 hover:bg-red-900/50 hover:text-red-300">
                                 <i class="fa-solid fa-right-from-bracket"></i>
                                 Log Out
@@ -833,12 +831,22 @@ let currentAgent = 'Standard'; // Default agent
             } else {
                 // User is signed out.
                 renderNavbar(null, null, pages, false);
-                // Attempt to sign in anonymously for a seamless guest experience.
-                auth.signInAnonymously().catch((error) => {
-                    if (error.code !== 'auth/operation-not-allowed') {
-                        console.error("Anonymous sign-in error:", error);
-                    }
-                });
+                
+                // KICK USER TO INDEX: If the user is logged out, redirect them to ../../index.html
+                const targetUrl = '../../index.html';
+                const currentPathname = window.location.pathname;
+                
+                // Determine if the current page is one of the designated entry points 
+                // (index or authentication page) to prevent an infinite loop.
+                const isEntryPoint = currentPathname.includes('index.html') || currentPathname.includes('authentication.html') || currentPathname === '/';
+                
+                if (!isEntryPoint) {
+                    console.log(`User logged out. Restricting access and redirecting to ${targetUrl}`);
+                    window.location.href = targetUrl;
+                }
+                
+                // NOTE: The previous anonymous sign-in attempt has been removed, as the intent of
+                // this change is to restrict access to the current page when logged out.
             }
         });
 
