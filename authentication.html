@@ -55,22 +55,6 @@
         .error-message { color: #f87171; font-weight: bold; }
         .success-message { color: #4ade80; }
         .warning-message { color: #fbbf24; }
-
-        .fixed-footer {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 40px; 
-            background-color: black; 
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-top: 1px solid black;
-        }
-        
-        main { padding-bottom: 60px; }
         
         .auth-split-container { max-width: 1200px; margin: 0 auto; min-height: 100vh; }
         @media (min-width: 768px) { .auth-col { min-height: 100vh; } }
@@ -85,7 +69,7 @@
     <div id="navbar-container"></div>
     <main class="flex-grow flex items-stretch justify-center p-0">
         <div class="auth-split-container bg-custom-darkest-gray flex flex-wrap w-full border-0 overflow-hidden p-0">
-            <div class="auth-col left-col flex-1 p-8 flex flex-col justify-center items-center bg-custom-dark-gray border-r border-custom-medium-gray min-w-[300px]">
+            <div class="auth-col left-col flex-1 p-8 flex flex-col justify-center items-center bg-custom-darkest-gray min-w-[300px]">
 
                 <div id="loginContainer" class="w-full flex flex-col items-center">
                     <h2 class="text-3xl font-bold text-custom-white-gray mb-6 text-center w-full tracking-tighter">Login to Your Account</h2>
@@ -181,7 +165,7 @@
         </div>
     </main>
 
-    <footer class="fixed-footer">
+    <footer class="w-full h-10 flex items-center justify-center bg-black border-t border-custom-medium-gray">
         <div class="text-center text-custom-light-gray text-xs">
             &copy; 2024 4simpleproblems (4SP). Built for students.
         </div>
