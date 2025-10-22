@@ -10,13 +10,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     
-    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     
-    <!-- TailwindCSS for styling the page content -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- The ONE script tag to rule them all. Defer ensures it runs after the page is parsed. -->
     <script src="navigation-mini.js" defer></script>
     
     <style>
@@ -35,8 +32,6 @@
     </style>
 </head>
 <body class="bg-black text-white min-h-screen">
-    <!-- The navigation.js script will automatically create and inject the navbar here -->
-
     <main>
         <section class="text-center py-12 sm:py-20 border-b border-gray-900">
             <div class="mx-auto max-w-4xl px-4">
@@ -49,13 +44,14 @@
                 <p class="text-xl text-gray-400 max-w-2xl mx-auto mb-6">
                     4simpleproblems (4SP) is a multi-tool platform offering soundboards, study apps, and essential Quality-of-Life (QOL) features like Tab Disguising and Panic Keys—all designed to make student life easier and more fun.
                 </p>
-                <a href="../authentication.html" class="inline-flex items-center justify-center px-8 py-3 border border-transparent text-base font-normal rounded-xl shadow-sm text-white bg-white/10 ring-1 ring-white/20 hover:bg-white/20 transition">
-                    Get Started Instantly &rarr;
-                </a>
-            </div>
+                <div id="auth-button-container">
+                    <a id="auth-button" href="../authentication.html" class="inline-flex items-center justify-center px-8 py-3 border border-transparent text-base font-normal rounded-xl shadow-sm text-white bg-white/10 ring-1 ring-white/20 hover:bg-white/20 transition">
+                        Get Started Instantly &rarr;
+                    </a>
+                </div>
+                </div>
         </section>
 
-        <!-- The rest of your page content remains the same -->
         <section id="features" class="py-16 mx-auto max-w-7xl px-4 space-y-16">
              <h2 class="text-4xl font-medium text-center mb-8">Core Features of 4SP</h2> 
 
@@ -138,6 +134,46 @@
         </div>
     </footer>
 
+    <script type="module" src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
+
+    <script type="module">
+        // Import the configuration and required functions
+        import { app } from '../firebase-config.js';
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js';
+
+        // Get the Firebase Auth instance
+        const auth = getAuth(app);
+
+        // Reference to the button element
+        const authButton = document.getElementById('auth-button');
+
+        /**
+         * Listens for changes in the user's sign-in state.
+         * If a user is logged in, it updates the button to "Go to dashboard".
+         * If no user is logged in, it retains the default "Get Started Instantly".
+         */
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is signed in. Change the button to "Go to dashboard"
+                if (authButton) {
+                    authButton.href = '../logged-in/dashboard.html';
+                    authButton.innerHTML = 'Go to Dashboard &rarr;';
+                }
+                
+                // You may also optionally redirect to the dashboard automatically here
+                // if you prefer that behavior:
+                // window.location.href = '../logged-in/dashboard.html'; 
+
+            } else {
+                // User is signed out. Ensure the button is set to "Get Started Instantly"
+                // This is the default, but explicitly setting it prevents issues if the state changes after initial load
+                if (authButton) {
+                    authButton.href = '../authentication.html';
+                    authButton.innerHTML = 'Get Started Instantly &rarr;';
+                }
+            }
+        });
+    </script>
 </body>
 </html>
-
