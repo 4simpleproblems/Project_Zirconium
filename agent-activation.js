@@ -40,7 +40,12 @@
     let currentAIRequestController = null;
     let chatHistory = [];
     let attachedFiles = [];
-    
+    let userSettings = {
+        nickname: DEFAULT_NICKNAME,
+        favoriteColor: DEFAULT_COLOR,
+        gender: 'Other',
+        age: 0
+    };
 
     // Simple debounce utility for performance
     const debounce = (func, delay) => {
@@ -50,6 +55,22 @@
             timeoutId = setTimeout(() => func.apply(this, args), delay);
         };
     };
+
+    /**
+     * Loads user settings from localStorage on script initialization.
+     */
+    function loadUserSettings() {
+        try {
+            const storedSettings = localStorage.getItem('ai-user-settings');
+            if (storedSettings) {
+                userSettings = { ...userSettings, ...JSON.parse(storedSettings) };
+                userSettings.age = parseInt(userSettings.age) || 0;
+            }
+        } catch (e) {
+            console.error("Error loading user settings:", e);
+        }
+    }
+    loadUserSettings(); // Load initial settings
 
     // --- REPLACED/MODIFIED FUNCTIONS ---
 
@@ -320,6 +341,12 @@
         attachmentButton.innerHTML = attachmentIconSVG;
         attachmentButton.title = 'Attach files';
         attachmentButton.onclick = () => handleFileUpload();
+        
+        const settingsButton = document.createElement('button');
+        settingsButton.id = 'ai-settings-button';
+        settingsButton.innerHTML = '<i class="fa-solid fa-gear"></i>';
+        settingsButton.title = 'Settings';
+        settingsButton.onclick = toggleSettingsMenu;
 
         const charCounter = document.createElement('div');
         charCounter.id = 'ai-char-counter';
@@ -328,7 +355,9 @@
         inputWrapper.appendChild(attachmentPreviewContainer);
         inputWrapper.appendChild(visualInput);
         inputWrapper.appendChild(attachmentButton);
+        inputWrapper.appendChild(settingsButton);
         
+        composeArea.appendChild(createSettingsMenu());
         composeArea.appendChild(inputWrapper);
 
         container.appendChild(brandTitle);
@@ -378,6 +407,9 @@
         isAIActive = false;
         isRequestPending = false;
         attachedFiles = [];
+        const settingsMenu = document.getElementById('ai-settings-menu');
+        if (settingsMenu) settingsMenu.classList.remove('active');
+         document.removeEventListener('click', handleMenuOutsideClick); // Clean up listener
     }
     
     function renderChatHistory() {
