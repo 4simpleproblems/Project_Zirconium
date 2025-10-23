@@ -40,7 +40,7 @@
     let currentAIRequestController = null;
     let chatHistory = [];
     let attachedFiles = [];
-    };
+    
 
     // Simple debounce utility for performance
     const debounce = (func, delay) => {
