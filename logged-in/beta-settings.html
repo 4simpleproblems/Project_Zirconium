@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4SP - Beta Settings</title>
+    <meta name="description" content="Admin panel for managing beta tester email whitelist.">
+
+    <!-- Fonts, Icons, and Tailwind CSS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Geist Font (Main text) -->
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Site-specific scripts (assuming they exist from other pages) -->
+    <script src="../navigation.js"></script>
+    <script src="../injector.js"></script>
+
+    <style>
+        /* --- FONT & BASE STYLING (MATCHING dictionary.html) --- */
+        body { 
+            font-family: 'Geist', sans-serif; 
+            background-color: #070707; 
+            color: #c0c0c0; 
+            transition: all 0.3s ease;
+            font-weight: 300; 
+            min-height: 100vh;
+        }
+        
+        h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
+            font-weight: 400 !important;
+        }
+
+        /* Styling for the main content container */
+        .page-container {
+            padding: 2rem 1rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        /* Main content card */
+        .settings-card {
+            background-color: #111111; 
+            border: 1px solid #252525; 
+            border-radius: 0.75rem; 
+            padding: 2rem; 
+            min-height: 70vh;
+        }
+
+        /* Standard loading screen style */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #070707;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        
+        /* Input styling (borrowed from dictionary.html) */
+        .admin-input {
+            width: 100%;
+            padding: 1rem 0.75rem;
+            padding-right: 6rem; /* Space for the button */
+            border-radius: 0.75rem; /* rounded-xl */
+            background-color: #1f2937; /* zinc-800 */
+            color: white;
+            border: 1px solid #374151; /* zinc-700 */
+            transition: all 0.15s ease;
+        }
+        .admin-input:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px #3b82f6; /* ring-2 ring-blue-500 */
+            border-color: #3b82f6; /* border-blue-500 */
+        }
+        
+        /* Button styling (borrowed from dictionary.html) */
+        .admin-btn {
+            position: absolute;
+            right: 0.5rem; /* right-2 */
+            top: 50%;
+            transform: translateY(-50%);
+            width: 5rem; /* w-20 */
+            height: 2.5rem; /* h-10 */
+            background-color: #06b6d4; /* cyan-600 */
+            color: white;
+            font-weight: 600; /* font-semibold */
+            border-radius: 0.5rem; /* rounded-lg */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-md */
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .admin-btn:hover {
+            background-color: #0891b2; /* cyan-700 */
+        }
+        .admin-btn:active {
+            transform: translateY(-50%) scale(0.98);
+        }
+        
+        /* Email list item styling */
+        .email-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            background-color: #1f2937; /* zinc-800 */
+            border: 1px solid #374151; /* zinc-700 */
+            border-radius: 0.5rem; /* rounded-lg */
+            margin-bottom: 0.5rem;
+        }
+        
+        .email-text {
+            color: #d1d5db; /* gray-300 */
+            font-weight: 300;
+        }
+        
+        .remove-btn {
+            color: #9ca3af; /* gray-400 */
+            background: none;
+            border: none;
+            cursor: pointer;
+            transition: color 0.15s ease;
+            padding: 0.25rem;
+        }
+        .remove-btn:hover {
+            color: #f87171; /* red-400 */
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <i class="fas fa-spinner fa-spin fa-2x text-gray-400"></i>
+        <p id="loading-text" class="text-xl text-gray-400">Verifying admin access...</p>
+    </div>
+
+    <!-- Main Page Content (Hidden until authenticated and verified as admin) -->
+    <main id="page-content" class="page-container hidden">
+        <div class="settings-card shadow-xl">
+            <h1 class="text-3xl font-bold text-white mb-6 text-center">Beta Tester Management</h1>
+
+            <!-- Add Email Form -->
+            <form id="add-email-form" class="relative mb-8">
+                <input 
+                    type="email"
+                    id="email-input"
+                    placeholder="Enter beta tester's email..."
+                    class="admin-input"
+                    required
+                />
+                <button 
+                    type="submit"
+                    id="add-button" 
+                    class="admin-btn"
+                    title="Add Email">
+                    <i class="fas fa-plus"></i>
+                    <span>Add</span>
+                </button>
+            </form>
+            
+            <!-- Message area for success/error -->
+            <div id="add-message" class="text-center min-h-[1.25rem] mb-4 text-sm">&nbsp;</div>
+
+            <!-- Email List Display -->
+            <div class="mt-4">
+                <h2 class="text-2xl font-semibold text-white mb-4 border-b border-zinc-700 pb-2">Current Beta Testers</h2>
+                <div id="email-list-container" class="max-h-[50vh] overflow-y-auto pr-2">
+                    <!-- Emails will be dynamically injected here -->
+                    <p id="list-loading-text" class="text-lg text-gray-400 text-center">
+                        Loading email list...
+                    </p>
+                </div>
+            </div>
+            
+        </div>
+    </main>
+
+    <script type="module">
+        // --- Firebase Core Imports (v10+ ESM) ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { 
+            getAuth, 
+            onAuthStateChanged, 
+            signInWithCustomToken, 
+            signInAnonymously 
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            onSnapshot, 
+            setDoc, 
+            updateDoc, 
+            arrayUnion, 
+            arrayRemove,
+            setLogLevel
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        
+        // --- CONFIGURATION IMPORT ---
+        import { firebaseConfig as importedConfig } from "../firebase-config.js"; 
+        
+        // --- Canvas Global Variables (MANDATORY USE) ---
+        // Use provided config if available, otherwise fall back to imported config
+        const rawFirebaseConfig = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
+        const finalFirebaseConfig = rawFirebaseConfig ? JSON.parse(rawFirebaseConfig) : importedConfig;
+        
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        // --- ADMIN CONFIGURATION ---
+        // !!! IMPORTANT: EDIT THIS LIST WITH YOUR ADMIN EMAIL ADDRESSES !!!
+        const ADMIN_EMAILS = [
+            "your-admin-email@gmail.com", 
+            "another-admin@example.com"
+        ];
+        // -----------------------------
+
+        // --- Initialize Firebase ---
+        const app = initializeApp(finalFirebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        setLogLevel('debug'); // Enable Firestore logging
+
+        // --- DOM Elements ---
+        const loadingScreen = document.getElementById('loading-screen');
+        const loadingText = document.getElementById('loading-text');
+        const pageContent = document.getElementById('page-content');
+        const addEmailForm = document.getElementById('add-email-form');
+        const emailInput = document.getElementById('email-input');
+        const addMessage = document.getElementById('add-message');
+        const emailListContainer = document.getElementById('email-list-container');
+        const listLoadingText = document.getElementById('list-loading-text');
+
+        // --- Firestore Reference ---
+        // Storing as /artifacts/{appId}/public/data/app_config/beta_testers
+        const betaTestersRef = doc(db, 'artifacts', appId, 'public', 'data', 'app_config', 'beta_testers');
+
+        let unsubscribeFromTesters = null; // To hold the onSnapshot listener
+
+        // --- Core Functions ---
+
+        /**
+         * Attaches a real-time listener to the beta testers document.
+         */
+        function loadBetaTesters() {
+            if (unsubscribeFromTesters) {
+                unsubscribeFromTesters(); // Detach any existing listener
+            }
+
+            unsubscribeFromTesters = onSnapshot(betaTestersRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const emails = docSnap.data()?.emails || [];
+                    renderEmailList(emails);
+                } else {
+                    // Document doesn't exist yet
+                    renderEmailList([]);
+                }
+            }, (error) => {
+                console.error("Error listening to beta testers:", error);
+                listLoadingText.textContent = "Error loading email list.";
+                listLoadingText.classList.add("text-red-400");
+            });
+        }
+
+        /**
+         * Renders the list of emails to the DOM.
+         * @param {string[]} emails - An array of email strings.
+         */
+        function renderEmailList(emails) {
+            // Clear loading text or existing list
+            listLoadingText.style.display = 'none';
+            emailListContainer.innerHTML = ''; 
+
+            if (emails.length === 0) {
+                emailListContainer.innerHTML = `
+                    <p class="text-lg text-gray-400 text-center">
+                        No beta testers found. Add one above!
+                    </p>
+                `;
+                return;
+            }
+
+            // Sort emails alphabetically
+            emails.sort();
+
+            emails.forEach(email => {
+                const emailEl = document.createElement('div');
+                emailEl.className = 'email-item';
+                emailEl.innerHTML = `
+                    <span class="email-text truncate pr-4">${escapeHTML(email)}</span>
+                    <button class="remove-btn" data-email="${escapeHTML(email)}" title="Remove ${escapeHTML(email)}">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                `;
+                emailListContainer.appendChild(emailEl);
+            });
+        }
+
+        /**
+         * Handles the submission of the "add email" form.
+         */
+        async function handleAddEmail(e) {
+            e.preventDefault();
+            const email = emailInput.value.trim().toLowerCase();
+            
+            if (!email) {
+                showToast("Please enter an email address.", "error");
+                return;
+            }
+            
+            // Basic email regex validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                showToast("Please enter a valid email address.", "error");
+                return;
+            }
+
+            try {
+                // Use setDoc with merge:true to safely create or update
+                // This will create the doc if it doesn't exist, or just
+                // add to the array if it does.
+                await setDoc(betaTestersRef, {
+                    emails: arrayUnion(email)
+                }, { merge: true });
+                
+                showToast(`Added ${email} successfully.`, "success");
+                emailInput.value = '';
+            } catch (error) {
+                console.error("Error adding email:", error);
+                showToast("Failed to add email. See console for details.", "error");
+            }
+        }
+
+        /**
+         * Handles the click on a "remove email" button (using event delegation).
+         */
+        async function handleRemoveEmail(e) {
+            const removeButton = e.target.closest('.remove-btn');
+            if (!removeButton) {
+                return; // Click wasn't on a remove button
+            }
+            
+            const email = removeButton.dataset.email;
+            if (!email) {
+                return;
+            }
+            
+            // Note: No confirmation modal for simplicity, as seen in other files.
+            // You could add one here if needed.
+            
+            try {
+                // Use updateDoc to remove the email from the array
+                await updateDoc(betaTestersRef, {
+                    emails: arrayRemove(email)
+                });
+                
+                showToast(`Removed ${email}.`, "info");
+            } catch (error) {
+                console.error("Error removing email:", error);
+                // This might fail if the document doesn't exist, but it shouldn't
+                // be possible to click "remove" if the doc doesn't exist.
+                showToast("Failed to remove email. See console for details.", "error");
+            }
+        }
+
+        // --- Utility Functions ---
+
+        /**
+         * Shows a temporary message in the message area.
+         * @param {string} message - The text to display.
+         * @param {'success' | 'error' | 'info'} type - The message type for styling.
+         */
+        function showToast(message, type = "info") {
+            addMessage.textContent = message;
+            
+            addMessage.classList.remove('text-green-400', 'text-red-400', 'text-gray-400');
+            
+            if (type === "success") {
+                addMessage.classList.add('text-green-400');
+            } else if (type === "error") {
+                addMessage.classList.add('text-red-400');
+            } else {
+                addMessage.classList.add('text-gray-400');
+            }
+
+            // Clear the message after 3 seconds
+            setTimeout(() => {
+                if (addMessage.textContent === message) {
+                    addMessage.innerHTML = '&nbsp;'; // Reset to non-collapsing space
+                }
+            }, 3000);
+        }
+
+        /**
+         * Simple HTML escaper to prevent XSS.
+         */
+        function escapeHTML(str) {
+            return str.replace(/[&<>"']/g, function(match) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;'
+                }[match];
+            });
+        }
+
+
+        // --- Authentication Logic ---
+
+        /**
+         * Handles the initial sign-in process.
+         */
+        async function initializeAuth() {
+            try {
+                if (initialAuthToken) {
+                    // Use the token provided by the Canvas environment
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    // Fallback for local testing or if no token is present
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Initial Firebase authentication failed:", error);
+                loadingText.textContent = "Authentication failed. Check console.";
+                loadingText.classList.add("text-red-400");
+            }
+        }
+
+        // 1. Listen for the authentication state change
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is authenticated
+                console.log("User authenticated. Email:", user.email);
+                
+                // --- ADMIN CHECK ---
+                if (!user.email || !ADMIN_EMAILS.includes(user.email)) {
+                    // User is NOT an admin
+                    console.warn("Access Denied: User is not in the ADMIN_EMAILS list.");
+                    loadingText.textContent = "Access Denied. Redirecting to dashboard...";
+                    loadingText.classList.add("text-yellow-400");
+                    
+                    // Redirect to dashboard
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 2000);
+                    
+                    return; // Stop further execution
+                }
+                
+                // --- User is ADMIN ---
+                console.log("Admin access granted.");
+                
+                // Hide loading screen and show content
+                loadingScreen.style.display = 'none';
+                pageContent.classList.remove('hidden');
+                
+                // Attach Firestore listener now that we know user is an admin
+                loadBetaTesters();
+
+            } else {
+                // User is NOT authenticated. Redirect to login/index page.
+                console.log("User not authenticated. Redirecting to ../index.html...");
+                loadingText.textContent = "Not authenticated. Redirecting...";
+                // This redirect logic matches dictionary.html
+                window.location.href = '../index.html'; 
+            }
+        });
+
+        // 2. Attach event listeners
+        addEmailForm.addEventListener('submit', handleAddEmail);
+        emailListContainer.addEventListener('click', handleRemoveEmail);
+
+        // 3. Start the authentication process on load
+        initializeAuth();
+        
+    </script>
+</body>
+</html>
