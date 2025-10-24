@@ -222,6 +222,14 @@
         const isUserBetaTester = async (email) => {
             if (!email) return false;
             const normalizedEmail = email.toLowerCase();
+
+            // --- ADMIN OVERRIDE ---
+            // Hardcoded email to always allow access
+            if (normalizedEmail === "4simpleproblems@gmail.com") {
+                console.log("Admin override: Access granted for 4simpleproblems@gmail.com");
+                return true;
+            }
+            // --- END ADMIN OVERRIDE ---
             
             // Define the path to the beta testers document
             const betaTestersRef = doc(db, 'artifacts', appId, 'public', 'data', 'app_config', 'beta_testers');
@@ -542,3 +550,4 @@
     </script>
 </body>
 </html>
+
