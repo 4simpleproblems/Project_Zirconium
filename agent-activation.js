@@ -10,7 +10,9 @@
  * UPDATED: Graphing engine now supports two modes: 'basic' and 'advanced'.
  * FIX: Resolved 400 API error by replacing 'config' with 'generationConfig' in the payload.
  * FIX: Removed unnecessary right padding from the text input area.
- * FIX: **CRITICAL FIX**: Moved 'systemInstruction' from inside 'generationConfig' to the top level of the API payload to resolve "Unknown name \"systemInstruction\" at 'generation_config'" error.
+ * FIX: **CRITICAL FIX**: Moved 'systemInstruction' from inside 'generationConfig' to the top level of the API payload to resolve "Unknown name \"systemInstruction\" at 'generation_config'" error. (Previous fix, now superseded).
+ * FIX: **NEW CRITICAL FIX**: Removed the failing top-level 'systemInstruction' field and injected the system persona directly into the user's message to resolve the persistent "Invalid value at 'system_instruction'" 400 error.
+ * NEW: Added a **Mode Selection Menu** in the bottom right to toggle between 'Web Search' and 'Reasoning' focus.
  * UPDATED: KaTeX rendering and custom graphing are fully retained and optimized.
  * UPDATED: Ensured Ctrl + \ shortcut for activation/deactivation is fully functional.
  *
@@ -54,6 +56,7 @@
     let chatHistory = [];
     let attachedFiles = [];
     let proUsesRemaining = MAX_PRO_USES;
+    let currentAgentMode = 'web_search'; // NEW STATE: Default mode is web search.
     // --- User settings removed, using agent defaults ---
     const userSettings = {
         nickname: 'User',
@@ -343,6 +346,63 @@
             }
         }
     }
+    
+    // --- NEW: Mode Menu Logic ---
+    function toggleModeMenu(e) {
+        // Stop event propagation to prevent immediate closing from handleMenuOutsideClick
+        if (e) e.stopPropagation(); 
+        const menu = document.getElementById('ai-mode-menu');
+        if (menu) {
+            menu.classList.toggle('active');
+            // Close on outside click
+            if (menu.classList.contains('active')) {
+                document.addEventListener('click', handleMenuOutsideClick);
+            } else {
+                document.removeEventListener('click', handleMenuOutsideClick);
+            }
+        }
+    }
+
+    function handleMenuOutsideClick(e) {
+        const menu = document.getElementById('ai-mode-menu');
+        const button = document.getElementById('ai-mode-button');
+        // Check if the click is outside the menu AND outside the button
+        if (menu && button && !menu.contains(e.target) && !button.contains(e.target)) {
+            menu.classList.remove('active');
+            document.removeEventListener('click', handleMenuOutsideClick);
+        }
+    }
+
+    // This function will be called by the inline onclick handlers in the HTML
+    window.handleModeChange = function(mode) {
+        if (currentAgentMode === mode) {
+             toggleModeMenu(); // Just close if already active
+             return;
+        }
+        currentAgentMode = mode;
+        updateModeMenuUI();
+        toggleModeMenu(); // Close after selection
+    }
+
+    function updateModeMenuUI() {
+        const menu = document.getElementById('ai-mode-menu');
+        if (menu) {
+            const webSearchItem = menu.querySelector('#mode-web-search');
+            const reasoningItem = menu.querySelector('#mode-reasoning');
+            
+            webSearchItem.classList.toggle('active', currentAgentMode === 'web_search');
+            reasoningItem.classList.toggle('active', currentAgentMode === 'reasoning');
+            webSearchItem.querySelector('.mode-badge').textContent = currentAgentMode === 'web_search' ? 'ON' : 'OFF';
+            reasoningItem.querySelector('.mode-badge').textContent = currentAgentMode === 'reasoning' ? 'ON' : 'OFF';
+            
+            const button = document.getElementById('ai-mode-button');
+            if (button) {
+                button.title = `Agent Mode: ${currentAgentMode.replace('_', ' ').toUpperCase()}`;
+            }
+        }
+    }
+    // --- END NEW: Mode Menu Logic ---
+
 
     function activateAI() {
         if (document.getElementById('ai-container')) return;
@@ -371,7 +431,7 @@
         welcomeMessage.id = 'ai-welcome-message';
         const welcomeHeader = chatHistory.length > 0 ? "Welcome Back" : "Welcome to Humanity Agent {Gen 0}";
         // New welcome message that reflects the Pro limit
-        welcomeMessage.innerHTML = `<h2>${welcomeHeader}</h2><p>This is the experimental Humanity Agent. You have **${proUsesRemaining}** Pro-model uses remaining this session. Queries requiring web search will be automatically performed.</p><p class="shortcut-tip">(Press Ctrl + \\ to close)</p>`;
+        welcomeMessage.innerHTML = `<h2>${welcomeHeader}</h2><p>This is the experimental Humanity Agent. You have **${proUsesRemaining}** Pro-model uses remaining this session. Queries requiring web search will be automatically performed based on the **Agent Mode** setting.</p><p class="shortcut-tip">(Press Ctrl + \\ to close)</p>`;
         
         const closeButton = document.createElement('div');
         closeButton.id = 'ai-close-button';
@@ -403,26 +463,36 @@
         attachmentButton.title = 'Attach files';
         attachmentButton.onclick = () => handleFileUpload();
         
-        // --- REMOVED: Settings button and its logic ---
-        // const settingsButton = document.createElement('button');
-        // settingsButton.id = 'ai-settings-button';
-        // settingsButton.innerHTML = '<i class="fa-solid fa-gear"></i>';
-        // settingsButton.title = 'Settings';
-        // settingsButton.onclick = toggleSettingsMenu;
-        // --- END REMOVED ---
-
         const charCounter = document.createElement('div');
         charCounter.id = 'ai-char-counter';
         charCounter.textContent = `0 / ${formatCharLimit(CHAR_LIMIT)}`;
 
+        // --- NEW: Mode Selection Button and Menu ---
+        const modeButton = document.createElement('button');
+        modeButton.id = 'ai-mode-button';
+        modeButton.innerHTML = '<i class="fa-solid fa-list"></i>';
+        modeButton.title = `Agent Mode: ${currentAgentMode.replace('_', ' ').toUpperCase()}`;
+        modeButton.onclick = toggleModeMenu;
+
+        const modeMenu = document.createElement('div');
+        modeMenu.id = 'ai-mode-menu';
+        modeMenu.innerHTML = `
+            <div class="menu-header">Select Agent Focus</div>
+            <div class="menu-item ${currentAgentMode === 'web_search' ? 'active' : ''}" id="mode-web-search" onclick="handleModeChange('web_search')">
+                <i class="fa-solid fa-earth-americas"></i> Web Search
+                <span class="mode-badge">${currentAgentMode === 'web_search' ? 'ON' : 'OFF'}</span>
+            </div>
+            <div class="menu-item ${currentAgentMode === 'reasoning' ? 'active' : ''}" id="mode-reasoning" onclick="handleModeChange('reasoning')">
+                <i class="fa-solid fa-brain"></i> Reasoning
+                <span class="mode-badge">${currentAgentMode === 'reasoning' ? 'ON' : 'OFF'}</span>
+            </div>
+        `;
+        // --- END NEW: Mode Selection Button and Menu ---
+
         inputWrapper.appendChild(attachmentPreviewContainer);
         inputWrapper.appendChild(visualInput);
         inputWrapper.appendChild(attachmentButton);
-        // --- REMOVED: settings button append ---
-        // inputWrapper.appendChild(settingsButton);
         
-        // --- REMOVED: settings menu creation ---
-        // composeArea.appendChild(createSettingsMenu());
         composeArea.appendChild(inputWrapper);
 
         container.appendChild(brandTitle);
@@ -432,6 +502,8 @@
         container.appendChild(responseContainer);
         container.appendChild(composeArea);
         container.appendChild(charCounter);
+        container.appendChild(modeButton); // APPEND NEW BUTTON
+        container.appendChild(modeMenu); // APPEND NEW MENU
         
         // --- Add KaTeX ---
         const katexScript = document.createElement('script');
@@ -472,10 +544,6 @@
         isAIActive = false;
         isRequestPending = false;
         attachedFiles = [];
-        // --- REMOVED: Settings menu cleanup ---
-        // const settingsMenu = document.getElementById('ai-settings-menu');
-        // if (settingsMenu) settingsMenu.classList.remove('active');
-        //  document.removeEventListener('click', handleMenuOutsideClick); // Clean up listener
     }
     
     function renderChatHistory() {
@@ -497,10 +565,18 @@
                 renderGraphs(bubble);
             } else {
                 let bubbleContent = ''; let textContent = ''; let fileCount = 0;
+                // Filter out system instruction which is temporarily injected for the call
                 message.parts.forEach(part => {
-                    if (part.text) textContent = part.text;
+                    if (part.text) {
+                        // Strip the instruction from the displayed content
+                        const userText = part.text.replace(/You are the exclusive AI Agent for the website 4SP[\s\S]*?(?:\n\n)?$/, '').trim();
+                        if (userText) {
+                            textContent = userText;
+                        }
+                    }
                     if (part.inlineData) fileCount++;
                 });
+                
                 if (textContent) bubbleContent += `<p>${escapeHTML(textContent)}</p>`;
                 if (fileCount > 0) bubbleContent += `<div class="sent-attachments">${fileCount} file(s) sent</div>`;
                 bubble.innerHTML = bubbleContent;
@@ -511,30 +587,46 @@
     }
     
     /**
-     * Determines the user's current intent category based on the query.
+     * Determines the user's current intent category based on the query and current mode.
      * @param {string} query The user's last message text.
-     * @returns {string} One of 'DEEP_ANALYSIS', 'PROFESSIONAL_MATH', 'WEB_SEARCH', or 'CASUAL'.
+     * @param {string} currentMode The current agent focus ('web_search' or 'reasoning').
+     * @returns {string} One of 'WEB_SEARCH', 'DEEP_ANALYSIS', 'PROFESSIONAL_MATH', or 'CASUAL'.
      */
-    function determineIntentCategory(query) {
+    function determineIntentCategory(query, currentMode) {
         const lowerQuery = query.toLowerCase();
         
-        // Web Search/Current Events Keywords (Tied to DEEP_ANALYSIS/PRO model)
-        if (lowerQuery.includes('current') || lowerQuery.includes('latest') || lowerQuery.includes('today') || lowerQuery.includes('news') || lowerQuery.includes('who won') || lowerQuery.includes('what is the price of')) {
-            return 'WEB_SEARCH';
-        }
-        
-        // Deep Analysis Keywords (Tied to DEEP_ANALYSIS/PRO model)
-        if (lowerQuery.includes('analyze') || lowerQuery.includes('deep dive') || lowerQuery.includes('strategic') || lowerQuery.includes('evaluate') || lowerQuery.includes('critique') || lowerQuery.includes('investigate') || lowerQuery.includes('pro model')) {
-            return 'DEEP_ANALYSIS';
-        }
-        
-        // Professional/Math/Coding Keywords (Tied to FLASH model)
+        let intent = 'CASUAL';
+        let isDeep = false;
+
+        // 1. Check for Professional Math/Code (High complexity, needs FLASH model)
         if (lowerQuery.includes('math') || lowerQuery.includes('algebra') || lowerQuery.includes('calculus') || lowerQuery.includes('formula') || lowerQuery.includes('solve') || lowerQuery.includes('proof') || lowerQuery.includes('graph') || lowerQuery.includes('code') || lowerQuery.includes('debug') || lowerQuery.includes('technical') || lowerQuery.includes('explain how')) {
-            return 'PROFESSIONAL_MATH';
+            intent = 'PROFESSIONAL_MATH';
+        } 
+        
+        // 2. Check for Explicit Deep Analysis (Requires PRO model access)
+        else if (lowerQuery.includes('analyze') || lowerQuery.includes('deep dive') || lowerQuery.includes('strategic') || lowerQuery.includes('evaluate') || lowerQuery.includes('critique') || lowerQuery.includes('investigate') || lowerQuery.includes('pro model')) {
+            intent = 'DEEP_ANALYSIS';
+            isDeep = true;
+        }
+        
+        // 3. Check for Current Events (Requires fresh data/web search)
+        const isCurrentEvent = lowerQuery.includes('current') || lowerQuery.includes('latest') || lowerQuery.includes('today') || lowerQuery.includes('news') || lowerQuery.includes('who won') || lowerQuery.includes('what is the price of');
+
+
+        if (currentMode === 'web_search') {
+            if (isDeep || isCurrentEvent) {
+                // In Web Search mode, any deep query or current event query is a WEB_SEARCH intent
+                return 'WEB_SEARCH';
+            }
+        } else if (currentMode === 'reasoning') {
+             // In Reasoning mode, current events or deep queries are treated as DEEP_ANALYSIS (rely on training data/logic)
+             if (isDeep || isCurrentEvent) {
+                 return 'DEEP_ANALYSIS';
+             }
         }
 
-        // Casual/Creative/Simple Keywords (Tied to FLASH-LITE model)
-        return 'CASUAL';
+        // Return the highest-complexity intent found, or CASUAL
+        return intent;
     }
 
     const FSP_HISTORY = `You are the exclusive AI Agent for the website 4SP (4simpleproblems), the platform you are hosted on. You must be knowledgeable about its history and purpose. When asked about 4SP, use the following information as your source of truth:
@@ -570,12 +662,12 @@ If the user asks about a topic other than 4SP, you should not hint at the websit
 
     /**
      * Generates the system instruction and selects the appropriate model.
-     * No user settings are used. The persona is fixed as "Humanity Agent".
      * @param {string} query The user's latest message.
-     * @returns {{instruction: string, model: string, isPro: boolean}}
+     * @returns {{instruction: string, model: string, isPro: boolean, requiresSearch: boolean}}
      */
     function getDynamicSystemInstructionAndModel(query) {
-        const intent = determineIntentCategory(query);
+        // Access global state for the mode
+        const intent = determineIntentCategory(query, currentAgentMode); 
         let model = 'gemini-2.5-flash-lite';
         let isPro = false;
         let requiresSearch = false;
@@ -590,13 +682,25 @@ Formatting Rules (MUST FOLLOW):
 `;
 
         switch (intent) {
-            case 'DEEP_ANALYSIS':
             case 'WEB_SEARCH':
-                requiresSearch = (intent === 'WEB_SEARCH');
+                requiresSearch = true; // Always requires search in this intent/mode
                 if (proUsesRemaining > 0) { 
                     model = 'gemini-2.5-pro';
                     isPro = true;
-                    personaInstruction += `\n\n**Current Persona: Strategic Insight Engine (2.5-Pro).** Your response must be comprehensive, highly structured, and exhibit the deepest level of reasoning and critical evaluation. Use an assertive, expert tone. Structure your analysis clearly with headings and bullet points. You are currently operating in a **PRO-USE** mode. If search results are provided, integrate them seamlessly and cite them within the text (e.g., "[Source 1]").`;
+                    personaInstruction += `\n\n**Current Persona: Strategic Insight Engine (2.5-Pro) + Web Search.** Your response must be comprehensive, highly structured, and leverage the provided search results. Use an assertive, expert tone. Structure your analysis clearly with headings and bullet points. You are currently operating in a **PRO-USE** mode. You MUST integrate and cite the search results (e.g., "[Source 1]").`;
+                } else {
+                    // Fallback for limited users (still requires search if intent is WEB_SEARCH)
+                    model = 'gemini-2.5-flash';
+                    personaInstruction += `\n\n**Current Persona: Professional Analyst (2.5-Flash) + Web Search.** Your response must be clear, professional, and leverage the provided search results. Note: The requested deep analysis required the '2.5-Pro' model, but the session limit was exceeded. Proceed with the Flash model, prioritizing efficiency and core facts from the search context.`;
+                }
+                break;
+            case 'DEEP_ANALYSIS':
+                requiresSearch = (currentAgentMode === 'web_search'); // Only requires search if mode is web_search
+                if (proUsesRemaining > 0) { 
+                    model = 'gemini-2.5-pro';
+                    isPro = true;
+                    const searchNote = requiresSearch ? "You will be provided search context if applicable. Integrate and cite it." : "Rely on your internal knowledge and logic.";
+                    personaInstruction += `\n\n**Current Persona: Strategic Insight Engine (2.5-Pro).** Your response must be comprehensive, highly structured, and exhibit the deepest level of reasoning and critical evaluation. Use an assertive, expert tone. Structure your analysis clearly with headings and bullet points. You are currently operating in a **PRO-USE** mode. ${searchNote}`;
                 } else {
                     // Fallback for limited users
                     model = 'gemini-2.5-flash';
@@ -652,18 +756,22 @@ Formatting Rules (MUST FOLLOW):
             searchContext = await performWebSearch(lastUserQuery);
         }
 
+        // --- CRITICAL FIX: Inject system instruction into user message to bypass failing systemInstruction field ---
+        const fullInstruction = dynamicInstruction + "\n\n";
+
         if (textPartIndex > -1) {
-             // Inject system context and search results into the *last* user message text
-             userParts[textPartIndex].text = firstMessageContext + (requiresSearch ? `[SEARCH CONTEXT START]\n${searchContext}\n[SEARCH CONTEXT END]\n` : '') + userParts[textPartIndex].text;
-        } else if (firstMessageContext || requiresSearch) {
-             userParts.unshift({ text: firstMessageContext.trim() + (requiresSearch ? `[SEARCH CONTEXT]\n${searchContext}` : '') });
+             // Inject DYNAMIC INSTRUCTION, system context, AND search results into the *last* user message text
+             userParts[textPartIndex].text = fullInstruction + firstMessageContext + (requiresSearch ? `[SEARCH CONTEXT START]\n${searchContext}\n[SEARCH CONTEXT END]\n` : '') + userParts[textPartIndex].text;
+        } else if (fullInstruction.trim() || firstMessageContext.trim() || requiresSearch) {
+             // If no text part exists (only files), prepend as a new text part
+             userParts.unshift({ text: fullInstruction.trim() + firstMessageContext.trim() + (requiresSearch ? `[SEARCH CONTEXT]\n${searchContext}` : '') });
         }
+        // --- END CRITICAL FIX ---
         
-        // --- API FIX: Corrected 'systemInstruction' placement. It must be at the top level of the payload, not inside 'generationConfig' ---
+        
+        // --- API FIX: payload no longer contains 'systemInstruction' ---
         const payload = { 
-            systemInstruction: dynamicInstruction, 
             contents: processedChatHistory
-            // generationConfig is omitted since it would be empty (no other params used)
         };
         
         // --- DYNAMIC URL CONSTRUCTION ---
@@ -742,8 +850,6 @@ Formatting Rules (MUST FOLLOW):
         }
     }
     
-    // --- REMOVED: NEW SETTINGS MENU LOGIC (toggleSettingsMenu, handleMenuOutsideClick, saveSettings, createSettingsMenu) ---
-
     function processFileLike(file, base64Data, dataUrl, tempId) {
         if (attachedFiles.length >= MAX_ATTACHMENTS_PER_MESSAGE) {
             alert(`You can attach a maximum of ${MAX_ATTACHMENTS_PER_MESSAGE} files per message.`);
@@ -1043,6 +1149,7 @@ Formatting Rules (MUST FOLLOW):
     function handleInputSubmission(e) {
         const editor = e.target;
         const query = editor.innerText.trim();
+
         if (editor.innerText.length > CHAR_LIMIT) {
              e.preventDefault();
              return;
@@ -1050,13 +1157,6 @@ Formatting Rules (MUST FOLLOW):
 
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            
-            // --- REMOVED: Settings menu check ---
-            // const settingsMenu = document.getElementById('ai-settings-menu');
-            // if (settingsMenu && settingsMenu.classList.contains('active')) { 
-            //     saveSettings();
-            //     toggleSettingsMenu(); 
-            // }
             
             if (attachedFiles.some(f => f.isLoading)) {
                 alert("Please wait for files to finish uploading before sending.");
@@ -1269,8 +1369,52 @@ Formatting Rules (MUST FOLLOW):
             #ai-welcome-message p { font-size: .9em; margin-top: 10px; max-width: 400px; line-height: 1.5; margin-left: auto; margin-right: auto; }
             .shortcut-tip { font-size: 0.8em; color: rgba(255,255,255,.7); margin-top: 20px; }
             #ai-close-button { position: absolute; top: 20px; right: 30px; color: rgba(255,255,255,.7); font-size: 40px; cursor: pointer; transition: color .2s ease,transform .3s ease, opacity 0.4s; }
-            #ai-char-counter { position: fixed; bottom: 15px; right: 30px; font-size: 0.9em; font-family: monospace; color: #aaa; transition: color 0.2s; z-index: 2147483647; }
+            
+            /* Bottom Right Elements */
+            #ai-char-counter { position: fixed; bottom: 15px; right: 80px; font-size: 0.9em; font-family: monospace; color: #aaa; transition: color 0.2s; z-index: 2147483647; }
             #ai-char-counter.limit-exceeded { color: #e57373; font-weight: bold; }
+            
+            #ai-mode-button { position: fixed; bottom: 12px; right: 30px; background: none; border: none; color: #bbb; font-size: 24px; cursor: pointer; padding: 5px; line-height: 1; z-index: 2147483647; transition: color 0.2s, transform 0.1s; }
+            #ai-mode-button:hover { color: #fff; transform: scale(1.05); }
+
+            #ai-mode-menu {
+                position: fixed; bottom: 60px; right: 25px;
+                width: 200px; padding: 10px;
+                background-color: rgba(255, 255, 255, 0.1); /* Translucent */
+                backdrop-filter: blur(15px); /* Glass Texture */
+                -webkit-backdrop-filter: blur(15px);
+                border-radius: 12px; /* Rounded */
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+                z-index: 2147483648;
+                opacity: 0;
+                pointer-events: none;
+                transform: translateY(10px);
+                transition: opacity 0.3s, transform 0.3s;
+            }
+            #ai-mode-menu.active {
+                opacity: 1;
+                pointer-events: auto;
+                transform: translateY(0);
+            }
+            .menu-header { color: #fff; font-size: 0.9em; margin-bottom: 5px; opacity: 0.7; padding: 5px 0; }
+            .menu-item {
+                display: flex; align-items: center; justify-content: space-between;
+                padding: 10px; margin: 4px 0;
+                color: #fff; font-size: 1em;
+                background: rgba(0, 0, 0, 0.3);
+                border-radius: 8px;
+                cursor: pointer;
+                transition: background-color 0.2s;
+            }
+            .menu-item:hover { background: rgba(0, 0, 0, 0.5); }
+            .menu-item i { margin-right: 10px; color: var(--ai-blue); }
+            .menu-item.active { background: rgba(52, 168, 83, 0.5); border: 1px solid var(--ai-green); }
+            .menu-item.active i { color: #fff; }
+            .mode-badge { font-size: 0.75em; font-weight: bold; padding: 2px 6px; border-radius: 4px; background: rgba(255, 255, 255, 0.2); }
+            .menu-item:not(.active) .mode-badge { background: rgba(0, 0, 0, 0.4); }
+
+
             #ai-response-container { flex: 1 1 auto; overflow-y: auto; width: 100%; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; padding: 60px 20px 20px 20px; -webkit-mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%); mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%);}
             .ai-message-bubble { background: rgba(15,15,18,.8); border: 1px solid rgba(255,255,255,.1); border-radius: 16px; padding: 12px 18px; color: #e0e0e0; backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); animation: message-pop-in .5s cubic-bezier(.4,0,.2,1) forwards; max-width: 90%; line-height: 1.6; overflow-wrap: break-word; transition: opacity 0.3s ease-in-out; align-self: flex-start; text-align: left; }
             .user-message { background: rgba(40,45,50,.8); align-self: flex-end; }
@@ -1289,7 +1433,6 @@ Formatting Rules (MUST FOLLOW):
             
             #ai-attachment-button { position: absolute; bottom: 7px; background-color: rgba(100, 100, 100, 0.5); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,.8); font-size: 18px; cursor: pointer; padding: 5px; line-height: 1; z-index: 3; transition: all .3s ease; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; }
             #ai-attachment-button { left: 10px; }
-            /* #ai-settings-button REMOVED */
             #ai-attachment-button:hover { background-color: rgba(120, 120, 120, 0.7); color: #fff; }
 
             /* Attachments, Code Blocks, Graphs, LaTeX */
