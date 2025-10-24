@@ -3,8 +3,9 @@
  *
  * MODIFIED: Refactored to remove Agent/Category system and implement a dynamic, context-aware AI persona.
  * MODIFIED: Removed all personal preference settings (nickname, color, gender, age).
- * NEW: The Settings Menu now contains toggles for Web Search and Location Sharing.
- * NEW: The AI's system instruction now dynamically reflects the Web Search and Location Sharing status.
+ * UPDATED: The Settings Menu now contains toggles for Web Search and Location Sharing.
+ * NEW: Added a "Specific Location Name" input to the settings menu for detailed location context, as requested.
+ * UPDATED: The AI's system instruction now dynamically reflects the Web Search and Location Sharing status.
  * UI: Fixed background and title colors. Replaced Agent button with a grey Settings button.
  * UPDATED: Implemented browser color selector for user favorite color.
  * UPDATED: AI container does not load on DOMContentLoaded; requires Ctrl + \ shortcut.
@@ -79,13 +80,17 @@
         return true; 
     }
 
+    /**
+     * Fetches the user-defined specific location name for context.
+     * @returns {string} The user's specific location or a generic fallback.
+     */
     function getUserLocationForContext() {
-        let location = localStorage.getItem('ai-user-location');
-        if (!location) {
-            location = 'United States'; 
-            localStorage.setItem('ai-user-location', location);
+        const specificLocation = localStorage.getItem('ai-user-specific-location');
+        if (specificLocation && specificLocation.trim()) {
+            return specificLocation.trim();
         }
-        return location;
+        // Fallback to a generic description if the user hasn't set a specific one
+        return 'a generic, unspecified location (defaulting to a general context)';
     }
 
     /**
@@ -314,7 +319,7 @@
         
         // Note: The welcome message now dynamically reflects the location sharing setting on first message
         const locationTip = userSettings.isLocationSharingEnabled 
-            ? "To improve your experience, your general location (state or country) will be shared with your first message. You may be subject to message limits."
+            ? "To improve your experience, your location (name, city, address) will be shared with your first message. You may be subject to message limits."
             : "Location sharing is currently disabled in settings. You may be subject to message limits.";
             
         welcomeMessage.innerHTML = `<h2>${welcomeHeader}</h2><p>${locationTip}</p><p class="shortcut-tip">(Press Ctrl + \\ to close)</p>`;
@@ -712,6 +717,12 @@ Formatting Rules (MUST FOLLOW):
             document.getElementById('settings-web-search').checked = userSettings.isWebSearchEnabled;
             document.getElementById('settings-location-sharing').checked = userSettings.isLocationSharingEnabled;
             document.getElementById('settings-email').value = localStorage.getItem('ai-user-email') || '';
+            document.getElementById('settings-specific-location').value = localStorage.getItem('ai-user-specific-location') || '';
+
+            // Manually trigger visibility check for location input
+            const locationToggle = document.getElementById('settings-location-sharing');
+            const locationGroup = document.getElementById('specific-location-group');
+            locationGroup.style.display = locationToggle.checked ? 'block' : 'none';
 
             document.addEventListener('click', handleMenuOutsideClick);
         } else {
@@ -734,16 +745,19 @@ Formatting Rules (MUST FOLLOW):
         const searchToggle = document.getElementById('settings-web-search');
         const locationToggle = document.getElementById('settings-location-sharing');
         const emailEl = document.getElementById('settings-email');
+        const specificLocationEl = document.getElementById('settings-specific-location');
 
         userSettings.isWebSearchEnabled = searchToggle.checked;
         userSettings.isLocationSharingEnabled = locationToggle.checked;
         const email = emailEl.value.trim();
+        const specificLocation = specificLocationEl.value.trim();
         
         localStorage.setItem('ai-user-settings', JSON.stringify({
             isWebSearchEnabled: userSettings.isWebSearchEnabled,
             isLocationSharingEnabled: userSettings.isLocationSharingEnabled
         }));
         localStorage.setItem('ai-user-email', email);
+        localStorage.setItem('ai-user-specific-location', specificLocation);
     }
 
     function createSettingsMenu() {
@@ -767,14 +781,27 @@ Formatting Rules (MUST FOLLOW):
                 <label for="settings-location-sharing">Share Location Context</label>
                 <input type="checkbox" id="settings-location-sharing" ${userSettings.isLocationSharingEnabled ? 'checked' : ''} />
                 <span class="toggle-slider"></span>
-                <p class="setting-note">Share your general location (e.g., 'United States') with your first message for better localized results.</p>
+                <p class="setting-note">Share your specific location for better localized results.</p>
+            </div>
+            <div class="setting-group" id="specific-location-group">
+                <label for="settings-specific-location">Specific Location Name</label>
+                <input type="text" id="settings-specific-location" placeholder="e.g., 123 Main St, New York, NY" value="${localStorage.getItem('ai-user-specific-location') || ''}" />
+                <p class="setting-note">This full address/city name will be passed to the AI as context when sharing is enabled.</p>
             </div>
             <button id="settings-save-button">Save & Close</button>
         `;
 
         const saveButton = menu.querySelector('#settings-save-button');
+        const locationToggle = menu.querySelector('#settings-location-sharing');
+        const locationGroup = menu.querySelector('#specific-location-group');
         const inputs = menu.querySelectorAll('input, select');
         
+        // Logic to show/hide the specific location input
+        const updateLocationVisibility = () => {
+            locationGroup.style.display = locationToggle.checked ? 'block' : 'none';
+        };
+        locationToggle.addEventListener('change', updateLocationVisibility);
+
         const debouncedSave = debounce(saveSettings, 500);
         inputs.forEach(input => {
             input.addEventListener('input', debouncedSave);
@@ -785,6 +812,9 @@ Formatting Rules (MUST FOLLOW):
             saveSettings();
             toggleSettingsMenu();
         };
+
+        // Initial call to set visibility
+        updateLocationVisibility();
 
         return menu;
     }
