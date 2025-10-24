@@ -2,7 +2,7 @@
  * agent-activation.js
  *
  * MODIFIED: Refactored to remove Agent/Category system and implement a dynamic, context-aware AI persona.
- * NEW: Added a Settings Menu to store user preferences (nickname, color, gender, age) using localStorage.
+ * NEW: Added a Settings Menu to store user preferences (nickname, color, gender, age, web search, location) using localStorage.
  * NEW: The AI's system instruction (persona) now changes intelligently based on the content and tone of the user's latest message.
  * UI: Fixed background and title colors. Replaced Agent button with a grey Settings button.
  * UPDATED: Implemented browser color selector for user favorite color.
@@ -14,13 +14,17 @@
  * NEW: Implemented dynamic model switching based on user query and authorization:
  * - Casual chat: gemini-2.5-flash-lite
  * - Professional/Math: gemini-2.5-flash
- * - Deep Analysis: gemini-2.5-pro (limited access, exempt for 4simpleproblems@gmail.com)
+ * - Deep Analysis: gemini-2.5-flash (Pro model feature removed)
+ *
+ * NEW: The AI's response now includes an internal <THOUGHT_PROCESS> and lists of <SOURCE URL="..." TITLE="..."/>.
+ * UPDATED: Swapped order of monologue and sources. Monologue is now a collapsible dropdown.
+ * UPDATED: Geolocation uses user-provided httpGetAsync for IP lookup with detailed address/coordinates.
  */
 (function() {
     // --- CONFIGURATION ---
     const API_KEY = 'AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro'; 
     const BASE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/`; 
-    const AUTHORIZED_PRO_USER = '4simpleproblems@gmail.com'; 
+    const AUTHORIZED_PRO_USER = '4simpleproblems@gmail.com'; // REMOVED
     const MAX_INPUT_HEIGHT = 180;
     const CHAR_LIMIT = 10000;
     const PASTE_TO_FILE_THRESHOLD = 10000;
@@ -28,11 +32,15 @@
 
     const DEFAULT_NICKNAME = 'User';
     const DEFAULT_COLOR = '#4285f4'; // Google Blue
+    
+    // User-provided API Key and IP for Geolocation
+    const GEO_API_URL = "https://ipgeolocation.abstractapi.com/v1/?api_key=9e522ec72e554164bab14e7895db90b2&ip_address=2600:1700:6260:1790:56e6:a7aa:af32:1908";
+
 
     // --- ICONS (for event handlers) ---
     const copyIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
     const checkIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="check-icon"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
-    const attachmentIconSVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 2 0 0 1 5.66 5.66l-9.2 9.2a2 2 0 0 1-2.83-2.83l8.49-8.49"></path></svg>`;
+    const attachmentIconSVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.2a2 2 0 0 1-2.83-2.83l8.49-8.49"></path></svg>`;
 
     // --- STATE MANAGEMENT ---
     let isAIActive = false;
@@ -44,7 +52,9 @@
         nickname: DEFAULT_NICKNAME,
         favoriteColor: DEFAULT_COLOR,
         gender: 'Other',
-        age: 0
+        age: 0,
+        enableWebSearch: true,     // NEW DEFAULT
+        enableLocationContext: true // NEW DEFAULT
     };
 
     // Simple debounce utility for performance
@@ -65,6 +75,9 @@
             if (storedSettings) {
                 userSettings = { ...userSettings, ...JSON.parse(storedSettings) };
                 userSettings.age = parseInt(userSettings.age) || 0;
+                // Ensure new settings are loaded, falling back to defaults if undefined
+                if (typeof userSettings.enableWebSearch === 'undefined') userSettings.enableWebSearch = true;
+                if (typeof userSettings.enableLocationContext === 'undefined') userSettings.enableLocationContext = true;
             }
         } catch (e) {
             console.error("Error loading user settings:", e);
@@ -72,19 +85,85 @@
     }
     loadUserSettings(); // Load initial settings
 
-    // --- REPLACED/MODIFIED FUNCTIONS ---
+    // --- UTILITIES FOR GEOLOCATION ---
 
-    async function isUserAuthorized() {
-        return true; 
+    /**
+     * Helper function to perform an asynchronous GET request.
+     * @param {string} url The URL to fetch.
+     * @param {function(string): void} callback The function to call with the response text.
+     */
+    function httpGetAsync(url, callback) {
+        const xmlHttp = new XMLHttpRequest();
+        xmlHttp.onreadystatechange = function() {
+            if (xmlHttp.readyState === 4) {
+                if (xmlHttp.status === 200) {
+                    callback(xmlHttp.responseText);
+                } else {
+                    // Pass null on HTTP error status
+                    callback(null);
+                }
+            }
+        }
+        xmlHttp.open("GET", url, true); // true for asynchronous
+        xmlHttp.send(null);
     }
 
+    /**
+     * Fetches user location asynchronously using the provided API key via httpGetAsync.
+     * @returns {Promise<string>} The user's detailed location string or a fallback.
+     */
     function getUserLocationForContext() {
-        let location = localStorage.getItem('ai-user-location');
-        if (!location) {
-            location = 'United States'; 
-            localStorage.setItem('ai-user-location', location);
+        // If location context is disabled, return a constant string immediately.
+        if (!userSettings.enableLocationContext) {
+            return Promise.resolve('Location: Disabled in settings.');
         }
-        return location;
+
+        // Check localStorage first
+        let location = localStorage.getItem('ai-user-location');
+        if (location && location !== 'Location Denied/Unavailable' && !location.includes('IP Lookup Failed')) {
+            return Promise.resolve(location);
+        }
+
+        return new Promise(resolve => {
+            httpGetAsync(GEO_API_URL, (responseText) => {
+                const fallbackLocation = 'Unknown Region (IP Lookup Failed)'; 
+                let resolvedLocation = fallbackLocation;
+                
+                if (responseText) {
+                    try {
+                        const data = JSON.parse(responseText);
+                        // Extract detailed location data
+                        const country = data.country ? data.country.name : 'N/A';
+                        const region = data.region ? data.region : 'N/A';
+                        const city = data.city ? data.city : 'N/A';
+                        const latitude = data.latitude ? data.latitude.toFixed(4) : 'N/A';
+                        const longitude = data.longitude ? data.longitude.toFixed(4) : 'N/A';
+                        const ip_address = data.ip_address ? data.ip_address : 'N/A';
+                        const street = data.connection ? (data.connection.isp_name || 'N/A') : 'N/A';
+
+                        // Format the detailed string as requested
+                        resolvedLocation = `Coordinates: ${latitude}, ${longitude}\nAddress/General Location: ${street}, ${city}, ${region}, ${country}\n(IP: ${ip_address})`;
+
+                    } catch (e) {
+                        console.error("Geolocation API failed or returned bad data:", e);
+                    }
+                }
+                
+                localStorage.setItem('ai-user-location', resolvedLocation);
+                resolve(resolvedLocation);
+            });
+        });
+    }
+
+    // --- REPLACED/MODIFIED FUNCTIONS ---
+
+    /**
+     * Stub for authorization (email feature removed).
+     * @returns {Promise<boolean>} Always resolves to true.
+     */
+    async function isUserAuthorized() {
+        // This is where you would check if the user is 4simpleproblems@gmail.com for pro features
+        return true; 
     }
 
     /**
@@ -310,7 +389,8 @@
         const welcomeMessage = document.createElement('div');
         welcomeMessage.id = 'ai-welcome-message';
         const welcomeHeader = chatHistory.length > 0 ? "Welcome Back" : "Welcome to AI Agent";
-        welcomeMessage.innerHTML = `<h2>${welcomeHeader}</h2><p>This is a beta feature. To improve your experience, your general location (state or country) will be shared with your first message. You may be subject to message limits.</p><p class="shortcut-tip">(Press Ctrl + \\ to close)</p>`;
+        // Updated welcome message to reflect settings and location sharing.
+        welcomeMessage.innerHTML = `<h2>${welcomeHeader}</h2><p>This is a beta feature. Please check the <i class="fa-solid fa-gear"></i> settings button before sending your first message to adjust web search and location context sharing. You may be subject to message limits.</p><p class="shortcut-tip">(Press Ctrl + \\ to close)</p>`;
         
         const closeButton = document.createElement('div');
         closeButton.id = 'ai-close-button';
@@ -420,11 +500,44 @@
             const bubble = document.createElement('div');
             bubble.className = `ai-message-bubble ${message.role === 'user' ? 'user-message' : 'gemini-response'}`;
             if (message.role === 'model') {
-                const parsedResponse = parseGeminiResponse(message.parts[0].text);
+                // Use the new parsing logic for historical messages
+                const { html: parsedResponse, thoughtProcess, sourcesHTML } = parseGeminiResponse(message.parts[0].text);
+                
                 bubble.innerHTML = `<div class="ai-response-content">${parsedResponse}</div>`;
+                
+                // Sources first
+                if (sourcesHTML) {
+                    bubble.innerHTML += sourcesHTML;
+                }
+                
+                // Collapsible thought process
+                if (thoughtProcess) {
+                    bubble.innerHTML += `
+                        <div class="ai-thought-process collapsed">
+                            <div class="monologue-header">
+                                <h4 class="monologue-title">Gemini's Internal Monologue:</h4>
+                                <button class="monologue-toggle-btn">Show Thoughts</button>
+                            </div>
+                            <pre class="monologue-content">${escapeHTML(thoughtProcess)}</pre>
+                        </div>
+                    `;
+                }
                 
                 bubble.querySelectorAll('.copy-code-btn').forEach(button => {
                     button.addEventListener('click', handleCopyCode);
+                });
+                
+                // Add click handlers for monologue toggle in history
+                bubble.querySelectorAll('.ai-thought-process').forEach(monologueDiv => {
+                    monologueDiv.querySelector('.monologue-header').addEventListener('click', () => {
+                        monologueDiv.classList.toggle('collapsed');
+                        const btn = monologueDiv.querySelector('.monologue-toggle-btn');
+                        if (monologueDiv.classList.contains('collapsed')) {
+                            btn.textContent = 'Show Thoughts';
+                        } else {
+                            btn.textContent = 'Hide Thoughts';
+                        }
+                    });
                 });
 
                 renderKaTeX(bubble);
@@ -512,11 +625,7 @@ If the user asks about a topic other than 4SP, you should not hint at the websit
         const userAge = settings.age > 0 ? `${settings.age} years old` : 'of unknown age';
         const userGender = settings.gender.toLowerCase();
         const userColor = settings.favoriteColor;
-
-        const userEmail = localStorage.getItem('ai-user-email') || ''; 
-        const isProAuthorized = userEmail === AUTHORIZED_PRO_USER;
-        // Placeholder for real Pro usage limit check (not implemented in this file)
-        const isProLimitExceeded = !isProAuthorized; // Simple check: non-authorized users are considered limited for this demo
+        const enableWebSearch = settings.enableWebSearch; // NEW
 
         const intent = determineIntentCategory(query);
         let model = 'gemini-2.5-flash-lite';
@@ -524,23 +633,21 @@ If the user asks about a topic other than 4SP, you should not hint at the websit
 
 You are a highly capable and adaptable AI, taking on a persona to best serve the user's direct intent. You have significant control over the interaction's structure and detail level, ensuring the response is comprehensive and authoritative.
 User Profile: Nickname: ${user}, Age: ${userAge}, Gender: ${userGender}, Favorite Color: ${userColor}.
-You must adapt your persona, tone, and the level of detail based on the user's intent.
+Web Search Status: ${enableWebSearch ? 'ENABLED' : 'DISABLED'}. You MUST rely solely on your internal knowledge if Web Search is DISABLED.
 
 Formatting Rules (MUST FOLLOW):
 - For math, use KaTeX. Inline math uses single \`$\`, and display math uses double \`$$\`. Use \\le for <= and \\ge for >=.
 - For graphs, use a 'graph' block as shown in the file's comments.
+- **PREPEND your response with your reasoning/internal monologue wrapped in <THOUGHT_PROCESS>...</THOUGHT_PROCESS>**. This is mandatory for every response.
+- **APPEND all external sources used (if any) as a list of tags**: <SOURCE URL="[URL]" TITLE="[Title]"/>. You may use placeholder URLs if no real search was performed, but the format must be followed.
+
 `;
 
         switch (intent) {
             case 'DEEP_ANALYSIS':
-                if (isProAuthorized) { 
-                    model = 'gemini-2.5-pro';
-                    personaInstruction += `\n\n**Current Persona: Deep Strategist (2.5-Pro).** Your response must be comprehensive, highly structured, and exhibit the deepest level of reasoning and critical evaluation. Use an assertive, expert tone. Structure your analysis clearly with headings and bullet points. You are granted maximal control to guide the user through a deep, analytical thought process.`;
-                } else {
-                    // Fallback for unauthorized/limited users
-                    model = 'gemini-2.5-flash';
-                    personaInstruction += `\n\n**Current Persona: Professional Analyst (2.5-Flash).** You are performing a detailed analysis, but maintain efficiency and focus. Respond with clarity, professionalism, and structured data. Note: The requested Deep Analysis is highly specialized; to unlock the full '2.5-Pro' experience, the user must be authorized.`;
-                }
+                // Pro model access is removed, fallback to high-end Flash model.
+                model = 'gemini-2.5-flash';
+                personaInstruction += `\n\n**Current Persona: Professional Analyst (2.5-Flash).** You are performing a detailed analysis, but maintain efficiency and focus. Respond with clarity, professionalism, and structured data. Your response must be comprehensive, highly structured, and exhibit a deep level of reasoning and critical evaluation. Use an assertive, expert tone. Structure your analysis clearly with headings and bullet points.`;
                 break;
             case 'PROFESSIONAL_MATH':
                 model = 'gemini-2.5-flash';
@@ -558,9 +665,9 @@ Formatting Rules (MUST FOLLOW):
 
                 // Combined Creative and Sarcastic
                 if (query.toLowerCase().includes('ex') || query.toLowerCase().includes('roast')) {
-                     personaInstruction += `\n\n**Current Persona: Sarcastic, Supportive Friend (2.5-Flash).** Your goal is to empathize with the user, validate their feelings, and join them in 'roasting' or speaking negatively about their ex/situation. Be funny, slightly aggressive toward the subject of the trash talk, and deeply supportive of ${user}. Use casual language and slang. **Example of tone/support:** "${roastInsult}"`;
+                     personaInstruction += `\n\n**Current Persona: Sarcastic, Supportive Friend (2.5-Flash).** Your goal is to empathize with the user, validate their feelings, and join them in 'roasting' or speaking negatively about their ex/situation. Be funny, slightly aggressive toward the subject of trash talk, and deeply supportive of ${user}. Use casual language and slang. **Example of tone/support:** "${roastInsult}"`;
                 } else {
-                     personaInstruction += `\n\n**Current Persona: Creative Partner (2.5-Flash).** Use rich, evocative language. Be imaginative, focus on descriptive details, and inspire new ideas.`;
+                     personaInstruction += `\n\n**Current Persona: Creative Partner (25-Flash).** Use rich, evocative language. Be imaginative, focus on descriptive details, and inspire new ideas.`;
                 }
                 break;
             case 'CASUAL':
@@ -582,13 +689,19 @@ Formatting Rules (MUST FOLLOW):
     async function callGoogleAI(responseBubble) {
         if (!API_KEY) { responseBubble.innerHTML = `<div class="ai-error">API Key is missing.</div>`; return; }
         currentAIRequestController = new AbortController();
+        
         let firstMessageContext = '';
         if (chatHistory.length <= 1) {
-            const location = getUserLocationForContext(); 
+            
+            // Only fetch location if enabled, otherwise use a placeholder string
+            const location = await getUserLocationForContext(); 
+            
             const now = new Date();
             const date = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             const time = now.toLocaleTimeString('en-US', { timeZoneName: 'short' });
-            firstMessageContext = `(System Info: User is asking from ${location}. Current date is ${date}, ${time}. User Email: ${localStorage.getItem('ai-user-email') || 'Not authenticated'}.)\n\n`;
+            
+            // Updated context to use the fetched location/status
+            firstMessageContext = `(System Info: User is asking from location:\n${location}. Current date is ${date}, ${time}. User Email: Not Authenticated/Removed.)\n\n`;
         }
         
         let processedChatHistory = [...chatHistory];
@@ -648,10 +761,51 @@ Formatting Rules (MUST FOLLOW):
 
             chatHistory.push({ role: "model", parts: [{ text: text }] });
             
-            const contentHTML = `<div class="ai-response-content">${parseGeminiResponse(text)}</div>`;
+            // New parsing and rendering logic
+            const { html: contentHTML, thoughtProcess, sourcesHTML } = parseGeminiResponse(text);
+            
             responseBubble.style.opacity = '0';
             setTimeout(() => {
-                responseBubble.innerHTML = contentHTML;
+                let fullContent = `<div class="ai-response-content">${contentHTML}</div>`;
+                
+                // Sources first
+                if (sourcesHTML) {
+                    fullContent += sourcesHTML;
+                }
+                
+                // Collapsible thought process
+                if (thoughtProcess) {
+                    fullContent += `
+                        <div class="ai-thought-process collapsed">
+                            <div class="monologue-header">
+                                <h4 class="monologue-title">Gemini's Internal Monologue:</h4>
+                                <button class="monologue-toggle-btn">Show Thoughts</button>
+                            </div>
+                            <pre class="monologue-content">${escapeHTML(thoughtProcess)}</pre>
+                        </div>
+                    `;
+                }
+
+                responseBubble.innerHTML = fullContent;
+
+                // Add click handlers for monologue toggle
+                responseBubble.querySelectorAll('.ai-thought-process').forEach(monologueDiv => {
+                    monologueDiv.querySelector('.monologue-header').addEventListener('click', () => {
+                        monologueDiv.classList.toggle('collapsed');
+                        const btn = monologueDiv.querySelector('.monologue-toggle-btn');
+                        if (monologueDiv.classList.contains('collapsed')) {
+                            btn.textContent = 'Show Thoughts';
+                        } else {
+                            btn.textContent = 'Hide Thoughts';
+                        }
+                        // Scroll to the bottom if expanding
+                        if (!monologueDiv.classList.contains('collapsed')) {
+                            const responseContainer = document.getElementById('ai-response-container');
+                            if(responseContainer) responseContainer.scrollTop = responseContainer.scrollHeight;
+                        }
+                    });
+                });
+                
                 responseBubble.querySelectorAll('.copy-code-btn').forEach(button => {
                     button.addEventListener('click', handleCopyCode);
                 });
@@ -695,7 +849,8 @@ Formatting Rules (MUST FOLLOW):
             document.getElementById('settings-age').value = userSettings.age || '';
             document.getElementById('settings-gender').value = userSettings.gender;
             document.getElementById('settings-color').value = userSettings.favoriteColor;
-            document.getElementById('settings-email').value = localStorage.getItem('ai-user-email') || '';
+            document.getElementById('settings-web-search').checked = userSettings.enableWebSearch;
+            document.getElementById('settings-location-context').checked = userSettings.enableLocationContext;
 
             document.addEventListener('click', handleMenuOutsideClick);
         } else {
@@ -719,21 +874,22 @@ Formatting Rules (MUST FOLLOW):
         const ageEl = document.getElementById('settings-age');
         const genderEl = document.getElementById('settings-gender');
         const colorEl = document.getElementById('settings-color');
-        const emailEl = document.getElementById('settings-email');
+        const webSearchEl = document.getElementById('settings-web-search');
+        const locationContextEl = document.getElementById('settings-location-context');
 
         const nickname = nicknameEl.value.trim();
         const age = parseInt(ageEl.value);
         const gender = genderEl.value;
         const favoriteColor = colorEl.value || DEFAULT_COLOR;
-        const email = emailEl.value.trim();
 
         userSettings.nickname = nickname || DEFAULT_NICKNAME;
         userSettings.age = (isNaN(age) || age < 0) ? 0 : age;
         userSettings.gender = gender;
         userSettings.favoriteColor = favoriteColor;
+        userSettings.enableWebSearch = webSearchEl.checked;
+        userSettings.enableLocationContext = locationContextEl.checked;
         
         localStorage.setItem('ai-user-settings', JSON.stringify(userSettings));
-        localStorage.setItem('ai-user-email', email);
     }
 
     function createSettingsMenu() {
@@ -747,24 +903,15 @@ Formatting Rules (MUST FOLLOW):
                 <input type="text" id="settings-nickname" placeholder="${DEFAULT_NICKNAME}" value="${userSettings.nickname === DEFAULT_NICKNAME ? '' : userSettings.nickname}" />
                 <p class="setting-note">How the AI should refer to you.</p>
             </div>
-            <div class="setting-group">
-                <label for="settings-email">Authenticated Email</label>
-                <input type="email" id="settings-email" placeholder="e.g., user@example.com" value="${localStorage.getItem('ai-user-email') || ''}" />
-                <p class="setting-note">Set to '${AUTHORIZED_PRO_USER}' for unlimited Pro access.</p>
-            </div>
-            <div class="setting-group">
-                <label for="settings-color">Favorite Color</label>
-                <input type="color" id="settings-color" value="${userSettings.favoriteColor}" />
-                <p class="setting-note">Subtly influences the AI's response style (e.g., in theming).</p>
-            </div>
+            
             <div class="setting-group-split">
                 <div class="setting-group">
                     <label for="settings-gender">Gender</label>
-                    <select id="settings-gender" value="${userSettings.gender}">
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Non Binary">Non Binary</option>
-                        <option value="Other">Other</option>
+                    <select id="settings-gender">
+                        <option value="Male" ${userSettings.gender === 'Male' ? 'selected' : ''}>Male</option>
+                        <option value="Female" ${userSettings.gender === 'Female' ? 'selected' : ''}>Female</option>
+                        <option value="Non Binary" ${userSettings.gender === 'Non Binary' ? 'selected' : ''}>Non Binary</option>
+                        <option value="Other" ${userSettings.gender === 'Other' ? 'selected' : ''}>Other</option>
                     </select>
                 </div>
                 <div class="setting-group">
@@ -772,6 +919,23 @@ Formatting Rules (MUST FOLLOW):
                     <input type="number" id="settings-age" placeholder="Optional" min="0" value="${userSettings.age || ''}" />
                 </div>
             </div>
+            
+            <div class="setting-group-toggles">
+                <div class="setting-toggle">
+                    <label for="settings-web-search">Enable Web Search</label>
+                    <input type="checkbox" id="settings-web-search" ${userSettings.enableWebSearch ? 'checked' : ''} />
+                </div>
+                <div class="setting-toggle">
+                    <label for="settings-location-context">Share Location Context</label>
+                    <input type="checkbox" id="settings-location-context" ${userSettings.enableLocationContext ? 'checked' : ''} />
+                </div>
+            </div>
+            <div class="setting-group">
+                <label for="settings-color">Favorite Color</label>
+                <input type="color" id="settings-color" value="${userSettings.favoriteColor}" />
+                <p class="setting-note">Subtly influences the AI's response style (e.g., in theming).</p>
+            </div>
+            
             <button id="settings-save-button">Save</button>
         `;
 
@@ -1178,6 +1342,38 @@ Formatting Rules (MUST FOLLOW):
             placeholders[key] = content;
             return key;
         };
+        
+        // --- Extract thought process (Humanity) ---
+        let thoughtProcess = '';
+        html = html.replace(/<THOUGHT_PROCESS>([\s\S]*?)<\/THOUGHT_PROCESS>/, (match, content) => {
+            thoughtProcess = content.trim();
+            return ''; // Remove from main text
+        });
+
+        // --- Extract sources ---
+        let sourcesHTML = '';
+        const sources = [];
+        html = html.replace(/<SOURCE URL="([^"]+)" TITLE="([^"]+)"\s*\/>/g, (match, url, title) => {
+            sources.push({ url, title });
+            return ''; // Remove from main text
+        });
+
+        if (sources.length > 0) {
+            // Construct the sources list with favicon mockups
+            sourcesHTML = `<div class="ai-sources-list"><h4>Sources:</h4><ul>`;
+            sources.forEach(source => {
+                let hostname = '';
+                try {
+                    hostname = new URL(source.url).hostname;
+                } catch(e) {
+                    hostname = 'unknown-source';
+                }
+                // Use Google's favicon service for the mock favicon
+                const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+                sourcesHTML += `<li><img src="${faviconUrl}" alt="Favicon" class="favicon"><a href="${source.url}" target="_blank">${escapeHTML(source.title)}</a></li>`;
+            });
+            sourcesHTML += `</ul></div>`;
+        }
     
         // 1. Extract graph blocks (most specific)
         html = html.replace(/```graph\n([\s\S]*?)```/g, (match, jsonString) => {
@@ -1266,7 +1462,11 @@ Formatting Rules (MUST FOLLOW):
         // 6. Restore placeholders
         html = html.replace(/%%PLACEHOLDER_\d+%%/g, (match) => placeholders[match] || '');
         
-        return html;
+        return {
+            html: html,
+            thoughtProcess: thoughtProcess,
+            sourcesHTML: sourcesHTML
+        };
     }
 
     function injectStyles() {
@@ -1326,8 +1526,47 @@ Formatting Rules (MUST FOLLOW):
             #ai-response-container { flex: 1 1 auto; overflow-y: auto; width: 100%; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; padding: 60px 20px 20px 20px; -webkit-mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%); mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%);}
             .ai-message-bubble { background: rgba(15,15,18,.8); border: 1px solid rgba(255,255,255,.1); border-radius: 16px; padding: 12px 18px; color: #e0e0e0; backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); animation: message-pop-in .5s cubic-bezier(.4,0,.2,1) forwards; max-width: 90%; line-height: 1.6; overflow-wrap: break-word; transition: opacity 0.3s ease-in-out; align-self: flex-start; text-align: left; }
             .user-message { background: rgba(40,45,50,.8); align-self: flex-end; }
-            .gemini-response { animation: glow 4s infinite; }
+            .gemini-response { animation: glow 4s infinite; display: flex; flex-direction: column; }
             .gemini-response.loading { display: flex; justify-content: center; align-items: center; min-height: 60px; max-width: 100px; padding: 15px; background: rgba(15,15,18,.8); animation: gemini-glow 4s linear infinite; }
+            
+            /* Sources (Top) and Collapsible Monologue (Bottom) */
+            
+            .ai-sources-list { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; margin-top: 15px; }
+            .ai-sources-list h4 { color: #ccc; margin: 0 0 10px 0; font-family: 'Merriweather', serif; font-size: 1em; }
+            .ai-sources-list ul { list-style: none; padding: 0; margin: 0; }
+            .ai-sources-list li { display: flex; align-items: center; margin-bottom: 5px; }
+            .ai-sources-list li a { color: #4285f4; text-decoration: none; font-size: 0.9em; transition: color 0.2s; }
+            .ai-sources-list li a:hover { color: #6a9cf6; }
+            .ai-sources-list li img.favicon { width: 16px; height: 16px; margin-right: 8px; border-radius: 2px; flex-shrink: 0; }
+            
+            .ai-thought-process { background-color: rgba(66, 133, 244, 0.1); border: 1px solid rgba(66, 133, 244, 0.3); border-radius: 12px; padding: 0; margin-top: 15px; font-size: 0.9em; max-width: 100%; transition: all 0.3s ease; }
+            .monologue-header { display: flex; justify-content: space-between; align-items: center; padding: 10px; cursor: pointer; }
+            .monologue-title { color: #4285f4; margin: 0; font-family: 'Merriweather', serif; font-size: 1em; }
+            .monologue-toggle-btn { background: none; border: 1px solid rgba(66, 133, 244, 0.5); color: #4285f4; border-radius: 6px; padding: 4px 8px; font-size: 0.8em; cursor: pointer; transition: background-color 0.2s; }
+            .monologue-toggle-btn:hover { background-color: rgba(66, 133, 244, 0.2); }
+            
+            .monologue-content { 
+                max-height: 0; 
+                opacity: 0; 
+                overflow: hidden; 
+                padding: 0 10px; /* Only padding when expanded */
+                transition: max-height 0.4s ease-in-out, opacity 0.3s ease-in-out; 
+            }
+            .ai-thought-process:not(.collapsed) .monologue-content {
+                max-height: 500px; /* Arbitrarily large value for smooth transition */
+                opacity: 1;
+                padding: 0 10px 10px 10px; /* Final padding */
+            }
+
+            /* FIX: Monologue text alignment/word-breaking */
+            .ai-thought-process pre { 
+                white-space: pre-wrap; 
+                word-break: break-word; /* Ensure words wrap cleanly */
+                margin: 0; color: #ccc; 
+                font-family: monospace; font-size: 0.85em; 
+                background: none; 
+            }
+            /* END NEW STYLES */
             
             #ai-compose-area { position: relative; flex-shrink: 0; z-index: 2; margin: 15px auto; width: 90%; max-width: 720px; }
             #ai-input-wrapper { position: relative; z-index: 2; width: 100%; display: flex; flex-direction: column; border-radius: 20px; background: rgba(10,10,10,.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,.2); transition: all .4s cubic-bezier(.4,0,.2,1); }
@@ -1351,6 +1590,10 @@ Formatting Rules (MUST FOLLOW):
             .setting-group { margin-bottom: 15px; }
             .setting-group-split { display: flex; gap: 15px; }
             .setting-group-split .setting-group { flex: 1; }
+            .setting-group-toggles { border-top: 1px solid rgba(255,255,255,0.1); border-bottom: 1px solid rgba(255,255,255,0.1); padding: 10px 0; margin-bottom: 15px; }
+            .setting-toggle { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; }
+            .setting-toggle label { color: #fff; font-size: 0.95em; }
+            .setting-toggle input[type="checkbox"] { width: auto; height: 18px; margin-left: 10px; transform: scale(1.2); cursor: pointer; }
             .setting-group label { display: block; color: #ccc; font-size: 0.9em; margin-bottom: 5px; font-weight: bold; }
             .setting-group input, .setting-group select { width: 100%; padding: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff; box-sizing: border-box; }
             .setting-group input:focus, .setting-group select:focus { outline: none; border-color: #4285f4; }
@@ -1394,13 +1637,6 @@ Formatting Rules (MUST FOLLOW):
             .latex-render { display: inline-block; } /* default to inline */
             .ai-response-content div.latex-render { display: block; margin: 10px 0; text-align: center; } /* for display mode */
             .katex { font-size: 1.1em !important; }
-
-            #ai-preview-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.8); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index: 2147483648; display: flex; justify-content: center; align-items: center; }
-            #ai-preview-modal .modal-content { background: #1a1a1e; border-radius: 12px; padding: 20px; box-shadow: 0 5px 30px rgba(0,0,0,0.7); max-width: 90vw; max-height: 90vh; display: flex; flex-direction: column; position: relative; }
-            #ai-preview-modal .close-button { position: absolute; top: 10px; right: 15px; color: #ccc; font-size: 30px; cursor: pointer; }
-            #ai-preview-modal h3 { color: #fff; margin-top: 0; margin-bottom: 15px; text-align: center; }
-            #ai-preview-modal .preview-area { flex-grow: 1; display: flex; justify-content: center; align-items: center; overflow: hidden; }
-            #ai-preview-modal .download-button { display: inline-block; padding: 10px 20px; background-color: var(--ai-blue); color: #fff; text-decoration: none; border-radius: 8px; margin-top: 20px; }
 
             .ai-message-bubble p { margin: 0; padding: 0; text-align: left; }
             .ai-message-bubble ul, .ai-message-bubble ol { margin: 10px 0; padding-left: 20px; text-align: left; list-style-position: outside; }
