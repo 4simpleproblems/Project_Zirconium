@@ -1,1093 +1,1357 @@
 /**
- * humanity-gen0-activation.js
+ * agent-activation.js
  *
- * MODIFIED: Upgraded to "Humanity Agent (Gen 0)" architecture.
- * REPLACED: localStorage has been entirely replaced with Firestore for robust, persistent state management (Settings and History).
- * NEW: Implemented dynamic multi-model switching (lite, flash, pro) based on query complexity and authorization checks.
- * NEW: Integrated Google Search grounding via the native Gemini API tools for real-time information access.
- * NEW: Implemented Custom Dual-Mode Graphing Engine using HTML Canvas.
- * NEW: Integrated KaTeX for high-quality LaTeX/Math rendering.
- * REFACTORED: Complete UI/UX overhaul injected via JavaScript for a modern, responsive, and professional dark-mode experience.
+ * UPGRADED to "Humanity Agent" (Humanity {Gen 0})
+ * MODIFIED: REMOVED the entire Agent/Category/Settings system (nickname, color, gender, age, email/localStorage).
+ * NEW: Implemented a strict, dynamic multi-model system: 'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.5-pro'.
+ * NEW: Implemented a **Strict Pro Usage Limit** check for 'gemini-2.5-pro' queries (limited to 5 per session).
+ * NEW: Integrated **Google Custom Search JSON API** for up-to-date web answers using a defined search engine ID.
+ * UPDATED: Dynamic model selection now uses a more robust intent classifier.
+ * UPDATED: Graphing engine now supports two modes: 'basic' (default) and 'advanced' (for deep queries).
+ * UI: Removed the grey Settings button and all associated UI/UX elements. Fixed background and title colors.
+ * UPDATED: KaTeX rendering and custom graphing are fully retained and optimized.
+ * UPDATED: Ensured Ctrl + \ shortcut for activation/deactivation is fully functional.
  *
- * CRITICAL FIXES (Mandatory Compliance):
- * - Replaced prohibited window.confirm() with a compliant, two-step UI confirmation flow.
- * - Reinstated KaTeX and auto-render script injection for functional math rendering.
- * - Corrected CSS syntax error in the injected <style> block.
- *
- * CORE ARCHITECTURE: Strict adherence to the original IIFE structure, variable naming, and function flow is maintained.
+ * DYNAMIC MODEL SWITCHING:
+ * - CASUAL: gemini-2.5-flash-lite (Concise, low cost)
+ * - PROFESSIONAL_MATH: gemini-2.5-flash (Precision, logic, code, graphing)
+ * - DEEP_ANALYSIS: gemini-2.5-pro (Limited to MAX_PRO_USES, requires search integration)
  */
 (function() {
-    // --- CONFIGURATION & GLOBAL STATE ---
-    // NOTE: API_KEY is set to an empty string as required, relying on the Canvas environment injection.
-    const API_KEY = "";
-    const BASE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/`;
-    // NOTE: This placeholder assumes the actual PRO access check is done via the auth token/backend logic
-    const AUTHORIZED_PRO_USER_ID = 'PRO_ACCESS_USER_ID'; 
-    const SEARCH_ENGINE_ID = "d0d0c075d757140ef"; // Documented as per directive
+    // --- CONFIGURATION ---
+    const API_KEY = 'AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro'; 
+    const BASE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/`; 
+    // --- NEW: GOOGLE SEARCH API CONFIG ---
+    const GOOGLE_SEARCH_API_KEY = API_KEY; // Using the main AI key for all Google services
+    const SEARCH_ENGINE_ID = 'd0d0c075d757140ef';
+    const SEARCH_API_URL = 'https://www.googleapis.com/customsearch/v1';
+    // --- NEW: PRO USAGE CONFIG ---
+    const MAX_PRO_USES = 5; 
+    const AUTHORIZED_PRO_USER_ID = '4simpleproblems@gmail.com'; // Placeholder/Mock for server-side check
+    // --- END NEW CONFIG ---
 
-    // Firebase Globals (will be assigned by injected module script)
-    let db = null;
-    let auth = null;
-    let userId = null;
-    let appId = null;
+    const MAX_INPUT_HEIGHT = 180;
+    const CHAR_LIMIT = 10000;
+    const PASTE_TO_FILE_THRESHOLD = 10000;
+    const MAX_ATTACHMENTS_PER_MESSAGE = 10;
 
-    // Agent State
-    let agentHistory = [];
-    let agentSettings = {
+    // Default 'Agent' Identity (No user settings allowed)
+    const AGENT_NICKNAME = 'Humanity Agent';
+    const AGENT_COLOR = '#34a853'; // Google Green, symbolizing the new 'Humanity' persona
+
+    // --- ICONS (for event handlers) ---
+    const copyIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+    const checkIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="check-icon"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+    const attachmentIconSVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.2a2 2 0 0 1-2.83-2.83l8.49-8.49"></path></svg>`;
+    const searchIconSVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="search-icon"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`;
+
+    // --- STATE MANAGEMENT ---
+    let isAIActive = false;
+    let isRequestPending = false;
+    let currentAIRequestController = null;
+    let chatHistory = [];
+    let attachedFiles = [];
+    let proUsesRemaining = MAX_PRO_USES;
+    // --- User settings removed, using agent defaults ---
+    const userSettings = {
         nickname: 'User',
-        color: '#3b82f6',
-        persona: 'Standard',
-        proAccess: false,
-        useSearch: true
+        favoriteColor: '#4285f4',
+        gender: 'Other',
+        age: 0
     };
-    let isFetching = false;
-    let chatOpen = false;
 
-    // Utility for Firebase Path Construction
-    const getFirestorePaths = (uid) => {
-        const baseAppId = typeof __app_id !== 'undefined' ? __app_id : 'default-agent-app';
-        return {
-            settingsDoc: `artifacts/${baseAppId}/users/${uid}/agent_config/settings`,
-            historyCol: `artifacts/${baseAppId}/users/${uid}/agent_history`
+    // Simple debounce utility for performance
+    const debounce = (func, delay) => {
+        let timeoutId;
+        return (...args) => {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => func.apply(this, args), delay);
         };
     };
 
-    // --- FIREBASE INITIALIZATION AND PERSISTENCE (CRITICAL REPLACEMENT) ---
+    /**
+     * Loads user settings from localStorage on script initialization.
+     * REMOVED: No user settings are loaded/stored.
+     */
+    function loadUserSettings() {
+        // Function removed as per command: settings/localStorage logic eliminated.
+    }
+    loadUserSettings(); // Retained for structural compliance, but is a stub.
 
-    // Expose necessary functions globally for the Firebase module script to call back into
-    window.Agent = {
-        initFirebase: function(currentUserId) {
-            userId = currentUserId;
-            appId = typeof __app_id !== 'undefined' ? __app_id : 'default-agent-app';
-            db = window.db; // Assigned by the injected module script
-            auth = window.auth; // Assigned by the injected module script
-
-            if (db && userId) {
-                const paths = getFirestorePaths(userId);
-                console.log(`[Agent/Firestore] Initializing for User: ${userId} at App: ${appId}`);
-
-                // Check for PRO Access Status (Mocked based on auth status)
-                // This check is a simplified mock; real logic would involve checking custom claims.
-                agentSettings.proAccess = (auth.currentUser && auth.currentUser.uid === AUTHORIZED_PRO_USER_ID);
-                
-                loadSettings(paths.settingsDoc);
-                loadHistory(paths.historyCol);
-            } else {
-                console.error("[Agent/Firestore] DB or User ID not available for initialization.");
-            }
+    // --- NEW: Web Search Integration ---
+    /**
+     * Performs a web search using the Google Custom Search JSON API.
+     * @param {string} query The search query.
+     * @returns {Promise<string>} A structured string of search results to be sent to the model.
+     */
+    async function performWebSearch(query) {
+        if (!SEARCH_ENGINE_ID || !GOOGLE_SEARCH_API_KEY) {
+            return "Web Search Failed: API Key or Engine ID is missing.";
         }
-    };
-
-    /**
-     * Loads user settings from Firestore and sets up a real-time listener.
-     * @param {string} docPath - Path to the settings document.
-     */
-    function loadSettings(docPath) {
-        if (!db) return;
-
-        const settingsRef = window.firebase.doc(db, docPath);
-
-        // Real-time listener for settings
-        window.firebase.onSnapshot(settingsRef, (docSnap) => {
-            if (docSnap.exists()) {
-                const loaded = docSnap.data();
-                Object.assign(agentSettings, loaded);
-                console.log("[Agent/Firestore] Settings loaded/updated.");
-                updateUIFromSettings();
-            } else {
-                console.warn("[Agent/Firestore] Settings document not found. Using defaults.");
-                saveSettings(); // Save defaults immediately if doc doesn't exist
-            }
-        }, (error) => {
-            console.error("[Agent/Firestore] Error setting up settings listener:", error);
-        });
-    }
-
-    /**
-     * Saves current agent settings to Firestore.
-     */
-    function saveSettings() {
-        if (!db || !userId) return;
-
-        const paths = getFirestorePaths(userId);
-        const settingsRef = window.firebase.doc(db, paths.settingsDoc);
-
-        // Remove ephemeral data before saving
-        const dataToSave = { ...agentSettings };
-        delete dataToSave.proAccess;
-
-        window.firebase.setDoc(settingsRef, dataToSave, { merge: true }).catch(error => {
-            console.error("[Agent/Firestore] Error saving settings:", error);
-        });
-    }
-
-    /**
-     * Loads agent history from Firestore and sets up a real-time listener.
-     * @param {string} colPath - Path to the history collection.
-     */
-    function loadHistory(colPath) {
-        if (!db) return;
-
-        const historyRef = window.firebase.collection(db, colPath);
-        const q = window.firebase.query(historyRef, window.firebase.orderBy('timestamp', 'asc'));
-
-        // Real-time listener for history
-        window.firebase.onSnapshot(q, (snapshot) => {
-            agentHistory = [];
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                // Firestore automatically deserializes, but ensure text is present
-                if (data.role && data.text) {
-                    agentHistory.push({
-                        role: data.role,
-                        text: data.text,
-                        id: doc.id
-                    });
-                }
-            });
-            console.log(`[Agent/Firestore] History loaded/updated: ${agentHistory.length} messages.`);
-            renderHistory();
-        }, (error) => {
-            console.error("[Agent/Firestore] Error setting up history listener:", error);
-        });
-    }
-
-    /**
-     * Adds a message to the Firestore history collection.
-     * @param {string} role - 'user' or 'model'.
-     * @param {string} text - The message content.
-     */
-    function addHistoryMessage(role, text) {
-        if (!db || !userId) return;
-
-        const paths = getFirestorePaths(userId);
-        const historyRef = window.firebase.collection(db, paths.historyCol);
-
-        const newMessage = {
-            role: role,
-            text: text,
-            timestamp: Date.now() // Use timestamp for ordering
-        };
-
-        // Use addDoc for a new document with an auto-generated ID
-        window.firebase.addDoc(historyRef, newMessage).catch(error => {
-            console.error("[Agent/Firestore] Error adding history message:", error);
-        });
-        // Note: The UI update (renderHistory) will happen automatically via the onSnapshot listener.
-    }
-
-    /**
-     * Clears all history documents for the current user.
-     */
-    async function clearHistory() {
-        if (!db || !userId) return;
-
-        const paths = getFirestorePaths(userId);
-        const historyRef = window.firebase.collection(db, paths.historyCol);
+        
+        const searchUrl = `${SEARCH_API_URL}?key=${GOOGLE_SEARCH_API_KEY}&cx=${SEARCH_ENGINE_ID}&q=${encodeURIComponent(query)}&num=3`;
         
         try {
-            const snapshot = await window.firebase.getDocs(historyRef);
-            const deletePromises = [];
-            snapshot.forEach(doc => {
-                deletePromises.push(window.firebase.deleteDoc(window.firebase.doc(db, paths.historyCol, doc.id)));
-            });
-            await Promise.all(deletePromises);
-            // Wait for onSnapshot to update agentHistory before logging success
-            // Note: This relies on the listener firing, which is robust.
-            console.log("[Agent/Firestore] History documents sent for deletion.");
-        } catch (error) {
-            console.error("[Agent/Firestore] Error clearing history:", error);
+            const response = await fetch(searchUrl);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Search API failed with status ${response.status}: ${JSON.stringify(errorData)}`);
+            }
+            const data = await response.json();
+            
+            if (data.items && data.items.length > 0) {
+                let searchResults = "Web Search Results (Top 3):\n";
+                data.items.forEach((item, index) => {
+                    const snippet = item.snippet ? item.snippet.replace(/\n/g, ' ').trim() : 'No snippet available.';
+                    searchResults += `[${index + 1}] Source: ${item.displayLink}. Snippet: ${snippet}\n`;
+                });
+                return searchResults;
+            } else {
+                return "Web Search Results: No current information found for the query.";
+            }
+        } catch (e) {
+            console.error("Web Search Error:", e);
+            return `Web Search Failed: An exception occurred: ${e.message}`;
         }
     }
+    // --- END NEW: Web Search Integration ---
 
-    // --- CORE AI LOGIC ---
+    // --- REPLACED/MODIFIED FUNCTIONS ---
+
+    async function isUserAuthorized() {
+        // Mock authorization check for structural integrity.
+        // The real check for Pro access is now tied to the dynamic model selection logic.
+        return true; 
+    }
+
+    function getUserLocationForContext() {
+        let location = localStorage.getItem('ai-user-location');
+        if (!location) {
+            location = 'United States'; 
+            localStorage.setItem('ai-user-location', location);
+        }
+        return location;
+    }
 
     /**
-     * Implements exponential backoff for robust API fetching.
-     * @param {string} url - The API endpoint URL.
-     * @param {object} options - Fetch options (method, headers, body).
-     * @param {number} maxRetries - Maximum number of retries.
-     * @param {number} delay - Initial delay in milliseconds.
-     * @returns {Promise<Response>} - The successful fetch response.
+     * Renders mathematical formulas using KaTeX.
+     * @param {HTMLElement} container The parent element to search for formulas.
      */
-    async function exponentialBackoffFetch(url, options, maxRetries = 5, delay = 1000) {
-        for (let attempt = 0; attempt < maxRetries; attempt++) {
+    function renderKaTeX(container) {
+        if (typeof katex === 'undefined') {
+            console.warn("KaTeX not loaded, skipping render.");
+            return;
+        }
+        container.querySelectorAll('.latex-render').forEach(element => {
+            const mathText = element.dataset.tex;
+            const displayMode = element.dataset.displayMode === 'true';
             try {
-                const response = await fetch(url, options);
-                if (response.status !== 429) { // Not a rate limit error
-                    return response;
-                }
-                console.warn(`[API] Rate limit hit (429). Retrying in ${delay}ms (Attempt ${attempt + 1}/${maxRetries}).`);
-            } catch (error) {
-                console.error(`[API] Fetch attempt failed: ${error.message}`);
-                if (attempt === maxRetries - 1) throw error;
-            }
-            // Wait before retrying
-            await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, attempt)));
-        }
-        throw new Error("API failed after multiple retries due to rate limits or network issues.");
-    }
-
-    /**
-     * Determines the appropriate Gemini model based on the user's query complexity and access level.
-     * @param {string} query - The user's input text.
-     * @returns {string} - The model name.
-     */
-    function determineModel(query) {
-        const lowerQuery = query.toLowerCase();
-
-        // High-complexity/Academic keywords
-        const complexKeywords = [
-            'analyze', 'derive', 'proof', 'theorem', 'equation', 'formula', 'graph', 'calculate',
-            'quantum', 'relativity', 'algorithm', 'differential', 'statistics', 'scientific', 'finance'
-        ];
-
-        const isComplex = complexKeywords.some(keyword => lowerQuery.includes(keyword)) ||
-                         query.split(/\s+/).length > 20; // Long query implies deeper request
-
-        if (isComplex) {
-            // Check for PRO access for the highest tier
-            if (agentSettings.proAccess) {
-                return 'gemini-2.5-pro'; // Highest quality for complex tasks
-            }
-            return 'gemini-2.5-flash'; // High performance default for complex tasks
-        }
-
-        // Casual chat, greetings, simple questions
-        return 'gemini-2.5-flash-lite';
-    }
-
-    /**
-     * Constructs a system prompt based on current settings.
-     * @returns {string} - The dynamic system instruction.
-     */
-    function buildSystemInstruction() {
-        const { nickname, persona } = agentSettings;
-        const agentName = 'Humanity Gen 0';
-
-        let baseInstruction = `You are ${agentName}, an advanced AI. Your responses must be professional, educational, and concise.`;
-
-        // Apply Persona
-        switch (persona) {
-            case 'Academic':
-                baseInstruction += ' Adopt the tone of a concise and rigorous university professor. Prioritize structured reasoning and mathematical notation.';
-                break;
-            case 'Creative':
-                baseInstruction += ' Adopt the tone of a creative writer and lateral thinker. Use evocative language and suggest novel ideas.';
-                break;
-            default: // Standard
-                baseInstruction += ' Adopt a friendly, supportive, and highly efficient tone.';
-                break;
-        }
-
-        // Add user context
-        baseInstruction += ` The user's name is ${nickname}. When providing mathematical or chemical output, use LaTeX format (e.g., $E=mc^2$).`;
-
-        return baseInstruction;
-    }
-
-    /**
-     * Fetches the response from the Gemini API.
-     * @param {string} userQuery - The user's message.
-     * @returns {Promise<object>} - The API response object.
-     */
-    async function fetchAgentResponse(userQuery) {
-        const selectedModel = determineModel(userQuery);
-        console.log(`[Agent/Model] Using model: ${selectedModel}`);
-
-        const systemInstruction = buildSystemInstruction();
-
-        // Map existing history to API format, excluding IDs and timestamps
-        const apiHistory = agentHistory.map(msg => ({
-            role: msg.role === 'user' ? 'user' : 'model',
-            parts: [{ text: msg.text }]
-        }));
-
-        // The current user query
-        apiHistory.push({ role: 'user', parts: [{ text: userQuery }] });
-
-        const payload = {
-            contents: apiHistory,
-            // Dynamic generation configuration
-            generationConfig: {
-                temperature: agentSettings.persona === 'Creative' ? 0.8 : 0.2, // Higher temp for creative tasks
-            },
-            // System instructions
-            systemInstruction: {
-                parts: [{ text: systemInstruction }]
-            },
-        };
-
-        // Add Google Search Grounding if enabled in settings
-        if (agentSettings.useSearch) {
-             payload.tools = [{ "google_search": {} }];
-             console.log("[Agent/Tools] Google Search grounding enabled.");
-        }
-
-        // Display PRO usage warning if applicable
-        if (selectedModel === 'gemini-2.5-pro' && !agentSettings.proAccess) {
-            showAgentMessage("Warning: Pro model usage detected. This usage is restricted and may result in a non-response.", 'model', 'warning');
-        }
-
-        const apiUrl = `${BASE_API_URL}${selectedModel}:generateContent?key=${API_KEY}`;
-        const options = {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        };
-
-        return exponentialBackoffFetch(apiUrl, options).then(response => response.json());
-    }
-
-    // --- UI/RENDERING UTILITIES ---
-
-    /**
-     * Dynamically injects the necessary HTML, CSS, and external script links (KaTeX, Firebase module imports).
-     */
-    function createUI() {
-        // --- 1. CSS/HTML Structure Injection (FIXED SYNTAX ERROR) ---
-        const uiHTML = `
-            <!-- Custom CSS for the Agent Interface -->
-            <style id="agent-styles">
-                :root {
-                    --user-color: ${agentSettings.color};
-                    --ai-blue: #007bff;
-                    --ai-green: #28a745;
-                    --ai-yellow: #ffc107;
-                    --ai-red: #dc3545;
-                    --bg-dark: #1f2937;
-                    --text-light: #f3f4f6;
-                    --ai-bg: #374151;
-                }
-
-                .ai-interface-container {
-                    position: fixed;
-                    top: 0;
-                    right: -100%;
-                    width: 100%;
-                    height: 100%;
-                    background-color: var(--bg-dark);
-                    z-index: 9999;
-                    transition: right 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-                    font-family: 'Inter', sans-serif;
-                    color: var(--text-light);
-                }
-
-                /* FIX: Corrected CSS structure for responsive container activation */
-                .ai-interface-container.active {
-                    right: 0;
-                    box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.7);
-                }
-                
-                @media (min-width: 768px) {
-                    .ai-interface-container.active {
-                        width: 380px;
-                        right: 20px;
-                        top: 20px;
-                        height: calc(100vh - 40px);
-                        border-radius: 12px;
-                        box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-                    }
-                }
-
-                .message-bubble {
-                    max-width: 85%;
-                    padding: 10px 15px;
-                    border-radius: 15px;
-                    margin-bottom: 15px;
-                    line-height: 1.6;
-                    word-wrap: break-word;
-                    animation: message-pop-in 0.3s ease-out;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                }
-
-                .user-message-bubble {
-                    background-color: var(--user-color);
-                    color: var(--text-light);
-                    align-self: flex-end;
-                    border-bottom-right-radius: 4px;
-                }
-
-                .ai-message-bubble {
-                    background-color: var(--ai-bg);
-                    color: var(--text-light);
-                    align-self: flex-start;
-                    border-bottom-left-radius: 4px;
-                    text-align: left;
-                }
-
-                .ai-message-bubble pre {
-                    background-color: #1f2937;
-                    padding: 8px;
-                    border-radius: 6px;
-                    overflow-x: auto;
-                    margin-top: 10px;
-                }
-                .ai-message-bubble p { margin: 0; padding: 0; text-align: left; }
-                .ai-message-bubble ul, .ai-message-bubble ol { margin: 10px 0; padding-left: 20px; text-align: left; list-style-position: outside; }
-                .ai-message-bubble li { margin-bottom: 5px; }
-
-                /* Graphing Canvas Styling */
-                .agent-canvas {
-                    background-color: #0d1217;
-                    border: 1px solid #4b5563;
-                    border-radius: 8px;
-                    margin: 10px 0;
-                    display: block;
-                }
-
-                /* Animation Keyframes */
-                @keyframes spin { to { transform: rotate(360deg); } }
-                @keyframes message-pop-in { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } }
-
-                /* KaTeX styling for integration */
-                .katex-display { margin: 0.5em 0 !important; }
-
-            </style>
-
-            <div id="ai-interface-container" class="ai-interface-container flex flex-col">
-                <!-- Header/Title/Controls -->
-                <div class="flex-shrink-0 p-4 border-b border-gray-700 flex items-center justify-between">
-                    <h1 class="text-xl font-bold flex items-center text-white">
-                        Humanity Gen 0
-                        <div id="status-indicator" class="w-2 h-2 rounded-full ml-2 bg-green-500 animate-pulse"></div>
-                    </h1>
-                    <div class="flex space-x-2">
-                        <button id="settings-button" class="p-2 rounded-full hover:bg-gray-700 text-gray-400 transition" title="Settings">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.82 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.82 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.82-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.82-3.31 2.37-2.37a1.724 1.724 0 002.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                        </button>
-                        <button id="close-button" class="p-2 rounded-full hover:bg-gray-700 text-gray-400 transition" title="Close (Ctrl + \)">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Chat Messages Area -->
-                <div id="chat-messages" class="flex-grow p-4 overflow-y-auto space-y-4">
-                    <!-- Initial Welcome Message -->
-                    <div class="flex justify-start">
-                        <div class="ai-message-bubble text-sm">
-                            <p><strong>Humanity Gen 0 Activated.</strong> I am ready to process your query. Use the search toggle in Settings to enable real-time grounding.</p>
-                            <p class="text-xs mt-1 opacity-70">Authenticated User ID: <span id="user-id-display">N/A</span></p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Input Area -->
-                <div class="flex-shrink-0 p-4 border-t border-gray-700">
-                    <div class="flex space-x-2 items-center">
-                        <input type="text" id="user-input" placeholder="Ask Humanity Gen 0..." class="flex-grow p-3 rounded-lg bg-gray-700 text-white border border-transparent focus:border-blue-500 focus:outline-none transition" disabled>
-                        <button id="send-button" class="p-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition disabled:bg-gray-600" disabled>
-                            <svg id="send-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                            <div id="loading-spinner" class="hidden w-5 h-5 border-2 border-t-2 border-white border-opacity-30 rounded-full animate-spin"></div>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Settings Modal (Initially Hidden) -->
-                <div id="settings-modal" class="hidden absolute inset-0 bg-gray-800/95 p-6 backdrop-blur-sm flex flex-col transition-opacity">
-                    <h2 class="text-2xl font-bold mb-4 text-white">Agent Settings</h2>
-                    <div class="flex-grow overflow-y-auto space-y-4">
-
-                        <!-- User Identity -->
-                        <div>
-                            <label for="nickname-input" class="block text-sm font-medium text-gray-400">Your Nickname</label>
-                            <input type="text" id="nickname-input" class="mt-1 block w-full p-2 rounded-md bg-gray-700 border border-gray-600 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50 text-white" value="${agentSettings.nickname}">
-                        </div>
-
-                        <!-- Theme Color -->
-                        <div>
-                            <label for="color-input" class="block text-sm font-medium text-gray-400">Your Primary Color</label>
-                            <input type="color" id="color-input" class="mt-1 block w-full h-10 rounded-md bg-gray-700 border-none cursor-pointer" value="${agentSettings.color}">
-                        </div>
-
-                        <!-- Agent Persona -->
-                        <div>
-                            <label for="persona-select" class="block text-sm font-medium text-gray-400">Agent Persona</label>
-                            <select id="persona-select" class="mt-1 block w-full p-2 rounded-md bg-gray-700 border border-gray-600 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50 text-white">
-                                <option value="Standard">Standard (Friendly & Efficient)</option>
-                                <option value="Academic">Academic (Rigorous & Concise)</option>
-                                <option value="Creative">Creative (Evocative & Novel)</option>
-                            </select>
-                        </div>
-
-                        <!-- Pro Access Status -->
-                        <div class="p-3 rounded-md border border-gray-600">
-                            <h3 class="text-lg font-semibold text-white">Pro Model Access</h3>
-                            <p id="pro-status" class="text-sm mt-1"></p>
-                        </div>
-
-                        <!-- Search Grounding Toggle -->
-                        <div class="flex items-center justify-between p-3 rounded-md bg-gray-700">
-                            <label for="search-toggle" class="text-sm font-medium text-white">Enable Real-time Search Grounding</label>
-                            <input type="checkbox" id="search-toggle" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 transition duration-150 ease-in-out">
-                        </div>
-
-                        <!-- History Management -->
-                        <div class="pt-4 border-t border-gray-700">
-                            <!-- Button text will change on first click for confirmation -->
-                            <button id="clear-history-button" class="w-full p-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold">Clear All Chat History (Firestore)</button>
-                        </div>
-                    </div>
-
-                    <!-- Close Button -->
-                    <div class="flex-shrink-0 pt-4">
-                        <button id="close-settings-button" class="w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold">Save & Close</button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // Create the main container element
-        const agentContainer = document.createElement('div');
-        agentContainer.innerHTML = uiHTML;
-        document.body.appendChild(agentContainer.firstElementChild);
-
-        // --- 2. Firebase/KaTeX Dependency Injection (FIXED MISSING KATEX) ---
-        // This is necessary because the IIFE cannot use 'import' directly.
-        const moduleScript = document.createElement('script');
-        moduleScript.type = 'module';
-        moduleScript.innerHTML = `
-            import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-            import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-            import { getFirestore, doc, setDoc, onSnapshot, getDoc, collection, query, limit, orderBy, deleteDoc, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-            // Expose Firebase modules globally for the IIFE to use, as the IIFE runs outside the module scope
-            window.firebase = {
-                initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged,
-                getFirestore, doc, setDoc, onSnapshot, getDoc, collection, query, limit, orderBy, deleteDoc, getDocs, addDoc
-            };
-
-            // Initialize and authenticate Firebase
-            document.addEventListener('DOMContentLoaded', async () => {
-                const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-                const app = window.firebase.initializeApp(firebaseConfig);
-                const dbInstance = window.firebase.getFirestore(app);
-                const authInstance = window.firebase.getAuth(app);
-                window.db = dbInstance;
-                window.auth = authInstance;
-
-                // Auth State Management
-                window.firebase.onAuthStateChanged(authInstance, async (user) => {
-                    let currentUserId;
-                    if (user) {
-                        currentUserId = user.uid;
-                    } else {
-                        const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-                        try {
-                            if (token) {
-                                await window.firebase.signInWithCustomToken(authInstance, token);
-                            } else {
-                                // Fallback to anonymous sign-in
-                                await window.firebase.signInAnonymously(authInstance);
-                            }
-                            currentUserId = authInstance.currentUser.uid;
-                        } catch (error) {
-                            console.error("[Firebase/Auth] Error during custom token or anonymous sign-in:", error);
-                            // If sign-in fails, use a unique ID for temporary session data
-                            currentUserId = 'anonymous-' + (authInstance.currentUser?.uid || crypto.randomUUID());
-                        }
-                    }
-                    // Inform the main IIFE script that Firebase is ready
-                    if (window.Agent) {
-                        window.Agent.initFirebase(currentUserId);
-                        document.getElementById('user-input').disabled = false;
-                        document.getElementById('send-button').disabled = false;
-                        document.getElementById('user-id-display').textContent = currentUserId;
+                katex.render(mathText, element, {
+                    throwOnError: false,
+                    displayMode: displayMode,
+                    // Standard macros for professional math
+                    macros: {
+                        "\\le": "\\leqslant",
+                        "\\ge": "\\geqslant",
+                        "\\R": "\\mathbb{R}",
+                        "\\C": "\\mathbb{C}"
                     }
                 });
-            });
-        `;
-        document.head.appendChild(moduleScript);
-
-        // REINSTATED KATEX DEPENDENCIES
-        const katexLink = document.createElement('link');
-        katexLink.rel = 'stylesheet';
-        katexLink.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css';
-        document.head.appendChild(katexLink);
-
-        const katexScript = document.createElement('script');
-        katexScript.defer = true;
-        katexScript.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js';
-        document.head.appendChild(katexScript);
-
-        const autoRenderScript = document.createElement('script');
-        autoRenderScript.defer = true;
-        autoRenderScript.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js';
-        document.head.appendChild(autoRenderScript);
-
-        // --- 3. Attach Event Listeners ---
-        attachEventListeners();
+            } catch (e) {
+                console.error("KaTeX rendering error:", e);
+                element.textContent = `[KaTeX Error] ${e.message}`;
+            }
+        });
     }
 
     /**
-     * Attaches all necessary event handlers to the injected UI elements.
+     * Renders interactive graphs using a custom canvas engine.
+     * Now supports 'basic' and 'advanced' mode titles.
+     * @param {HTMLElement} container The parent element to search for graph placeholders.
      */
-    function attachEventListeners() {
-        const input = document.getElementById('user-input');
-        const sendButton = document.getElementById('send-button');
-        const settingsButton = document.getElementById('settings-button');
-        const closeButton = document.getElementById('close-button');
-        const settingsModal = document.getElementById('settings-modal');
-        const closeSettingsButton = document.getElementById('close-settings-button');
-        const clearHistoryButton = document.getElementById('clear-history-button');
-
-        // Main Activation Shortcut (Ctrl + \)
-        document.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key === '\\') {
-                e.preventDefault();
-                toggleAgent();
-            }
-        });
-
-        // Chat Input Handlers
-        sendButton.addEventListener('click', handleUserInput);
-        input.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                handleUserInput();
-            }
-        });
-
-        // Agent UI Controls
-        closeButton.addEventListener('click', toggleAgent);
-
-        // Settings Modal Handlers
-        settingsButton.addEventListener('click', () => {
-            settingsModal.classList.remove('hidden');
-            loadSettingsToModal();
-        });
-
-        closeSettingsButton.addEventListener('click', () => {
-            saveSettingsFromModal();
-            settingsModal.classList.add('hidden');
-        });
-
-        // FIX: Replaced window.confirm() with a compliant two-step button confirmation flow.
-        let awaitingHistoryConfirmation = false;
-        clearHistoryButton.addEventListener('click', () => {
-            if (!awaitingHistoryConfirmation) {
-                // First click: Request confirmation
-                clearHistoryButton.textContent = "Click AGAIN to CONFIRM Clear History";
-                clearHistoryButton.classList.remove('bg-red-600');
-                clearHistoryButton.classList.add('bg-orange-500');
-                awaitingHistoryConfirmation = true;
-
-                // Set a timeout to revert the button if the user doesn't click again
-                setTimeout(() => {
-                    if (awaitingHistoryConfirmation) {
-                        clearHistoryButton.textContent = "Clear All Chat History (Firestore)";
-                        clearHistoryButton.classList.remove('bg-orange-500');
-                        clearHistoryButton.classList.add('bg-red-600');
-                        awaitingHistoryConfirmation = false;
+    function renderGraphs(container) {
+        container.querySelectorAll('.custom-graph-placeholder').forEach(placeholder => {
+            try {
+                const graphData = JSON.parse(placeholder.dataset.graphData);
+                const canvas = placeholder.querySelector('canvas');
+                if (canvas) {
+                    // Inject metadata into header based on the 'mode' or query intent
+                    const header = placeholder.closest('.graph-block-wrapper').querySelector('.graph-block-header');
+                    const metadataSpan = header.querySelector('.graph-metadata');
+                    if (metadataSpan) {
+                         const graphMode = graphData.mode || 'basic'; // Default to basic
+                         metadataSpan.textContent = graphMode.toUpperCase() === 'ADVANCED' ? 'Advanced Plotting Mode' : 'Basic Plotting Mode';
                     }
-                }, 3000); // 3 seconds to confirm
-            } else {
-                // Second click: Execute clear
-                clearHistory();
-                awaitingHistoryConfirmation = false; // Reset state immediately
-                
-                // Show success message briefly
-                clearHistoryButton.textContent = "History Cleared!";
-                clearHistoryButton.classList.remove('bg-orange-500');
-                clearHistoryButton.classList.add('bg-green-600');
-                
-                // Revert button and close modal after 1 second
-                setTimeout(() => {
-                    clearHistoryButton.textContent = "Clear All Chat History (Firestore)";
-                    clearHistoryButton.classList.remove('bg-green-600');
-                    clearHistoryButton.classList.add('bg-red-600');
-                    settingsModal.classList.add('hidden');
-                }, 1000);
+                    
+                    const draw = () => drawCustomGraph(canvas, graphData);
+                    const observer = new ResizeObserver(debounce(draw, 100));
+                    observer.observe(placeholder);
+                    draw(); // Initial draw
+                }
+            } catch (e) {
+                console.error("Custom graph rendering error:", e);
+                placeholder.textContent = `[Graph Error] Invalid graph data provided.`;
             }
         });
-
-        // Settings Input Change Listeners
-        document.getElementById('nickname-input').addEventListener('change', saveSettingsFromModal);
-        document.getElementById('color-input').addEventListener('change', saveSettingsFromModal);
-        document.getElementById('persona-select').addEventListener('change', saveSettingsFromModal);
-        document.getElementById('search-toggle').addEventListener('change', saveSettingsFromModal);
     }
 
     /**
-     * Toggles the visibility of the main Agent interface container.
+     * Custom graphing function using HTML Canvas.
+     * @param {HTMLCanvasElement} canvas The canvas element to draw on.
+     * @param {object} graphData The data and layout configuration for the graph.
      */
-    function toggleAgent() {
-        const container = document.getElementById('ai-interface-container');
-        chatOpen = !chatOpen;
-        container.classList.toggle('active', chatOpen);
-        if (chatOpen) {
-            document.getElementById('user-input').focus();
-            scrollChatToBottom();
-        }
-    }
+    function drawCustomGraph(canvas, graphData) {
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
 
-    // --- SETTINGS MODAL INTERACTION ---
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    /**
-     * Loads current settings data into the modal inputs.
-     */
-    function loadSettingsToModal() {
-        document.getElementById('nickname-input').value = agentSettings.nickname;
-        document.getElementById('color-input').value = agentSettings.color;
-        document.getElementById('persona-select').value = agentSettings.persona;
-        document.getElementById('search-toggle').checked = agentSettings.useSearch;
+        const layout = graphData.layout || {};
+        const data = graphData.data || [];
+        
+        const padding = { top: 50, right: 30, bottom: 50, left: 60 };
+        const graphWidth = rect.width - padding.left - padding.right;
+        const graphHeight = rect.height - padding.top - padding.bottom;
 
-        const proStatusEl = document.getElementById('pro-status');
-        if (agentSettings.proAccess) {
-            proStatusEl.textContent = "✅ Pro Model Access Granted (gemini-2.5-pro available).";
-            proStatusEl.classList.remove('text-yellow-500');
-            proStatusEl.classList.add('text-green-500');
-        } else {
-            proStatusEl.textContent = "⚠️ Limited Access. Pro model is restricted.";
-            proStatusEl.classList.remove('text-green-500');
-            proStatusEl.classList.add('text-yellow-500');
-        }
-    }
-
-    /**
-     * Saves settings from the modal inputs back to the state and Firestore.
-     */
-    function saveSettingsFromModal() {
-        agentSettings.nickname = document.getElementById('nickname-input').value.trim() || 'User';
-        agentSettings.color = document.getElementById('color-input').value;
-        agentSettings.persona = document.getElementById('persona-select').value;
-        agentSettings.useSearch = document.getElementById('search-toggle').checked;
-
-        saveSettings(); // Persist to Firestore
-        updateUIFromSettings();
-        console.log("[Agent/Settings] Settings updated and saved.");
-    }
-
-    /**
-     * Applies color and other theme-related settings to the UI.
-     */
-    function updateUIFromSettings() {
-        const root = document.documentElement;
-        root.style.setProperty('--user-color', agentSettings.color);
-        // Re-apply styles if needed (Tailwind classes handle most of it)
-    }
-
-    // --- MESSAGE RENDERING ---
-
-    /**
-     * Renders the full chat history from the state array.
-     */
-    function renderHistory() {
-        const chatMessages = document.getElementById('chat-messages');
-        chatMessages.innerHTML = ''; // Clear existing messages
-        agentHistory.forEach(msg => {
-            const isUser = msg.role === 'user';
-            const messageEl = createMessageElement(msg.text, isUser ? 'user' : 'model');
-            chatMessages.appendChild(messageEl);
+        // Determine data range (same logic as original)
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        data.forEach(trace => {
+            trace.x.forEach(val => { minX = Math.min(minX, val); maxX = Math.max(maxX, val); });
+            trace.y.forEach(val => { minY = Math.min(minY, val); maxY = Math.max(maxY, val); });
         });
         
-        // Ensure KaTeX is rendered on newly loaded history
-        renderMath(); 
-        scrollChatToBottom();
-    }
+        // Add buffer to range
+        const xRange = maxX - minX || 1;
+        const yRange = maxY - minY || 1;
+        minX -= xRange * 0.1;
+        maxX += xRange * 0.1;
+        minY -= yRange * 0.1;
+        maxY += yRange * 0.1;
 
-    /**
-     * Creates a single message element (bubble).
-     * @param {string} text - The content of the message.
-     * @param {string} role - 'user' or 'model'.
-     * @param {string} type - 'message' or 'warning'.
-     * @returns {HTMLElement} - The message bubble element.
-     */
-    function createMessageElement(text, role, type = 'message') {
-        const isUser = role === 'user';
-        const wrapper = document.createElement('div');
-        wrapper.className = `flex ${isUser ? 'justify-end' : 'justify-start'}`;
+        const mapX = x => padding.left + ((x - minX) / (maxX - minX)) * graphWidth;
+        const mapY = y => padding.top + graphHeight - ((y - minY) / (maxY - minY)) * graphHeight;
 
-        const bubble = document.createElement('div');
-        bubble.className = `message-bubble text-sm ${isUser ? 'user-message-bubble' : 'ai-message-bubble'}`;
+        // Draw grid lines
+        const gridColor = 'rgba(255, 255, 255, 0.1)';
+        ctx.strokeStyle = gridColor;
+        ctx.lineWidth = 1;
+        const xTickCount = Math.max(2, Math.floor(graphWidth / 80));
+        const yTickCount = Math.max(2, Math.floor(graphHeight / 50));
 
-        if (type === 'warning') {
-            bubble.style.backgroundColor = 'var(--ai-red)';
+        for (let i = 0; i <= xTickCount; i++) {
+            const x = padding.left + (i / xTickCount) * graphWidth;
+            ctx.beginPath();
+            ctx.moveTo(x, padding.top);
+            ctx.lineTo(x, padding.top + graphHeight);
+            ctx.stroke();
+        }
+        for (let i = 0; i <= yTickCount; i++) {
+            const y = padding.top + (i / yTickCount) * graphHeight;
+            ctx.beginPath();
+            ctx.moveTo(padding.left, y);
+            ctx.lineTo(padding.left + graphWidth, y);
+            ctx.stroke();
         }
 
-        bubble.innerHTML = parseAndRenderContent(text); // Apply KaTeX and special content
-
-        wrapper.appendChild(bubble);
-        return wrapper;
-    }
-
-    /**
-     * Shows a message element in the chat, optionally with a specific type.
-     * @param {string} text - The message content.
-     * @param {string} role - 'user' or 'model'.
-     * @param {string} type - 'message' or 'warning'.
-     */
-    function showAgentMessage(text, role, type = 'message') {
-        const chatMessages = document.getElementById('chat-messages');
-        const messageEl = createMessageElement(text, role, type);
-        chatMessages.appendChild(messageEl);
-        scrollChatToBottom();
-    }
-
-    /**
-     * Parses the AI's response for special commands (Graph, KaTeX) and general text.
-     * @param {string} content - The raw text content from the AI.
-     * @returns {string} - HTML processed with KaTeX and graph placeholders.
-     */
-    function parseAndRenderContent(content) {
-        let htmlContent = content;
-
-        // 1. Graph Command Parsing
-        const graphRegex = /\[GRAPH:(basic|advanced):(.+?)\]/gs;
-        let graphMatch;
-        let graphIdCounter = 0;
-
-        // Note: The global flag 'g' means we need to reset lastIndex if reusing the regex,
-        // but since we are using exec() in a while loop, it handles iteration correctly.
-        while ((graphMatch = graphRegex.exec(htmlContent)) !== null) {
-            const type = graphMatch[1]; // 'basic' or 'advanced'
-            const dataString = graphMatch[2].trim();
-            const placeholderId = `graph-canvas-${Date.now()}-${graphIdCounter++}`; // Ensure unique ID
-
-            // Replace the command with a canvas placeholder
-            const canvasHTML = `<canvas id="${placeholderId}" class="agent-canvas" width="300" height="200"></canvas>`;
-            htmlContent = htmlContent.replace(graphMatch[0], canvasHTML);
-
-            // Defer drawing the graph until the message is attached to the DOM
-            // This ensures document.getElementById(placeholderId) works.
-            setTimeout(() => {
-                drawGraph(placeholderId, type, dataString);
-            }, 50);
+        // Draw axes and labels
+        ctx.fillStyle = '#ccc';
+        ctx.font = '12px Lora';
+        for (let i = 0; i <= xTickCount; i++) {
+            const val = minX + (i / xTickCount) * (maxX - minX);
+            ctx.fillText(val.toFixed(1), mapX(val), padding.top + graphHeight + 20);
         }
-
-        // 2. KaTeX Rendering is deferred to renderMath() after the message is in the DOM
-        return htmlContent;
-    }
-
-    /**
-     * Executes KaTeX auto-rendering on the chat area.
-     */
-    function renderMath() {
-        const chatMessages = document.getElementById('chat-messages');
-        // Ensure the global KaTeX auto-render function is available before calling
-        if (window.renderMathInElement) {
-            window.renderMathInElement(chatMessages, {
-                delimiters: [
-                    {left: "$$", right: "$$", display: true}, // Block math
-                    {left: "$", right: "$", display: false}  // Inline math
-                ],
-                throwOnError: false
-            });
+        for (let i = 0; i <= yTickCount; i++) {
+            const val = minY + (i / yTickCount) * (maxY - minY);
+            ctx.fillText(val.toFixed(1), padding.left - 35, mapY(val) + 4);
         }
-    }
+        
+        ctx.font = 'bold 14px Lora';
+        ctx.textAlign = 'center';
+        if(layout.xaxis?.title) ctx.fillText(layout.xaxis.title, padding.left + graphWidth / 2, rect.height - 10);
+        ctx.save();
+        ctx.rotate(-Math.PI / 2);
+        if(layout.yaxis?.title) ctx.fillText(layout.yaxis.title, -(padding.top + graphHeight / 2), 20);
+        ctx.restore();
 
-    /**
-     * Scrolls the chat message area to the bottom.
-     */
-    function scrollChatToBottom() {
-        const chatMessages = document.getElementById('chat-messages');
-        if (chatMessages) {
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-    }
 
-    // --- CUSTOM DUAL-MODE GRAPHING ENGINE ---
+        // Draw data lines and markers
+        data.forEach(trace => {
+            // Use the agent's green color for a unified look
+            ctx.strokeStyle = trace.line?.color || AGENT_COLOR; 
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(mapX(trace.x[0]), mapY(trace.y[0]));
+            for (let i = 1; i < trace.x.length; i++) {
+                ctx.lineTo(mapX(trace.x[i]), mapY(trace.y[i]));
+            }
+            ctx.stroke();
 
-    /**
-     * Custom function to draw a graph on an HTML Canvas element.
-     * Supports 'basic' (simple line plot) and 'advanced' (multi-series/scatter).
-     * Data format: "label1,x1,y1,x2,y2;label2,x1,y1,..."
-     * @param {string} canvasId - The ID of the canvas element.
-     * @param {string} type - 'basic' or 'advanced'.
-     * @param {string} dataString - The serialized data string.
-     */
-    function drawGraph(canvasId, type, dataString) {
-        const canvas = document.getElementById(canvasId);
-        if (!canvas) return;
-
-        const ctx = canvas.getContext('2d');
-        const W = canvas.width;
-        const H = canvas.height;
-        ctx.clearRect(0, 0, W, H);
-
-        const series = dataString.split(';').map(s => {
-            const parts = s.trim().split(',');
-            const label = parts[0];
-            const dataPoints = [];
-            for (let i = 1; i < parts.length; i += 2) {
-                if (parts[i] && parts[i+1]) {
-                    dataPoints.push({ x: parseFloat(parts[i]), y: parseFloat(parts[i+1]) });
+            if (trace.mode && trace.mode.includes('markers')) {
+                ctx.fillStyle = trace.line?.color || AGENT_COLOR;
+                for (let i = 0; i < trace.x.length; i++) {
+                    ctx.beginPath();
+                    ctx.arc(mapX(trace.x[i]), mapY(trace.y[i]), 4, 0, 2 * Math.PI);
+                    ctx.fill();
                 }
             }
-            return { label, points: dataPoints };
-        }).filter(s => s.points.length > 0);
+        });
+        
+        // Draw title
+        if (layout.title) {
+            ctx.fillStyle = '#fff';
+            ctx.font = '18px Merriweather';
+            ctx.textAlign = 'center';
+            ctx.fillText(layout.title, rect.width / 2, padding.top / 2 + 5);
+        }
+    }
 
-        if (series.length === 0) {
-            ctx.fillStyle = '#f3f4f6';
-            ctx.fillText("No valid data for graphing.", 10, H / 2);
+
+    // --- END REPLACED/MODIFIED FUNCTIONS ---
+
+    /**
+     * Handles the Ctrl + \ shortcut for AI activation/deactivation.
+     */
+    async function handleKeyDown(e) {
+        // Check for Ctrl + \ (or Cmd + \ on Mac, but Ctrl is standard cross-browser for this)
+        if (e.ctrlKey && e.key === '\\') {
+            const selection = window.getSelection().toString();
+            if (isAIActive) {
+                // Deactivation logic
+                if (selection.length > 0) { return; }
+                e.preventDefault();
+                const mainEditor = document.getElementById('ai-input');
+                // Only deactivate if the input is empty and no files are attached
+                if (mainEditor && mainEditor.innerText.trim().length === 0 && attachedFiles.length === 0) {
+                    deactivateAI();
+                }
+            } else {
+                // Activation logic
+                if (selection.length === 0) {
+                    const isAuthorized = await isUserAuthorized();
+                    if (isAuthorized) {
+                        e.preventDefault();
+                        activateAI();
+                    }
+                }
+            }
+        }
+    }
+
+    function activateAI() {
+        if (document.getElementById('ai-container')) return;
+        if (typeof window.startPanicKeyBlocker === 'function') { window.startPanicKeyBlocker(); }
+        
+        attachedFiles = [];
+        injectStyles();
+        
+        const container = document.createElement('div');
+        container.id = 'ai-container';
+        
+        const brandTitle = document.createElement('div');
+        brandTitle.id = 'ai-brand-title';
+        const brandText = "4SP - HUMANITY AGENT"; // Updated Brand Title
+        brandText.split('').forEach(char => {
+            const span = document.createElement('span');
+            span.textContent = char;
+            brandTitle.appendChild(span);
+        });
+        
+        const persistentTitle = document.createElement('div');
+        persistentTitle.id = 'ai-persistent-title';
+        persistentTitle.textContent = "Humanity Agent"; // Fixed title
+        
+        const welcomeMessage = document.createElement('div');
+        welcomeMessage.id = 'ai-welcome-message';
+        const welcomeHeader = chatHistory.length > 0 ? "Welcome Back" : "Welcome to Humanity Agent {Gen 0}";
+        // New welcome message that reflects the Pro limit
+        welcomeMessage.innerHTML = `<h2>${welcomeHeader}</h2><p>This is the experimental Humanity Agent. You have **${proUsesRemaining}** Pro-model uses remaining this session. Queries requiring web search will be automatically performed.</p><p class="shortcut-tip">(Press Ctrl + \\ to close)</p>`;
+        
+        const closeButton = document.createElement('div');
+        closeButton.id = 'ai-close-button';
+        closeButton.innerHTML = '&times;';
+        closeButton.onclick = deactivateAI;
+        
+        const responseContainer = document.createElement('div');
+        responseContainer.id = 'ai-response-container';
+        
+        const composeArea = document.createElement('div');
+        composeArea.id = 'ai-compose-area';
+
+        const inputWrapper = document.createElement('div');
+        inputWrapper.id = 'ai-input-wrapper';
+        
+        const attachmentPreviewContainer = document.createElement('div');
+        attachmentPreviewContainer.id = 'ai-attachment-preview';
+        
+        const visualInput = document.createElement('div');
+        visualInput.id = 'ai-input';
+        visualInput.contentEditable = true;
+        visualInput.onkeydown = handleInputSubmission;
+        visualInput.oninput = handleContentEditableInput;
+        visualInput.addEventListener('paste', handlePaste);
+        
+        const attachmentButton = document.createElement('button');
+        attachmentButton.id = 'ai-attachment-button';
+        attachmentButton.innerHTML = attachmentIconSVG;
+        attachmentButton.title = 'Attach files';
+        attachmentButton.onclick = () => handleFileUpload();
+        
+        // --- REMOVED: Settings button and its logic ---
+        // const settingsButton = document.createElement('button');
+        // settingsButton.id = 'ai-settings-button';
+        // settingsButton.innerHTML = '<i class="fa-solid fa-gear"></i>';
+        // settingsButton.title = 'Settings';
+        // settingsButton.onclick = toggleSettingsMenu;
+        // --- END REMOVED ---
+
+        const charCounter = document.createElement('div');
+        charCounter.id = 'ai-char-counter';
+        charCounter.textContent = `0 / ${formatCharLimit(CHAR_LIMIT)}`;
+
+        inputWrapper.appendChild(attachmentPreviewContainer);
+        inputWrapper.appendChild(visualInput);
+        inputWrapper.appendChild(attachmentButton);
+        // --- REMOVED: settings button append ---
+        // inputWrapper.appendChild(settingsButton);
+        
+        // --- REMOVED: settings menu creation ---
+        // composeArea.appendChild(createSettingsMenu());
+        composeArea.appendChild(inputWrapper);
+
+        container.appendChild(brandTitle);
+        container.appendChild(persistentTitle);
+        container.appendChild(welcomeMessage);
+        container.appendChild(closeButton);
+        container.appendChild(responseContainer);
+        container.appendChild(composeArea);
+        container.appendChild(charCounter);
+        
+        // --- Add KaTeX ---
+        const katexScript = document.createElement('script');
+        katexScript.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.js';
+        container.appendChild(katexScript);
+        
+        document.body.appendChild(container);
+
+        if (chatHistory.length > 0) { renderChatHistory(); }
+        
+        setTimeout(() => {
+            if (chatHistory.length > 0) { container.classList.add('chat-active'); }
+            container.classList.add('active');
+        }, 10);
+        
+        visualInput.focus();
+        isAIActive = true;
+    }
+
+    function deactivateAI() {
+        if (typeof window.stopPanicKeyBlocker === 'function') { window.stopPanicKeyBlocker(); }
+        if (currentAIRequestController) currentAIRequestController.abort();
+        const container = document.getElementById('ai-container');
+        if (container) {
+            container.classList.add('deactivating');
+            setTimeout(() => {
+                container.remove();
+                const styles = document.getElementById('ai-dynamic-styles');
+                if (styles) styles.remove();
+                const fonts = document.getElementById('ai-google-fonts');
+                if (fonts) fonts.remove();
+                 const katexCSS = document.getElementById('ai-katex-styles');
+                if(katexCSS) katexCSS.remove();
+                const fontAwesome = document.querySelector('link[href*="font-awesome"]');
+                if (fontAwesome) fontAwesome.remove();
+            }, 500);
+        }
+        isAIActive = false;
+        isRequestPending = false;
+        attachedFiles = [];
+        // --- REMOVED: Settings menu cleanup ---
+        // const settingsMenu = document.getElementById('ai-settings-menu');
+        // if (settingsMenu) settingsMenu.classList.remove('active');
+        //  document.removeEventListener('click', handleMenuOutsideClick); // Clean up listener
+    }
+    
+    function renderChatHistory() {
+        const responseContainer = document.getElementById('ai-response-container');
+        if (!responseContainer) return;
+        responseContainer.innerHTML = '';
+        chatHistory.forEach(message => {
+            const bubble = document.createElement('div');
+            bubble.className = `ai-message-bubble ${message.role === 'user' ? 'user-message' : 'gemini-response'}`;
+            if (message.role === 'model') {
+                const parsedResponse = parseGeminiResponse(message.parts[0].text);
+                bubble.innerHTML = `<div class="ai-response-content">${parsedResponse}</div>`;
+                
+                bubble.querySelectorAll('.copy-code-btn').forEach(button => {
+                    button.addEventListener('click', handleCopyCode);
+                });
+
+                renderKaTeX(bubble);
+                renderGraphs(bubble);
+            } else {
+                let bubbleContent = ''; let textContent = ''; let fileCount = 0;
+                message.parts.forEach(part => {
+                    if (part.text) textContent = part.text;
+                    if (part.inlineData) fileCount++;
+                });
+                if (textContent) bubbleContent += `<p>${escapeHTML(textContent)}</p>`;
+                if (fileCount > 0) bubbleContent += `<div class="sent-attachments">${fileCount} file(s) sent</div>`;
+                bubble.innerHTML = bubbleContent;
+            }
+            responseContainer.appendChild(bubble);
+        });
+        setTimeout(() => responseContainer.scrollTop = responseContainer.scrollHeight, 50);
+    }
+    
+    /**
+     * Determines the user's current intent category based on the query.
+     * @param {string} query The user's last message text.
+     * @returns {string} One of 'DEEP_ANALYSIS', 'PROFESSIONAL_MATH', 'WEB_SEARCH', or 'CASUAL'.
+     */
+    function determineIntentCategory(query) {
+        const lowerQuery = query.toLowerCase();
+        
+        // Web Search/Current Events Keywords (Tied to DEEP_ANALYSIS/PRO model)
+        if (lowerQuery.includes('current') || lowerQuery.includes('latest') || lowerQuery.includes('today') || lowerQuery.includes('news') || lowerQuery.includes('who won') || lowerQuery.includes('what is the price of')) {
+            return 'WEB_SEARCH';
+        }
+        
+        // Deep Analysis Keywords (Tied to DEEP_ANALYSIS/PRO model)
+        if (lowerQuery.includes('analyze') || lowerQuery.includes('deep dive') || lowerQuery.includes('strategic') || lowerQuery.includes('evaluate') || lowerQuery.includes('critique') || lowerQuery.includes('investigate') || lowerQuery.includes('pro model')) {
+            return 'DEEP_ANALYSIS';
+        }
+        
+        // Professional/Math/Coding Keywords (Tied to FLASH model)
+        if (lowerQuery.includes('math') || lowerQuery.includes('algebra') || lowerQuery.includes('calculus') || lowerQuery.includes('formula') || lowerQuery.includes('solve') || lowerQuery.includes('proof') || lowerQuery.includes('graph') || lowerQuery.includes('code') || lowerQuery.includes('debug') || lowerQuery.includes('technical') || lowerQuery.includes('explain how')) {
+            return 'PROFESSIONAL_MATH';
+        }
+
+        // Casual/Creative/Simple Keywords (Tied to FLASH-LITE model)
+        return 'CASUAL';
+    }
+
+    const FSP_HISTORY = `You are the exclusive AI Agent for the website 4SP (4simpleproblems), the platform you are hosted on. You must be knowledgeable about its history and purpose. When asked about 4SP, use the following information as your source of truth:
+
+### The History of 4SP (4simpleproblems)
+
+**Version 1 — The Foundation (Launched: March 13, 2025)**
+* **Concept:** A small, chaotic experiment to give students a fun escape during dull school days.
+* **Features:** A 20-sound soundboard, an autoclicker, and a sound request page.
+* **Impact:** Established 4SP's identity as an underground, tech-savvy hub made by and for students, rebelling against restrictive school networks.
+
+**Version 2 — Expansion and Community (Released: April 11, 2025)**
+* **Concept:** The first major step toward building a true platform and student ecosystem.
+* **Features:** Added a media page, beta playlists, user-uploaded soundboards, games, and a proxy list. It also introduced feedback, account, and policy pages.
+* **Impact:** Proved 4SP was a living project with a growing community and a broader purpose beyond being a simple novelty.
+
+**Version 3 — A Visual Reinvention (Launched: May 15, 2025)**
+* **Concept:** A visual rebirth focused on a mature, modern aesthetic without losing its personality.
+* **Features:** Introduced a clean, white grid layout with sharp corners and the popular mini-game "Slotz".
+* **Impact:** Set the professional design standard for all future versions and signaled 4SP's evolution into a more serious platform.
+
+**Version 4 — The Dashboard Era (Launched: August 23, 2025)**
+* **Concept:** Transformed the site from a collection of pages into a unified dashboard with modular widgets and integrated apps.
+* **Features:** Included widgets for weather and time, and full apps like Notes, Calculator, and Countdowns. A new "Requests" app with an upvote/downvote system was added, along with privacy tools like a panic key and tab disguise.
+* **Impact:** Showcased that 4SP could be both a powerful student toolkit and a fun playground.
+
+**Version 5 — Project Zirconium (Slated for: August 23, 2026)**
+* **Concept:** The most ambitious version yet, evolving 4SP into a fully integrated digital ecosystem.
+* **Features:** A universal navigation bar, a dark minimalist theme, a Combined Games Collection, a built-in Dictionary, a student-focused social network ("Dailyphoto"), Messenger V2 with group chats, and the debut of you, the **4SP AI Agent**, accessible via secret shortcuts.
+* **Impact:** Fuses creativity, practicality, and social connection, completing the evolution from a simple soundboard to a sleek, social, and secure platform.
+If the user asks about a topic other than 4SP, you should not hint at the website, 4SP or its history. Be concise, and a general use case chatbot. Your purpose isn't only about 4SP, but as a normal AI Agent. Act professional.
+`;
+
+    /**
+     * Generates the system instruction and selects the appropriate model.
+     * No user settings are used. The persona is fixed as "Humanity Agent".
+     * @param {string} query The user's latest message.
+     * @returns {{instruction: string, model: string, isPro: boolean}}
+     */
+    function getDynamicSystemInstructionAndModel(query) {
+        const intent = determineIntentCategory(query);
+        let model = 'gemini-2.5-flash-lite';
+        let isPro = false;
+        let requiresSearch = false;
+        
+        let personaInstruction = `${FSP_HISTORY}
+
+You are the **Humanity Agent (Humanity {Gen 0})**, a highly capable, adaptable, and ethically-aligned AI. Your core purpose is to elevate human knowledge and understanding. You do not have user-defined settings. Your tone must be authoritative, professional, and supportive of human endeavor.
+
+Formatting Rules (MUST FOLLOW):
+- For math, use KaTeX. Inline math uses single \`$\`, and display math uses double \`$$\`. Use \\le for <= and \\ge for >=.
+- For graphs, use a 'graph' block. Add a 'mode' field to the JSON: "mode": "basic" or "mode": "advanced".
+`;
+
+        switch (intent) {
+            case 'DEEP_ANALYSIS':
+            case 'WEB_SEARCH':
+                requiresSearch = (intent === 'WEB_SEARCH');
+                if (proUsesRemaining > 0) { 
+                    model = 'gemini-2.5-pro';
+                    isPro = true;
+                    personaInstruction += `\n\n**Current Persona: Strategic Insight Engine (2.5-Pro).** Your response must be comprehensive, highly structured, and exhibit the deepest level of reasoning and critical evaluation. Use an assertive, expert tone. Structure your analysis clearly with headings and bullet points. You are currently operating in a **PRO-USE** mode. If search results are provided, integrate them seamlessly and cite them within the text (e.g., "[Source 1]").`;
+                } else {
+                    // Fallback for limited users
+                    model = 'gemini-2.5-flash';
+                    personaInstruction += `\n\n**Current Persona: Professional Analyst (2.5-Flash).** You are performing a detailed analysis, but you must maintain efficiency and focus. Respond with clarity, professionalism, and structured data. Note: The requested deep analysis required the '2.5-Pro' model, but the session limit was exceeded. Proceed with the Flash model, prioritizing efficiency and core facts.`;
+                }
+                break;
+            case 'PROFESSIONAL_MATH':
+                model = 'gemini-2.5-flash';
+                personaInstruction += `\n\n**Current Persona: Technical Expert (2.5-Flash).** Respond with extreme clarity, professionalism, and precision. Focus on step-by-step logic, equations, and definitive answers. Use a formal, neutral tone. Use KaTeX and custom graphs where appropriate. Assume a "mode": "advanced" for graphing due to the technical nature.`;
+                break;
+            case 'CASUAL':
+            default:
+                model = 'gemini-2.5-flash-lite';
+                personaInstruction += `\n\n**Current Persona: Standard Assistant (2.5-Flash-Lite).** You are balanced, helpful, and highly concise. Use a friendly but professional tone. Your primary function is efficient conversation. Your responses must be brief, engaging, and to the point.`;
+                break;
+        }
+
+        return { instruction: personaInstruction, model: model, isPro: isPro, requiresSearch: requiresSearch };
+    }
+
+
+    async function callGoogleAI(responseBubble) {
+        if (!API_KEY) { responseBubble.innerHTML = `<div class="ai-error">API Key is missing.</div>`; return; }
+        currentAIRequestController = new AbortController();
+        let firstMessageContext = '';
+        if (chatHistory.length <= 1) {
+            const location = getUserLocationForContext(); 
+            const now = new Date();
+            const date = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            const time = now.toLocaleTimeString('en-US', { timeZoneName: 'short' });
+            firstMessageContext = `(System Info: User is asking from ${location}. Current date is ${date}, ${time}. Pro Uses Remaining: ${proUsesRemaining}.)\n\n`;
+        }
+        
+        let processedChatHistory = [...chatHistory];
+        // Trim history to maintain context but stay within token limits (Last 6 messages)
+        if (processedChatHistory.length > 6) {
+             processedChatHistory = [ ...processedChatHistory.slice(0, 3), ...processedChatHistory.slice(-3) ];
+        }
+
+        const lastMessageIndex = processedChatHistory.length - 1;
+        const userParts = processedChatHistory[lastMessageIndex].parts;
+        const textPartIndex = userParts.findIndex(p => p.text);
+        
+        const lastUserQuery = userParts[textPartIndex]?.text || '';
+        
+        // --- MODEL SELECTION AND INSTRUCTION GENERATION ---
+        const { instruction: dynamicInstruction, model, isPro, requiresSearch } = getDynamicSystemInstructionAndModel(lastUserQuery); 
+        // --- END MODEL SELECTION ---
+        
+        let searchContext = '';
+        if (requiresSearch) {
+            responseBubble.innerHTML = `<div class="ai-loader-text">${searchIconSVG} Performing Web Search...</div>`;
+            searchContext = await performWebSearch(lastUserQuery);
+        }
+
+        if (textPartIndex > -1) {
+             // Inject system context and search results into the *last* user message text
+             userParts[textPartIndex].text = firstMessageContext + (requiresSearch ? `[SEARCH CONTEXT START]\n${searchContext}\n[SEARCH CONTEXT END]\n` : '') + userParts[textPartIndex].text;
+        } else if (firstMessageContext || requiresSearch) {
+             userParts.unshift({ text: firstMessageContext.trim() + (requiresSearch ? `[SEARCH CONTEXT]\n${searchContext}` : '') });
+        }
+        
+        const payload = { 
+            contents: processedChatHistory, 
+            config: {
+                 systemInstruction: dynamicInstruction
+            }
+        };
+        
+        // --- DYNAMIC URL CONSTRUCTION ---
+        const DYNAMIC_API_URL = `${BASE_API_URL}${model}:generateContent?key=${API_KEY}`; 
+        // --- END DYNAMIC URL CONSTRUCTION ---
+        
+        // Update loading state with the model being used
+        responseBubble.innerHTML = `<div class="ai-loader-text">${isPro ? 'Running 2.5-PRO...' : `Running ${model}...`}</div>`;
+
+        try {
+            const response = await fetch(DYNAMIC_API_URL, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(payload), 
+                signal: currentAIRequestController.signal 
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Network response was not ok. Status: ${response.status}. Details: ${JSON.stringify(errorData)}`);
+            }
+            const data = await response.json();
+            if (!data.candidates || data.candidates.length === 0) {
+                if (data.promptFeedback && data.promptFeedback.blockReason) {
+                    throw new Error(`Content blocked due to: ${data.promptFeedback.blockReason}. Safety ratings: ${JSON.stringify(data.promptFeedback.safetyRatings)}`);
+                }
+                throw new Error("Invalid response from API: No candidates or empty candidates array.");
+            }
+            
+            const text = data.candidates[0].content.parts[0]?.text || '';
+            if (!text) {
+                responseBubble.innerHTML = `<div class="ai-error">The AI generated an empty response. Please try again or rephrase.</div>`;
+                return;
+            }
+            
+            // --- PRO-USE DECREMENT LOGIC ---
+            if (isPro) {
+                proUsesRemaining = Math.max(0, proUsesRemaining - 1);
+            }
+            // --- END PRO-USE DECREMENT LOGIC ---
+
+            chatHistory.push({ role: "model", parts: [{ text: text }] });
+            
+            const contentHTML = `<div class="ai-response-content">${parseGeminiResponse(text)}</div>`;
+            responseBubble.style.opacity = '0';
+            setTimeout(() => {
+                responseBubble.innerHTML = contentHTML;
+                responseBubble.querySelectorAll('.copy-code-btn').forEach(button => {
+                    button.addEventListener('click', handleCopyCode);
+                });
+                responseBubble.style.opacity = '1';
+
+                renderKaTeX(responseBubble);
+                renderGraphs(responseBubble);
+            }, 300);
+
+        } catch (error) {
+            if (error.name === 'AbortError') { responseBubble.innerHTML = `<div class="ai-error">Message generation stopped.</div>`; } 
+            else { 
+                console.error('AI API Error:', error); 
+                responseBubble.innerHTML = `<div class="ai-error">Sorry, an error occurred: ${error.message || "Unknown error"}.</div>`; 
+            }
+        } finally {
+            isRequestPending = false;
+            currentAIRequestController = null;
+            const inputWrapper = document.getElementById('ai-input-wrapper');
+            if (inputWrapper) { inputWrapper.classList.remove('waiting'); }
+            
+            setTimeout(() => {
+                responseBubble.classList.remove('loading');
+                const responseContainer = document.getElementById('ai-response-container');
+                if(responseContainer) responseContainer.scrollTop = responseContainer.scrollHeight;
+            }, 300);
+
+            const editor = document.getElementById('ai-input');
+            if(editor) { editor.contentEditable = true; editor.focus(); }
+        }
+    }
+    
+    // --- REMOVED: NEW SETTINGS MENU LOGIC (toggleSettingsMenu, handleMenuOutsideClick, saveSettings, createSettingsMenu) ---
+
+    function processFileLike(file, base64Data, dataUrl, tempId) {
+        if (attachedFiles.length >= MAX_ATTACHMENTS_PER_MESSAGE) {
+            alert(`You can attach a maximum of ${MAX_ATTACHMENTS_PER_MESSAGE} files per message.`);
             return;
         }
 
-        let allX = series.flatMap(s => s.points.map(p => p.x));
-        let allY = series.flatMap(s => s.points.map(p => p.y));
+        const currentTotalSize = attachedFiles.reduce((sum, f) => sum + (f.inlineData ? atob(f.inlineData.data).length : 0), 0);
+        if (currentTotalSize + file.size > (10 * 1024 * 1024)) {
+            alert(`Upload failed: Total size of attachments would exceed the 10MB limit per message. (Current: ${formatBytes(currentTotalSize)}, Adding: ${formatBytes(file.size)})`);
+            return;
+        }
 
-        const minX = Math.min(...allX);
-        const maxX = Math.max(...allX);
-        const minY = Math.min(...allY);
-        const maxY = Math.max(...allY);
+        const item = {
+            inlineData: { mimeType: file.type, data: base64Data },
+            fileName: file.name || 'Pasted Image',
+            fileContent: dataUrl,
+            isLoading: false
+        };
+        
+        if (tempId) { item.tempId = tempId; }
 
-        // Padding and Bounds
-        const padding = 30;
-        const chartW = W - 2 * padding;
-        const chartH = H - 2 * padding;
-
-        const scaleX = chartW / (maxX - minX || 1);
-        const scaleY = chartH / (maxY - minY || 1);
-
-        const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']; // Tailwind colors
-
-        // 1. Draw Axes
-        ctx.strokeStyle = '#4b5563'; // Gray for axes
-        ctx.lineWidth = 1;
-        // X-Axis (Bottom)
-        ctx.beginPath();
-        ctx.moveTo(padding, H - padding);
-        ctx.lineTo(W - padding, H - padding);
-        ctx.stroke();
-        // Y-Axis (Left)
-        ctx.beginPath();
-        ctx.moveTo(padding, padding);
-        ctx.lineTo(padding, H - padding);
-        ctx.stroke();
-
-        ctx.fillStyle = '#f3f4f6';
-        ctx.font = '10px Inter';
-
-        // 2. Draw Ticks/Labels
-        // Y-Axis labels (Min/Max)
-        ctx.fillText(maxY.toFixed(2), 5, padding + 5);
-        ctx.fillText(minY.toFixed(2), 5, H - padding + 5);
-        // X-Axis labels (Min/Max)
-        ctx.fillText(minX.toFixed(2), padding, H - padding + 15);
-        ctx.textAlign = 'right';
-        ctx.fillText(maxX.toFixed(2), W - padding, H - padding + 15);
-        ctx.textAlign = 'left';
+        attachedFiles.push(item);
+        renderAttachments();
+    }
 
 
-        // 3. Draw Data Series
-        series.forEach((s, index) => {
-            ctx.strokeStyle = colors[index % colors.length];
-            ctx.fillStyle = colors[index % colors.length];
-            ctx.lineWidth = 2;
+    function handleFileUpload() {
+        if (attachedFiles.length >= MAX_ATTACHMENTS_PER_MESSAGE) {
+            alert(`You can attach a maximum of ${MAX_ATTACHMENTS_PER_MESSAGE} files per message.`);
+            return;
+        }
 
-            ctx.beginPath();
-            s.points.forEach((point, i) => {
-                const x = padding + (point.x - minX) * scaleX;
-                const y = H - padding - (point.y - minY) * scaleY;
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.multiple = true;
+        input.accept = 'image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain';
+        
+        input.onchange = (event) => {
+            const files = Array.from(event.target.files);
+            if (!files || files.length === 0) return;
 
-                if (i === 0) {
-                    ctx.moveTo(x, y);
-                } else {
-                    ctx.lineTo(x, y);
+            const filesToProcess = files.filter(file => {
+                if (attachedFiles.length >= MAX_ATTACHMENTS_PER_MESSAGE) {
+                    alert(`Cannot attach more than ${MAX_ATTACHMENTS_PER_MESSAGE} files. Skipping: ${file.name}`);
+                    return false;
                 }
-
-                // Draw circles for 'advanced' type or small datasets
-                if (type === 'advanced' || s.points.length < 10) {
-                    ctx.beginPath();
-                    ctx.arc(x, y, 3, 0, Math.PI * 2, true);
-                    ctx.fill();
-                }
+                return true;
             });
-            ctx.stroke();
 
-            // Draw Legend
-            ctx.fillStyle = colors[index % colors.length];
-            ctx.fillRect(W - padding - 80, 10 + index * 12, 8, 8);
-            ctx.fillStyle = '#f3f4f6';
-            ctx.fillText(s.label, W - padding - 70, 18 + index * 12);
+            const currentTotalSize = attachedFiles.reduce((sum, file) => sum + (file.inlineData ? atob(file.inlineData.data).length : 0), 0);
+            const newFilesSize = filesToProcess.reduce((sum, file) => sum + file.size, 0);
+            if (currentTotalSize + newFilesSize > (10 * 1024 * 1024)) {
+                alert(`Upload failed: Total size of attachments would exceed the 10MB limit per message. (Current: ${formatBytes(currentTotalSize)}, Adding: ${formatBytes(newFilesSize)})`);
+                return;
+            }
+            
+            filesToProcess.forEach(file => {
+                const tempId = `file-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+                attachedFiles.push({ tempId, file, isLoading: true });
+                renderAttachments();
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const base64Data = e.target.result.split(',')[1];
+                    const dataUrl = e.target.result;
+                    
+                    const itemIndex = attachedFiles.findIndex(f => f.tempId === tempId);
+                    if (itemIndex > -1) {
+                        const item = attachedFiles[itemIndex];
+                        item.isLoading = false;
+                        item.inlineData = { mimeType: file.type, data: base64Data };
+                        item.fileName = file.name;
+                        item.fileContent = dataUrl;
+                        delete item.file;
+                        delete item.tempId;
+                        renderAttachments();
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+        };
+        input.click();
+    }
+
+    function renderAttachments() {
+        const previewContainer = document.getElementById('ai-attachment-preview');
+        const inputWrapper = document.getElementById('ai-input-wrapper');
+        
+        if (attachedFiles.length === 0) {
+            inputWrapper.classList.remove('has-attachments');
+            previewContainer.innerHTML = '';
+            return;
+        }
+
+        previewContainer.style.display = 'flex';
+        inputWrapper.classList.add('has-attachments');
+        previewContainer.innerHTML = '';
+
+        attachedFiles.forEach((file, index) => {
+            const fileCard = document.createElement('div');
+            fileCard.className = 'attachment-card';
+            let previewHTML = '';
+            let fileExt = 'FILE';
+            let fileName = '';
+
+            if (file.isLoading) {
+                fileCard.classList.add('loading');
+                fileName = file.file.name;
+                fileExt = fileName.split('.').pop().toUpperCase();
+                previewHTML = `<div class="ai-loader"></div><span class="file-icon">📄</span>`;
+            } else {
+                fileName = file.fileName;
+                fileExt = fileName.split('.').pop().toUpperCase();
+                if (file.inlineData.mimeType.startsWith('image/')) {
+                    previewHTML = `<img src="data:${file.inlineData.mimeType};base64,${file.inlineData.data}" alt="${fileName}" />`;
+                } else {
+                    previewHTML = `<span class="file-icon">📄</span>`;
+                }
+                fileCard.onclick = () => showFilePreview(file);
+            }
+
+            if (fileExt.length > 5) fileExt = 'FILE';
+            let fileTypeBadge = `<div class="file-type-badge">${fileExt}</div>`;
+            if (file.inlineData && file.inlineData.mimeType.startsWith('image/')) {
+                 fileTypeBadge = '';
+            }
+
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = fileName;
+            const marqueeWrapper = document.createElement('div');
+            marqueeWrapper.className = 'file-name';
+            marqueeWrapper.appendChild(nameSpan);
+
+            fileCard.innerHTML = `${previewHTML}<div class="file-info"></div>${fileTypeBadge}<button class="remove-attachment-btn" data-index="${index}">&times;</button>`;
+            fileCard.querySelector('.file-info').appendChild(marqueeWrapper);
+
+            setTimeout(() => {
+                if (nameSpan.scrollWidth > marqueeWrapper.clientWidth) {
+                    const marqueeDuration = fileName.length / 4;
+                    nameSpan.style.animationDuration = `${marqueeDuration}s`;
+                    marqueeWrapper.classList.add('marquee');
+                    nameSpan.innerHTML += `<span aria-hidden="true">${fileName}</span>`;
+                }
+            }, 0);
+
+            fileCard.querySelector('.remove-attachment-btn').onclick = (e) => {
+                e.stopPropagation();
+                attachedFiles.splice(index, 1);
+                renderAttachments();
+            };
+            previewContainer.appendChild(fileCard);
         });
     }
 
-    // --- MAIN EXECUTION FLOW ---
-
-    /**
-     * Handles the user's input, sends the request, and updates the UI.
-     */
-    async function handleUserInput() {
-        const input = document.getElementById('user-input');
-        const userQuery = input.value.trim();
-
-        if (!userQuery || isFetching) {
+    function showFilePreview(file) {
+        if (!file.fileContent) {
+            alert("File content not available for preview.");
             return;
         }
 
-        isFetching = true;
-        input.value = '';
-        input.disabled = true;
-        document.getElementById('send-icon').classList.add('hidden');
-        document.getElementById('loading-spinner').classList.remove('hidden');
-        document.getElementById('status-indicator').classList.remove('bg-green-500');
-        document.getElementById('status-indicator').classList.add('bg-yellow-500', 'animate-pulse');
+        const previewModal = document.createElement('div');
+        previewModal.id = 'ai-preview-modal';
+        previewModal.innerHTML = `
+            <div class="modal-content">
+                <span class="close-button">&times;</span>
+                <h3>${escapeHTML(file.fileName)}</h3>
+                <div class="preview-area"></div>
+            </div>
+        `;
+        document.body.appendChild(previewModal);
 
-        // 1. Show User Message and Add to History
-        showAgentMessage(userQuery, 'user');
-        addHistoryMessage('user', userQuery);
+        const previewArea = previewModal.querySelector('.preview-area');
+        if (file.inlineData.mimeType.startsWith('image/')) {
+            previewArea.innerHTML = `<img src="${file.fileContent}" alt="${file.fileName}" style="max-width: 100%; max-height: 80vh; object-fit: contain;">`;
+        } else if (file.inlineData.mimeType.startsWith('text/')) {
+            fetch(file.fileContent)
+                .then(response => response.text())
+                .then(text => {
+                    previewArea.innerHTML = `<pre style="white-space: pre-wrap; word-break: break-all; max-height: 70vh; overflow-y: auto; background-color: #222; padding: 10px; border-radius: 5px;">${escapeHTML(text)}</pre>`;
+                })
+                .catch(error => {
+                    console.error("Error reading text file for preview:", error);
+                    previewArea.innerHTML = `<p>Could not load text content for preview.</p>`;
+                });
+        } else {
+            previewArea.innerHTML = `<p>Preview not available for this file type. You can download it to view.</p>
+                                     <a href="${file.fileContent}" download="${file.fileName}" class="download-button">Download File</a>`;
+        }
 
-        try {
-            // 2. Fetch Response
-            const response = await fetchAgentResponse(userQuery);
-
-            let aiResponseText = "An error occurred, and the response could not be parsed.";
-            const candidate = response.candidates?.[0];
-
-            if (candidate && candidate.content?.parts?.[0]?.text) {
-                aiResponseText = candidate.content.parts[0].text;
-            } else if (response.error) {
-                aiResponseText = `API Error: ${response.error.message}. Please check your configuration or try a simpler query.`;
+        previewModal.querySelector('.close-button').onclick = () => {
+            previewModal.remove();
+        };
+        previewModal.addEventListener('click', (e) => {
+            if (e.target === previewModal) {
+                previewModal.remove();
             }
+        });
+    }
 
-            // 3. Append Search Citations if present (Grounding)
-            let sourcesHTML = '';
-            const groundingMetadata = candidate?.groundingMetadata;
-            if (groundingMetadata && groundingMetadata.groundingAttributions) {
-                const sources = groundingMetadata.groundingAttributions
-                    .map(attr => ({ uri: attr.web?.uri, title: attr.web?.title }))
-                    .filter(source => source.uri && source.title)
-                    .slice(0, 3); // Limit to top 3 sources
 
-                if (sources.length > 0) {
-                    sourcesHTML = "\n\n**Sources:**\n";
-                    sources.forEach((s, i) => {
-                        sourcesHTML += `- [${s.title}](${s.uri})\n`;
-                    });
+    function formatCharCount(count) {
+        if (count >= 1000) {
+            return (count / 1000).toFixed(count % 1000 === 0 ? 0 : 1) + 'K';
+        }
+        return count.toString();
+    }
+
+    function formatCharLimit(limit) {
+        return (limit / 1000).toFixed(0) + 'K';
+    }
+
+    function handleContentEditableInput(e) {
+        const editor = e.target;
+        const charCount = editor.innerText.length;
+        
+        const counter = document.getElementById('ai-char-counter');
+        if (counter) {
+            counter.textContent = `${formatCharCount(charCount)} / ${formatCharLimit(CHAR_LIMIT)}`;
+            counter.classList.toggle('limit-exceeded', charCount > CHAR_LIMIT);
+        }
+
+        if (charCount > CHAR_LIMIT) {
+            editor.innerText = editor.innerText.substring(0, CHAR_LIMIT);
+            const selection = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(editor);
+            range.collapse(false);
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
+
+        if (editor.scrollHeight > MAX_INPUT_HEIGHT) { editor.style.height = `${MAX_INPUT_HEIGHT}px`; editor.style.overflowY = 'auto'; } 
+        else { editor.style.height = 'auto'; editor.style.height = `${editor.scrollHeight}px`; editor.style.overflowY = 'hidden'; }
+        fadeOutWelcomeMessage();
+    }
+    
+    function handlePaste(e) {
+        e.preventDefault();
+        const clipboardData = e.clipboardData || window.clipboardData;
+        const pastedText = clipboardData.getData('text/plain');
+        
+        const items = clipboardData.items;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf("image") !== -1) {
+                const file = items[i].getAsFile();
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const base64Data = event.target.result.split(',')[1];
+                        const dataUrl = event.target.result;
+                        file.name = `pasted-image-${Date.now()}.${file.type.split('/')[1] || 'png'}`;
+                        processFileLike(file, base64Data, dataUrl);
+                    };
+                    reader.readAsDataURL(file);
+                    return; 
                 }
             }
-            aiResponseText += sourcesHTML;
+        }
+        
+        const currentText = e.target.innerText;
+        const totalLengthIfPasted = currentText.length + pastedText.length;
 
-
-            // 4. Show AI Message and Add to History
-            showAgentMessage(aiResponseText, 'model');
-            addHistoryMessage('model', aiResponseText);
-
-            // 5. Render Math (KaTeX)
-            // Call renderMath after the new message has been added to the DOM
-            renderMath();
-
-        } catch (error) {
-            console.error("[Agent/Execution] Fatal error during API call:", error);
-            showAgentMessage(`System Error: Could not connect to the Agent or complete the request. Details: ${error.message}`, 'model', 'warning');
-        } finally {
-            // 6. Reset State
-            isFetching = false;
-            input.disabled = false;
-            document.getElementById('send-icon').classList.remove('hidden');
-            document.getElementById('loading-spinner').classList.add('hidden');
-            document.getElementById('status-indicator').classList.remove('bg-yellow-500', 'animate-pulse');
-            document.getElementById('status-indicator').classList.add('bg-green-500');
-            input.focus();
+        if (pastedText.length > PASTE_TO_FILE_THRESHOLD || totalLengthIfPasted > CHAR_LIMIT) {
+            let filenameBase = 'paste';
+            let filename = `${filenameBase}.txt`;
+            let counter = 1;
+            while (attachedFiles.some(f => f.fileName === filename)) {
+                filename = `${filenameBase}(${counter++}).txt`;
+            }
+            
+            const encoder = new TextEncoder();
+            const encoded = encoder.encode(pastedText);
+            const base64Data = btoa(String.fromCharCode.apply(null, encoded));
+            const blob = new Blob([pastedText], {type: 'text/plain'});
+            blob.name = filename; 
+            
+            if (attachedFiles.length < MAX_ATTACHMENTS_PER_MESSAGE) {
+                const reader = new FileReader();
+                reader.onloadend = (event) => {
+                    attachedFiles.push({
+                        inlineData: { mimeType: 'text/plain', data: base64Data },
+                        fileName: filename,
+                        fileContent: event.target.result
+                    });
+                    renderAttachments();
+                };
+                reader.readAsDataURL(blob);
+            } else {
+                alert(`Cannot attach more than ${MAX_ATTACHMENTS_PER_MESSAGE} files. Text was too large to paste directly.`);
+            }
+        } else {
+            document.execCommand('insertText', false, pastedText);
+            handleContentEditableInput({target: e.target});
         }
     }
 
-    // --- INITIALIZATION ---
-    // The IIFE runs immediately and creates the UI/attaches listeners.
-    createUI();
+    function handleInputSubmission(e) {
+        const editor = e.target;
+        const query = editor.innerText.trim();
+        if (editor.innerText.length > CHAR_LIMIT) {
+             e.preventDefault();
+             return;
+        }
 
-    // The Firebase initialization (window.Agent.initFirebase) will be called by the
-    // injected module script once the authentication state is determined.
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            
+            // --- REMOVED: Settings menu check ---
+            // const settingsMenu = document.getElementById('ai-settings-menu');
+            // if (settingsMenu && settingsMenu.classList.contains('active')) { 
+            //     saveSettings();
+            //     toggleSettingsMenu(); 
+            // }
+            
+            if (attachedFiles.some(f => f.isLoading)) {
+                alert("Please wait for files to finish uploading before sending.");
+                return;
+            }
+            if (!query && attachedFiles.length === 0) return;
+            if (isRequestPending) return;
+            
+            isRequestPending = true;
+            document.getElementById('ai-input-wrapper').classList.add('waiting');
+            const parts = [];
+            if (query) parts.push({ text: query });
+            attachedFiles.forEach(file => { if (file.inlineData) parts.push({ inlineData: file.inlineData }); });
+            chatHistory.push({ role: "user", parts: parts });
+            const responseContainer = document.getElementById('ai-response-container');
+            const userBubble = document.createElement('div');
+            userBubble.className = 'ai-message-bubble user-message';
+            let bubbleContent = query ? `<p>${escapeHTML(query)}</p>` : '';
+            if (attachedFiles.length > 0) { bubbleContent += `<div class="sent-attachments">${attachedFiles.length} file(s) sent</div>`; }
+            userBubble.innerHTML = bubbleContent;
+            responseContainer.appendChild(userBubble);
+            const responseBubble = document.createElement('div');
+            responseBubble.className = 'ai-message-bubble gemini-response loading';
+            // Default loading spinner before model selection
+            responseBubble.innerHTML = '<div class="ai-loader"></div>'; 
+            responseContainer.appendChild(responseBubble);
+            responseContainer.scrollTop = responseContainer.scrollHeight;
+            editor.innerHTML = '';
+            handleContentEditableInput({target: editor});
+            attachedFiles = [];
+            renderAttachments();
+            
+            callGoogleAI(responseBubble);
+        }
+    }
+    
+    function handleCopyCode(event) {
+        const btn = event.currentTarget;
+        const wrapper = btn.closest('.code-block-wrapper');
+        const code = wrapper.querySelector('pre > code');
+        if (code) {
+            navigator.clipboard.writeText(code.innerText).then(() => {
+                btn.innerHTML = checkIconSVG;
+                btn.disabled = true;
+                setTimeout(() => {
+                    btn.innerHTML = copyIconSVG;
+                    btn.disabled = false;
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy code: ', err);
+                alert('Failed to copy code.');
+            });
+        }
+    }
+    
+    function fadeOutWelcomeMessage(){const container=document.getElementById("ai-container");if(container&&!container.classList.contains("chat-active")){container.classList.add("chat-active")}}
+    function escapeHTML(str){const p=document.createElement("p");p.textContent=str;return p.innerHTML}
+    function formatBytes(bytes, decimals = 2) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    }
+    
+    function parseGeminiResponse(text) {
+        let html = text;
+        const placeholders = {};
+        let placeholderId = 0;
+    
+        const addPlaceholder = (content) => {
+            const key = `%%PLACEHOLDER_${placeholderId++}%%`;
+            placeholders[key] = content;
+            return key;
+        };
+    
+        // 1. Extract graph blocks (most specific) - Now checking for 'mode'
+        html = html.replace(/```graph\n([\s\S]*?)```/g, (match, jsonString) => {
+            let metadata = 'Basic Plotting Mode';
+            try {
+                const graphData = JSON.parse(jsonString);
+                if(graphData.mode && graphData.mode.toLowerCase() === 'advanced') {
+                    metadata = 'Advanced Plotting Mode';
+                }
+                const escapedData = escapeHTML(jsonString);
+                const content = `
+                    <div class="graph-block-wrapper">
+                        <div class="graph-block-header">
+                            <span class="graph-metadata">${metadata}</span>
+                        </div>
+                        <div class="custom-graph-placeholder" data-graph-data='${escapedData}'>
+                            <canvas class="graph-canvas"></canvas>
+                        </div>
+                    </div>
+                `;
+                return addPlaceholder(content);
+            } catch(e) { 
+                console.error("Graph JSON parsing error:", e);
+                const escapedError = escapeHTML(`[Graph Error] Invalid graph JSON: ${e.message}`);
+                return addPlaceholder(`<div class="ai-error">${escapedError}</div>`);
+            }
+        });
 
+        // 2. Extract general code blocks
+        html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
+            const trimmedCode = code.trim();
+            const lines = trimmedCode.split('\n').length;
+            const words = trimmedCode.split(/\s+/).filter(Boolean).length;
+            const escapedCode = escapeHTML(trimmedCode);
+            const langClass = lang ? `language-${lang.toLowerCase()}` : '';
+            const content = `
+                <div class="code-block-wrapper">
+                    <div class="code-block-header">
+                        <span class="code-metadata">${lines} lines &middot; ${words} words</span>
+                        <button class="copy-code-btn" title="Copy code">${copyIconSVG}</button>
+                    </div>
+                    <pre><code class="${langClass}">${escapedCode}</code></pre>
+                </div>
+            `;
+            return addPlaceholder(content);
+        });
+
+        // 3. Extract KaTeX blocks BEFORE escaping general HTML
+        // Display mode: $$...$$
+        html = html.replace(/\$\$([\s\S]*?)\$\$/g, (match, formula) => {
+            const content = `<div class="latex-render" data-tex="${escapeHTML(formula)}" data-display-mode="true"></div>`;
+            return addPlaceholder(content);
+        });
+        // Inline mode: $...$
+        html = html.replace(/\$([^\s\$][^\$]*?[^\s\$])\$/g, (match, formula) => {
+            const content = `<span class="latex-render" data-tex="${escapeHTML(formula)}" data-display-mode="false"></span>`;
+             return addPlaceholder(content);
+        });
+
+        // 4. Escape the rest of the HTML
+        html = escapeHTML(html);
+
+        // 5. Apply markdown styling
+        html = html.replace(/^### (.*$)/gm, "<h3>$1</h3>")
+                   .replace(/^## (.*$)/gm, "<h2>$1</h2>")
+                   .replace(/^# (.*$)/gm, "<h1>$1</h1>");
+        html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                   .replace(/\*(.*?)\*/g, "<em>$1</em>");
+        
+        html = html.replace(/^(?:\*|-)\s(.*$)/gm, "<li>$1</li>");
+        html = html.replace(/((?:<br>)?\s*<li>.*<\/li>(\s*<br>)*)+/gs, (match) => {
+            const listItems = match.replace(/<br>/g, '').trim();
+            return `<ul>${listItems}</ul>`;
+        });
+        html = html.replace(/(<\/li>\s*<li>)/g, "</li><li>");
+        
+        html = html.replace(/\n/g, "<br>");
+        
+        // 6. Restore placeholders
+        html = html.replace(/%%PLACEHOLDER_\d+%%/g, (match) => placeholders[match] || '');
+        
+        return html;
+    }
+
+    function injectStyles() {
+        if (document.getElementById('ai-dynamic-styles')) return;
+        
+        if (!document.getElementById('ai-katex-styles')) {
+            const katexStyles = document.createElement('link');
+            katexStyles.id = 'ai-katex-styles';
+            katexStyles.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css';
+            katexStyles.rel = 'stylesheet';
+            document.head.appendChild(katexStyles);
+        }
+
+        if (!document.getElementById('ai-google-fonts')) {
+            const googleFonts = document.createElement('link');
+            googleFonts.id = 'ai-google-fonts';
+            googleFonts.href = 'https://fonts.googleapis.com/css2?family=Lora:wght@400;700&family=Merriweather:wght@400;700&display=swap';
+            googleFonts.rel = 'stylesheet';
+            document.head.appendChild(googleFonts);
+        }
+        const fontAwesome = document.createElement('link');
+        fontAwesome.rel = 'stylesheet';
+        fontAwesome.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css';
+        document.head.appendChild(fontAwesome);
+
+        const style = document.createElement("style");
+        style.id = "ai-dynamic-styles";
+        style.innerHTML = `
+            :root { --ai-red: #ea4335; --ai-blue: #4285f4; --ai-green: ${AGENT_COLOR}; --ai-yellow: #fbbc05; }
+            #ai-container { 
+                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+                background-color: rgba(10, 10, 15, 0.95);
+                backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); 
+                z-index: 2147483647; opacity: 0; transition: opacity 0.5s, background 0.5s; 
+                font-family: 'Lora', serif; display: flex; flex-direction: column; 
+                justify-content: flex-end; padding: 0; box-sizing: border-box; overflow: hidden; 
+            }
+            #ai-container.active { opacity: 1; }
+            #ai-container.deactivating, #ai-container.deactivating > * { transition: opacity 0.4s, transform 0.4s; }
+            #ai-container.deactivating { opacity: 0 !important; background-color: rgba(0,0,0,0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); }
+            #ai-persistent-title, #ai-brand-title { 
+                position: absolute; top: 28px; left: 30px; font-family: 'Lora', serif; 
+                font-size: 18px; font-weight: bold; color: #FFFFFF;
+                opacity: 0; transition: opacity 0.5s 0.2s, color 0.5s; 
+            }
+            #ai-container.chat-active #ai-persistent-title { opacity: 1; }
+            #ai-container:not(.chat-active) #ai-brand-title { opacity: 1; }
+            #ai-brand-title span { animation: brand-title-pulse 4s linear infinite; }
+            #ai-welcome-message { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; color: rgba(255,255,255,.5); opacity: 1; transition: opacity .5s, transform .5s; width: 100%; }
+            #ai-container.chat-active #ai-welcome-message { opacity: 0; pointer-events: none; transform: translate(-50%,-50%) scale(0.95); }
+            #ai-welcome-message h2 { font-family: 'Merriweather', serif; font-size: 2.2em; margin: 0; color: #fff; }
+            #ai-welcome-message p { font-size: .9em; margin-top: 10px; max-width: 400px; line-height: 1.5; margin-left: auto; margin-right: auto; }
+            .shortcut-tip { font-size: 0.8em; color: rgba(255,255,255,.7); margin-top: 20px; }
+            #ai-close-button { position: absolute; top: 20px; right: 30px; color: rgba(255,255,255,.7); font-size: 40px; cursor: pointer; transition: color .2s ease,transform .3s ease, opacity 0.4s; }
+            #ai-char-counter { position: fixed; bottom: 15px; right: 30px; font-size: 0.9em; font-family: monospace; color: #aaa; transition: color 0.2s; z-index: 2147483647; }
+            #ai-char-counter.limit-exceeded { color: #e57373; font-weight: bold; }
+            #ai-response-container { flex: 1 1 auto; overflow-y: auto; width: 100%; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; padding: 60px 20px 20px 20px; -webkit-mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%); mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%);}
+            .ai-message-bubble { background: rgba(15,15,18,.8); border: 1px solid rgba(255,255,255,.1); border-radius: 16px; padding: 12px 18px; color: #e0e0e0; backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); animation: message-pop-in .5s cubic-bezier(.4,0,.2,1) forwards; max-width: 90%; line-height: 1.6; overflow-wrap: break-word; transition: opacity 0.3s ease-in-out; align-self: flex-start; text-align: left; }
+            .user-message { background: rgba(40,45,50,.8); align-self: flex-end; }
+            .gemini-response { animation: glow 4s infinite; }
+            .gemini-response.loading { display: flex; justify-content: center; align-items: center; min-height: 60px; max-width: 100%; padding: 15px; background: rgba(15,15,18,.8); animation: gemini-glow 4s linear infinite; }
+            
+            #ai-compose-area { position: relative; flex-shrink: 0; z-index: 2; margin: 15px auto; width: 90%; max-width: 720px; }
+            #ai-input-wrapper { position: relative; z-index: 2; width: 100%; display: flex; flex-direction: column; border-radius: 20px; background: rgba(10,10,10,.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,.2); transition: all .4s cubic-bezier(.4,0,.2,1); }
+            #ai-input-wrapper::before, #ai-input-wrapper::after { content: ''; position: absolute; top: -1px; left: -1px; right: -1px; bottom: -1px; border-radius: 21px; z-index: -1; transition: opacity 0.5s ease-in-out; }
+            #ai-input-wrapper::before { animation: glow 3s infinite; opacity: 1; }
+            #ai-input-wrapper.waiting::before { opacity: 0; }
+            #ai-input-wrapper.waiting::after { opacity: 1; animation: none; /* Disable glow on waiting state for a calmer look */ }
+            #ai-input { min-height: 48px; max-height: ${MAX_INPUT_HEIGHT}px; overflow-y: hidden; color: #fff; font-size: 1.1em; padding: 13px 60px 13px 60px; box-sizing: border-box; word-wrap: break-word; outline: 0; text-align: left; }
+            #ai-input:empty::before { content: 'Ask a question or describe your files...'; color: rgba(255, 255, 255, 0.4); pointer-events: none; }
+            
+            #ai-attachment-button { position: absolute; bottom: 7px; background-color: rgba(100, 100, 100, 0.5); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,.8); font-size: 18px; cursor: pointer; padding: 5px; line-height: 1; z-index: 3; transition: all .3s ease; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; }
+            #ai-attachment-button { left: 10px; }
+            /* #ai-settings-button REMOVED */
+            #ai-attachment-button:hover { background-color: rgba(120, 120, 120, 0.7); color: #fff; }
+
+            /* Attachments, Code Blocks, Graphs, LaTeX */
+            #ai-attachment-preview { display: none; flex-direction: row; gap: 10px; padding: 0; max-height: 0; border-bottom: 1px solid transparent; overflow-x: auto; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+            #ai-input-wrapper.has-attachments #ai-attachment-preview { max-height: 100px; padding: 10px 15px; }
+            .attachment-card { position: relative; border-radius: 8px; overflow: hidden; background: #333; height: 80px; width: 80px; flex-shrink: 0; display: flex; justify-content: center; align-items: center; transition: filter 0.3s; cursor: pointer; }
+            .attachment-card.loading { filter: grayscale(80%) brightness(0.7); }
+            .attachment-card.loading .file-icon { opacity: 0.3; }
+            .attachment-card.loading .ai-loader { position: absolute; z-index: 2; }
+            .attachment-card img { width: 100%; height: 100%; object-fit: cover; }
+            .file-info { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); overflow: hidden; }
+            .file-name { display: block; color: #fff; font-size: 0.75em; padding: 4px; text-align: center; white-space: nowrap; }
+            .file-name.marquee > span { display: inline-block; padding-left: 100%; animation: marquee linear infinite; }
+            .file-type-badge { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.7em; padding: 2px 5px; border-radius: 4px; font-family: sans-serif; font-weight: bold; }
+            .remove-attachment-btn { position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.5); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; z-index: 3; }
+
+            .ai-loader { width: 25px; height: 25px; border-radius: 50%; animation: spin 1s linear infinite; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; }
+            .ai-loader-text { display: flex; align-items: center; color: #bbb; font-size: 0.95em; }
+            .ai-loader-text .search-icon { margin-right: 8px; stroke: var(--ai-green); }
+            .ai-loader-text .ai-loader { margin-right: 8px; }
+            
+            .code-block-wrapper, .graph-block-wrapper { background-color: rgba(42, 42, 48, 0.8); border-radius: 8px; margin: 10px 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+            .code-block-header, .graph-block-header { display: flex; justify-content: flex-end; align-items: center; padding: 6px 12px; background-color: rgba(0,0,0,0.2); }
+            .code-metadata, .graph-metadata { font-size: 0.8em; color: #aaa; margin-right: auto; font-family: monospace; }
+            .graph-metadata { color: var(--ai-green); font-weight: bold; }
+            .copy-code-btn { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; border-radius: 6px; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s; }
+            .copy-code-btn:hover { background: rgba(255, 255, 255, 0.2); }
+            .copy-code-btn:disabled { cursor: default; background: rgba(25, 103, 55, 0.5); }
+            .copy-code-btn svg { stroke: #e0e0e0; }
+            .code-block-wrapper pre { margin: 0; padding: 15px; overflow: auto; background-color: transparent; }
+            .code-block-wrapper pre::-webkit-scrollbar { height: 8px; }
+            .code-block-wrapper pre::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+            .code-block-wrapper code { font-family: 'Menlo', 'Consolas', monospace; font-size: 0.9em; color: #f0f0f0; }
+            .custom-graph-placeholder { min-height: 400px; position: relative; padding: 10px; }
+            .graph-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+            .latex-render { display: inline-block; } /* default to inline */
+            .ai-response-content div.latex-render { display: block; margin: 10px 0; text-align: center; } /* for display mode */
+            .katex { font-size: 1.1em !important; }
+
+            #ai-preview-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.8); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index: 2147483648; display: flex; justify-content: center; align-items: center; }
+            #ai-preview-modal .modal-content { background: #1a1a1e; border-radius: 12px; padding: 20px; box-shadow: 0 5px 30px rgba(0,0,0,0.7); max-width: 90vw; max-height: 90vh; display: flex; flex-direction: column; position: relative; }
+            #ai-preview-modal .close-button { position: absolute; top: 10px; right: 15px; color: #ccc; font-size: 30px; cursor: pointer; }
+            #ai-preview-modal h3 { color: #fff; margin-top: 0; margin-bottom: 15px; text-align: center; }
+            #ai-preview-modal .preview-area { flex-grow: 1; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+            #ai-preview-modal .download-button { display: inline-block; padding: 10px 20px; background-color: var(--ai-blue); color: #fff; text-decoration: none; border-radius: 8px; margin-top: 20px; }
+
+            .ai-message-bubble p { margin: 0; padding: 0; text-align: left; }
+            .ai-message-bubble ul, .ai-message-bubble ol { margin: 10px 0; padding-left: 20px; text-align: left; list-style-position: outside; }
+            .ai-message-bubble li { margin-bottom: 5px; }
+
+            @keyframes glow { 0%,100% { box-shadow: 0 0 5px rgba(255,255,255,.15), 0 0 10px rgba(255,255,255,.1); } 50% { box-shadow: 0 0 10px rgba(255,255,255,.25), 0 0 20px rgba(255,255,255,.2); } }
+            /* Updated gemini-glow to use AGENT_COLOR (green) predominantly */
+            @keyframes gemini-glow { 0%,100% { box-shadow: 0 0 8px 2px var(--ai-green); } 25% { box-shadow: 0 0 8px 2px var(--ai-blue); } 50% { box-shadow: 0 0 8px 2px var(--ai-yellow); } 75% { box-shadow: 0 0 8px 2px var(--ai-red); } }
+            @keyframes spin { to { transform: rotate(360deg); } }
+            @keyframes message-pop-in { 0% { opacity: 0; transform: translateY(10px) scale(.98); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+            /* Updated brand-title-pulse to use AGENT_COLOR (green) predominantly */
+            @keyframes brand-title-pulse { 0%, 100% { text-shadow: 0 0 7px var(--ai-green); } 25% { text-shadow: 0 0 7px var(--ai-blue); } 50% { text-shadow: 0 0 7px var(--ai-yellow); } 75% { text-shadow: 0 0 7px var(--ai-red); } }
+            @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+        `;
+    document.head.appendChild(style);}
+    
+    document.addEventListener('keydown', handleKeyDown);
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        loadUserSettings();
+    });
 })();
