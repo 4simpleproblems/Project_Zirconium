@@ -2,7 +2,7 @@
  * agent-activation.js
  *
  * MODIFIED: Refactored to remove Agent/Category system and implement a dynamic, context-aware AI persona.
- * NEW: Added a Settings Menu to store user preferences (nickname, color, gender, age) using localStorage.
+ * NEW: Added a Settings Menu to store user preferences (nickname, color, gender, age, web search, location) using localStorage.
  * NEW: The AI's system instruction (persona) now changes intelligently based on the content and tone of the user's latest message.
  * UI: Fixed background and title colors. Replaced Agent button with a grey Settings button.
  * UPDATED: Implemented browser color selector for user favorite color.
@@ -17,15 +17,14 @@
  * - Deep Analysis: gemini-2.5-flash (Pro model feature removed)
  *
  * NEW: The AI's response now includes an internal <THOUGHT_PROCESS> and lists of <SOURCE URL="..." TITLE="..."/>.
- * UPDATED: Removed authenticated email feature.
- * UPDATED: Implemented browser Geolocation API for context, now including mock reverse geocoding for full address.
  * UPDATED: Swapped order of monologue and sources. Monologue is now a collapsible dropdown.
+ * UPDATED: Geolocation uses user-provided httpGetAsync for IP lookup with detailed address/coordinates.
  */
 (function() {
     // --- CONFIGURATION ---
     const API_KEY = 'AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro'; 
     const BASE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/`; 
-    // const AUTHORIZED_PRO_USER = '4simpleproblems@gmail.com'; // REMOVED
+    const AUTHORIZED_PRO_USER = '4simpleproblems@gmail.com'; // REMOVED
     const MAX_INPUT_HEIGHT = 180;
     const CHAR_LIMIT = 10000;
     const PASTE_TO_FILE_THRESHOLD = 10000;
@@ -33,6 +32,10 @@
 
     const DEFAULT_NICKNAME = 'User';
     const DEFAULT_COLOR = '#4285f4'; // Google Blue
+    
+    // User-provided API Key and IP for Geolocation
+    const GEO_API_URL = "https://ipgeolocation.abstractapi.com/v1/?api_key=9e522ec72e554164bab14e7895db90b2&ip_address=2600:1700:6260:1790:56e6:a7aa:af32:1908";
+
 
     // --- ICONS (for event handlers) ---
     const copyIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
@@ -49,7 +52,9 @@
         nickname: DEFAULT_NICKNAME,
         favoriteColor: DEFAULT_COLOR,
         gender: 'Other',
-        age: 0
+        age: 0,
+        enableWebSearch: true,     // NEW DEFAULT
+        enableLocationContext: true // NEW DEFAULT
     };
 
     // Simple debounce utility for performance
@@ -70,6 +75,9 @@
             if (storedSettings) {
                 userSettings = { ...userSettings, ...JSON.parse(storedSettings) };
                 userSettings.age = parseInt(userSettings.age) || 0;
+                // Ensure new settings are loaded, falling back to defaults if undefined
+                if (typeof userSettings.enableWebSearch === 'undefined') userSettings.enableWebSearch = true;
+                if (typeof userSettings.enableLocationContext === 'undefined') userSettings.enableLocationContext = true;
             }
         } catch (e) {
             console.error("Error loading user settings:", e);
@@ -80,72 +88,72 @@
     // --- UTILITIES FOR GEOLOCATION ---
 
     /**
-     * MOCK Reverse Geocoding function.
-     * In a real application, this would use an external API (like Google Maps Geocoding API)
-     * and requires a separate API key. This mock simulates the process.
-     * @param {number} latitude
-     * @param {number} longitude
-     * @returns {Promise<string>} Resolves with a mock address string.
+     * Helper function to perform an asynchronous GET request.
+     * @param {string} url The URL to fetch.
+     * @param {function(string): void} callback The function to call with the response text.
      */
-    async function reverseGeocode(latitude, longitude) {
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 500)); 
-
-        // Mock Data: returns a structured address
-        const mockAddresses = [
-            "123 Main St, Massillon, OH 44646, USA (Stark County)",
-            "789 Maple Rd, Austin, TX 78701, USA (Travis County)",
-            "101 Pine Ln, Seattle, WA 98101, USA (King County)",
-            "22B Baker Street, London, NW1 6XE, UK (Greater London)"
-        ];
-        const mockAddress = mockAddresses[Math.floor(Math.random() * mockAddresses.length)];
-
-        return mockAddress;
+    function httpGetAsync(url, callback) {
+        const xmlHttp = new XMLHttpRequest();
+        xmlHttp.onreadystatechange = function() {
+            if (xmlHttp.readyState === 4) {
+                if (xmlHttp.status === 200) {
+                    callback(xmlHttp.responseText);
+                } else {
+                    // Pass null on HTTP error status
+                    callback(null);
+                }
+            }
+        }
+        xmlHttp.open("GET", url, true); // true for asynchronous
+        xmlHttp.send(null);
     }
 
     /**
-     * Gets user location via Geolocation API, then attempts mock reverse geocoding for context.
-     * @returns {Promise<string>} Resolves with coordinates and address string or a fallback.
+     * Fetches user location asynchronously using the provided API key via httpGetAsync.
+     * @returns {Promise<string>} The user's detailed location string or a fallback.
      */
     function getUserLocationForContext() {
-        return new Promise((resolve) => {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    async (position) => {
-                        const lat = position.coords.latitude;
-                        const lon = position.coords.longitude;
-                        const coords = `Latitude: ${lat.toFixed(4)}, Longitude: ${lon.toFixed(4)}`;
-                        
-                        let address = 'Fetching address...';
-                        try {
-                            // Attempt mock reverse geocoding
-                            address = await reverseGeocode(lat, lon);
-                        } catch (e) {
-                            console.error('Reverse geocoding failed (mock):', e);
-                            address = 'Address lookup failed/requires real API key.';
-                        }
-                        
-                        // Combine coordinates and address for the context string
-                        const locationString = `Coordinates: ${coords}\nGeneral Location/Address: ${address}`;
-                        localStorage.setItem('ai-user-location', locationString);
-                        resolve(locationString);
-                    },
-                    (error) => {
-                        console.warn('Geolocation failed:', error.message);
-                        let fallback = localStorage.getItem('ai-user-location') || 'Location Denied/Unavailable';
-                        localStorage.setItem('ai-user-location', fallback);
-                        resolve(fallback);
-                    },
-                    { enableHighAccuracy: false, timeout: 5000, maximumAge: 0 }
-                );
-            } else {
-                let fallback = localStorage.getItem('ai-user-location') || 'Geolocation not supported by browser.';
-                localStorage.setItem('ai-user-location', fallback);
-                resolve(fallback);
-            }
+        // If location context is disabled, return a constant string immediately.
+        if (!userSettings.enableLocationContext) {
+            return Promise.resolve('Location: Disabled in settings.');
+        }
+
+        // Check localStorage first
+        let location = localStorage.getItem('ai-user-location');
+        if (location && location !== 'Location Denied/Unavailable' && !location.includes('IP Lookup Failed')) {
+            return Promise.resolve(location);
+        }
+
+        return new Promise(resolve => {
+            httpGetAsync(GEO_API_URL, (responseText) => {
+                const fallbackLocation = 'Unknown Region (IP Lookup Failed)'; 
+                let resolvedLocation = fallbackLocation;
+                
+                if (responseText) {
+                    try {
+                        const data = JSON.parse(responseText);
+                        // Extract detailed location data
+                        const country = data.country ? data.country.name : 'N/A';
+                        const region = data.region ? data.region : 'N/A';
+                        const city = data.city ? data.city : 'N/A';
+                        const latitude = data.latitude ? data.latitude.toFixed(4) : 'N/A';
+                        const longitude = data.longitude ? data.longitude.toFixed(4) : 'N/A';
+                        const ip_address = data.ip_address ? data.ip_address : 'N/A';
+                        const street = data.connection ? (data.connection.isp_name || 'N/A') : 'N/A';
+
+                        // Format the detailed string as requested
+                        resolvedLocation = `Coordinates: ${latitude}, ${longitude}\nAddress/General Location: ${street}, ${city}, ${region}, ${country}\n(IP: ${ip_address})`;
+
+                    } catch (e) {
+                        console.error("Geolocation API failed or returned bad data:", e);
+                    }
+                }
+                
+                localStorage.setItem('ai-user-location', resolvedLocation);
+                resolve(resolvedLocation);
+            });
         });
     }
-
 
     // --- REPLACED/MODIFIED FUNCTIONS ---
 
@@ -154,6 +162,7 @@
      * @returns {Promise<boolean>} Always resolves to true.
      */
     async function isUserAuthorized() {
+        // This is where you would check if the user is 4simpleproblems@gmail.com for pro features
         return true; 
     }
 
@@ -380,8 +389,8 @@
         const welcomeMessage = document.createElement('div');
         welcomeMessage.id = 'ai-welcome-message';
         const welcomeHeader = chatHistory.length > 0 ? "Welcome Back" : "Welcome to AI Agent";
-        // Updated welcome message to reflect location sharing.
-        welcomeMessage.innerHTML = `<h2>${welcomeHeader}</h2><p>This is a beta feature. To improve your experience, your general location (if permitted) will be shared with your first message. You may be subject to message limits.</p><p class="shortcut-tip">(Press Ctrl + \\ to close)</p>`;
+        // Updated welcome message to reflect settings and location sharing.
+        welcomeMessage.innerHTML = `<h2>${welcomeHeader}</h2><p>This is a beta feature. Please check the <i class="fa-solid fa-gear"></i> settings button before sending your first message to adjust web search and location context sharing. You may be subject to message limits.</p><p class="shortcut-tip">(Press Ctrl + \\ to close)</p>`;
         
         const closeButton = document.createElement('div');
         closeButton.id = 'ai-close-button';
@@ -496,12 +505,12 @@
                 
                 bubble.innerHTML = `<div class="ai-response-content">${parsedResponse}</div>`;
                 
-                // NEW: Sources first
+                // Sources first
                 if (sourcesHTML) {
                     bubble.innerHTML += sourcesHTML;
                 }
                 
-                // NEW: Collapsible thought process
+                // Collapsible thought process
                 if (thoughtProcess) {
                     bubble.innerHTML += `
                         <div class="ai-thought-process collapsed">
@@ -557,7 +566,6 @@
         const lowerQuery = query.toLowerCase();
         
         // Deep Analysis Keywords
-        // Note: The gemini-2.5-pro model is no longer available via authorization in this code.
         if (lowerQuery.includes('analyze') || lowerQuery.includes('deep dive') || lowerQuery.includes('strategic') || lowerQuery.includes('evaluate') || lowerQuery.includes('critique') || lowerQuery.includes('investigate') || lowerQuery.includes('pro model')) {
             return 'DEEP_ANALYSIS';
         }
@@ -617,6 +625,7 @@ If the user asks about a topic other than 4SP, you should not hint at the websit
         const userAge = settings.age > 0 ? `${settings.age} years old` : 'of unknown age';
         const userGender = settings.gender.toLowerCase();
         const userColor = settings.favoriteColor;
+        const enableWebSearch = settings.enableWebSearch; // NEW
 
         const intent = determineIntentCategory(query);
         let model = 'gemini-2.5-flash-lite';
@@ -624,7 +633,7 @@ If the user asks about a topic other than 4SP, you should not hint at the websit
 
 You are a highly capable and adaptable AI, taking on a persona to best serve the user's direct intent. You have significant control over the interaction's structure and detail level, ensuring the response is comprehensive and authoritative.
 User Profile: Nickname: ${user}, Age: ${userAge}, Gender: ${userGender}, Favorite Color: ${userColor}.
-You must adapt your persona, tone, and the level of detail based on the user's intent.
+Web Search Status: ${enableWebSearch ? 'ENABLED' : 'DISABLED'}. You MUST rely solely on your internal knowledge if Web Search is DISABLED.
 
 Formatting Rules (MUST FOLLOW):
 - For math, use KaTeX. Inline math uses single \`$\`, and display math uses double \`$$\`. Use \\le for <= and \\ge for >=.
@@ -683,12 +692,15 @@ Formatting Rules (MUST FOLLOW):
         
         let firstMessageContext = '';
         if (chatHistory.length <= 1) {
-            // Await location for context
+            
+            // Only fetch location if enabled, otherwise use a placeholder string
             const location = await getUserLocationForContext(); 
+            
             const now = new Date();
             const date = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             const time = now.toLocaleTimeString('en-US', { timeZoneName: 'short' });
-            // Updated system info to reflect removed email feature
+            
+            // Updated context to use the fetched location/status
             firstMessageContext = `(System Info: User is asking from location:\n${location}. Current date is ${date}, ${time}. User Email: Not Authenticated/Removed.)\n\n`;
         }
         
@@ -756,12 +768,12 @@ Formatting Rules (MUST FOLLOW):
             setTimeout(() => {
                 let fullContent = `<div class="ai-response-content">${contentHTML}</div>`;
                 
-                // NEW: Sources first
+                // Sources first
                 if (sourcesHTML) {
                     fullContent += sourcesHTML;
                 }
                 
-                // NEW: Collapsible thought process
+                // Collapsible thought process
                 if (thoughtProcess) {
                     fullContent += `
                         <div class="ai-thought-process collapsed">
@@ -837,6 +849,8 @@ Formatting Rules (MUST FOLLOW):
             document.getElementById('settings-age').value = userSettings.age || '';
             document.getElementById('settings-gender').value = userSettings.gender;
             document.getElementById('settings-color').value = userSettings.favoriteColor;
+            document.getElementById('settings-web-search').checked = userSettings.enableWebSearch;
+            document.getElementById('settings-location-context').checked = userSettings.enableLocationContext;
 
             document.addEventListener('click', handleMenuOutsideClick);
         } else {
@@ -860,6 +874,8 @@ Formatting Rules (MUST FOLLOW):
         const ageEl = document.getElementById('settings-age');
         const genderEl = document.getElementById('settings-gender');
         const colorEl = document.getElementById('settings-color');
+        const webSearchEl = document.getElementById('settings-web-search');
+        const locationContextEl = document.getElementById('settings-location-context');
 
         const nickname = nicknameEl.value.trim();
         const age = parseInt(ageEl.value);
@@ -870,6 +886,8 @@ Formatting Rules (MUST FOLLOW):
         userSettings.age = (isNaN(age) || age < 0) ? 0 : age;
         userSettings.gender = gender;
         userSettings.favoriteColor = favoriteColor;
+        userSettings.enableWebSearch = webSearchEl.checked;
+        userSettings.enableLocationContext = locationContextEl.checked;
         
         localStorage.setItem('ai-user-settings', JSON.stringify(userSettings));
     }
@@ -885,11 +903,7 @@ Formatting Rules (MUST FOLLOW):
                 <input type="text" id="settings-nickname" placeholder="${DEFAULT_NICKNAME}" value="${userSettings.nickname === DEFAULT_NICKNAME ? '' : userSettings.nickname}" />
                 <p class="setting-note">How the AI should refer to you.</p>
             </div>
-            <div class="setting-group">
-                <label for="settings-color">Favorite Color</label>
-                <input type="color" id="settings-color" value="${userSettings.favoriteColor}" />
-                <p class="setting-note">Subtly influences the AI's response style (e.g., in theming).</p>
-            </div>
+            
             <div class="setting-group-split">
                 <div class="setting-group">
                     <label for="settings-gender">Gender</label>
@@ -905,6 +919,23 @@ Formatting Rules (MUST FOLLOW):
                     <input type="number" id="settings-age" placeholder="Optional" min="0" value="${userSettings.age || ''}" />
                 </div>
             </div>
+            
+            <div class="setting-group-toggles">
+                <div class="setting-toggle">
+                    <label for="settings-web-search">Enable Web Search</label>
+                    <input type="checkbox" id="settings-web-search" ${userSettings.enableWebSearch ? 'checked' : ''} />
+                </div>
+                <div class="setting-toggle">
+                    <label for="settings-location-context">Share Location Context</label>
+                    <input type="checkbox" id="settings-location-context" ${userSettings.enableLocationContext ? 'checked' : ''} />
+                </div>
+            </div>
+            <div class="setting-group">
+                <label for="settings-color">Favorite Color</label>
+                <input type="color" id="settings-color" value="${userSettings.favoriteColor}" />
+                <p class="setting-note">Subtly influences the AI's response style (e.g., in theming).</p>
+            </div>
+            
             <button id="settings-save-button">Save</button>
         `;
 
@@ -1498,7 +1529,7 @@ Formatting Rules (MUST FOLLOW):
             .gemini-response { animation: glow 4s infinite; display: flex; flex-direction: column; }
             .gemini-response.loading { display: flex; justify-content: center; align-items: center; min-height: 60px; max-width: 100px; padding: 15px; background: rgba(15,15,18,.8); animation: gemini-glow 4s linear infinite; }
             
-            /* NEW STYLES for Sources (Top) and Collapsible Monologue (Bottom) */
+            /* Sources (Top) and Collapsible Monologue (Bottom) */
             
             .ai-sources-list { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; margin-top: 15px; }
             .ai-sources-list h4 { color: #ccc; margin: 0 0 10px 0; font-family: 'Merriweather', serif; font-size: 1em; }
@@ -1559,6 +1590,10 @@ Formatting Rules (MUST FOLLOW):
             .setting-group { margin-bottom: 15px; }
             .setting-group-split { display: flex; gap: 15px; }
             .setting-group-split .setting-group { flex: 1; }
+            .setting-group-toggles { border-top: 1px solid rgba(255,255,255,0.1); border-bottom: 1px solid rgba(255,255,255,0.1); padding: 10px 0; margin-bottom: 15px; }
+            .setting-toggle { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; }
+            .setting-toggle label { color: #fff; font-size: 0.95em; }
+            .setting-toggle input[type="checkbox"] { width: auto; height: 18px; margin-left: 10px; transform: scale(1.2); cursor: pointer; }
             .setting-group label { display: block; color: #ccc; font-size: 0.9em; margin-bottom: 5px; font-weight: bold; }
             .setting-group input, .setting-group select { width: 100%; padding: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff; box-sizing: border-box; }
             .setting-group input:focus, .setting-group select:focus { outline: none; border-color: #4285f4; }
