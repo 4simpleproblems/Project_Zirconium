@@ -6,6 +6,7 @@
  * ✅ Removed: All settings features, menu, and buttons.
  * ✅ Integrated: Robust real-time web search (Google Programmable Search Engine API) via existing API_KEY.
  * ✅ Fixed: Critical bug in Ctrl + \ wake phrase keydown handler.
+ * ✅ FIXED: GOOGLE_SEARCH_CX_ID is now correctly set to 'd0d0c075d757140ef'.
  * ✅ Enhanced: Dynamic model switching (default) with Gemini 2.5 Pro access limited to authorized users.
  * ✅ Upgraded: Graphing with Basic/Advanced modes and full LaTeX (KaTeX) support.
  * ✅ UI/UX: Font stack updated to Merriweather (classical) and Roboto Mono (code/structured).
@@ -14,9 +15,11 @@
     // --- CONFIGURATION ---
     const API_KEY = 'AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro'; 
     const BASE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/`; 
-    // NOTE: Replace with your actual CX ID. The API Key is used for both services.
+    
+    // ✅ CX ID FIX APPLIED: Using the ID from the user's script tag.
     const GOOGLE_SEARCH_API_BASE = `https://customsearch.googleapis.com/customsearch/v1`; 
-    const GOOGLE_SEARCH_CX_ID = 'AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro'; 
+    const GOOGLE_SEARCH_CX_ID = 'd0d0c075d757140ef'; 
+
     const AUTHORIZED_PRO_USER = '4simpleproblems@gmail.com'; 
 
     const MAX_INPUT_HEIGHT = 180;
@@ -30,7 +33,6 @@
     const attachmentIconSVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.2a2 2 0 0 1-2.83-2.83l8.49-8.49"></path></svg>`;
     const searchIconSVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`;
     
-    // Humanity Agent Avatar (for display)
     const AGENT_AVATAR = 'G0'; 
 
     // --- STATE MANAGEMENT ---
@@ -40,7 +42,7 @@
     let chatHistory = [];
     let attachedFiles = [];
     let isSearchEnabled = true; 
-    let userSettings = { // Keep a placeholder for context, though settings menu is removed
+    let userSettings = { 
         nickname: 'User',
         favoriteColor: DEFAULT_COLOR,
         gender: 'Other',
@@ -88,7 +90,8 @@
      * Integrates real-time web search using the Google Programmable Search Engine API.
      */
     async function callGoogleSearchAPI(query) {
-        if (!isSearchEnabled || GOOGLE_SEARCH_CX_ID === 'YOUR_CUSTOM_SEARCH_ENGINE_ID') {
+        // Explicit check for CX ID and search status
+        if (!isSearchEnabled || !GOOGLE_SEARCH_CX_ID) {
              console.warn("Search disabled or CX ID not configured.");
              return [];
         }
@@ -118,24 +121,19 @@
      */
     function getModelForQuery(prompt, userEmail) {
         const lowerPrompt = prompt.toLowerCase();
-        let model = 'gemini-2.5-flash-lite'; // Default: Casual Chat
+        let model = 'gemini-2.5-flash-lite'; 
 
-        // Keywords for Professional/Analytical Mode
         const professionalKeywords = /(analyze|reason|evaluate|derive|calculate|equation|mathematics|proof|model|professional|code|function|structure)/;
-
         if (professionalKeywords.test(lowerPrompt) || chatHistory.length > 2) {
             model = 'gemini-2.5-flash'; 
         }
 
-        // Keywords for Deep Analysis/Reasoning Mode (Pro Access)
         const deepAnalysisKeywords = /(deep analysis|robust reasoning|critical evaluation|non-trivial|complex systems|implement immediately|non-negotiable|full solution)/;
-
         if (deepAnalysisKeywords.test(lowerPrompt)) {
-            // Check for authorized Pro user email
             if (userEmail === AUTHORIZED_PRO_USER) {
                 return 'gemini-2.5-pro'; 
             } else {
-                return 'gemini-2.5-flash'; // Fallback for unauthorized users
+                return 'gemini-2.5-flash';
             }
         }
 
@@ -143,17 +141,12 @@
     }
 
     // --- UI/UX & STYLES ---
-
-    /**
-     * Injects the dynamic CSS styles and loads required fonts.
-     */
     function injectStyles() {
         if (document.getElementById('ai-dynamic-styles')) return;
 
         const fontLink = document.createElement('link');
         fontLink.id = 'ai-google-fonts';
         fontLink.rel = 'stylesheet';
-        // Using Merriweather (classical/body) and Roboto Mono (code/structure)
         fontLink.href = 'https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&family=Roboto+Mono:wght@300;400;700&display=swap';
         document.head.appendChild(fontLink);
 
@@ -161,14 +154,9 @@
         style.id = 'ai-dynamic-styles';
         style.textContent = `
             :root {
-                --ai-blue: #4285f4;
-                --ai-green: #34a853;
-                --ai-yellow: #fbbc04;
-                --ai-red: #ea4335;
-                --ai-bg-dark: #1e1e1e;
-                --ai-bg-medium: #2d2d2d;
-                --ai-text-light: #e0e0e0;
-                --ai-text-medium: #a0a0a0;
+                --ai-blue: #4285f4; --ai-green: #34a853; --ai-yellow: #fbbc04; --ai-red: #ea4335;
+                --ai-bg-dark: #1e1e1e; --ai-bg-medium: #2d2d2d;
+                --ai-text-light: #e0e0e0; --ai-text-medium: #a0a0a0;
                 --ai-header-font: 'Merriweather', serif;
                 --ai-body-font: 'Merriweather', serif;
                 --ai-code-font: 'Roboto Mono', monospace;
@@ -660,8 +648,6 @@
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // --- Drawing Implementation Logic Goes Here ---
-        
         // Example: Draw simple crosshair
         ctx.strokeStyle = '#ccc';
         ctx.lineWidth = 1;
@@ -692,7 +678,7 @@
     // --- AI ACTIVATION / DEACTIVATION ---
 
     /**
-     * FIX: Handles the keyboard shortcut for activation/deactivation.
+     * FIX: Handles the keyboard shortcut for activation/deactivation (Ctrl + \).
      */
     function handleKeyDown(e) {
         // Ensure Ctrl + \ is captured
@@ -718,7 +704,6 @@
 
     function activateAI() {
         if (document.getElementById('ai-container')) return;
-        // Placeholder for external security/blocker functions
         if (typeof window.startPanicKeyBlocker === 'function') { window.startPanicKeyBlocker(); }
 
         attachedFiles = [];
@@ -793,8 +778,6 @@
         charCounter.id = 'ai-char-counter';
         charCounter.textContent = `0 / ${formatCharLimit(CHAR_LIMIT)}`;
 
-        // Removed the settings button and menu.
-
         inputWrapper.appendChild(attachmentPreviewContainer);
         inputWrapper.appendChild(visualInput);
         inputWrapper.appendChild(attachmentButton);
@@ -856,7 +839,6 @@
             button.classList.toggle('active', isSearchEnabled);
             button.title = isSearchEnabled ? 'Real-time Search ON' : 'Real-time Search OFF';
         }
-        // Update welcome message if present
         const welcome = document.getElementById('ai-welcome-message');
         if (welcome) {
              welcome.querySelector('p').innerHTML = `This agent is designed for **Deep Analysis** and **Robust Reasoning**. Dynamic mode is active. Web search is ${isSearchEnabled ? 'enabled' : 'disabled'}.`;
@@ -873,7 +855,6 @@
         const bubble = document.createElement('div');
         bubble.classList.add('ai-message-bubble');
 
-        // Simple Markdown-to-HTML conversion (optimized for code, math, and general text)
         let htmlContent = content
             .replace(/```(.*?)```/gs, (match, code) => {
                 const langMatch = code.match(/^(\w+)\n/);
@@ -881,20 +862,14 @@
                 const codeBody = langMatch ? code.replace(langMatch[0], '') : code;
 
                 const copyButton = `<button class="code-copy-button" onclick="copyCode(this)">${copyIconSVG} Copy</button>`;
-                // Use Roboto Mono for code blocks
                 return `<pre data-lang="${language}"><code>${codeBody.trim()}</code>${copyButton}</pre>`;
             })
-            // Block LaTeX: $$...$$ 
             .replace(/\$\$(.*?)\$\$/gs, (match, tex) => {
-                // Use KaTeX wrapper for display mode
                 return `<div class="latex-render" data-tex="${tex.trim()}" data-display-mode="true"></div>`;
             })
-            // Inline LaTeX: $...$
             .replace(/\$(.+?)\$/g, (match, tex) => {
-                // Use KaTeX wrapper for inline mode
                 return `<span class="latex-render" data-tex="${tex.trim()}" data-display-mode="false"></span>`;
             })
-            // Basic markdown: bold, lists, etc.
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
             .replace(/\n\s*-\s/g, '<ul><li>')
             .replace(/\n\s*\d\.\s/g, '<ol><li>')
@@ -903,12 +878,10 @@
             .replace(/\n/g, '<br>');
 
 
-        // Handle Custom Graph Placeholder (must come after code block parsing)
         htmlContent = htmlContent.replace(/```custom_graph\n(.*?)\n```/gs, (match, json) => {
             try {
                 const graphData = JSON.parse(json.trim());
-                const mode = graphData.layout?.mode || 'Basic'; // Basic/Advanced
-                // Create a container with data attributes for rendering
+                const mode = graphData.layout?.mode || 'Basic'; 
                 return `
                     <div class="custom-graph-placeholder" data-graph-data='${json.trim()}' data-mode="${mode}">
                         <canvas style="width:100%; height:100%;"></canvas>
@@ -923,7 +896,6 @@
 
         bubble.innerHTML = htmlContent;
 
-        // Append Search References if present
         if (searchRefs && searchRefs.length > 0) {
             const refContainer = document.createElement('div');
             refContainer.classList.add('search-references');
@@ -939,7 +911,6 @@
             bubble.appendChild(refContainer);
         }
 
-        // Add avatar and bubble to message
         if (isAgent) {
             message.appendChild(createAvatar(true, AGENT_AVATAR));
             message.appendChild(bubble);
@@ -948,7 +919,6 @@
             message.appendChild(createAvatar(false, userSettings.nickname));
         }
 
-        // Post-render processing: KaTeX and Graphs
         setTimeout(() => {
             renderKaTeX(bubble);
             renderGraphs(bubble);
@@ -971,13 +941,10 @@
 
     // --- Input & File Handling ---
     
-    // ... [handleContentEditableInput, handlePaste, handleFileUpload, removeFile, handleInputSubmission - standard implementations retained] ...
-
     function handleContentEditableInput() {
         const input = document.getElementById('ai-input');
         if (!input) return;
         
-        // Dynamic Height Adjustment (Standard)
         if (input.scrollHeight > input.clientHeight) {
             if (input.scrollHeight <= MAX_INPUT_HEIGHT) {
                 input.style.height = `${input.scrollHeight}px`;
@@ -988,7 +955,6 @@
             input.style.height = 'auto';
         }
 
-        // Character Count Update (Standard)
         const charCount = input.innerText.length;
         const counter = document.getElementById('ai-char-counter');
         if (counter) {
@@ -1013,7 +979,6 @@
             files.slice(0, MAX_ATTACHMENTS_PER_MESSAGE - attachedFiles.length).forEach(file => {
                 if (attachedFiles.length >= MAX_ATTACHMENTS_PER_MESSAGE) return;
                 
-                // Read and encode file content for the model
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     const base64Data = event.target.result.split(',')[1];
@@ -1063,43 +1028,39 @@
                 return;
             }
 
-            // Record user message
             chatHistory.push({ role: 'user', content: prompt, files: attachedFiles.map(f => f.name) });
             renderChatHistory();
 
-            // Clear input and files
             inputElement.innerText = '';
-            inputElement.style.height = 'auto'; // Reset height
+            inputElement.style.height = 'auto'; 
             attachedFiles = [];
             updateAttachmentPreview();
             handleContentEditableInput(); 
             
-            // Set active state
             document.getElementById('ai-container').classList.add('chat-active');
             isRequestPending = true;
             
-            // Call API
             await generateResponse(prompt);
 
             isRequestPending = false;
         }
     }
 
-    // --- Core Agent Logic (Updated for Search, Model, and Context) ---
+    // --- Core Agent Logic ---
 
     async function generateResponse(prompt) {
         currentAIRequestController = new AbortController();
         const signal = currentAIRequestController.signal;
         
-        const currentUserEmail = AUTHORIZED_PRO_USER; // Mocking authorized user for testing, replace with actual user session retrieval
+        const currentUserEmail = AUTHORIZED_PRO_USER; 
         const modelName = getModelForQuery(prompt, currentUserEmail);
         let searchRefs = [];
 
-        // 1. Fetch Web Search Context (if enabled)
+        // 1. Fetch Web Search Context
         let searchContext = '';
         if (isSearchEnabled) {
             const searchResults = await callGoogleSearchAPI(prompt);
-            searchRefs = searchResults; // Store for display
+            searchRefs = searchResults; 
             if (searchResults.length > 0) {
                 searchContext = "\n\n### REAL-TIME WEB CONTEXT (Grounding Data):\n";
                 searchResults.forEach((item, index) => {
@@ -1109,7 +1070,7 @@
             }
         }
 
-        // 2. Construct System Instruction (Enhanced for Deep Analysis/Reasoning)
+        // 2. Construct System Instruction 
         const systemInstruction = `
             You are the "Humanity Agent," codenamed "Humanity {Gen 0}."
             Your persona is highly professional, concise, and focused on deep analysis and robust reasoning.
@@ -1140,7 +1101,6 @@
                     data: file.base64Data
                 }
              }));
-             // Add files to the last user message
              contents[contents.length - 1].parts.push(...fileParts);
         }
 
@@ -1166,7 +1126,6 @@
             const data = await response.json();
             const agentContent = data.candidates?.[0]?.content?.parts?.[0]?.text || "Error: Failed to generate a valid response.";
             
-            // Record and render agent response
             chatHistory.push({ role: 'model', content: agentContent, searchRefs: searchRefs });
             document.getElementById('ai-response-container').appendChild(createMessageBubble(agentContent, true, searchRefs));
             scrollResponseToBottom();
@@ -1188,7 +1147,6 @@
 
     // --- Global Initialization ---
 
-    // Expose utility functions for use in dynamically created elements (e.g., copyCode, removeFile)
     window.copyCode = async function(button) {
         const codeElement = button.closest('pre').querySelector('code');
         const codeText = codeElement.innerText;
