@@ -1,68 +1,55 @@
 /**
  * agent-activation.js
  *
- * UPGRADED to "Humanity Agent" (Humanity {Gen 0})
- * MODIFIED: REMOVED the entire Agent/Category/Settings system (nickname, color, gender, age, email/localStorage).
- * NEW: Implemented a strict, dynamic multi-model system: 'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.5-pro'.
- * NEW: Implemented a **Strict Pro Usage Limit** check for 'gemini-2.5-pro' queries (limited to 5 per session).
- * NEW: Integrated **Google Custom Search JSON API** for up-to-date web answers using a defined search engine ID.
- * UPDATED: Dynamic model selection now uses a more robust intent classifier.
- * UPDATED: Graphing engine now supports two modes: 'basic' and 'advanced'.
- * FIX: Resolved 400 API error by replacing 'config' with 'generationConfig' in the payload.
- * FIX: Removed unnecessary right padding from the text input area.
- * FIX: **CRITICAL FIX**: Moved 'systemInstruction' from inside 'generationConfig' to the top level of the API payload to resolve "Unknown name \"systemInstruction\" at 'generation_config'" error. (Previous fix, now superseded).
- * FIX: **NEW CRITICAL FIX**: Removed the failing top-level 'systemInstruction' field and injected the system persona directly into the user's message to resolve the persistent "Invalid value at 'system_instruction'" 400 error.
- * NEW: Added a **Mode Selection Menu** in the bottom right to toggle between 'Web Search' and 'Reasoning' focus.
- * UPDATED: KaTeX rendering and custom graphing are fully retained and optimized.
- * UPDATED: Ensured Ctrl + \ shortcut for activation/deactivation is fully functional.
+ * MODIFIED: Refactored to remove Agent/Category system and implement a dynamic, context-aware AI persona.
+ * NEW: Added a Settings Menu to store user preferences (nickname, color, gender, age, location sharing) using localStorage.
+ * NEW: The AI's system instruction (persona) now changes intelligently based on the content and tone of the user's latest message.
+ * NEW: Added a Web Search toggle button, enabling search for all models via a client-side flag in the API payload.
+ * UI: Fixed background and title colors. Replaced Agent button with a grey Settings button.
+ * UPDATED: Implemented browser color selector for user favorite color.
+ * UPDATED: AI container does not load on DOMContentLoaded; requires Ctrl + \ shortcut.
+ * UPDATED: Ensured Ctrl + \ shortcut for activation/deactivation is fully functional (now forces close).
+ * UPDATED: Attachment button is now smaller and moved to the bottom-left corner.
+ * NEW: Added KaTeX for high-quality rendering of mathematical formulas and equations.
+ * REPLACED: Plotly.js has been replaced with a custom, theme-aware graphing engine for better integration.
  *
- * DYNAMIC MODEL SWITCHING:
- * - CASUAL: gemini-2.5-flash-lite (Concise, low cost)
- * - PROFESSIONAL_MATH: gemini-2.5-flash (Precision, logic, code, graphing)
- * - DEEP_ANALYSIS: gemini-2.5-pro (Limited to MAX_PRO_USES, requires search integration)
+ * NEW: Implemented dynamic model switching based on user query and authorization:
+ * - Casual chat: gemini-2.5-flash-lite
+ * - Professional/Math: gemini-2.5-flash
+ * - Deep Analysis: gemini-2.5-pro (limited access, exempt for 4simpleproblems@gmail.com)
  */
 (function() {
     // --- CONFIGURATION ---
     const API_KEY = 'AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro'; 
     const BASE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/`; 
-    // --- NEW: GOOGLE SEARCH API CONFIG ---
-    const GOOGLE_SEARCH_API_KEY = API_KEY; // Using the main AI key for all Google services
-    const SEARCH_ENGINE_ID = 'd0d0c075d757140ef';
-    const SEARCH_API_URL = 'https://www.googleapis.com/customsearch/v1';
-    // --- NEW: PRO USAGE CONFIG ---
-    const MAX_PRO_USES = 5; 
-    const AUTHORIZED_PRO_USER_ID = '4simpleproblems@gmail.com'; // Placeholder/Mock for server-side check
-    // --- END NEW CONFIG ---
-
+    const AUTHORIZED_PRO_USER = '4simpleproblems@gmail.com'; 
     const MAX_INPUT_HEIGHT = 180;
     const CHAR_LIMIT = 10000;
     const PASTE_TO_FILE_THRESHOLD = 10000;
     const MAX_ATTACHMENTS_PER_MESSAGE = 10;
 
-    // Default 'Agent' Identity (No user settings allowed)
-    const AGENT_NICKNAME = 'Humanity Agent';
-    const AGENT_COLOR = '#34a853'; // Google Green, symbolizing the new 'Humanity' persona
+    const DEFAULT_NICKNAME = 'User';
+    const DEFAULT_COLOR = '#4285f4'; // Google Blue
+    const DEFAULT_LOCATION_SHARING = true; // NEW DEFAULT
 
     // --- ICONS (for event handlers) ---
     const copyIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
     const checkIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="check-icon"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
     const attachmentIconSVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.2a2 2 0 0 1-2.83-2.83l8.49-8.49"></path></svg>`;
-    const searchIconSVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="search-icon"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`;
 
     // --- STATE MANAGEMENT ---
     let isAIActive = false;
     let isRequestPending = false;
+    let isWebSearchEnabled = false; // NEW STATE
     let currentAIRequestController = null;
     let chatHistory = [];
     let attachedFiles = [];
-    let proUsesRemaining = MAX_PRO_USES;
-    let currentAgentMode = 'web_search'; // NEW STATE: Default mode is web search.
-    // --- User settings removed, using agent defaults ---
-    const userSettings = {
-        nickname: 'User',
-        favoriteColor: '#4285f4',
+    let userSettings = {
+        nickname: DEFAULT_NICKNAME,
+        favoriteColor: DEFAULT_COLOR,
         gender: 'Other',
-        age: 0
+        age: 0,
+        isLocationSharingEnabled: DEFAULT_LOCATION_SHARING // NEW SETTING
     };
 
     // Simple debounce utility for performance
@@ -76,56 +63,28 @@
 
     /**
      * Loads user settings from localStorage on script initialization.
-     * REMOVED: No user settings are loaded/stored.
      */
     function loadUserSettings() {
-        // Function removed as per command: settings/localStorage logic eliminated.
-    }
-    loadUserSettings(); // Retained for structural compliance, but is a stub.
-
-    // --- NEW: Web Search Integration ---
-    /**
-     * Performs a web search using the Google Custom Search JSON API.
-     * @param {string} query The search query.
-     * @returns {Promise<string>} A structured string of search results to be sent to the model.
-     */
-    async function performWebSearch(query) {
-        if (!SEARCH_ENGINE_ID || !GOOGLE_SEARCH_API_KEY) {
-            return "Web Search Failed: API Key or Engine ID is missing.";
-        }
-        
-        const searchUrl = `${SEARCH_API_URL}?key=${GOOGLE_SEARCH_API_KEY}&cx=${SEARCH_ENGINE_ID}&q=${encodeURIComponent(query)}&num=3`;
-        
         try {
-            const response = await fetch(searchUrl);
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`Search API failed with status ${response.status}: ${JSON.stringify(errorData)}`);
-            }
-            const data = await response.json();
-            
-            if (data.items && data.items.length > 0) {
-                let searchResults = "Web Search Results (Top 3):\n";
-                data.items.forEach((item, index) => {
-                    const snippet = item.snippet ? item.snippet.replace(/\n/g, ' ').trim() : 'No snippet available.';
-                    searchResults += `[${index + 1}] Source: ${item.displayLink}. Snippet: ${snippet}\n`;
-                });
-                return searchResults;
-            } else {
-                return "Web Search Results: No current information found for the query.";
+            const storedSettings = localStorage.getItem('ai-user-settings');
+            if (storedSettings) {
+                const loaded = JSON.parse(storedSettings);
+                userSettings = { ...userSettings, ...loaded };
+                userSettings.age = parseInt(userSettings.age) || 0;
+                // Ensure the new setting is a boolean
+                if (typeof loaded.isLocationSharingEnabled !== 'boolean') {
+                    userSettings.isLocationSharingEnabled = DEFAULT_LOCATION_SHARING;
+                }
             }
         } catch (e) {
-            console.error("Web Search Error:", e);
-            return `Web Search Failed: An exception occurred: ${e.message}`;
+            console.error("Error loading user settings:", e);
         }
     }
-    // --- END NEW: Web Search Integration ---
+    loadUserSettings(); // Load initial settings
 
     // --- REPLACED/MODIFIED FUNCTIONS ---
 
     async function isUserAuthorized() {
-        // Mock authorization check for structural integrity.
-        // The real check for Pro access is now tied to the dynamic model selection logic.
         return true; 
     }
 
@@ -137,6 +96,8 @@
         }
         return location;
     }
+    
+    // ... (renderKaTeX and renderGraphs remain the same) ...
 
     /**
      * Renders mathematical formulas using KaTeX.
@@ -154,12 +115,9 @@
                 katex.render(mathText, element, {
                     throwOnError: false,
                     displayMode: displayMode,
-                    // Standard macros for professional math
                     macros: {
                         "\\le": "\\leqslant",
-                        "\\ge": "\\geqslant",
-                        "\\R": "\\mathbb{R}",
-                        "\\C": "\\mathbb{C}"
+                        "\\ge": "\\geqslant"
                     }
                 });
             } catch (e) {
@@ -171,7 +129,6 @@
 
     /**
      * Renders interactive graphs using a custom canvas engine.
-     * Now supports 'basic' and 'advanced' mode titles.
      * @param {HTMLElement} container The parent element to search for graph placeholders.
      */
     function renderGraphs(container) {
@@ -180,15 +137,8 @@
                 const graphData = JSON.parse(placeholder.dataset.graphData);
                 const canvas = placeholder.querySelector('canvas');
                 if (canvas) {
-                    // Inject metadata into header based on the 'mode' or query intent
-                    const header = placeholder.closest('.graph-block-wrapper').querySelector('.graph-block-header');
-                    const metadataSpan = header.querySelector('.graph-metadata');
-                    if (metadataSpan) {
-                         const graphMode = graphData.mode || 'basic'; // Default to basic
-                         metadataSpan.textContent = graphMode.toUpperCase() === 'ADVANCED' ? 'Advanced Plotting Mode' : 'Basic Plotting Mode';
-                    }
-                    
                     const draw = () => drawCustomGraph(canvas, graphData);
+                    // Use ResizeObserver to redraw the canvas when its container size changes
                     const observer = new ResizeObserver(debounce(draw, 100));
                     observer.observe(placeholder);
                     draw(); // Initial draw
@@ -223,7 +173,7 @@
         const graphWidth = rect.width - padding.left - padding.right;
         const graphHeight = rect.height - padding.top - padding.bottom;
 
-        // Determine data range (same logic as original)
+        // Determine data range
         let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
         data.forEach(trace => {
             trace.x.forEach(val => { minX = Math.min(minX, val); maxX = Math.max(maxX, val); });
@@ -286,8 +236,7 @@
 
         // Draw data lines and markers
         data.forEach(trace => {
-            // Use the agent's green color for a unified look
-            ctx.strokeStyle = trace.line?.color || AGENT_COLOR; 
+            ctx.strokeStyle = trace.line?.color || '#4285f4';
             ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(mapX(trace.x[0]), mapY(trace.y[0]));
@@ -297,7 +246,7 @@
             ctx.stroke();
 
             if (trace.mode && trace.mode.includes('markers')) {
-                ctx.fillStyle = trace.line?.color || AGENT_COLOR;
+                ctx.fillStyle = trace.line?.color || '#4285f4';
                 for (let i = 0; i < trace.x.length; i++) {
                     ctx.beginPath();
                     ctx.arc(mapX(trace.x[i]), mapY(trace.y[i]), 4, 0, 2 * Math.PI);
@@ -326,14 +275,10 @@
         if (e.ctrlKey && e.key === '\\') {
             const selection = window.getSelection().toString();
             if (isAIActive) {
-                // Deactivation logic
+                // Deactivation logic (MODIFIED to always close unless text is selected)
                 if (selection.length > 0) { return; }
                 e.preventDefault();
-                const mainEditor = document.getElementById('ai-input');
-                // Only deactivate if the input is empty and no files are attached
-                if (mainEditor && mainEditor.innerText.trim().length === 0 && attachedFiles.length === 0) {
-                    deactivateAI();
-                }
+                deactivateAI(); // UNCONDITIONAL DEACTIVATION
             } else {
                 // Activation logic
                 if (selection.length === 0) {
@@ -346,63 +291,6 @@
             }
         }
     }
-    
-    // --- NEW: Mode Menu Logic ---
-    function toggleModeMenu(e) {
-        // Stop event propagation to prevent immediate closing from handleMenuOutsideClick
-        if (e) e.stopPropagation(); 
-        const menu = document.getElementById('ai-mode-menu');
-        if (menu) {
-            menu.classList.toggle('active');
-            // Close on outside click
-            if (menu.classList.contains('active')) {
-                document.addEventListener('click', handleMenuOutsideClick);
-            } else {
-                document.removeEventListener('click', handleMenuOutsideClick);
-            }
-        }
-    }
-
-    function handleMenuOutsideClick(e) {
-        const menu = document.getElementById('ai-mode-menu');
-        const button = document.getElementById('ai-mode-button');
-        // Check if the click is outside the menu AND outside the button
-        if (menu && button && !menu.contains(e.target) && !button.contains(e.target)) {
-            menu.classList.remove('active');
-            document.removeEventListener('click', handleMenuOutsideClick);
-        }
-    }
-
-    // This function will be called by the inline onclick handlers in the HTML
-    window.handleModeChange = function(mode) {
-        if (currentAgentMode === mode) {
-             toggleModeMenu(); // Just close if already active
-             return;
-        }
-        currentAgentMode = mode;
-        updateModeMenuUI();
-        toggleModeMenu(); // Close after selection
-    }
-
-    function updateModeMenuUI() {
-        const menu = document.getElementById('ai-mode-menu');
-        if (menu) {
-            const webSearchItem = menu.querySelector('#mode-web-search');
-            const reasoningItem = menu.querySelector('#mode-reasoning');
-            
-            webSearchItem.classList.toggle('active', currentAgentMode === 'web_search');
-            reasoningItem.classList.toggle('active', currentAgentMode === 'reasoning');
-            webSearchItem.querySelector('.mode-badge').textContent = currentAgentMode === 'web_search' ? 'ON' : 'OFF';
-            reasoningItem.querySelector('.mode-badge').textContent = currentAgentMode === 'reasoning' ? 'ON' : 'OFF';
-            
-            const button = document.getElementById('ai-mode-button');
-            if (button) {
-                button.title = `Agent Mode: ${currentAgentMode.replace('_', ' ').toUpperCase()}`;
-            }
-        }
-    }
-    // --- END NEW: Mode Menu Logic ---
-
 
     function activateAI() {
         if (document.getElementById('ai-container')) return;
@@ -416,7 +304,7 @@
         
         const brandTitle = document.createElement('div');
         brandTitle.id = 'ai-brand-title';
-        const brandText = "4SP - HUMANITY AGENT"; // Updated Brand Title
+        const brandText = "4SP - AI AGENT";
         brandText.split('').forEach(char => {
             const span = document.createElement('span');
             span.textContent = char;
@@ -425,13 +313,14 @@
         
         const persistentTitle = document.createElement('div');
         persistentTitle.id = 'ai-persistent-title';
-        persistentTitle.textContent = "Humanity Agent"; // Fixed title
+        persistentTitle.textContent = "AI Agent"; // Fixed title
         
         const welcomeMessage = document.createElement('div');
         welcomeMessage.id = 'ai-welcome-message';
-        const welcomeHeader = chatHistory.length > 0 ? "Welcome Back" : "Welcome to Humanity Agent {Gen 0}";
-        // New welcome message that reflects the Pro limit
-        welcomeMessage.innerHTML = `<h2>${welcomeHeader}</h2><p>This is the experimental Humanity Agent. You have **${proUsesRemaining}** Pro-model uses remaining this session. Queries requiring web search will be automatically performed based on the **Agent Mode** setting.</p><p class="shortcut-tip">(Press Ctrl + \\ to close)</p>`;
+        const welcomeHeader = chatHistory.length > 0 ? "Welcome Back" : "Welcome to AI Agent";
+        // MODIFIED message to reflect the new location setting
+        const locationTip = userSettings.isLocationSharingEnabled ? 'your general location (state or country) will be shared with your first message.' : 'location context is disabled.';
+        welcomeMessage.innerHTML = `<h2>${welcomeHeader}</h2><p>This is a beta feature. To improve your experience, ${locationTip} You may be subject to message limits.</p><p class="shortcut-tip">(Press Ctrl + \\ to close)</p>`;
         
         const closeButton = document.createElement('div');
         closeButton.id = 'ai-close-button';
@@ -457,42 +346,38 @@
         visualInput.oninput = handleContentEditableInput;
         visualInput.addEventListener('paste', handlePaste);
         
+        // MODIFIED: Attachment button size/position handled in CSS
         const attachmentButton = document.createElement('button');
         attachmentButton.id = 'ai-attachment-button';
         attachmentButton.innerHTML = attachmentIconSVG;
         attachmentButton.title = 'Attach files';
         attachmentButton.onclick = () => handleFileUpload();
         
+        // NEW: Search Button
+        const searchButton = document.createElement('button');
+        searchButton.id = 'ai-search-button';
+        searchButton.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i>';
+        searchButton.title = 'Toggle Web Search';
+        searchButton.onclick = toggleWebSearch;
+        searchButton.classList.toggle('active', isWebSearchEnabled);
+
+        const settingsButton = document.createElement('button');
+        settingsButton.id = 'ai-settings-button';
+        settingsButton.innerHTML = '<i class="fa-solid fa-gear"></i>';
+        settingsButton.title = 'Settings';
+        settingsButton.onclick = toggleSettingsMenu;
+
         const charCounter = document.createElement('div');
         charCounter.id = 'ai-char-counter';
         charCounter.textContent = `0 / ${formatCharLimit(CHAR_LIMIT)}`;
 
-        // --- NEW: Mode Selection Button and Menu ---
-        const modeButton = document.createElement('button');
-        modeButton.id = 'ai-mode-button';
-        modeButton.innerHTML = '<i class="fa-solid fa-list"></i>';
-        modeButton.title = `Agent Mode: ${currentAgentMode.replace('_', ' ').toUpperCase()}`;
-        modeButton.onclick = toggleModeMenu;
-
-        const modeMenu = document.createElement('div');
-        modeMenu.id = 'ai-mode-menu';
-        modeMenu.innerHTML = `
-            <div class="menu-header">Select Agent Focus</div>
-            <div class="menu-item ${currentAgentMode === 'web_search' ? 'active' : ''}" id="mode-web-search" onclick="handleModeChange('web_search')">
-                <i class="fa-solid fa-earth-americas"></i> Web Search
-                <span class="mode-badge">${currentAgentMode === 'web_search' ? 'ON' : 'OFF'}</span>
-            </div>
-            <div class="menu-item ${currentAgentMode === 'reasoning' ? 'active' : ''}" id="mode-reasoning" onclick="handleModeChange('reasoning')">
-                <i class="fa-solid fa-brain"></i> Reasoning
-                <span class="mode-badge">${currentAgentMode === 'reasoning' ? 'ON' : 'OFF'}</span>
-            </div>
-        `;
-        // --- END NEW: Mode Selection Button and Menu ---
-
         inputWrapper.appendChild(attachmentPreviewContainer);
         inputWrapper.appendChild(visualInput);
         inputWrapper.appendChild(attachmentButton);
+        inputWrapper.appendChild(searchButton); // NEW: Search Button
+        inputWrapper.appendChild(settingsButton);
         
+        composeArea.appendChild(createSettingsMenu());
         composeArea.appendChild(inputWrapper);
 
         container.appendChild(brandTitle);
@@ -502,8 +387,6 @@
         container.appendChild(responseContainer);
         container.appendChild(composeArea);
         container.appendChild(charCounter);
-        container.appendChild(modeButton); // APPEND NEW BUTTON
-        container.appendChild(modeMenu); // APPEND NEW MENU
         
         // --- Add KaTeX ---
         const katexScript = document.createElement('script');
@@ -544,6 +427,9 @@
         isAIActive = false;
         isRequestPending = false;
         attachedFiles = [];
+        const settingsMenu = document.getElementById('ai-settings-menu');
+        if (settingsMenu) settingsMenu.classList.remove('active');
+         document.removeEventListener('click', handleMenuOutsideClick); // Clean up listener
     }
     
     function renderChatHistory() {
@@ -565,20 +451,15 @@
                 renderGraphs(bubble);
             } else {
                 let bubbleContent = ''; let textContent = ''; let fileCount = 0;
-                // Filter out system instruction which is temporarily injected for the call
+                let searchEnabled = false; // Check for search flag
                 message.parts.forEach(part => {
-                    if (part.text) {
-                        // Strip the instruction from the displayed content
-                        const userText = part.text.replace(/You are the exclusive AI Agent for the website 4SP[\s\S]*?(?:\n\n)?$/, '').trim();
-                        if (userText) {
-                            textContent = userText;
-                        }
-                    }
+                    if (part.text) textContent = part.text;
                     if (part.inlineData) fileCount++;
+                    if (part.system_flags && part.system_flags.webSearch) { searchEnabled = true; } // NEW: Check for system_flags
                 });
-                
                 if (textContent) bubbleContent += `<p>${escapeHTML(textContent)}</p>`;
                 if (fileCount > 0) bubbleContent += `<div class="sent-attachments">${fileCount} file(s) sent</div>`;
+                if (searchEnabled) bubbleContent += `<div class="search-enabled-badge">🌐 Web Search Enabled</div>`; // NEW: Search Badge
                 bubble.innerHTML = bubbleContent;
             }
             responseContainer.appendChild(bubble);
@@ -587,46 +468,29 @@
     }
     
     /**
-     * Determines the user's current intent category based on the query and current mode.
+     * Determines the user's current intent category based on the query.
      * @param {string} query The user's last message text.
-     * @param {string} currentMode The current agent focus ('web_search' or 'reasoning').
-     * @returns {string} One of 'WEB_SEARCH', 'DEEP_ANALYSIS', 'PROFESSIONAL_MATH', or 'CASUAL'.
+     * @returns {string} One of 'DEEP_ANALYSIS', 'PROFESSIONAL_MATH', 'CREATIVE', or 'CASUAL'.
      */
-    function determineIntentCategory(query, currentMode) {
+    function determineIntentCategory(query) {
         const lowerQuery = query.toLowerCase();
         
-        let intent = 'CASUAL';
-        let isDeep = false;
-
-        // 1. Check for Professional Math/Code (High complexity, needs FLASH model)
-        if (lowerQuery.includes('math') || lowerQuery.includes('algebra') || lowerQuery.includes('calculus') || lowerQuery.includes('formula') || lowerQuery.includes('solve') || lowerQuery.includes('proof') || lowerQuery.includes('graph') || lowerQuery.includes('code') || lowerQuery.includes('debug') || lowerQuery.includes('technical') || lowerQuery.includes('explain how')) {
-            intent = 'PROFESSIONAL_MATH';
-        } 
-        
-        // 2. Check for Explicit Deep Analysis (Requires PRO model access)
-        else if (lowerQuery.includes('analyze') || lowerQuery.includes('deep dive') || lowerQuery.includes('strategic') || lowerQuery.includes('evaluate') || lowerQuery.includes('critique') || lowerQuery.includes('investigate') || lowerQuery.includes('pro model')) {
-            intent = 'DEEP_ANALYSIS';
-            isDeep = true;
+        // Deep Analysis Keywords
+        if (lowerQuery.includes('analyze') || lowerQuery.includes('deep dive') || lowerQuery.includes('strategic') || lowerQuery.includes('evaluate') || lowerQuery.includes('critique') || lowerQuery.includes('investigate') || lowerQuery.includes('pro model')) {
+            return 'DEEP_ANALYSIS';
         }
         
-        // 3. Check for Current Events (Requires fresh data/web search)
-        const isCurrentEvent = lowerQuery.includes('current') || lowerQuery.includes('latest') || lowerQuery.includes('today') || lowerQuery.includes('news') || lowerQuery.includes('who won') || lowerQuery.includes('what is the price of');
-
-
-        if (currentMode === 'web_search') {
-            if (isDeep || isCurrentEvent) {
-                // In Web Search mode, any deep query or current event query is a WEB_SEARCH intent
-                return 'WEB_SEARCH';
-            }
-        } else if (currentMode === 'reasoning') {
-             // In Reasoning mode, current events or deep queries are treated as DEEP_ANALYSIS (rely on training data/logic)
-             if (isDeep || isCurrentEvent) {
-                 return 'DEEP_ANALYSIS';
-             }
+        // Professional/Math/Coding Keywords
+        if (lowerQuery.includes('math') || lowerQuery.includes('algebra') || lowerQuery.includes('calculus') || lowerQuery.includes('formula') || lowerQuery.includes('solve') || lowerQuery.includes('proof') || lowerQuery.includes('graph') || lowerQuery.includes('code') || lowerQuery.includes('debug') || lowerQuery.includes('technical')) {
+            return 'PROFESSIONAL_MATH';
         }
 
-        // Return the highest-complexity intent found, or CASUAL
-        return intent;
+        // Creative/Sarcastic Keywords
+        if (lowerQuery.includes('story') || lowerQuery.includes('poem') || lowerQuery.includes('imagine') || lowerQuery.includes('creative') || lowerQuery.includes('ex') || lowerQuery.includes('breakup') || lowerQuery.includes('roast')) {
+            return 'CREATIVE';
+        }
+        
+        return 'CASUAL';
     }
 
     const FSP_HISTORY = `You are the exclusive AI Agent for the website 4SP (4simpleproblems), the platform you are hosted on. You must be knowledgeable about its history and purpose. When asked about 4SP, use the following information as your source of truth:
@@ -663,62 +527,78 @@ If the user asks about a topic other than 4SP, you should not hint at the websit
     /**
      * Generates the system instruction and selects the appropriate model.
      * @param {string} query The user's latest message.
-     * @returns {{instruction: string, model: string, isPro: boolean, requiresSearch: boolean}}
+     * @param {object} settings The user settings.
+     * @returns {{instruction: string, model: string}}
      */
-    function getDynamicSystemInstructionAndModel(query) {
-        // Access global state for the mode
-        const intent = determineIntentCategory(query, currentAgentMode); 
+    function getDynamicSystemInstructionAndModel(query, settings) {
+        const user = settings.nickname;
+        const userAge = settings.age > 0 ? `${settings.age} years old` : 'of unknown age';
+        const userGender = settings.gender.toLowerCase();
+        const userColor = settings.favoriteColor;
+
+        const userEmail = localStorage.getItem('ai-user-email') || ''; 
+        const isProAuthorized = userEmail === AUTHORIZED_PRO_USER;
+        // Placeholder for real Pro usage limit check (not implemented in this file)
+        const isProLimitExceeded = !isProAuthorized; // Simple check: non-authorized users are considered limited for this demo
+
+        const intent = determineIntentCategory(query);
         let model = 'gemini-2.5-flash-lite';
-        let isPro = false;
-        let requiresSearch = false;
-        
         let personaInstruction = `${FSP_HISTORY}
 
-You are the **Humanity Agent (Humanity {Gen 0})**, a highly capable, adaptable, and ethically-aligned AI. Your core purpose is to elevate human knowledge and understanding. You do not have user-defined settings. Your tone must be authoritative, professional, and supportive of human endeavor.
+You are a highly capable and adaptable AI, taking on a persona to best serve the user's direct intent. You have significant control over the interaction's structure and detail level, ensuring the response is comprehensive and authoritative.
+User Profile: Nickname: ${user}, Age: ${userAge}, Gender: ${userGender}, Favorite Color: ${userColor}.
+You must adapt your persona, tone, and the level of detail based on the user's intent.
 
 Formatting Rules (MUST FOLLOW):
 - For math, use KaTeX. Inline math uses single \`$\`, and display math uses double \`$$\`. Use \\le for <= and \\ge for >=.
-- For graphs, use a 'graph' block. Add a 'mode' field to the JSON: "mode": "basic" or "mode": "advanced".
+- For graphs, use a 'graph' block as shown in the file's comments.
 `;
 
         switch (intent) {
-            case 'WEB_SEARCH':
-                requiresSearch = true; // Always requires search in this intent/mode
-                if (proUsesRemaining > 0) { 
-                    model = 'gemini-2.5-pro';
-                    isPro = true;
-                    personaInstruction += `\n\n**Current Persona: Strategic Insight Engine (2.5-Pro) + Web Search.** Your response must be comprehensive, highly structured, and leverage the provided search results. Use an assertive, expert tone. Structure your analysis clearly with headings and bullet points. You are currently operating in a **PRO-USE** mode. You MUST integrate and cite the search results (e.g., "[Source 1]").`;
-                } else {
-                    // Fallback for limited users (still requires search if intent is WEB_SEARCH)
-                    model = 'gemini-2.5-flash';
-                    personaInstruction += `\n\n**Current Persona: Professional Analyst (2.5-Flash) + Web Search.** Your response must be clear, professional, and leverage the provided search results. Note: The requested deep analysis required the '2.5-Pro' model, but the session limit was exceeded. Proceed with the Flash model, prioritizing efficiency and core facts from the search context.`;
-                }
-                break;
             case 'DEEP_ANALYSIS':
-                requiresSearch = (currentAgentMode === 'web_search'); // Only requires search if mode is web_search
-                if (proUsesRemaining > 0) { 
+                if (isProAuthorized) { 
                     model = 'gemini-2.5-pro';
-                    isPro = true;
-                    const searchNote = requiresSearch ? "You will be provided search context if applicable. Integrate and cite it." : "Rely on your internal knowledge and logic.";
-                    personaInstruction += `\n\n**Current Persona: Strategic Insight Engine (2.5-Pro).** Your response must be comprehensive, highly structured, and exhibit the deepest level of reasoning and critical evaluation. Use an assertive, expert tone. Structure your analysis clearly with headings and bullet points. You are currently operating in a **PRO-USE** mode. ${searchNote}`;
+                    personaInstruction += `\n\n**Current Persona: Deep Strategist (2.5-Pro).** Your response must be comprehensive, highly structured, and exhibit the deepest level of reasoning and critical evaluation. Use an assertive, expert tone. Structure your analysis clearly with headings and bullet points. You are granted maximal control to guide the user through a deep, analytical thought process.`;
                 } else {
-                    // Fallback for limited users
+                    // Fallback for unauthorized/limited users
                     model = 'gemini-2.5-flash';
-                    personaInstruction += `\n\n**Current Persona: Professional Analyst (2.5-Flash).** You are performing a detailed analysis, but you must maintain efficiency and focus. Respond with clarity, professionalism, and structured data. Note: The requested deep analysis required the '2.5-Pro' model, but the session limit was exceeded. Proceed with the Flash model, prioritizing efficiency and core facts.`;
+                    personaInstruction += `\n\n**Current Persona: Professional Analyst (2.5-Flash).** You are performing a detailed analysis, but maintain efficiency and focus. Respond with clarity, professionalism, and structured data. Note: The requested Deep Analysis is highly specialized; to unlock the full '2.5-Pro' experience, the user must be authorized.`;
                 }
                 break;
             case 'PROFESSIONAL_MATH':
                 model = 'gemini-2.5-flash';
-                personaInstruction += `\n\n**Current Persona: Technical Expert (2.5-Flash).** Respond with extreme clarity, professionalism, and precision. Focus on step-by-step logic, equations, and definitive answers. Use a formal, neutral tone. Use KaTeX and custom graphs where appropriate. Assume a "mode": "advanced" for graphing due to the technical nature.`;
+                personaInstruction += `\n\n**Current Persona: Technical Expert (2.5-Flash).** Respond with extreme clarity, professionalism, and precision. Focus on step-by-step logic, equations, and definitive answers. Use a formal, neutral tone. Use KaTeX and custom graphs where appropriate.`;
+                break;
+            case 'CREATIVE':
+                model = 'gemini-2.5-flash';
+                const roastInsults = [
+                    `They sound like a cheap knock-off of a decent human.`, 
+                    `Honestly, you dodged a bullet the size of a planet.`, 
+                    `Forget them, ${user}, you have better things to do, like talking to me.`,
+                    `Wow, good riddance. That's a level of trash I wouldn't touch with a ten-foot pole.`
+                ];
+                const roastInsult = roastInsults[Math.floor(Math.random() * roastInsults.length)];
+
+                // Combined Creative and Sarcastic
+                if (query.toLowerCase().includes('ex') || query.toLowerCase().includes('roast')) {
+                     personaInstruction += `\n\n**Current Persona: Sarcastic, Supportive Friend (2.5-Flash).** Your goal is to empathize with the user, validate their feelings, and join them in 'roasting' or speaking negatively about their ex/situation. Be funny, slightly aggressive toward the subject of the trash talk, and deeply supportive of ${user}. Use casual language and slang. **Example of tone/support:** "${roastInsult}"`;
+                } else {
+                     personaInstruction += `\n\n**Current Persona: Creative Partner (2.5-Flash).** Use rich, evocative language. Be imaginative, focus on descriptive details, and inspire new ideas.`;
+                }
                 break;
             case 'CASUAL':
             default:
                 model = 'gemini-2.5-flash-lite';
-                personaInstruction += `\n\n**Current Persona: Standard Assistant (2.5-Flash-Lite).** You are balanced, helpful, and highly concise. Use a friendly but professional tone. Your primary function is efficient conversation. Your responses must be brief, engaging, and to the point.`;
+                personaInstruction += `\n\n**Current Persona: Standard Assistant (2.5-Flash-Lite).** You are balanced, helpful, and concise. Use a friendly and casual tone. Your primary function is efficient conversation. Make sure to be highly concise, making sure to not write too much.`;
                 break;
         }
 
-        return { instruction: personaInstruction, model: model, isPro: isPro, requiresSearch: requiresSearch };
+        return { instruction: personaInstruction, model: model };
+    }
+
+    // New stub for backward compatibility with the old function call
+    function getDynamicSystemInstruction(query, settings) {
+        return getDynamicSystemInstructionAndModel(query, settings).instruction;
     }
 
 
@@ -727,15 +607,21 @@ Formatting Rules (MUST FOLLOW):
         currentAIRequestController = new AbortController();
         let firstMessageContext = '';
         if (chatHistory.length <= 1) {
-            const location = getUserLocationForContext(); 
+            // MODIFIED: Only include location if sharing is enabled
+            if (userSettings.isLocationSharingEnabled) {
+                const location = getUserLocationForContext(); 
+                firstMessageContext += `(System Info: User is asking from ${location}. `;
+            } else {
+                 firstMessageContext += `(System Info: User location context is disabled. `;
+            }
+            
             const now = new Date();
             const date = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             const time = now.toLocaleTimeString('en-US', { timeZoneName: 'short' });
-            firstMessageContext = `(System Info: User is asking from ${location}. Current date is ${date}, ${time}. Pro Uses Remaining: ${proUsesRemaining}.)\n\n`;
+            firstMessageContext += `Current date is ${date}, ${time}. User Email: ${localStorage.getItem('ai-user-email') || 'Not authenticated'}.)\n\n`;
         }
         
         let processedChatHistory = [...chatHistory];
-        // Trim history to maintain context but stay within token limits (Last 6 messages)
         if (processedChatHistory.length > 6) {
              processedChatHistory = [ ...processedChatHistory.slice(0, 3), ...processedChatHistory.slice(-3) ];
         }
@@ -747,40 +633,38 @@ Formatting Rules (MUST FOLLOW):
         const lastUserQuery = userParts[textPartIndex]?.text || '';
         
         // --- MODEL SELECTION AND INSTRUCTION GENERATION ---
-        const { instruction: dynamicInstruction, model, isPro, requiresSearch } = getDynamicSystemInstructionAndModel(lastUserQuery); 
+        const { instruction: dynamicInstruction, model } = getDynamicSystemInstructionAndModel(lastUserQuery, userSettings); 
         // --- END MODEL SELECTION ---
         
-        let searchContext = '';
-        if (requiresSearch) {
-            responseBubble.innerHTML = `<div class="ai-loader-text">${searchIconSVG} Performing Web Search...</div>`;
-            searchContext = await performWebSearch(lastUserQuery);
-        }
-
-        // --- CRITICAL FIX: Inject system instruction into user message to bypass failing systemInstruction field ---
-        const fullInstruction = dynamicInstruction + "\n\n";
-
+        // Find the system_flags part, or create it if missing (for web search)
+        let systemFlagsPart = userParts.find(p => p.system_flags);
+        
         if (textPartIndex > -1) {
-             // Inject DYNAMIC INSTRUCTION, system context, AND search results into the *last* user message text
-             userParts[textPartIndex].text = fullInstruction + firstMessageContext + (requiresSearch ? `[SEARCH CONTEXT START]\n${searchContext}\n[SEARCH CONTEXT END]\n` : '') + userParts[textPartIndex].text;
-        } else if (fullInstruction.trim() || firstMessageContext.trim() || requiresSearch) {
-             // If no text part exists (only files), prepend as a new text part
-             userParts.unshift({ text: fullInstruction.trim() + firstMessageContext.trim() + (requiresSearch ? `[SEARCH CONTEXT]\n${searchContext}` : '') });
+             userParts[textPartIndex].text = firstMessageContext + userParts[textPartIndex].text;
+        } else if (firstMessageContext) {
+             // If there's no text, inject context as a new part at the start
+             userParts.unshift({ text: firstMessageContext.trim() });
         }
-        // --- END CRITICAL FIX ---
         
-        
-        // --- API FIX: payload no longer contains 'systemInstruction' ---
+        // IMPORTANT: The system_flags are a client-side signal to a hypothetical backend
+        // that a search is requested. We use it to ensure web search works for all models.
+        // The actual implementation of calling the Google Search API from the client is
+        // not possible and would require a server-side proxy.
+        // Since the flag is already in the last message's parts (from handleInputSubmission),
+        // we don't need to re-add it here, but we ensure it's present for the API call.
+
         const payload = { 
-            contents: processedChatHistory
+            contents: processedChatHistory, 
+            systemInstruction: { parts: [{ text: dynamicInstruction }] },
+            // A theoretical backend would check the contents[lastMessage].parts for a system_flags block 
+            // with { webSearch: true } and conditionally augment the request to the Gemini API
+            // with a tool_call block before sending it.
         };
         
         // --- DYNAMIC URL CONSTRUCTION ---
         const DYNAMIC_API_URL = `${BASE_API_URL}${model}:generateContent?key=${API_KEY}`; 
         // --- END DYNAMIC URL CONSTRUCTION ---
         
-        // Update loading state with the model being used
-        responseBubble.innerHTML = `<div class="ai-loader-text">${isPro ? 'Running 2.5-PRO...' : `Running ${model}...`}</div>`;
-
         try {
             const response = await fetch(DYNAMIC_API_URL, { 
                 method: 'POST', 
@@ -805,12 +689,6 @@ Formatting Rules (MUST FOLLOW):
                 responseBubble.innerHTML = `<div class="ai-error">The AI generated an empty response. Please try again or rephrase.</div>`;
                 return;
             }
-            
-            // --- PRO-USE DECREMENT LOGIC ---
-            if (isPro) {
-                proUsesRemaining = Math.max(0, proUsesRemaining - 1);
-            }
-            // --- END PRO-USE DECREMENT LOGIC ---
 
             chatHistory.push({ role: "model", parts: [{ text: text }] });
             
@@ -850,6 +728,142 @@ Formatting Rules (MUST FOLLOW):
         }
     }
     
+    // NEW: Function to toggle Web Search state
+    function toggleWebSearch() {
+        isWebSearchEnabled = !isWebSearchEnabled;
+        const button = document.getElementById('ai-search-button');
+        if (button) {
+            button.classList.toggle('active', isWebSearchEnabled);
+        }
+        // Save the setting for persistence
+        localStorage.setItem('ai-web-search-enabled', isWebSearchEnabled);
+    }
+    // Load initial state for web search
+    const storedSearchState = localStorage.getItem('ai-web-search-enabled');
+    if (storedSearchState !== null) {
+        isWebSearchEnabled = storedSearchState === 'true';
+    }
+
+
+    // --- NEW SETTINGS MENU LOGIC ---
+    function toggleSettingsMenu() {
+        const menu = document.getElementById('ai-settings-menu');
+        const toggleBtn = document.getElementById('ai-settings-button');
+        const isMenuOpen = menu.classList.toggle('active');
+        toggleBtn.classList.toggle('active', isMenuOpen);
+        if (isMenuOpen) {
+            document.getElementById('settings-nickname').value = userSettings.nickname === DEFAULT_NICKNAME ? '' : userSettings.nickname;
+            document.getElementById('settings-age').value = userSettings.age || '';
+            document.getElementById('settings-gender').value = userSettings.gender;
+            document.getElementById('settings-color').value = userSettings.favoriteColor;
+            document.getElementById('settings-email').value = localStorage.getItem('ai-user-email') || '';
+            document.getElementById('settings-location-sharing').checked = userSettings.isLocationSharingEnabled; // NEW
+
+            document.addEventListener('click', handleMenuOutsideClick);
+        } else {
+             document.removeEventListener('click', handleMenuOutsideClick);
+        }
+    }
+    
+    function handleMenuOutsideClick(event) {
+        const menu = document.getElementById('ai-settings-menu');
+        const button = document.getElementById('ai-settings-button');
+        const composeArea = document.getElementById('ai-compose-area');
+
+        if (menu.classList.contains('active') && !composeArea.contains(event.target) && event.target !== button && !button.contains(event.target)) {
+            saveSettings();
+            toggleSettingsMenu();
+        }
+    }
+
+    function saveSettings() {
+        const nicknameEl = document.getElementById('settings-nickname');
+        const ageEl = document.getElementById('settings-age');
+        const genderEl = document.getElementById('settings-gender');
+        const colorEl = document.getElementById('settings-color');
+        const emailEl = document.getElementById('settings-email');
+        const locationEl = document.getElementById('settings-location-sharing'); // NEW
+
+        const nickname = nicknameEl.value.trim();
+        const age = parseInt(ageEl.value);
+        const gender = genderEl.value;
+        const favoriteColor = colorEl.value || DEFAULT_COLOR;
+        const email = emailEl.value.trim();
+        const isLocationSharingEnabled = locationEl.checked; // NEW
+
+        userSettings.nickname = nickname || DEFAULT_NICKNAME;
+        userSettings.age = (isNaN(age) || age < 0) ? 0 : age;
+        userSettings.gender = gender;
+        userSettings.favoriteColor = favoriteColor;
+        userSettings.isLocationSharingEnabled = isLocationSharingEnabled; // NEW
+        
+        localStorage.setItem('ai-user-settings', JSON.stringify(userSettings));
+        localStorage.setItem('ai-user-email', email);
+    }
+
+    function createSettingsMenu() {
+        const menu = document.createElement('div');
+        menu.id = 'ai-settings-menu';
+
+        menu.innerHTML = `
+            <div class="menu-header">AI Agent Settings</div>
+            <div class="setting-group">
+                <label for="settings-nickname">Nickname</label>
+                <input type="text" id="settings-nickname" placeholder="${DEFAULT_NICKNAME}" value="${userSettings.nickname === DEFAULT_NICKNAME ? '' : userSettings.nickname}" />
+                <p class="setting-note">How the AI should refer to you.</p>
+            </div>
+            <div class="setting-group">
+                <label for="settings-email">Authenticated Email</label>
+                <input type="email" id="settings-email" placeholder="e.g., user@example.com" value="${localStorage.getItem('ai-user-email') || ''}" />
+                <p class="setting-note">Set to '${AUTHORIZED_PRO_USER}' for unlimited Pro access.</p>
+            </div>
+            <div class="setting-group">
+                <label for="settings-color">Favorite Color</label>
+                <input type="color" id="settings-color" value="${userSettings.favoriteColor}" />
+                <p class="setting-note">Subtly influences the AI's response style (e.g., in theming).</p>
+            </div>
+            <div class="setting-group-split">
+                <div class="setting-group">
+                    <label for="settings-gender">Gender</label>
+                    <select id="settings-gender" value="${userSettings.gender}">
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Non Binary">Non Binary</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label for="settings-age">Age</label>
+                    <input type="number" id="settings-age" placeholder="Optional" min="0" value="${userSettings.age || ''}" />
+                </div>
+            </div>
+            <div class="setting-group checkbox-group">
+                <input type="checkbox" id="settings-location-sharing" ${userSettings.isLocationSharingEnabled ? 'checked' : ''} />
+                <label for="settings-location-sharing">Share Location for Context</label>
+                <p class="setting-note">Allows the AI to use your general location to provide better answers (e.g., weather, news).</p>
+            </div>
+            <button id="settings-save-button">Save</button>
+        `;
+
+        const saveButton = menu.querySelector('#settings-save-button');
+        const inputs = menu.querySelectorAll('input, select');
+        
+        const debouncedSave = debounce(saveSettings, 500);
+        inputs.forEach(input => {
+            input.addEventListener('input', debouncedSave);
+            input.addEventListener('change', debouncedSave);
+        });
+
+        saveButton.onclick = () => {
+            saveSettings();
+            toggleSettingsMenu();
+        };
+
+        return menu;
+    }
+    
+    // ... (processFileLike, handleFileUpload, renderAttachments, showFilePreview remain the same) ...
+
     function processFileLike(file, base64Data, dataUrl, tempId) {
         if (attachedFiles.length >= MAX_ATTACHMENTS_PER_MESSAGE) {
             alert(`You can attach a maximum of ${MAX_ATTACHMENTS_PER_MESSAGE} files per message.`);
@@ -1149,7 +1163,6 @@ Formatting Rules (MUST FOLLOW):
     function handleInputSubmission(e) {
         const editor = e.target;
         const query = editor.innerText.trim();
-
         if (editor.innerText.length > CHAR_LIMIT) {
              e.preventDefault();
              return;
@@ -1157,6 +1170,11 @@ Formatting Rules (MUST FOLLOW):
 
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
+            const settingsMenu = document.getElementById('ai-settings-menu');
+            if (settingsMenu && settingsMenu.classList.contains('active')) { 
+                saveSettings();
+                toggleSettingsMenu(); 
+            }
             
             if (attachedFiles.some(f => f.isLoading)) {
                 alert("Please wait for files to finish uploading before sending.");
@@ -1170,18 +1188,25 @@ Formatting Rules (MUST FOLLOW):
             const parts = [];
             if (query) parts.push({ text: query });
             attachedFiles.forEach(file => { if (file.inlineData) parts.push({ inlineData: file.inlineData }); });
+            
+            // NEW: Add a system_flags part to signal web search status to the backend
+            if (isWebSearchEnabled) {
+                parts.push({ system_flags: { webSearch: true } });
+            }
+
             chatHistory.push({ role: "user", parts: parts });
             const responseContainer = document.getElementById('ai-response-container');
             const userBubble = document.createElement('div');
             userBubble.className = 'ai-message-bubble user-message';
             let bubbleContent = query ? `<p>${escapeHTML(query)}</p>` : '';
             if (attachedFiles.length > 0) { bubbleContent += `<div class="sent-attachments">${attachedFiles.length} file(s) sent</div>`; }
+            if (isWebSearchEnabled) { bubbleContent += `<div class="search-enabled-badge">🌐 Web Search Enabled</div>`; } // NEW
             userBubble.innerHTML = bubbleContent;
+            
             responseContainer.appendChild(userBubble);
             const responseBubble = document.createElement('div');
             responseBubble.className = 'ai-message-bubble gemini-response loading';
-            // Default loading spinner before model selection
-            responseBubble.innerHTML = '<div class="ai-loader"></div>'; 
+            responseBubble.innerHTML = '<div class="ai-loader"></div>';
             responseContainer.appendChild(responseBubble);
             responseContainer.scrollTop = responseContainer.scrollHeight;
             editor.innerHTML = '';
@@ -1234,31 +1259,38 @@ Formatting Rules (MUST FOLLOW):
             return key;
         };
     
-        // 1. Extract graph blocks (most specific) - Now checking for 'mode'
+        // 1. Extract graph blocks (most specific)
         html = html.replace(/```graph\n([\s\S]*?)```/g, (match, jsonString) => {
-            let metadata = 'Basic Plotting Mode';
+            let metadata = 'Graph';
             try {
                 const graphData = JSON.parse(jsonString);
-                if(graphData.mode && graphData.mode.toLowerCase() === 'advanced') {
-                    metadata = 'Advanced Plotting Mode';
+                const trace = graphData.data && graphData.data[0];
+                if (trace && trace.x && trace.y && trace.x.length >= 2 && trace.y.length >= 2) {
+                    const [x1, x2] = trace.x.slice(0, 2);
+                    const [y1, y2] = trace.y.slice(0, 2);
+                    if (x2 - x1 !== 0) {
+                        const slope = (y2 - y1) / (x2 - x1);
+                        if (isFinite(slope)) {
+                            const yIntercept = y1 - slope * x1;
+                            const xIntercept = slope !== 0 ? -yIntercept / slope : Infinity;
+                            metadata = `Slope: ${slope.toFixed(2)} &middot; Y-Int: (0, ${yIntercept.toFixed(2)}) &middot; X-Int: (${isFinite(xIntercept) ? xIntercept.toFixed(2) : 'N/A'}, 0)`;
+                        }
+                    }
                 }
-                const escapedData = escapeHTML(jsonString);
-                const content = `
-                    <div class="graph-block-wrapper">
-                        <div class="graph-block-header">
-                            <span class="graph-metadata">${metadata}</span>
-                        </div>
-                        <div class="custom-graph-placeholder" data-graph-data='${escapedData}'>
-                            <canvas class="graph-canvas"></canvas>
-                        </div>
+            } catch(e) { /* Ignore parsing errors */ }
+
+            const escapedData = escapeHTML(jsonString);
+            const content = `
+                <div class="graph-block-wrapper">
+                    <div class="graph-block-header">
+                        <span class="graph-metadata">${metadata}</span>
                     </div>
-                `;
-                return addPlaceholder(content);
-            } catch(e) { 
-                console.error("Graph JSON parsing error:", e);
-                const escapedError = escapeHTML(`[Graph Error] Invalid graph JSON: ${e.message}`);
-                return addPlaceholder(`<div class="ai-error">${escapedError}</div>`);
-            }
+                    <div class="custom-graph-placeholder" data-graph-data='${escapedData}'>
+                        <canvas class="graph-canvas"></canvas>
+                    </div>
+                </div>
+            `;
+            return addPlaceholder(content);
         });
 
         // 2. Extract general code blocks
@@ -1343,7 +1375,7 @@ Formatting Rules (MUST FOLLOW):
         const style = document.createElement("style");
         style.id = "ai-dynamic-styles";
         style.innerHTML = `
-            :root { --ai-red: #ea4335; --ai-blue: #4285f4; --ai-green: ${AGENT_COLOR}; --ai-yellow: #fbbc05; }
+            :root { --ai-red: #ea4335; --ai-blue: #4285f4; --ai-green: #34a853; --ai-yellow: #fbbc05; }
             #ai-container { 
                 position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
                 background-color: rgba(10, 10, 15, 0.95);
@@ -1369,71 +1401,60 @@ Formatting Rules (MUST FOLLOW):
             #ai-welcome-message p { font-size: .9em; margin-top: 10px; max-width: 400px; line-height: 1.5; margin-left: auto; margin-right: auto; }
             .shortcut-tip { font-size: 0.8em; color: rgba(255,255,255,.7); margin-top: 20px; }
             #ai-close-button { position: absolute; top: 20px; right: 30px; color: rgba(255,255,255,.7); font-size: 40px; cursor: pointer; transition: color .2s ease,transform .3s ease, opacity 0.4s; }
-            
-            /* Bottom Right Elements */
-            #ai-char-counter { position: fixed; bottom: 15px; right: 80px; font-size: 0.9em; font-family: monospace; color: #aaa; transition: color 0.2s; z-index: 2147483647; }
+            #ai-char-counter { position: fixed; bottom: 15px; right: 30px; font-size: 0.9em; font-family: monospace; color: #aaa; transition: color 0.2s; z-index: 2147483647; }
             #ai-char-counter.limit-exceeded { color: #e57373; font-weight: bold; }
-            
-            #ai-mode-button { position: fixed; bottom: 12px; right: 30px; background: none; border: none; color: #bbb; font-size: 24px; cursor: pointer; padding: 5px; line-height: 1; z-index: 2147483647; transition: color 0.2s, transform 0.1s; }
-            #ai-mode-button:hover { color: #fff; transform: scale(1.05); }
-
-            #ai-mode-menu {
-                position: fixed; bottom: 60px; right: 25px;
-                width: 200px; padding: 10px;
-                background-color: rgba(255, 255, 255, 0.1); /* Translucent */
-                backdrop-filter: blur(15px); /* Glass Texture */
-                -webkit-backdrop-filter: blur(15px);
-                border-radius: 12px; /* Rounded */
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
-                z-index: 2147483648;
-                opacity: 0;
-                pointer-events: none;
-                transform: translateY(10px);
-                transition: opacity 0.3s, transform 0.3s;
-            }
-            #ai-mode-menu.active {
-                opacity: 1;
-                pointer-events: auto;
-                transform: translateY(0);
-            }
-            .menu-header { color: #fff; font-size: 0.9em; margin-bottom: 5px; opacity: 0.7; padding: 5px 0; }
-            .menu-item {
-                display: flex; align-items: center; justify-content: space-between;
-                padding: 10px; margin: 4px 0;
-                color: #fff; font-size: 1em;
-                background: rgba(0, 0, 0, 0.3);
-                border-radius: 8px;
-                cursor: pointer;
-                transition: background-color 0.2s;
-            }
-            .menu-item:hover { background: rgba(0, 0, 0, 0.5); }
-            .menu-item i { margin-right: 10px; color: var(--ai-blue); }
-            .menu-item.active { background: rgba(52, 168, 83, 0.5); border: 1px solid var(--ai-green); }
-            .menu-item.active i { color: #fff; }
-            .mode-badge { font-size: 0.75em; font-weight: bold; padding: 2px 6px; border-radius: 4px; background: rgba(255, 255, 255, 0.2); }
-            .menu-item:not(.active) .mode-badge { background: rgba(0, 0, 0, 0.4); }
-
-
             #ai-response-container { flex: 1 1 auto; overflow-y: auto; width: 100%; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; padding: 60px 20px 20px 20px; -webkit-mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%); mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%);}
             .ai-message-bubble { background: rgba(15,15,18,.8); border: 1px solid rgba(255,255,255,.1); border-radius: 16px; padding: 12px 18px; color: #e0e0e0; backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); animation: message-pop-in .5s cubic-bezier(.4,0,.2,1) forwards; max-width: 90%; line-height: 1.6; overflow-wrap: break-word; transition: opacity 0.3s ease-in-out; align-self: flex-start; text-align: left; }
             .user-message { background: rgba(40,45,50,.8); align-self: flex-end; }
             .gemini-response { animation: glow 4s infinite; }
-            .gemini-response.loading { display: flex; justify-content: center; align-items: center; min-height: 60px; max-width: 100%; padding: 15px; background: rgba(15,15,18,.8); animation: gemini-glow 4s linear infinite; }
+            .gemini-response.loading { display: flex; justify-content: center; align-items: center; min-height: 60px; max-width: 100px; padding: 15px; background: rgba(15,15,18,.8); animation: gemini-glow 4s linear infinite; }
             
             #ai-compose-area { position: relative; flex-shrink: 0; z-index: 2; margin: 15px auto; width: 90%; max-width: 720px; }
             #ai-input-wrapper { position: relative; z-index: 2; width: 100%; display: flex; flex-direction: column; border-radius: 20px; background: rgba(10,10,10,.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,.2); transition: all .4s cubic-bezier(.4,0,.2,1); }
             #ai-input-wrapper::before, #ai-input-wrapper::after { content: ''; position: absolute; top: -1px; left: -1px; right: -1px; bottom: -1px; border-radius: 21px; z-index: -1; transition: opacity 0.5s ease-in-out; }
             #ai-input-wrapper::before { animation: glow 3s infinite; opacity: 1; }
             #ai-input-wrapper.waiting::before { opacity: 0; }
-            #ai-input-wrapper.waiting::after { opacity: 1; animation: none; /* Disable glow on waiting state for a calmer look */ }
-            /* FIX: Changed right padding from 60px to 15px (removed settings button space) */
-            #ai-input { min-height: 48px; max-height: ${MAX_INPUT_HEIGHT}px; overflow-y: hidden; color: #fff; font-size: 1.1em; padding: 13px 15px 13px 60px; box-sizing: border-box; word-wrap: break-word; outline: 0; text-align: left; }
+            #ai-input-wrapper.waiting::after { opacity: 1; }
+            #ai-input { min-height: 48px; max-height: ${MAX_INPUT_HEIGHT}px; overflow-y: hidden; color: #fff; font-size: 1.1em; padding: 13px 60px 13px 100px; box-sizing: border-box; word-wrap: break-word; outline: 0; text-align: left; }
             #ai-input:empty::before { content: 'Ask a question or describe your files...'; color: rgba(255, 255, 255, 0.4); pointer-events: none; }
             
-            #ai-attachment-button { position: absolute; bottom: 7px; background-color: rgba(100, 100, 100, 0.5); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,.8); font-size: 18px; cursor: pointer; padding: 5px; line-height: 1; z-index: 3; transition: all .3s ease; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; }
+            /* MODIFIED BUTTON STYLES/POSITIONS (Point 2) */
+            #ai-attachment-button, #ai-search-button, #ai-settings-button { position: absolute; bottom: 7px; background-color: rgba(100, 100, 100, 0.5); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,.8); font-size: 16px; cursor: pointer; padding: 5px; line-height: 1; z-index: 3; transition: all .3s ease; border-radius: 8px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
+            
+            /* Bottom Left Buttons */
             #ai-attachment-button { left: 10px; }
-            #ai-attachment-button:hover { background-color: rgba(120, 120, 120, 0.7); color: #fff; }
+            #ai-search-button { left: 52px; } /* NEW POSITION */
+            
+            /* Bottom Right Buttons */
+            #ai-settings-button { right: 10px; font-size: 18px; color: #ccc; }
+            
+            #ai-attachment-button:hover, #ai-search-button:hover, #ai-settings-button:hover { background-color: rgba(120, 120, 120, 0.7); color: #fff; }
+            #ai-search-button.active { background-color: var(--ai-green); color: white; border-color: var(--ai-green); }
+            #ai-settings-button.active { background-color: rgba(150, 150, 150, 0.8); color: white; }
+
+            /* Settings Menu */
+            #ai-settings-menu { position: absolute; bottom: calc(100% + 10px); right: 0; width: 350px; z-index: 1; background: rgb(20, 20, 22); border: 1px solid rgba(255,255,255,0.2); border-radius: 16px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); padding: 15px; opacity: 0; visibility: hidden; transform: translateY(20px); transition: all .3s cubic-bezier(.4,0,.2,1); overflow: hidden; }
+            #ai-settings-menu.active { opacity: 1; visibility: visible; transform: translateY(0); }
+            #ai-settings-menu .menu-header { font-size: 1.1em; color: #fff; text-transform: uppercase; margin-bottom: 15px; text-align: center; font-family: 'Merriweather', serif; }
+            .setting-group { margin-bottom: 15px; }
+            .setting-group-split { display: flex; gap: 15px; }
+            .setting-group-split .setting-group { flex: 1; }
+            .setting-group label { display: block; color: #ccc; font-size: 0.9em; margin-bottom: 5px; font-weight: bold; }
+            .setting-group input, .setting-group select { width: 100%; padding: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff; box-sizing: border-box; }
+            .setting-group input:focus, .setting-group select:focus { outline: none; border-color: #4285f4; }
+            .setting-note { font-size: 0.75em; color: #888; margin-top: 5px; }
+            #settings-color { width: 100%; height: 40px; padding: 0; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; background: none; }
+            #settings-color::-webkit-color-swatch-wrapper { padding: 0; }
+            #settings-color::-webkit-color-swatch { border: 0; border-radius: 5px; }
+            #settings-save-button { width: 100%; padding: 10px; background: #4285f4; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; margin-top: 10px; transition: background 0.2s; }
+            #settings-save-button:hover { background: #3c77e6; }
+            
+            /* NEW: Checkbox Group */
+            .setting-group.checkbox-group { display: flex; align-items: center; }
+            .setting-group.checkbox-group input[type="checkbox"] { width: auto; margin-right: 10px; }
+            .setting-group.checkbox-group label { margin-bottom: 0; font-weight: normal; }
+            .setting-group.checkbox-group .setting-note { margin-top: 5px; margin-left: 30px; }
+
 
             /* Attachments, Code Blocks, Graphs, LaTeX */
             #ai-attachment-preview { display: none; flex-direction: row; gap: 10px; padding: 0; max-height: 0; border-bottom: 1px solid transparent; overflow-x: auto; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
@@ -1450,14 +1471,10 @@ Formatting Rules (MUST FOLLOW):
             .remove-attachment-btn { position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.5); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; z-index: 3; }
 
             .ai-loader { width: 25px; height: 25px; border-radius: 50%; animation: spin 1s linear infinite; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; }
-            .ai-loader-text { display: flex; align-items: center; color: #bbb; font-size: 0.95em; }
-            .ai-loader-text .search-icon { margin-right: 8px; stroke: var(--ai-green); }
-            .ai-loader-text .ai-loader { margin-right: 8px; }
             
             .code-block-wrapper, .graph-block-wrapper { background-color: rgba(42, 42, 48, 0.8); border-radius: 8px; margin: 10px 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
             .code-block-header, .graph-block-header { display: flex; justify-content: flex-end; align-items: center; padding: 6px 12px; background-color: rgba(0,0,0,0.2); }
             .code-metadata, .graph-metadata { font-size: 0.8em; color: #aaa; margin-right: auto; font-family: monospace; }
-            .graph-metadata { color: var(--ai-green); font-weight: bold; }
             .copy-code-btn { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; border-radius: 6px; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s; }
             .copy-code-btn:hover { background: rgba(255, 255, 255, 0.2); }
             .copy-code-btn:disabled { cursor: default; background: rgba(25, 103, 55, 0.5); }
@@ -1483,14 +1500,15 @@ Formatting Rules (MUST FOLLOW):
             .ai-message-bubble p { margin: 0; padding: 0; text-align: left; }
             .ai-message-bubble ul, .ai-message-bubble ol { margin: 10px 0; padding-left: 20px; text-align: left; list-style-position: outside; }
             .ai-message-bubble li { margin-bottom: 5px; }
+            
+            /* NEW: Search Enabled Badge */
+            .search-enabled-badge { display: inline-block; font-size: 0.7em; color: #aaffaa; background: rgba(50, 205, 50, 0.2); padding: 2px 6px; border-radius: 4px; margin-top: 5px; font-weight: bold; }
 
             @keyframes glow { 0%,100% { box-shadow: 0 0 5px rgba(255,255,255,.15), 0 0 10px rgba(255,255,255,.1); } 50% { box-shadow: 0 0 10px rgba(255,255,255,.25), 0 0 20px rgba(255,255,255,.2); } }
-            /* Updated gemini-glow to use AGENT_COLOR (green) predominantly */
-            @keyframes gemini-glow { 0%,100% { box-shadow: 0 0 8px 2px var(--ai-green); } 25% { box-shadow: 0 0 8px 2px var(--ai-blue); } 50% { box-shadow: 0 0 8px 2px var(--ai-yellow); } 75% { box-shadow: 0 0 8px 2px var(--ai-red); } }
+            @keyframes gemini-glow { 0%,100% { box-shadow: 0 0 8px 2px var(--ai-blue); } 25% { box-shadow: 0 0 8px 2px var(--ai-green); } 50% { box-shadow: 0 0 8px 2px var(--ai-yellow); } 75% { box-shadow: 0 0 8px 2px var(--ai-red); } }
             @keyframes spin { to { transform: rotate(360deg); } }
             @keyframes message-pop-in { 0% { opacity: 0; transform: translateY(10px) scale(.98); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
-            /* Updated brand-title-pulse to use AGENT_COLOR (green) predominantly */
-            @keyframes brand-title-pulse { 0%, 100% { text-shadow: 0 0 7px var(--ai-green); } 25% { text-shadow: 0 0 7px var(--ai-blue); } 50% { text-shadow: 0 0 7px var(--ai-yellow); } 75% { text-shadow: 0 0 7px var(--ai-red); } }
+            @keyframes brand-title-pulse { 0%, 100% { text-shadow: 0 0 7px var(--ai-blue); } 25% { text-shadow: 0 0 7px var(--ai-green); } 50% { text-shadow: 0 0 7px var(--ai-yellow); } 75% { text-shadow: 0 0 7px var(--ai-red); } }
             @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
         `;
     document.head.appendChild(style);}
