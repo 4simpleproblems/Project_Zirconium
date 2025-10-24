@@ -10,6 +10,7 @@
  * UPDATED: Graphing engine now supports two modes: 'basic' and 'advanced'.
  * FIX: Resolved 400 API error by replacing 'config' with 'generationConfig' in the payload.
  * FIX: Removed unnecessary right padding from the text input area.
+ * FIX: **CRITICAL FIX**: Moved 'systemInstruction' from inside 'generationConfig' to the top level of the API payload to resolve "Unknown name \"systemInstruction\" at 'generation_config'" error.
  * UPDATED: KaTeX rendering and custom graphing are fully retained and optimized.
  * UPDATED: Ensured Ctrl + \ shortcut for activation/deactivation is fully functional.
  *
@@ -658,12 +659,11 @@ Formatting Rules (MUST FOLLOW):
              userParts.unshift({ text: firstMessageContext.trim() + (requiresSearch ? `[SEARCH CONTEXT]\n${searchContext}` : '') });
         }
         
-        // --- API FIX: Replaced 'config' with the correct 'generationConfig' for REST API ---
+        // --- API FIX: Corrected 'systemInstruction' placement. It must be at the top level of the payload, not inside 'generationConfig' ---
         const payload = { 
-            contents: processedChatHistory, 
-            generationConfig: {
-                 systemInstruction: dynamicInstruction
-            }
+            systemInstruction: dynamicInstruction, 
+            contents: processedChatHistory
+            // generationConfig is omitted since it would be empty (no other params used)
         };
         
         // --- DYNAMIC URL CONSTRUCTION ---
