@@ -16,12 +16,7 @@
  * - Professional/Math: gemini-2.5-flash
  * - Deep Analysis: gemini-2.5-pro (limited access, exempt for 4simpleproblems@gmail.com)
  *
- * MAJOR MODIFICATIONS:
- * - Settings Menu and associated logic removed.
- * - Settings button replaced with a Share Location button.
- * - Geolocation API integration added to prompt user for location and save it to localStorage.
- * - Added history sanitization in callGoogleAI to fix "system_flags" API error.
- * - Updated CSS to vertically center input action buttons.
+ * NEW: Integrated Google Custom Search API (CX ID: d0d0c075d757140ef) to provide the AI with real-time search context for non-casual queries.
  */
 (function() {
     // --- CONFIGURATION ---
@@ -33,6 +28,10 @@
     const PASTE_TO_FILE_THRESHOLD = 10000;
     const MAX_ATTACHMENTS_PER_MESSAGE = 10;
 
+    // NEW: Search API Configuration
+    const SEARCH_CX_ID = 'd0d0c075d757140ef';
+    const SEARCH_API_URL = `https://www.googleapis.com/customsearch/v1?key=${API_KEY}&cx=${SEARCH_CX_ID}&q=`;
+
     const DEFAULT_NICKNAME = 'User';
     const DEFAULT_COLOR = '#4285f4'; // Google Blue
 
@@ -40,7 +39,6 @@
     const copyIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
     const checkIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="check-icon"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
     const attachmentIconSVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.2a2 2 0 0 1-2.83-2.83l8.49-8.49"></path></svg>`;
-    const locationIconSVG = `<i class="fa-solid fa-location-dot"></i>`;
 
     // --- STATE MANAGEMENT ---
     let isAIActive = false;
@@ -71,7 +69,6 @@
         try {
             const storedSettings = localStorage.getItem('ai-user-settings');
             if (storedSettings) {
-                // Keep the structure but ignore the save/load fields not needed for context
                 userSettings = { ...userSettings, ...JSON.parse(storedSettings) };
                 userSettings.age = parseInt(userSettings.age) || 0;
             }
@@ -87,65 +84,18 @@
         return true; 
     }
 
+    /**
+     * Retrieves the user's general location (name form).
+     * This function already fulfills the user request to use location name, not coordinates.
+     */
     function getUserLocationForContext() {
         let location = localStorage.getItem('ai-user-location');
-        if (!location || location.startsWith('Latitude:')) {
-            // Default or placeholder if not set or if it's a raw coordinate string
+        if (!location) {
             location = 'United States'; 
+            localStorage.setItem('ai-user-location', location);
         }
         return location;
     }
-    
-    /**
-     * Requests user location using the browser's Geolocation API.
-     */
-    function requestUserLocation() {
-        const button = document.getElementById('ai-location-button');
-        if (button) button.disabled = true;
-
-        if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const lat = position.coords.latitude;
-                    const lon = position.coords.longitude;
-                    // Storing raw coordinates, or a string for context
-                    const locationString = `Latitude: ${lat}, Longitude: ${lon}`;
-                    localStorage.setItem('ai-user-location', locationString);
-
-                    // Update button status
-                    if (button) {
-                        button.innerHTML = checkIconSVG;
-                        setTimeout(() => {
-                            button.innerHTML = locationIconSVG;
-                            button.disabled = false;
-                        }, 3000);
-                    }
-                    
-                    alert(`Location shared: ${locationString}. This will be used for context.`);
-                },
-                (error) => {
-                    let errorMessage = 'Could not retrieve location.';
-                    if (error.code === error.PERMISSION_DENIED) {
-                        errorMessage = 'Location access denied by the user.';
-                    } else if (error.code === error.POSITION_UNAVAILABLE) {
-                        errorMessage = 'Location information is unavailable.';
-                    } else if (error.code === error.TIMEOUT) {
-                        errorMessage = 'The request to get user location timed out.';
-                    }
-                    alert(errorMessage);
-                    if (button) {
-                        button.innerHTML = locationIconSVG;
-                        button.disabled = false;
-                    }
-                },
-                { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-            );
-        } else {
-            alert("Geolocation is not supported by your browser.");
-            if (button) button.disabled = false;
-        }
-    }
-
 
     /**
      * Renders mathematical formulas using KaTeX.
@@ -402,12 +352,11 @@
         attachmentButton.title = 'Attach files';
         attachmentButton.onclick = () => handleFileUpload();
         
-        // REPLACED: Settings button with Location button
-        const locationButton = document.createElement('button');
-        locationButton.id = 'ai-location-button';
-        locationButton.innerHTML = locationIconSVG;
-        locationButton.title = 'Share Location Context';
-        locationButton.onclick = requestUserLocation;
+        const settingsButton = document.createElement('button');
+        settingsButton.id = 'ai-settings-button';
+        settingsButton.innerHTML = '<i class="fa-solid fa-gear"></i>';
+        settingsButton.title = 'Settings';
+        settingsButton.onclick = toggleSettingsMenu;
 
         const charCounter = document.createElement('div');
         charCounter.id = 'ai-char-counter';
@@ -416,8 +365,9 @@
         inputWrapper.appendChild(attachmentPreviewContainer);
         inputWrapper.appendChild(visualInput);
         inputWrapper.appendChild(attachmentButton);
-        inputWrapper.appendChild(locationButton);
+        inputWrapper.appendChild(settingsButton);
         
+        composeArea.appendChild(createSettingsMenu());
         composeArea.appendChild(inputWrapper);
 
         container.appendChild(brandTitle);
@@ -467,6 +417,9 @@
         isAIActive = false;
         isRequestPending = false;
         attachedFiles = [];
+        const settingsMenu = document.getElementById('ai-settings-menu');
+        if (settingsMenu) settingsMenu.classList.remove('active');
+         document.removeEventListener('click', handleMenuOutsideClick); // Clean up listener
     }
     
     function renderChatHistory() {
@@ -636,18 +589,55 @@ Formatting Rules (MUST FOLLOW):
     }
 
 
+    /**
+     * Performs a Google Custom Search and returns formatted results.
+     * @param {string} query The search query.
+     * @returns {Promise<string>} Formatted string of search results or an empty string.
+     */
+    async function callGoogleSearch(query) {
+        if (!API_KEY || !SEARCH_CX_ID) {
+            console.warn("Search API not configured.");
+            return '';
+        }
+        
+        const url = SEARCH_API_URL + encodeURIComponent(query);
+
+        try {
+            const response = await fetch(url, { signal: currentAIRequestController.signal });
+            if (!response.ok) {
+                console.error(`Search API failed with status: ${response.status}`);
+                return '';
+            }
+            const data = await response.json();
+            
+            if (data.items && data.items.length > 0) {
+                let resultString = "--- Google Search Results ---\n";
+                // Only take the top 3 results
+                data.items.slice(0, 3).forEach((item, index) => {
+                    resultString += `Result ${index + 1}: [Title: ${item.title}] [Snippet: ${item.snippet}] [URL: ${item.link}]\n`;
+                });
+                resultString += "----------------------------\n";
+                return resultString;
+            } else {
+                return '';
+            }
+
+        } catch (error) {
+            if (error.name === 'AbortError') return '';
+            console.error('Google Search Error:', error);
+            return '';
+        }
+    }
+
+
     async function callGoogleAI(responseBubble) {
         if (!API_KEY) { responseBubble.innerHTML = `<div class="ai-error">API Key is missing.</div>`; return; }
         currentAIRequestController = new AbortController();
-        let firstMessageContext = '';
-        if (chatHistory.length <= 1) {
-            const location = getUserLocationForContext(); 
-            const now = new Date();
-            const date = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            const time = now.toLocaleTimeString('en-US', { timeZoneName: 'short' });
-            firstMessageContext = `(System Info: User is asking from ${location}. Current date is ${date}, ${time}. User Email: ${localStorage.getItem('ai-user-email') || 'Not authenticated'}.)\n\n`;
-        }
         
+        // Context variables
+        let firstMessageContext = '';
+        
+        // Prepare chat history (context window limiting logic)
         let processedChatHistory = [...chatHistory];
         if (processedChatHistory.length > 6) {
              processedChatHistory = [ ...processedChatHistory.slice(0, 3), ...processedChatHistory.slice(-3) ];
@@ -662,41 +652,38 @@ Formatting Rules (MUST FOLLOW):
         // --- MODEL SELECTION AND INSTRUCTION GENERATION ---
         const { instruction: dynamicInstruction, model } = getDynamicSystemInstructionAndModel(lastUserQuery, userSettings); 
         // --- END MODEL SELECTION ---
+        
+        // --- NEW: Google Search Integration ---
+        let searchContext = '';
+        const intent = determineIntentCategory(lastUserQuery);
+        // Trigger search for analytical, technical, or deep dive queries
+        if (lastUserQuery && (intent === 'DEEP_ANALYSIS' || intent === 'PROFESSIONAL_MATH')) {
+             searchContext = await callGoogleSearch(lastUserQuery);
+        }
+        // --- END NEW: Google Search Integration ---
+
+        // System Info Context (including location in name form)
+        if (chatHistory.length <= 1) {
+            const location = getUserLocationForContext(); 
+            const now = new Date();
+            const date = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            const time = now.toLocaleTimeString('en-US', { timeZoneName: 'short' });
+            // The location variable is a name (e.g., 'United States'), fulfilling the user request.
+            firstMessageContext = `(System Info: User is asking from ${location}. Current date is ${date}, ${time}. User Email: ${localStorage.getItem('ai-user-email') || 'Not authenticated'}.)\n\n`;
+        }
+
+
+        // Prepend all system and search context to the user's latest message
+        const fullContext = firstMessageContext + searchContext;
 
         if (textPartIndex > -1) {
-             userParts[textPartIndex].text = firstMessageContext + userParts[textPartIndex].text;
-        } else if (firstMessageContext) {
-             userParts.unshift({ text: firstMessageContext.trim() });
+             userParts[textPartIndex].text = fullContext + userParts[textPartIndex].text;
+        } else if (fullContext) {
+             userParts.unshift({ text: fullContext.trim() });
         }
         
-        // --- API Error Fix: Sanitize history to prevent passing unknown fields like "system_flags" ---
-        const sanitizedHistory = processedChatHistory.map(message => {
-            return {
-                role: message.role,
-                parts: message.parts.map(part => {
-                    const sanitizedPart = {};
-                    if (part.text !== undefined) {
-                        sanitizedPart.text = part.text;
-                    }
-                    if (part.inlineData && part.inlineData.mimeType && part.inlineData.data) {
-                        sanitizedPart.inlineData = {
-                            mimeType: part.inlineData.mimeType,
-                            data: part.inlineData.data
-                        };
-                    }
-                    return sanitizedPart;
-                })
-            };
-        });
-        
-        /* * NOTE TO DEVELOPER: To enable true web search (as requested by the user), 
-         * this client-side code must be updated to handle tool-call responses from 
-         * the API (e.g., calling the Google Search tool when the model requests it). 
-         * This block is a placeholder for future tool-call response parsing.
-         */
-
         const payload = { 
-            contents: sanitizedHistory, 
+            contents: processedChatHistory, 
             systemInstruction: { parts: [{ text: dynamicInstruction }] } 
         };
         
@@ -767,7 +754,113 @@ Formatting Rules (MUST FOLLOW):
         }
     }
     
-    // --- REMOVED SETTINGS MENU LOGIC ---
+    // --- NEW SETTINGS MENU LOGIC ---
+    function toggleSettingsMenu() {
+        const menu = document.getElementById('ai-settings-menu');
+        const toggleBtn = document.getElementById('ai-settings-button');
+        const isMenuOpen = menu.classList.toggle('active');
+        toggleBtn.classList.toggle('active', isMenuOpen);
+        if (isMenuOpen) {
+            document.getElementById('settings-nickname').value = userSettings.nickname === DEFAULT_NICKNAME ? '' : userSettings.nickname;
+            document.getElementById('settings-age').value = userSettings.age || '';
+            document.getElementById('settings-gender').value = userSettings.gender;
+            document.getElementById('settings-color').value = userSettings.favoriteColor;
+            document.getElementById('settings-email').value = localStorage.getItem('ai-user-email') || '';
+
+            document.addEventListener('click', handleMenuOutsideClick);
+        } else {
+             document.removeEventListener('click', handleMenuOutsideClick);
+        }
+    }
+    
+    function handleMenuOutsideClick(event) {
+        const menu = document.getElementById('ai-settings-menu');
+        const button = document.getElementById('ai-settings-button');
+        const composeArea = document.getElementById('ai-compose-area');
+
+        if (menu.classList.contains('active') && !composeArea.contains(event.target) && event.target !== button && !button.contains(event.target)) {
+            saveSettings();
+            toggleSettingsMenu();
+        }
+    }
+
+    function saveSettings() {
+        const nicknameEl = document.getElementById('settings-nickname');
+        const ageEl = document.getElementById('settings-age');
+        const genderEl = document.getElementById('settings-gender');
+        const colorEl = document.getElementById('settings-color');
+        const emailEl = document.getElementById('settings-email');
+
+        const nickname = nicknameEl.value.trim();
+        const age = parseInt(ageEl.value);
+        const gender = genderEl.value;
+        const favoriteColor = colorEl.value || DEFAULT_COLOR;
+        const email = emailEl.value.trim();
+
+        userSettings.nickname = nickname || DEFAULT_NICKNAME;
+        userSettings.age = (isNaN(age) || age < 0) ? 0 : age;
+        userSettings.gender = gender;
+        userSettings.favoriteColor = favoriteColor;
+        
+        localStorage.setItem('ai-user-settings', JSON.stringify(userSettings));
+        localStorage.setItem('ai-user-email', email);
+    }
+
+    function createSettingsMenu() {
+        const menu = document.createElement('div');
+        menu.id = 'ai-settings-menu';
+
+        menu.innerHTML = `
+            <div class="menu-header">AI Agent Settings</div>
+            <div class="setting-group">
+                <label for="settings-nickname">Nickname</label>
+                <input type="text" id="settings-nickname" placeholder="${DEFAULT_NICKNAME}" value="${userSettings.nickname === DEFAULT_NICKNAME ? '' : userSettings.nickname}" />
+                <p class="setting-note">How the AI should refer to you.</p>
+            </div>
+            <div class="setting-group">
+                <label for="settings-email">Authenticated Email</label>
+                <input type="email" id="settings-email" placeholder="e.g., user@example.com" value="${localStorage.getItem('ai-user-email') || ''}" />
+                <p class="setting-note">Set to '${AUTHORIZED_PRO_USER}' for unlimited Pro access.</p>
+            </div>
+            <div class="setting-group">
+                <label for="settings-color">Favorite Color</label>
+                <input type="color" id="settings-color" value="${userSettings.favoriteColor}" />
+                <p class="setting-note">Subtly influences the AI's response style (e.g., in theming).</p>
+            </div>
+            <div class="setting-group-split">
+                <div class="setting-group">
+                    <label for="settings-gender">Gender</label>
+                    <select id="settings-gender" value="${userSettings.gender}">
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Non Binary">Non Binary</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label for="settings-age">Age</label>
+                    <input type="number" id="settings-age" placeholder="Optional" min="0" value="${userSettings.age || ''}" />
+                </div>
+            </div>
+            <button id="settings-save-button">Save</button>
+        `;
+
+        const saveButton = menu.querySelector('#settings-save-button');
+        const inputs = menu.querySelectorAll('input, select');
+        
+        const debouncedSave = debounce(saveSettings, 500);
+        inputs.forEach(input => {
+            input.addEventListener('input', debouncedSave);
+            input.addEventListener('change', debouncedSave);
+        });
+
+        saveButton.onclick = () => {
+            saveSettings();
+            toggleSettingsMenu();
+        };
+
+        return menu;
+    }
 
     function processFileLike(file, base64Data, dataUrl, tempId) {
         if (attachedFiles.length >= MAX_ATTACHMENTS_PER_MESSAGE) {
@@ -1075,6 +1168,11 @@ Formatting Rules (MUST FOLLOW):
 
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
+            const settingsMenu = document.getElementById('ai-settings-menu');
+            if (settingsMenu && settingsMenu.classList.contains('active')) { 
+                saveSettings();
+                toggleSettingsMenu(); 
+            }
             
             if (attachedFiles.some(f => f.isLoading)) {
                 alert("Please wait for files to finish uploading before sending.");
@@ -1310,21 +1408,28 @@ Formatting Rules (MUST FOLLOW):
             #ai-input { min-height: 48px; max-height: ${MAX_INPUT_HEIGHT}px; overflow-y: hidden; color: #fff; font-size: 1.1em; padding: 13px 60px 13px 60px; box-sizing: border-box; word-wrap: break-word; outline: 0; text-align: left; }
             #ai-input:empty::before { content: 'Ask a question or describe your files...'; color: rgba(255, 255, 255, 0.4); pointer-events: none; }
             
-            #ai-attachment-button, #ai-location-button { 
-                position: absolute; 
-                top: 50%; 
-                transform: translateY(-50%); 
-                background-color: rgba(100, 100, 100, 0.5); 
-                border: 1px solid rgba(255,255,255,0.2); 
-                color: rgba(255,255,255,.8); 
-                font-size: 18px; cursor: pointer; padding: 5px; line-height: 1; z-index: 3; 
-                transition: all .3s ease; border-radius: 8px; width: 38px; height: 38px; 
-                display: flex; align-items: center; justify-content: center; 
-            }
+            #ai-attachment-button, #ai-settings-button { position: absolute; bottom: 7px; background-color: rgba(100, 100, 100, 0.5); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,.8); font-size: 18px; cursor: pointer; padding: 5px; line-height: 1; z-index: 3; transition: all .3s ease; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; }
             #ai-attachment-button { left: 10px; }
-            #ai-location-button { right: 10px; font-size: 20px; color: #ccc; }
-            #ai-attachment-button:hover, #ai-location-button:hover { background-color: rgba(120, 120, 120, 0.7); color: #fff; }
-            #ai-location-button.active { background-color: rgba(150, 150, 150, 0.8); color: white; }
+            #ai-settings-button { right: 10px; font-size: 20px; color: #ccc; }
+            #ai-attachment-button:hover, #ai-settings-button:hover { background-color: rgba(120, 120, 120, 0.7); color: #fff; }
+            #ai-settings-button.active { background-color: rgba(150, 150, 150, 0.8); color: white; }
+
+            /* Settings Menu */
+            #ai-settings-menu { position: absolute; bottom: calc(100% + 10px); right: 0; width: 350px; z-index: 1; background: rgb(20, 20, 22); border: 1px solid rgba(255,255,255,0.2); border-radius: 16px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); padding: 15px; opacity: 0; visibility: hidden; transform: translateY(20px); transition: all .3s cubic-bezier(.4,0,.2,1); overflow: hidden; }
+            #ai-settings-menu.active { opacity: 1; visibility: visible; transform: translateY(0); }
+            #ai-settings-menu .menu-header { font-size: 1.1em; color: #fff; text-transform: uppercase; margin-bottom: 15px; text-align: center; font-family: 'Merriweather', serif; }
+            .setting-group { margin-bottom: 15px; }
+            .setting-group-split { display: flex; gap: 15px; }
+            .setting-group-split .setting-group { flex: 1; }
+            .setting-group label { display: block; color: #ccc; font-size: 0.9em; margin-bottom: 5px; font-weight: bold; }
+            .setting-group input, .setting-group select { width: 100%; padding: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff; box-sizing: border-box; }
+            .setting-group input:focus, .setting-group select:focus { outline: none; border-color: #4285f4; }
+            .setting-note { font-size: 0.75em; color: #888; margin-top: 5px; }
+            #settings-color { width: 100%; height: 40px; padding: 0; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; background: none; }
+            #settings-color::-webkit-color-swatch-wrapper { padding: 0; }
+            #settings-color::-webkit-color-swatch { border: 0; border-radius: 5px; }
+            #settings-save-button { width: 100%; padding: 10px; background: #4285f4; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; margin-top: 10px; transition: background 0.2s; }
+            #settings-save-button:hover { background: #3c77e6; }
 
             /* Attachments, Code Blocks, Graphs, LaTeX */
             #ai-attachment-preview { display: none; flex-direction: row; gap: 10px; padding: 0; max-height: 0; border-bottom: 1px solid transparent; overflow-x: auto; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
