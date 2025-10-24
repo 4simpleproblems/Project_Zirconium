@@ -6,10 +6,10 @@
  * tab menu loaded from page-identification.json.
  *
  * --- UPDATES & FEATURES ---
- * 1. ADMIN EMAIL SET: The privileged email is now set to 4simpleproblems@gmail.com.
- * 2. AI FEATURES REMOVED: All code related to the AI Agent (modal, logic, API calls) has been removed.
- * 3. SETTINGS LINK: Includes the 'Settings' link in the authenticated user's dropdown menu.
- * 4. ADMIN TABS: Tabs marked as `adminOnly: true` are filtered out for non-privileged users.
+ * 1. ADMIN EMAIL SET: The privileged email is set to 4simpleproblems@gmail.com.
+ * 2. AI FEATURES REMOVED: All AI-related code has been removed.
+ * 3. GOLD ADMIN TAB: The 'Beta Settings' tab now has a premium gold-textured look and uses the path: ../logged-in/beta-settings.html.
+ * 4. SETTINGS LINK: Includes the 'Settings' link in the authenticated user's dropdown menu.
  * 5. ACTIVE TAB SCROLL: Auto-scrolls the active tab to the center of the viewport for visibility.
  * 6. LOGOUT REDIRECT: Redirects logged-out users away from logged-in pages.
  */
@@ -126,7 +126,7 @@ let db;
             // INJECTION: Add the requested admin-only tab for demonstration
             pages['beta-settings'] = { 
                 name: "Beta Settings", 
-                url: "/admin/beta-settings.html", 
+                url: "../logged-in/beta-settings.html", // <--- UPDATED PATH
                 icon: "fa-solid fa-flask", 
                 adminOnly: true 
             };
@@ -136,7 +136,8 @@ let db;
             // If the configuration fails to load, use a minimal set of pages for stability
             pages = {
                 'home': { name: "Home", url: "../../index.html", icon: "fa-solid fa-house" },
-                'admin': { name: "Beta Settings", url: "/admin/beta-settings.html", icon: "fa-solid fa-flask", adminOnly: true } 
+                // Fallback using the new path
+                'admin': { name: "Beta Settings", url: "../logged-in/beta-settings.html", icon: "fa-solid fa-flask", adminOnly: true } 
             };
         }
 
@@ -207,17 +208,29 @@ let db;
                 .nav-tab.active { color: #4f46e5; border-color: #4f46e5; background-color: rgba(79, 70, 229, 0.1); }
                 .nav-tab.active:hover { color: #6366f1; border-color: #6366f1; background-color: rgba(79, 70, 229, 0.15); }
                 
-                /* Style for the Admin Badge */
-                .admin-badge {
-                    display: inline-block;
-                    margin-left: 0.5rem; 
-                    padding: 0 0.5rem;
-                    font-size: 0.7rem; 
-                    font-weight: 600; 
-                    line-height: 1.3;
-                    border-radius: 9999px; /* full rounded */
-                    background-color: #dc2626; /* red-600 */
-                    color: white;
+                /* NEW: Gold textured style for Admin Tab */
+                .nav-tab.admin-tab {
+                    /* Gold Gradient Text - ensures the text color is not overridden by default states */
+                    background: linear-gradient(45deg, #f0e68c, #ffd700, #daa520, #f0e68c);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    color: transparent; /* Required for the gradient effect to work */
+                    font-weight: 700;
+                    border: 2px solid gold;
+                    box-shadow: 0 0 8px rgba(255, 215, 0, 0.6); /* Soft glow */
+                    transition: all 0.3s ease;
+                }
+                
+                .nav-tab.admin-tab:not(.active):hover {
+                    border-color: #ffd700;
+                    background-color: rgba(255, 215, 0, 0.1);
+                    box-shadow: 0 0 12px rgba(255, 215, 0, 0.9);
+                }
+
+                .nav-tab.admin-tab.active {
+                    background-color: rgba(255, 215, 0, 0.25);
+                    border-color: #f0e68c;
+                    box-shadow: 0 0 10px rgba(255, 215, 0, 1);
                 }
             `;
             document.head.appendChild(style);
@@ -297,12 +310,11 @@ let db;
                 .map(page => {
                     const isActive = isTabActive(page.url);
                     const activeClass = isActive ? 'active' : '';
+                    const adminClass = page.adminOnly ? 'admin-tab' : ''; // <--- NEW: Apply admin-tab class
                     const iconClasses = getIconClass(page.icon);
                     
-                    // Add admin badge if applicable
-                    const adminTag = page.adminOnly ? `<span class="admin-badge">ADMIN</span>` : '';
-                    
-                    return `<a href="${page.url}" class="nav-tab ${activeClass}"><i class="${iconClasses} mr-2"></i>${page.name}${adminTag}</a>`;
+                    // The admin badge (span) is removed, now styling is applied to the tab anchor tag itself
+                    return `<a href="${page.url}" class="nav-tab ${activeClass} ${adminClass}"><i class="${iconClasses} mr-2"></i>${page.name}</a>`;
                 }).join('');
 
             // --- Auth Views ---
