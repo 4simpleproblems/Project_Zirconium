@@ -14,6 +14,11 @@
  * 5. SCROLL GLIDER FIX: Scroll buttons are now visible by default (static) and use the 'hover' opacity (1.0) at all times, only fading out when not needed.
  * 6. LOGOUT REDIRECT (NEW): If a user is logged out, they are automatically redirected to '../../index.html' unless they are already on an entry page.
  * 7. SETTINGS REMOVAL (NEW): The 'Settings' link has been removed from the authenticated user menu.
+ *
+ * --- USER REQUESTS ADDED ---
+ * 8. SETTINGS LINK: Added a 'Settings' link to the authenticated user's mini-menu.
+ * 9. ADMIN TABS: Added logic to hide tabs marked with `adminOnly: true` from non-privileged users.
+ * 10. ACTIVE TAB SCROLL: Improved auto-scroll logic to center the active tab, ensuring it is visible when loading pages far to the right.
  */
 
 // =========================================================================
@@ -181,9 +186,22 @@ let currentAgent = 'Standard'; // Default agent
             const response = await fetch(PAGE_CONFIG_URL);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             pages = await response.json();
+            
+            // INJECTION: Add the requested admin-only tab for demonstration
+            pages['beta-settings'] = { 
+                name: "Beta Settings", 
+                url: "/admin/beta-settings.html", 
+                icon: "fa-solid fa-flask", 
+                adminOnly: true 
+            };
+            
         } catch (error) {
             console.error("Failed to load page identification config:", error);
-            // Continue execution
+            // If the configuration fails to load, use a minimal set of pages for stability
+            pages = {
+                'home': { name: "Home", url: "../../index.html", icon: "fa-solid fa-house" },
+                'admin': { name: "Beta Settings", url: "/admin/beta-settings.html", icon: "fa-solid fa-flask", adminOnly: true } 
+            };
         }
 
         try {
@@ -367,6 +385,18 @@ let currentAgent = 'Standard'; // Default agent
                     background-size: 0.8em;
                     padding-right: 1.5rem;
                 }
+                /* Style for the Admin Badge */
+                .admin-badge {
+                    display: inline-block;
+                    margin-left: 0.5rem; 
+                    padding: 0 0.5rem;
+                    font-size: 0.7rem; 
+                    font-weight: 600; 
+                    line-height: 1.3;
+                    border-radius: 9999px; /* full rounded */
+                    background-color: #dc2626; /* red-600 */
+                    color: white;
+                }
             `;
             document.head.appendChild(style);
         };
@@ -422,6 +452,7 @@ let currentAgent = 'Standard'; // Default agent
             const hasHorizontalOverflow = container.scrollWidth > container.offsetWidth;
 
             if (hasHorizontalOverflow) {
+                // Tolerance for floating point math
                 const isScrolledToLeft = container.scrollLeft < 5; 
                 const isScrolledToRight = container.scrollLeft + container.offsetWidth >= container.scrollWidth - 5; 
 
@@ -448,19 +479,28 @@ let currentAgent = 'Standard'; // Default agent
             if (!container) return; // Should not happen, but safe check
 
             const logoPath = "/images/logo.png"; 
-            const tabsHtml = Object.values(pages || {}).map(page => {
-                const isActive = isTabActive(page.url);
-                const activeClass = isActive ? 'active' : '';
-                const iconClasses = getIconClass(page.icon);
-                return `<a href="${page.url}" class="nav-tab ${activeClass}"><i class="${iconClasses} mr-2"></i>${page.name}</a>`;
-            }).join('');
+            
+            // Filter and map pages for tabs, applying adminOnly filter
+            const tabsHtml = Object.values(pages || {})
+                .filter(page => !(page.adminOnly && !isPrivilegedUser)) // Filter out adminOnly tabs for non-privileged users
+                .map(page => {
+                    const isActive = isTabActive(page.url);
+                    const activeClass = isActive ? 'active' : '';
+                    const iconClasses = getIconClass(page.icon);
+                    
+                    // Add admin badge if applicable
+                    const adminTag = page.adminOnly ? `<span class="admin-badge">ADMIN</span>` : '';
+                    
+                    return `<a href="${page.url}" class="nav-tab ${activeClass}"><i class="${iconClasses} mr-2"></i>${page.name}${adminTag}</a>`;
+                }).join('');
 
             // --- AI Agent Selector HTML (Only for Privileged User) ---
             const agentOptionsHtml = Object.keys(AGENT_CATEGORIES).map(key => 
                 `<option value="${key}" ${key === currentAgent ? 'selected' : ''}>${key}</option>`
             ).join('');
 
-            // The aiAgentButton variable is now empty because isPrivilegedUser will be false
+            // The aiAgentButton variable is now empty because isPrivilegedUser will be false (due to placeholder email)
+            // But we keep the logic here for when a privileged user logs in
             const aiAgentButton = isPrivilegedUser ? `
                 <div class="relative flex-shrink-0 mr-4">
                     <button id="ai-toggle" title="AI Agent (Ctrl+A)" class="w-8 h-8 rounded-full border border-indigo-600 bg-indigo-700/50 flex items-center justify-center text-indigo-300 hover:bg-indigo-600 hover:text-white transition">
@@ -508,6 +548,11 @@ let currentAgent = 'Standard'; // Default agent
                             <a href="/logged-in/dashboard.html" class="auth-menu-link">
                                 <i class="fa-solid fa-house-user"></i>
                                 Dashboard
+                            </a>
+                            <!-- NEW: Settings link added as requested -->
+                            <a href="/logged-in/settings.html" class="auth-menu-link">
+                                <i class="fa-solid fa-gear"></i>
+                                Settings
                             </a>
                             <button id="logout-button" class="auth-menu-button text-red-400 hover:bg-red-900/50 hover:text-red-300">
                                 <i class="fa-solid fa-right-from-bracket"></i>
@@ -578,11 +623,23 @@ let currentAgent = 'Standard'; // Default agent
             // --- 5. SETUP EVENT LISTENERS ---
             setupEventListeners(user, isPrivilegedUser);
 
-            // Auto-scroll to the active tab
+            // NEW: Auto-scroll to the active tab, centering it in the view.
             const activeTab = document.querySelector('.nav-tab.active');
             const tabContainer = document.querySelector('.tab-scroll-container');
             if (activeTab && tabContainer) {
-                tabContainer.scrollLeft = activeTab.offsetLeft - (tabContainer.offsetWidth / 2) + (activeTab.offsetWidth / 2);
+                // Calculate the scroll position needed to center the active tab
+                const centerOffset = (tabContainer.offsetWidth - activeTab.offsetWidth) / 2;
+                let scrollTarget = activeTab.offsetLeft - centerOffset;
+                
+                // Clamp the scroll target to prevent negative scroll or scrolling beyond content
+                const maxScroll = tabContainer.scrollWidth - tabContainer.offsetWidth;
+                scrollTarget = Math.max(0, Math.min(scrollTarget, maxScroll));
+
+                // Wait a brief moment to ensure the layout is settled before scrolling
+                // This ensures correct calculation after DOM rendering is complete.
+                setTimeout(() => {
+                    tabContainer.scrollLeft = scrollTarget;
+                }, 100);
             }
             
             // Initial check to hide/show them correctly after load
