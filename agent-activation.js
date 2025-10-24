@@ -7,8 +7,9 @@
  * NEW: Implemented a **Strict Pro Usage Limit** check for 'gemini-2.5-pro' queries (limited to 5 per session).
  * NEW: Integrated **Google Custom Search JSON API** for up-to-date web answers using a defined search engine ID.
  * UPDATED: Dynamic model selection now uses a more robust intent classifier.
- * UPDATED: Graphing engine now supports two modes: 'basic' (default) and 'advanced' (for deep queries).
- * UI: Removed the grey Settings button and all associated UI/UX elements. Fixed background and title colors.
+ * UPDATED: Graphing engine now supports two modes: 'basic' and 'advanced'.
+ * FIX: Resolved 400 API error by replacing 'config' with 'generationConfig' in the payload.
+ * FIX: Removed unnecessary right padding from the text input area.
  * UPDATED: KaTeX rendering and custom graphing are fully retained and optimized.
  * UPDATED: Ensured Ctrl + \ shortcut for activation/deactivation is fully functional.
  *
@@ -657,9 +658,10 @@ Formatting Rules (MUST FOLLOW):
              userParts.unshift({ text: firstMessageContext.trim() + (requiresSearch ? `[SEARCH CONTEXT]\n${searchContext}` : '') });
         }
         
+        // --- API FIX: Replaced 'config' with the correct 'generationConfig' for REST API ---
         const payload = { 
             contents: processedChatHistory, 
-            config: {
+            generationConfig: {
                  systemInstruction: dynamicInstruction
             }
         };
@@ -1281,7 +1283,8 @@ Formatting Rules (MUST FOLLOW):
             #ai-input-wrapper::before { animation: glow 3s infinite; opacity: 1; }
             #ai-input-wrapper.waiting::before { opacity: 0; }
             #ai-input-wrapper.waiting::after { opacity: 1; animation: none; /* Disable glow on waiting state for a calmer look */ }
-            #ai-input { min-height: 48px; max-height: ${MAX_INPUT_HEIGHT}px; overflow-y: hidden; color: #fff; font-size: 1.1em; padding: 13px 60px 13px 60px; box-sizing: border-box; word-wrap: break-word; outline: 0; text-align: left; }
+            /* FIX: Changed right padding from 60px to 15px (removed settings button space) */
+            #ai-input { min-height: 48px; max-height: ${MAX_INPUT_HEIGHT}px; overflow-y: hidden; color: #fff; font-size: 1.1em; padding: 13px 15px 13px 60px; box-sizing: border-box; word-wrap: break-word; outline: 0; text-align: left; }
             #ai-input:empty::before { content: 'Ask a question or describe your files...'; color: rgba(255, 255, 255, 0.4); pointer-events: none; }
             
             #ai-attachment-button { position: absolute; bottom: 7px; background-color: rgba(100, 100, 100, 0.5); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,.8); font-size: 18px; cursor: pointer; padding: 5px; line-height: 1; z-index: 3; transition: all .3s ease; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; }
