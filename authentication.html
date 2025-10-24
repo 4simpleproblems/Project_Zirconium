@@ -198,11 +198,15 @@
             query,
             where,
             getDocs,
-            serverTimestamp
+            serverTimestamp,
+            setLogLevel
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
         // --- Import Firebase Config ---
         import { firebaseConfig } from "./firebase-config.js"; 
+
+        // --- Canvas Global Variables (MANDATORY USE) ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
         if (!firebaseConfig || !firebaseConfig.apiKey) {
             console.error("FATAL ERROR: Firebase configuration is missing or invalid.");
@@ -212,6 +216,34 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        setLogLevel('debug'); // Enable Firestore logging
+
+        // --- Beta Tester Check Function ---
+        const isUserBetaTester = async (email) => {
+            if (!email) return false;
+            const normalizedEmail = email.toLowerCase();
+            
+            // Define the path to the beta testers document
+            const betaTestersRef = doc(db, 'artifacts', appId, 'public', 'data', 'app_config', 'beta_testers');
+            
+            try {
+                const docSnap = await getDoc(betaTestersRef);
+                
+                if (docSnap.exists()) {
+                    const emails = docSnap.data()?.emails || [];
+                    const normalizedEmails = emails.map(e => String(e).toLowerCase());
+                    return normalizedEmails.includes(normalizedEmail);
+                } else {
+                    // If the list doc doesn't exist, deny access (fail-closed)
+                    console.warn("Beta tester list document not found. Access denied.");
+                    return false;
+                }
+            } catch (error) {
+                console.error("Error checking beta tester status:", error);
+                // If there's an error, deny access (fail-closed)
+                return false;
+            }
+        };
 
         // --- Unified Data Model ---
         // All user profile data will be stored in a top-level 'users' collection.
@@ -270,6 +302,17 @@
 
         const handleSuccessfulLogin = async (user) => {
             await setPersistence(auth, browserLocalPersistence);
+            
+            // --- NEW: BETA TESTER CHECK (for Email + Existing Social) ---
+            const isBetaTester = await isUserBetaTester(user.email);
+            if (!isBetaTester) {
+                const googleFormLink = "https://docs.google.com/forms/d/e/1FAIpQLSdWdL4RTE8p7t7gMGYpIHYiYcV__sNa8vOlwOCQyoolKuQimQ/viewform?usp=publish-editor";
+                showMessage(messageDivs.login, `This account is not on the beta tester list. <a href="${googleFormLink}" target="_blank" class="underline font-bold text-yellow-300">Apply for beta access here</a>.`, 'warning');
+                await signOut(auth); // Log them out.
+                return; // Stop further execution.
+            }
+            // --- End Beta Tester Check ---
+            
             const isProviderLogin = user.providerData.some(p => ['google.com', 'github.com', 'microsoft.com'].includes(p.providerId));
             
             if (user.emailVerified || isProviderLogin) {
@@ -389,6 +432,16 @@
                 e.preventDefault();
                 const email = document.getElementById('signupEmail').value.trim();
                 const password = document.getElementById('signupPassword').value;
+
+                // --- NEW: BETA TESTER CHECK (for New Email Signup) ---
+                const isBetaTester = await isUserBetaTester(email);
+                if (!isBetaTester) {
+                    const googleFormLink = "https://docs.google.com/forms/d/e/1FAIpQLSdWdL4RTE8p7t7gMGYpIHYiYcV__sNa8vOlwOCQyoolKuQimQ/viewform?usp=publish-editor";
+                    showMessage(messageDivs.signup, `This email is not on the beta tester list. <a href="${googleFormLink}" target="_blank" class="underline font-bold text-yellow-300">Apply for beta access here</a>.`, 'warning');
+                    return; // Stop account creation
+                }
+                // --- End Beta Tester Check ---
+                
                 const passwordError = validatePassword(password);
                 if (passwordError) { showMessage(messageDivs.signup, passwordError); return; }
 
@@ -423,9 +476,31 @@
 
                     if (userDoc.exists()) {
                         // User exists -> Log them in
+                        // This will trigger handleSuccessfulLogin, which has the beta check.
                         await handleSuccessfulLogin(user);
                     } else {
                         // New user -> Create account
+                        
+                        // --- NEW: BETA TESTER CHECK (for New Social) ---
+                        const isBetaTester = await isUserBetaTester(user.email);
+                        if (!isBetaTester) {
+                            const googleFormLink = "https://docs.google.com/forms/d/e/1FAIpQLSdWdL4RTE8p7t7gMGYpIHYiYcV__sNa8vOlwOCQyoolKuQimQ/viewform?usp=publish-editor";
+                            const visibleMessageDiv = messageDivs.login.offsetParent ? messageDivs.login : messageDivs.username;
+                            showMessage(visibleMessageDiv, `This account is not on the beta tester list. <a href="${googleFormLink}" target="_blank" class="underline font-bold text-yellow-300">Apply for beta access here</a>.`, 'warning');
+                            
+                            // Important: Delete the just-created auth user and sign out
+                            try {
+                                await user.delete();
+                                console.log("Deleted non-beta social user from Firebase Auth.");
+                            } catch (deleteError) {
+                                console.error("Error deleting non-beta user:", deleteError);
+                                // If deletion fails, at least sign them out.
+                                await signOut(auth);
+                            }
+                            return; // Stop execution
+                        }
+                        // --- End Beta Tester Check ---
+                        
                         let username = (user.displayName || user.email.split('@')[0] || 'User')
                             .replace(/[^a-zA-Z0-9]/g, '').slice(0, 16);
                         if (username.length < 4) username = `User${user.uid.substring(0, 8)}`;
@@ -439,6 +514,9 @@
 
                         const docCreated = await createUserDocument(user, providerName, finalUsername);
                         if (docCreated) {
+                            // Since this is a new social user, they are already "verified"
+                            // and have passed the beta check. Log them in.
+                            await setPersistence(auth, browserLocalPersistence);
                             navigateToDashboard();
                         } else {
                             throw new Error('Failed to create user document for social auth.');
