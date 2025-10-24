@@ -312,16 +312,18 @@ User Environment Context:
         const { instruction: dynamicInstruction } = getDynamicSystemInstructionAndModel();
         // --- END MODEL SELECTION ---
 
+        // FIX: The API is complaining about the top-level 'config' key.
+        // We promote 'systemInstruction' and 'tools' to be top-level keys.
         const payload = {
             contents: processedChatHistory,
-            config: {
-                systemInstruction: { parts: [{ text: dynamicInstruction }] }
-            }
+            // Use systemInstruction as a top-level field instead of nesting it in 'config'
+            systemInstruction: { parts: [{ text: dynamicInstruction }] }
         };
 
         // --- WEB GROUNDING INTEGRATION ---
         if (userSettings.webSearchEnabled) {
-            payload.config.tools = [{ googleSearch: {} }];
+            // Use tools as a top-level field instead of nesting it in 'config'
+            payload.tools = [{ googleSearch: {} }];
         }
         // --- END WEB GROUNDING INTEGRATION ---
 
