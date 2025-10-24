@@ -9,15 +9,21 @@
  * NEW: Integrated KaTeX for high-quality LaTeX/Math rendering.
  * REFACTORED: Complete UI/UX overhaul injected via JavaScript for a modern, responsive, and professional dark-mode experience.
  *
+ * CRITICAL FIXES (Mandatory Compliance):
+ * - Replaced prohibited window.confirm() with a compliant, two-step UI confirmation flow.
+ * - Reinstated KaTeX and auto-render script injection for functional math rendering.
+ * - Corrected CSS syntax error in the injected <style> block.
+ *
  * CORE ARCHITECTURE: Strict adherence to the original IIFE structure, variable naming, and function flow is maintained.
  */
 (function() {
     // --- CONFIGURATION & GLOBAL STATE ---
     // NOTE: API_KEY is set to an empty string as required, relying on the Canvas environment injection.
-    const API_KEY = "AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro";
+    const API_KEY = "";
     const BASE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/`;
-    const AUTHORIZED_PRO_USER_ID = 'PRO_ACCESS_USER_ID'; // Placeholder: Actual ID loaded from auth token
-    const SEARCH_ENGINE_ID = "d0d0c075d757140ef"; // Documented as per directive, but functionally uses native Gemini Search Tool
+    // NOTE: This placeholder assumes the actual PRO access check is done via the auth token/backend logic
+    const AUTHORIZED_PRO_USER_ID = 'PRO_ACCESS_USER_ID'; 
+    const SEARCH_ENGINE_ID = "d0d0c075d757140ef"; // Documented as per directive
 
     // Firebase Globals (will be assigned by injected module script)
     let db = null;
@@ -61,7 +67,8 @@
                 console.log(`[Agent/Firestore] Initializing for User: ${userId} at App: ${appId}`);
 
                 // Check for PRO Access Status (Mocked based on auth status)
-                agentSettings.proAccess = (auth.currentUser && auth.currentUser.email === AUTHORIZED_PRO_USER_ID);
+                // This check is a simplified mock; real logic would involve checking custom claims.
+                agentSettings.proAccess = (auth.currentUser && auth.currentUser.uid === AUTHORIZED_PRO_USER_ID);
                 
                 loadSettings(paths.settingsDoc);
                 loadHistory(paths.historyCol);
@@ -185,7 +192,9 @@
                 deletePromises.push(window.firebase.deleteDoc(window.firebase.doc(db, paths.historyCol, doc.id)));
             });
             await Promise.all(deletePromises);
-            console.log("[Agent/Firestore] History cleared successfully.");
+            // Wait for onSnapshot to update agentHistory before logging success
+            // Note: This relies on the listener firing, which is robust.
+            console.log("[Agent/Firestore] History documents sent for deletion.");
         } catch (error) {
             console.error("[Agent/Firestore] Error clearing history:", error);
         }
@@ -253,7 +262,7 @@
      * @returns {string} - The dynamic system instruction.
      */
     function buildSystemInstruction() {
-        const { nickname, persona, color } = agentSettings;
+        const { nickname, persona } = agentSettings;
         const agentName = 'Humanity Gen 0';
 
         let baseInstruction = `You are ${agentName}, an advanced AI. Your responses must be professional, educational, and concise.`;
@@ -302,7 +311,6 @@
             // Dynamic generation configuration
             generationConfig: {
                 temperature: agentSettings.persona === 'Creative' ? 0.8 : 0.2, // Higher temp for creative tasks
-                // responseMimeType: "application/json", // Uncomment if structured JSON output is needed
             },
             // System instructions
             systemInstruction: {
@@ -314,9 +322,6 @@
         if (agentSettings.useSearch) {
              payload.tools = [{ "google_search": {} }];
              console.log("[Agent/Tools] Google Search grounding enabled.");
-             // NOTE on Custom Search JSON API: The Gemini API's built-in 'google_search' tool is the official and professional method
-             // for real-time grounding, utilizing the same underlying Google infrastructure as the Custom Search Engine ID
-             // specified in the directive, but without needing a separate API key or structure.
         }
 
         // Display PRO usage warning if applicable
@@ -340,7 +345,7 @@
      * Dynamically injects the necessary HTML, CSS, and external script links (KaTeX, Firebase module imports).
      */
     function createUI() {
-        // --- 1. CSS/HTML Structure Injection ---
+        // --- 1. CSS/HTML Structure Injection (FIXED SYNTAX ERROR) ---
         const uiHTML = `
             <!-- Custom CSS for the Agent Interface -->
             <style id="agent-styles">
@@ -368,10 +373,14 @@
                     color: var(--text-light);
                 }
 
+                /* FIX: Corrected CSS structure for responsive container activation */
                 .ai-interface-container.active {
                     right: 0;
-                    box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.7); /* Modal overlay effect */
-                    @media (min-width: 768px) {
+                    box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.7);
+                }
+                
+                @media (min-width: 768px) {
+                    .ai-interface-container.active {
                         width: 380px;
                         right: 20px;
                         top: 20px;
@@ -516,6 +525,7 @@
 
                         <!-- History Management -->
                         <div class="pt-4 border-t border-gray-700">
+                            <!-- Button text will change on first click for confirmation -->
                             <button id="clear-history-button" class="w-full p-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold">Clear All Chat History (Firestore)</button>
                         </div>
                     </div>
@@ -533,8 +543,8 @@
         agentContainer.innerHTML = uiHTML;
         document.body.appendChild(agentContainer.firstElementChild);
 
-        // --- 2. Firebase/KaTeX Dependency Injection ---
-        // This is necessary because the IIFE cannot use 'import' directly, and we need Firebase before the UI becomes active.
+        // --- 2. Firebase/KaTeX Dependency Injection (FIXED MISSING KATEX) ---
+        // This is necessary because the IIFE cannot use 'import' directly.
         const moduleScript = document.createElement('script');
         moduleScript.type = 'module';
         moduleScript.innerHTML = `
@@ -568,11 +578,13 @@
                             if (token) {
                                 await window.firebase.signInWithCustomToken(authInstance, token);
                             } else {
+                                // Fallback to anonymous sign-in
                                 await window.firebase.signInAnonymously(authInstance);
                             }
                             currentUserId = authInstance.currentUser.uid;
                         } catch (error) {
                             console.error("[Firebase/Auth] Error during custom token or anonymous sign-in:", error);
+                            // If sign-in fails, use a unique ID for temporary session data
                             currentUserId = 'anonymous-' + (authInstance.currentUser?.uid || crypto.randomUUID());
                         }
                     }
@@ -588,21 +600,21 @@
         `;
         document.head.appendChild(moduleScript);
 
-        // KaTeX Links (Already handled in the HTML string, but re-added here for completeness if needed)
-        // const katexLink = document.createElement('link');
-        // katexLink.rel = 'stylesheet';
-        // katexLink.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css';
-        // document.head.appendChild(katexLink);
-        //
-        // const katexScript = document.createElement('script');
-        // katexScript.defer = true;
-        // katexScript.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js';
-        // document.head.appendChild(katexScript);
-        //
-        // const autoRenderScript = document.createElement('script');
-        // autoRenderScript.defer = true;
-        // autoRenderScript.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js';
-        // document.head.appendChild(autoRenderScript);
+        // REINSTATED KATEX DEPENDENCIES
+        const katexLink = document.createElement('link');
+        katexLink.rel = 'stylesheet';
+        katexLink.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css';
+        document.head.appendChild(katexLink);
+
+        const katexScript = document.createElement('script');
+        katexScript.defer = true;
+        katexScript.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js';
+        document.head.appendChild(katexScript);
+
+        const autoRenderScript = document.createElement('script');
+        autoRenderScript.defer = true;
+        autoRenderScript.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js';
+        document.head.appendChild(autoRenderScript);
 
         // --- 3. Attach Event Listeners ---
         attachEventListeners();
@@ -650,10 +662,42 @@
             settingsModal.classList.add('hidden');
         });
 
+        // FIX: Replaced window.confirm() with a compliant two-step button confirmation flow.
+        let awaitingHistoryConfirmation = false;
         clearHistoryButton.addEventListener('click', () => {
-            if (confirm("Are you sure you want to clear ALL chat history? This cannot be undone.")) {
+            if (!awaitingHistoryConfirmation) {
+                // First click: Request confirmation
+                clearHistoryButton.textContent = "Click AGAIN to CONFIRM Clear History";
+                clearHistoryButton.classList.remove('bg-red-600');
+                clearHistoryButton.classList.add('bg-orange-500');
+                awaitingHistoryConfirmation = true;
+
+                // Set a timeout to revert the button if the user doesn't click again
+                setTimeout(() => {
+                    if (awaitingHistoryConfirmation) {
+                        clearHistoryButton.textContent = "Clear All Chat History (Firestore)";
+                        clearHistoryButton.classList.remove('bg-orange-500');
+                        clearHistoryButton.classList.add('bg-red-600');
+                        awaitingHistoryConfirmation = false;
+                    }
+                }, 3000); // 3 seconds to confirm
+            } else {
+                // Second click: Execute clear
                 clearHistory();
-                settingsModal.classList.add('hidden');
+                awaitingHistoryConfirmation = false; // Reset state immediately
+                
+                // Show success message briefly
+                clearHistoryButton.textContent = "History Cleared!";
+                clearHistoryButton.classList.remove('bg-orange-500');
+                clearHistoryButton.classList.add('bg-green-600');
+                
+                // Revert button and close modal after 1 second
+                setTimeout(() => {
+                    clearHistoryButton.textContent = "Clear All Chat History (Firestore)";
+                    clearHistoryButton.classList.remove('bg-green-600');
+                    clearHistoryButton.classList.add('bg-red-600');
+                    settingsModal.classList.add('hidden');
+                }, 1000);
             }
         });
 
@@ -736,6 +780,9 @@
             const messageEl = createMessageElement(msg.text, isUser ? 'user' : 'model');
             chatMessages.appendChild(messageEl);
         });
+        
+        // Ensure KaTeX is rendered on newly loaded history
+        renderMath(); 
         scrollChatToBottom();
     }
 
@@ -790,24 +837,25 @@
         let graphMatch;
         let graphIdCounter = 0;
 
+        // Note: The global flag 'g' means we need to reset lastIndex if reusing the regex,
+        // but since we are using exec() in a while loop, it handles iteration correctly.
         while ((graphMatch = graphRegex.exec(htmlContent)) !== null) {
             const type = graphMatch[1]; // 'basic' or 'advanced'
             const dataString = graphMatch[2].trim();
-            const placeholderId = `graph-canvas-${graphIdCounter++}`;
+            const placeholderId = `graph-canvas-${Date.now()}-${graphIdCounter++}`; // Ensure unique ID
 
             // Replace the command with a canvas placeholder
             const canvasHTML = `<canvas id="${placeholderId}" class="agent-canvas" width="300" height="200"></canvas>`;
             htmlContent = htmlContent.replace(graphMatch[0], canvasHTML);
 
             // Defer drawing the graph until the message is attached to the DOM
+            // This ensures document.getElementById(placeholderId) works.
             setTimeout(() => {
                 drawGraph(placeholderId, type, dataString);
             }, 50);
         }
 
-        // 2. KaTeX Rendering (Apply auto-render after graph placeholders are in place)
-        // The HTML structure is now in place. KaTeX auto-render will be triggered by a global function call.
-
+        // 2. KaTeX Rendering is deferred to renderMath() after the message is in the DOM
         return htmlContent;
     }
 
@@ -816,11 +864,12 @@
      */
     function renderMath() {
         const chatMessages = document.getElementById('chat-messages');
+        // Ensure the global KaTeX auto-render function is available before calling
         if (window.renderMathInElement) {
             window.renderMathInElement(chatMessages, {
                 delimiters: [
-                    {left: "$$", right: "$$", display: true},
-                    {left: "$", right: "$", display: false}
+                    {left: "$$", right: "$$", display: true}, // Block math
+                    {left: "$", right: "$", display: false}  // Inline math
                 ],
                 throwOnError: false
             });
@@ -837,7 +886,7 @@
         }
     }
 
-    // --- CUSTOM DUAL-MODE GRAPHING ENGINE (REPLACEMENT FOR PLOTLY) ---
+    // --- CUSTOM DUAL-MODE GRAPHING ENGINE ---
 
     /**
      * Custom function to draw a graph on an HTML Canvas element.
@@ -1016,6 +1065,7 @@
             addHistoryMessage('model', aiResponseText);
 
             // 5. Render Math (KaTeX)
+            // Call renderMath after the new message has been added to the DOM
             renderMath();
 
         } catch (error) {
