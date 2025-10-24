@@ -18,7 +18,8 @@
  *
  * NEW: The AI's response now includes an internal <THOUGHT_PROCESS> and lists of <SOURCE URL="..." TITLE="..."/>.
  * UPDATED: Removed authenticated email feature.
- * UPDATED: Implemented browser Geolocation API for context.
+ * UPDATED: Implemented browser Geolocation API for context, now including mock reverse geocoding for full address.
+ * UPDATED: Swapped order of monologue and sources. Monologue is now a collapsible dropdown.
  */
 (function() {
     // --- CONFIGURATION ---
@@ -76,26 +77,56 @@
     }
     loadUserSettings(); // Load initial settings
 
-    // --- REPLACED/MODIFIED FUNCTIONS ---
+    // --- UTILITIES FOR GEOLOCATION ---
 
     /**
-     * Stub for authorization (email feature removed).
-     * @returns {Promise<boolean>} Always resolves to true.
+     * MOCK Reverse Geocoding function.
+     * In a real application, this would use an external API (like Google Maps Geocoding API)
+     * and requires a separate API key. This mock simulates the process.
+     * @param {number} latitude
+     * @param {number} longitude
+     * @returns {Promise<string>} Resolves with a mock address string.
      */
-    async function isUserAuthorized() {
-        return true; 
+    async function reverseGeocode(latitude, longitude) {
+        // Simulate API call delay
+        await new Promise(resolve => setTimeout(resolve, 500)); 
+
+        // Mock Data: returns a structured address
+        const mockAddresses = [
+            "123 Main St, Massillon, OH 44646, USA (Stark County)",
+            "789 Maple Rd, Austin, TX 78701, USA (Travis County)",
+            "101 Pine Ln, Seattle, WA 98101, USA (King County)",
+            "22B Baker Street, London, NW1 6XE, UK (Greater London)"
+        ];
+        const mockAddress = mockAddresses[Math.floor(Math.random() * mockAddresses.length)];
+
+        return mockAddress;
     }
 
     /**
-     * Gets user location via Geolocation API, storing it in localStorage.
-     * @returns {Promise<string>} Resolves with location string or a fallback.
+     * Gets user location via Geolocation API, then attempts mock reverse geocoding for context.
+     * @returns {Promise<string>} Resolves with coordinates and address string or a fallback.
      */
     function getUserLocationForContext() {
         return new Promise((resolve) => {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        const locationString = `Latitude: ${position.coords.latitude.toFixed(4)}, Longitude: ${position.coords.longitude.toFixed(4)}`;
+                    async (position) => {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        const coords = `Latitude: ${lat.toFixed(4)}, Longitude: ${lon.toFixed(4)}`;
+                        
+                        let address = 'Fetching address...';
+                        try {
+                            // Attempt mock reverse geocoding
+                            address = await reverseGeocode(lat, lon);
+                        } catch (e) {
+                            console.error('Reverse geocoding failed (mock):', e);
+                            address = 'Address lookup failed/requires real API key.';
+                        }
+                        
+                        // Combine coordinates and address for the context string
+                        const locationString = `Coordinates: ${coords}\nGeneral Location/Address: ${address}`;
                         localStorage.setItem('ai-user-location', locationString);
                         resolve(locationString);
                     },
@@ -113,6 +144,17 @@
                 resolve(fallback);
             }
         });
+    }
+
+
+    // --- REPLACED/MODIFIED FUNCTIONS ---
+
+    /**
+     * Stub for authorization (email feature removed).
+     * @returns {Promise<boolean>} Always resolves to true.
+     */
+    async function isUserAuthorized() {
+        return true; 
     }
 
     /**
@@ -454,15 +496,39 @@
                 
                 bubble.innerHTML = `<div class="ai-response-content">${parsedResponse}</div>`;
                 
-                if (thoughtProcess) {
-                    bubble.innerHTML += `<div class="ai-thought-process"><h4>Gemini's Internal Monologue:</h4><pre>${escapeHTML(thoughtProcess)}</pre></div>`;
-                }
+                // NEW: Sources first
                 if (sourcesHTML) {
                     bubble.innerHTML += sourcesHTML;
                 }
                 
+                // NEW: Collapsible thought process
+                if (thoughtProcess) {
+                    bubble.innerHTML += `
+                        <div class="ai-thought-process collapsed">
+                            <div class="monologue-header">
+                                <h4 class="monologue-title">Gemini's Internal Monologue:</h4>
+                                <button class="monologue-toggle-btn">Show Thoughts</button>
+                            </div>
+                            <pre class="monologue-content">${escapeHTML(thoughtProcess)}</pre>
+                        </div>
+                    `;
+                }
+                
                 bubble.querySelectorAll('.copy-code-btn').forEach(button => {
                     button.addEventListener('click', handleCopyCode);
+                });
+                
+                // Add click handlers for monologue toggle in history
+                bubble.querySelectorAll('.ai-thought-process').forEach(monologueDiv => {
+                    monologueDiv.querySelector('.monologue-header').addEventListener('click', () => {
+                        monologueDiv.classList.toggle('collapsed');
+                        const btn = monologueDiv.querySelector('.monologue-toggle-btn');
+                        if (monologueDiv.classList.contains('collapsed')) {
+                            btn.textContent = 'Show Thoughts';
+                        } else {
+                            btn.textContent = 'Hide Thoughts';
+                        }
+                    });
                 });
 
                 renderKaTeX(bubble);
@@ -590,9 +656,9 @@ Formatting Rules (MUST FOLLOW):
 
                 // Combined Creative and Sarcastic
                 if (query.toLowerCase().includes('ex') || query.toLowerCase().includes('roast')) {
-                     personaInstruction += `\n\n**Current Persona: Sarcastic, Supportive Friend (2.5-Flash).** Your goal is to empathize with the user, validate their feelings, and join them in 'roasting' or speaking negatively about their ex/situation. Be funny, slightly aggressive toward the subject of the trash talk, and deeply supportive of ${user}. Use casual language and slang. **Example of tone/support:** "${roastInsult}"`;
+                     personaInstruction += `\n\n**Current Persona: Sarcastic, Supportive Friend (2.5-Flash).** Your goal is to empathize with the user, validate their feelings, and join them in 'roasting' or speaking negatively about their ex/situation. Be funny, slightly aggressive toward the subject of trash talk, and deeply supportive of ${user}. Use casual language and slang. **Example of tone/support:** "${roastInsult}"`;
                 } else {
-                     personaInstruction += `\n\n**Current Persona: Creative Partner (2.5-Flash).** Use rich, evocative language. Be imaginative, focus on descriptive details, and inspire new ideas.`;
+                     personaInstruction += `\n\n**Current Persona: Creative Partner (25-Flash).** Use rich, evocative language. Be imaginative, focus on descriptive details, and inspire new ideas.`;
                 }
                 break;
             case 'CASUAL':
@@ -623,7 +689,7 @@ Formatting Rules (MUST FOLLOW):
             const date = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             const time = now.toLocaleTimeString('en-US', { timeZoneName: 'short' });
             // Updated system info to reflect removed email feature
-            firstMessageContext = `(System Info: User is asking from ${location}. Current date is ${date}, ${time}. User Email: Not Authenticated/Removed.)\n\n`;
+            firstMessageContext = `(System Info: User is asking from location:\n${location}. Current date is ${date}, ${time}. User Email: Not Authenticated/Removed.)\n\n`;
         }
         
         let processedChatHistory = [...chatHistory];
@@ -690,16 +756,44 @@ Formatting Rules (MUST FOLLOW):
             setTimeout(() => {
                 let fullContent = `<div class="ai-response-content">${contentHTML}</div>`;
                 
-                if (thoughtProcess) {
-                    fullContent += `<div class="ai-thought-process"><h4>Gemini's Internal Monologue:</h4><pre>${escapeHTML(thoughtProcess)}</pre></div>`;
+                // NEW: Sources first
+                if (sourcesHTML) {
+                    fullContent += sourcesHTML;
                 }
                 
-                // Add thought process and sources
-                responseBubble.innerHTML = fullContent;
-                if (sourcesHTML) {
-                    responseBubble.innerHTML += sourcesHTML;
+                // NEW: Collapsible thought process
+                if (thoughtProcess) {
+                    fullContent += `
+                        <div class="ai-thought-process collapsed">
+                            <div class="monologue-header">
+                                <h4 class="monologue-title">Gemini's Internal Monologue:</h4>
+                                <button class="monologue-toggle-btn">Show Thoughts</button>
+                            </div>
+                            <pre class="monologue-content">${escapeHTML(thoughtProcess)}</pre>
+                        </div>
+                    `;
                 }
 
+                responseBubble.innerHTML = fullContent;
+
+                // Add click handlers for monologue toggle
+                responseBubble.querySelectorAll('.ai-thought-process').forEach(monologueDiv => {
+                    monologueDiv.querySelector('.monologue-header').addEventListener('click', () => {
+                        monologueDiv.classList.toggle('collapsed');
+                        const btn = monologueDiv.querySelector('.monologue-toggle-btn');
+                        if (monologueDiv.classList.contains('collapsed')) {
+                            btn.textContent = 'Show Thoughts';
+                        } else {
+                            btn.textContent = 'Hide Thoughts';
+                        }
+                        // Scroll to the bottom if expanding
+                        if (!monologueDiv.classList.contains('collapsed')) {
+                            const responseContainer = document.getElementById('ai-response-container');
+                            if(responseContainer) responseContainer.scrollTop = responseContainer.scrollHeight;
+                        }
+                    });
+                });
+                
                 responseBubble.querySelectorAll('.copy-code-btn').forEach(button => {
                     button.addEventListener('click', handleCopyCode);
                 });
@@ -1218,14 +1312,14 @@ Formatting Rules (MUST FOLLOW):
             return key;
         };
         
-        // --- NEW: Extract thought process (Humanity) ---
+        // --- Extract thought process (Humanity) ---
         let thoughtProcess = '';
         html = html.replace(/<THOUGHT_PROCESS>([\s\S]*?)<\/THOUGHT_PROCESS>/, (match, content) => {
             thoughtProcess = content.trim();
             return ''; // Remove from main text
         });
 
-        // --- NEW: Extract sources ---
+        // --- Extract sources ---
         let sourcesHTML = '';
         const sources = [];
         html = html.replace(/<SOURCE URL="([^"]+)" TITLE="([^"]+)"\s*\/>/g, (match, url, title) => {
@@ -1404,10 +1498,7 @@ Formatting Rules (MUST FOLLOW):
             .gemini-response { animation: glow 4s infinite; display: flex; flex-direction: column; }
             .gemini-response.loading { display: flex; justify-content: center; align-items: center; min-height: 60px; max-width: 100px; padding: 15px; background: rgba(15,15,18,.8); animation: gemini-glow 4s linear infinite; }
             
-            /* NEW STYLES for Thought Process and Sources */
-            .ai-thought-process { background-color: rgba(66, 133, 244, 0.1); border: 1px solid rgba(66, 133, 244, 0.3); border-radius: 12px; padding: 10px; margin-top: 15px; font-size: 0.9em; max-width: 100%; }
-            .ai-thought-process h4 { color: #4285f4; margin: 0 0 8px 0; font-family: 'Merriweather', serif; font-size: 1em; }
-            .ai-thought-process pre { white-space: pre-wrap; word-break: break-all; margin: 0; color: #ccc; font-family: monospace; font-size: 0.85em; background: none; padding: 0; }
+            /* NEW STYLES for Sources (Top) and Collapsible Monologue (Bottom) */
             
             .ai-sources-list { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; margin-top: 15px; }
             .ai-sources-list h4 { color: #ccc; margin: 0 0 10px 0; font-family: 'Merriweather', serif; font-size: 1em; }
@@ -1416,6 +1507,34 @@ Formatting Rules (MUST FOLLOW):
             .ai-sources-list li a { color: #4285f4; text-decoration: none; font-size: 0.9em; transition: color 0.2s; }
             .ai-sources-list li a:hover { color: #6a9cf6; }
             .ai-sources-list li img.favicon { width: 16px; height: 16px; margin-right: 8px; border-radius: 2px; flex-shrink: 0; }
+            
+            .ai-thought-process { background-color: rgba(66, 133, 244, 0.1); border: 1px solid rgba(66, 133, 244, 0.3); border-radius: 12px; padding: 0; margin-top: 15px; font-size: 0.9em; max-width: 100%; transition: all 0.3s ease; }
+            .monologue-header { display: flex; justify-content: space-between; align-items: center; padding: 10px; cursor: pointer; }
+            .monologue-title { color: #4285f4; margin: 0; font-family: 'Merriweather', serif; font-size: 1em; }
+            .monologue-toggle-btn { background: none; border: 1px solid rgba(66, 133, 244, 0.5); color: #4285f4; border-radius: 6px; padding: 4px 8px; font-size: 0.8em; cursor: pointer; transition: background-color 0.2s; }
+            .monologue-toggle-btn:hover { background-color: rgba(66, 133, 244, 0.2); }
+            
+            .monologue-content { 
+                max-height: 0; 
+                opacity: 0; 
+                overflow: hidden; 
+                padding: 0 10px; /* Only padding when expanded */
+                transition: max-height 0.4s ease-in-out, opacity 0.3s ease-in-out; 
+            }
+            .ai-thought-process:not(.collapsed) .monologue-content {
+                max-height: 500px; /* Arbitrarily large value for smooth transition */
+                opacity: 1;
+                padding: 0 10px 10px 10px; /* Final padding */
+            }
+
+            /* FIX: Monologue text alignment/word-breaking */
+            .ai-thought-process pre { 
+                white-space: pre-wrap; 
+                word-break: break-word; /* Ensure words wrap cleanly */
+                margin: 0; color: #ccc; 
+                font-family: monospace; font-size: 0.85em; 
+                background: none; 
+            }
             /* END NEW STYLES */
             
             #ai-compose-area { position: relative; flex-shrink: 0; z-index: 2; margin: 15px auto; width: 90%; max-width: 720px; }
