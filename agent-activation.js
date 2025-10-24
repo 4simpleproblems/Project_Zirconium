@@ -11,6 +11,7 @@
  * REMOVED: All code related to KaTeX, custom graphing, file handling, and chat history trimming
  * has been removed to simplify the core agent function as requested.
  * UPDATED: Model choice simplified to only 'gemini-2.5-flash' for all queries.
+ * FIXED: Removed the non-standard 'sources' field from chat history sent to the Gemini API payload.
  */
 (function() {
     // --- CONFIGURATION ---
@@ -251,7 +252,8 @@
             const bubble = document.createElement('div');
             bubble.className = `ai-message-bubble ${message.role === 'user' ? 'user-message' : 'gemini-response'}`;
             if (message.role === 'model') {
-                const parsedResponse = parseGeminiResponse(message.parts[0].text, message.sources); // Pass sources to parser
+                // message.sources is used here
+                const parsedResponse = parseGeminiResponse(message.parts[0].text, message.sources);
                 bubble.innerHTML = `<div class="ai-response-content">${parsedResponse}</div>`;
 
                 bubble.querySelectorAll('.copy-code-btn').forEach(button => {
@@ -307,22 +309,27 @@ User Environment Context:
         if (processedChatHistory.length > 8) {
              processedChatHistory = processedChatHistory.slice(processedChatHistory.length - 8);
         }
+        
+        // FIX: The API rejects custom fields like 'sources' in the 'contents' array.
+        // We strip non-API fields from the history before sending.
+        const apiChatHistory = processedChatHistory.map(message => {
+            const apiMessage = { role: message.role, parts: message.parts };
+            // Do not include message.sources, message.id, etc., in the API payload
+            return apiMessage;
+        });
+
 
         // --- MODEL SELECTION AND INSTRUCTION GENERATION ---
         const { instruction: dynamicInstruction } = getDynamicSystemInstructionAndModel();
         // --- END MODEL SELECTION ---
 
-        // FIX: The API is complaining about the top-level 'config' key.
-        // We promote 'systemInstruction' and 'tools' to be top-level keys.
         const payload = {
-            contents: processedChatHistory,
-            // Use systemInstruction as a top-level field instead of nesting it in 'config'
+            contents: apiChatHistory, // Use the cleaned history
             systemInstruction: { parts: [{ text: dynamicInstruction }] }
         };
 
         // --- WEB GROUNDING INTEGRATION ---
         if (userSettings.webSearchEnabled) {
-            // Use tools as a top-level field instead of nesting it in 'config'
             payload.tools = [{ googleSearch: {} }];
         }
         // --- END WEB GROUNDING INTEGRATION ---
@@ -354,7 +361,8 @@ User Environment Context:
                 responseBubble.innerHTML = `<div class="ai-error">The AI generated an empty response. Please try again or rephrase.</div>`;
                 return;
             }
-
+            
+            // Push to local chatHistory including the sources for rendering
             chatHistory.push({ role: "model", parts: [{ text: text }], sources: sources });
 
             const contentHTML = `<div class="ai-response-content">${parseGeminiResponse(text, sources)}</div>`;
@@ -583,7 +591,10 @@ User Environment Context:
             const parts = [];
             if (query) parts.push({ text: query });
             attachedFiles.forEach(file => { if (file.inlineData) parts.push({ inlineData: file.inlineData }); });
+            // Add user message to history. This is where the error came from previously.
+            // We now know that the history object saved here should contain all metadata needed for rendering.
             chatHistory.push({ role: "user", parts: parts });
+
             const responseContainer = document.getElementById('ai-response-container');
             const userBubble = document.createElement('div');
             userBubble.className = 'ai-message-bubble user-message';
