@@ -2,8 +2,9 @@
  * agent-activation.js
  *
  * MODIFIED: Refactored to remove Agent/Category system and implement a dynamic, context-aware AI persona.
- * NEW: Added a Settings Menu to store user preferences (nickname, color, gender, age) using localStorage.
- * NEW: The AI's system instruction (persona) now changes intelligently based on the content and tone of the user's latest message.
+ * MODIFIED: Removed all personal preference settings (nickname, color, gender, age).
+ * NEW: The Settings Menu now contains toggles for Web Search and Location Sharing.
+ * NEW: The AI's system instruction now dynamically reflects the Web Search and Location Sharing status.
  * UI: Fixed background and title colors. Replaced Agent button with a grey Settings button.
  * UPDATED: Implemented browser color selector for user favorite color.
  * UPDATED: AI container does not load on DOMContentLoaded; requires Ctrl + \ shortcut.
@@ -15,8 +16,6 @@
  * - Casual chat: gemini-2.5-flash-lite
  * - Professional/Math: gemini-2.5-flash
  * - Deep Analysis: gemini-2.5-pro (limited access, exempt for 4simpleproblems@gmail.com)
- *
- * NEW: Integrated Google Custom Search API (CX ID: d0d0c075d757140ef) to provide the AI with real-time search context for non-casual queries.
  */
 (function() {
     // --- CONFIGURATION ---
@@ -27,13 +26,6 @@
     const CHAR_LIMIT = 10000;
     const PASTE_TO_FILE_THRESHOLD = 10000;
     const MAX_ATTACHMENTS_PER_MESSAGE = 10;
-
-    // NEW: Search API Configuration
-    const SEARCH_CX_ID = 'd0d0c075d757140ef';
-    const SEARCH_API_URL = `https://www.googleapis.com/customsearch/v1?key=${API_KEY}&cx=${SEARCH_CX_ID}&q=`;
-
-    const DEFAULT_NICKNAME = 'User';
-    const DEFAULT_COLOR = '#4285f4'; // Google Blue
 
     // --- ICONS (for event handlers) ---
     const copyIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
@@ -47,10 +39,8 @@
     let chatHistory = [];
     let attachedFiles = [];
     let userSettings = {
-        nickname: DEFAULT_NICKNAME,
-        favoriteColor: DEFAULT_COLOR,
-        gender: 'Other',
-        age: 0
+        isWebSearchEnabled: false,
+        isLocationSharingEnabled: true, // Default to true based on old behavior
     };
 
     // Simple debounce utility for performance
@@ -69,8 +59,13 @@
         try {
             const storedSettings = localStorage.getItem('ai-user-settings');
             if (storedSettings) {
-                userSettings = { ...userSettings, ...JSON.parse(storedSettings) };
-                userSettings.age = parseInt(userSettings.age) || 0;
+                const loaded = JSON.parse(storedSettings);
+                // Only load the new, simple settings.
+                userSettings.isWebSearchEnabled = loaded.isWebSearchEnabled === true;
+                userSettings.isLocationSharingEnabled = loaded.isLocationSharingEnabled !== false; // Default to true if missing
+            } else {
+                 // If no settings exist, initialize location sharing to true to match old logic
+                 userSettings.isLocationSharingEnabled = true;
             }
         } catch (e) {
             console.error("Error loading user settings:", e);
@@ -84,10 +79,6 @@
         return true; 
     }
 
-    /**
-     * Retrieves the user's general location (name form).
-     * This function already fulfills the user request to use location name, not coordinates.
-     */
     function getUserLocationForContext() {
         let location = localStorage.getItem('ai-user-location');
         if (!location) {
@@ -320,7 +311,13 @@
         const welcomeMessage = document.createElement('div');
         welcomeMessage.id = 'ai-welcome-message';
         const welcomeHeader = chatHistory.length > 0 ? "Welcome Back" : "Welcome to AI Agent";
-        welcomeMessage.innerHTML = `<h2>${welcomeHeader}</h2><p>This is a beta feature. To improve your experience, your general location (state or country) will be shared with your first message. You may be subject to message limits.</p><p class="shortcut-tip">(Press Ctrl + \\ to close)</p>`;
+        
+        // Note: The welcome message now dynamically reflects the location sharing setting on first message
+        const locationTip = userSettings.isLocationSharingEnabled 
+            ? "To improve your experience, your general location (state or country) will be shared with your first message. You may be subject to message limits."
+            : "Location sharing is currently disabled in settings. You may be subject to message limits.";
+            
+        welcomeMessage.innerHTML = `<h2>${welcomeHeader}</h2><p>${locationTip}</p><p class="shortcut-tip">(Press Ctrl + \\ to close)</p>`;
         
         const closeButton = document.createElement('div');
         closeButton.id = 'ai-close-button';
@@ -518,11 +515,8 @@ If the user asks about a topic other than 4SP, you should not hint at the websit
      * @returns {{instruction: string, model: string}}
      */
     function getDynamicSystemInstructionAndModel(query, settings) {
-        const user = settings.nickname;
-        const userAge = settings.age > 0 ? `${settings.age} years old` : 'of unknown age';
-        const userGender = settings.gender.toLowerCase();
-        const userColor = settings.favoriteColor;
-
+        const isSearchEnabled = settings.isWebSearchEnabled;
+        const isLocationShared = settings.isLocationSharingEnabled;
         const userEmail = localStorage.getItem('ai-user-email') || ''; 
         const isProAuthorized = userEmail === AUTHORIZED_PRO_USER;
         // Placeholder for real Pro usage limit check (not implemented in this file)
@@ -533,7 +527,12 @@ If the user asks about a topic other than 4SP, you should not hint at the websit
         let personaInstruction = `${FSP_HISTORY}
 
 You are a highly capable and adaptable AI, taking on a persona to best serve the user's direct intent. You have significant control over the interaction's structure and detail level, ensuring the response is comprehensive and authoritative.
-User Profile: Nickname: ${user}, Age: ${userAge}, Gender: ${userGender}, Favorite Color: ${userColor}.
+
+**Current System Status:**
+- Web Search is **${isSearchEnabled ? 'ENABLED' : 'DISABLED'}**. Do not perform web searches unless enabled.
+- Location Sharing is **${isLocationShared ? 'ENABLED' : 'DISABLED'}**.
+- Your model selection is dynamic based on user intent.
+
 You must adapt your persona, tone, and the level of detail based on the user's intent.
 
 Formatting Rules (MUST FOLLOW):
@@ -561,14 +560,14 @@ Formatting Rules (MUST FOLLOW):
                 const roastInsults = [
                     `They sound like a cheap knock-off of a decent human.`, 
                     `Honestly, you dodged a bullet the size of a planet.`, 
-                    `Forget them, ${user}, you have better things to do, like talking to me.`,
+                    `Forget them, you have better things to do, like talking to me.`,
                     `Wow, good riddance. That's a level of trash I wouldn't touch with a ten-foot pole.`
                 ];
                 const roastInsult = roastInsults[Math.floor(Math.random() * roastInsults.length)];
 
                 // Combined Creative and Sarcastic
                 if (query.toLowerCase().includes('ex') || query.toLowerCase().includes('roast')) {
-                     personaInstruction += `\n\n**Current Persona: Sarcastic, Supportive Friend (2.5-Flash).** Your goal is to empathize with the user, validate their feelings, and join them in 'roasting' or speaking negatively about their ex/situation. Be funny, slightly aggressive toward the subject of the trash talk, and deeply supportive of ${user}. Use casual language and slang. **Example of tone/support:** "${roastInsult}"`;
+                     personaInstruction += `\n\n**Current Persona: Sarcastic, Supportive Friend (2.5-Flash).** Your goal is to empathize with the user, validate their feelings, and join them in 'roasting' or speaking negatively about their ex/situation. Be funny, slightly aggressive toward the subject of the trash talk, and deeply supportive. Use casual language and slang. **Example of tone/support:** "${roastInsult}"`;
                 } else {
                      personaInstruction += `\n\n**Current Persona: Creative Partner (2.5-Flash).** Use rich, evocative language. Be imaginative, focus on descriptive details, and inspire new ideas.`;
                 }
@@ -589,55 +588,26 @@ Formatting Rules (MUST FOLLOW):
     }
 
 
-    /**
-     * Performs a Google Custom Search and returns formatted results.
-     * @param {string} query The search query.
-     * @returns {Promise<string>} Formatted string of search results or an empty string.
-     */
-    async function callGoogleSearch(query) {
-        if (!API_KEY || !SEARCH_CX_ID) {
-            console.warn("Search API not configured.");
-            return '';
-        }
-        
-        const url = SEARCH_API_URL + encodeURIComponent(query);
-
-        try {
-            const response = await fetch(url, { signal: currentAIRequestController.signal });
-            if (!response.ok) {
-                console.error(`Search API failed with status: ${response.status}`);
-                return '';
-            }
-            const data = await response.json();
-            
-            if (data.items && data.items.length > 0) {
-                let resultString = "--- Google Search Results ---\n";
-                // Only take the top 3 results
-                data.items.slice(0, 3).forEach((item, index) => {
-                    resultString += `Result ${index + 1}: [Title: ${item.title}] [Snippet: ${item.snippet}] [URL: ${item.link}]\n`;
-                });
-                resultString += "----------------------------\n";
-                return resultString;
-            } else {
-                return '';
-            }
-
-        } catch (error) {
-            if (error.name === 'AbortError') return '';
-            console.error('Google Search Error:', error);
-            return '';
-        }
-    }
-
-
     async function callGoogleAI(responseBubble) {
         if (!API_KEY) { responseBubble.innerHTML = `<div class="ai-error">API Key is missing.</div>`; return; }
         currentAIRequestController = new AbortController();
-        
-        // Context variables
         let firstMessageContext = '';
+        if (chatHistory.length <= 1) {
+            let locationContext = '';
+            if (userSettings.isLocationSharingEnabled) {
+                const location = getUserLocationForContext();
+                locationContext = `User is asking from ${location}. `;
+            } else {
+                 locationContext = `User has disabled location sharing. `;
+            }
+
+            const now = new Date();
+            const date = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            const time = now.toLocaleTimeString('en-US', { timeZoneName: 'short' });
+
+            firstMessageContext = `(System Info: ${locationContext}Current date is ${date}, ${time}. User Email: ${localStorage.getItem('ai-user-email') || 'Not authenticated'}.)\n\n`;
+        }
         
-        // Prepare chat history (context window limiting logic)
         let processedChatHistory = [...chatHistory];
         if (processedChatHistory.length > 6) {
              processedChatHistory = [ ...processedChatHistory.slice(0, 3), ...processedChatHistory.slice(-3) ];
@@ -652,34 +622,11 @@ Formatting Rules (MUST FOLLOW):
         // --- MODEL SELECTION AND INSTRUCTION GENERATION ---
         const { instruction: dynamicInstruction, model } = getDynamicSystemInstructionAndModel(lastUserQuery, userSettings); 
         // --- END MODEL SELECTION ---
-        
-        // --- NEW: Google Search Integration ---
-        let searchContext = '';
-        const intent = determineIntentCategory(lastUserQuery);
-        // Trigger search for analytical, technical, or deep dive queries
-        if (lastUserQuery && (intent === 'DEEP_ANALYSIS' || intent === 'PROFESSIONAL_MATH')) {
-             searchContext = await callGoogleSearch(lastUserQuery);
-        }
-        // --- END NEW: Google Search Integration ---
-
-        // System Info Context (including location in name form)
-        if (chatHistory.length <= 1) {
-            const location = getUserLocationForContext(); 
-            const now = new Date();
-            const date = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            const time = now.toLocaleTimeString('en-US', { timeZoneName: 'short' });
-            // The location variable is a name (e.g., 'United States'), fulfilling the user request.
-            firstMessageContext = `(System Info: User is asking from ${location}. Current date is ${date}, ${time}. User Email: ${localStorage.getItem('ai-user-email') || 'Not authenticated'}.)\n\n`;
-        }
-
-
-        // Prepend all system and search context to the user's latest message
-        const fullContext = firstMessageContext + searchContext;
 
         if (textPartIndex > -1) {
-             userParts[textPartIndex].text = fullContext + userParts[textPartIndex].text;
-        } else if (fullContext) {
-             userParts.unshift({ text: fullContext.trim() });
+             userParts[textPartIndex].text = firstMessageContext + userParts[textPartIndex].text;
+        } else if (firstMessageContext) {
+             userParts.unshift({ text: firstMessageContext.trim() });
         }
         
         const payload = { 
@@ -761,10 +708,9 @@ Formatting Rules (MUST FOLLOW):
         const isMenuOpen = menu.classList.toggle('active');
         toggleBtn.classList.toggle('active', isMenuOpen);
         if (isMenuOpen) {
-            document.getElementById('settings-nickname').value = userSettings.nickname === DEFAULT_NICKNAME ? '' : userSettings.nickname;
-            document.getElementById('settings-age').value = userSettings.age || '';
-            document.getElementById('settings-gender').value = userSettings.gender;
-            document.getElementById('settings-color').value = userSettings.favoriteColor;
+            // Ensure inputs reflect current state when opening
+            document.getElementById('settings-web-search').checked = userSettings.isWebSearchEnabled;
+            document.getElementById('settings-location-sharing').checked = userSettings.isLocationSharingEnabled;
             document.getElementById('settings-email').value = localStorage.getItem('ai-user-email') || '';
 
             document.addEventListener('click', handleMenuOutsideClick);
@@ -785,24 +731,18 @@ Formatting Rules (MUST FOLLOW):
     }
 
     function saveSettings() {
-        const nicknameEl = document.getElementById('settings-nickname');
-        const ageEl = document.getElementById('settings-age');
-        const genderEl = document.getElementById('settings-gender');
-        const colorEl = document.getElementById('settings-color');
+        const searchToggle = document.getElementById('settings-web-search');
+        const locationToggle = document.getElementById('settings-location-sharing');
         const emailEl = document.getElementById('settings-email');
 
-        const nickname = nicknameEl.value.trim();
-        const age = parseInt(ageEl.value);
-        const gender = genderEl.value;
-        const favoriteColor = colorEl.value || DEFAULT_COLOR;
+        userSettings.isWebSearchEnabled = searchToggle.checked;
+        userSettings.isLocationSharingEnabled = locationToggle.checked;
         const email = emailEl.value.trim();
-
-        userSettings.nickname = nickname || DEFAULT_NICKNAME;
-        userSettings.age = (isNaN(age) || age < 0) ? 0 : age;
-        userSettings.gender = gender;
-        userSettings.favoriteColor = favoriteColor;
         
-        localStorage.setItem('ai-user-settings', JSON.stringify(userSettings));
+        localStorage.setItem('ai-user-settings', JSON.stringify({
+            isWebSearchEnabled: userSettings.isWebSearchEnabled,
+            isLocationSharingEnabled: userSettings.isLocationSharingEnabled
+        }));
         localStorage.setItem('ai-user-email', email);
     }
 
@@ -813,36 +753,23 @@ Formatting Rules (MUST FOLLOW):
         menu.innerHTML = `
             <div class="menu-header">AI Agent Settings</div>
             <div class="setting-group">
-                <label for="settings-nickname">Nickname</label>
-                <input type="text" id="settings-nickname" placeholder="${DEFAULT_NICKNAME}" value="${userSettings.nickname === DEFAULT_NICKNAME ? '' : userSettings.nickname}" />
-                <p class="setting-note">How the AI should refer to you.</p>
-            </div>
-            <div class="setting-group">
                 <label for="settings-email">Authenticated Email</label>
                 <input type="email" id="settings-email" placeholder="e.g., user@example.com" value="${localStorage.getItem('ai-user-email') || ''}" />
                 <p class="setting-note">Set to '${AUTHORIZED_PRO_USER}' for unlimited Pro access.</p>
             </div>
-            <div class="setting-group">
-                <label for="settings-color">Favorite Color</label>
-                <input type="color" id="settings-color" value="${userSettings.favoriteColor}" />
-                <p class="setting-note">Subtly influences the AI's response style (e.g., in theming).</p>
+            <div class="setting-group setting-toggle">
+                <label for="settings-web-search">Enable Web Search (Context)</label>
+                <input type="checkbox" id="settings-web-search" ${userSettings.isWebSearchEnabled ? 'checked' : ''} />
+                <span class="toggle-slider"></span>
+                <p class="setting-note">Allow the AI to use Google Search results for fresh information.</p>
             </div>
-            <div class="setting-group-split">
-                <div class="setting-group">
-                    <label for="settings-gender">Gender</label>
-                    <select id="settings-gender" value="${userSettings.gender}">
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Non Binary">Non Binary</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-                <div class="setting-group">
-                    <label for="settings-age">Age</label>
-                    <input type="number" id="settings-age" placeholder="Optional" min="0" value="${userSettings.age || ''}" />
-                </div>
+            <div class="setting-group setting-toggle">
+                <label for="settings-location-sharing">Share Location Context</label>
+                <input type="checkbox" id="settings-location-sharing" ${userSettings.isLocationSharingEnabled ? 'checked' : ''} />
+                <span class="toggle-slider"></span>
+                <p class="setting-note">Share your general location (e.g., 'United States') with your first message for better localized results.</p>
             </div>
-            <button id="settings-save-button">Save</button>
+            <button id="settings-save-button">Save & Close</button>
         `;
 
         const saveButton = menu.querySelector('#settings-save-button');
@@ -1430,6 +1357,15 @@ Formatting Rules (MUST FOLLOW):
             #settings-color::-webkit-color-swatch { border: 0; border-radius: 5px; }
             #settings-save-button { width: 100%; padding: 10px; background: #4285f4; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; margin-top: 10px; transition: background 0.2s; }
             #settings-save-button:hover { background: #3c77e6; }
+
+            /* New Setting Toggle Styles */
+            .setting-toggle { position: relative; display: flex; flex-direction: column; }
+            .setting-toggle label { margin-bottom: 0; }
+            .setting-toggle input[type="checkbox"] { opacity: 0; width: 0; height: 0; }
+            .toggle-slider { position: absolute; cursor: pointer; top: 0; right: 0; width: 40px; height: 20px; background-color: #555; transition: .4s; border-radius: 20px; }
+            .toggle-slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; }
+            .setting-toggle input:checked + .toggle-slider { background-color: var(--ai-blue); }
+            .setting-toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
 
             /* Attachments, Code Blocks, Graphs, LaTeX */
             #ai-attachment-preview { display: none; flex-direction: row; gap: 10px; padding: 0; max-height: 0; border-bottom: 1px solid transparent; overflow-x: auto; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
