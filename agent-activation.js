@@ -1,207 +1,127 @@
 /**
- * agent-activation.js
+ * Humanity Gen 0 AI Model (agent-activation.js)
  *
- * MODIFIED FOR HUMANITY GEN 0:
- * 1. REBRANDED: Agent name changed to "Humanity Gen 0".
- * 2. SETTINGS REMOVED: All settings UI (button, modal, preference logic) and localStorage persistence are removed.
- * 3. AESTHETICS: All orange and glowing CSS animations have been removed.
- * 4. WEB SEARCH ADDED: Implemented a toggle for Google Search Grounding via the Gemini API.
- * 5. SOURCES ADDED: Displays clickable citation sources (grounding metadata) when web search is used.
+ * MODIFIED: Refactored to Humanity Gen 0 branding.
+ * REMOVED: All settings features (settings button, panel, and localStorage usage) are gone.
+ * NEW: Implemented Google Search Grounding for real-time web access via a toggle switch.
+ * NEW: Responses that utilize web search now display the grounded source citations.
+ * UPDATED: Simplified CSS, removed glowing animations, and focused on a neutral, professional theme.
  *
- * Dependencies:
- * - KaTeX (for math rendering)
- * - Lucide Icons (for UI elements)
- * - Tailwind CSS (via CDN)
+ * NOTE: This implementation uses the integrated Google Search grounding tool, not a separate
+ * Custom Search Engine CX ID, as this is the standard, modern approach for the Gemini API.
  */
 (function() {
     // --- CONFIGURATION ---
-    // NOTE: API_KEY is intentionally left empty. The environment will provide the necessary token/key.
-    const API_KEY = '';
-    const BASE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/`;
-    // Use the model required for Google Search Grounding
-    const MODEL_NAME = 'gemini-2.5-flash-preview-09-2025';
+    // The API key is left empty as the canvas environment will inject it at runtime.
+    const API_KEY = 'AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro';
+    // We use the recommended model for search grounding and general chat.
+    const MODEL_NAME = 'gemini-2.5-flash';
+    const BASE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
     
-    // --- STATE ---
-    let chatHistory = [];
-    let isProcessing = false;
-    let isActivated = false;
-    let isWebSearchEnabled = false; // New state for web search toggle
+    const APP_TITLE = "Humanity Gen 0";
+    const DEFAULT_SYSTEM_PROMPT = `You are the **Humanity Gen 0** AI Model. Your goal is to be a friendly, highly concise, and accurate assistant. Use markdown formatting extensively. When you use web search (Google Search Grounding) for factual information, make sure your response is directly supported by the sources provided. Be conversational and helpful.`;
 
-    // --- AI PERSONA ---
-    const AI_TITLE = 'Humanity Gen 0';
-    const AI_PERSONA = 'You are Humanity Gen 0, a helpful and respectful large language model designed to assist users. Provide concise, clear, and well-structured responses. Use Markdown formatting and ensure all mathematical equations are enclosed in KaTeX syntax (`$` for inline, `$$` for display). Do not mention that you are an AI model or your purpose unless asked directly.';
-
-    // --- DOM ELEMENT REFERENCES (pre-declaration) ---
+    // --- STATE & INITIALIZATION ---
     let aiContainer;
-    let chatHistoryContainer;
-    let userInput;
-    let sendButton;
-    let searchToggle;
+    let chatHistory = [];
+    let isInitialized = false;
+    let isVisible = false;
+    let isLoading = false;
+    let currentSystemPrompt = DEFAULT_SYSTEM_PROMPT;
+    let isWebSearchEnabled = true; // NEW: State for web searching
 
-    // --- UTILITIES ---
+    // Helper functions for base64 to ArrayBuffer (for audio) - currently unused but kept for completeness
+    function base64ToArrayBuffer(base64) {
+        const binaryString = atob(base64);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        return bytes.buffer;
+    }
 
-    // 1. Exponential Backoff for API Retries
-    async function fetchWithRetry(url, options, maxRetries = 5) {
-        for (let i = 0; i < maxRetries; i++) {
+    // NEW: Toggles the state of the web search
+    function toggleWebSearch() {
+        isWebSearchEnabled = !isWebSearchEnabled;
+        const toggleButton = document.getElementById('web-search-toggle');
+        const icon = document.getElementById('web-search-icon');
+        
+        if (isWebSearchEnabled) {
+            toggleButton.classList.remove('bg-gray-700');
+            toggleButton.classList.add('bg-blue-600');
+            icon.classList.remove('text-gray-400');
+            icon.classList.add('text-white');
+            toggleButton.setAttribute('aria-checked', 'true');
+        } else {
+            toggleButton.classList.remove('bg-blue-600');
+            toggleButton.classList.add('bg-gray-700');
+            icon.classList.remove('text-white');
+            icon.classList.add('text-gray-400');
+            toggleButton.setAttribute('aria-checked', 'false');
+        }
+        console.log(`Web Search Enabled: ${isWebSearchEnabled}`);
+    }
+
+    // --- API & RESPONSE HANDLING ---
+
+    // NEW: Handles the API call with conditional search grounding and source extraction.
+    async function fetchResponse(prompt, history) {
+        isLoading = true;
+        const chatbox = document.getElementById('ai-chatbox');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        if (loadingIndicator) loadingIndicator.style.display = 'block';
+        if (chatbox) chatbox.scrollTop = chatbox.scrollHeight;
+
+        // Use the full chat history for context
+        const contents = history.map(msg => ({
+            role: msg.role === 'user' ? 'user' : 'model',
+            parts: [{ text: msg.text }]
+        }));
+
+        const payload = {
+            contents: contents,
+            generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 2048,
+            },
+            systemInstruction: {
+                parts: [{ text: currentSystemPrompt }]
+            },
+        };
+
+        // Conditionally add the Google Search grounding tool
+        if (isWebSearchEnabled) {
+            payload.tools = [{ "google_search": {} }];
+        }
+
+        const maxRetries = 5;
+        let attempt = 0;
+        
+        while (attempt < maxRetries) {
             try {
-                const response = await fetch(url, options);
-                if (response.status === 429 && i < maxRetries - 1) {
-                    const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    continue; // Retry the request
-                }
+                const response = await fetch(BASE_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                return response;
-            } catch (error) {
-                if (i === maxRetries - 1) {
-                    throw error;
+
+                const result = await response.json();
+                const candidate = result.candidates?.[0];
+
+                if (!candidate || !candidate.content?.parts?.[0]?.text) {
+                    throw new Error("Invalid response structure from API.");
                 }
-                const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
-                await new Promise(resolve => setTimeout(resolve, delay));
-            }
-        }
-    }
-    
-    // 2. Autoresize textarea
-    function autoResize(el) {
-        el.style.height = 'auto';
-        el.style.height = (el.scrollHeight) + 'px';
-    }
 
-    // 3. Simple Loading Spinner Management
-    function toggleLoading(show) {
-        if (show) {
-            sendButton.innerHTML = `<div class="loading-spinner w-5 h-5 border-2 border-white border-t-blue-500"></div>`;
-            sendButton.disabled = true;
-            userInput.disabled = true;
-            userInput.placeholder = 'Thinking...';
-        } else {
-            sendButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>';
-            sendButton.disabled = false;
-            userInput.disabled = false;
-            userInput.placeholder = 'Ask me anything...';
-        }
-    }
+                // 1. Extract the generated text
+                const text = candidate.content.parts[0].text;
 
-    // 4. Scroll to bottom
-    function scrollToBottom() {
-        chatHistoryContainer.scrollTop = chatHistoryContainer.scrollHeight;
-    }
-
-    // --- CHAT RENDERING ---
-
-    function createSourcesHtml(sources) {
-        let listItems = sources.map((s, index) =>
-            `<a href="${s.uri}" target="_blank" class="text-xs text-blue-300 hover:text-blue-100 block truncate transition duration-200" title="${s.title || s.uri}">
-                <span class="font-semibold">${index + 1}.</span> ${s.title || 'Source Link'}
-            </a>`
-        ).join('');
-
-        // Collapsible button for sources
-        return `
-            <div class="mt-3 pt-2 border-t border-gray-600">
-                <button onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('svg').classList.toggle('rotate-180');"
-                        class="flex items-center text-sm font-medium text-gray-300 hover:text-gray-100 focus:outline-none transition duration-200 p-1 -m-1 rounded-md">
-                    <span class="mr-1">Sources Used (${sources.length})</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform duration-200">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                    </svg>
-                </button>
-                <div class="mt-1 space-y-1 hidden">
-                    ${listItems}
-                </div>
-            </div>
-        `;
-    }
-
-    function renderMessage(role, text, sources = []) {
-        const messageWrapper = document.createElement('div');
-        messageWrapper.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
-
-        const messageBubble = document.createElement('div');
-        messageBubble.className = `message-bubble max-w-4/5 p-3 rounded-xl shadow-md ${role === 'user' ? 'bg-blue-600 text-white ml-auto rounded-br-sm' : 'bg-gray-700 text-gray-100 mr-auto rounded-bl-sm'}`;
-
-        // Create content area
-        const contentDiv = document.createElement('div');
-        contentDiv.className = 'ai-message-bubble';
-        contentDiv.innerHTML = text; // Content is pre-rendered Markdown/KaTeX
-
-        messageBubble.appendChild(contentDiv);
-
-        // Add Sources if available and it's an AI message
-        if (role !== 'user' && sources && sources.length > 0) {
-            const sourcesHtml = createSourcesHtml(sources);
-            messageBubble.insertAdjacentHTML('beforeend', sourcesHtml);
-        }
-
-        messageWrapper.appendChild(messageBubble);
-        chatHistoryContainer.appendChild(messageWrapper);
-        scrollToBottom();
-        
-        // Render KaTeX after message is added to DOM
-        if (role !== 'user') {
-            try {
-                 renderMathInElement(contentDiv, {
-                    delimiters: [
-                        {left: "$$", right: "$$", display: true},
-                        {left: "$", right: "$", display: false}
-                    ],
-                    throwOnError: false
-                });
-            } catch (e) {
-                console.error("KaTeX rendering error:", e);
-            }
-        }
-    }
-
-    // --- CHAT LOGIC ---
-
-    async function sendChatMessage() {
-        if (isProcessing) return;
-
-        const userMessage = userInput.value.trim();
-        if (!userMessage) return;
-
-        // 1. Prepare UI
-        toggleLoading(true);
-        userInput.value = '';
-        autoResize(userInput);
-
-        // 2. Render User Message and add to history
-        renderMessage('user', userMessage);
-        chatHistory.push({ role: 'user', parts: [{ text: userMessage }] });
-
-        let aiText = 'An unknown error occurred.';
-        let sources = [];
-
-        try {
-            const apiUrl = `${BASE_API_URL}${MODEL_NAME}:generateContent?key=${API_KEY}`;
-            
-            // CONDITIONAL TOOL INCLUSION (Web Search Logic)
-            const tools = isWebSearchEnabled ? [{ "google_search": {} }] : undefined;
-
-            const payload = {
-                contents: chatHistory,
-                systemInstruction: { parts: [{ text: AI_PERSONA }] },
-                // Only include tools if they are defined
-                ...(tools && { tools: tools })
-            };
-
-            const response = await fetchWithRetry(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            const result = await response.json();
-            const candidate = result.candidates?.[0];
-
-            if (candidate && candidate.content?.parts?.[0]?.text) {
-                aiText = candidate.content.parts[0].text;
-                
-                // Extract grounding sources
+                // 2. Extract grounding sources
+                let sources = [];
                 const groundingMetadata = candidate.groundingMetadata;
                 if (groundingMetadata && groundingMetadata.groundingAttributions) {
                     sources = groundingMetadata.groundingAttributions
@@ -211,286 +131,325 @@
                         }))
                         .filter(source => source.uri && source.title); // Ensure sources are valid
                 }
+                
+                return { text, sources };
 
-            } else {
-                aiText = 'The model returned an empty response.';
-                console.error('API Response Error:', result);
+            } catch (error) {
+                console.error(`Attempt ${attempt + 1} failed:`, error);
+                attempt++;
+                if (attempt < maxRetries) {
+                    const delay = Math.pow(2, attempt) * 1000; // Exponential backoff (1s, 2s, 4s, 8s, ...)
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    return { text: "I'm sorry, I'm having trouble connecting to the network right now. Please try again later.", sources: [] };
+                }
             }
-
-        } catch (error) {
-            console.error('Fetch Error:', error);
-            aiText = `Error: Could not connect to the AI model. Details: ${error.message}`;
-        } finally {
-            toggleLoading(false);
-            
-            // 3. Render AI Response and add to history
-            renderMessage('model', aiText, sources);
-            chatHistory.push({ role: 'model', parts: [{ text: aiText }] });
         }
     }
 
-    // --- UI/DOM CREATION ---
 
-    function createAndInjectUI() {
-        // --- 1. CSS STYLES (Cleaned up, no glow, blue theme) ---
+    // --- UI RENDERING & INTERACTION ---
+
+    function appendMessage(role, text, sources = []) {
+        const chatbox = document.getElementById('ai-chatbox');
+        if (!chatbox) return;
+
+        const messageContainer = document.createElement('div');
+        messageContainer.className = `flex mb-3 ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+
+        const messageBubble = document.createElement('div');
+        messageBubble.className = `max-w-3/4 px-4 py-2 rounded-xl text-white shadow-md transition-all duration-300 transform message-pop-in ${
+            role === 'user'
+                ? 'bg-blue-600 rounded-br-none'
+                : 'bg-gray-700 rounded-tl-none ai-message-bubble'
+        }`;
+        
+        // Render text (and process markdown/katex)
+        const content = document.createElement('div');
+        content.innerHTML = renderContent(text); // Assume renderContent handles markdown
+
+        messageBubble.appendChild(content);
+
+        // NEW: Render sources if they exist (only for AI messages)
+        if (role !== 'user' && sources.length > 0) {
+            const sourcesContainer = document.createElement('div');
+            sourcesContainer.className = 'mt-2 pt-2 border-t border-gray-600 text-xs text-gray-400';
+            
+            const sourcesTitle = document.createElement('span');
+            sourcesTitle.className = 'font-semibold block mb-1 text-gray-300';
+            sourcesTitle.textContent = 'Sources:';
+            sourcesContainer.appendChild(sourcesTitle);
+
+            const sourcesList = document.createElement('ul');
+            sourcesList.className = 'list-none p-0 space-y-1';
+            
+            sources.slice(0, 3).forEach((source, index) => { // Limit to 3 sources for clean UI
+                const listItem = document.createElement('li');
+                const link = document.createElement('a');
+                link.href = source.uri;
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+                link.className = 'hover:text-blue-400 transition-colors duration-150 block truncate';
+                link.textContent = `${index + 1}. ${source.title}`;
+                listItem.appendChild(link);
+                sourcesList.appendChild(listItem);
+            });
+
+            sourcesContainer.appendChild(sourcesList);
+            messageBubble.appendChild(sourcesContainer);
+        }
+
+        messageContainer.appendChild(messageBubble);
+        chatbox.appendChild(messageContainer);
+        chatbox.scrollTop = chatbox.scrollHeight;
+
+        // Apply KaTeX rendering after the element is in the DOM
+        content.querySelectorAll('.math-display, .math-inline').forEach(element => {
+            try {
+                if (element.classList.contains('math-display')) {
+                    katex.render(element.textContent, element, { displayMode: true, throwOnError: false });
+                } else {
+                    katex.render(element.textContent, element, { displayMode: false, throwOnError: false });
+                }
+            } catch (e) {
+                console.error("KaTeX rendering failed:", e);
+                element.textContent = element.textContent; // Fallback to raw text
+            }
+        });
+    }
+
+    function renderContent(markdown) {
+        // Simple markdown to HTML conversion for chat bubbles
+        let html = markdown
+            // Replace **bold** with <strong>
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            // Replace *italic* with <em>
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            // Handle code blocks (simple version)
+            .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre class="p-2 my-2 bg-gray-800 rounded-lg overflow-x-auto"><code>$2</code></pre>')
+            // Handle inline code `code`
+            .replace(/`(.*?)`/g, '<code class="bg-gray-600 px-1 py-0.5 rounded text-sm">$1</code>')
+            // Handle headers (h4 max to fit bubble)
+            .replace(/^#### (.*$)/gim, '<h4>$1</h4>')
+            .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+            .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+            // Handle bullet points
+            .replace(/^\* (.*$)/gim, '<li>$1</li>')
+            .replace(/(^|\n)<li>/g, '\n<ul><li>')
+            .replace(/<\/li>\n/g, '</li>\n')
+            .replace(/<\/li>\n(?!<li>)/g, '</li></ul>\n')
+
+        // Handle paragraphs (ensure double newline for paragraph break)
+        html = html.split('\n\n').map(p => {
+            // Only wrap if it doesn't already look like an HTML element
+            if (!p.trim().startsWith('<') && p.trim().length > 0) {
+                return `<p>${p.trim()}</p>`;
+            }
+            return p;
+        }).join('');
+
+        // 3. KaTeX and Math Handling (converts to span for KaTeX later)
+        // Display math: $$...$$
+        html = html.replace(/\$\$([\s\S]*?)\$\$/g, '<span class="math-display">$$1</span>');
+        // Inline math: $...$
+        html = html.replace(/\$([^\s$][^$]*[^\s$])\$/g, '<span class="math-inline">$1</span>');
+
+        return html;
+    }
+
+    async function handleUserPrompt(event) {
+        if (event.key === 'Enter' && !event.shiftKey && !isLoading) {
+            event.preventDefault();
+            const input = event.target;
+            const prompt = input.value.trim();
+
+            if (!prompt) return;
+
+            // 1. Append user message and clear input
+            appendMessage('user', prompt);
+            chatHistory.push({ role: 'user', text: prompt });
+            input.value = '';
+            
+            // 2. Add loading indicator
+            const loadingIndicator = document.getElementById('loading-indicator');
+            loadingIndicator.style.display = 'flex';
+            
+            // 3. Fetch response
+            const { text: aiResponse, sources } = await fetchResponse(prompt, chatHistory);
+            
+            // 4. Update history and UI
+            isLoading = false;
+            loadingIndicator.style.display = 'none';
+            
+            appendMessage('ai', aiResponse, sources);
+            chatHistory.push({ role: 'ai', text: aiResponse });
+
+            // 5. Update system prompt based on user's last message for the NEXT turn (dynamic persona)
+            // Removed complex persona logic to meet the requirements of a fixed 'Humanity Gen 0' persona.
+        }
+    }
+
+    // --- UI SETUP ---
+
+    function createAIContainer() {
+        const container = document.createElement('div');
+        container.id = 'ai-assistant-container';
+        container.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm bg-gray-900/80 transition-opacity duration-300 opacity-0 pointer-events-none font-sans';
+        container.style.fontFamily = 'Inter, sans-serif';
+
+        container.innerHTML = `
+            <div id="ai-chat-window" class="flex flex-col w-full max-w-lg h-full max-h-[85vh] bg-gray-800 rounded-xl shadow-2xl transition-all duration-300 transform scale-95 opacity-0 border border-gray-700">
+                
+                <!-- Chat Header (No Settings Button) -->
+                <div id="ai-chat-title" class="flex items-center justify-between p-3 bg-gray-900 text-white rounded-t-xl shadow-lg border-b border-gray-700">
+                    <h3 class="text-lg font-semibold tracking-wide">${APP_TITLE}</h3>
+                    <div id="controls-container" class="flex items-center space-x-4">
+                        
+                        <!-- NEW: Web Search Toggle -->
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm text-gray-400">Web Search</span>
+                            <button id="web-search-toggle" role="switch" aria-checked="true" class="relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 bg-blue-600">
+                                <span class="sr-only">Toggle web search</span>
+                                <span id="web-search-icon" aria-hidden="true" class="pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 translate-x-5 flex items-center justify-center text-white">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-globe"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                                </span>
+                            </button>
+                        </div>
+                        
+                        <!-- Close Button -->
+                        <button id="close-ai-button" class="p-1 rounded-full text-gray-400 hover:text-red-400 transition duration-150 transform hover:scale-105" aria-label="Close Chat">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Chat Messages -->
+                <div id="ai-chatbox" class="flex-grow p-4 overflow-y-auto space-y-4 bg-gray-850">
+                    <div class="flex mb-3 justify-start">
+                        <div class="max-w-3/4 px-4 py-2 rounded-xl text-white shadow-md bg-gray-700 rounded-tl-none ai-message-bubble">
+                            <p>Hello! I am **${APP_TITLE}**. I'm here to help you. What can I assist you with today?</p>
+                            <p class="mt-1 text-sm text-gray-400">Web Search is currently <span class="font-bold text-blue-400">enabled</span>. I will ground my answers with real-time information when necessary.</p>
+                        </div>
+                    </div>
+                    <!-- Loading Indicator -->
+                    <div id="loading-indicator" class="flex items-center justify-start mb-3" style="display: none;">
+                        <div class="bg-gray-700 rounded-full w-4 h-4 mr-2 animate-pulse"></div>
+                        <div class="bg-gray-700 rounded-full w-4 h-4 mr-2 animate-pulse" style="animation-delay: 0.2s;"></div>
+                        <div class="bg-gray-700 rounded-full w-4 h-4 animate-pulse" style="animation-delay: 0.4s;"></div>
+                    </div>
+                </div>
+
+                <!-- Chat Input -->
+                <div class="p-3 bg-gray-900 rounded-b-xl border-t border-gray-700">
+                    <textarea id="ai-input" class="w-full p-3 bg-gray-700 text-white rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 border-none outline-none placeholder-gray-400 shadow-inner" placeholder="Ask me anything... (Press Enter to send)" rows="2"></textarea>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(container);
+
+        // Initial setup for the web search toggle's visual state
+        const toggleButton = document.getElementById('web-search-toggle');
+        const icon = document.getElementById('web-search-icon');
+        toggleButton.classList.add('bg-blue-600');
+        icon.classList.add('text-white');
+    }
+
+    // --- MAIN INITIALIZATION ---
+
+    function initialize() {
+        if (isInitialized) return;
+
+        // 1. Setup CSS styles (integrated Tailwind and custom styles)
         const style = document.createElement('style');
         style.textContent = `
-            :root {
-                --humanity-blue: #0A66C2; /* Primary Action Blue */
-                --bg-dark: #1F2937;
-                --text-light: #F9FAFB;
-            }
-
-            /* Custom scrollbar */
-            #chat-history-container::-webkit-scrollbar { width: 8px; }
-            #chat-history-container::-webkit-scrollbar-thumb { background: #4B5563; border-radius: 4px; }
-            #chat-history-container::-webkit-scrollbar-track { background: #374151; }
-
-            /* Main Container */
-            #ai-container {
-                position: fixed;
-                top: 50%;
-                right: 20px;
-                transform: translateY(-50%);
-                width: 100%;
-                max-width: 400px;
-                height: 85vh;
-                background-color: #374151; /* Darker slate */
-                border-radius: 1rem;
-                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-                display: flex;
-                flex-direction: column;
-                overflow: hidden;
-                z-index: 50;
-                transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
-                opacity: 0;
-                transform: translate(100%, -50%); /* Start off-screen */
-                font-family: 'Inter', sans-serif;
-            }
-
-            #ai-container.active {
-                opacity: 1;
-                transform: translate(0, -50%); /* Slide in */
-            }
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
             
-            /* Header */
-            #ai-header {
-                padding: 1rem;
-                background-color: #1F2937; /* Even darker slate */
-                border-radius: 1rem 1rem 0 0;
-                border-bottom: 1px solid #4B5563;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                color: var(--text-light);
-            }
+            .font-sans { font-family: 'Inter', sans-serif; }
+            
+            /* Custom Scrollbar for Chatbox */
+            #ai-chatbox::-webkit-scrollbar { width: 8px; }
+            #ai-chatbox::-webkit-scrollbar-thumb { background-color: #4b5563; border-radius: 4px; }
+            #ai-chatbox::-webkit-scrollbar-thumb:hover { background-color: #6b7280; }
 
-            /* Toggle Switch Style */
-            .toggle-switch-container {
-                display: flex;
-                align-items: center;
-                cursor: pointer;
-            }
-            .toggle-switch input[type="checkbox"] {
-                opacity: 0;
-                width: 0;
-                height: 0;
-            }
-            .slider {
-                position: relative;
-                cursor: pointer;
-                background-color: #ccc;
-                transition: .4s;
-                width: 38px;
-                height: 20px;
-                border-radius: 20px;
-            }
-            .slider:before {
-                position: absolute;
-                content: "";
-                height: 14px;
-                width: 14px;
-                left: 3px;
-                bottom: 3px;
-                background-color: white;
-                transition: .4s;
-                border-radius: 50%;
-            }
-            input:checked + .slider {
-                background-color: var(--humanity-blue);
-            }
-            input:checked + .slider:before {
-                transform: translateX(18px);
-            }
-
-            /* Message Styling */
-            .message-bubble {
-                max-width: 85%;
-                padding: 0.75rem 1rem;
-                border-radius: 1rem;
-                margin-bottom: 1rem;
-                animation: message-pop-in 0.3s ease-out;
-            }
-
-            .ai-message-bubble * {
-                max-width: 100%;
-            }
-
-            @keyframes message-pop-in {
-                0% { opacity: 0; transform: translateY(10px); }
-                100% { opacity: 1; transform: translateY(0); }
-            }
-
-            /* Loading Spinner */
-            .loading-spinner {
-                animation: spin 1s linear infinite;
-            }
-
-            @keyframes spin {
-                to { transform: rotate(360deg); }
-            }
-
-            /* KaTeX specific overrides for dark theme */
-            .katex-display {
-                margin: 0.5em 0 !important;
-                padding: 0.5em !important;
-                background-color: #2D3748;
-                border-radius: 0.5rem;
-                overflow-x: auto;
-            }
+            /* Chat Bubble Styling */
+            .ai-message-bubble h1, .ai-message-bubble h2, .ai-message-bubble h3, .ai-message-bubble h4 { margin-top: 10px; margin-bottom: 5px; font-weight: 700; text-align: left; }
             .ai-message-bubble p { margin: 0; padding: 0; text-align: left; }
             .ai-message-bubble ul, .ai-message-bubble ol { margin: 10px 0; padding-left: 20px; text-align: left; list-style-position: outside; }
             .ai-message-bubble li { margin-bottom: 5px; }
+            
+            /* REMOVED: All glow animations, including orange ones. */
 
-            /* Fixes for markdown elements */
-            .ai-message-bubble h1, .ai-message-bubble h2, .ai-message-bubble h3 { margin-top: 1rem; font-weight: bold; }
+            @keyframes message-pop-in { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } }
+            .message-pop-in { animation: message-pop-in 0.3s ease-out; }
         `;
         document.head.appendChild(style);
-        
-        // --- 2. KA'TEX & LIBRARIES ---
-        const linkKat = document.createElement('link');
-        linkKat.rel = 'stylesheet';
-        linkKat.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css';
-        document.head.appendChild(linkKat);
 
-        const scriptKat = document.createElement('script');
-        scriptKat.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js';
-        document.head.appendChild(scriptKat);
+        // 2. Load necessary libraries (KaTeX for math rendering)
+        const katexCSS = document.createElement('link');
+        katexCSS.rel = 'stylesheet';
+        katexCSS.href = 'https://cdn.jsdelivr.net/npm/katex@0.13.18/dist/katex.min.css';
+        document.head.appendChild(katexCSS);
 
-        const scriptAut = document.createElement('script');
-        scriptAut.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js';
-        document.head.appendChild(scriptAut);
+        const katexJS = document.createElement('script');
+        katexJS.src = 'https://cdn.jsdelivr.net/npm/katex@0.13.18/dist/katex.min.js';
+        document.head.appendChild(katexJS);
 
-        // --- 3. MAIN HTML STRUCTURE ---
-        aiContainer = document.createElement('div');
-        aiContainer.id = 'ai-container';
-        aiContainer.className = 'hidden'; // Start hidden until activated
+        // 3. Create UI elements
+        createAIContainer();
+        aiContainer = document.getElementById('ai-assistant-container');
 
-        aiContainer.innerHTML = `
-            <header id="ai-header">
-                <h2 class="text-xl font-bold">${AI_TITLE}</h2>
-                <!-- Web Search Toggle -->
-                <div class="toggle-switch-container">
-                    <span class="text-sm font-medium mr-2">Web Search</span>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="web-search-toggle">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                <!-- Activation Button (now acts as a close button) -->
-                <button id="activation-btn" class="text-gray-400 hover:text-white transition duration-200">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
-            </header>
+        // 4. Attach event listeners
+        document.getElementById('ai-input').addEventListener('keydown', handleUserPrompt);
+        document.getElementById('close-ai-button').addEventListener('click', toggleVisibility);
+        document.getElementById('web-search-toggle').addEventListener('click', toggleWebSearch); // NEW Listener
 
-            <div id="chat-history-container" class="flex-grow p-4 overflow-y-auto bg-gray-800">
-                <div class="flex justify-start">
-                    <div class="message-bubble bg-gray-700 text-gray-100 mr-auto rounded-bl-sm">
-                        Welcome! I am **Humanity Gen 0**. I'm here to assist you. Press <kbd>Ctrl</kbd> + <kbd>\\</kbd> to hide me.
-                    </div>
-                </div>
-            </div>
-
-            <div class="p-3 bg-gray-900 border-t border-gray-700">
-                <div class="flex space-x-3 items-end">
-                    <textarea id="user-input" rows="1" class="flex-grow p-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:ring-2 focus:ring-blue-500 resize-none overflow-hidden placeholder-gray-400" placeholder="Ask me anything..."></textarea>
-                    <button id="send-button" class="flex-shrink-0 w-10 h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center transition duration-200">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                    </button>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(aiContainer);
-
-        // --- 4. CACHE DOM REFERENCES ---
-        chatHistoryContainer = document.getElementById('chat-history-container');
-        userInput = document.getElementById('user-input');
-        sendButton = document.getElementById('send-button');
-        searchToggle = document.getElementById('web-search-toggle');
-        const activationBtn = document.getElementById('activation-btn');
-
-        // --- 5. INITIAL EVENT LISTENERS ---
-
-        // Web Search Toggle Listener
-        searchToggle.addEventListener('change', () => {
-            isWebSearchEnabled = searchToggle.checked;
-            console.log('Web Search Enabled:', isWebSearchEnabled);
-        });
-
-        // Send button listener
-        sendButton.addEventListener('click', sendChatMessage);
-
-        // Input field listeners
-        userInput.addEventListener('input', () => autoResize(userInput));
-        userInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendChatMessage();
-            }
-        });
-
-        // Activation Button listener (to close the window)
-        activationBtn.addEventListener('click', () => toggleActivation(false));
-
-        // Global activation hotkey
-        document.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key === '\\') {
-                e.preventDefault();
-                toggleActivation();
-            }
-        });
+        isInitialized = true;
     }
 
-    // --- ACTIVATION/DEACTIVATION ---
+    function toggleVisibility() {
+        if (!isInitialized) initialize();
 
-    function toggleActivation(force) {
-        if (typeof force === 'boolean') {
-            isActivated = force;
-        } else {
-            isActivated = !isActivated;
-        }
+        isVisible = !isVisible;
+        const chatWindow = document.getElementById('ai-chat-window');
 
-        if (isActivated) {
-            aiContainer.classList.remove('hidden');
-            // Timeout allows the display block to take effect before the transition
-            setTimeout(() => aiContainer.classList.add('active'), 10);
-            userInput.focus();
+        if (isVisible) {
+            aiContainer.classList.remove('opacity-0', 'pointer-events-none');
+            chatWindow.classList.remove('scale-95', 'opacity-0');
+            document.getElementById('ai-input').focus();
         } else {
-            aiContainer.classList.remove('active');
-            // Timeout waits for the transition to finish before hiding
-            setTimeout(() => aiContainer.classList.add('hidden'), 300);
+            aiContainer.classList.add('opacity-0', 'pointer-events-none');
+            chatWindow.classList.add('scale-95', 'opacity-0');
         }
     }
 
-    // --- INITIALIZATION ---
-
-    // Wait for the entire page to load before injecting the AI UI
-    window.addEventListener('load', () => {
-        createAndInjectUI();
-        console.log('Humanity Gen 0 Initialized. Use Ctrl + \\ to activate.');
+    // --- ACTIVATION SHORTCUT (Ctrl + \) ---
+    document.addEventListener('keydown', (event) => {
+        // Toggle visibility with Ctrl + \ (or Cmd + \ on Mac)
+        if (event.key === '\\' && (event.ctrlKey || event.metaKey)) {
+            event.preventDefault();
+            toggleVisibility();
+        }
     });
+
+    // Initial check to ensure Tailwind is available and initialized.
+    document.addEventListener('DOMContentLoaded', () => {
+        // We only initialize the chat panel when the keyboard shortcut is used,
+        // but ensure the key listeners are ready on DOM load.
+        // We call initialize() here to ensure all event listeners are attached,
+        // but the container remains hidden until the shortcut is pressed.
+        initialize();
+    });
+
+    // Load Tailwind CSS (required for styling)
+    const tailwindScript = document.createElement('script');
+    tailwindScript.src = 'https://cdn.tailwindcss.com';
+    document.head.appendChild(tailwindScript);
+
+    // Initial state setup for the web search
+    window.onload = () => {
+        // This ensures the visual state matches the initial JS variable state (true)
+        toggleWebSearch(); // Call once to set initial visual state to 'on'
+        toggleWebSearch(); // Call again to reverse the state back to 'on' after the first call set it to 'off'
+    };
 
 })();
