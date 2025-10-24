@@ -5,6 +5,8 @@
  * STATUS: Settings Menu, Settings Button, and all associated features have been entirely removed.
  * ARCHITECTURE: All new features integrated strictly within idiomatic JavaScript, maintaining existing naming and structural flow.
  *
+ * BUG FIX (Ctrl + \): Corrected handleKeyDown logic to use e.code for reliable cross-platform detection of the backslash key.
+ *
  * NEW FEATURES:
  * 1. Multi-Model Dynamic Switching (Gemini 2.5 Pro usage strictly enforced by AUTHORIZED_PRO_USER).
  * 2. Real-Time Web Search Integration (Google Custom Search JSON API).
@@ -683,7 +685,11 @@
      */
     function renderKaTeX(container) {
         if (typeof katex === 'undefined') {
-            console.warn("KaTeX not loaded, skipping render.");
+            // Dynamically load KaTeX script if not present
+            const katexScript = document.createElement('script');
+            katexScript.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.js';
+            katexScript.onload = () => renderKaTeX(container);
+            document.head.appendChild(katexScript);
             return;
         }
         container.querySelectorAll('.latex-render').forEach(element => {
@@ -1060,11 +1066,12 @@
     // --- MAIN AGENT ACTIVATION/DEACTIVATION ---
 
     /**
-     * Handles the Ctrl + \ shortcut for AI activation/deactivation.
+     * Handles the Ctrl + \ (or Cmd + \) shortcut for AI activation/deactivation.
      */
     async function handleKeyDown(e) {
-        // Check for Ctrl + \ (or Cmd + \ on Mac)
-        if (e.ctrlKey && e.key === '\\') {
+        // FIX: Use e.code === 'Backslash' for reliable cross-platform detection of the '\' key,
+        // and include e.metaKey to support Cmd+\ on macOS.
+        if ((e.ctrlKey || e.metaKey) && (e.code === 'Backslash')) {
             const selection = window.getSelection().toString();
             if (isAIActive) {
                 // Deactivation logic
@@ -1158,7 +1165,6 @@
         charCounter.textContent = `0 / ${formatCharLimit(CHAR_LIMIT)}`;
 
         // --- REMOVAL OF SETTINGS UI: The settings button and menu creation are removed here ---
-        // settingsButton and createSettingsMenu() are not appended.
         
         inputWrapper.appendChild(attachmentPreviewContainer);
         inputWrapper.appendChild(visualInput);
@@ -1794,9 +1800,6 @@ Formatting Rules (MUST FOLLOW):
     }
     
     // --- ATTACHMENT AND FILE HELPERS (Retained) ---
-
-    // Retained functions from old agent-activation.js file:
-    // processFileLike, handleFileUpload, renderAttachments, showFilePreview (if needed, simplified preview)
 
     // Simplified File Preview for robustness (original was large)
     function showFilePreview(file) { 
