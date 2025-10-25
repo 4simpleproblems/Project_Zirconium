@@ -25,454 +25,442 @@
             color: #c0c0c0; 
             transition: all 0.3s ease;
             font-weight: 300; 
+            min-height: 100vh;
         }
-        .dark { color-scheme: dark; }
 
-        /* Custom scrollbar for a sleek look */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #1a1a1a; }
-        ::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #777; }
-
-        /* Custom active state for sidebar items */
+        /* --- LAYOUT --- */
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+            gap: 2rem;
+        }
+        @media (min-width: 768px) {
+            .settings-grid {
+                grid-template-columns: 280px 1fr;
+            }
+        }
+        
+        /* --- SIDEBAR --- */
+        .sidebar {
+            background-color: #111111;
+            border-radius: 1rem;
+            padding: 0.5rem;
+            border: 1px solid #1f1f1f;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
         .sidebar-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.2s;
+            color: #a0a0a0;
+            font-weight: 500;
         }
         .sidebar-item:hover {
             background-color: #1a1a1a;
+            color: #e0e0e0;
         }
         .sidebar-item.active {
-            background-color: #1f2937; /* Tailwind gray-800 */
-            border-left: 4px solid #4f46e5; /* Tailwind indigo-600 */
-            color: #ffffff;
+            background-color: #1a1a1a;
+            color: #4f46e5;
+            box-shadow: inset 3px 0 0 #4f46e5;
         }
-        
-        /* Utility class for visually distinct labels */
-        .label-pill {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-weight: 500;
-            font-size: 0.875rem;
-            color: #e0e0e0;
-            background-color: #1f2937; /* default gray background */
-            border: 1px solid #374151; /* default gray border */
+        .sidebar-item.active i {
+            color: #4f46e5 !important;
         }
-        
-        /* Styles for the loading overlay */
-        #loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(7, 7, 7, 0.9);
-            z-index: 1000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
+        .sidebar-item i {
+            width: 1.5rem;
+            text-align: center;
+            margin-right: 0.75rem;
+            color: #a0a0a0;
         }
 
+        /* --- MAIN PANEL --- */
+        .main-panel {
+            background-color: #111111;
+            border-radius: 1rem;
+            padding: 2rem;
+            border: 1px solid #1f1f1f;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .main-panel-title {
+            font-size: 1.875rem; /* 3xl */
+            font-weight: 700;
+            color: #ffffff;
+            border-bottom: 2px solid #1f1f1f;
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .main-panel-title i {
+            color: #4f46e5; /* Default blue for icons */
+        }
+
+        /* --- COLOR PICKER --- */
+        .color-selector {
+            width: 40px;
+            height: 40px;
+            border-radius: 9999px; /* full rounded */
+            cursor: pointer;
+            border: 3px solid transparent;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            transition: transform 0.1s, border-color 0.2s;
+        }
+        .color-selector:hover {
+            transform: scale(1.1);
+        }
+        .color-selector.active {
+            border-color: #4f46e5;
+            transform: scale(1.05);
+            box-shadow: 0 0 0 2px #4f46e5, 0 2px 8px rgba(0,0,0,0.5);
+        }
     </style>
 </head>
-<body class="min-h-screen">
-    <!-- Navigation Bar will be injected here by navigation.js -->
-    
-    <div id="loading-overlay" class="text-white">
-        <i class="fas fa-spinner fa-spin text-4xl mb-4 text-indigo-500"></i>
-        <p>Loading user settings...</p>
-    </div>
+<body>
+    <!-- Navigation Bar will be prepended here by navigation.js -->
 
-    <main id="settings-content" class="container mx-auto p-4 md:p-8 pt-24 hidden">
-        <h1 class="text-3xl md:text-4xl font-extrabold mb-8 text-white tracking-tight">Application Settings</h1>
-
-        <div class="flex flex-col lg:flex-row gap-8">
-            <!-- Sidebar Navigation -->
-            <div id="sidebar-container" class="lg:w-1/4 bg-gray-900 rounded-xl shadow-2xl p-4 h-fit sticky top-24">
-                <!-- Sidebar items will be dynamically added here -->
-            </div>
-
-            <!-- Settings Panel -->
-            <div id="panel-container" class="lg:w-3/4">
-                <div id="panel-header" class="mb-6 pb-4 border-b border-gray-800">
-                    <h2 id="panel-title" class="text-3xl font-bold text-white"></h2>
-                </div>
-                <div id="panel-content">
-                    <!-- Section-specific content will be loaded here -->
-                </div>
+    <div class="settings-grid">
+        <!-- Sidebar Navigation -->
+        <div class="sidebar">
+            <h2 class="text-xl font-bold p-4 text-white">App Settings</h2>
+            <div id="sidebar-nav" class="flex flex-col space-y-1">
+                <!-- Sidebar items will be dynamically generated -->
             </div>
         </div>
-    </main>
 
-    <!-- Firebase Imports and Configuration -->
+        <!-- Main Content Panel -->
+        <div class="main-panel">
+            <h1 id="panel-title" class="main-panel-title"></h1>
+            <div id="panel-content">
+                <!-- Content will be dynamically generated -->
+            </div>
+        </div>
+    </div>
+
+
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        
-        // --- GLOBAL SETUP ---
-        setLogLevel('debug');
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js";
+        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js";
 
-        let app, db, auth, userId = null;
-        let isAuthReady = false;
-        
-        // Default labels for demonstration purposes
-        let currentLabels = []; 
-        let pendingLabelChanges = false; 
+        // Global Firebase variables populated by navigation.js
+        const FIREBASE_CONFIG = window.FIREBASE_CONFIG || { apiKey: "MOCK_KEY" };
+        const USER_SETTINGS_KEY = '4sp_navbar_color';
 
-        const sections = [
-            { id: 'profile', title: 'Profile Information', icon: 'fa-user-circle', content: 'Manage your personal details, name, and profile picture.', color: 'text-blue-400' },
-            { id: 'security', title: 'Security & Authentication', icon: 'fa-shield-alt', content: 'Change your password, enable two-factor authentication, and view active sessions.', color: 'text-red-400' },
-            { id: 'notifications', title: 'Notification Preferences', icon: 'fa-bell', content: 'Customize how and when you receive alerts and email updates.', color: 'text-yellow-400' },
-            { id: 'labels', title: 'Custom Labels', icon: 'fa-tags', content: 'Define and manage custom labels for organizing your data.', color: 'text-green-400' },
-            { id: 'advanced', title: 'Advanced Settings', icon: 'fa-cogs', content: 'Configure system-wide and experimental settings.', color: 'text-purple-400' },
-        ];
+        let auth, db;
+        let userId;
 
-        // --- FIREBASE INITIALIZATION & AUTH ---
+        // --- Data Definitions ---
 
-        async function initFirebaseAndAuth() {
+        // Map of colors to display names for hover effect (Goal #4)
+        const COLOR_NAMES = {
+            '#000000': 'Pure Obsidian',
+            '#ffffff': 'Industrial White',
+            '#facc15': 'Solar Flare Yellow',
+            '#6b21a8': 'Deep Violet',
+            '#1e40af': 'Cerulean Deep',
+            '#ef4444': 'Emergency Red',
+            '#10b981': 'Emerald Green',
+            '#374151': 'Gunmetal Gray',
+            '#8b5cf6': 'Vaporwave Purple',
+            '#f97316': 'Electric Orange',
+            '#4b5563': 'Slate Gray',
+            '#059669': 'Forest Teal',
+        };
+
+        // HEX colors to display in the palette (must match keys in COLOR_NAMES)
+        const PALETTE_COLORS = Object.keys(COLOR_NAMES); 
+
+
+        // Setting sections configuration
+        const SECTIONS = {
+            'profile': {
+                title: "User Profile",
+                icon: "fa-user-circle",
+                color: "text-blue-500",
+                content: "Manage your username, profile picture, and display information.",
+                render: renderProfileSection
+            },
+            'appearance': {
+                title: "Appearance",
+                icon: "fa-palette",
+                color: "text-purple-500",
+                content: "Customize the look and feel of the application, including the navigation bar color.",
+                render: renderAppearanceSection
+            },
+            'security': {
+                title: "Security & Privacy",
+                icon: "fa-lock",
+                color: "text-red-500",
+                content: "Update your password, manage linked accounts, and configure two-factor authentication.",
+                render: renderDefaultSection
+            },
+            'notifications': {
+                title: "Notifications",
+                icon: "fa-bell",
+                color: "text-yellow-500",
+                content: "Configure your email and in-app notification preferences.",
+                render: renderDefaultSection
+            },
+            'advanced': {
+                title: "Advanced Settings",
+                icon: "fa-cogs",
+                color: "text-gray-500",
+                content: "Access advanced configuration options, including data export and account deletion.",
+                render: renderDefaultSection
+            }
+        };
+
+        // --- Firebase Initialization and Auth Check ---
+
+        const startAuthFlow = () => {
             try {
-                app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
+                const app = initializeApp(FIREBASE_CONFIG);
                 auth = getAuth(app);
+                db = getFirestore(app);
 
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
-
-                // Listener to track auth state changes
-                onAuthStateChanged(auth, (user) => {
+                // Wait for navigation.js to load the auth state.
+                const authUnsub = auth.onAuthStateChanged(user => {
                     if (user) {
                         userId = user.uid;
-                        console.log("Authenticated with user ID:", userId);
+                        console.log("User authenticated:", userId);
+                        renderSidebar();
+                        displaySection('appearance'); // Default to Appearance section
                     } else {
-                        // For this application, we expect a user object from the token or anonymous sign-in
-                        console.log("Authentication state changed: User is null.");
-                        userId = crypto.randomUUID(); // Fallback to a random ID
+                        console.log("User not authenticated. Redirecting.");
+                        // Redirect to home or login page if not logged in
+                        window.location.href = "../../index.html"; 
                     }
-                    isAuthReady = true;
-                    // Proceed to app logic once auth is ready
-                    setupApp(); 
+                    // Unsubscribe after the first check to prevent multiple calls
+                    authUnsub(); 
                 });
-
             } catch (error) {
-                console.error("Firebase Initialization or Authentication Error:", error);
+                console.error("Firebase initialization failed:", error);
             }
-        }
-        
-        /**
-         * Fetches initial data (like labels) from Firestore.
-         */
-        async function fetchInitialData() {
-            if (!db || !userId) {
-                console.error("Database or User ID not initialized.");
-                return;
-            }
+        };
 
-            const dataPath = `/artifacts/${appId}/users/${userId}/app_settings/config`;
-            const docRef = doc(db, dataPath);
+        // --- Rendering Functions ---
 
-            try {
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    // Deserialize labels from JSON string if necessary, or assume array/default
-                    currentLabels = data.labels || [];
-                    console.log("Initial labels loaded:", currentLabels);
-                } else {
-                    console.log("Settings document not found. Using default labels.");
-                    // Initialize with some default placeholder labels if none exist
-                    currentLabels = ['Urgent', 'Low Priority', 'In Review'];
-                }
-            } catch (e) {
-                console.error("Error loading initial data:", e);
-                // Fallback to defaults on error
-                currentLabels = ['Urgent', 'Low Priority', 'In Review'];
-            }
-        }
-        
-        /**
-         * Saves the currentLabels array to Firestore.
-         */
-        async function saveLabelsToFirestore() {
-            if (!db || !userId) {
-                console.error("Cannot save: Database or User ID not initialized.");
-                return;
-            }
+        const renderSidebar = () => {
+            const sidebarNav = document.getElementById('sidebar-nav');
+            sidebarNav.innerHTML = Object.entries(SECTIONS).map(([id, section]) => `
+                <div 
+                    id="sidebar-${id}" 
+                    class="sidebar-item" 
+                    data-section-id="${id}"
+                    onclick="displaySection('${id}')"
+                >
+                    <i class="fa-solid ${section.icon} ${section.color}"></i>
+                    <span>${section.title}</span>
+                </div>
+            `).join('');
 
-            const saveButton = document.getElementById('saveLabelsButton');
-            if(saveButton) {
-                saveButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Saving...';
-                saveButton.disabled = true;
-            }
-            
-            const dataPath = `/artifacts/${appId}/users/${userId}/app_settings/config`;
-            const docRef = doc(db, dataPath);
+            // Add click listeners (already handled by onclick attribute)
+            window.displaySection = displaySection;
+        };
 
-            try {
-                // Prepare data for storage
-                const dataToSave = { 
-                    labels: currentLabels 
-                };
-                
-                // Use setDoc with merge: true to avoid overwriting other settings
-                await setDoc(docRef, dataToSave, { merge: true });
-
-                console.log("Labels saved successfully.");
-                pendingLabelChanges = false;
-                
-                const messageEl = document.getElementById('labelsSaveMessage');
-                if (messageEl) {
-                    messageEl.textContent = 'Labels saved successfully!';
-                    messageEl.classList.remove('text-orange-400', 'hidden');
-                    messageEl.classList.add('text-green-400');
-                    setTimeout(() => {
-                        messageEl.classList.add('hidden');
-                        messageEl.classList.remove('text-green-400');
-                    }, 3000);
-                }
-
-            } catch (e) {
-                console.error("Error saving labels:", e);
-                const messageEl = document.getElementById('labelsSaveMessage');
-                if (messageEl) {
-                    messageEl.textContent = 'Error saving labels: ' + e.message;
-                    messageEl.classList.remove('text-orange-400', 'hidden');
-                    messageEl.classList.add('text-red-400');
-                }
-            } finally {
-                if(saveButton) {
-                    saveButton.innerHTML = '<i class="fas fa-save mr-2"></i> Save All Labels Changes';
-                    saveButton.disabled = false;
-                }
-            }
-        }
-
-
-        // --- UI RENDERING FUNCTIONS ---
-
-        function setupSidebar() {
-            const sidebarContainer = document.getElementById('sidebar-container');
-            sidebarContainer.innerHTML = '';
-            
-            sections.forEach((section) => {
-                const item = document.createElement('div');
-                item.className = 'sidebar-item flex items-center p-3 rounded-lg text-gray-400 hover:text-white';
-                item.id = `sidebar-${section.id}`;
-                item.innerHTML = `<i class="fas ${section.icon} mr-3 ${section.color}"></i> ${section.title}`;
-                item.addEventListener('click', () => displaySection(section.id));
-                sidebarContainer.appendChild(item);
-            });
-
-            // Display the first section by default
-            if (sections.length > 0) {
-                displaySection(sections[0].id);
-            }
-        }
-        
-        /**
-         * Renders the list of currentLabels in the Labels section UI.
-         */
-        function renderLabels() {
-            const container = document.getElementById('existingLabelsContainer');
-            if (!container) return;
-
-            container.innerHTML = '';
-            if (currentLabels.length === 0) {
-                 container.innerHTML = '<p class="text-gray-500 italic">No custom labels defined yet. Add one above!</p>';
-                 return;
-            }
-
-            currentLabels.forEach((label, index) => {
-                // Simple hash function for consistent (but random-looking) colors
-                const hashColor = (str) => {
-                    let hash = 0;
-                    for (let i = 0; i < str.length; i++) {
-                        hash = str.charCodeAt(i) + ((hash << 5) - hash);
-                    }
-                    // Select from a predefined set of Tailwind color classes for aesthetics
-                    const colors = [
-                        { text: 'text-purple-300', bg: 'bg-purple-900/30' },
-                        { text: 'text-green-300', bg: 'bg-green-900/30' },
-                        { text: 'text-blue-300', bg: 'bg-blue-900/30' },
-                        { text: 'text-yellow-300', bg: 'bg-yellow-900/30' },
-                        { text: 'text-pink-300', bg: 'bg-pink-900/30' }
-                    ];
-                    return colors[Math.abs(hash) % colors.length];
-                };
-
-                const color = hashColor(label);
-                
-                const labelDiv = document.createElement('div');
-                labelDiv.className = 'flex justify-between items-center p-3 bg-gray-800 rounded-lg border border-gray-700 hover:border-indigo-600 transition duration-150';
-                labelDiv.innerHTML = `
-                    <span class="text-sm font-medium ${color.text} ${color.bg} px-3 py-1 rounded-full shadow-inner">${label}</span>
-                    <button data-label="${label}" class="remove-label-btn text-red-400 hover:text-red-500 transition-colors duration-150 p-1 rounded-full hover:bg-red-900/20" title="Remove label">
-                        <i class="fas fa-times"></i>
-                    </button>
-                `;
-                container.appendChild(labelDiv);
-            });
-
-            // Attach listeners to remove buttons
-            document.querySelectorAll('.remove-label-btn').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const labelToRemove = e.currentTarget.getAttribute('data-label');
-                    currentLabels = currentLabels.filter(label => label !== labelToRemove);
-                    pendingLabelChanges = true;
-                    renderLabels(); // Re-render the list
-                });
-            });
-        }
-
-        /**
-         * Handles content rendering and event setup for the selected section.
-         */
-        function displaySection(sectionId) {
-            const section = sections.find(s => s.id === sectionId);
+        const displaySection = (sectionId) => {
+            const section = SECTIONS[sectionId];
             if (!section) return;
 
             const panelTitle = document.getElementById('panel-title');
             const panelContent = document.getElementById('panel-content');
-            
-            panelTitle.innerHTML = `<i class="fas ${section.icon} mr-2 ${section.color}"></i> ${section.title}`;
 
-            let htmlContent = '';
+            // 1. Update panel title
+            panelTitle.innerHTML = `<i class="fa-solid ${section.icon} mr-2 ${section.color}"></i> ${section.title}`;
 
-            if (sectionId === 'labels') {
-                // --- CUSTOM CONTENT FOR LABELS SECTION ---
-                htmlContent = `
-                    <div class="flex flex-col space-y-6">
-                        <p class="text-lg text-gray-400">${section.content}</p>
+            // 2. Render section specific content
+            section.render(panelContent);
 
-                        <!-- Label Management Form -->
-                        <div class="p-6 rounded-xl bg-gray-900 border border-indigo-500/20 shadow-xl">
-                            <h3 class="text-xl font-semibold mb-4 text-white flex items-center">
-                                <i class="fas fa-plus-circle mr-3 text-indigo-400"></i> Add New Label
-                            </h3>
-                            <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
-                                <input type="text" id="newLabelInput" placeholder="Enter new label name (max 30 characters)"
-                                       class="flex-grow p-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition duration-150"
-                                       maxlength="30">
-                                <button id="addLabelButton"
-                                        class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 px-5 rounded-lg shadow-md transition duration-200 flex items-center justify-center">
-                                    <i class="fas fa-plus mr-2"></i> Add
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Existing Labels List -->
-                        <div class="p-6 rounded-xl bg-gray-900 border border-gray-700">
-                            <h3 class="text-xl font-semibold mb-4 text-white flex items-center">
-                                <i class="fas fa-list-ul mr-3 text-gray-400"></i> Existing Labels
-                            </h3>
-                            <div id="existingLabelsContainer" class="space-y-3">
-                                <!-- Labels will be rendered here by JavaScript -->
-                            </div>
-                            <p id="labelsSaveMessage" class="text-sm mt-4 text-orange-400 hidden">You have unsaved changes!</p>
-                        </div>
-                        
-                        <button id="saveLabelsButton" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-lg shadow-lg transition-all duration-200 mt-4 self-start flex items-center">
-                            <i class="fas fa-save mr-2"></i> Save All Labels Changes
-                        </button>
-                    </div>
-                `;
-            } else {
-                // --- GENERIC CONTENT FOR ALL OTHER SECTIONS ---
-                htmlContent = `
-                    <div class="flex flex-col space-y-4">
-                        <p class="text-lg text-gray-400">${section.content}</p>
-                        <div class="bg-gray-800 p-4 rounded-xl border border-gray-700">
-                            <h3 class="text-xl font-semibold mb-2 text-white">Section Details</h3>
-                            <p class="text-sm text-gray-500">
-                                This is where the detailed controls, forms, and toggles for the 
-                                ${section.title} section would be implemented. 
-                                <i class="fas fa-magic text-purple-400 ml-1"></i>
-                            </p>
-                        </div>
-                        <button class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-lg shadow-lg transition-all duration-200 mt-4 self-start flex items-center">
-                            <i class="fas fa-save mr-2"></i> Save Changes
-                        </button>
-                    </div>
-                `;
-            }
-
-            panelContent.innerHTML = htmlContent;
-
-            // 1. Update sidebar active state
+            // 3. Update sidebar active state
             document.querySelectorAll('.sidebar-item').forEach(item => {
                 item.classList.remove('active');
             });
             document.getElementById(`sidebar-${sectionId}`).classList.add('active');
+        };
 
+        // --- Section Renderers ---
 
-            // 2. Setup dynamic functionality for the LABELS section
-            if (sectionId === 'labels') {
-                renderLabels(); // Initial render of the existing labels
+        const renderDefaultSection = (panelContent) => {
+            const sectionId = panelContent.closest('.main-panel').querySelector('#panel-title').textContent.trim().toLowerCase().replace(/\s/g, '-');
+            const section = SECTIONS[sectionId.replace('-section', '')]; // Simple lookup
+            
+            panelContent.innerHTML = `
+                <div class="flex flex-col space-y-4">
+                    <p class="text-lg text-gray-400">${section.content}</p>
+                    <div class="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                        <h3 class="text-xl font-semibold mb-2 text-white">Under Development</h3>
+                        <p class="text-sm text-gray-500">
+                            This section is currently under construction. Please check back later for detailed controls and configuration options.
+                            <i class="fa-solid fa-code text-indigo-400 ml-1"></i>
+                        </p>
+                    </div>
+                    <button class="bg-gray-600 cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg shadow-lg transition-all duration-200 mt-4 self-start flex items-center">
+                        <i class="fa-solid fa-save mr-2"></i> Save Changes (Disabled)
+                    </button>
+                </div>
+            `;
+        };
 
-                const input = document.getElementById('newLabelInput');
-                const addButton = document.getElementById('addLabelButton');
-                const saveButton = document.getElementById('saveLabelsButton');
-                const messageEl = document.getElementById('labelsSaveMessage');
+        const renderProfileSection = (panelContent) => {
+            const section = SECTIONS['profile'];
+            
+            panelContent.innerHTML = `
+                <div class="flex flex-col space-y-4">
+                    <p class="text-lg text-gray-400">${section.content}</p>
+                    <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 space-y-4">
+                        <h3 class="text-xl font-semibold text-white">Profile Details</h3>
+                        <div>
+                            <label for="username" class="block text-sm font-medium text-gray-400 mb-1">Username</label>
+                            <input type="text" id="username" value="${auth.currentUser?.displayName || 'User'}" class="w-full p-2 rounded-lg bg-gray-900 border border-gray-700 text-white focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-400 mb-1">Email (Read Only)</label>
+                            <input type="email" id="email" value="${auth.currentUser?.email || 'N/A'}" readonly class="w-full p-2 rounded-lg bg-gray-700 border border-gray-600 text-gray-400 cursor-not-allowed">
+                        </div>
+                    </div>
+                    <button id="save-profile-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg shadow-lg transition-all duration-200 mt-4 self-start flex items-center">
+                        <i class="fa-solid fa-save mr-2"></i> Save Profile
+                    </button>
+                </div>
+            `;
+            // Add listeners for profile saving (omitted for brevity, but structure is here)
+        };
+
+        const renderAppearanceSection = (panelContent) => {
+            const currentNavbarColor = localStorage.getItem(USER_SETTINGS_KEY) || '#000000';
+            const section = SECTIONS['appearance'];
+            
+            const colorPaletteHtml = PALETTE_COLORS.map(color => {
+                const isActive = color.toLowerCase() === currentNavbarColor.toLowerCase();
+                const name = COLOR_NAMES[color.toLowerCase()] || 'Custom Color';
                 
-                // Function to add a label
-                const addLabel = () => {
-                    const newLabel = input.value.trim();
-                    if (newLabel && newLabel.length <= 30 && !currentLabels.includes(newLabel)) {
-                        currentLabels.push(newLabel);
-                        input.value = '';
-                        pendingLabelChanges = true;
-                        messageEl.classList.remove('hidden', 'text-green-400', 'text-red-400');
-                        messageEl.classList.add('text-orange-400');
-                        messageEl.textContent = 'You have unsaved changes!';
-                        renderLabels();
-                    } else if (currentLabels.includes(newLabel)) {
-                        console.warn("Label already exists.");
-                    } else if (!newLabel) {
-                        console.warn("Label cannot be empty.");
-                    }
-                };
+                return `
+                    <div 
+                        class="color-selector ${isActive ? 'active' : ''}" 
+                        style="background-color: ${color};" 
+                        data-color="${color}" 
+                        onclick="selectNavbarColor('${color}')"
+                        title="${name}"
+                    ></div>
+                `;
+            }).join('');
 
-                // Event listener for the Add button
-                addButton.addEventListener('click', addLabel);
-                
-                // Event listener for 'Enter' key press in the input
-                input.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault(); // Prevent form submission if it were a form
-                        addLabel();
+
+            panelContent.innerHTML = `
+                <div class="flex flex-col space-y-6">
+                    <p class="text-lg text-gray-400">${section.content}</p>
+                    
+                    <!-- Navbar Color Palette -->
+                    <div class="bg-gray-900 p-6 rounded-lg border border-gray-800">
+                        <h3 class="text-xl font-semibold mb-4 text-white flex items-center">
+                            <i class="fa-solid fa-box-tissue mr-2 text-pink-400"></i> Navbar Background Color
+                        </h3>
+                        <p class="text-sm text-gray-500 mb-4">
+                            Select a preset color for the application's top navigation bar. The text/icon color adjusts automatically for maximum contrast and subtle tinting. Hover over a color for its name!
+                        </p>
+                        <div id="color-palette" class="flex flex-wrap gap-4 p-2">
+                            ${colorPaletteHtml}
+                        </div>
+                    </div>
+
+                    <!-- Custom Color Input -->
+                    <div class="bg-gray-900 p-6 rounded-lg border border-gray-800">
+                        <h3 class="text-xl font-semibold mb-4 text-white flex items-center">
+                            <i class="fa-solid fa-tint mr-2 text-cyan-400"></i> Custom Color (HEX)
+                        </h3>
+                        <div class="flex items-center space-x-3">
+                            <input type="color" id="custom-color-picker" value="${currentNavbarColor}" class="w-10 h-10 p-0 rounded-lg border-none overflow-hidden cursor-pointer" title="Custom Color Picker">
+                            <input type="text" id="custom-color-hex" value="${currentNavbarColor}" maxlength="7" class="p-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:ring-indigo-500 focus:border-indigo-500 w-32 uppercase" placeholder="#123456">
+                            <button id="apply-custom-color" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg shadow-lg transition-all duration-200 flex items-center">
+                                Apply Custom
+                            </button>
+                        </div>
+                        <p id="color-error" class="text-red-500 text-sm mt-2 hidden">Invalid HEX color code.</p>
+                    </div>
+
+                </div>
+            `;
+            
+            const customHexInput = document.getElementById('custom-color-hex');
+            const customPicker = document.getElementById('custom-color-picker');
+            const applyButton = document.getElementById('apply-custom-color');
+
+            // Sync Hex Input to Picker
+            customHexInput.addEventListener('input', (e) => {
+                const hex = e.target.value.toUpperCase();
+                if (/^#?([0-9A-F]{6})$/.test(hex)) {
+                    customPicker.value = hex.startsWith('#') ? hex : '#' + hex;
+                    document.getElementById('color-error').classList.add('hidden');
+                }
+            });
+
+            // Sync Picker to Hex Input
+            customPicker.addEventListener('input', (e) => {
+                customHexInput.value = e.target.value.toUpperCase();
+                document.getElementById('color-error').classList.add('hidden');
+            });
+
+            // Apply Custom Color
+            applyButton.addEventListener('click', () => {
+                const hex = customHexInput.value.toUpperCase().startsWith('#') ? customHexInput.value : '#' + customHexInput.value;
+                if (/^#[0-9A-F]{6}$/.test(hex)) {
+                    selectNavbarColor(hex);
+                    document.getElementById('color-error').classList.add('hidden');
+                } else {
+                    document.getElementById('color-error').classList.remove('hidden');
+                }
+            });
+
+            window.selectNavbarColor = selectNavbarColor; // Expose to global scope for onclick
+        };
+
+        const selectNavbarColor = (color) => {
+            const hexColor = color.toUpperCase();
+            
+            // 1. Save to Local Storage
+            try {
+                localStorage.setItem(USER_SETTINGS_KEY, hexColor);
+                console.log(`Navbar color saved: ${hexColor}`);
+            } catch (e) {
+                console.error("Could not save to Local Storage:", e);
+                // Fallback: use global variable if available
+                if (window.USER_SETTINGS_KEY) {
+                    window.USER_SETTINGS_KEY = hexColor;
+                }
+            }
+            
+            // 2. Refresh Navigation Bar (which relies on localStorage)
+            if (typeof window.startNavigationBootstrap === 'function') {
+                window.startNavigationBootstrap();
+            } else {
+                console.warn("startNavigationBootstrap function not found. Navbar update requires page refresh.");
+            }
+
+            // 3. Update active state in settings UI
+            const palette = document.getElementById('color-palette');
+            if (palette) {
+                palette.querySelectorAll('.color-selector').forEach(selector => {
+                    selector.classList.remove('active');
+                    if (selector.getAttribute('data-color').toUpperCase() === hexColor) {
+                        selector.classList.add('active');
                     }
                 });
-
-                // Event listener for the Save button
-                saveButton.addEventListener('click', saveLabelsToFirestore);
             }
-        }
+            
+            // 4. Update custom input fields
+            const customHexInput = document.getElementById('custom-color-hex');
+            const customPicker = document.getElementById('custom-color-picker');
+            if (customHexInput) customHexInput.value = hexColor;
+            if (customPicker) customPicker.value = hexColor;
+        };
         
-        // --- START APPLICATION FLOW ---
-
-        async function setupApp() {
-            // 1. Fetch data (including labels)
-            await fetchInitialData(); 
-            // 2. Setup UI
-            setupSidebar();
-            // 3. Hide loading overlay and show content
-            document.getElementById('loading-overlay').classList.add('hidden');
-            document.getElementById('settings-content').classList.remove('hidden');
-        }
-
-        // Initialize Firebase and start the process
-        initFirebaseAndAuth();
-
+        // --- START APPLICATION ---\
+        startAuthFlow();
     </script>
 </body>
 </html>
