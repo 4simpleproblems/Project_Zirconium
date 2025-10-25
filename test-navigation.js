@@ -5,11 +5,13 @@
  * to rendering user-specific information.
  *
  * --- UPDATES & FEATURES ---
- * 1. PURE BLACK CONTRAST: Text/icons now switch to pure black (#000000) for light background colors (Luminance > 0.4).
- * 2. IMMEDIATE COLOR SYNC: CSS styles are injected synchronously immediately after color load, fixing the visual delay.
- * 3. COMPLETE COLOR SYNCHRONIZATION: The navbar, the fading scroll texture, text, icons, and borders all adjust dynamically.
- * 4. PURE LOCAL STORAGE: Color setting is loaded ONLY from Local Storage.
- * 5. FIREBASE SETTINGS REMOVED: All Firebase Firestore logic related to color settings has been removed.
+ * 1. AUTOMATIC REFRESH: Implements a bootstrap/cleanup pattern (startNavigationBootstrap) to allow the script to re-run
+ * without a page refresh when the file is updated in the Canvas environment.
+ * 2. DYNAMIC LOGO SWITCHING: Uses '/images/logo-dark.png' for light backgrounds (Luminance > 0.4) and '/images/logo.png' for dark backgrounds.
+ * 3. TINTED TEXT/ICONS: Implements color manipulation (HSL) to subtly tint the contrast text/icon color toward the background color's hue,
+ * providing a more cohesive design. This tint is also applied to the logo image.
+ * 4. PURE BLACK CONTRAST: Text/icons switch to pure black (#000000) for light background colors (Luminance > 0.4).
+ * 5. IMMEDIATE COLOR SYNC: CSS styles are injected synchronously immediately after color load, fixing the visual delay.
  */
 
 // =========================================================================
@@ -38,15 +40,84 @@ let db;
 
 // --- Global Variable for User Settings ---
 let userSettings = {
-    navbarColor: DEFAULT_NAVBAR_COLOR
+    navbarColor: DEFAULT_NAVBAR_COLOR,
+    textColor: 'white' // Final determined text color (tinted or pure)
 };
 
-// --- Utility Functions (Luminance and Contrast) ---
+// --- HSL Utility Functions ---
+
+/**
+ * Converts Hex to HSL. Used for tint calculation.
+ */
+const hexToHsl = (hex) => {
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h, s, l = (max + min) / 2;
+
+    if (max === min) {
+        h = s = 0; // grayscale
+    } else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+    }
+
+    return { h: h * 360, s: s * 100, l: l * 100 };
+};
+
+/**
+ * Converts HSL (0-360, 0-100, 0-100) back to Hex.
+ */
+const hslToHex = (h, s, l) => {
+    h /= 360;
+    s /= 100;
+    l /= 100;
+
+    let r, g, b;
+
+    if (s === 0) {
+        r = g = b = l; // grayscale
+    } else {
+        const hue2rgb = (p, q, t) => {
+            if (t < 0) t += 1;
+            if (t > 1) t -= 1;
+            if (t < 1 / 6) return p + (q - p) * 6 * t;
+            if (t < 1 / 2) return q;
+            if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+            return p;
+        };
+
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1 / 3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1 / 3);
+    }
+
+    const toHex = (c) => {
+        const hex = Math.round(c * 255).toString(16);
+        return hex.length === 1 ? '0' + hex : hex;
+    };
+
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+};
+
+// --- Luminance and Contrast Functions ---
 
 /**
  * Calculates the perceived luminance of a hex color (0 to 1).
  */
 const getLuminance = (hex) => {
+    // Standard WCAG luminance calculation
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
     const b = parseInt(hex.slice(5, 7), 16);
@@ -61,13 +132,33 @@ const getLuminance = (hex) => {
 };
 
 /**
- * Determines the best text color (white or pure-black) for contrast.
- * @param {string} hexColor - The background hex color.
- * @returns {string} Either 'white' or '#000000' (pure-black).
+ * Determines the final, possibly tinted, color for text/icons.
+ * @param {string} bgColor - The background hex color.
+ * @returns {string} The final hex color for the text/icons.
  */
-const getContrastTextColor = (hexColor) => {
-    // If the background luminance is higher than 0.4 (i.e., a light color), use pure black text.
-    return getLuminance(hexColor) > 0.4 ? '#000000' : 'white';
+const getTintedContrastColor = (bgColor) => {
+    const isLightBg = getLuminance(bgColor) > 0.4;
+    const baseColor = isLightBg ? '#000000' : 'white'; 
+    
+    // Check if the background color is saturated enough to warrant a tint
+    const { h, s, l } = hexToHsl(bgColor);
+
+    // If saturation is low (near grayscale), return the base contrast color.
+    // Threshold of 10% saturation to consider it 'tintable'.
+    if (s < 10) { 
+        return baseColor;
+    }
+
+    // Apply a subtle tint toward the background's hue.
+    if (isLightBg) {
+        // Light background (uses black text): Tint the black darker/more saturated.
+        // Hue (h), slight saturation (15), and very low luminance (5)
+        return hslToHex(h, 15, 5); 
+    } else {
+        // Dark background (uses white text): Tint the white lighter/more saturated.
+        // Hue (h), slight saturation (15), and very high luminance (95)
+        return hslToHex(h, 15, 95); 
+    }
 };
 
 /**
@@ -78,12 +169,15 @@ const applyNavbarColor = (color) => {
         color = DEFAULT_NAVBAR_COLOR;
     }
     
-    const contrastTextColor = getContrastTextColor(color);
+    const finalTextColor = getTintedContrastColor(color);
     
     // Set global settings and CSS variables
     userSettings.navbarColor = color;
+    userSettings.textColor = finalTextColor;
     document.documentElement.style.setProperty('--navbar-color', color);
-    document.documentElement.style.setProperty('--navbar-text-color', contrastTextColor);
+    document.documentElement.style.setProperty('--navbar-text-color', finalTextColor);
+    document.documentElement.style.setProperty('--navbar-text-color-dark', '#374151'); // Darkened link color for light modes
+    document.documentElement.style.setProperty('--navbar-text-color-light', '#d1d5db'); // Light link color for dark modes
 };
 
 /**
@@ -100,10 +194,38 @@ const loadLocalNavbarColor = () => {
     }
 };
 
-// --- Self-invoking function to encapsulate all logic ---
-(function() {
+// --- Core Logic Wrapped for Refreshability ---
+
+// ---------------------------------------------------------------------
+// ⭐️ AUTOMATIC REFRESH MECHANISM
+// The entire application is wrapped in this structure to allow the
+// Canvas environment to re-run the script without a page refresh.
+// ---------------------------------------------------------------------
+
+/**
+ * Handles cleanup of old elements before re-running the script.
+ */
+const reinitializeNavigation = () => {
+    const navbarContainer = document.getElementById('navbar-container');
+    if (navbarContainer) {
+        // Remove the existing navbar and all its children (and thus, event listeners)
+        navbarContainer.remove();
+    }
+    const dynamicStyles = document.getElementById('navbar-dynamic-styles');
+    if (dynamicStyles) {
+        dynamicStyles.remove();
+    }
+};
+
+/**
+ * Main bootstrap function containing all application logic.
+ */
+const startNavigationBootstrap = () => {
     
-    // ⭐️ STEP 1: Load the color from Local Storage IMMEDIATELY and set CSS variables
+    // ⭐️ Step 1: Immediate cleanup before starting to prevent duplicates.
+    reinitializeNavigation();
+
+    // ⭐️ Step 2: Load the color from Local Storage IMMEDIATELY and set CSS variables
     loadLocalNavbarColor(); 
     
     if (!FIREBASE_CONFIG || !FIREBASE_CONFIG.apiKey) {
@@ -111,25 +233,20 @@ const loadLocalNavbarColor = () => {
         return;
     }
 
-    // --- 2. DYNAMICALLY INJECT STYLES (LIFTED & FIXED) ---
+    // --- 3. DYNAMICALLY INJECT STYLES ---
 
     /**
      * Injects the dynamic CSS styles using the currently set global color variables.
      */
     const injectStyles = () => {
-        // Read the currently applied colors from the global state/CSS variables
         const navbarColor = userSettings.navbarColor; 
-        const contrastTextColor = getContrastTextColor(navbarColor); // This will be 'white' or '#000000'
-
+        const finalTextColor = userSettings.textColor; // The tinted color
+        const isLightBg = getLuminance(navbarColor) > 0.4;
+        
         // Dynamic fade effect colors: use the navbar color for the gradient background
         const fadeLeft = `linear-gradient(to right, ${navbarColor} 50%, transparent)`;
         const fadeRight = `linear-gradient(to left, ${navbarColor} 50%, transparent)`;
         
-        let existingStyle = document.getElementById('navbar-dynamic-styles');
-        if (existingStyle) {
-            existingStyle.remove();
-        }
-
         const style = document.createElement('style');
         style.id = 'navbar-dynamic-styles';
         
@@ -139,40 +256,44 @@ const loadLocalNavbarColor = () => {
             .auth-navbar { 
                 position: fixed; top: 0; left: 0; right: 0; z-index: 1000; 
                 background: var(--navbar-color); 
-                /* Border contrast adjusted */
-                border-bottom: 1px solid ${contrastTextColor === '#000000' ? '#dddddd' : 'rgb(31 41 55)'}; 
+                /* Border color based on contrast */
+                border-bottom: 1px solid ${isLightBg ? '#dddddd' : 'rgb(31 41 55)'}; 
                 height: 4rem; 
                 color: var(--navbar-text-color); 
             }
             .auth-navbar nav { padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
             .initial-avatar { background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; }
             
+            /* Dynamic Logo Tinting */
+            .navbar-logo {
+                height: 2rem;
+                filter: drop-shadow(0 0 0 ${finalTextColor});
+            }
+
             /* Auth Dropdown Menu Styles */
             .auth-menu-container { 
                 position: absolute; right: 0; top: 50px; width: 16rem; 
                 background: var(--navbar-color);
-                /* Border contrast adjusted */
-                border: 1px solid ${contrastTextColor === '#000000' ? '#bbbbbb' : 'rgb(55 65 81)'}; 
+                border: 1px solid ${isLightBg ? '#bbbbbb' : 'rgb(55 65 81)'}; 
                 border-radius: 0.75rem; padding: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
                 transition: transform 0.2s ease-out, opacity 0.2s ease-out; transform-origin: top right; 
             }
             .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
             .auth-menu-link, .auth-menu-button { 
-                /* Link color contrast adjusted */
-                color: ${contrastTextColor === '#000000' ? '#374151' : '#d1d5db'}; 
+                /* Link color is dark/light fallback, not fully tinted for legibility */
+                color: ${isLightBg ? 'var(--navbar-text-color-dark)' : 'var(--navbar-text-color-light)'}; 
                 display: flex; align-items: center; gap: 0.75rem; width: 100%; text-align: left; 
                 padding: 0.5rem 0.75rem; font-size: 0.875rem; 
                 border-radius: 0.375rem; transition: background-color 0.2s, color 0.2s; border: none; cursor: pointer;
             }
             .auth-menu-link:hover, .auth-menu-button:hover { 
-                /* Hover background and text color contrast adjusted */
-                background-color: ${contrastTextColor === '#000000' ? '#f3f4f6' : 'rgb(55 65 81)'}; 
-                color: ${contrastTextColor === '#000000' ? '#000000' : 'white'}; 
+                background-color: ${isLightBg ? '#f3f4f6' : 'rgb(55 65 81)'}; 
+                color: var(--navbar-text-color); /* Hover color is the fully tinted color */
             }
-            /* Logged out button styling contrast adjusted */
-            .logged-out-auth-toggle { background: ${contrastTextColor === '#000000' ? '#ffffff' : '#010101'}; border: 1px solid ${contrastTextColor === '#000000' ? '#dddddd' : '#374151'}; }
-            /* Pure black icon for light backgrounds */
-            .logged-out-auth-toggle i { color: ${contrastTextColor === '#000000' ? '#000000' : '#DADADA'}; }
+            
+            /* Logged out button styling */
+            .logged-out-auth-toggle { background: ${isLightBg ? '#ffffff' : '#010101'}; border: 1px solid ${isLightBg ? '#dddddd' : '#374151'}; }
+            .logged-out-auth-toggle i { color: var(--navbar-text-color); }
 
             /* Tab Wrapper and Glide Buttons */
             .tab-wrapper { flex-grow: 1; display: flex; align-items: center; position: relative; min-width: 0; margin: 0 1rem; }
@@ -193,18 +314,17 @@ const loadLocalNavbarColor = () => {
             /* Tab Links - Default state */
             .nav-tab { 
                 flex-shrink: 0; padding: 0.5rem 1rem; 
-                /* Default tab text color contrast adjusted */
-                color: ${contrastTextColor === '#000000' ? '#6b7280' : '#9ca3af'}; 
+                /* Default tab text color uses dark/light fallback */
+                color: ${isLightBg ? '#6b7280' : '#9ca3af'}; 
                 font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; 
                 transition: all 0.2s; text-decoration: none; line-height: 1.5; 
                 display: flex; align-items: center; margin-right: 0.5rem; border: 1px solid transparent; 
             }
             /* Tab Hover state */
             .nav-tab:not(.active):hover { 
-                color: var(--navbar-text-color); 
-                border-color: ${contrastTextColor === '#000000' ? '#9ca3af' : '#d1d5db'}; 
-                /* Hover background color contrast adjusted */
-                background-color: ${contrastTextColor === '#000000' ? 'rgba(0,0,0,0.05)' : 'rgba(79, 70, 229, 0.05)'}; 
+                color: var(--navbar-text-color); /* Hover color is the fully tinted color */
+                border-color: ${isLightBg ? '#9ca3af' : '#d1d5db'}; 
+                background-color: ${isLightBg ? 'rgba(0,0,0,0.05)' : 'rgba(79, 70, 229, 0.05)'}; 
             }
             /* Tab Active state (uses fixed blue for consistency) */
             .nav-tab.active { color: #4f46e5; border-color: #4f46e5; background-color: rgba(79, 70, 229, 0.1); }
@@ -225,11 +345,11 @@ const loadLocalNavbarColor = () => {
         document.head.appendChild(style);
     };
 
-    // ⭐️ STEP 3: Call injectStyles IMMEDIATELY after loading color. THIS IS THE FIX.
+    // ⭐️ Step 4: Inject styles immediately after color load.
     injectStyles();
 
 
-    // --- 1. DYNAMICALLY LOAD EXTERNAL ASSETS (Helper functions) ---
+    // --- 4. DYNAMICALLY LOAD EXTERNAL ASSETS (Helper functions) ---
 
     const loadScript = (src) => {
         return new Promise((resolve, reject) => {
@@ -329,7 +449,7 @@ const loadLocalNavbarColor = () => {
         }
     };
 
-    // --- 2. INITIALIZE FIREBASE AND RENDER NAVBAR ---
+    // --- 5. INITIALIZE FIREBASE AND RENDER NAVBAR ---
     const initializeApp = (pages) => {
         const app = firebase.initializeApp(FIREBASE_CONFIG);
         auth = firebase.auth();
@@ -393,15 +513,17 @@ const loadLocalNavbarColor = () => {
             }
         };
 
-        // --- 4. RENDER THE NAVBAR HTML ---
+        // --- 6. RENDER THE NAVBAR HTML ---
         const renderNavbar = (user, userData, pages, isPrivilegedUser) => {
             const container = document.getElementById('navbar-container');
             if (!container) return; 
             
             // Re-inject styles here to catch potential live updates from the settings page
             injectStyles();
-
-            const logoPath = "/images/logo.png"; 
+            
+            // Determine the logo based on background luminance
+            const isLightBg = getLuminance(userSettings.navbarColor) > 0.4;
+            const logoPath = isLightBg ? "/images/logo-dark.png" : "/images/logo.png";
             
             const tabsHtml = Object.values(pages || {})
                 .filter(page => !(page.adminOnly && !isPrivilegedUser))
@@ -471,7 +593,7 @@ const loadLocalNavbarColor = () => {
                 <header class="auth-navbar">
                     <nav>
                         <a href="/" class="flex items-center space-x-2 flex-shrink-0">
-                            <img src="${logoPath}" alt="4SP Logo" class="h-8 w-auto">
+                            <img src="${logoPath}" alt="4SP Logo" class="navbar-logo">
                         </a>
 
                         <div class="tab-wrapper">
@@ -489,7 +611,7 @@ const loadLocalNavbarColor = () => {
                 </header>
             `;
 
-            // --- 5. SETUP EVENT LISTENERS ---
+            // --- 7. SETUP EVENT LISTENERS ---
             setupEventListeners(user);
 
             // Auto-scroll to active tab
@@ -570,7 +692,7 @@ const loadLocalNavbarColor = () => {
         };
 
 
-        // --- 6. AUTH STATE LISTENER ---
+        // --- 8. AUTH STATE LISTENER ---
         auth.onAuthStateChanged(async (user) => {
             let isPrivilegedUser = false;
             
@@ -608,7 +730,7 @@ const loadLocalNavbarColor = () => {
             }
         });
 
-        // --- FINAL SETUP ---
+        // --- 9. FINAL DOM SETUP ---
         if (!document.getElementById('navbar-container')) {
             const navbarDiv = document.createElement('div');
             navbarDiv.id = 'navbar-container';
@@ -617,7 +739,10 @@ const loadLocalNavbarColor = () => {
     };
 
     // --- START THE PROCESS ---
-    // Wait for the DOM to be ready before fetching scripts and running Firebase init
     document.addEventListener('DOMContentLoaded', run);
 
-})();
+}; // End of startNavigationBootstrap
+
+// Call the bootstrap function to start the application.
+// This is the entry point for both initial load and automatic refreshes.
+startNavigationBootstrap();
