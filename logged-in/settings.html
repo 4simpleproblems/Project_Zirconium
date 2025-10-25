@@ -13,12 +13,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- REMOVED: The script below was causing "Uncaught SyntaxError: Unexpected token 'export'" 
-         because firebase-config.js contains ES module syntax but was loaded as a standard script. 
-         The configuration is correctly loaded via the __firebase_config global variable in the <script type="module"> block. -->
-    <!-- <script src="../firebase-config.js"></script> -->
-
-    <!-- Assuming navigation and injector are still needed -->
+    <!-- navigation.js and injector.js must be loaded here if they are external files -->
     <script src="../navigation.js"></script>
     <script src="../injector.js"></script>
 
@@ -43,10 +38,10 @@
 
         /* Full-screen content wrapper */
         .settings-wrapper {
-            flex-grow: 1; /* Allows the main content area to take up remaining height */
+            flex-grow: 1; 
             display: flex;
             flex-direction: column;
-            padding: 0 1rem; /* Horizontal padding for the content area */
+            padding: 0 1rem; 
         }
 
         /* Header Styling */
@@ -130,7 +125,7 @@
                 gap: 1rem;
             }
             .settings-sidebar {
-                max-width: 100%; /* Sidebar takes full width on mobile if visible */
+                max-width: 100%;
                 margin-bottom: 0;
             }
         }
@@ -198,48 +193,45 @@
         const panelContent = document.getElementById('panel-content');
         const pageHtmlTitle = document.getElementById('page-title');
 
-        // --- FIREBASE CONFIGURATION LOGIC (FIXED) ---
-        // We strictly rely on the Canvas global variable __firebase_config as it's the most reliable source.
-        let config = {};
+        // --- FIREBASE CONFIGURATION & INITIALIZATION ---
+        let firebaseConfig = {};
 
         if (rawFirebaseConfig) {
             try {
-                config = JSON.parse(rawFirebaseConfig);
+                firebaseConfig = JSON.parse(rawFirebaseConfig);
                 console.log("Firebase config loaded successfully from __firebase_config.");
             } catch (e) {
                 console.error("Failed to parse __firebase_config:", e);
             }
         } else {
-            console.error("Firebase config is missing from Canvas globals. Initialization likely to fail.");
+            console.error("Firebase config is missing from Canvas globals. Initialization will likely fail.");
         }
 
-
-        // --- Initialize Firebase ---
         let app, auth;
-        // Ensure config has keys before attempting to initialize
-        if (Object.keys(config).length > 0) {
+        let initializationSuccessful = false;
+
+        // Ensure config is not empty before attempting to initialize
+        if (Object.keys(firebaseConfig).length > 0) {
             try {
-                app = initializeApp(config);
+                app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
+                initializationSuccessful = true;
             } catch (e) {
+                // This catches the fatal config errors like 'auth/invalid-api-key'
                 console.error("Firebase initialization failed:", e);
-                // Set auth to null on failure to trigger the subsequent error handler
-                auth = null; 
+                loadingScreen.querySelector('p').textContent = 'Error: Application configuration failed. See console for details.';
             }
-        } else {
-             console.error("Firebase initialization skipped: Configuration object is empty.");
-             auth = null;
         }
+        
+        // --- AUTHENTICATION & REDIRECTION LOGIC (Encapsulated) ---
 
-        // --- AUTHENTICATION & REDIRECTION LOGIC ---
+        /**
+         * Attempts to sign in using the provided custom token or anonymously.
+         */
         async function initializeAuth() {
-            try {
-                // IMPORTANT: 'auth' must be checked if it's null before use
-                if (!auth) {
-                    console.error("Cannot initialize auth: Firebase Auth instance is null.");
-                    return; 
-                }
+            if (!auth) return; // Should not happen if initializationSuccessful is false
 
+            try {
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
                 } else {
@@ -251,8 +243,23 @@
             }
         }
 
-        // IMPORTANT: 'auth' must be checked if it's null before subscribing to onAuthStateChanged
-        if (auth) {
+        /**
+         * Starts the authentication listener and sign-in process.
+         */
+        function startAuthFlow() {
+            if (!initializationSuccessful || !auth) {
+                // Handle failed initialization by forcing redirect
+                console.error("Cannot start auth flow: Firebase not initialized successfully.");
+                loadingScreen.querySelector('p').textContent = 'Error: Configuration failed. Redirecting to login...';
+                
+                // Wait briefly then redirect, matching the failed auth flow
+                setTimeout(() => {
+                    window.location.href = '../index.html'; 
+                }, 1000); 
+                return;
+            }
+
+            // 1. Listen for the authentication state change
             onAuthStateChanged(auth, (user) => {
                 if (user) {
                     // User is authenticated
@@ -272,24 +279,15 @@
                     window.location.href = '../index.html'; 
                 }
             });
-        }
-        
 
-        // 2. Start the authentication process on load
-        if (auth) {
+            // 2. Start the authentication process on load
             initializeAuth();
-        } else {
-            // If auth is null (due to configuration/initialization error), show error and trigger redirect logic
-            loadingScreen.querySelector('p').textContent = 'Error: Application configuration failed. Redirecting...';
-            // Wait briefly then redirect, matching the failed auth flow
-            setTimeout(() => {
-                window.location.href = '../index.html'; 
-            }, 1000); 
         }
 
         // --- SETTINGS UI LOGIC ---
 
         function renderSidebar() {
+            sidebarNav.innerHTML = ''; // Clear existing content
             settingsSections.forEach(section => {
                 const item = document.createElement('div');
                 item.className = 'sidebar-item group';
@@ -337,6 +335,9 @@
             });
             document.getElementById(`sidebar-${sectionId}`).classList.add('active');
         }
+        
+        // --- START APPLICATION ---
+        startAuthFlow();
     </script>
 </body>
 </html>
