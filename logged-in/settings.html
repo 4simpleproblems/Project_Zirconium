@@ -13,9 +13,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- User Request: Import firebase-config.js as a standard script (not a module).
-         NOTE: As this file seems to contain an 'export' error, we rely fully on __firebase_config below. -->
-    <script src="../firebase-config.js"></script>
+    <!-- REMOVED: The script below was causing "Uncaught SyntaxError: Unexpected token 'export'" 
+         because firebase-config.js contains ES module syntax but was loaded as a standard script. 
+         The configuration is correctly loaded via the __firebase_config global variable in the <script type="module"> block. -->
+    <!-- <script src="../firebase-config.js"></script> -->
 
     <!-- Assuming navigation and injector are still needed -->
     <script src="../navigation.js"></script>
@@ -198,8 +199,7 @@
         const pageHtmlTitle = document.getElementById('page-title');
 
         // --- FIREBASE CONFIGURATION LOGIC (FIXED) ---
-        // We strictly rely on the Canvas global variable __firebase_config as it's the most reliable source,
-        // which bypasses the SyntaxError in the external non-module script.
+        // We strictly rely on the Canvas global variable __firebase_config as it's the most reliable source.
         let config = {};
 
         if (rawFirebaseConfig) {
@@ -210,9 +210,6 @@
                 console.error("Failed to parse __firebase_config:", e);
             }
         } else {
-            // Fallback for an environment that doesn't provide the global variable, 
-            // although this is what likely caused the initial error.
-            // Keeping it simple here to ensure config is not empty if environment fails.
             console.error("Firebase config is missing from Canvas globals. Initialization likely to fail.");
         }
 
@@ -237,6 +234,12 @@
         // --- AUTHENTICATION & REDIRECTION LOGIC ---
         async function initializeAuth() {
             try {
+                // IMPORTANT: 'auth' must be checked if it's null before use
+                if (!auth) {
+                    console.error("Cannot initialize auth: Firebase Auth instance is null.");
+                    return; 
+                }
+
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
                 } else {
@@ -245,33 +248,32 @@
             } catch (error) {
                 // This catches authentication errors after init, like invalid tokens
                 console.error("Initial Firebase authentication failed:", error);
-                // Force sign out to trigger redirect logic
-                if (auth?.currentUser) {
-                    // Sign out is not strictly needed as onAuthStateChanged handles unauthenticated user,
-                    // but logging the error is important.
-                }
             }
         }
 
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                // User is authenticated
-                console.log("User authenticated. UID:", user.uid);
-                
-                // Hide loading screen and show content
-                loadingScreen.style.display = 'none';
-                pageContent.classList.remove('hidden');
+        // IMPORTANT: 'auth' must be checked if it's null before subscribing to onAuthStateChanged
+        if (auth) {
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    // User is authenticated
+                    console.log("User authenticated. UID:", user.uid);
+                    
+                    // Hide loading screen and show content
+                    loadingScreen.style.display = 'none';
+                    pageContent.classList.remove('hidden');
 
-                // Initialize the settings UI
-                renderSidebar();
-                loadSection('general');
+                    // Initialize the settings UI
+                    renderSidebar();
+                    loadSection('general');
 
-            } else {
-                // User is NOT authenticated. Redirect to login/index page.
-                console.log("User not authenticated. Redirecting to ../index.html...");
-                window.location.href = '../index.html'; 
-            }
-        });
+                } else {
+                    // User is NOT authenticated. Redirect to login/index page.
+                    console.log("User not authenticated. Redirecting to ../index.html...");
+                    window.location.href = '../index.html'; 
+                }
+            });
+        }
+        
 
         // 2. Start the authentication process on load
         if (auth) {
