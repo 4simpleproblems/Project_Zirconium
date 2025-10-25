@@ -5,12 +5,11 @@
  * to rendering user-specific information.
  *
  * --- UPDATES & FEATURES ---
- * 1. AUTOMATIC REFRESH: Implements a bootstrap/cleanup pattern (startNavigationBootstrap) to allow the script to re-run
- * without a page refresh when the file is updated in the Canvas environment.
- * 2. DYNAMIC LOGO SWITCHING: Uses '/images/logo-dark.png' for light backgrounds (Luminance > 0.4) and '/images/logo.png' for dark backgrounds.
- * 3. TINTED TEXT/ICONS: Implements color manipulation (HSL) to subtly tint the contrast text/icon color toward the background color's hue.
- * 4. REFINED CONTRAST LOGIC: Implements a three-tier luminance system (Light, Mid-Dark, Very Dark) to ensure text is always highly visible:
- * - Mid-Dark backgrounds now result in a dark, tinted text (as requested).
+ * 1. FIX: Restored correct HTML structure and styling for the logged-in and logged-out menu buttons and dropdowns.
+ * 2. TINTING FIX: Updated color logic to prevent tinting on backgrounds that are very close to pure white or pure black, 
+ * ensuring the text/icons remain pure black/white for maximum contrast (e.g., pure white background gets pure black text).
+ * 3. STYLE REMOVAL: The special gold styling for the 'Beta Settings' tab has been removed.
+ * 4. DYNAMIC LOGO SWITCHING: Uses '/images/logo-dark.png' for light backgrounds (Luminance > 0.4) and '/images/logo.png' for dark backgrounds.
  * 5. TINTED LOGO: The logo is fully tinted to match the text/icon color using a CSS filter.
  */
 
@@ -72,6 +71,7 @@ const hexToHsl = (hex) => {
         h /= 6;
     }
 
+    // Return HSL as (0-360, 0-100, 0-100)
     return { h: h * 360, s: s * 100, l: l * 100 };
 };
 
@@ -134,44 +134,50 @@ const getLuminance = (hex) => {
 
 /**
  * Determines the final, possibly tinted, color for text/icons based on a three-tier luminance system.
- * * Logic:
- * L > 0.5 (Light) -> Very Dark Text (L: 5)
- * 0.2 < L <= 0.5 (Mid-Dark) -> Dark Text (L: 15) - fulfills the user's request for "very dark version of the color"
- * L <= 0.2 (Very Dark) -> Very Light Text (L: 95)
- * * @param {string} bgColor - The background hex color.
+ * * * Logic:
+ * L > 0.9 (Near White) OR (L > 0.5 AND S < 15) -> Pure Black (#000000)
+ * L < 0.1 (Near Black) OR (L <= 0.5 AND S < 15) -> Pure White (#FFFFFF)
+ * 0.5 < L <= 0.9 (Light) -> Very Dark Tinted Text (L: 5)
+ * 0.2 < L <= 0.5 (Mid-Dark) -> Dark Tinted Text (L: 15)
+ * L <= 0.2 (Very Dark) -> Very Light Tinted Text (L: 95)
+ * * * @param {string} bgColor - The background hex color.
  * @returns {string} The final hex color for the text/icons.
  */
 const getTintedContrastColor = (bgColor) => {
     const luminance = getLuminance(bgColor);
     const { h, s } = hexToHsl(bgColor);
     
+    // --- ACHROMATIC COLOR CHECK (Pure Black/White Requirement) ---
+    // If the color is very close to white (L > 0.9) OR light/mid-range but low saturation (S < 15), force black text.
+    if (luminance > 0.9 || (luminance > 0.5 && s < 15)) { 
+        return '#000000'; 
+    }
+    
+    // If the color is very close to black (L < 0.1) OR mid-dark but low saturation (S < 15), force white text.
+    if (luminance < 0.1 || (luminance <= 0.5 && s < 15)) {
+        return '#FFFFFF';
+    }
+
+    // --- TINT APPLICATION (Saturated Colors) ---
+    // Use a moderate saturation (20-30) for a visible but subtle tint
+    const tintSaturation = 25;
+
     const isVeryDarkBg = luminance <= 0.2; 
     const isMidDarkBg = luminance > 0.2 && luminance <= 0.5;
     const isLightBg = luminance > 0.5;
     
-    // 1. If low saturation (grayscale), use pure black/white bases.
-    // Threshold of 10% saturation to consider it 'tintable'.
-    if (s < 10) { 
-        if (isVeryDarkBg) return '#FFFFFF';
-        return '#000000'; 
-    }
-
-    // 2. Apply Tint based on the three tiers
-    // Use a moderate saturation (20-30) for a visible but subtle tint
-    const tintSaturation = 25;
-
     if (isVeryDarkBg) {
         // Very Dark Background (L <= 0.2): Use very bright text
         return hslToHex(h, tintSaturation, 95); 
     } else if (isMidDarkBg) {
-        // Mid-Dark Background (0.2 < L <= 0.5): Use dark text (user requested)
+        // Mid-Dark Background (0.2 < L <= 0.5): Use dark text
         return hslToHex(h, tintSaturation, 15); 
     } else if (isLightBg) {
         // Light Background (L > 0.5): Use very dark text
         return hslToHex(h, tintSaturation, 5); 
     }
 
-    // Fallback
+    // Fallback (should not be reached)
     return luminance > 0.5 ? '#000000' : '#FFFFFF';
 };
 
@@ -186,14 +192,18 @@ const applyNavbarColor = (color) => {
     const finalTextColor = getTintedContrastColor(color);
     const luminance = getLuminance(color);
     const textHsl = hexToHsl(finalTextColor);
+    
+    // Determine if the text color is black or white for link color calculation
+    const isDarkText = getLuminance(finalTextColor) < 0.5;
 
     // Calculate a muted, less saturated link base color for non-active tabs.
-    // Dark link text for light/mid-dark backgrounds (L > 0.2)
     let linkBaseColor;
-    if (luminance > 0.2) {
-        linkBaseColor = hslToHex(textHsl.h, 15, 45); // Muted dark for visibility
+    if (isDarkText) {
+        // If text is dark, use a muted gray (L: 45) slightly tinted
+        linkBaseColor = hslToHex(textHsl.h, 15, 45); 
     } else {
-        linkBaseColor = hslToHex(textHsl.h, 10, 75); // Muted light for dark backgrounds
+        // If text is light, use a muted light gray (L: 75) slightly tinted
+        linkBaseColor = hslToHex(textHsl.h, 10, 75); 
     }
     
     // Set global settings and CSS variables
@@ -265,7 +275,6 @@ const startNavigationBootstrap = () => {
      */
     const injectStyles = () => {
         const navbarColor = userSettings.navbarColor; 
-        const finalTextColor = userSettings.textColor; // The fully tinted color
         const isLightBg = getLuminance(navbarColor) > 0.4;
         
         // Dynamic fade effect colors: use the navbar color for the gradient background
@@ -302,16 +311,29 @@ const startNavigationBootstrap = () => {
                 /* Apply the text color tint to the logo image. This requires the logo to be monochromatic (white/light on transparent). */
                 filter: drop-shadow(0 0 0 var(--navbar-text-color));
             }
-
-            /* Auth Dropdown Menu Styles */
+            
+            /* Auth Dropdown Menu Container (Fixing the menu) */
             .auth-menu-container { 
                 position: absolute; right: 0; top: 50px; width: 16rem; 
                 background: var(--navbar-color);
                 border: 1px solid ${isLightBg ? '#bbbbbb' : 'rgb(55 65 81)'}; 
                 border-radius: 0.75rem; padding: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
                 transition: transform 0.2s ease-out, opacity 0.2s ease-out; transform-origin: top right; 
+                z-index: 999; /* Ensure menu is on top of everything but the navbar itself */
             }
             .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
+            
+            /* User Info Header in Dropdown */
+            .user-info-header {
+                 border-bottom: 1px solid ${isLightBg ? '#e5e7eb' : '#374151'}; 
+                 margin-bottom: 0.5rem;
+                 padding: 0.5rem 0.75rem;
+            }
+            .user-info-header p {
+                 color: ${isLightBg ? 'var(--navbar-text-color-dark)' : 'var(--navbar-text-color-light)'};
+            }
+
+            /* Dropdown Links and Buttons */
             .auth-menu-link, .auth-menu-button { 
                 /* Link color uses a fixed dark/light gray for contrast in the dropdown */
                 color: ${isLightBg ? 'var(--navbar-text-color-dark)' : 'var(--navbar-text-color-light)'}; 
@@ -320,13 +342,17 @@ const startNavigationBootstrap = () => {
                 border-radius: 0.375rem; transition: background-color 0.2s, color 0.2s; border: none; cursor: pointer;
             }
             .auth-menu-link:hover, .auth-menu-button:hover { 
-                background-color: ${isLightBg ? '#f3f4f6' : 'rgb(55 65 81)'}; 
                 /* Hover color is the fully tinted color (high contrast) */
                 color: var(--navbar-text-color); 
+                background-color: ${isLightBg ? '#f3f4f6' : 'rgb(55 65 81)'}; 
             }
             
             /* Logged out button styling */
-            .logged-out-auth-toggle { background: ${isLightBg ? '#ffffff' : '#010101'}; border: 1px solid ${isLightBg ? '#dddddd' : '#374151'}; }
+            .logged-out-auth-toggle { 
+                /* Use the calculated background/text color for the button */
+                background: var(--navbar-color); 
+                border: 1px solid var(--navbar-text-color); 
+            }
             .logged-out-auth-toggle i { 
                 /* Icon color is the fully tinted color */
                 color: var(--navbar-text-color); 
@@ -368,18 +394,6 @@ const startNavigationBootstrap = () => {
             /* Tab Active state (uses fixed blue for consistency) */
             .nav-tab.active { color: #4f46e5; border-color: #4f46e5; background-color: rgba(79, 70, 229, 0.1); }
             .nav-tab.active:hover { color: #6366f1; border-color: #6366f1; background-color: rgba(79, 70, 229, 0.15); }
-            
-            /* Admin Tab styling remains independent of base color for gold effect */
-            .nav-tab.admin-tab {
-                background: linear-gradient(45deg, #f0e68c, #ffd700, #daa520, #f0e68c);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                color: transparent; 
-                font-weight: 700;
-                border: 2px solid gold;
-                box-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
-                transition: all 0.3s ease;
-            }
         `;
         document.head.appendChild(style);
     };
@@ -460,6 +474,7 @@ const startNavigationBootstrap = () => {
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             pages = await response.json();
             
+            // Re-adding the beta settings page with no special styling
             pages['beta-settings'] = { 
                 name: "Beta Settings", 
                 url: "../logged-in/beta-settings.html", 
@@ -560,8 +575,10 @@ const startNavigationBootstrap = () => {
             // Re-inject styles here to catch potential live updates from the settings page
             injectStyles();
             
+            const navbarColor = userSettings.navbarColor; 
+            const isLightBg = getLuminance(navbarColor) > 0.4;
+
             // Determine the logo based on background luminance
-            const isLightBg = getLuminance(userSettings.navbarColor) > 0.4;
             const logoPath = isLightBg ? "/images/logo-dark.png" : "/images/logo.png";
             
             const tabsHtml = Object.values(pages || {})
@@ -569,22 +586,22 @@ const startNavigationBootstrap = () => {
                 .map(page => {
                     const isActive = isTabActive(page.url);
                     const activeClass = isActive ? 'active' : '';
-                    const adminClass = page.adminOnly ? 'admin-tab' : '';
+                    // Removed admin-tab class and logic
                     const iconClasses = getIconClass(page.icon);
                     
-                    return `<a href="${page.url}" class="nav-tab ${activeClass} ${adminClass}"><i class="${iconClasses} mr-2"></i>${page.name}</a>`;
+                    return `<a href="${page.url}" class="nav-tab ${activeClass}"><i class="${iconClasses} mr-2"></i>${page.name}</a>`;
                 }).join('');
 
             // --- Auth Views (loggedInView and loggedOutView definitions) ---
             const loggedOutView = `
                 <div class="relative flex-shrink-0">
-                    <button id="auth-toggle" class="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-700 transition logged-out-auth-toggle">
-                        <i class="fa-solid fa-user"></i>
+                    <button id="auth-toggle" class="w-10 h-10 rounded-full border border-gray-600 flex items-center justify-center hover:bg-gray-700 transition logged-out-auth-toggle">
+                        <i class="fa-solid fa-user text-xl"></i>
                     </button>
                     <div id="auth-menu-container" class="auth-menu-container closed">
                         <a href="/authentication.html" class="auth-menu-link">
-                            <i class="fa-solid fa-lock"></i>
-                            Authenticate
+                            <i class="fa-solid fa-right-to-bracket w-5"></i>
+                            Log In / Sign Up
                         </a>
                     </div>
                 </div>
@@ -598,28 +615,31 @@ const startNavigationBootstrap = () => {
 
                 const avatar = photoURL ?
                     `<img src="${photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">` :
-                    `<div class="initial-avatar w-8 h-8 rounded-full text-sm font-semibold">${initial}</div>`;
+                    `<div class="initial-avatar w-10 h-10 rounded-full text-lg font-semibold">${initial}</div>`; // Increased size for better touch target
 
                 return `
                     <div class="relative flex-shrink-0">
-                        <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
+                        <button id="auth-toggle" class="w-10 h-10 rounded-full border ${isLightBg ? 'border-gray-400' : 'border-gray-600'} overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 ${isLightBg ? 'focus:ring-offset-white focus:ring-blue-500' : 'focus:ring-offset-gray-900 focus:ring-blue-500'}">
                             ${avatar}
                         </button>
-                        <div class="px-3 py-2 border-b border-gray-700 mb-2">
-                            <p class="text-sm font-semibold text-white truncate">${username}</p>
-                            <p class="text-xs text-gray-400 truncate">${email}</p>
-                        </div>
+                        
                         <div id="auth-menu-container" class="auth-menu-container closed">
+                            <!-- User Info Header -->
+                            <div class="user-info-header">
+                                <p class="text-sm font-semibold truncate">${username}</p>
+                                <p class="text-xs truncate">${email}</p>
+                            </div>
+
                             <a href="/logged-in/dashboard.html" class="auth-menu-link">
-                                <i class="fa-solid fa-house-user"></i>
+                                <i class="fa-solid fa-house-user w-5"></i>
                                 Dashboard
                             </a>
                             <a href="/logged-in/settings.html" class="auth-menu-link">
-                                <i class="fa-solid fa-gear"></i>
+                                <i class="fa-solid fa-gear w-5"></i>
                                 Settings
                             </a>
-                            <button id="logout-button" class="auth-menu-button text-red-400 hover:bg-red-900/50 hover:text-red-300">
-                                <i class="fa-solid fa-right-from-bracket"></i>
+                            <button id="logout-button" class="auth-menu-button ${isLightBg ? 'text-red-600 hover:bg-red-50' : 'text-red-400 hover:bg-red-900/50 hover:text-red-300'}">
+                                <i class="fa-solid fa-right-from-bracket w-5"></i>
                                 Log Out
                             </button>
                         </div>
