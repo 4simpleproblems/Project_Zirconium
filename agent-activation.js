@@ -24,17 +24,25 @@
  * CSS: Reduced margins between response content, sources, and monologue for a tighter layout.
  * MODIFIED: Location Sharing is now OFF by default.
  * MODIFIED: Web search prompt is more direct to improve search quality.
+ *
+ * --- UI/UX Update ---
+ * NEW: Source list becomes scrollable if > 5 sources.
+ * CSS: Reduced margin between response content and source list.
+ * MODIFIED: Thought process (monologue) no longer includes the model name.
+ * NEW: Thought process panel is hidden for simple/short thoughts (e.g., "Hi").
+ * CSS: Thought process container is neutral when collapsed, blue when expanded.
+ * CSS: Thought process collapse/expand animation is now faster (0.2s) and removes opacity fade.
  */
 (function() {
     // --- CONFIGURATION ---
     const API_KEY = 'AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro';
-    // REMOVED: OPENCAGE_API_KEY is no longer needed for Nominatim.
     const BASE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/`;
     // const AUTHORIZED_PRO_USER = '4simpleproblems@gmail.com'; // REMOVED
     const MAX_INPUT_HEIGHT = 180;
     const CHAR_LIMIT = 10000;
     const PASTE_TO_FILE_THRESHOLD = 10000;
     const MAX_ATTACHMENTS_PER_MESSAGE = 10;
+    const MONOLOGUE_CHAR_THRESHOLD = 75; // NEW: Don't show monologue if thoughts are shorter than this
 
     // --- ICONS (for event handlers) ---
     const copyIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
@@ -102,9 +110,6 @@
         xmlHttp.onerror = function() {
             callback(null, new Error("Network request failed"));
         };
-        // Nominatim requests a valid User-Agent, but the browser will send one automatically.
-        // If running in a different environment, you would need to set one.
-        // xmlHttp.setRequestHeader("User-Agent", "4SP-AI-Agent/1.0 (your-email@example.com)");
         xmlHttp.send(null);
     }
 
@@ -579,8 +584,8 @@
                     bubble.innerHTML += sourcesHTML;
                 }
 
-                // NEW: Collapsible thought process
-                if (thoughtProcess) {
+                // NEW: Collapsible thought process (with length check)
+                if (thoughtProcess && thoughtProcess.length > MONOLOGUE_CHAR_THRESHOLD) {
                     bubble.innerHTML += `
                         <div class="ai-thought-process collapsed">
                             <div class="monologue-header">
@@ -726,11 +731,13 @@ Formatting Rules (MUST FOLLOW):
             case 'DEEP_ANALYSIS':
                 // Pro model access is removed, fallback to high-end Flash model.
                 model = 'gemini-2.5-flash';
-                personaInstruction += `\n\n**Current Persona: Professional Analyst (2.5-Flash).** You are performing a detailed analysis, but maintain efficiency and focus. Respond with clarity, professionalism, and structured data. Your response must be comprehensive, highly structured, and exhibit a deep level of reasoning and critical evaluation. Use an assertive, expert tone. Structure your analysis clearly with headings and bullet points.`;
+                // MODIFIED: Removed model name from thought
+                personaInstruction += `\n\n**Current Persona: Professional Analyst.** You are performing a detailed analysis, but maintain efficiency and focus. Respond with clarity, professionalism, and structured data. Your response must be comprehensive, highly structured, and exhibit a deep level of reasoning and critical evaluation. Use an assertive, expert tone. Structure your analysis clearly with headings and bullet points.`;
                 break;
             case 'PROFESSIONAL_MATH':
                 model = 'gemini-2.5-flash';
-                personaInstruction += `\n\n**Current Persona: Technical Expert (2.5-Flash).** Respond with extreme clarity, professionalism, and precision. Focus on step-by-step logic, equations, and definitive answers. Use a formal, neutral tone. Use KaTeX and custom graphs where appropriate.`;
+                // MODIFIED: Removed model name from thought
+                personaInstruction += `\n\n**Current Persona: Technical Expert.** Respond with extreme clarity, professionalism, and precision. Focus on step-by-step logic, equations, and definitive answers. Use a formal, neutral tone. Use KaTeX and custom graphs where appropriate.`;
                 break;
             case 'CREATIVE':
                 model = 'gemini-2.5-flash';
@@ -744,15 +751,18 @@ Formatting Rules (MUST FOLLOW):
 
                 // Combined Creative and Sarcastic
                 if (query.toLowerCase().includes('ex') || query.toLowerCase().includes('roast')) {
-                    personaInstruction += `\n\n**Current Persona: Sarcastic, Supportive Friend (2.5-Flash).** Your goal is to empathize with the user, validate their feelings, and join them in 'roasting' or speaking negatively about their ex/situation. Be funny, slightly aggressive toward the subject of trash talk, and deeply supportive of the user. Use casual language and slang. **Example of tone/support:** "${roastInsult}"`;
+                    // MODIFIED: Removed model name from thought
+                    personaInstruction += `\n\n**Current Persona: Sarcastic, Supportive Friend.** Your goal is to empathize with the user, validate their feelings, and join them in 'roasting' or speaking negatively about their ex/situation. Be funny, slightly aggressive toward the subject of trash talk, and deeply supportive of the user. Use casual language and slang. **Example of tone/support:** "${roastInsult}"`;
                 } else {
-                    personaInstruction += `\n\n**Current Persona: Creative Partner (25-Flash).** Use rich, evocative language. Be imaginative, focus on descriptive details, and inspire new ideas.`;
+                    // MODIFIED: Removed model name from thought
+                    personaInstruction += `\n\n**Current Persona: Creative Partner.** Use rich, evocative language. Be imaginative, focus on descriptive details, and inspire new ideas.`;
                 }
                 break;
             case 'CASUAL':
             default:
                 model = 'gemini-2.5-flash-lite';
-                personaInstruction += `\n\n**Current Persona: Standard Assistant (2.5-Flash-Lite).** You are balanced, helpful, and concise. Use a friendly and casual tone. Your primary function is efficient conversation. Make sure to be highly concise, making sure to not write too much.`;
+                // MODIFIED: Removed model name from thought
+                personaInstruction += `\n\n**Current Persona: Standard Assistant.** You are balanced, helpful, and concise. Use a friendly and casual tone. Your primary function is efficient conversation. Make sure to be highly concise, making sure to not write too much.`;
                 break;
         }
 
@@ -920,8 +930,8 @@ Formatting Rules (MUST FOLLOW):
                     fullContent += sourcesHTML;
                 }
 
-                // NEW: Collapsible thought process
-                if (thoughtProcess) {
+                // NEW: Collapsible thought process (with length check)
+                if (thoughtProcess && thoughtProcess.length > MONOLOGUE_CHAR_THRESHOLD) {
                     fullContent += `
                         <div class="ai-thought-process collapsed">
                             <div class="monologue-header">
@@ -1534,8 +1544,9 @@ Formatting Rules (MUST FOLLOW):
         });
 
         if (sources.length > 0) {
-            // Construct the sources list with favicon mockups
-            sourcesHTML = `<div class="ai-sources-list"><h4>Sources:</h4><ul>`;
+            // NEW: Add 'scrollable' class if sources > 5
+            const listClass = sources.length > 5 ? 'scrollable' : '';
+            sourcesHTML = `<div class="ai-sources-list"><h4>Sources:</h4><ul class="${listClass}">`;
             sources.forEach(source => {
                 let hostname = '';
                 try {
@@ -1707,8 +1718,8 @@ Formatting Rules (MUST FOLLOW):
             
             /* UPDATED STYLES for Sources (Top) and Collapsible Monologue (Bottom) */
             
-            /* CSS FIX: Reduced margin-top from 15px to 10px */
-            .ai-sources-list { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; margin-top: 10px; }
+            /* CSS FIX: Reduced margin-top and padding-top */
+            .ai-sources-list { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px; margin-top: 8px; }
             .ai-sources-list h4 { color: #ccc; margin: 0 0 10px 0; font-family: 'Merriweather', serif; font-size: 1em; }
             .ai-sources-list ul { list-style: none; padding: 0; margin: 0; }
             .ai-sources-list li { display: flex; align-items: center; margin-bottom: 5px; }
@@ -1716,24 +1727,87 @@ Formatting Rules (MUST FOLLOW):
             .ai-sources-list li a:hover { color: #6a9cf6; }
             .ai-sources-list li img.favicon { width: 16px; height: 16px; margin-right: 8px; border-radius: 2px; flex-shrink: 0; }
             
-            /* CSS FIX: Reduced margin-top from 15px to 10px */
-            .ai-thought-process { background-color: rgba(66, 133, 244, 0.1); border: 1px solid rgba(66, 133, 244, 0.3); border-radius: 12px; padding: 0; margin-top: 10px; font-size: 0.9em; max-width: 100%; transition: all 0.3s ease; }
-            .monologue-header { display: flex; justify-content: space-between; align-items: center; padding: 10px; cursor: pointer; }
-            .monologue-title { color: #4285f4; margin: 0; font-family: 'Merriweather', serif; font-size: 1em; }
-            .monologue-toggle-btn { background: none; border: 1px solid rgba(66, 133, 244, 0.5); color: #4285f4; border-radius: 6px; padding: 4px 8px; font-size: 0.8em; cursor: pointer; transition: background-color 0.2s; }
-            .monologue-toggle-btn:hover { background-color: rgba(66, 133, 244, 0.2); }
+            /* NEW: Scrollable source list for > 5 items */
+            .ai-sources-list ul.scrollable {
+                max-height: 170px; /* Approx 5.5 items */
+                overflow-y: auto;
+                padding-right: 5px; 
+                scrollbar-width: thin;
+                scrollbar-color: #555 #333;
+            }
+            .ai-sources-list ul.scrollable::-webkit-scrollbar { width: 8px; }
+            .ai-sources-list ul.scrollable::-webkit-scrollbar-track { background: #333; border-radius: 4px; }
+            .ai-sources-list ul.scrollable::-webkit-scrollbar-thumb { background-color: #555; border-radius: 4px; }
             
+            /* MODIFIED: Thought process colors and transitions */
+            .ai-thought-process { 
+                border-radius: 12px; 
+                padding: 0; 
+                margin-top: 10px; 
+                font-size: 0.9em; 
+                max-width: 100%; 
+                /* MODIFIED: Faster transition, added background/border */
+                transition: background-color 0.3s ease, border-color 0.3s ease;
+                
+                /* Default OPEN state */
+                background-color: rgba(66, 133, 244, 0.1); 
+                border: 1px solid rgba(66, 133, 244, 0.3); 
+            }
+            .ai-thought-process.collapsed {
+                /* COLLAPSED state */
+                background-color: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .monologue-header { display: flex; justify-content: space-between; align-items: center; padding: 10px; cursor: pointer; }
+            
+            .monologue-title { 
+                margin: 0; 
+                font-family: 'Merriweather', serif; 
+                font-size: 1em;
+                transition: color 0.3s ease;
+                color: #4285f4; /* OPEN state color */
+            }
+            .ai-thought-process.collapsed .monologue-title {
+                color: #ccc; /* COLLAPSED state color */
+            }
+
+            .monologue-toggle-btn { 
+                background: none; 
+                border-radius: 6px; 
+                padding: 4px 8px; 
+                font-size: 0.8em; 
+                cursor: pointer; 
+                transition: background-color 0.2s, border-color 0.3s ease, color 0.3s ease;
+                
+                /* OPEN state */
+                border: 1px solid rgba(66, 133, 244, 0.5); 
+                color: #4285f4;
+            }
+            .ai-thought-process:not(.collapsed) .monologue-toggle-btn:hover { 
+                background-color: rgba(66, 133, 244, 0.2); 
+            }
+            
+            .ai-thought-process.collapsed .monologue-toggle-btn {
+                /* COLLAPSED state */
+                border-color: rgba(255, 255, 255, 0.2);
+                color: #ccc;
+            }
+            .ai-thought-process.collapsed .monologue-toggle-btn:hover {
+                background-color: rgba(255, 255, 255, 0.1);
+            }
+            
+            /* MODIFIED: Faster animation, no fade */
             .monologue-content { 
                 max-height: 0; 
-                opacity: 0; 
+                opacity: 1; /* No fade */
                 overflow: hidden; 
-                padding: 0 10px; /* Only padding when expanded */
-                transition: max-height 0.4s ease-in-out, opacity 0.3s ease-in-out; 
+                padding: 0 10px; /* Only horizontal padding when collapsed */
+                transition: max-height 0.2s ease-out, padding 0.2s ease-out; 
             }
             .ai-thought-process:not(.collapsed) .monologue-content {
-                max-height: 500px; /* Arbitrarily large value for smooth transition */
-                opacity: 1;
-                padding: 0 10px 10px 10px; /* Final padding */
+                max-height: 500px; /* Arbitrarily large value */
+                padding: 0 10px 10px 10px; /* Final padding with bottom */
             }
 
             .ai-thought-process pre { 
