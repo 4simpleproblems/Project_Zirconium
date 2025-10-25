@@ -6,22 +6,19 @@
     <title id="page-title">4SP - Settings</title>
     <meta name="description" content="User settings and application configuration for 4SP.">
 
+    <!-- Fonts, Icons, and Tailwind CSS -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <script src="../test-navigation.js"></script>
+    <!-- navigation.js and injector.js must be loaded here if they are external files -->
+    <script src="../navigation.js"></script>
     <script src="../injector.js"></script>
 
     <style>
         /* --- FONT & BASE STYLING (MATCHING base-template.html) --- */
-        :root {
-            /* Default or loaded navbar color variable - Initialized by JS */
-            --navbar-background: #000000;
-        }
-
         body { 
             font-family: 'Geist', sans-serif; 
             background-color: #070707; 
@@ -29,655 +26,441 @@
             transition: all 0.3s ease;
             font-weight: 300; 
             min-height: 100vh;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
+        }
+
+        /* --- LAYOUT --- */
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+            gap: 2rem;
+        }
+        @media (min-width: 768px) {
+            .settings-grid {
+                grid-template-columns: 280px 1fr;
+            }
         }
         
-        h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
-            font-weight: 400 !important;
+        /* --- SIDEBAR --- */
+        .sidebar {
+            background-color: #111111;
+            border-radius: 1rem;
+            padding: 0.5rem;
+            border: 1px solid #1f1f1f;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
-
-        /* Full-screen content wrapper (Unchanged) */
-        .settings-wrapper {
-            flex-grow: 1; 
-            display: flex;
-            flex-direction: column;
-            padding: 0 1rem; 
-        }
-
-        /* Header Styling (Unchanged) */
-        .page-header {
-            padding: 2rem 1rem 1rem 1rem;
-            max-width: 1200px;
-            margin: 0 auto;
-            width: 100%;
-        }
-
-        /* Settings Grid Layout (Unchanged) */
-        .settings-layout {
-            display: flex;
-            gap: 2rem;
-            max-width: 1200px;
-            margin: 0 auto;
-            width: 100%;
-            padding-bottom: 2rem;
-            flex-grow: 1;
-        }
-
-        /* Sidebar Styling (Unchanged) */
-        .settings-sidebar {
-            width: 100%;
-            min-width: 200px;
-            max-width: 280px;
-            flex-shrink: 0;
-        }
-
-        /* Sidebar Item Styling (Unchanged) */
         .sidebar-item {
             display: flex;
             align-items: center;
             padding: 0.75rem 1rem;
-            margin-bottom: 0.25rem;
-            border-radius: 0.5rem;
+            border-radius: 0.75rem;
             cursor: pointer;
-            transition: background-color 0.2s ease, color 0.2s ease;
-            color: #c0c0c0;
-        }
-
-        .sidebar-item:hover {
-            background-color: #1a1a1a;
-            color: #ffffff;
-        }
-
-        .sidebar-item.active {
-            background-color: #3b82f6; /* Blue-500 */
-            color: #ffffff;
+            transition: all 0.2s;
+            color: #a0a0a0;
             font-weight: 500;
         }
+        .sidebar-item:hover {
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+        }
+        .sidebar-item.active {
+            background-color: #1a1a1a;
+            color: #4f46e5;
+            box-shadow: inset 3px 0 0 #4f46e5;
+        }
+        .sidebar-item.active i {
+            color: #4f46e5 !important;
+        }
+        .sidebar-item i {
+            width: 1.5rem;
+            text-align: center;
+            margin-right: 0.75rem;
+            color: #a0a0a0;
+        }
 
-        /* Main Content Panel (Unchanged) */
-        .settings-panel {
-            flex-grow: 1;
+        /* --- MAIN PANEL --- */
+        .main-panel {
             background-color: #111111;
-            border: 1px solid #252525;
-            border-radius: 0.75rem;
+            border-radius: 1rem;
             padding: 2rem;
-            min-height: 70vh;
+            border: 1px solid #1f1f1f;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .main-panel-title {
+            font-size: 1.875rem; /* 3xl */
+            font-weight: 700;
+            color: #ffffff;
+            border-bottom: 2px solid #1f1f1f;
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .main-panel-title i {
+            color: #4f46e5; /* Default blue for icons */
         }
 
-        /* Standard loading screen style (Unchanged) */
-        #loading-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #070707;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-        }
-        
-        /* Mobile adjustments (Unchanged) */
-        @media (max-width: 768px) {
-            .settings-layout {
-                flex-direction: column;
-                gap: 1rem;
-            }
-            .settings-sidebar {
-                max-width: 100%;
-                margin-bottom: 0;
-            }
-        }
-
-        /* Color Palette Styles */
-        .color-option {
-            width: 2rem;
-            height: 2rem;
-            border-radius: 0.5rem;
+        /* --- COLOR PICKER --- */
+        .color-selector {
+            width: 40px;
+            height: 40px;
+            border-radius: 9999px; /* full rounded */
             cursor: pointer;
-            border: 2px solid transparent;
+            border: 3px solid transparent;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
             transition: transform 0.1s, border-color 0.2s;
         }
-        .color-option:hover {
+        .color-selector:hover {
             transform: scale(1.1);
         }
-        .color-option.selected {
-            border-color: #3b82f6; /* Blue-500 */
-            box-shadow: 0 0 0 2px #3b82f640;
-        }
-        
-        /* Image Preview Style */
-        #navbar-image-preview {
-            width: 100%;
-            height: 150px;
-            background-color: #1f2937;
-            border-radius: 0.5rem;
-            border: 1px dashed #4b5563;
-            background-image: var(--navbar-image, none);
-            background-size: var(--navbar-bg-size, auto);
-            background-position: var(--navbar-bg-position, center);
-            background-repeat: no-repeat;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            position: relative;
+        .color-selector.active {
+            border-color: #4f46e5;
+            transform: scale(1.05);
+            box-shadow: 0 0 0 2px #4f46e5, 0 2px 8px rgba(0,0,0,0.5);
         }
     </style>
 </head>
 <body>
+    <!-- Navigation Bar will be prepended here by navigation.js -->
 
-    <div id="loading-screen">
-        <p class="text-xl text-gray-400">Verifying authentication and loading settings...</p>
+    <div class="settings-grid">
+        <!-- Sidebar Navigation -->
+        <div class="sidebar">
+            <h2 class="text-xl font-bold p-4 text-white">App Settings</h2>
+            <div id="sidebar-nav" class="flex flex-col space-y-1">
+                <!-- Sidebar items will be dynamically generated -->
+            </div>
+        </div>
+
+        <!-- Main Content Panel -->
+        <div class="main-panel">
+            <h1 id="panel-title" class="main-panel-title"></h1>
+            <div id="panel-content">
+                <!-- Content will be dynamically generated -->
+            </div>
+        </div>
     </div>
 
-    <main id="page-content" class="settings-wrapper hidden">
-        
-        <header class="page-header">
-            <h1 id="main-title" class="text-3xl text-white font-bold mb-3 tracking-wide">Settings</h1>
-            <div class="h-px bg-white/20 w-full"></div>
-        </header>
-
-        <div class="settings-layout">
-            
-            <nav id="settings-sidebar" class="settings-sidebar"></nav>
-
-            <section class="settings-panel">
-                <h2 id="panel-title" class="text-2xl font-semibold text-indigo-400 mb-6">General</h2>
-                <div id="panel-content" class="text-gray-400">
-                    <p>Configure basic application behavior like language, theme, and startup settings.</p>
-                </div>
-            </section>
-        </div>
-    </main>
 
     <script type="module">
-        // Assuming navigation.js has already loaded Firebase and set up global auth listener.
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js";
+        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js";
 
-        // --- CONSTANTS AND DOM ELEMENTS (Updated to handle Background Object) ---
-        const BASE_TITLE = "Settings";
-        // Key for Local Storage (Must match the one in navigation.js)
-        const NAVBAR_KEY = '4sp_navbar_background';
-        // Default settings object (Must match the default in navigation.js)
-        const DEFAULT_NAVBAR_SETTINGS = { 
-            type: 'color', 
-            value: '#000000', 
-            imgPosition: 'center', 
-            imgSize: 'cover'
-        }; 
-        
-        const settingsSections = [
-            // ... (Sections remain the same) ...
-            { id: 'general', title: 'General', icon: 'fa-cog', content: 'Configure basic application behavior like language, theme, and startup settings.', color: 'text-yellow-400' },
-            { id: 'privacy', title: 'Privacy & Security', icon: 'fa-shield-alt', content: 'Manage your data permissions, account security, and two-factor authentication. Strong security is a priority!', color: 'text-red-400' },
-            { id: 'personalization', title: 'Personalization', icon: 'fa-palette', content: 'Customize the look and feel of the application, including colors, image backgrounds, and layout. Make it truly yours!', color: 'text-pink-400' },
-            { id: 'notifications', title: 'Notifications', icon: 'fa-bell', content: 'Set your preferences for alerts and communication methods. Never miss an important update.', color: 'text-green-400' },
-            { id: 'data', title: 'Data Management', icon: 'fa-database', content: 'View, export, or request deletion of your stored data.', color: 'text-blue-400' },
-            { id: 'about', title: 'About 4SP', icon: 'fa-info-circle', content: 'Application version, legal notices, and credits.', color: 'text-gray-400' }
-        ];
+        // Global Firebase variables populated by navigation.js
+        const FIREBASE_CONFIG = window.FIREBASE_CONFIG || { apiKey: "MOCK_KEY" };
+        const USER_SETTINGS_KEY = '4sp_navbar_color';
 
-        // Nice-looking 16-color palette (Unchanged)
-        const colorPalette = [
-            '#000000', // Black (Default)
-            '#1f2937', // Blue-Gray (Dark Mode Accent)
-            '#f7f7f7', // Light Gray
-            '#FFFFFF', // White
-            '#3b82f6', // Bright Blue
-            '#10b981', // Emerald Green
-            '#f59e0b', // Amber Yellow
-            '#ef4444', // Red
-            '#8b5cf6', // Violet
-            '#ec4899', // Pink
-            '#06b6d4', // Cyan
-            '#65a30d', // Lime Green
-            '#7c3aed', // Purple
-            '#f97316', // Orange
-            '#475569', // Slate Gray
-            '#16a34a'  // Dark Green
-        ];
-        
-        // --- DOM Elements (Unchanged) ---
-        const loadingScreen = document.getElementById('loading-screen');
-        const pageContent = document.getElementById('page-content');
-        const mainTitle = document.getElementById('main-title');
-        const sidebarNav = document.getElementById('settings-sidebar');
-        const panelTitle = document.getElementById('panel-title');
-        const panelContent = document.getElementById('panel-content');
-        const pageHtmlTitle = document.getElementById('page-title');
+        let auth, db;
+        let userId;
 
-        let currentNavbarSettings = DEFAULT_NAVBAR_SETTINGS;
+        // --- Data Definitions ---
 
-        // --- LOCAL STORAGE FUNCTIONS (Updated for Background Object) ---
+        // Map of colors to display names for hover effect (Goal #4)
+        const COLOR_NAMES = {
+            '#000000': 'Pure Obsidian',
+            '#ffffff': 'Industrial White',
+            '#facc15': 'Solar Flare Yellow',
+            '#6b21a8': 'Deep Violet',
+            '#1e40af': 'Cerulean Deep',
+            '#ef4444': 'Emergency Red',
+            '#10b981': 'Emerald Green',
+            '#374151': 'Gunmetal Gray',
+            '#8b5cf6': 'Vaporwave Purple',
+            '#f97316': 'Electric Orange',
+            '#4b5563': 'Slate Gray',
+            '#059669': 'Forest Teal',
+        };
 
-        /**
-         * Loads the navbar settings from Local Storage, falling back to default.
-         * @returns {Object} The loaded or default settings object.
-         */
-        function loadLocalNavbarSettings() {
-            try {
-                const localSettingsString = localStorage.getItem(NAVBAR_KEY);
-                const localSettings = localSettingsString ? JSON.parse(localSettingsString) : {};
-                // Ensure all properties are present via merge
-                return { ...DEFAULT_NAVBAR_SETTINGS, ...localSettings };
-            } catch (e) {
-                console.error("Could not read from Local Storage:", e);
-                return DEFAULT_NAVBAR_SETTINGS;
+        // HEX colors to display in the palette (must match keys in COLOR_NAMES)
+        const PALETTE_COLORS = Object.keys(COLOR_NAMES); 
+
+
+        // Setting sections configuration
+        const SECTIONS = {
+            'profile': {
+                title: "User Profile",
+                icon: "fa-user-circle",
+                color: "text-blue-500",
+                content: "Manage your username, profile picture, and display information.",
+                render: renderProfileSection
+            },
+            'appearance': {
+                title: "Appearance",
+                icon: "fa-palette",
+                color: "text-purple-500",
+                content: "Customize the look and feel of the application, including the navigation bar color.",
+                render: renderAppearanceSection
+            },
+            'security': {
+                title: "Security & Privacy",
+                icon: "fa-lock",
+                color: "text-red-500",
+                content: "Update your password, manage linked accounts, and configure two-factor authentication.",
+                render: renderDefaultSection
+            },
+            'notifications': {
+                title: "Notifications",
+                icon: "fa-bell",
+                color: "text-yellow-500",
+                content: "Configure your email and in-app notification preferences.",
+                render: renderDefaultSection
+            },
+            'advanced': {
+                title: "Advanced Settings",
+                icon: "fa-cogs",
+                color: "text-gray-500",
+                content: "Access advanced configuration options, including data export and account deletion.",
+                render: renderDefaultSection
             }
-        }
-        
-        /**
-         * Saves a new navbar settings object to Local Storage.
-         * @param {Object} settings - The new settings object.
-         */
-        function saveLocalNavbarSettings(settings) {
-            try {
-                // Ensure all default properties are present before saving
-                const finalSettings = { ...DEFAULT_NAVBAR_SETTINGS, ...settings };
-                localStorage.setItem(NAVBAR_KEY, JSON.stringify(finalSettings));
-                currentNavbarSettings = finalSettings;
-                // Use the new update function which relies on the global function in navigation.js
-                // NOTE: This relies on the navigation.js script having a globally accessible update function, 
-                // which is implicitly done by calling applyNavbarBackground internally in the bootstrap. 
-                // We'll simulate the update by directly calling a simplified version here, or more reliably,
-                // by using the one available in the global scope if it was exposed. Since it's not, 
-                // we'll rely on the updateNavbarColor/applyNavbarBackground call in navigation.js via a trigger.
+        };
 
-                // For a live update in the settings page, we'll call the logic directly
-                if (typeof applyNavbarBackground === 'function') {
-                    applyNavbarBackground(finalSettings);
-                } else {
-                    // Fallback: Manually update the CSS variables, though less robust than the full logic
-                    updateNavbarColor(finalSettings);
-                }
-                
-                alert(`Navbar background updated to ${finalSettings.type} and saved locally.`);
+        // --- Firebase Initialization and Auth Check ---
+
+        const startAuthFlow = () => {
+            try {
+                const app = initializeApp(FIREBASE_CONFIG);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                // Wait for navigation.js to load the auth state.
+                const authUnsub = auth.onAuthStateChanged(user => {
+                    if (user) {
+                        userId = user.uid;
+                        console.log("User authenticated:", userId);
+                        renderSidebar();
+                        displaySection('appearance'); // Default to Appearance section
+                    } else {
+                        console.log("User not authenticated. Redirecting.");
+                        // Redirect to home or login page if not logged in
+                        window.location.href = "../../index.html"; 
+                    }
+                    // Unsubscribe after the first check to prevent multiple calls
+                    authUnsub(); 
+                });
             } catch (error) {
-                console.error("Error saving navbar settings to Local Storage:", error);
-                alert("Failed to save background setting locally. See console.");
+                console.error("Firebase initialization failed:", error);
             }
-        }
-        
-        /**
-         * Removes the navbar settings from Local Storage.
-         */
-        function deleteLocalNavbarSettings() {
-            try {
-                localStorage.removeItem(NAVBAR_KEY);
-                currentNavbarSettings = DEFAULT_NAVBAR_SETTINGS;
-                // Reset the UI components and preview
-                updateNavbarColor(DEFAULT_NAVBAR_SETTINGS); 
-                alert("Navbar background restored to default. You may need to refresh the page for the change to take full effect across the site.");
-            } catch (error) {
-                console.error("Error deleting navbar settings from Local Storage:", error);
-                alert("Failed to restore default setting. See console.");
-            }
-        }
+        };
 
-        /**
-         * Updates the CSS variables on the document root for live preview.
-         * Note: This is a simplified version for the settings UI, relying on
-         * navigation.js to read these variables via its own update logic.
-         * @param {Object} settings - The settings object to set.
-         */
-        function updateNavbarColor(settings) {
-            if (settings.type === 'color') {
-                document.documentElement.style.setProperty('--navbar-background', settings.value);
-                document.documentElement.style.setProperty('--navbar-image', 'none');
-                document.documentElement.style.setProperty('--navbar-overlay', 'none'); 
-                document.documentElement.style.setProperty('--navbar-bg-size', 'auto');
-                document.documentElement.style.setProperty('--navbar-bg-position', 'left');
-            } else if (settings.type === 'image') {
-                // Use the effectiveBgColor for the base color of the image-backed bar
-                document.documentElement.style.setProperty('--navbar-background', '#1a1a1a'); 
-                document.documentElement.style.setProperty('--navbar-image', `url('${settings.value}')`);
-                document.documentElement.style.setProperty('--navbar-overlay', 'rgba(0, 0, 0, 0.4)'); 
-                document.documentElement.style.setProperty('--navbar-bg-size', settings.imgSize);
-                document.documentElement.style.setProperty('--navbar-bg-position', settings.imgPosition);
-            }
-        }
+        // --- Rendering Functions ---
 
-        // --- AUTHENTICATION & REDIRECTION LOGIC (Updated to load Settings Object) ---
+        const renderSidebar = () => {
+            const sidebarNav = document.getElementById('sidebar-nav');
+            sidebarNav.innerHTML = Object.entries(SECTIONS).map(([id, section]) => `
+                <div 
+                    id="sidebar-${id}" 
+                    class="sidebar-item" 
+                    data-section-id="${id}"
+                    onclick="displaySection('${id}')"
+                >
+                    <i class="fa-solid ${section.icon} ${section.color}"></i>
+                    <span>${section.title}</span>
+                </div>
+            `).join('');
 
-        function startAuthFlow() {
-            // ... (Firebase check logic remains) ...
+            // Add click listeners (already handled by onclick attribute)
+            window.displaySection = displaySection;
+        };
 
-            // We rely on the global `firebase` object loaded by navigation.js
-            if (typeof firebase === 'undefined' || typeof firebase.auth === 'undefined') {
-                 // Fallback rendering
-                 renderSidebar();
-                 loadSection('general');
-                 loadingScreen.style.display = 'none';
-                 pageContent.classList.remove('hidden');
-                 return;
-            }
-
-            firebase.auth().onAuthStateChanged(() => {
-                // Initial load of the color setting
-                currentNavbarSettings = loadLocalNavbarSettings();
-                updateNavbarColor(currentNavbarSettings);
-
-                console.log("Settings Page: Authentication state checked.");
-                
-                renderSidebar();
-                loadSection('general');
-                
-                loadingScreen.style.display = 'none';
-                pageContent.classList.remove('hidden');
-            });
-        }
-        
-        // --- SETTINGS UI LOGIC (Updated for Personalization Tab) ---
-        
-        // ... (renderSidebar and loadSection up to personalization) ...
-        
-        function loadSection(sectionId) {
-            const section = settingsSections.find(s => s.id === sectionId);
+        const displaySection = (sectionId) => {
+            const section = SECTIONS[sectionId];
             if (!section) return;
 
-            // 1. Update main title and HTML title
-            mainTitle.textContent = `${BASE_TITLE} - ${section.title}`;
-            pageHtmlTitle.textContent = `4SP - ${BASE_TITLE} - ${section.title}`;
+            const panelTitle = document.getElementById('panel-title');
+            const panelContent = document.getElementById('panel-content');
 
-            // 2. Update content panel
-            panelTitle.innerHTML = `<i class="fas ${section.icon} mr-2 ${section.color}"></i> ${section.title}`;
-            panelContent.innerHTML = `
-                <div class="flex flex-col space-y-4">
-                    <p class="text-lg">${section.content}</p>
-                    <div id="section-details" class="bg-gray-800 p-4 rounded-lg border border-gray-700">
-                        <h3 class="text-xl font-semibold mb-2 text-white">Section Details</h3>
-                        <p class="text-sm text-gray-500">
-                            This is where the detailed controls, forms, and toggles for the 
-                            ${section.title} section would be implemented. 
-                            <i class="fas fa-magic text-purple-400 ml-1"></i>
-                        </p>
-                    </div>
-                    ${sectionId === 'personalization' ? '' : `
-                    <button id="save-settings-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg shadow-lg transition-all duration-200 mt-4 self-start flex items-center">
-                        <i class="fas fa-save mr-2"></i> Save Changes
-                    </button>
-                    `}
-                </div>
-            `;
-            
-            // --- PERSONALIZATION SPECIFIC CONTENT (REVAMPED) ---
-            if (sectionId === 'personalization') {
-                currentNavbarSettings = loadLocalNavbarSettings();
-                updateNavbarColor(currentNavbarSettings);
+            // 1. Update panel title
+            panelTitle.innerHTML = `<i class="fa-solid ${section.icon} mr-2 ${section.color}"></i> ${section.title}`;
 
-                document.getElementById('section-details').innerHTML = `
-                    <h3 class="text-xl font-semibold mb-4 text-white">Universal Navbar Background</h3>
-                    <p class="text-sm text-gray-500 mb-4">
-                        Customize the look of your navigation bar with a solid color or a custom image.
-                    </p>
-                    
-                    <div id="navbar-image-preview" class="mb-6">
-                        <p id="image-preview-placeholder" class="text-gray-500 text-sm ${currentNavbarSettings.type === 'image' ? 'hidden' : ''}">Navbar Live Preview</p>
-                    </div>
+            // 2. Render section specific content
+            section.render(panelContent);
 
-                    <div class="flex border-b border-gray-700 mb-6">
-                        <button id="tab-color" class="pb-2 px-4 text-sm font-medium ${currentNavbarSettings.type === 'color' ? 'text-indigo-400 border-b-2 border-indigo-400' : 'text-gray-400 hover:text-white'} transition duration-150">
-                            Solid Color
-                        </button>
-                        <button id="tab-image" class="pb-2 px-4 text-sm font-medium ${currentNavbarSettings.type === 'image' ? 'text-indigo-400 border-b-2 border-indigo-400' : 'text-gray-400 hover:text-white'} transition duration-150">
-                            Background Image
-                        </button>
-                    </div>
-
-                    <div id="personalization-content">
-                        </div>
-
-                    <div class="flex space-x-4 mt-6 pt-4 border-t border-gray-700">
-                        <button id="save-settings-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg shadow-lg transition-all duration-200 flex items-center">
-                            <i class="fas fa-save mr-2"></i> Apply and Save Locally
-                        </button>
-                        <button id="restore-button" class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg shadow-lg transition-all duration-200 flex items-center">
-                            <i class="fas fa-undo-alt mr-2"></i> Restore to Defaults
-                        </button>
-                    </div>
-                `;
-                
-                // --- TAB MANAGEMENT ---
-                const colorTabButton = document.getElementById('tab-color');
-                const imageTabButton = document.getElementById('tab-image');
-                const contentPanel = document.getElementById('personalization-content');
-
-                const switchTab = (tabId) => {
-                    colorTabButton.classList.remove('text-indigo-400', 'border-b-2', 'border-indigo-400');
-                    colorTabButton.classList.add('text-gray-400', 'hover:text-white');
-                    imageTabButton.classList.remove('text-indigo-400', 'border-b-2', 'border-indigo-400');
-                    imageTabButton.classList.add('text-gray-400', 'hover:text-white');
-
-                    if (tabId === 'color') {
-                        colorTabButton.classList.add('text-indigo-400', 'border-b-2', 'border-indigo-400');
-                        renderColorPanel();
-                    } else if (tabId === 'image') {
-                        imageTabButton.classList.add('text-indigo-400', 'border-b-2', 'border-indigo-400');
-                        renderImagePanel();
-                    }
-                };
-                
-                colorTabButton.addEventListener('click', () => switchTab('color'));
-                imageTabButton.addEventListener('click', () => switchTab('image'));
-                
-                // Initialize the correct tab
-                switchTab(currentNavbarSettings.type);
-
-                // --- HELPER FUNCTION: LIVE PREVIEW & UI UPDATE ---
-                const applySettingsChange = (newSettings) => {
-                    // Save to a temporary variable for live preview and 'Save' button use
-                    currentNavbarSettings = { ...currentNavbarSettings, ...newSettings }; 
-                    
-                    // Update the live preview
-                    updateNavbarColor(currentNavbarSettings);
-                    
-                    // Update UI elements based on the new state
-                    const previewPlaceholder = document.getElementById('image-preview-placeholder');
-                    if (previewPlaceholder) {
-                        if (currentNavbarSettings.type === 'image') {
-                            previewPlaceholder.classList.add('hidden');
-                        } else {
-                            previewPlaceholder.classList.remove('hidden');
-                        }
-                    }
-
-                    if (currentNavbarSettings.type === 'color') {
-                        // Update color picker/input if available
-                        const picker = document.getElementById('custom-color-picker');
-                        const input = document.getElementById('custom-color-input');
-                        if (picker && input) {
-                            picker.value = currentNavbarSettings.value;
-                            input.value = currentNavbarSettings.value;
-                        }
-                        // Update palette selection
-                        document.querySelectorAll('.color-option').forEach(item => item.classList.remove('selected'));
-                        const selectedPaletteItem = document.querySelector(`.color-option[data-color="${currentNavbarSettings.value.toLowerCase()}"]`);
-                        if (selectedPaletteItem) {
-                            selectedPaletteItem.classList.add('selected');
-                        }
-                    } else if (currentNavbarSettings.type === 'image') {
-                        // Update image settings UI if available
-                        const positionSelect = document.getElementById('image-position-select');
-                        const sizeSelect = document.getElementById('image-size-select');
-                        if(positionSelect) positionSelect.value = currentNavbarSettings.imgPosition;
-                        if(sizeSelect) sizeSelect.value = currentNavbarSettings.imgSize;
-                    }
-                };
-
-
-                // --- COLOR PANEL RENDER & LOGIC ---
-                const renderColorPanel = () => {
-                    // Ensure the type is correctly set for UI interactions
-                    if (currentNavbarSettings.type !== 'color') {
-                        currentNavbarSettings.type = 'color';
-                        currentNavbarSettings.value = DEFAULT_NAVBAR_SETTINGS.value;
-                        applySettingsChange(currentNavbarSettings);
-                    }
-                    const currentColor = currentNavbarSettings.value;
-
-                    contentPanel.innerHTML = `
-                        <label class="block text-sm font-medium text-gray-400 mb-2">Color Palette</label>
-                        <div id="color-palette" class="flex flex-wrap gap-3 mb-6"></div>
-                        
-                        <label for="custom-color-picker" class="block text-sm font-medium text-gray-400 mb-2">Custom Color Picker</label>
-                        <div class="flex items-center space-x-3 mb-6">
-                            <input type="color" id="custom-color-picker" class="w-12 h-12 rounded-lg cursor-pointer" value="${currentColor}">
-                            <input type="text" id="custom-color-input" class="bg-gray-700 text-white border border-gray-600 rounded-lg p-2 font-mono text-sm w-32" value="${currentColor}" maxlength="7" pattern="#[0-9a-fA-F]{6}">
-                        </div>
-                    `;
-
-                    // Initialize the color palette
-                    const paletteContainer = document.getElementById('color-palette');
-                    colorPalette.forEach(color => {
-                        const colorDiv = document.createElement('div');
-                        const isSelected = currentColor.toLowerCase() === color.toLowerCase();
-
-                        colorDiv.className = `color-option ${isSelected ? 'selected' : ''}`;
-                        colorDiv.style.backgroundColor = color;
-                        colorDiv.setAttribute('data-color', color);
-                        colorDiv.addEventListener('click', () => {
-                            applySettingsChange({ type: 'color', value: color });
-                        });
-                        paletteContainer.appendChild(colorDiv);
-                    });
-                    
-                    // Custom color picker logic
-                    const customPicker = document.getElementById('custom-color-picker');
-                    const customInput = document.getElementById('custom-color-input');
-                    
-                    customPicker.addEventListener('input', (e) => {
-                        applySettingsChange({ type: 'color', value: e.target.value });
-                    });
-                    
-                    customInput.addEventListener('input', (e) => {
-                        const color = e.target.value.trim();
-                        if (/^#[0-9A-F]{6}$/i.test(color)) {
-                            applySettingsChange({ type: 'color', value: color });
-                        }
-                    });
-                };
-
-
-                // --- IMAGE PANEL RENDER & LOGIC ---
-                const renderImagePanel = () => {
-                    // Ensure the type is correctly set for UI interactions
-                    if (currentNavbarSettings.type !== 'image') {
-                        currentNavbarSettings.type = 'image';
-                        // Keep the current value or use a placeholder if it was a color before
-                        if (!/^data:image\/(jpeg|png|gif|webp);base64,/.test(currentNavbarSettings.value)) {
-                             currentNavbarSettings.value = ''; 
-                        }
-                        applySettingsChange(currentNavbarSettings);
-                    }
-
-                    contentPanel.innerHTML = `
-                        <label for="image-upload" class="block text-sm font-medium text-gray-400 mb-2">Upload Image (Max 500KB)</label>
-                        <input type="file" id="image-upload" accept="image/*" class="mb-4 block w-full text-sm text-gray-500
-                                file:mr-4 file:py-2 file:px-4
-                                file:rounded-full file:border-0
-                                file:text-sm file:font-semibold
-                                file:bg-violet-50 file:text-violet-700
-                                hover:file:bg-violet-100">
-
-                        <div id="image-controls" class="space-y-4 ${currentNavbarSettings.value ? '' : 'hidden'}">
-                            <label class="block text-sm font-medium text-gray-400">Cropping/Position Settings (Widescreen Focus)</label>
-
-                            <div class="flex space-x-4">
-                                <div>
-                                    <label for="image-position-select" class="block text-xs font-medium text-gray-500 mb-1">Position</label>
-                                    <select id="image-position-select" class="bg-gray-700 text-white border border-gray-600 rounded-lg p-2 text-sm w-32">
-                                        <option value="center" ${currentNavbarSettings.imgPosition === 'center' ? 'selected' : ''}>Center</option>
-                                        <option value="left" ${currentNavbarSettings.imgPosition === 'left' ? 'selected' : ''}>Left</option>
-                                        <option value="right" ${currentNavbarSettings.imgPosition === 'right' ? 'selected' : ''}>Right</option>
-                                        <option value="top" ${currentNavbarSettings.imgPosition === 'top' ? 'selected' : ''}>Top</option>
-                                        <option value="bottom" ${currentNavbarSettings.imgPosition === 'bottom' ? 'selected' : ''}>Bottom</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label for="image-size-select" class="block text-xs font-medium text-gray-500 mb-1">Size</label>
-                                    <select id="image-size-select" class="bg-gray-700 text-white border border-gray-600 rounded-lg p-2 text-sm w-32">
-                                        <option value="cover" ${currentNavbarSettings.imgSize === 'cover' ? 'selected' : ''}>Cover (Crop)</option>
-                                        <option value="contain" ${currentNavbarSettings.imgSize === 'contain' ? 'selected' : ''}>Contain (Fit)</option>
-                                        <option value="auto" ${currentNavbarSettings.imgSize === 'auto' ? 'selected' : ''}>Original</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    
-                    // --- IMAGE UPLOAD LOGIC ---
-                    const imageUpload = document.getElementById('image-upload');
-                    const controls = document.getElementById('image-controls');
-
-                    imageUpload.addEventListener('change', (event) => {
-                        const file = event.target.files[0];
-                        if (!file) return;
-
-                        if (file.size > 500 * 1024) { // 500 KB limit
-                            alert("Image file size exceeds the 500KB limit for local storage. Please choose a smaller image.");
-                            imageUpload.value = ''; // Clear file input
-                            return;
-                        }
-
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                            // Base64 encoding complete
-                            applySettingsChange({ type: 'image', value: e.target.result });
-                            controls.classList.remove('hidden');
-                        };
-                        reader.onerror = (error) => {
-                            console.error("Error reading file:", error);
-                            alert("Failed to read image file.");
-                        };
-
-                        reader.readAsDataURL(file); // Encode image to Base64
-                    });
-
-                    // --- IMAGE SETTINGS CHANGE LISTENERS ---
-                    const positionSelect = document.getElementById('image-position-select');
-                    const sizeSelect = document.getElementById('image-size-select');
-
-                    if(positionSelect) {
-                        positionSelect.addEventListener('change', (e) => {
-                            applySettingsChange({ imgPosition: e.target.value });
-                        });
-                    }
-                    if(sizeSelect) {
-                        sizeSelect.addEventListener('change', (e) => {
-                            applySettingsChange({ imgSize: e.target.value });
-                        });
-                    }
-                };
-
-                // --- GLOBAL BUTTON LOGIC ---
-                document.getElementById('save-settings-button').addEventListener('click', () => {
-                    // Saves the current state of currentNavbarSettings
-                    saveLocalNavbarSettings(currentNavbarSettings);
-                });
-                
-                document.getElementById('restore-button').addEventListener('click', () => {
-                    deleteLocalNavbarSettings();
-                    // Reset the UI components
-                    currentNavbarSettings = DEFAULT_NAVBAR_SETTINGS;
-                    switchTab(currentNavbarSettings.type); // Switch back to color tab
-                    applySettingsChange(DEFAULT_NAVBAR_SETTINGS);
-                });
-            }
-            // --- END PERSONALIZATION SPECIFIC CONTENT ---
-            
-            // 3. Update sidebar active state (Unchanged)
+            // 3. Update sidebar active state
             document.querySelectorAll('.sidebar-item').forEach(item => {
                 item.classList.remove('active');
             });
             document.getElementById(`sidebar-${sectionId}`).classList.add('active');
-        }
+        };
+
+        // --- Section Renderers ---
+
+        const renderDefaultSection = (panelContent) => {
+            const sectionId = panelContent.closest('.main-panel').querySelector('#panel-title').textContent.trim().toLowerCase().replace(/\s/g, '-');
+            const section = SECTIONS[sectionId.replace('-section', '')]; // Simple lookup
+            
+            panelContent.innerHTML = `
+                <div class="flex flex-col space-y-4">
+                    <p class="text-lg text-gray-400">${section.content}</p>
+                    <div class="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                        <h3 class="text-xl font-semibold mb-2 text-white">Under Development</h3>
+                        <p class="text-sm text-gray-500">
+                            This section is currently under construction. Please check back later for detailed controls and configuration options.
+                            <i class="fa-solid fa-code text-indigo-400 ml-1"></i>
+                        </p>
+                    </div>
+                    <button class="bg-gray-600 cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg shadow-lg transition-all duration-200 mt-4 self-start flex items-center">
+                        <i class="fa-solid fa-save mr-2"></i> Save Changes (Disabled)
+                    </button>
+                </div>
+            `;
+        };
+
+        const renderProfileSection = (panelContent) => {
+            const section = SECTIONS['profile'];
+            
+            panelContent.innerHTML = `
+                <div class="flex flex-col space-y-4">
+                    <p class="text-lg text-gray-400">${section.content}</p>
+                    <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 space-y-4">
+                        <h3 class="text-xl font-semibold text-white">Profile Details</h3>
+                        <div>
+                            <label for="username" class="block text-sm font-medium text-gray-400 mb-1">Username</label>
+                            <input type="text" id="username" value="${auth.currentUser?.displayName || 'User'}" class="w-full p-2 rounded-lg bg-gray-900 border border-gray-700 text-white focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-400 mb-1">Email (Read Only)</label>
+                            <input type="email" id="email" value="${auth.currentUser?.email || 'N/A'}" readonly class="w-full p-2 rounded-lg bg-gray-700 border border-gray-600 text-gray-400 cursor-not-allowed">
+                        </div>
+                    </div>
+                    <button id="save-profile-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg shadow-lg transition-all duration-200 mt-4 self-start flex items-center">
+                        <i class="fa-solid fa-save mr-2"></i> Save Profile
+                    </button>
+                </div>
+            `;
+            // Add listeners for profile saving (omitted for brevity, but structure is here)
+        };
+
+        const renderAppearanceSection = (panelContent) => {
+            const currentNavbarColor = localStorage.getItem(USER_SETTINGS_KEY) || '#000000';
+            const section = SECTIONS['appearance'];
+            
+            const colorPaletteHtml = PALETTE_COLORS.map(color => {
+                const isActive = color.toLowerCase() === currentNavbarColor.toLowerCase();
+                const name = COLOR_NAMES[color.toLowerCase()] || 'Custom Color';
+                
+                return `
+                    <div 
+                        class="color-selector ${isActive ? 'active' : ''}" 
+                        style="background-color: ${color};" 
+                        data-color="${color}" 
+                        onclick="selectNavbarColor('${color}')"
+                        title="${name}"
+                    ></div>
+                `;
+            }).join('');
+
+
+            panelContent.innerHTML = `
+                <div class="flex flex-col space-y-6">
+                    <p class="text-lg text-gray-400">${section.content}</p>
+                    
+                    <!-- Navbar Color Palette -->
+                    <div class="bg-gray-900 p-6 rounded-lg border border-gray-800">
+                        <h3 class="text-xl font-semibold mb-4 text-white flex items-center">
+                            <i class="fa-solid fa-box-tissue mr-2 text-pink-400"></i> Navbar Background Color
+                        </h3>
+                        <p class="text-sm text-gray-500 mb-4">
+                            Select a preset color for the application's top navigation bar. The text/icon color adjusts automatically for maximum contrast and subtle tinting. Hover over a color for its name!
+                        </p>
+                        <div id="color-palette" class="flex flex-wrap gap-4 p-2">
+                            ${colorPaletteHtml}
+                        </div>
+                    </div>
+
+                    <!-- Custom Color Input -->
+                    <div class="bg-gray-900 p-6 rounded-lg border border-gray-800">
+                        <h3 class="text-xl font-semibold mb-4 text-white flex items-center">
+                            <i class="fa-solid fa-tint mr-2 text-cyan-400"></i> Custom Color (HEX)
+                        </h3>
+                        <div class="flex items-center space-x-3">
+                            <input type="color" id="custom-color-picker" value="${currentNavbarColor}" class="w-10 h-10 p-0 rounded-lg border-none overflow-hidden cursor-pointer" title="Custom Color Picker">
+                            <input type="text" id="custom-color-hex" value="${currentNavbarColor}" maxlength="7" class="p-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:ring-indigo-500 focus:border-indigo-500 w-32 uppercase" placeholder="#123456">
+                            <button id="apply-custom-color" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg shadow-lg transition-all duration-200 flex items-center">
+                                Apply Custom
+                            </button>
+                        </div>
+                        <p id="color-error" class="text-red-500 text-sm mt-2 hidden">Invalid HEX color code.</p>
+                    </div>
+
+                </div>
+            `;
+            
+            const customHexInput = document.getElementById('custom-color-hex');
+            const customPicker = document.getElementById('custom-color-picker');
+            const applyButton = document.getElementById('apply-custom-color');
+
+            // Sync Hex Input to Picker
+            customHexInput.addEventListener('input', (e) => {
+                const hex = e.target.value.toUpperCase();
+                if (/^#?([0-9A-F]{6})$/.test(hex)) {
+                    customPicker.value = hex.startsWith('#') ? hex : '#' + hex;
+                    document.getElementById('color-error').classList.add('hidden');
+                }
+            });
+
+            // Sync Picker to Hex Input
+            customPicker.addEventListener('input', (e) => {
+                customHexInput.value = e.target.value.toUpperCase();
+                document.getElementById('color-error').classList.add('hidden');
+            });
+
+            // Apply Custom Color
+            applyButton.addEventListener('click', () => {
+                const hex = customHexInput.value.toUpperCase().startsWith('#') ? customHexInput.value : '#' + customHexInput.value;
+                if (/^#[0-9A-F]{6}$/.test(hex)) {
+                    selectNavbarColor(hex);
+                    document.getElementById('color-error').classList.add('hidden');
+                } else {
+                    document.getElementById('color-error').classList.remove('hidden');
+                }
+            });
+
+            window.selectNavbarColor = selectNavbarColor; // Expose to global scope for onclick
+        };
+
+        const selectNavbarColor = (color) => {
+            const hexColor = color.toUpperCase();
+            
+            // 1. Save to Local Storage
+            try {
+                localStorage.setItem(USER_SETTINGS_KEY, hexColor);
+                console.log(`Navbar color saved: ${hexColor}`);
+            } catch (e) {
+                console.error("Could not save to Local Storage:", e);
+                // Fallback: use global variable if available
+                if (window.USER_SETTINGS_KEY) {
+                    window.USER_SETTINGS_KEY = hexColor;
+                }
+            }
+            
+            // 2. Refresh Navigation Bar (which relies on localStorage)
+            if (typeof window.startNavigationBootstrap === 'function') {
+                window.startNavigationBootstrap();
+            } else {
+                console.warn("startNavigationBootstrap function not found. Navbar update requires page refresh.");
+            }
+
+            // 3. Update active state in settings UI
+            const palette = document.getElementById('color-palette');
+            if (palette) {
+                palette.querySelectorAll('.color-selector').forEach(selector => {
+                    selector.classList.remove('active');
+                    if (selector.getAttribute('data-color').toUpperCase() === hexColor) {
+                        selector.classList.add('active');
+                    }
+                });
+            }
+            
+            // 4. Update custom input fields
+            const customHexInput = document.getElementById('custom-color-hex');
+            const customPicker = document.getElementById('custom-color-picker');
+            if (customHexInput) customHexInput.value = hexColor;
+            if (customPicker) customPicker.value = hexColor;
+        };
         
-        // --- START APPLICATION ---
-        document.addEventListener('DOMContentLoaded', startAuthFlow);
+        // --- START APPLICATION ---\
+        startAuthFlow();
     </script>
 </body>
 </html>
