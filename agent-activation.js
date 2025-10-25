@@ -16,7 +16,7 @@
  * - Professional/Math: gemini-2.5-flash
  * - Deep Analysis: gemini-2.5-flash (Pro model feature removed)
  *
- * NEW: The AI's response now includes an internal <THOUGHT_PROCESS> and lists of <SOURCE URL="..." TITLE="..."/>.
+ * NEW: The AI's response now includes an internal <THOUGHT_PROCESS> and lists sources parsed from groundingMetadata.
  * UPDATED: Removed authenticated email feature.
  * REPLACED: Geolocation now uses browser's `navigator.geolocation`, triggered on first message if setting is enabled.
  * NEW: Location Sharing is OFF by default.
@@ -25,10 +25,11 @@
  * NEW: Added a "nudge" popup if AI needs web search but the setting is disabled.
  * UPDATED: Swapped order of monologue and sources. Monologue is now a collapsible dropdown.
  * CSS: Reduced margins between response content, sources, and monologue for a tighter layout.
+ * FIX: Removed invalid 'sources' field from chatHistory payload sent to API.
  */
 (function() {
     // --- CONFIGURATION ---
-    const API_KEY = 'AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro';
+    const API_KEY = 'AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro'; // Replace with your actual API key
     const BASE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/`;
     // const AUTHORIZED_PRO_USER = '4simpleproblems@gmail.com'; // REMOVED
     const MAX_INPUT_HEIGHT = 180;
@@ -45,7 +46,8 @@
     let isAIActive = false;
     let isRequestPending = false;
     let currentAIRequestController = null;
-    let chatHistory = [];
+    let chatHistory = []; // Stores objects { role: "user" | "model", parts: [...] }
+    let chatHistoryWithSources = []; // NEW: Stores { role, parts, sources } for rendering
     let attachedFiles = [];
     // NEW: Replaced userSettings with appSettings, locationSharing defaults to false
     let appSettings = {
@@ -486,28 +488,23 @@
         document.removeEventListener('click', handleMenuOutsideClick); // Clean up listener
     }
 
+    // MODIFIED: Use chatHistoryWithSources for rendering
     function renderChatHistory() {
         const responseContainer = document.getElementById('ai-response-container');
         if (!responseContainer) return;
         responseContainer.innerHTML = '';
-        chatHistory.forEach(message => {
+        chatHistoryWithSources.forEach(message => { // Use the rendering history
             const bubble = document.createElement('div');
             bubble.className = `ai-message-bubble ${message.role === 'user' ? 'user-message' : 'gemini-response'}`;
             if (message.role === 'model') {
-                // Use the new parsing logic for historical messages
-                // MODIFIED: `parseGeminiResponse` no longer returns sourcesHTML
                 const {
                     html: parsedResponse,
                     thoughtProcess
                 } = parseGeminiResponse(message.parts[0].text);
 
-                // Reconstruct sources from stored metadata if available (simplified for history)
-                // This part is tricky as groundingMetadata isn't stored in chatHistory.
-                // For simplicity, history items will only render text-based content.
-                // To fix this, we'd need to store metadata in chatHistory.
-                // For now, we'll just parse the text.
+                // Reconstruct sourcesHTML from the stored sources
                 let sourcesHTML = '';
-                if (message.sources) { // Assume we start storing sources in history
+                if (message.sources && message.sources.length > 0) {
                     sourcesHTML = `<div class="ai-sources-list"><h4>Sources:</h4><ul>`;
                     message.sources.forEach(source => {
                         let hostname = '';
@@ -529,7 +526,6 @@
                     bubble.innerHTML += sourcesHTML;
                 }
 
-                // NEW: Collapsible thought process
                 if (thoughtProcess) {
                     bubble.innerHTML += `
                         <div class="ai-thought-process collapsed">
@@ -759,7 +755,7 @@ Formatting Rules (MUST FOLLOW):
         currentAIRequestController = new AbortController();
 
         let firstMessageContext = '';
-        if (chatHistory.length <= 1) {
+        if (chatHistory.length <= 1) { // Only add context on the very first user message
             // Await location for context (will respect the setting and prompt if needed)
             const location = await getUserLocationForContext();
             const now = new Date();
@@ -776,35 +772,40 @@ Formatting Rules (MUST FOLLOW):
             firstMessageContext = `(System Info: User is asking from location:\n${location}. Current date is ${date}, ${time}. User Email: Not Authenticated/Removed.)\n\n`;
         }
 
-        let processedChatHistory = [...chatHistory];
-        if (processedChatHistory.length > 6) {
-            processedChatHistory = [...processedChatHistory.slice(0, 3), ...processedChatHistory.slice(-3)];
+        // Prepare chat history for the API (no sources field)
+        let apiChatHistory = [...chatHistory];
+        if (apiChatHistory.length > 6) {
+            apiChatHistory = [...apiChatHistory.slice(0, 3), ...apiChatHistory.slice(-3)];
         }
 
-        const lastMessageIndex = processedChatHistory.length - 1;
-        const userParts = processedChatHistory[lastMessageIndex].parts;
+        const lastMessageIndex = apiChatHistory.length - 1;
+        const userParts = apiChatHistory[lastMessageIndex].parts;
         const textPartIndex = userParts.findIndex(p => p.text);
 
         const lastUserQuery = userParts[textPartIndex]?.text || '';
 
         // --- MODEL SELECTION AND INSTRUCTION GENERATION ---
-        // UPDATED: Pass appSettings instead of userSettings
         const {
             instruction: dynamicInstruction,
             model
         } = getDynamicSystemInstructionAndModel(lastUserQuery, appSettings);
         // --- END MODEL SELECTION ---
 
-        if (textPartIndex > -1) {
-            userParts[textPartIndex].text = firstMessageContext + userParts[textPartIndex].text;
+        // Prepend context only if it's the first message and context exists
+        if (firstMessageContext && textPartIndex > -1) {
+            // Clone parts to avoid modifying original history
+            const modifiedUserParts = JSON.parse(JSON.stringify(userParts));
+            modifiedUserParts[textPartIndex].text = firstMessageContext + modifiedUserParts[textPartIndex].text;
+            apiChatHistory[lastMessageIndex].parts = modifiedUserParts;
         } else if (firstMessageContext) {
-            userParts.unshift({
-                text: firstMessageContext.trim()
-            });
+             // If only files were sent on first message
+            const modifiedUserParts = [{ text: firstMessageContext.trim() }, ...JSON.parse(JSON.stringify(userParts))];
+            apiChatHistory[lastMessageIndex].parts = modifiedUserParts;
         }
 
+
         const payload = {
-            contents: processedChatHistory,
+            contents: apiChatHistory, // Use the prepared history
             systemInstruction: {
                 parts: [{
                     text: dynamicInstruction
@@ -813,7 +814,6 @@ Formatting Rules (MUST FOLLOW):
         };
 
         // --- DYNAMIC URL CONSTRUCTION ---
-        // MODIFIED: Use the model returned from getDynamicSystemInstructionAndModel
         const DYNAMIC_API_URL = `${BASE_API_URL}${model}:generateContent?key=${API_KEY}`;
         // --- END DYNAMIC URL CONSTRUCTION ---
 
@@ -841,18 +841,15 @@ Formatting Rules (MUST FOLLOW):
 
             // MODIFIED: Candidate extraction
             const candidate = data.candidates?.[0];
-            if (!candidate || !candidate.content?.parts?.[0]?.text) {
-                if (data.promptFeedback && data.promptFeedback.blockReason) {
+            // Allow empty string response, but throw error if structure is wrong
+            if (!candidate?.content?.parts) {
+                 if (data.promptFeedback && data.promptFeedback.blockReason) {
                     throw new Error(`Content blocked due to: ${data.promptFeedback.blockReason}. Safety ratings: ${JSON.stringify(data.promptFeedback.safetyRatings)}`);
                 }
-                throw new Error("Invalid response from API: No candidates or empty candidates array.");
+                throw new Error("Invalid response from API: Missing content parts.");
             }
 
-            let text = candidate.content.parts[0].text;
-            if (!text && text !== "") { // Allow empty string response
-                responseBubble.innerHTML = `<div class="ai-error">The AI generated an empty response. Please try again or rephrase.</div>`;
-                return;
-            }
+            let text = candidate.content.parts[0]?.text ?? ""; // Default to empty string if text is missing
 
             // NEW: Check for web search requirement
             if (text.includes('[NEEDS_WEB_SEARCH]')) {
@@ -889,14 +886,21 @@ Formatting Rules (MUST FOLLOW):
             }
             // END: Parse Grounding Metadata
 
-            // MODIFIED: Store sources in chat history for rerender
-            chatHistory.push({
+            // Store message for API history (without sources field)
+            const apiHistoryEntry = {
                 role: "model",
-                parts: [{
-                    text: text
-                }],
-                sources: sources // Store parsed sources
-            });
+                parts: [{ text: text }]
+            };
+            chatHistory.push(apiHistoryEntry);
+
+             // Store message for rendering (with sources field)
+            const renderHistoryEntry = {
+                role: "model",
+                parts: [{ text: text }],
+                sources: sources
+            };
+            chatHistoryWithSources.push(renderHistoryEntry);
+
 
             // MODIFIED: parseGeminiResponse no longer returns sourcesHTML
             const {
@@ -960,7 +964,8 @@ Formatting Rules (MUST FOLLOW):
                 responseBubble.innerHTML = `<div class="ai-error">Message generation stopped.</div>`;
             } else {
                 console.error('AI API Error:', error);
-                responseBubble.innerHTML = `<div class_ = "ai-error">Sorry, an error occurred: ${error.message || "Unknown error"}.</div>`;
+                // FIX: Corrected class name typo
+                responseBubble.innerHTML = `<div class="ai-error">Sorry, an error occurred: ${error.message || "Unknown error"}.</div>`;
             }
         } finally {
             isRequestPending = false;
@@ -1430,10 +1435,16 @@ Formatting Rules (MUST FOLLOW):
                     inlineData: file.inlineData
                 });
             });
-            chatHistory.push({
-                role: "user",
-                parts: parts
-            });
+
+            // Store user message for API history
+            const userApiHistoryEntry = { role: "user", parts: parts };
+            chatHistory.push(userApiHistoryEntry);
+
+             // Store user message for rendering history
+            const userRenderHistoryEntry = { role: "user", parts: parts };
+            chatHistoryWithSources.push(userRenderHistoryEntry);
+
+
             const responseContainer = document.getElementById('ai-response-container');
             const userBubble = document.createElement('div');
             userBubble.className = 'ai-message-bubble user-message';
@@ -1464,6 +1475,32 @@ Formatting Rules (MUST FOLLOW):
         const wrapper = btn.closest('.code-block-wrapper');
         const code = wrapper.querySelector('pre > code');
         if (code) {
+            // Use execCommand for broader compatibility within potential iframe restrictions
+            const textarea = document.createElement('textarea');
+            textarea.value = code.innerText;
+            textarea.style.position = 'fixed'; // Prevent scrolling to bottom
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    btn.innerHTML = checkIconSVG;
+                    btn.disabled = true;
+                    setTimeout(() => {
+                        btn.innerHTML = copyIconSVG;
+                        btn.disabled = false;
+                    }, 2000);
+                } else {
+                     console.error('Fallback: Oops, unable to copy');
+                     alert('Failed to copy code using fallback.');
+                }
+            } catch (err) {
+                console.error('Fallback: Oops, unable to copy', err);
+                alert('Failed to copy code.');
+            }
+            document.body.removeChild(textarea);
+
+            /* // Prefer navigator.clipboard but it might fail in some contexts
             navigator.clipboard.writeText(code.innerText).then(() => {
                 btn.innerHTML = checkIconSVG;
                 btn.disabled = true;
@@ -1475,6 +1512,7 @@ Formatting Rules (MUST FOLLOW):
                 console.error('Failed to copy code: ', err);
                 alert('Failed to copy code.');
             });
+            */
         }
     }
 
@@ -1923,3 +1961,4 @@ Formatting Rules (MUST FOLLOW):
         loadAppSettings(); // Replaced loadUserSettings
     });
 })();
+
