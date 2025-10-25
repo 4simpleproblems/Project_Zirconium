@@ -18,15 +18,17 @@
  *
  * NEW: The AI's response now includes an internal <THOUGHT_PROCESS> and lists of <SOURCE URL="..." TITLE="..."/>.
  * UPDATED: Removed authenticated email feature.
- * REPLACED: Geolocation now uses the browser's native `navigator.geolocation` API, toggleable via settings.
+ * REPLACED: Geolocation now uses browser's `navigator.geolocation` (with high accuracy) and Nominatim (OpenStreetMap) for reverse geocoding.
  * NEW: Added a "nudge" popup if AI needs web search but the setting is disabled.
  * UPDATED: Swapped order of monologue and sources. Monologue is now a collapsible dropdown.
  * CSS: Reduced margins between response content, sources, and monologue for a tighter layout.
  * MODIFIED: Location Sharing is now OFF by default.
+ * MODIFIED: Web search prompt is more direct to improve search quality.
  */
 (function() {
     // --- CONFIGURATION ---
     const API_KEY = 'AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro';
+    // REMOVED: OPENCAGE_API_KEY is no longer needed for Nominatim.
     const BASE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/`;
     // const AUTHORIZED_PRO_USER = '4simpleproblems@gmail.com'; // REMOVED
     const MAX_INPUT_HEIGHT = 180;
@@ -82,11 +84,34 @@
 
     // --- UTILITIES FOR GEOLOCATION ---
 
-    // REMOVED: httpGetAsync function is no longer needed as we use navigator.geolocation.
+    /**
+     * NEW: Helper function for async HTTP GET request.
+     */
+    function httpGetAsync(url, callback) {
+        const xmlHttp = new XMLHttpRequest();
+        xmlHttp.onreadystatechange = function() {
+            if (xmlHttp.readyState === 4) {
+                if (xmlHttp.status === 200) {
+                    callback(xmlHttp.responseText, null);
+                } else {
+                    callback(null, new Error(`HTTP Error: ${xmlHttp.status} ${xmlHttp.statusText}`));
+                }
+            }
+        }
+        xmlHttp.open("GET", url, true); // true for asynchronous
+        xmlHttp.onerror = function() {
+            callback(null, new Error("Network request failed"));
+        };
+        // Nominatim requests a valid User-Agent, but the browser will send one automatically.
+        // If running in a different environment, you would need to set one.
+        // xmlHttp.setRequestHeader("User-Agent", "4SP-AI-Agent/1.0 (your-email@example.com)");
+        xmlHttp.send(null);
+    }
+
 
     /**
-     * REPLACED: Gets user location via Browser's Geolocation API, if setting is enabled.
-     * @returns {Promise<string>} Resolves with location string or a fallback.
+     * REPLACED: Gets user location via Browser's Geolocation API, then reverse-geocodes it using Nominatim.
+     * @returns {Promise<string>} Resolves with a human-readable address string or a fallback.
      */
     function getUserLocationForContext() {
         return new Promise((resolve) => {
@@ -108,15 +133,41 @@
 
             // Browser API will prompt user for permission if not already granted
             navigator.geolocation.getCurrentPosition(
-                // Success Callback
+                // Success Callback: Got coordinates, now reverse geocode
                 (position) => {
-                    const lat = position.coords.latitude.toFixed(4);
-                    const lon = position.coords.longitude.toFixed(4);
-                    const locationString = `Coordinates: Latitude: ${lat}, Longitude: ${lon}`;
-                    localStorage.setItem('ai-user-location', locationString);
-                    resolve(locationString);
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+
+                    // NEW: Use Nominatim (OpenStreetMap) for reverse geocoding. No API key needed.
+                    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&accept-language=en`;
+
+                    httpGetAsync(url, (response, error) => {
+                        if (error) {
+                            console.warn('Reverse geocoding failed:', error.message);
+                            const fallback = `Coordinates: ${lat.toFixed(4)}, ${lon.toFixed(4)} (Reverse geocoding failed)`;
+                            localStorage.setItem('ai-user-location', fallback);
+                            resolve(fallback);
+                        } else {
+                            try {
+                                const data = JSON.parse(response);
+                                // NEW: Parse Nominatim's response format
+                                if (data && data.display_name) {
+                                    const locationString = data.display_name;
+                                    localStorage.setItem('ai-user-location', locationString);
+                                    resolve(locationString);
+                                } else {
+                                    throw new Error('No display_name in Nominatim response');
+                                }
+                            } catch (e) {
+                                console.error('Failed to parse Nominatim response:', e);
+                                const fallback = `Coordinates: ${lat.toFixed(4)}, ${lon.toFixed(4)} (Address parsing failed)`;
+                                localStorage.setItem('ai-user-location', fallback);
+                                resolve(fallback);
+                            }
+                        }
+                    });
                 },
-                // Error Callback
+                // Error Callback: Failed to get coordinates
                 (error) => {
                     let fallback;
                     switch (error.code) {
@@ -136,6 +187,10 @@
                     console.warn('Geolocation failed:', fallback);
                     localStorage.setItem('ai-user-location', fallback);
                     resolve(fallback);
+                },
+                // Options object to request high accuracy
+                {
+                    enableHighAccuracy: true
                 }
             );
         });
@@ -659,11 +714,11 @@ Formatting Rules (MUST FOLLOW):
 - **APPEND all external sources used (if any) as a list of tags**: <SOURCE URL="[URL]" TITLE="[Title]"/>. You may use placeholder URLs if no real search was performed, but the format must be followed.
 `;
 
-        // NEW: Add web search instruction
+        // NEW: Add web search instruction (MODIFIED for clarity and forcefulness)
         if (currentSettings.webSearch) {
-            personaInstruction += `\n**Web Search: ENABLED.** You can and should use external sources to answer questions about current events, specific facts, or places.\n`;
+            personaInstruction += `\n**Web Search: ENABLED.** You have access to a live web search tool. You **must** use this tool to find real-time information or answer questions about current events, specific facts, people, companies, or places. Prioritize recent, authoritative sources. When you use a source, you **must** append it using the <SOURCE URL="..." TITLE="..."/> format.\n`;
         } else {
-            personaInstruction += `\n**Web Search: DISABLED.** You must answer using only your internal knowledge. If you CANNOT answer without a web search, you MUST include the exact string \`[NEEDS_WEB_SEARCH]\` in your response and explain that you need web access to answer fully.\n`;
+            personaInstruction += `\n**Web Search: DISABLED.** You must answer using only your internal knowledge. Your knowledge cutoff is limited. If you CANNOT answer without a web search, you MUST include the exact string \`[NEEDS_WEB_SEARCH]\` in your response and explain that you need web access to answer fully.\n`;
         }
 
 
@@ -753,7 +808,7 @@ Formatting Rules (MUST FOLLOW):
 
         let firstMessageContext = '';
         if (chatHistory.length <= 1) {
-            // Await location for context (will respect the setting)
+            // Await location for context (will respect the setting and reverse geocode)
             const location = await getUserLocationForContext();
             const now = new Date();
             const date = now.toLocaleDateString('en-US', {
@@ -999,7 +1054,7 @@ Formatting Rules (MUST FOLLOW):
             <div class="setting-group toggle-group">
                 <div class="setting-label">
                     <label for="settings-location-sharing">Location Sharing</label>
-                    <p class="setting-note">Share general location for context-aware responses (e.g., weather).</p>
+                    <p class="setting-note">Share precise location for context-aware responses (e.g., weather).</p>
                 </div>
                 <label class="ai-toggle-switch">
                     <input type="checkbox" id="settings-location-sharing" ${appSettings.locationSharing ? 'checked' : ''}>
