@@ -9,448 +9,470 @@
     <!-- Fonts, Icons, and Tailwind CSS -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- Using Geist for a modern, high-contrast look -->
-    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- External Scripts for Authentication (as referenced in your existing structure) -->
-    <!-- Assuming these handle global Firebase init and auth status -->
+    <!-- navigation.js and injector.js must be loaded here if they are external files -->
     <script src="../navigation.js"></script>
     <script src="../injector.js"></script>
 
     <style>
-        /* --- FONT & BASE STYLING (Matching user's preference for dark mode/Geist) --- */
+        /* --- FONT & BASE STYLING (MATCHING base-template.html) --- */
         body { 
             font-family: 'Geist', sans-serif; 
             background-color: #070707; 
             color: #c0c0c0; 
             transition: all 0.3s ease;
             font-weight: 300; 
-            min-height: 100vh;
         }
+        .dark { color-scheme: dark; }
 
-        /* --- Custom Scrollbar for the main content (for aesthetics) --- */
-        .content-scroll::-webkit-scrollbar { width: 6px; }
-        .content-scroll::-webkit-scrollbar-thumb { background-color: #1e293b; border-radius: 3px; }
-        .content-scroll::-webkit-scrollbar-track { background-color: #0f172a; }
-        
-        /* --- Sidebar Active State Styling --- */
-        .sidebar-item.active {
-            box-shadow: 0 0 10px rgba(99, 102, 241, 0.3); /* Subtle glow for active item */
-            border-left: 4px solid #6366f1; /* Strong indicator on the left */
-            padding-left: 0.75rem; /* Readjust padding to account for border */
-        }
-        
-        /* --- General Button Styling for Actions --- */
-        .action-btn {
-            @apply font-medium py-3 px-6 rounded-xl shadow-lg transition-all duration-300 mt-8 self-start flex items-center justify-center 
-                   hover:shadow-indigo-500/30 active:scale-[0.98];
-        }
+        /* Custom scrollbar for a sleek look */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1a1a1a; }
+        ::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #777; }
 
-        /* --- Custom Toggle Switch Styling (for 2FA) --- */
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 44px;
-            height: 24px;
-        }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider {
-            position: absolute;
+        /* Custom active state for sidebar items */
+        .sidebar-item {
             cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .sidebar-item:hover {
+            background-color: #1a1a1a;
+        }
+        .sidebar-item.active {
+            background-color: #1f2937; /* Tailwind gray-800 */
+            border-left: 4px solid #4f46e5; /* Tailwind indigo-600 */
+            color: #ffffff;
+        }
+        
+        /* Utility class for visually distinct labels */
+        .label-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-weight: 500;
+            font-size: 0.875rem;
+            color: #e0e0e0;
+            background-color: #1f2937; /* default gray background */
+            border: 1px solid #374151; /* default gray border */
+        }
+        
+        /* Styles for the loading overlay */
+        #loading-overlay {
+            position: fixed;
             top: 0;
             left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #4b5563;
-            transition: .4s;
+            width: 100%;
+            height: 100%;
+            background: rgba(7, 7, 7, 0.9);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
         }
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 3px;
-            background-color: white;
-            transition: .4s;
-        }
-        input:checked + .slider { background-color: #4f46e5; }
-        input:checked + .slider:before { transform: translateX(20px); }
-        .slider.round { border-radius: 24px; }
-        .slider.round:before { border-radius: 50%; }
 
     </style>
 </head>
-<body class="p-4 sm:p-8">
-
-    <div id="loading-spinner" class="fixed inset-0 bg-gray-900/90 flex items-center justify-center z-50 transition-opacity duration-500">
-        <i class="fas fa-spinner fa-spin text-indigo-400 text-4xl"></i>
-        <p class="ml-4 text-indigo-300 font-medium">Loading user settings...</p>
+<body class="min-h-screen">
+    <!-- Navigation Bar will be injected here by navigation.js -->
+    
+    <div id="loading-overlay" class="text-white">
+        <i class="fas fa-spinner fa-spin text-4xl mb-4 text-indigo-500"></i>
+        <p>Loading user settings...</p>
     </div>
 
-    <!-- Main Settings Container -->
-    <div id="settings-container" class="max-w-7xl mx-auto mt-10 p-6 md:p-10 bg-gray-900 border border-gray-800 rounded-3xl shadow-2xl hidden">
-        <h1 class="text-4xl font-extrabold mb-8 text-white tracking-tight">
-            <i class="fas fa-cog text-indigo-500 mr-3"></i> Application Settings
-        </h1>
+    <main id="settings-content" class="container mx-auto p-4 md:p-8 pt-24 hidden">
+        <h1 class="text-3xl md:text-4xl font-extrabold mb-8 text-white tracking-tight">Application Settings</h1>
 
-        <!-- Settings Layout: Sidebar (1/4) and Content (3/4) -->
-        <div class="flex flex-col md:flex-row gap-8">
-            
-            <!-- 1. Sidebar Navigation (Left Panel) -->
-            <nav id="sidebar" class="md:w-1/4 flex-shrink-0 bg-gray-800 p-4 rounded-2xl space-y-2 border border-gray-700/50">
-                <!-- Sidebar items will be dynamically injected here -->
-            </nav>
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- Sidebar Navigation -->
+            <div id="sidebar-container" class="lg:w-1/4 bg-gray-900 rounded-xl shadow-2xl p-4 h-fit sticky top-24">
+                <!-- Sidebar items will be dynamically added here -->
+            </div>
 
-            <!-- 2. Content Panel (Right Panel) -->
-            <main class="md:w-3/4 bg-gray-800/50 p-6 sm:p-8 rounded-2xl border border-gray-700 content-scroll max-h-[80vh]">
-                <h2 id="panel-title" class="text-3xl font-bold mb-6 text-white border-b border-gray-700 pb-4">
-                    <!-- Title and icon updated by JS -->
-                </h2>
-                <div id="panel-content">
-                    <!-- Content will be dynamically injected here -->
+            <!-- Settings Panel -->
+            <div id="panel-container" class="lg:w-3/4">
+                <div id="panel-header" class="mb-6 pb-4 border-b border-gray-800">
+                    <h2 id="panel-title" class="text-3xl font-bold text-white"></h2>
                 </div>
-            </main>
-
+                <div id="panel-content">
+                    <!-- Section-specific content will be loaded here -->
+                </div>
+            </div>
         </div>
-    </div>
+    </main>
 
+    <!-- Firebase Imports and Configuration -->
     <script type="module">
-        // Import Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Global variables provided by the Canvas runtime
+        
+        // --- GLOBAL SETUP ---
+        setLogLevel('debug');
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-        let app;
-        let auth;
-        let db;
-        let userId = null;
-        let unsubscribeProfile = null;
+        let app, db, auth, userId = null;
+        let isAuthReady = false;
+        
+        // Default labels for demonstration purposes
+        let currentLabels = []; 
+        let pendingLabelChanges = false; 
 
-        // Configuration data for the settings sections
-        const settingsData = [
-            { id: 'profile', title: 'User Profile', icon: 'fa-user-circle', color: 'text-indigo-400', content: 'Manage your name, public profile details, and account visibility settings.' },
-            { id: 'security', title: 'Security & Auth', icon: 'fa-lock', color: 'text-red-400', content: 'Update your password, manage two-factor authentication, and view recent login activity.' },
-            { id: 'appearance', title: 'Appearance', icon: 'fa-palette', color: 'text-yellow-400', content: 'Customize the visual theme, color scheme, and display density.' },
-            { id: 'data', title: 'Data Management', icon: 'fa-database', color: 'text-green-400', content: 'Export your data, manage stored files, and review privacy controls.' },
+        const sections = [
+            { id: 'profile', title: 'Profile Information', icon: 'fa-user-circle', content: 'Manage your personal details, name, and profile picture.', color: 'text-blue-400' },
+            { id: 'security', title: 'Security & Authentication', icon: 'fa-shield-alt', content: 'Change your password, enable two-factor authentication, and view active sessions.', color: 'text-red-400' },
+            { id: 'notifications', title: 'Notification Preferences', icon: 'fa-bell', content: 'Customize how and when you receive alerts and email updates.', color: 'text-yellow-400' },
+            { id: 'labels', title: 'Custom Labels', icon: 'fa-tags', content: 'Define and manage custom labels for organizing your data.', color: 'text-green-400' },
+            { id: 'advanced', title: 'Advanced Settings', icon: 'fa-cogs', content: 'Configure system-wide and experimental settings.', color: 'text-purple-400' },
         ];
 
         // --- FIREBASE INITIALIZATION & AUTH ---
 
-        async function startAuthFlow() {
+        async function initFirebaseAndAuth() {
             try {
-                // Initialize Firebase
                 app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
                 db = getFirestore(app);
-                setLogLevel('Debug'); // Enable Firestore logging
+                auth = getAuth(app);
 
-                // Sign in with custom token or anonymously
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
                 } else {
                     await signInAnonymously(auth);
                 }
 
-                // Listen for authentication state changes
+                // Listener to track auth state changes
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
                         userId = user.uid;
-                        console.log("Authenticated with UID:", userId);
-                        
-                        // Proceed to load content after authentication
-                        renderSidebar();
-                        showSection('profile'); // Default to showing the profile section
-                        
-                        // Attach real-time listener for user profile data
-                        setupProfileListener(userId);
-                        
-                        document.getElementById('loading-spinner').classList.add('opacity-0');
-                        setTimeout(() => {
-                            document.getElementById('loading-spinner').classList.add('hidden');
-                            document.getElementById('settings-container').classList.remove('hidden');
-                        }, 500);
-
+                        console.log("Authenticated with user ID:", userId);
                     } else {
-                        // This case is typically handled by navigation.js redirecting, but good to have a fallback
-                        console.log("No user signed in. Using anonymous fallback.");
-                        userId = crypto.randomUUID(); // Fallback for non-authenticated local usage
-                        renderSidebar();
-                        showSection('profile');
-                        document.getElementById('loading-spinner').classList.add('opacity-0');
-                        setTimeout(() => {
-                            document.getElementById('loading-spinner').classList.add('hidden');
-                            document.getElementById('settings-container').classList.remove('hidden');
-                        }, 500);
+                        // For this application, we expect a user object from the token or anonymous sign-in
+                        console.log("Authentication state changed: User is null.");
+                        userId = crypto.randomUUID(); // Fallback to a random ID
                     }
+                    isAuthReady = true;
+                    // Proceed to app logic once auth is ready
+                    setupApp(); 
                 });
 
             } catch (error) {
-                console.error("Firebase Initialization or Auth Error:", error);
-                // Display error message to user instead of freezing the app
-                const container = document.getElementById('settings-container');
-                container.innerHTML = `<p class="text-red-500 p-8">Error loading application: ${error.message}. Check console for details.</p>`;
-                container.classList.remove('hidden');
-                document.getElementById('loading-spinner').classList.add('hidden');
+                console.error("Firebase Initialization or Authentication Error:", error);
             }
         }
         
-        // --- DATA LOGIC ---
-
-        function getUserProfilePath(uid) {
-            // Path: /artifacts/{appId}/users/{userId}/profile_data/main_profile
-            return doc(db, 'artifacts', appId, 'users', uid, 'profile_data', 'main_profile');
-        }
-
-        function setupProfileListener(uid) {
-            // Clear existing listener if any
-            if (unsubscribeProfile) {
-                unsubscribeProfile();
-            }
-
-            const profileRef = getUserProfilePath(uid);
-            
-            // Set up real-time listener
-            unsubscribeProfile = onSnapshot(profileRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    console.log("Current profile data:", data);
-                    
-                    // Update the UI if profile section is visible
-                    const displayNameInput = document.getElementById('displayName');
-                    const userIdDisplay = document.getElementById('user-id-display');
-                    
-                    if (displayNameInput) displayNameInput.value = data.displayName || 'Anonymous User';
-                    if (userIdDisplay) userIdDisplay.textContent = uid;
-                } else {
-                    console.log("No profile data found. Creating default.");
-                    // Create a default document if it doesn't exist
-                    setDoc(profileRef, {
-                        displayName: 'Anonymous User',
-                        createdAt: new Date().toISOString(),
-                        theme: 'dark'
-                    }, { merge: true }).catch(err => console.error("Error creating default profile:", err));
-                }
-            }, (error) => {
-                console.error("Profile Snapshot Error:", error);
-            });
-        }
-        
-        async function saveProfile() {
-            if (!userId) {
-                console.error("Cannot save profile: User ID is missing.");
+        /**
+         * Fetches initial data (like labels) from Firestore.
+         */
+        async function fetchInitialData() {
+            if (!db || !userId) {
+                console.error("Database or User ID not initialized.");
                 return;
             }
 
-            const displayNameInput = document.getElementById('displayName');
-            const newDisplayName = displayNameInput ? displayNameInput.value.trim() : 'Anonymous User';
+            const dataPath = `/artifacts/${appId}/users/${userId}/app_settings/config`;
+            const docRef = doc(db, dataPath);
+
+            try {
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    // Deserialize labels from JSON string if necessary, or assume array/default
+                    currentLabels = data.labels || [];
+                    console.log("Initial labels loaded:", currentLabels);
+                } else {
+                    console.log("Settings document not found. Using default labels.");
+                    // Initialize with some default placeholder labels if none exist
+                    currentLabels = ['Urgent', 'Low Priority', 'In Review'];
+                }
+            } catch (e) {
+                console.error("Error loading initial data:", e);
+                // Fallback to defaults on error
+                currentLabels = ['Urgent', 'Low Priority', 'In Review'];
+            }
+        }
+        
+        /**
+         * Saves the currentLabels array to Firestore.
+         */
+        async function saveLabelsToFirestore() {
+            if (!db || !userId) {
+                console.error("Cannot save: Database or User ID not initialized.");
+                return;
+            }
+
+            const saveButton = document.getElementById('saveLabelsButton');
+            if(saveButton) {
+                saveButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Saving...';
+                saveButton.disabled = true;
+            }
             
-            if (newDisplayName.length < 3) {
-                 console.error("Display name must be at least 3 characters long.");
-                 // In a real app, you'd show a visible error message here.
+            const dataPath = `/artifacts/${appId}/users/${userId}/app_settings/config`;
+            const docRef = doc(db, dataPath);
+
+            try {
+                // Prepare data for storage
+                const dataToSave = { 
+                    labels: currentLabels 
+                };
+                
+                // Use setDoc with merge: true to avoid overwriting other settings
+                await setDoc(docRef, dataToSave, { merge: true });
+
+                console.log("Labels saved successfully.");
+                pendingLabelChanges = false;
+                
+                const messageEl = document.getElementById('labelsSaveMessage');
+                if (messageEl) {
+                    messageEl.textContent = 'Labels saved successfully!';
+                    messageEl.classList.remove('text-orange-400', 'hidden');
+                    messageEl.classList.add('text-green-400');
+                    setTimeout(() => {
+                        messageEl.classList.add('hidden');
+                        messageEl.classList.remove('text-green-400');
+                    }, 3000);
+                }
+
+            } catch (e) {
+                console.error("Error saving labels:", e);
+                const messageEl = document.getElementById('labelsSaveMessage');
+                if (messageEl) {
+                    messageEl.textContent = 'Error saving labels: ' + e.message;
+                    messageEl.classList.remove('text-orange-400', 'hidden');
+                    messageEl.classList.add('text-red-400');
+                }
+            } finally {
+                if(saveButton) {
+                    saveButton.innerHTML = '<i class="fas fa-save mr-2"></i> Save All Labels Changes';
+                    saveButton.disabled = false;
+                }
+            }
+        }
+
+
+        // --- UI RENDERING FUNCTIONS ---
+
+        function setupSidebar() {
+            const sidebarContainer = document.getElementById('sidebar-container');
+            sidebarContainer.innerHTML = '';
+            
+            sections.forEach((section) => {
+                const item = document.createElement('div');
+                item.className = 'sidebar-item flex items-center p-3 rounded-lg text-gray-400 hover:text-white';
+                item.id = `sidebar-${section.id}`;
+                item.innerHTML = `<i class="fas ${section.icon} mr-3 ${section.color}"></i> ${section.title}`;
+                item.addEventListener('click', () => displaySection(section.id));
+                sidebarContainer.appendChild(item);
+            });
+
+            // Display the first section by default
+            if (sections.length > 0) {
+                displaySection(sections[0].id);
+            }
+        }
+        
+        /**
+         * Renders the list of currentLabels in the Labels section UI.
+         */
+        function renderLabels() {
+            const container = document.getElementById('existingLabelsContainer');
+            if (!container) return;
+
+            container.innerHTML = '';
+            if (currentLabels.length === 0) {
+                 container.innerHTML = '<p class="text-gray-500 italic">No custom labels defined yet. Add one above!</p>';
                  return;
             }
 
-            try {
-                const profileRef = getUserProfilePath(userId);
+            currentLabels.forEach((label, index) => {
+                // Simple hash function for consistent (but random-looking) colors
+                const hashColor = (str) => {
+                    let hash = 0;
+                    for (let i = 0; i < str.length; i++) {
+                        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+                    }
+                    // Select from a predefined set of Tailwind color classes for aesthetics
+                    const colors = [
+                        { text: 'text-purple-300', bg: 'bg-purple-900/30' },
+                        { text: 'text-green-300', bg: 'bg-green-900/30' },
+                        { text: 'text-blue-300', bg: 'bg-blue-900/30' },
+                        { text: 'text-yellow-300', bg: 'bg-yellow-900/30' },
+                        { text: 'text-pink-300', bg: 'bg-pink-900/30' }
+                    ];
+                    return colors[Math.abs(hash) % colors.length];
+                };
+
+                const color = hashColor(label);
                 
-                // 1. Update Firestore Profile Document
-                await setDoc(profileRef, {
-                    displayName: newDisplayName,
-                    lastUpdated: new Date().toISOString()
-                }, { merge: true });
-                
-                // 2. Update Firebase Auth Profile (optional, but good practice)
-                await updateProfile(auth.currentUser, { displayName: newDisplayName });
+                const labelDiv = document.createElement('div');
+                labelDiv.className = 'flex justify-between items-center p-3 bg-gray-800 rounded-lg border border-gray-700 hover:border-indigo-600 transition duration-150';
+                labelDiv.innerHTML = `
+                    <span class="text-sm font-medium ${color.text} ${color.bg} px-3 py-1 rounded-full shadow-inner">${label}</span>
+                    <button data-label="${label}" class="remove-label-btn text-red-400 hover:text-red-500 transition-colors duration-150 p-1 rounded-full hover:bg-red-900/20" title="Remove label">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                container.appendChild(labelDiv);
+            });
 
-                console.log("Profile saved successfully.");
-                // Update UI to show success
-                const saveButton = document.querySelector('#panel-content .action-btn');
-                saveButton.textContent = 'Saved!';
-                saveButton.classList.replace('bg-indigo-600', 'bg-green-600');
-                setTimeout(() => {
-                    saveButton.textContent = 'Save Profile';
-                    saveButton.classList.replace('bg-green-600', 'bg-indigo-600');
-                }, 1500);
-
-            } catch (error) {
-                console.error("Error saving profile:", error);
-                // Show error message
-                const saveButton = document.querySelector('#panel-content .action-btn');
-                saveButton.textContent = 'Save Error!';
-                saveButton.classList.replace('bg-indigo-600', 'bg-red-600');
-                setTimeout(() => {
-                    saveButton.textContent = 'Save Profile';
-                    saveButton.classList.replace('bg-red-600', 'bg-indigo-600');
-                }, 1500);
-            }
-        }
-        
-        // --- UI RENDERING & INTERACTION ---
-
-        function renderSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            if (!sidebar) return;
-
-            sidebar.innerHTML = settingsData.map(section => `
-                <a id="sidebar-${section.id}" href="#" onclick="showSection('${section.id}'); return false;" 
-                   class="sidebar-item flex items-center p-3 rounded-xl transition-all duration-200 
-                          hover:bg-gray-700/50 text-gray-300 border-l-4 border-transparent">
-                    <i class="fas ${section.icon} w-5 ${section.color} mr-3"></i>
-                    <span class="font-medium">${section.title}</span>
-                </a>
-            `).join('');
+            // Attach listeners to remove buttons
+            document.querySelectorAll('.remove-label-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const labelToRemove = e.currentTarget.getAttribute('data-label');
+                    currentLabels = currentLabels.filter(label => label !== labelToRemove);
+                    pendingLabelChanges = true;
+                    renderLabels(); // Re-render the list
+                });
+            });
         }
 
-        function showSection(sectionId) {
-            const section = settingsData.find(s => s.id === sectionId);
+        /**
+         * Handles content rendering and event setup for the selected section.
+         */
+        function displaySection(sectionId) {
+            const section = sections.find(s => s.id === sectionId);
+            if (!section) return;
+
             const panelTitle = document.getElementById('panel-title');
             const panelContent = document.getElementById('panel-content');
-
-            if (!section || !panelTitle || !panelContent) return;
-
-            // 1. Update Panel Title
-            panelTitle.innerHTML = `<i class="fas ${section.icon} mr-3 ${section.color}"></i> ${section.title}`;
-
-            // 2. Update Panel Content (Dynamically generating forms/toggles)
-            let contentHtml = '';
             
-            if (section.id === 'profile') {
-                contentHtml = `
-                    <p class="text-gray-400 mb-6">${section.content}</p>
-                    <div class="space-y-6">
-                        <!-- User ID Display -->
-                        <div class="p-4 bg-gray-800 rounded-xl border border-gray-700/50">
-                            <label class="block text-sm font-medium text-gray-400 mb-1">Your Unique User ID</label>
-                            <div id="user-id-display" class="font-mono text-xs sm:text-sm text-indigo-400 break-all">${userId || 'Loading...'}</div>
+            panelTitle.innerHTML = `<i class="fas ${section.icon} mr-2 ${section.color}"></i> ${section.title}`;
+
+            let htmlContent = '';
+
+            if (sectionId === 'labels') {
+                // --- CUSTOM CONTENT FOR LABELS SECTION ---
+                htmlContent = `
+                    <div class="flex flex-col space-y-6">
+                        <p class="text-lg text-gray-400">${section.content}</p>
+
+                        <!-- Label Management Form -->
+                        <div class="p-6 rounded-xl bg-gray-900 border border-indigo-500/20 shadow-xl">
+                            <h3 class="text-xl font-semibold mb-4 text-white flex items-center">
+                                <i class="fas fa-plus-circle mr-3 text-indigo-400"></i> Add New Label
+                            </h3>
+                            <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
+                                <input type="text" id="newLabelInput" placeholder="Enter new label name (max 30 characters)"
+                                       class="flex-grow p-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition duration-150"
+                                       maxlength="30">
+                                <button id="addLabelButton"
+                                        class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 px-5 rounded-lg shadow-md transition duration-200 flex items-center justify-center">
+                                    <i class="fas fa-plus mr-2"></i> Add
+                                </button>
+                            </div>
                         </div>
 
-                        <!-- Username/Display Name Field -->
-                        <div>
-                            <label for="displayName" class="block text-sm font-medium text-gray-300 mb-1">Display Name</label>
-                            <input type="text" id="displayName" value="Loading..." placeholder="Enter your display name" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg p-3 text-white focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
-                        </div>
-                    </div>
-                    <button onclick="saveProfile()" class="action-btn bg-indigo-600 hover:bg-indigo-700">
-                        <i class="fas fa-save mr-2"></i> Save Profile
-                    </button>
-                `;
-            } else if (section.id === 'security') {
-                contentHtml = `
-                    <p class="text-gray-400 mb-6">${section.content}</p>
-                    <div class="space-y-6">
-                        <!-- Password Change Button -->
-                        <div class="p-4 bg-gray-800 rounded-xl border border-gray-700/50 flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                            <div class="mb-4 sm:mb-0">
-                                <h3 class="text-white text-lg font-semibold">Change Password</h3>
-                                <p class="text-sm text-gray-500">Ensure your account is protected with a strong, unique password.</p>
+                        <!-- Existing Labels List -->
+                        <div class="p-6 rounded-xl bg-gray-900 border border-gray-700">
+                            <h3 class="text-xl font-semibold mb-4 text-white flex items-center">
+                                <i class="fas fa-list-ul mr-3 text-gray-400"></i> Existing Labels
+                            </h3>
+                            <div id="existingLabelsContainer" class="space-y-3">
+                                <!-- Labels will be rendered here by JavaScript -->
                             </div>
-                            <button class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center">
-                                <i class="fas fa-key mr-2"></i> Reset Password
-                            </button>
+                            <p id="labelsSaveMessage" class="text-sm mt-4 text-orange-400 hidden">You have unsaved changes!</p>
                         </div>
                         
-                        <!-- 2FA Toggle -->
-                        <div class="p-4 bg-gray-800 rounded-xl border border-gray-700/50 flex justify-between items-center">
-                            <div>
-                                <h3 class="text-white text-lg font-semibold">Two-Factor Authentication (2FA)</h3>
-                                <p class="text-sm text-gray-500">Currently: <span id="2fa-status" class="text-red-400 font-semibold">Disabled</span></p>
-                            </div>
-                            <label class="switch">
-                                <input type="checkbox" id="2fa-toggle" onchange="console.log('2FA Toggled')">
-                                <span class="slider round"></span>
-                            </label>
-                        </div>
+                        <button id="saveLabelsButton" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-lg shadow-lg transition-all duration-200 mt-4 self-start flex items-center">
+                            <i class="fas fa-save mr-2"></i> Save All Labels Changes
+                        </button>
                     </div>
-                    <button class="action-btn bg-red-600 hover:bg-red-700">
-                        <i class="fas fa-history mr-2"></i> View Activity Log
-                    </button>
                 `;
-            } else if (section.id === 'appearance') {
-                contentHtml = `
-                    <p class="text-gray-400 mb-6">${section.content}</p>
-                    <div class="space-y-6">
-                        <!-- Theme Selector -->
-                        <div>
-                            <label for="themeSelect" class="block text-sm font-medium text-gray-300 mb-1">Color Theme</label>
-                            <select id="themeSelect" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg p-3 text-white focus:ring-indigo-500 focus:border-indigo-500 transition-colors" onchange="console.log('Theme Changed')">
-                                <option value="dark">Dark Mode (Current)</option>
-                                <option value="light" disabled>Light Mode (Coming Soon)</option>
-                                <option value="system">System Default</option>
-                            </select>
+            } else {
+                // --- GENERIC CONTENT FOR ALL OTHER SECTIONS ---
+                htmlContent = `
+                    <div class="flex flex-col space-y-4">
+                        <p class="text-lg text-gray-400">${section.content}</p>
+                        <div class="bg-gray-800 p-4 rounded-xl border border-gray-700">
+                            <h3 class="text-xl font-semibold mb-2 text-white">Section Details</h3>
+                            <p class="text-sm text-gray-500">
+                                This is where the detailed controls, forms, and toggles for the 
+                                ${section.title} section would be implemented. 
+                                <i class="fas fa-magic text-purple-400 ml-1"></i>
+                            </p>
                         </div>
-
-                        <!-- Font Size Slider -->
-                        <div>
-                            <label for="fontSize" class="block text-sm font-medium text-gray-300 mb-3">Font Size: <span id="fontSizeValue" class="font-semibold text-indigo-400">100%</span></label>
-                            <input type="range" id="fontSize" min="80" max="120" value="100" step="5" 
-                                   class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg"
-                                   oninput="document.getElementById('fontSizeValue').textContent = this.value + '%'">
-                        </div>
+                        <button class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-lg shadow-lg transition-all duration-200 mt-4 self-start flex items-center">
+                            <i class="fas fa-save mr-2"></i> Save Changes
+                        </button>
                     </div>
-                    <button class="action-btn bg-yellow-600 hover:bg-yellow-700">
-                        <i class="fas fa-redo mr-2"></i> Apply Appearance
-                    </button>
-                `;
-            } else { // Data Management
-                contentHtml = `
-                    <p class="text-gray-400 mb-6">${section.content}</p>
-                    <div class="space-y-6">
-                        <!-- Data Export -->
-                        <div class="p-4 bg-gray-800 rounded-xl border border-gray-700/50 flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                            <div class="mb-4 sm:mb-0">
-                                <h3 class="text-white text-lg font-semibold">Export All Data</h3>
-                                <p class="text-sm text-gray-500">Download a full archive of all your user data in JSON format.</p>
-                            </div>
-                            <button class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center">
-                                <i class="fas fa-download mr-2"></i> Export Data
-                            </button>
-                        </div>
-
-                        <!-- Account Deletion -->
-                        <div class="p-4 bg-gray-800 rounded-xl border border-red-700/50">
-                            <h3 class="text-white text-lg font-semibold mb-2 text-red-400">Delete Account</h3>
-                            <p class="text-sm text-gray-500 mb-4">This action is irreversible and will permanently delete all your data across all services.</p>
-                            <button class="bg-gray-700 hover:bg-gray-600 text-red-400 font-medium py-2 px-4 rounded-lg transition-colors border border-red-400 flex items-center">
-                                <i class="fas fa-trash-alt mr-2"></i> Proceed to Deletion
-                            </button>
-                        </div>
-                    </div>
-                    <button class="action-btn bg-green-600 hover:bg-green-700">
-                        <i class="fas fa-file-contract mr-2"></i> Review Privacy Policy
-                    </button>
                 `;
             }
 
-            // Inject the specific content
-            panelContent.innerHTML = `<div class="flex flex-col space-y-6">${contentHtml}</div>`;
+            panelContent.innerHTML = htmlContent;
 
-            // 3. Update sidebar active state
+            // 1. Update sidebar active state
             document.querySelectorAll('.sidebar-item').forEach(item => {
-                item.classList.remove('active', 'bg-indigo-600/20', 'text-white', 'border-indigo-600');
-                item.classList.add('text-gray-300', 'border-transparent');
+                item.classList.remove('active');
             });
-            const activeItem = document.getElementById(`sidebar-${sectionId}`);
-            if (activeItem) {
-                activeItem.classList.add('active', 'bg-indigo-600/20', 'text-white', 'border-indigo-600');
-                activeItem.classList.remove('text-gray-300', 'border-transparent');
+            document.getElementById(`sidebar-${sectionId}`).classList.add('active');
+
+
+            // 2. Setup dynamic functionality for the LABELS section
+            if (sectionId === 'labels') {
+                renderLabels(); // Initial render of the existing labels
+
+                const input = document.getElementById('newLabelInput');
+                const addButton = document.getElementById('addLabelButton');
+                const saveButton = document.getElementById('saveLabelsButton');
+                const messageEl = document.getElementById('labelsSaveMessage');
+                
+                // Function to add a label
+                const addLabel = () => {
+                    const newLabel = input.value.trim();
+                    if (newLabel && newLabel.length <= 30 && !currentLabels.includes(newLabel)) {
+                        currentLabels.push(newLabel);
+                        input.value = '';
+                        pendingLabelChanges = true;
+                        messageEl.classList.remove('hidden', 'text-green-400', 'text-red-400');
+                        messageEl.classList.add('text-orange-400');
+                        messageEl.textContent = 'You have unsaved changes!';
+                        renderLabels();
+                    } else if (currentLabels.includes(newLabel)) {
+                        console.warn("Label already exists.");
+                    } else if (!newLabel) {
+                        console.warn("Label cannot be empty.");
+                    }
+                };
+
+                // Event listener for the Add button
+                addButton.addEventListener('click', addLabel);
+                
+                // Event listener for 'Enter' key press in the input
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault(); // Prevent form submission if it were a form
+                        addLabel();
+                    }
+                });
+
+                // Event listener for the Save button
+                saveButton.addEventListener('click', saveLabelsToFirestore);
             }
         }
         
-        // Expose showSection and saveProfile globally so they can be called from the HTML onclick attributes
-        window.showSection = showSection;
-        window.saveProfile = saveProfile;
+        // --- START APPLICATION FLOW ---
 
-        // --- START APPLICATION ---
-        document.addEventListener('DOMContentLoaded', startAuthFlow);
+        async function setupApp() {
+            // 1. Fetch data (including labels)
+            await fetchInitialData(); 
+            // 2. Setup UI
+            setupSidebar();
+            // 3. Hide loading overlay and show content
+            document.getElementById('loading-overlay').classList.add('hidden');
+            document.getElementById('settings-content').classList.remove('hidden');
+        }
+
+        // Initialize Firebase and start the process
+        initFirebaseAndAuth();
+
     </script>
 </body>
 </html>
