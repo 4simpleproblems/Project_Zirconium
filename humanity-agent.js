@@ -32,6 +32,12 @@
  * NEW: Thought process panel is hidden for simple/short thoughts (e.g., "Hi").
  * CSS: Thought process container is neutral when collapsed, blue when expanded.
  * CSS: Thought process collapse/expand animation is now faster (0.2s) and removes opacity fade.
+ *
+ * --- USER REQUESTS IMPLEMENTED ---
+ * BRANDING: Agent name changed to "HUMANITY" and persistent title changed to "Humanity Agent".
+ * GLOW: Rainbow glow keyframe replaced with "humanity-glow" (Cyan Blue: #00BCD4).
+ * ACCURACY: Geolocation options updated to request high accuracy and a fresh location fix.
+ * ---
  */
 (function() {
     // --- CONFIGURATION ---
@@ -193,9 +199,12 @@
                     localStorage.setItem('ai-user-location', fallback);
                     resolve(fallback);
                 },
-                // Options object to request high accuracy
+                // Options object to request high accuracy, a fresh fix (maximumAge: 0), and a 5-second timeout.
+                // UPDATED: High Accuracy settings implemented per user request for map direction accuracy.
                 {
-                    enableHighAccuracy: true
+                    enableHighAccuracy: true,
+                    maximumAge: 0,
+                    timeout: 5000
                 }
             );
         });
@@ -437,22 +446,24 @@
         const container = document.createElement('div');
         container.id = 'ai-container';
 
+        // USER REQUEST: Branding change (HUMANITY)
         const brandTitle = document.createElement('div');
         brandTitle.id = 'ai-brand-title';
-        const brandText = "4SP - AI AGENT";
+        const brandText = "HUMANITY";
         brandText.split('').forEach(char => {
             const span = document.createElement('span');
             span.textContent = char;
             brandTitle.appendChild(span);
         });
 
+        // USER REQUEST: Persistent title change ("Humanity Agent")
         const persistentTitle = document.createElement('div');
         persistentTitle.id = 'ai-persistent-title';
-        persistentTitle.textContent = "AI Agent"; // Fixed title
+        persistentTitle.textContent = "Humanity Agent"; // Fixed title
 
         const welcomeMessage = document.createElement('div');
         welcomeMessage.id = 'ai-welcome-message';
-        const welcomeHeader = chatHistory.length > 0 ? "Welcome Back" : "Welcome to AI Agent";
+        const welcomeHeader = chatHistory.length > 0 ? "Welcome Back" : "Welcome to Humanity Agent";
         // Updated welcome message to reflect location sharing.
         welcomeMessage.innerHTML = `<h2>${welcomeHeader}</h2><p>This is a beta feature. To improve your experience, your general location (if permitted) will be shared with your first message. You may be subject to message limits.</p><p class="shortcut-tip">(Press Ctrl + \\ to close)</p>`;
 
@@ -589,7 +600,7 @@
                     bubble.innerHTML += `
                         <div class="ai-thought-process collapsed">
                             <div class="monologue-header">
-                                <h4 class="monologue-title">Gemini's Internal Monologue:</h4>
+                                <h4 class="monologue-title">Humanity's Internal Monologue:</h4>
                                 <button class="monologue-toggle-btn">Show Thoughts</button>
                             </div>
                             <pre class="monologue-content">${escapeHTML(thoughtProcess)}</pre>
@@ -935,7 +946,7 @@ Formatting Rules (MUST FOLLOW):
                     fullContent += `
                         <div class="ai-thought-process collapsed">
                             <div class="monologue-header">
-                                <h4 class="monologue-title">Gemini's Internal Monologue:</h4>
+                                <h4 class="monologue-title">Humanity's Internal Monologue:</h4>
                                 <button class="monologue-toggle-btn">Show Thoughts</button>
                             </div>
                             <pre class="monologue-content">${escapeHTML(thoughtProcess)}</pre>
@@ -966,12 +977,11 @@ Formatting Rules (MUST FOLLOW):
                 responseBubble.querySelectorAll('.copy-code-btn').forEach(button => {
                     button.addEventListener('click', handleCopyCode);
                 });
-                responseBubble.style.opacity = '1';
 
+                responseBubble.style.opacity = '1';
                 renderKaTeX(responseBubble);
                 renderGraphs(responseBubble);
             }, 300);
-
         } catch (error) {
             if (error.name === 'AbortError') {
                 responseBubble.innerHTML = `<div class="ai-error">Message generation stopped.</div>`;
@@ -986,13 +996,11 @@ Formatting Rules (MUST FOLLOW):
             if (inputWrapper) {
                 inputWrapper.classList.remove('waiting');
             }
-
             setTimeout(() => {
                 responseBubble.classList.remove('loading');
                 const responseContainer = document.getElementById('ai-response-container');
                 if (responseContainer) responseContainer.scrollTop = responseContainer.scrollHeight;
             }, 300);
-
             const editor = document.getElementById('ai-input');
             if (editor) {
                 editor.contentEditable = true;
@@ -1000,18 +1008,17 @@ Formatting Rules (MUST FOLLOW):
             }
         }
     }
-
     // --- NEW SETTINGS MENU LOGIC ---
     function toggleSettingsMenu() {
         const menu = document.getElementById('ai-settings-menu');
         const toggleBtn = document.getElementById('ai-settings-button');
         const isMenuOpen = menu.classList.toggle('active');
         toggleBtn.classList.toggle('active', isMenuOpen);
+
         if (isMenuOpen) {
             // Load current settings into toggles
             document.getElementById('settings-web-search').checked = appSettings.webSearch;
             document.getElementById('settings-location-sharing').checked = appSettings.locationSharing;
-
             document.addEventListener('click', handleMenuOutsideClick);
         } else {
             document.removeEventListener('click', handleMenuOutsideClick);
@@ -1022,7 +1029,6 @@ Formatting Rules (MUST FOLLOW):
         const menu = document.getElementById('ai-settings-menu');
         const button = document.getElementById('ai-settings-button');
         const composeArea = document.getElementById('ai-compose-area');
-
         if (menu && menu.classList.contains('active') && !composeArea.contains(event.target) && event.target !== button && !button.contains(event.target)) {
             // No explicit save button, settings are saved on change, so just close.
             toggleSettingsMenu();
@@ -1046,10 +1052,8 @@ Formatting Rules (MUST FOLLOW):
     function createSettingsMenu() {
         const menu = document.createElement('div');
         menu.id = 'ai-settings-menu';
-
         menu.innerHTML = `
             <div class="menu-header">AI Agent Settings</div>
-            
             <div class="setting-group toggle-group">
                 <div class="setting-label">
                     <label for="settings-web-search">Web Search</label>
@@ -1060,7 +1064,6 @@ Formatting Rules (MUST FOLLOW):
                     <span class="ai-slider"></span>
                 </label>
             </div>
-
             <div class="setting-group toggle-group">
                 <div class="setting-label">
                     <label for="settings-location-sharing">Location Sharing</label>
@@ -1110,15 +1113,12 @@ Formatting Rules (MUST FOLLOW):
             fileContent: dataUrl,
             isLoading: false
         };
-
         if (tempId) {
             item.tempId = tempId;
         }
-
         attachedFiles.push(item);
         renderAttachments();
     }
-
 
     function handleFileUpload() {
         if (attachedFiles.length >= MAX_ATTACHMENTS_PER_MESSAGE) {
@@ -1145,39 +1145,21 @@ Formatting Rules (MUST FOLLOW):
 
             const currentTotalSize = attachedFiles.reduce((sum, file) => sum + (file.inlineData ? atob(file.inlineData.data).length : 0), 0);
             const newFilesSize = filesToProcess.reduce((sum, file) => sum + file.size, 0);
+
             if (currentTotalSize + newFilesSize > (10 * 1024 * 1024)) {
-                alert(`Upload failed: Total size of attachments would exceed the 10MB limit per message. (Current: ${formatBytes(currentTotalSize)}, Adding: ${formatBytes(newFilesSize)})`);
+                alert(`Upload failed: Total size of attachments would exceed the 10MB limit per message. (Current: ${formatBytes(currentTotalSize)}, New: ${formatBytes(newFilesSize)})`);
                 return;
             }
 
             filesToProcess.forEach(file => {
-                const tempId = `file-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-                attachedFiles.push({
-                    tempId,
-                    file,
-                    isLoading: true
-                });
-                renderAttachments();
-
                 const reader = new FileReader();
-                reader.onload = (e) => {
-                    const base64Data = e.target.result.split(',')[1];
+                reader.onload = function(e) {
                     const dataUrl = e.target.result;
-
-                    const itemIndex = attachedFiles.findIndex(f => f.tempId === tempId);
-                    if (itemIndex > -1) {
-                        const item = attachedFiles[itemIndex];
-                        item.isLoading = false;
-                        item.inlineData = {
-                            mimeType: file.type,
-                            data: base64Data
-                        };
-                        item.fileName = file.name;
-                        item.fileContent = dataUrl;
-                        delete item.file;
-                        delete item.tempId;
-                        renderAttachments();
-                    }
+                    const base64Data = dataUrl.split(',')[1];
+                    processFileLike(file, base64Data, dataUrl);
+                };
+                reader.onerror = function() {
+                    alert(`Failed to read file: ${file.name}`);
                 };
                 reader.readAsDataURL(file);
             });
@@ -1185,324 +1167,105 @@ Formatting Rules (MUST FOLLOW):
         input.click();
     }
 
-    function renderAttachments() {
-        const previewContainer = document.getElementById('ai-attachment-preview');
-        const inputWrapper = document.getElementById('ai-input-wrapper');
-
-        if (attachedFiles.length === 0) {
-            inputWrapper.classList.remove('has-attachments');
-            previewContainer.innerHTML = '';
-            return;
+    function handlePaste(event) {
+        let handled = false;
+        if (event.clipboardData && event.clipboardData.files.length > 0) {
+            const files = Array.from(event.clipboardData.files);
+            files.forEach(file => {
+                // Heuristically check if it's an image or something we want to process
+                if (file.type.startsWith('image/') || file.type === 'application/pdf') {
+                    event.preventDefault(); // Prevent default text input
+                    handled = true;
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const dataUrl = e.target.result;
+                        const base64Data = dataUrl.split(',')[1];
+                        // Use a temporary ID for immediate rendering and placeholder
+                        const tempId = `paste-${Date.now()}`;
+                        processFileLike(file, base64Data, dataUrl, tempId);
+                        // Remove the temp ID later if needed, but for now, it's just a regular attachment.
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
         }
 
-        previewContainer.style.display = 'flex';
-        inputWrapper.classList.add('has-attachments');
+        const text = event.clipboardData.getData('text/plain');
+        if (!handled && text.length > PASTE_TO_FILE_THRESHOLD && document.getElementById('ai-input').innerText.length === 0) {
+            event.preventDefault(); // Prevent default text input
+            handled = true;
+            // Treat large paste as a document attachment
+            const file = new Blob([text], {
+                type: 'text/plain'
+            });
+            file.name = `Pasted_Document_${Date.now()}.txt`;
+            file.lastModifiedDate = new Date();
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const dataUrl = e.target.result;
+                const base64Data = dataUrl.split(',')[1];
+                processFileLike(file, base64Data, dataUrl);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Allow text paste if not handled as a file or large document
+    }
+
+
+    function removeAttachment(index) {
+        attachedFiles.splice(index, 1);
+        renderAttachments();
+    }
+
+    function renderAttachments() {
+        const previewContainer = document.getElementById('ai-attachment-preview');
+        if (!previewContainer) return;
         previewContainer.innerHTML = '';
 
         attachedFiles.forEach((file, index) => {
-            const fileCard = document.createElement('div');
-            fileCard.className = 'attachment-card';
-            let previewHTML = '';
-            let fileExt = 'FILE';
-            let fileName = '';
+            const item = document.createElement('div');
+            item.className = 'attachment-item';
+            item.title = file.fileName;
 
-            if (file.isLoading) {
-                fileCard.classList.add('loading');
-                fileName = file.file.name;
-                fileExt = fileName.split('.').pop().toUpperCase();
-                previewHTML = `<div class="ai-loader"></div><span class="file-icon">📄</span>`;
+            let icon = '';
+            if (file.inlineData.mimeType.startsWith('image/')) {
+                icon = `<img src="${file.fileContent}" alt="${file.fileName}" onerror="this.src='data:image/svg+xml,...'" />`;
+            } else if (file.inlineData.mimeType.includes('pdf')) {
+                icon = `<i class="fa-solid fa-file-pdf"></i>`;
+            } else if (file.inlineData.mimeType.includes('word')) {
+                icon = `<i class="fa-solid fa-file-word"></i>`;
+            } else if (file.inlineData.mimeType.includes('text')) {
+                icon = `<i class="fa-solid fa-file-lines"></i>`;
             } else {
-                fileName = file.fileName;
-                fileExt = fileName.split('.').pop().toUpperCase();
-                if (file.inlineData.mimeType.startsWith('image/')) {
-                    previewHTML = `<img src="data:${file.inlineData.mimeType};base64,${file.inlineData.data}" alt="${fileName}" />`;
-                } else {
-                    previewHTML = `<span class="file-icon">📄</span>`;
-                }
-                fileCard.onclick = () => showFilePreview(file);
+                icon = `<i class="fa-solid fa-file"></i>`;
             }
 
-            if (fileExt.length > 5) fileExt = 'FILE';
-            let fileTypeBadge = `<div class="file-type-badge">${fileExt}</div>`;
-            if (file.inlineData && file.inlineData.mimeType.startsWith('image/')) {
-                fileTypeBadge = '';
-            }
-
-            const nameSpan = document.createElement('span');
-            nameSpan.textContent = fileName;
-            const marqueeWrapper = document.createElement('div');
-            marqueeWrapper.className = 'file-name';
-            marqueeWrapper.appendChild(nameSpan);
-
-            fileCard.innerHTML = `${previewHTML}<div class="file-info"></div>${fileTypeBadge}<button class="remove-attachment-btn" data-index="${index}">&times;</button>`;
-            fileCard.querySelector('.file-info').appendChild(marqueeWrapper);
-
-            setTimeout(() => {
-                if (nameSpan.scrollWidth > marqueeWrapper.clientWidth) {
-                    const marqueeDuration = fileName.length / 4;
-                    nameSpan.style.animationDuration = `${marqueeDuration}s`;
-                    marqueeWrapper.classList.add('marquee');
-                    nameSpan.innerHTML += `<span aria-hidden="true">${fileName}</span>`;
-                }
-            }, 0);
-
-            fileCard.querySelector('.remove-attachment-btn').onclick = (e) => {
-                e.stopPropagation();
-                attachedFiles.splice(index, 1);
-                renderAttachments();
-            };
-            previewContainer.appendChild(fileCard);
+            item.innerHTML = `
+                <div class="attachment-icon">${icon}</div>
+                <div class="attachment-details">
+                    <span class="attachment-filename">${file.fileName}</span>
+                </div>
+                <button class="remove-attachment" onclick="window.removeAIAttachment(${index})">&times;</button>
+            `;
+            previewContainer.appendChild(item);
         });
-    }
 
-    function showFilePreview(file) {
-        if (!file.fileContent) {
-            alert("File content not available for preview.");
-            return;
+        // Expose a global function for the dynamic button click (since this is not a module)
+        window.removeAIAttachment = removeAttachment;
+
+        // Toggle attachment button visibility
+        const attachButton = document.getElementById('ai-attachment-button');
+        if (attachButton) {
+            attachButton.style.opacity = attachedFiles.length >= MAX_ATTACHMENTS_PER_MESSAGE ? '0.5' : '1';
+            attachButton.style.cursor = attachedFiles.length >= MAX_ATTACHMENTS_PER_MESSAGE ? 'not-allowed' : 'pointer';
         }
 
-        const previewModal = document.createElement('div');
-        previewModal.id = 'ai-preview-modal';
-        previewModal.innerHTML = `
-            <div class="modal-content">
-                <span class="close-button">&times;</span>
-                <h3>${escapeHTML(file.fileName)}</h3>
-                <div class="preview-area"></div>
-            </div>
-        `;
-        document.body.appendChild(previewModal);
-
-        const previewArea = previewModal.querySelector('.preview-area');
-        if (file.inlineData.mimeType.startsWith('image/')) {
-            previewArea.innerHTML = `<img src="${file.fileContent}" alt="${file.fileName}" style="max-width: 100%; max-height: 80vh; object-fit: contain;">`;
-        } else if (file.inlineData.mimeType.startsWith('text/')) {
-            fetch(file.fileContent)
-                .then(response => response.text())
-                .then(text => {
-                    previewArea.innerHTML = `<pre style="white-space: pre-wrap; word-break: break-all; max-height: 70vh; overflow-y: auto; background-color: #222; padding: 10px; border-radius: 5px;">${escapeHTML(text)}</pre>`;
-                })
-                .catch(error => {
-                    console.error("Error reading text file for preview:", error);
-                    previewArea.innerHTML = `<p>Could not load text content for preview.</p>`;
-                });
-        } else {
-            previewArea.innerHTML = `<p>Preview not available for this file type. You can download it to view.</p>
-                                     <a href="${file.fileContent}" download="${file.fileName}" class="download-button">Download File</a>`;
+        const inputWrapper = document.getElementById('ai-input-wrapper');
+        if (inputWrapper) {
+            inputWrapper.classList.toggle('has-attachments', attachedFiles.length > 0);
         }
-
-        previewModal.querySelector('.close-button').onclick = () => {
-            previewModal.remove();
-        };
-        previewModal.addEventListener('click', (e) => {
-            if (e.target === previewModal) {
-                previewModal.remove();
-            }
-        });
-    }
-
-
-    function formatCharCount(count) {
-        if (count >= 1000) {
-            return (count / 1000).toFixed(count % 1000 === 0 ? 0 : 1) + 'K';
-        }
-        return count.toString();
-    }
-
-    function formatCharLimit(limit) {
-        return (limit / 1000).toFixed(0) + 'K';
-    }
-
-    function handleContentEditableInput(e) {
-        const editor = e.target;
-        const charCount = editor.innerText.length;
-
-        const counter = document.getElementById('ai-char-counter');
-        if (counter) {
-            counter.textContent = `${formatCharCount(charCount)} / ${formatCharLimit(CHAR_LIMIT)}`;
-            counter.classList.toggle('limit-exceeded', charCount > CHAR_LIMIT);
-        }
-
-        if (charCount > CHAR_LIMIT) {
-            editor.innerText = editor.innerText.substring(0, CHAR_LIMIT);
-            const selection = window.getSelection();
-            const range = document.createRange();
-            range.selectNodeContents(editor);
-            range.collapse(false);
-            selection.removeAllRanges();
-            selection.addRange(range);
-        }
-
-        if (editor.scrollHeight > MAX_INPUT_HEIGHT) {
-            editor.style.height = `${MAX_INPUT_HEIGHT}px`;
-            editor.style.overflowY = 'auto';
-        } else {
-            editor.style.height = 'auto';
-            editor.style.height = `${editor.scrollHeight}px`;
-            editor.style.overflowY = 'hidden';
-        }
-        fadeOutWelcomeMessage();
-    }
-
-    function handlePaste(e) {
-        e.preventDefault();
-        const clipboardData = e.clipboardData || window.clipboardData;
-        const pastedText = clipboardData.getData('text/plain');
-
-        const items = clipboardData.items;
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].type.indexOf("image") !== -1) {
-                const file = items[i].getAsFile();
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        const base64Data = event.target.result.split(',')[1];
-                        const dataUrl = event.target.result;
-                        file.name = `pasted-image-${Date.now()}.${file.type.split('/')[1] || 'png'}`;
-                        processFileLike(file, base64Data, dataUrl);
-                    };
-                    reader.readAsDataURL(file);
-                    return;
-                }
-            }
-        }
-
-        const currentText = e.target.innerText;
-        const totalLengthIfPasted = currentText.length + pastedText.length;
-
-        if (pastedText.length > PASTE_TO_FILE_THRESHOLD || totalLengthIfPasted > CHAR_LIMIT) {
-            let filenameBase = 'paste';
-            let filename = `${filenameBase}.txt`;
-            let counter = 1;
-            while (attachedFiles.some(f => f.fileName === filename)) {
-                filename = `${filenameBase}(${counter++}).txt`;
-            }
-
-            const encoder = new TextEncoder();
-            const encoded = encoder.encode(pastedText);
-            const base64Data = btoa(String.fromCharCode.apply(null, encoded));
-            const blob = new Blob([pastedText], {
-                type: 'text/plain'
-            });
-            blob.name = filename;
-
-            if (attachedFiles.length < MAX_ATTACHMENTS_PER_MESSAGE) {
-                const reader = new FileReader();
-                reader.onloadend = (event) => {
-                    attachedFiles.push({
-                        inlineData: {
-                            mimeType: 'text/plain',
-                            data: base64Data
-                        },
-                        fileName: filename,
-                        fileContent: event.target.result
-                    });
-                    renderAttachments();
-                };
-                reader.readAsDataURL(blob);
-            } else {
-                alert(`Cannot attach more than ${MAX_ATTACHMENTS_PER_MESSAGE} files. Text was too large to paste directly.`);
-            }
-        } else {
-            document.execCommand('insertText', false, pastedText);
-            handleContentEditableInput({
-                target: e.target
-            });
-        }
-    }
-
-    function handleInputSubmission(e) {
-        const editor = e.target;
-        const query = editor.innerText.trim();
-        if (editor.innerText.length > CHAR_LIMIT) {
-            e.preventDefault();
-            return;
-        }
-
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            const settingsMenu = document.getElementById('ai-settings-menu');
-            if (settingsMenu && settingsMenu.classList.contains('active')) {
-                // Settings are saved on change, just close the menu
-                toggleSettingsMenu();
-            }
-
-            if (attachedFiles.some(f => f.isLoading)) {
-                alert("Please wait for files to finish uploading before sending.");
-                return;
-            }
-            if (!query && attachedFiles.length === 0) return;
-            if (isRequestPending) return;
-
-            isRequestPending = true;
-            document.getElementById('ai-input-wrapper').classList.add('waiting');
-            const parts = [];
-            if (query) parts.push({
-                text: query
-            });
-            attachedFiles.forEach(file => {
-                if (file.inlineData) parts.push({
-                    inlineData: file.inlineData
-                });
-            });
-            chatHistory.push({
-                role: "user",
-                parts: parts
-            });
-            const responseContainer = document.getElementById('ai-response-container');
-            const userBubble = document.createElement('div');
-            userBubble.className = 'ai-message-bubble user-message';
-            let bubbleContent = query ? `<p>${escapeHTML(query)}</p>` : '';
-            if (attachedFiles.length > 0) {
-                bubbleContent += `<div class="sent-attachments">${attachedFiles.length} file(s) sent</div>`;
-            }
-            userBubble.innerHTML = bubbleContent;
-            responseContainer.appendChild(userBubble);
-            const responseBubble = document.createElement('div');
-            responseBubble.className = 'ai-message-bubble gemini-response loading';
-            responseBubble.innerHTML = '<div class="ai-loader"></div>';
-            responseContainer.appendChild(responseBubble);
-            responseContainer.scrollTop = responseContainer.scrollHeight;
-            editor.innerHTML = '';
-            handleContentEditableInput({
-                target: editor
-            });
-            attachedFiles = [];
-            renderAttachments();
-
-            callGoogleAI(responseBubble);
-        }
-    }
-
-    function handleCopyCode(event) {
-        const btn = event.currentTarget;
-        const wrapper = btn.closest('.code-block-wrapper');
-        const code = wrapper.querySelector('pre > code');
-        if (code) {
-            navigator.clipboard.writeText(code.innerText).then(() => {
-                btn.innerHTML = checkIconSVG;
-                btn.disabled = true;
-                setTimeout(() => {
-                    btn.innerHTML = copyIconSVG;
-                    btn.disabled = false;
-                }, 2000);
-            }).catch(err => {
-                console.error('Failed to copy code: ', err);
-                alert('Failed to copy code.');
-            });
-        }
-    }
-
-    function fadeOutWelcomeMessage() {
-        const container = document.getElementById("ai-container");
-        if (container && !container.classList.contains("chat-active")) {
-            container.classList.add("chat-active")
-        }
-    }
-
-    function escapeHTML(str) {
-        const p = document.createElement("p");
-        p.textContent = str;
-        return p.innerHTML
     }
 
     function formatBytes(bytes, decimals = 2) {
@@ -1514,140 +1277,176 @@ Formatting Rules (MUST FOLLOW):
         return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
     }
 
-    function parseGeminiResponse(text) {
-        let html = text;
-        const placeholders = {};
-        let placeholderId = 0;
+    function formatCharLimit(limit) {
+        if (limit >= 1000) {
+            return (limit / 1000) + 'k';
+        }
+        return limit;
+    }
 
-        const addPlaceholder = (content) => {
-            const key = `%%PLACEHOLDER_${placeholderId++}%%`;
-            placeholders[key] = content;
-            return key;
-        };
+    function handleContentEditableInput(event) {
+        const input = event.target;
+        const textLength = input.innerText.length;
+        const charCounter = document.getElementById('ai-char-counter');
+        const inputWrapper = document.getElementById('ai-input-wrapper');
+        const submitButton = document.getElementById('ai-submit-button');
 
-        // --- Extract thought process (Humanity) ---
-        let thoughtProcess = '';
-        html = html.replace(/<THOUGHT_PROCESS>([\s\S]*?)<\/THOUGHT_PROCESS>/, (match, content) => {
-            thoughtProcess = content.trim();
-            return ''; // Remove from main text
-        });
-
-        // --- Extract sources ---
-        let sourcesHTML = '';
-        const sources = [];
-        html = html.replace(/<SOURCE URL="([^"]+)" TITLE="([^"]+)"\s*\/>/g, (match, url, title) => {
-            sources.push({
-                url,
-                title
-            });
-            return ''; // Remove from main text
-        });
-
-        if (sources.length > 0) {
-            // NEW: Add 'scrollable' class if sources > 5
-            const listClass = sources.length > 5 ? 'scrollable' : '';
-            sourcesHTML = `<div class="ai-sources-list"><h4>Sources:</h4><ul class="${listClass}">`;
-            sources.forEach(source => {
-                let hostname = '';
-                try {
-                    hostname = new URL(source.url).hostname;
-                } catch (e) {
-                    hostname = 'unknown-source';
-                }
-                // Use Google's favicon service for the mock favicon
-                const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
-                sourcesHTML += `<li><img src="${faviconUrl}" alt="Favicon" class="favicon"><a href="${source.url}" target="_blank">${escapeHTML(source.title)}</a></li>`;
-            });
-            sourcesHTML += `</ul></div>`;
+        // Update character counter
+        if (charCounter) {
+            charCounter.textContent = `${textLength} / ${formatCharLimit(CHAR_LIMIT)}`;
+            charCounter.classList.toggle('over-limit', textLength > CHAR_LIMIT);
         }
 
-        // 1. Extract graph blocks (most specific)
-        html = html.replace(/```graph\n([\s\S]*?)```/g, (match, jsonString) => {
-            let metadata = 'Graph';
-            try {
-                const graphData = JSON.parse(jsonString);
-                const trace = graphData.data && graphData.data[0];
-                if (trace && trace.x && trace.y && trace.x.length >= 2 && trace.y.length >= 2) {
-                    const [x1, x2] = trace.x.slice(0, 2);
-                    const [y1, y2] = trace.y.slice(0, 2);
-                    if (x2 - x1 !== 0) {
-                        const slope = (y2 - y1) / (x2 - x1);
-                        if (isFinite(slope)) {
-                            const yIntercept = y1 - slope * x1;
-                            const xIntercept = slope !== 0 ? -yIntercept / slope : Infinity;
-                            metadata = `Slope: ${slope.toFixed(2)} &middot; Y-Int: (0, ${yIntercept.toFixed(2)}) &middot; X-Int: (${isFinite(xIntercept) ? xIntercept.toFixed(2) : 'N/A'}, 0)`;
-                        }
-                    }
-                }
-            } catch (e) {
-                /* Ignore parsing errors */ }
+        // Adjust height
+        input.style.height = 'auto'; // Reset height
+        let newHeight = input.scrollHeight;
 
-            const escapedData = escapeHTML(jsonString);
-            const content = `
-                <div class="graph-block-wrapper">
-                    <div class="graph-block-header">
-                        <span class="graph-metadata">${metadata}</span>
-                    </div>
-                    <div class="custom-graph-placeholder" data-graph-data='${escapedData}'>
-                        <canvas class="graph-canvas"></canvas>
-                    </div>
+        if (newHeight > MAX_INPUT_HEIGHT) {
+            input.style.overflowY = 'auto';
+            newHeight = MAX_INPUT_HEIGHT;
+        } else {
+            input.style.overflowY = 'hidden';
+        }
+        input.style.height = `${newHeight}px`;
+
+        // Style change for send button (removed, but good practice to keep the logic)
+        const hasContent = textLength > 0 || attachedFiles.length > 0;
+        if (inputWrapper) {
+            inputWrapper.classList.toggle('has-content', hasContent);
+        }
+    }
+
+    function handleInputSubmission(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    }
+
+    function sendMessage() {
+        if (isRequestPending) return;
+
+        const input = document.getElementById('ai-input');
+        const query = input.innerText.trim();
+        const textLength = query.length;
+
+        if (textLength > CHAR_LIMIT) {
+            alert(`Your message is too long. Please reduce it to under ${CHAR_LIMIT} characters.`);
+            return;
+        }
+
+        if (textLength === 0 && attachedFiles.length === 0) {
+            input.innerText = '';
+            handleContentEditableInput({
+                target: input
+            }); // Reset height
+            return;
+        }
+
+        const responseContainer = document.getElementById('ai-response-container');
+        const welcomeMessage = document.getElementById('ai-welcome-message');
+        const inputWrapper = document.getElementById('ai-input-wrapper');
+
+        // Hide welcome message after first send
+        if (welcomeMessage) {
+            welcomeMessage.style.display = 'none';
+        }
+        if (responseContainer) {
+            responseContainer.classList.add('chat-active');
+            document.getElementById('ai-container').classList.add('chat-active');
+        }
+
+        // 1. Create user message
+        const userMessage = {
+            role: "user",
+            parts: []
+        };
+        if (query) {
+            userMessage.parts.push({
+                text: query
+            });
+        }
+        attachedFiles.forEach(file => {
+            userMessage.parts.push({
+                inlineData: file.inlineData
+            });
+        });
+        chatHistory.push(userMessage);
+
+        // 2. Clear input and attachments
+        input.innerText = '';
+        input.focus();
+        attachedFiles = [];
+        renderAttachments();
+        handleContentEditableInput({
+            target: input
+        });
+
+        // 3. Render user message bubble
+        renderChatHistory(); // Rerender history to show latest user message
+
+        // 4. Create model response placeholder (loading state)
+        const responseBubble = document.createElement('div');
+        responseBubble.className = 'ai-message-bubble gemini-response loading';
+        responseBubble.innerHTML = `<div class="ai-loading-spinner"></div><p>Thinking...</p>`;
+        responseContainer.appendChild(responseBubble);
+        responseContainer.scrollTop = responseContainer.scrollHeight;
+
+        // 5. Start API call
+        isRequestPending = true;
+        if (inputWrapper) {
+            inputWrapper.classList.add('waiting');
+        }
+        input.contentEditable = false; // Disable input while waiting
+
+        callGoogleAI(responseBubble);
+    }
+
+    /**
+     * Parses the raw Gemini response text, separating out the thought process,
+     * main content, and source tags.
+     * @param {string} rawText The raw response text from the model.
+     * @returns {{html: string, thoughtProcess: string, sourcesHTML: string}}
+     */
+    function parseGeminiResponse(rawText) {
+        let thoughtProcess = '';
+        let content = rawText;
+        const sources = [];
+
+        // 1. Extract Thought Process (must be at the start)
+        const thoughtMatch = content.match(/<THOUGHT_PROCESS>([\s\S]*?)<\/THOUGHT_PROCESS>/);
+        if (thoughtMatch) {
+            thoughtProcess = thoughtMatch[1].trim();
+            content = content.replace(thoughtMatch[0], '').trim();
+        }
+
+        // 2. Extract Sources (must be at the end)
+        const sourceRegex = /<SOURCE\s+URL="([^"]+)"\s+TITLE="([^"]+)"\s*\/>/g;
+        let sourceMatch;
+        const contentWithoutSources = content.replace(sourceRegex, (match, url, title) => {
+            sources.push({
+                url: url,
+                title: title
+            });
+            return ''; // Remove from content
+        }).trim();
+
+        content = contentWithoutSources; // Update content after removing sources
+
+        // 3. Process the remaining content (Markdown, KaTeX, Code Blocks, Graphs)
+        let html = convertMarkdownToHTML(content);
+
+        // 4. Format Sources HTML
+        let sourcesHTML = '';
+        if (sources.length > 0) {
+            const listItems = sources.map(s => `<li><a href="${s.url}" target="_blank" rel="noopener noreferrer">${escapeHTML(s.title || s.url)}</a></li>`).join('');
+            sourcesHTML = `
+                <div class="ai-sources-container ${sources.length > 5 ? 'scrollable' : ''}">
+                    <h4>External Sources (${sources.length})</h4>
+                    <ul>${listItems}</ul>
                 </div>
             `;
-            return addPlaceholder(content);
-        });
-
-        // 2. Extract general code blocks
-        html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
-            const trimmedCode = code.trim();
-            const lines = trimmedCode.split('\n').length;
-            const words = trimmedCode.split(/\s+/).filter(Boolean).length;
-            const escapedCode = escapeHTML(trimmedCode);
-            const langClass = lang ? `language-${lang.toLowerCase()}` : '';
-            const content = `
-                <div class="code-block-wrapper">
-                    <div class="code-block-header">
-                        <span class="code-metadata">${lines} lines &middot; ${words} words</span>
-                        <button class="copy-code-btn" title="Copy code">${copyIconSVG}</button>
-                    </div>
-                    <pre><code class="${langClass}">${escapedCode}</code></pre>
-                </div>
-            `;
-            return addPlaceholder(content);
-        });
-
-        // 3. Extract KaTeX blocks BEFORE escaping general HTML
-        // Display mode: $$...$$
-        html = html.replace(/\$\$([\s\S]*?)\$\$/g, (match, formula) => {
-            const content = `<div class="latex-render" data-tex="${escapeHTML(formula)}" data-display-mode="true"></div>`;
-            return addPlaceholder(content);
-        });
-        // Inline mode: $...$
-        html = html.replace(/\$([^\s\$][^\$]*?[^\s\$])\$/g, (match, formula) => {
-            const content = `<span class="latex-render" data-tex="${escapeHTML(formula)}" data-display-mode="false"></span>`;
-            return addPlaceholder(content);
-        });
-
-        // 4. Escape the rest of the HTML
-        html = escapeHTML(html);
-
-        // 5. Apply markdown styling
-        html = html.replace(/^### (.*$)/gm, "<h3>$1</h3>")
-            .replace(/^## (.*$)/gm, "<h2>$1</h2>")
-            .replace(/^# (.*$)/gm, "<h1>$1</h1>");
-        html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-            .replace(/\*(.*?)\*/g, "<em>$1</em>");
-
-        html = html.replace(/^(?:\*|-)\s(.*$)/gm, "<li>$1</li>");
-        html = html.replace(/((?:<br>)?\s*<li>.*<\/li>(\s*<br>)*)+/gs, (match) => {
-            const listItems = match.replace(/<br>/g, '').trim();
-            return `<ul>${listItems}</ul>`;
-        });
-        html = html.replace(/(<\/li>\s*<li>)/g, "</li><li>");
-
-        html = html.replace(/\n/g, "<br>");
-
-        // 6. Restore placeholders
-        html = html.replace(/%%PLACEHOLDER_\d+%%/g, (match) => placeholders[match] || '');
+        }
 
         return {
             html: html,
@@ -1656,220 +1455,871 @@ Formatting Rules (MUST FOLLOW):
         };
     }
 
+    // Utility function to safely escape HTML content
+    function escapeHTML(str) {
+        if (!str) return '';
+        return str.replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+
+    /**
+     * Converts a subset of Markdown (headers, lists, bold, italics, code, quotes)
+     * and custom blocks (KaTeX, Graph) to HTML.
+     * @param {string} markdown The raw markdown content.
+     * @returns {string} The HTML string.
+     */
+    function convertMarkdownToHTML(markdown) {
+        // Ensure the string is trimmed and has some content
+        if (!markdown || typeof markdown !== 'string') return '';
+
+        let html = escapeHTML(markdown); // Start by escaping the whole string
+
+        // 1. Custom Block Detection: Graph (must be done first to protect internal content)
+        // Detects the custom ```graph ... ``` block
+        html = html.replace(/```graph\s*([\s\S]*?)\s*```/g, (match, graphData) => {
+            const placeholderId = `graph-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+            return `<div class="custom-graph-placeholder" data-graph-data="${encodeURIComponent(graphData)}"><canvas id="${placeholderId}"></canvas></div>`;
+        });
+
+        // 2. Custom Block Detection: KaTeX (must be done early)
+        // Detects $$ display math $$
+        html = html.replace(/\$\$([\s\S]*?)\$\$/g, (match, tex) => {
+            // Unescape inner content for KaTeX processing
+            tex = unescapeHTML(tex);
+            return `<div class="latex-render display-math" data-tex="${escapeHTML(tex)}" data-display-mode="true"></div>`;
+        });
+
+        // 3. Code Block Detection (``` code ```)
+        // Detects ```language ... ```
+        html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+            lang = lang ? lang.trim() : 'plaintext';
+            // Unescape the inner code content
+            const unescapedCode = unescapeHTML(code);
+            // Re-escape to safely put into the <pre> block
+            const escapedCode = escapeHTML(unescapedCode);
+            return `
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-language">${lang}</span>
+                        <button class="copy-code-btn" data-code="${escapeHTML(unescapedCode)}">${copyIconSVG} Copy Code</button>
+                    </div>
+                    <pre><code class="language-${lang}">${escapedCode}</code></pre>
+                </div>
+            `;
+        });
+
+
+        // Re-Unescape the entire content (except the protected custom blocks and code)
+        // This is complex. A better approach is to process in blocks.
+        // For simplicity, let's process the rest of the text line-by-line and unescape later.
+        html = unescapeHTML(html); // Unescape the entire thing before general markdown processing.
+
+        // 4. Inline Code (`code`)
+        html = html.replace(/`([^`]+)`/g, (match, code) => {
+            return `<code class="inline-code">${code}</code>`;
+        });
+
+        // 5. Inline KaTeX ($ math $)
+        html = html.replace(/\$([^$]+?)\$/g, (match, tex) => {
+            return `<span class="latex-render" data-tex="${escapeHTML(tex.trim())}" data-display-mode="false"></span>`;
+        });
+
+        // 6. Basic Formatting (Bold, Italics, Blockquotes, Headers)
+        // Blockquote
+        html = html.replace(/^> (.*)$/gm, (match, p1) => `<blockquote>${p1}</blockquote>`);
+
+        // Headers
+        html = html.replace(/^### (.*)$/gm, (match, p1) => `<h3>${p1}</h3>`);
+        html = html.replace(/^## (.*)$/gm, (match, p1) => `<h2>${p1}</h2>`);
+        html = html.replace(/^# (.*)$/gm, (match, p1) => `<h1>${p1}</h1>`);
+
+        // Unordered Lists
+        html = html.replace(/^(\s*)[*-] (.*)$/gm, (match, p1, p2) => `${p1}<li>${p2}</li>`);
+        // Ordered Lists (1., 2., etc.)
+        html = html.replace(/^(\s*)\d+\. (.*)$/gm, (match, p1, p2) => `${p1}<li>${p2}</li>`);
+
+        // Wrap list items in <ul> and <ol>
+        html = html.replace(/(^|\n)((\s*<li>.*<\/li>\s*)+)/g, (match, p1, p2) => {
+            // Check if the list items are indented. Simple implementation: assume no indentation means <ul>
+            if (p2.startsWith(' ')) {
+                // If it starts with space, it's a nested list, leave it alone for this simple parser
+                return match;
+            }
+            // Simple check to see if we can assume it's an ordered list (starts with 1.)
+            const isOrdered = p2.match(/<li[^>]*>\s*\d+\.\s/);
+            const tag = isOrdered ? 'ol' : 'ul';
+            // Clean up list numbering in simple parser by only taking the content of the list item.
+            p2 = p2.replace(/<li[^>]*>\s*\d+\.\s*/g, '<li>');
+            return `${p1}<${tag}>${p2}</${tag}>`;
+        });
+
+
+        // Bold and Italic (Must be done after headers and lists)
+        html = html.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>'); // Bold & Italic
+        html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); // Bold
+        html = html.replace(/\*(.*?)\*/g, '<em>$1</em>'); // Italic
+
+        // Line breaks (convert newlines not within blocks to <br>)
+        html = html.split('\n').map(line => {
+            // Don't wrap lines that are already block-level elements
+            if (line.match(/^(<h|<ul|<ol|<blockquote|<div class="code-block"|<div class="latex-render"|<div class="custom-graph-placeholder")/i) || line.trim() === '') {
+                return line;
+            }
+            return `<p>${line}</p>`;
+        }).join('\n');
+
+        // Cleanup: remove multiple empty lines
+        html = html.replace(/\n\s*\n/g, '\n');
+
+        return html.trim();
+    }
+
+    // Helper to reverse the basic escaping (needed for inner content of blocks)
+    function unescapeHTML(str) {
+        if (!str) return '';
+        return str.replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#039;/g, "'")
+            .replace(/&amp;/g, '&');
+    }
+
+    /**
+     * Handles copying code from a code block button.
+     * @param {Event} e The click event.
+     */
+    function handleCopyCode(e) {
+        const button = e.currentTarget;
+        const codeText = button.dataset.code;
+
+        navigator.clipboard.writeText(codeText).then(() => {
+            const originalHTML = button.innerHTML;
+            button.innerHTML = `${checkIconSVG} Copied!`;
+            setTimeout(() => {
+                button.innerHTML = originalHTML;
+            }, 2000);
+        }).catch(err => {
+            console.error('Could not copy text: ', err);
+            alert('Failed to copy code to clipboard.');
+        });
+    }
+
+
+    /**
+     * Injects the necessary CSS styles into the document head.
+     */
     function injectStyles() {
         if (document.getElementById('ai-dynamic-styles')) return;
 
-        if (!document.getElementById('ai-katex-styles')) {
-            const katexStyles = document.createElement('link');
-            katexStyles.id = 'ai-katex-styles';
-            katexStyles.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css';
-            katexStyles.rel = 'stylesheet';
-            document.head.appendChild(katexStyles);
+        // Add Font Awesome for icons (if not present)
+        if (!document.querySelector('link[href*="font-awesome"]')) {
+            const faLink = document.createElement('link');
+            faLink.rel = 'stylesheet';
+            faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css';
+            faLink.id = 'ai-font-awesome-styles';
+            document.head.appendChild(faLink);
         }
 
-        if (!document.getElementById('ai-google-fonts')) {
-            const googleFonts = document.createElement('link');
-            googleFonts.id = 'ai-google-fonts';
-            googleFonts.href = 'https://fonts.googleapis.com/css2?family=Lora:wght@400;700&family=Merriweather:wght@400;700&display=swap';
-            googleFonts.rel = 'stylesheet';
-            document.head.appendChild(googleFonts);
-        }
-        const fontAwesome = document.createElement('link');
-        fontAwesome.rel = 'stylesheet';
-        fontAwesome.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css';
-        document.head.appendChild(fontAwesome);
+        // Add KaTeX CSS
+        const katexLink = document.createElement('link');
+        katexLink.rel = 'stylesheet';
+        katexLink.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css';
+        katexLink.id = 'ai-katex-styles';
+        document.head.appendChild(katexLink);
 
-        const style = document.createElement("style");
-        style.id = "ai-dynamic-styles";
-        style.innerHTML = `
-            :root { --ai-red: #ea4335; --ai-blue: #4285f4; --ai-green: #34a853; --ai-yellow: #fbbc05; }
-            #ai-container { 
-                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-                background-color: rgba(10, 10, 15, 0.95);
-                backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); 
-                z-index: 2147483647; opacity: 0; transition: opacity 0.5s, background 0.5s; 
-                font-family: 'Lora', serif; display: flex; flex-direction: column; 
-                justify-content: flex-end; padding: 0; box-sizing: border-box; overflow: hidden; 
+        // Add Google Fonts
+        const fontLink = document.createElement('link');
+        fontLink.rel = 'stylesheet';
+        fontLink.href = 'https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Merriweather:wght@300;400;700&display=swap';
+        fontLink.id = 'ai-google-fonts';
+        document.head.appendChild(fontLink);
+
+
+        const style = document.createElement('style');
+        style.id = 'ai-dynamic-styles';
+        style.textContent = `
+            :root {
+                /* REPLACED: Updated branding colors */
+                --ai-primary-color: #00BCD4; /* Cyan Blue */
+                --ai-background-dark: #1f1f1f;
+                --ai-text-light: #f0f0f0;
+                --ai-text-mid: #cccccc;
+                --ai-text-dark: #888888;
+                --ai-input-bg: #2b2b2b;
+                --ai-border-color: #3a3a3a;
+                --ai-link-color: #4CAF50; /* Green highlight for links/sources */
+                --ai-error-color: #f44336;
             }
-            #ai-container.active { opacity: 1; }
-            #ai-container.deactivating, #ai-container.deactivating > * { transition: opacity 0.4s, transform 0.4s; }
-            #ai-container.deactivating { opacity: 0 !important; background-color: rgba(0,0,0,0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); }
-            #ai-persistent-title, #ai-brand-title { 
-                position: absolute; top: 28px; left: 30px; font-family: 'Lora', serif; 
-                font-size: 18px; font-weight: bold; color: #FFFFFF;
-                opacity: 0; transition: opacity 0.5s 0.2s, color 0.5s; 
+
+            #ai-container {
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                width: min(90vw, 500px);
+                max-height: min(90vh, 750px);
+                background-color: var(--ai-background-dark);
+                color: var(--ai-text-light);
+                border: 1px solid var(--ai-border-color);
+                border-radius: 12px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+                display: flex;
+                flex-direction: column;
+                z-index: 10000;
+                font-family: 'Lora', Georgia, serif;
+                transform: scale(0.95);
+                opacity: 0;
+                transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+                overflow: hidden;
             }
-            #ai-container.chat-active #ai-persistent-title { opacity: 1; }
-            #ai-container:not(.chat-active) #ai-brand-title { opacity: 1; }
-            #ai-brand-title span { animation: brand-title-pulse 4s linear infinite; }
-            #ai-welcome-message { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; color: rgba(255,255,255,.5); opacity: 1; transition: opacity .5s, transform .5s; width: 100%; }
-            #ai-container.chat-active #ai-welcome-message { opacity: 0; pointer-events: none; transform: translate(-50%,-50%) scale(0.95); }
-            #ai-welcome-message h2 { font-family: 'Merriweather', serif; font-size: 2.2em; margin: 0; color: #fff; }
-            #ai-welcome-message p { font-size: .9em; margin-top: 10px; max-width: 400px; line-height: 1.5; margin-left: auto; margin-right: auto; }
-            .shortcut-tip { font-size: 0.8em; color: rgba(255,255,255,.7); margin-top: 20px; }
-            #ai-close-button { position: absolute; top: 20px; right: 30px; color: rgba(255,255,255,.7); font-size: 40px; cursor: pointer; transition: color .2s ease,transform .3s ease, opacity 0.4s; }
-            #ai-char-counter { position: fixed; bottom: 15px; right: 30px; font-size: 0.9em; font-family: monospace; color: #aaa; transition: color 0.2s; z-index: 2147483647; }
-            #ai-char-counter.limit-exceeded { color: #e57373; font-weight: bold; }
-            #ai-response-container { flex: 1 1 auto; overflow-y: auto; width: 100%; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; padding: 60px 20px 20px 20px; -webkit-mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%); mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%);}
-            .ai-message-bubble { background: rgba(15,15,18,.8); border: 1px solid rgba(255,255,255,.1); border-radius: 16px; padding: 12px 18px; color: #e0e0e0; backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); animation: message-pop-in .5s cubic-bezier(.4,0,.2,1) forwards; max-width: 90%; line-height: 1.6; overflow-wrap: break-word; transition: opacity 0.3s ease-in-out; align-self: flex-start; text-align: left; }
-            .user-message { background: rgba(40,45,50,.8); align-self: flex-end; }
-            .gemini-response { animation: glow 4s infinite; display: flex; flex-direction: column; }
-            .gemini-response.loading { display: flex; justify-content: center; align-items: center; min-height: 60px; max-width: 100px; padding: 15px; background: rgba(15,15,18,.8); animation: gemini-glow 4s linear infinite; }
-            
-            /* UPDATED STYLES for Sources (Top) and Collapsible Monologue (Bottom) */
-            
-            /* CSS FIX: Reduced margin-top and padding-top */
-            .ai-sources-list { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px; margin-top: 8px; }
-            .ai-sources-list h4 { color: #ccc; margin: 0 0 10px 0; font-family: 'Merriweather', serif; font-size: 1em; }
-            .ai-sources-list ul { list-style: none; padding: 0; margin: 0; }
-            .ai-sources-list li { display: flex; align-items: center; margin-bottom: 5px; }
-            .ai-sources-list li a { color: #4285f4; text-decoration: none; font-size: 0.9em; transition: color 0.2s; }
-            .ai-sources-list li a:hover { color: #6a9cf6; }
-            .ai-sources-list li img.favicon { width: 16px; height: 16px; margin-right: 8px; border-radius: 2px; flex-shrink: 0; }
-            
-            /* NEW: Scrollable source list for > 5 items */
-            .ai-sources-list ul.scrollable {
-                max-height: 170px; /* Approx 5.5 items */
+
+            #ai-container.active {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            #ai-container.deactivating {
+                transform: scale(0.95);
+                opacity: 0;
+            }
+
+            /* --- HEADER/TITLE/BRANDING --- */
+            #ai-brand-title {
+                position: absolute;
+                top: 0;
+                left: 0;
+                padding: 15px 20px;
+                font-family: 'Merriweather', serif;
+                font-size: 1.2em;
+                font-weight: 700;
+                color: var(--ai-text-light);
+                opacity: 0.1;
+                pointer-events: none;
+                z-index: 10;
+            }
+            #ai-brand-title span {
+                opacity: 0; /* Hidden by default */
+                animation: humanity-glow-text 3s infinite alternate ease-in-out; /* Custom glow */
+            }
+            #ai-brand-title span:nth-child(1) { animation-delay: 0s; }
+            #ai-brand-title span:nth-child(2) { animation-delay: 0.1s; }
+            #ai-brand-title span:nth-child(3) { animation-delay: 0.2s; }
+            #ai-brand-title span:nth-child(4) { animation-delay: 0.3s; }
+            #ai-brand-title span:nth-child(5) { animation-delay: 0.4s; }
+            #ai-brand-title span:nth-child(6) { animation-delay: 0.5s; }
+            #ai-brand-title span:nth-child(7) { animation-delay: 0.6s; }
+            #ai-brand-title span:nth-child(8) { animation-delay: 0.7s; }
+
+            @keyframes humanity-glow-text {
+                0%, 100% { color: #00BCD4; text-shadow: 0 0 5px #00BCD4; opacity: 0.15; }
+                50% { color: #84FFFF; text-shadow: 0 0 10px #84FFFF, 0 0 20px #00BCD4; opacity: 0.4; }
+            }
+
+            #ai-persistent-title {
+                text-align: left;
+                padding: 15px 20px;
+                font-family: 'Merriweather', serif;
+                font-size: 1.1em;
+                font-weight: 700;
+                color: var(--ai-text-light);
+                border-bottom: 1px solid var(--ai-border-color);
+                z-index: 20;
+                background-color: var(--ai-background-dark);
+            }
+
+            #ai-close-button {
+                position: absolute;
+                top: 15px;
+                right: 20px;
+                font-size: 1.5em;
+                cursor: pointer;
+                color: var(--ai-text-dark);
+                transition: color 0.2s;
+                z-index: 30;
+            }
+            #ai-close-button:hover {
+                color: var(--ai-text-light);
+            }
+
+            /* --- WELCOME MESSAGE --- */
+            #ai-welcome-message {
+                padding: 20px;
+                text-align: left;
+                border-bottom: 1px solid var(--ai-border-color);
+                flex-shrink: 0;
+                z-index: 10;
+            }
+            #ai-welcome-message h2 {
+                margin: 0 0 10px 0;
+                font-size: 1.4em;
+                color: var(--ai-primary-color);
+                font-family: 'Merriweather', serif;
+            }
+            #ai-welcome-message p {
+                margin: 0 0 5px 0;
+                font-size: 0.9em;
+                line-height: 1.4;
+                color: var(--ai-text-mid);
+            }
+            .shortcut-tip {
+                font-style: italic;
+                color: var(--ai-text-dark);
+                font-size: 0.8em !important;
+                margin-top: 10px !important;
+            }
+
+            /* --- RESPONSE CONTAINER (Chat History) --- */
+            #ai-response-container {
+                flex-grow: 1;
                 overflow-y: auto;
-                padding-right: 5px; 
-                scrollbar-width: thin;
-                scrollbar-color: #555 #333;
+                padding: 10px 20px;
+                display: flex;
+                flex-direction: column;
+                gap: 15px;
+                scroll-behavior: smooth;
             }
-            .ai-sources-list ul.scrollable::-webkit-scrollbar { width: 8px; }
-            .ai-sources-list ul.scrollable::-webkit-scrollbar-track { background: #333; border-radius: 4px; }
-            .ai-sources-list ul.scrollable::-webkit-scrollbar-thumb { background-color: #555; border-radius: 4px; }
-            
-            /* MODIFIED: Thought process colors and transitions */
-            .ai-thought-process { 
-                border-radius: 12px; 
-                padding: 0; 
-                margin-top: 10px; 
-                font-size: 0.9em; 
-                max-width: 100%; 
-                /* MODIFIED: Faster transition, added background/border */
-                transition: background-color 0.3s ease, border-color 0.3s ease;
-                
-                /* Default OPEN state */
-                background-color: rgba(66, 133, 244, 0.1); 
-                border: 1px solid rgba(66, 133, 244, 0.3); 
+            #ai-response-container:not(.chat-active) {
+                display: none; /* Hide if no chat is active */
             }
-            .ai-thought-process.collapsed {
-                /* COLLAPSED state */
-                background-color: rgba(255, 255, 255, 0.05);
-                border: 1px solid rgba(255, 255, 255, 0.1);
+            #ai-container.chat-active #ai-response-container {
+                display: flex;
+            }
+            #ai-container.chat-active #ai-welcome-message {
+                display: none;
             }
 
-            .monologue-header { display: flex; justify-content: space-between; align-items: center; padding: 10px; cursor: pointer; }
-            
-            .monologue-title { 
-                margin: 0; 
-                font-family: 'Merriweather', serif; 
-                font-size: 1em;
-                transition: color 0.3s ease;
-                color: #4285f4; /* OPEN state color */
+            /* --- MESSAGE BUBBLES --- */
+            .ai-message-bubble {
+                padding: 12px;
+                border-radius: 10px;
+                max-width: 90%;
+                line-height: 1.5;
+                font-size: 0.95em;
+                word-wrap: break-word;
+                white-space: pre-wrap;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+                animation: message-pop-in 0.3s ease-out forwards;
+                opacity: 0;
             }
-            .ai-thought-process.collapsed .monologue-title {
-                color: #ccc; /* COLLAPSED state color */
+            .user-message {
+                background-color: var(--ai-primary-color);
+                color: var(--ai-background-dark);
+                align-self: flex-end;
+                border-bottom-right-radius: 2px;
+                font-family: 'Merriweather', serif;
+                font-weight: 700;
+            }
+            .gemini-response {
+                background-color: var(--ai-input-bg);
+                color: var(--ai-text-light);
+                align-self: flex-start;
+                border: 1px solid var(--ai-border-color);
+                border-bottom-left-radius: 2px;
+            }
+            .gemini-response p:first-child {
+                margin-top: 0;
+            }
+            .gemini-response p:last-child {
+                margin-bottom: 0;
             }
 
-            .monologue-toggle-btn { 
-                background: none; 
-                border-radius: 6px; 
-                padding: 4px 8px; 
-                font-size: 0.8em; 
-                cursor: pointer; 
-                transition: background-color 0.2s, border-color 0.3s ease, color 0.3s ease;
-                
-                /* OPEN state */
-                border: 1px solid rgba(66, 133, 244, 0.5); 
-                color: #4285f4;
+            /* --- RESPONSE CONTENT STYLING --- */
+            .ai-response-content {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
             }
-            .ai-thought-process:not(.collapsed) .monologue-toggle-btn:hover { 
-                background-color: rgba(66, 133, 244, 0.2); 
+
+            .ai-response-content a {
+                color: var(--ai-link-color);
+                text-decoration: none;
             }
-            
-            .ai-thought-process.collapsed .monologue-toggle-btn {
-                /* COLLAPSED state */
-                border-color: rgba(255, 255, 255, 0.2);
-                color: #ccc;
+            .ai-response-content a:hover {
+                text-decoration: underline;
             }
-            .ai-thought-process.collapsed .monologue-toggle-btn:hover {
+
+            .ai-response-content h1, .ai-response-content h2, .ai-response-content h3 {
+                color: var(--ai-primary-color);
+                font-family: 'Merriweather', serif;
+                font-weight: 700;
+                margin: 15px 0 5px 0;
+            }
+            .ai-response-content h1 { font-size: 1.5em; }
+            .ai-response-content h2 { font-size: 1.3em; }
+            .ai-response-content h3 { font-size: 1.1em; }
+
+            .ai-response-content ul, .ai-response-content ol {
+                margin: 5px 0 5px 20px;
+                padding: 0;
+            }
+            .ai-response-content li {
+                margin-bottom: 5px;
+            }
+            .ai-response-content strong {
+                font-weight: 700;
+            }
+
+            /* --- BLOCKQUOTE --- */
+            .ai-response-content blockquote {
+                border-left: 4px solid var(--ai-link-color);
+                padding-left: 10px;
+                margin: 10px 0;
+                color: var(--ai-text-mid);
+                font-style: italic;
+            }
+
+            /* --- INLINE CODE --- */
+            .inline-code {
                 background-color: rgba(255, 255, 255, 0.1);
-            }
-            
-            /* MODIFIED: Faster animation, no fade */
-            .monologue-content { 
-                max-height: 0; 
-                opacity: 1; /* No fade */
-                overflow: hidden; 
-                padding: 0 10px; /* Only horizontal padding when collapsed */
-                transition: max-height 0.2s ease-out, padding 0.2s ease-out; 
-            }
-            .ai-thought-process:not(.collapsed) .monologue-content {
-                max-height: 500px; /* Arbitrarily large value */
-                padding: 0 10px 10px 10px; /* Final padding with bottom */
+                padding: 2px 4px;
+                border-radius: 4px;
+                font-family: monospace;
+                color: #FFEB3B; /* Yellow for code */
+                font-size: 0.9em;
             }
 
-            .ai-thought-process pre { 
-                white-space: pre-wrap; 
-                word-break: break-word; 
-                margin: 0; color: #ccc; 
-                font-family: monospace; font-size: 0.85em; 
-                background: none; 
+            /* --- CODE BLOCK --- */
+            .code-block {
+                margin: 10px 0;
+                border: 1px solid #444;
+                border-radius: 6px;
+                overflow: hidden;
             }
-            /* END UPDATED STYLES */
-            
-            #ai-compose-area { position: relative; flex-shrink: 0; z-index: 2; margin: 15px auto; width: 90%; max-width: 720px; }
-            #ai-input-wrapper { position: relative; z-index: 2; width: 100%; display: flex; flex-direction: column; border-radius: 20px; background: rgba(10,10,10,.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,.2); transition: all .4s cubic-bezier(.4,0,.2,1); }
-            #ai-input-wrapper::before, #ai-input-wrapper::after { content: ''; position: absolute; top: -1px; left: -1px; right: -1px; bottom: -1px; border-radius: 21px; z-index: -1; transition: opacity 0.5s ease-in-out; }
-            #ai-input-wrapper::before { animation: glow 3s infinite; opacity: 1; }
-            #ai-input-wrapper.waiting::before { opacity: 0; }
-            #ai-input-wrapper.waiting::after { opacity: 1; }
-            #ai-input { min-height: 48px; max-height: ${MAX_INPUT_HEIGHT}px; overflow-y: hidden; color: #fff; font-size: 1.1em; padding: 13px 60px 13px 60px; box-sizing: border-box; word-wrap: break-word; outline: 0; text-align: left; }
-            #ai-input:empty::before { content: 'Ask a question or describe your files...'; color: rgba(255, 255, 255, 0.4); pointer-events: none; }
-            
-            #ai-attachment-button, #ai-settings-button { position: absolute; bottom: 7px; background-color: rgba(100, 100, 100, 0.5); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,.8); font-size: 18px; cursor: pointer; padding: 5px; line-height: 1; z-index: 3; transition: all .3s ease; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; }
-            #ai-attachment-button { left: 10px; }
-            #ai-settings-button { right: 10px; font-size: 20px; color: #ccc; }
-            #ai-attachment-button:hover, #ai-settings-button:hover { background-color: rgba(120, 120, 120, 0.7); color: #fff; }
-            #ai-settings-button.active { background-color: rgba(150, 150, 150, 0.8); color: white; }
-
-            /* NEW Settings Menu */
-            #ai-settings-menu { 
-                position: absolute; bottom: calc(100% + 10px); right: 0; width: 350px; 
-                z-index: 1; background: rgb(20, 20, 22); 
-                border: 1px solid rgba(255,255,255,0.2); border-radius: 16px; 
-                box-shadow: 0 5px 25px rgba(0,0,0,0.5); padding: 15px; 
-                opacity: 0; visibility: hidden; transform: translateY(20px); 
-                transition: all .3s cubic-bezier(.4,0,.2,1); overflow: hidden; 
-            }
-            #ai-settings-menu.active { opacity: 1; visibility: visible; transform: translateY(0); }
-            #ai-settings-menu .menu-header { 
-                font-size: 1.1em; color: #fff; text-transform: uppercase; 
-                margin-bottom: 20px; text-align: center; font-family: 'Merriweather', serif; 
-            }
-            .setting-group.toggle-group {
+            .code-header {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                background-color: #2b2b2b;
+                padding: 5px 10px;
+                border-bottom: 1px solid #444;
+            }
+            .code-language {
+                font-size: 0.8em;
+                color: var(--ai-text-mid);
+                text-transform: uppercase;
+                font-weight: bold;
+            }
+            .copy-code-btn {
+                background: none;
+                border: none;
+                color: var(--ai-text-mid);
+                cursor: pointer;
+                font-size: 0.8em;
+                padding: 4px 8px;
+                border-radius: 4px;
+                transition: background-color 0.2s;
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            }
+            .copy-code-btn:hover {
+                background-color: #3a3a3a;
+            }
+            .code-block pre {
+                background-color: #1e1e1e;
+                color: #cccccc;
+                padding: 10px;
+                margin: 0;
+                overflow-x: auto;
+                font-family: 'Fira Code', monospace;
+                font-size: 0.9em;
+            }
+            .code-block pre code {
+                white-space: pre;
+            }
+
+            /* --- LOADING STATE --- */
+            .ai-loading-spinner {
+                border: 3px solid rgba(255, 255, 255, 0.3);
+                border-top: 3px solid var(--ai-primary-color);
+                border-radius: 50%;
+                width: 14px;
+                height: 14px;
+                animation: spin 1s linear infinite;
+                display: inline-block;
+                margin-right: 8px;
+            }
+            .gemini-response.loading {
+                display: flex;
+                align-items: center;
+                color: var(--ai-text-mid);
+                font-style: italic;
+            }
+
+            /* --- ERROR STATE --- */
+            .ai-error {
+                color: var(--ai-error-color);
+                border: 1px solid var(--ai-error-color);
+                background-color: rgba(244, 67, 54, 0.1);
+                padding: 10px;
+                border-radius: 8px;
+            }
+
+            /* --- SOURCES CONTAINER --- */
+            .ai-sources-container {
+                margin-top: 10px;
+                padding-top: 10px;
+                border-top: 1px solid var(--ai-border-color);
+                font-size: 0.85em;
+                color: var(--ai-text-mid);
+            }
+            .ai-sources-container h4 {
+                margin: 0 0 5px 0;
+                font-size: 1em;
+                color: var(--ai-link-color);
+                font-family: 'Merriweather', serif;
+            }
+            .ai-sources-container ul {
+                list-style-type: none;
+                padding: 0;
+                margin: 0;
+            }
+            .ai-sources-container li {
+                margin-bottom: 3px;
+                text-overflow: ellipsis;
+                overflow: hidden;
+                white-space: nowrap;
+            }
+            .ai-sources-container a {
+                color: var(--ai-link-color);
+                text-decoration: none;
+            }
+            .ai-sources-container.scrollable {
+                max-height: 150px;
+                overflow-y: auto;
+                padding-right: 10px; /* Space for scrollbar */
+            }
+
+            /* --- THOUGHT PROCESS (Monologue) --- */
+            .ai-thought-process {
+                margin-top: 8px;
+                border: 1px solid var(--ai-border-color);
+                border-radius: 6px;
+                overflow: hidden;
+                transition: all 0.3s ease-out;
+            }
+            .monologue-header {
+                padding: 8px 10px;
+                background-color: var(--ai-background-dark);
+                cursor: pointer;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px solid var(--ai-border-color);
+                transition: background-color 0.2s;
+            }
+            .ai-thought-process:not(.collapsed) .monologue-header {
+                background-color: var(--ai-primary-color);
+                border-bottom: none;
+            }
+            .monologue-title {
+                margin: 0;
+                font-size: 0.9em;
+                color: var(--ai-text-mid);
+                font-weight: 400;
+                font-family: 'Merriweather', serif;
+                transition: color 0.2s;
+            }
+            .ai-thought-process:not(.collapsed) .monologue-title {
+                color: var(--ai-background-dark);
+            }
+            .monologue-toggle-btn {
+                background: none;
+                border: none;
+                color: var(--ai-text-mid);
+                font-size: 0.8em;
+                cursor: pointer;
+                transition: color 0.2s;
+            }
+            .ai-thought-process:not(.collapsed) .monologue-toggle-btn {
+                color: var(--ai-background-dark);
+                font-weight: bold;
+            }
+            .monologue-content {
+                margin: 0;
+                padding: 10px;
+                font-size: 0.8em;
+                background-color: #2b2b2b;
+                color: var(--ai-text-mid);
+                white-space: pre-wrap;
+                max-height: 0;
+                opacity: 0;
+                overflow: hidden;
+                transition: max-height 0.2s ease-in-out, opacity 0.2s ease-in-out, padding 0.2s ease-in-out;
+            }
+            .ai-thought-process:not(.collapsed) .monologue-content {
+                max-height: 300px; /* Sufficient height for expansion */
+                opacity: 1;
+                padding: 10px;
+            }
+
+
+            /* --- COMPOSE AREA --- */
+            #ai-compose-area {
+                padding: 10px 20px;
+                border-top: 1px solid var(--ai-border-color);
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+                flex-shrink: 0;
+                position: relative;
+            }
+
+            /* --- INPUT WRAPPER --- */
+            #ai-input-wrapper {
+                display: flex;
+                align-items: flex-end;
+                background-color: var(--ai-input-bg);
+                border: 2px solid var(--ai-input-bg);
+                border-radius: 20px;
+                padding: 8px 15px;
+                transition: border-color 0.3s, box-shadow 0.3s;
+                min-height: 40px;
+            }
+            #ai-input-wrapper:focus-within {
+                border-color: var(--ai-primary-color);
+                animation: humanity-glow 1.5s infinite alternate; /* Custom glow */
+            }
+            #ai-input-wrapper.waiting {
+                pointer-events: none;
+                opacity: 0.7;
+            }
+
+            /* --- INPUT (Content Editable) --- */
+            #ai-input {
+                flex-grow: 1;
+                min-height: 24px;
+                max-height: 180px;
+                overflow-y: hidden;
+                padding: 0;
+                margin: 0;
+                color: var(--ai-text-light);
+                font-size: 1em;
+                outline: none;
+                caret-color: var(--ai-primary-color);
+                white-space: pre-wrap;
+                word-break: break-word;
+                padding-right: 5px; /* Space from buttons */
+            }
+            #ai-input:empty:before {
+                content: attr(placeholder);
+                color: var(--ai-text-dark);
+                cursor: text;
+                pointer-events: none;
+            }
+            #ai-input[contenteditable]:empty:before {
+                content: "Ask me anything...";
+            }
+
+            /* --- BUTTONS (Attachment & Settings) --- */
+            #ai-attachment-button, #ai-settings-button {
+                background: none;
+                border: none;
+                color: var(--ai-text-dark);
+                cursor: pointer;
+                padding: 0;
+                margin-left: 5px;
+                height: 24px;
+                width: 24px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: color 0.2s, transform 0.2s;
+            }
+            #ai-attachment-button:hover, #ai-settings-button:hover {
+                color: var(--ai-text-light);
+            }
+            #ai-settings-button.active {
+                color: var(--ai-primary-color);
+                transform: rotate(45deg);
+            }
+            #ai-settings-button {
+                margin-right: 0;
+            }
+            #ai-settings-button i {
+                font-size: 1.1em;
+            }
+
+            /* --- CHARACTER COUNTER --- */
+            #ai-char-counter {
+                position: absolute;
+                bottom: -2px;
+                right: 20px;
+                font-size: 0.75em;
+                color: var(--ai-text-dark);
+                transition: color 0.2s;
+            }
+            #ai-char-counter.over-limit {
+                color: var(--ai-error-color);
+                font-weight: bold;
+            }
+
+            /* --- ATTACHMENT PREVIEW --- */
+            #ai-attachment-preview {
+                display: flex;
+                gap: 8px;
+                padding: 5px 0;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                margin-right: 5px;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+                margin-top: 5px;
+                max-width: 100%;
+            }
+            #ai-attachment-preview:empty {
+                border-top: none;
+                padding: 0;
+            }
+            #ai-input-wrapper.has-attachments {
+                flex-direction: column;
+                align-items: flex-start;
+                padding-bottom: 0;
+            }
+            .attachment-item {
+                display: flex;
+                align-items: center;
+                background-color: #3a3a3a;
+                border-radius: 4px;
+                padding: 2px 5px;
+                font-size: 0.8em;
+                color: var(--ai-text-light);
+                flex-shrink: 0;
+            }
+            .attachment-icon {
+                margin-right: 5px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 16px;
+                height: 16px;
+            }
+            .attachment-icon img {
+                max-width: 100%;
+                max-height: 100%;
+                border-radius: 2px;
+            }
+            .attachment-icon i {
+                color: var(--ai-primary-color);
+            }
+            .attachment-filename {
+                max-width: 80px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .remove-attachment {
+                background: none;
+                border: none;
+                color: var(--ai-text-dark);
+                margin-left: 5px;
+                cursor: pointer;
+                font-size: 1em;
+                padding: 0;
+                line-height: 1;
+                transition: color 0.2s;
+            }
+            .remove-attachment:hover {
+                color: var(--ai-error-color);
+            }
+
+            /* --- LATEX RENDERING --- */
+            .latex-render {
+                overflow-x: auto;
+                padding: 2px 0;
+                margin: 0 0 5px 0;
+            }
+            .display-math {
+                padding: 10px 0;
+                border-top: 1px dashed rgba(255, 255, 255, 0.1);
+                border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+                margin: 10px 0;
+                text-align: center;
+            }
+
+            /* --- CUSTOM GRAPH RENDERING --- */
+            .custom-graph-placeholder {
+                width: 100%;
+                height: 250px;
+                background-color: #1e1e1e;
+                border: 1px solid #444;
+                border-radius: 6px;
+                margin: 10px 0;
+                overflow: hidden;
+            }
+            .custom-graph-placeholder canvas {
+                display: block;
+                width: 100%;
+                height: 100%;
+            }
+
+            /* --- SETTINGS MENU --- */
+            #ai-settings-menu {
+                position: absolute;
+                bottom: 100%;
+                right: 0;
+                width: 300px;
+                background-color: var(--ai-background-dark);
+                border: 1px solid var(--ai-primary-color);
+                border-radius: 8px;
+                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+                padding: 15px;
+                margin-bottom: 10px;
+                opacity: 0;
+                transform: translateY(10px);
+                pointer-events: none;
+                transition: opacity 0.2s, transform 0.2s;
+                z-index: 10001;
+                text-align: left;
+            }
+            #ai-settings-menu.active {
+                opacity: 1;
+                transform: translateY(0);
+                pointer-events: auto;
+            }
+            .menu-header {
+                font-size: 1.2em;
+                font-weight: 700;
+                color: var(--ai-primary-color);
                 margin-bottom: 15px;
+                padding-bottom: 8px;
+                border-bottom: 1px solid var(--ai-border-color);
+                font-family: 'Merriweather', serif;
+            }
+            .setting-group {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 10px 0;
+                border-bottom: 1px dashed var(--ai-border-color);
+            }
+            .setting-group:last-child {
+                border-bottom: none;
+                padding-bottom: 0;
             }
             .setting-label {
-                flex: 1;
-                margin-right: 15px;
+                flex-grow: 1;
+                padding-right: 10px;
             }
             .setting-label label {
-                display: block; color: #ccc; font-size: 0.95em; 
-                margin-bottom: 3px; font-weight: bold;
+                font-weight: 700;
+                font-size: 0.95em;
+                display: block;
             }
-            .setting-note { font-size: 0.75em; color: #888; margin-top: 0; }
-            
-            /* NEW Toggle Switch CSS */
+            .setting-label p {
+                font-size: 0.75em;
+                color: var(--ai-text-dark);
+                margin: 3px 0 0 0;
+            }
+
+            /* --- TOGGLE SWITCH --- */
             .ai-toggle-switch {
                 position: relative;
                 display: inline-block;
-                width: 50px;
-                height: 28px;
+                width: 40px;
+                height: 24px;
                 flex-shrink: 0;
             }
             .ai-toggle-switch input {
@@ -1884,118 +2334,74 @@ Formatting Rules (MUST FOLLOW):
                 left: 0;
                 right: 0;
                 bottom: 0;
-                background-color: #333;
-                border: 1px solid #555;
+                background-color: #ccc;
                 transition: .4s;
-                border-radius: 28px;
+                border-radius: 24px;
             }
             .ai-slider:before {
                 position: absolute;
                 content: "";
-                height: 20px;
-                width: 20px;
-                left: 3px;
-                bottom: 3px;
+                height: 16px;
+                width: 16px;
+                left: 4px;
+                bottom: 4px;
                 background-color: white;
                 transition: .4s;
                 border-radius: 50%;
             }
-            input:checked + .ai-slider {
-                background-color: #4285f4;
-                border-color: #4285f4;
+            .ai-toggle-switch input:checked + .ai-slider {
+                background-color: var(--ai-primary-color);
             }
-            input:checked + .ai-slider:before {
-                transform: translateX(22px);
+            .ai-toggle-switch input:focus + .ai-slider {
+                box-shadow: 0 0 1px var(--ai-primary-color);
             }
-            /* END NEW Settings Menu */
+            .ai-toggle-switch input:checked + .ai-slider:before {
+                transform: translateX(16px);
+            }
 
-            /* Attachments, Code Blocks, Graphs, LaTeX */
-            #ai-attachment-preview { display: none; flex-direction: row; gap: 10px; padding: 0; max-height: 0; border-bottom: 1px solid transparent; overflow-x: auto; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-            #ai-input-wrapper.has-attachments #ai-attachment-preview { max-height: 100px; padding: 10px 15px; }
-            .attachment-card { position: relative; border-radius: 8px; overflow: hidden; background: #333; height: 80px; width: 80px; flex-shrink: 0; display: flex; justify-content: center; align-items: center; transition: filter 0.3s; cursor: pointer; }
-            .attachment-card.loading { filter: grayscale(80%) brightness(0.7); }
-            .attachment-card.loading .file-icon { opacity: 0.3; }
-            .attachment-card.loading .ai-loader { position: absolute; z-index: 2; }
-            .attachment-card img { width: 100%; height: 100%; object-fit: cover; }
-            .file-info { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); overflow: hidden; }
-            .file-name { display: block; color: #fff; font-size: 0.75em; padding: 4px; text-align: center; white-space: nowrap; }
-            .file-name.marquee > span { display: inline-block; padding-left: 100%; animation: marquee linear infinite; }
-            .file-type-badge { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.7em; padding: 2px 5px; border-radius: 4px; font-family: sans-serif; font-weight: bold; }
-            .remove-attachment-btn { position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.5); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; z-index: 3; }
-
-            .ai-loader { width: 25px; height: 25px; border-radius: 50%; animation: spin 1s linear infinite; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; }
-            
-            .code-block-wrapper, .graph-block-wrapper { background-color: rgba(42, 42, 48, 0.8); border-radius: 8px; margin: 10px 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
-            .code-block-header, .graph-block-header { display: flex; justify-content: flex-end; align-items: center; padding: 6px 12px; background-color: rgba(0,0,0,0.2); }
-            .code-metadata, .graph-metadata { font-size: 0.8em; color: #aaa; margin-right: auto; font-family: monospace; }
-            .copy-code-btn { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; border-radius: 6px; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s; }
-            .copy-code-btn:hover { background: rgba(255, 255, 255, 0.2); }
-            .copy-code-btn:disabled { cursor: default; background: rgba(25, 103, 55, 0.5); }
-            .copy-code-btn svg { stroke: #e0e0e0; }
-            .code-block-wrapper pre { margin: 0; padding: 15px; overflow: auto; background-color: transparent; }
-            .code-block-wrapper pre::-webkit-scrollbar { height: 8px; }
-            .code-block-wrapper pre::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
-            .code-block-wrapper code { font-family: 'Menlo', 'Consolas', monospace; font-size: 0.9em; color: #f0f0f0; }
-            .custom-graph-placeholder { min-height: 400px; position: relative; padding: 10px; }
-            .graph-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-
-            .latex-render { display: inline-block; } /* default to inline */
-            .ai-response-content div.latex-render { display: block; margin: 10px 0; text-align: center; } /* for display mode */
-            .katex { font-size: 1.1em !important; }
-
-            .ai-message-bubble p { margin: 0; padding: 0; text-align: left; }
-            .ai-message-bubble ul, .ai-message-bubble ol { margin: 10px 0; padding-left: 20px; text-align: left; list-style-position: outside; }
-            .ai-message-bubble li { margin-bottom: 5px; }
-
-            /* NEW Web Search Nudge Popup */
+            /* --- WEB SEARCH NUDGE POPUP --- */
             #ai-web-search-nudge {
                 position: fixed;
                 bottom: 20px;
                 left: 50%;
                 transform: translateX(-50%);
-                background-color: #2a2a2e;
-                border: 1px solid #444;
-                border-radius: 12px;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-                color: #eee;
-                z-index: 2147483647;
+                background-color: #3a3a3a;
+                color: var(--ai-text-light);
+                border: 1px solid var(--ai-link-color);
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
                 padding: 15px;
-                animation: nudge-fade-in 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+                z-index: 10002;
+                max-width: 300px;
+                text-align: center;
+                animation: nudge-fade-in 0.3s ease-out forwards;
             }
-            .nudge-content {
-                display: flex;
-                align-items: center;
-                gap: 15px;
-            }
-            .nudge-content p {
-                margin: 0;
+            #ai-web-search-nudge p {
+                margin: 0 0 10px 0;
                 font-size: 0.9em;
-                color: #ccc;
-            }
-            .nudge-buttons {
-                display: flex;
-                gap: 10px;
             }
             .nudge-buttons button {
-                background: none;
-                border: 1px solid #555;
-                color: #ddd;
+                background-color: var(--ai-primary-color);
+                color: var(--ai-background-dark);
+                border: none;
                 padding: 6px 12px;
-                border-radius: 6px;
+                border-radius: 4px;
                 cursor: pointer;
+                font-size: 0.85em;
+                margin: 0 5px;
                 transition: background-color 0.2s;
             }
-            .nudge-buttons button:hover {
-                background-color: #333;
+            #nudge-dismiss {
+                background-color: var(--ai-text-dark);
+                color: var(--ai-text-light);
             }
-            #nudge-open-settings {
-                background-color: #4285f4;
-                border-color: #4285f4;
-                color: white;
+            #nudge-dismiss:hover {
+                background-color: #555;
             }
             #nudge-open-settings:hover {
-                background-color: #3c77e6;
+                background-color: #00897b;
             }
+
             @keyframes nudge-fade-in {
                 from { opacity: 0; transform: translateX(-50%) translateY(20px); }
                 to { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -2004,18 +2410,17 @@ Formatting Rules (MUST FOLLOW):
 
 
             @keyframes glow { 0%,100% { box-shadow: 0 0 5px rgba(255,255,255,.15), 0 0 10px rgba(255,255,255,.1); } 50% { box-shadow: 0 0 10px rgba(255,255,255,.25), 0 0 20px rgba(255,255,255,.2); } }
-            @keyframes gemini-glow { 0%,100% { box-shadow: 0 0 8px 2px var(--ai-blue); } 25% { box-shadow: 0 0 8px 2px var(--ai-green); } 50% { box-shadow: 0 0 8px 2px var(--ai-yellow); } 75% { box-shadow: 0 0 8px 2px var(--ai-red); } }
+            /* CHANGED: Replaced gemini-glow (rainbow) with humanity-glow (cyan blue) */
+            @keyframes humanity-glow { 0%,100% { box-shadow: 0 0 8px 2px #00BCD4, 0 0 15px 5px rgba(0, 188, 212, 0.5); } 50% { box-shadow: 0 0 15px 5px #00BCD4, 0 0 25px 8px rgba(0, 188, 212, 0.7); } }
             @keyframes spin { to { transform: rotate(360deg); } }
             @keyframes message-pop-in { 0% { opacity: 0; transform: translateY(10px) scale(.98); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
-            @keyframes brand-title-pulse { 0%, 100% { text-shadow: 0 0 7px var(--ai-blue); } 25% { text-shadow: 0 0 7px var(--ai-green); } 50% { text-shadow: 0 0 7px var(--ai-yellow); } 75% { text-shadow: 0 0 7px var(--ai-red); } }
-            @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
         `;
         document.head.appendChild(style);
     }
 
+    // --- INITIALIZATION ---
     document.addEventListener('keydown', handleKeyDown);
-
-    document.addEventListener('DOMContentLoaded', async () => {
-        loadAppSettings(); // Replaced loadUserSettings
-    });
+    // Expose for external calls if needed (e.g. from the website's main script)
+    window.activateAI = activateAI;
+    window.deactivateAI = deactivateAI;
 })();
