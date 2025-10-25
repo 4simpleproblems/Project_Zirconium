@@ -16,20 +16,16 @@
  * - Professional/Math: gemini-2.5-flash
  * - Deep Analysis: gemini-2.5-flash (Pro model feature removed)
  *
- * NEW: The AI's response now includes an internal <THOUGHT_PROCESS> and lists sources parsed from groundingMetadata.
+ * NEW: The AI's response now includes an internal <THOUGHT_PROCESS> and lists of <SOURCE URL="..." TITLE="..."/>.
  * UPDATED: Removed authenticated email feature.
- * REPLACED: Geolocation now uses browser's `navigator.geolocation`, triggered on first message if setting is enabled.
- * NEW: Location Sharing is OFF by default.
- * NEW: Web Search (Grounding) is now implemented. `callGoogleAI` adds grounding tools to the payload.
- * NEW: Response parsing now handles `groundingMetadata` for sources, instead of text-based tags.
+ * REPLACED: Geolocation now uses AbstractAPI via XMLHttpRequest, toggleable via settings.
  * NEW: Added a "nudge" popup if AI needs web search but the setting is disabled.
  * UPDATED: Swapped order of monologue and sources. Monologue is now a collapsible dropdown.
  * CSS: Reduced margins between response content, sources, and monologue for a tighter layout.
- * FIX: Removed invalid 'sources' field from chatHistory payload sent to API.
  */
 (function() {
     // --- CONFIGURATION ---
-    const API_KEY = 'AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro'; // Replace with your actual API key
+    const API_KEY = 'AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro';
     const BASE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/`;
     // const AUTHORIZED_PRO_USER = '4simpleproblems@gmail.com'; // REMOVED
     const MAX_INPUT_HEIGHT = 180;
@@ -46,13 +42,12 @@
     let isAIActive = false;
     let isRequestPending = false;
     let currentAIRequestController = null;
-    let chatHistory = []; // Stores objects { role: "user" | "model", parts: [...] }
-    let chatHistoryWithSources = []; // NEW: Stores { role, parts, sources } for rendering
+    let chatHistory = [];
     let attachedFiles = [];
-    // NEW: Replaced userSettings with appSettings, locationSharing defaults to false
+    // NEW: Replaced userSettings with appSettings
     let appSettings = {
         webSearch: true,
-        locationSharing: false
+        locationSharing: true
     };
 
     // Simple debounce utility for performance
@@ -87,43 +82,75 @@
     // --- UTILITIES FOR GEOLOCATION ---
 
     /**
-     * REPLACED: Gets user location via Browser API `navigator.geolocation` if setting is enabled.
-     * This is called on the first message send.
+     * NEW: Helper function for async HTTP GET request.
+     */
+    function httpGetAsync(url, callback) {
+        const xmlHttp = new XMLHttpRequest();
+        xmlHttp.onreadystatechange = function() {
+            if (xmlHttp.readyState === 4) {
+                if (xmlHttp.status === 200) {
+                    callback(xmlHttp.responseText, null);
+                } else {
+                    callback(null, new Error(`HTTP Error: ${xmlHttp.status} ${xmlHttp.statusText}`));
+                }
+            }
+        }
+        xmlHttp.open("GET", url, true); // true for asynchronous
+        xmlHttp.onerror = function() {
+            callback(null, new Error("Network request failed"));
+        };
+        xmlHttp.send(null);
+    }
+
+    /**
+     * REPLACED: Gets user location via AbstractAPI, if setting is enabled.
      * @returns {Promise<string>} Resolves with location string or a fallback.
      */
     function getUserLocationForContext() {
         return new Promise((resolve) => {
+            // Check the new appSetting
             if (!appSettings.locationSharing) {
-                resolve('Location Sharing is disabled by user.');
+                const fallback = 'Location Sharing is disabled by user.';
+                localStorage.setItem('ai-user-location', fallback);
+                resolve(fallback);
                 return;
             }
 
-            // If enabled, try to get it. Browser will cache permission.
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    // SUCCESS
-                    const lat = position.coords.latitude.toFixed(4);
-                    const lon = position.coords.longitude.toFixed(4);
-                    const locationString = `Coordinates: Latitude: ${lat}, Longitude: ${lon}`;
-                    localStorage.setItem('ai-user-location', locationString); // Cache it
-                    resolve(locationString);
-                },
-                (error) => {
-                    // DENIED or FAILED
+            // Use the provided URL and API key
+            const url = "https://ipgeolocation.abstractapi.com/v1/?api_key=9e522ec72e554164bab14e7895db90b2&ip_address=2600:1700:6260:1790:56e6:a7aa:af32:1908";
+
+            httpGetAsync(url, (response, error) => {
+                if (error) {
                     console.warn('Geolocation failed:', error.message);
-                    // Flip setting back off since it failed/was denied
-                    appSettings.locationSharing = false;
-                    saveAppSettings();
-                    // Update the toggle in the UI if it's open
-                    const toggle = document.getElementById('settings-location-sharing');
-                    if (toggle) toggle.checked = false;
-                    resolve('Location access denied or unavailable. Setting disabled.');
-                }, {
-                    enableHighAccuracy: false,
-                    timeout: 5000,
-                    maximumAge: 3600000
-                } // 1hr cache
-            );
+                    let fallback = localStorage.getItem('ai-user-location') || 'Location API Error/Unavailable';
+                    localStorage.setItem('ai-user-location', fallback);
+                    resolve(fallback);
+                } else {
+                    try {
+                        const data = JSON.parse(response);
+                        const {
+                            city,
+                            region,
+                            country,
+                            latitude,
+                            longitude
+                        } = data;
+                        // Format a location string similar to the old one
+                        const lat = parseFloat(latitude).toFixed(4);
+                        const lon = parseFloat(longitude).toFixed(4);
+                        const address = [city, region, country].filter(Boolean).join(', ');
+
+                        const locationString = `Coordinates: Latitude: ${lat}, Longitude: ${lon}\nGeneral Location/Address: ${address}`;
+                        localStorage.setItem('ai-user-location', locationString);
+                        resolve(locationString);
+                    } catch (e) {
+                        console.error('Failed to parse location response:', e);
+                        let fallback = 'Location response parsing failed.';
+                        localStorage.setItem('ai-user-location', fallback);
+                        resolve(fallback);
+                    }
+                }
+            });
         });
     }
 
@@ -488,44 +515,29 @@
         document.removeEventListener('click', handleMenuOutsideClick); // Clean up listener
     }
 
-    // MODIFIED: Use chatHistoryWithSources for rendering
     function renderChatHistory() {
         const responseContainer = document.getElementById('ai-response-container');
         if (!responseContainer) return;
         responseContainer.innerHTML = '';
-        chatHistoryWithSources.forEach(message => { // Use the rendering history
+        chatHistory.forEach(message => {
             const bubble = document.createElement('div');
             bubble.className = `ai-message-bubble ${message.role === 'user' ? 'user-message' : 'gemini-response'}`;
             if (message.role === 'model') {
+                // Use the new parsing logic for historical messages
                 const {
                     html: parsedResponse,
-                    thoughtProcess
+                    thoughtProcess,
+                    sourcesHTML
                 } = parseGeminiResponse(message.parts[0].text);
-
-                // Reconstruct sourcesHTML from the stored sources
-                let sourcesHTML = '';
-                if (message.sources && message.sources.length > 0) {
-                    sourcesHTML = `<div class="ai-sources-list"><h4>Sources:</h4><ul>`;
-                    message.sources.forEach(source => {
-                        let hostname = '';
-                        try {
-                            hostname = new URL(source.uri).hostname;
-                        } catch (e) {
-                            hostname = 'unknown-source';
-                        }
-                        const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
-                        sourcesHTML += `<li><img src="${faviconUrl}" alt="Favicon" class="favicon"><a href="${source.uri}" target="_blank">${escapeHTML(source.title)}</a></li>`;
-                    });
-                    sourcesHTML += `</ul></div>`;
-                }
-
 
                 bubble.innerHTML = `<div class="ai-response-content">${parsedResponse}</div>`;
 
+                // NEW: Sources first
                 if (sourcesHTML) {
                     bubble.innerHTML += sourcesHTML;
                 }
 
+                // NEW: Collapsible thought process
                 if (thoughtProcess) {
                     bubble.innerHTML += `
                         <div class="ai-thought-process collapsed">
@@ -640,9 +652,13 @@ If the user asks about a topic other than 4SP, you should not hint at the websit
      */
     function getDynamicSystemInstructionAndModel(query, currentSettings) {
         // REMOVED: Personalization features
+        // const user = settings.nickname;
+        // const userAge = settings.age > 0 ? `${settings.age} years old` : 'of unknown age';
+        // const userGender = settings.gender.toLowerCase();
+        // const userColor = settings.favoriteColor;
 
         const intent = determineIntentCategory(query);
-        let model = 'gemini-2.5-flash-lite'; // Default model
+        let model = 'gemini-2.5-flash-lite';
         let personaInstruction = `${FSP_HISTORY}
 
 You are a highly capable and adaptable AI, taking on a persona to best serve the user's direct intent. You have significant control over the interaction's structure and detail level, ensuring the response is comprehensive and authoritative.
@@ -653,14 +669,12 @@ Formatting Rules (MUST FOLLOW):
 - For math, use KaTeX. Inline math uses single \`$\`, and display math uses double \`$$\`. Use \\le for <= and \\ge for >=.
 - For graphs, use a 'graph' block as shown in the file's comments.
 - **PREPEND your response with your reasoning/internal monologue wrapped in <THOUGHT_PROCESS>...</THOUGHT_PROCESS>**. This is mandatory for every response.
-- **Your response text MUST NOT contain <SOURCE> tags.** Real sources will be added from metadata.
+- **APPEND all external sources used (if any) as a list of tags**: <SOURCE URL="[URL]" TITLE="[Title]"/>. You may use placeholder URLs if no real search was performed, but the format must be followed.
 `;
 
         // NEW: Add web search instruction
         if (currentSettings.webSearch) {
-            personaInstruction += `\n**Web Search: ENABLED.** You MUST use external sources to answer questions about current events, specific facts, or places. Your response will be grounded.\n`;
-            // Use a model that supports grounding
-            model = 'gemini-2.5-flash-preview-09-2025';
+            personaInstruction += `\n**Web Search: ENABLED.** You can and should use external sources to answer questions about current events, specific facts, or places.\n`;
         } else {
             personaInstruction += `\n**Web Search: DISABLED.** You must answer using only your internal knowledge. If you CANNOT answer without a web search, you MUST include the exact string \`[NEEDS_WEB_SEARCH]\` in your response and explain that you need web access to answer fully.\n`;
         }
@@ -668,17 +682,15 @@ Formatting Rules (MUST FOLLOW):
 
         switch (intent) {
             case 'DEEP_ANALYSIS':
-                // Use a stronger model if not already set by grounding
-                if (!currentSettings.webSearch) model = 'gemini-2.5-flash';
-                personaInstruction += `\n\n**Current Persona: Professional Analyst (${model.includes('preview') ? '2.5-Flash-Preview' : '2.5-Flash'}).** You are performing a detailed analysis. Respond with clarity, professionalism, and structured data. Your response must be comprehensive, highly structured, and exhibit a deep level of reasoning. Use an assertive, expert tone.`;
+                // Pro model access is removed, fallback to high-end Flash model.
+                model = 'gemini-2.5-flash';
+                personaInstruction += `\n\n**Current Persona: Professional Analyst (2.5-Flash).** You are performing a detailed analysis, but maintain efficiency and focus. Respond with clarity, professionalism, and structured data. Your response must be comprehensive, highly structured, and exhibit a deep level of reasoning and critical evaluation. Use an assertive, expert tone. Structure your analysis clearly with headings and bullet points.`;
                 break;
             case 'PROFESSIONAL_MATH':
-                // Math doesn't typically need search, so we can use the non-grounded model
                 model = 'gemini-2.5-flash';
                 personaInstruction += `\n\n**Current Persona: Technical Expert (2.5-Flash).** Respond with extreme clarity, professionalism, and precision. Focus on step-by-step logic, equations, and definitive answers. Use a formal, neutral tone. Use KaTeX and custom graphs where appropriate.`;
                 break;
             case 'CREATIVE':
-                // Creative tasks also don't need search
                 model = 'gemini-2.5-flash';
                 const roastInsults = [
                     `They sound like a cheap knock-off of a decent human.`,
@@ -688,17 +700,17 @@ Formatting Rules (MUST FOLLOW):
                 ];
                 const roastInsult = roastInsults[Math.floor(Math.random() * roastInsults.length)];
 
+                // Combined Creative and Sarcastic
                 if (query.toLowerCase().includes('ex') || query.toLowerCase().includes('roast')) {
                     personaInstruction += `\n\n**Current Persona: Sarcastic, Supportive Friend (2.5-Flash).** Your goal is to empathize with the user, validate their feelings, and join them in 'roasting' or speaking negatively about their ex/situation. Be funny, slightly aggressive toward the subject of trash talk, and deeply supportive of the user. Use casual language and slang. **Example of tone/support:** "${roastInsult}"`;
                 } else {
-                    // FIX: Corrected (25-Flash) to (2.5-Flash)
-                    personaInstruction += `\n\n**Current Persona: Creative Partner (2.5-Flash).** Use rich, evocative language. Be imaginative, focus on descriptive details, and inspire new ideas.`;
+                    personaInstruction += `\n\n**Current Persona: Creative Partner (25-Flash).** Use rich, evocative language. Be imaginative, focus on descriptive details, and inspire new ideas.`;
                 }
                 break;
             case 'CASUAL':
             default:
-                // Use default model (which would be 'preview' if search is on, 'lite' if off)
-                personaInstruction += `\n\n**Current Persona: Standard Assistant (${model.includes('preview') ? '2.5-Flash-Preview' : '2.5-Flash-Lite'}).** You are balanced, helpful, and concise. Use a friendly and casual tone. Your primary function is efficient conversation. Make sure to be highly concise, making sure to not write too much.`;
+                model = 'gemini-2.5-flash-lite';
+                personaInstruction += `\n\n**Current Persona: Standard Assistant (2.5-Flash-Lite).** You are balanced, helpful, and concise. Use a friendly and casual tone. Your primary function is efficient conversation. Make sure to be highly concise, making sure to not write too much.`;
                 break;
         }
 
@@ -732,13 +744,11 @@ Formatting Rules (MUST FOLLOW):
         `;
         document.body.appendChild(nudge);
 
-        const dismiss = () => {
-            nudge.style.opacity = '0';
-            setTimeout(() => nudge.remove(), 300);
-        };
+        const dismiss = () => nudge.remove();
         nudge.querySelector('#nudge-dismiss').onclick = dismiss;
         nudge.querySelector('#nudge-open-settings').onclick = () => {
             const menu = document.getElementById('ai-settings-menu');
+            const toggleBtn = document.getElementById('ai-settings-button');
             if (menu && !menu.classList.contains('active')) {
                 toggleSettingsMenu();
             }
@@ -755,8 +765,8 @@ Formatting Rules (MUST FOLLOW):
         currentAIRequestController = new AbortController();
 
         let firstMessageContext = '';
-        if (chatHistory.length <= 1) { // Only add context on the very first user message
-            // Await location for context (will respect the setting and prompt if needed)
+        if (chatHistory.length <= 1) {
+            // Await location for context (will respect the setting)
             const location = await getUserLocationForContext();
             const now = new Date();
             const date = now.toLocaleDateString('en-US', {
@@ -772,40 +782,35 @@ Formatting Rules (MUST FOLLOW):
             firstMessageContext = `(System Info: User is asking from location:\n${location}. Current date is ${date}, ${time}. User Email: Not Authenticated/Removed.)\n\n`;
         }
 
-        // Prepare chat history for the API (no sources field)
-        let apiChatHistory = [...chatHistory];
-        if (apiChatHistory.length > 6) {
-            apiChatHistory = [...apiChatHistory.slice(0, 3), ...apiChatHistory.slice(-3)];
+        let processedChatHistory = [...chatHistory];
+        if (processedChatHistory.length > 6) {
+            processedChatHistory = [...processedChatHistory.slice(0, 3), ...processedChatHistory.slice(-3)];
         }
 
-        const lastMessageIndex = apiChatHistory.length - 1;
-        const userParts = apiChatHistory[lastMessageIndex].parts;
+        const lastMessageIndex = processedChatHistory.length - 1;
+        const userParts = processedChatHistory[lastMessageIndex].parts;
         const textPartIndex = userParts.findIndex(p => p.text);
 
         const lastUserQuery = userParts[textPartIndex]?.text || '';
 
         // --- MODEL SELECTION AND INSTRUCTION GENERATION ---
+        // UPDATED: Pass appSettings instead of userSettings
         const {
             instruction: dynamicInstruction,
             model
         } = getDynamicSystemInstructionAndModel(lastUserQuery, appSettings);
         // --- END MODEL SELECTION ---
 
-        // Prepend context only if it's the first message and context exists
-        if (firstMessageContext && textPartIndex > -1) {
-            // Clone parts to avoid modifying original history
-            const modifiedUserParts = JSON.parse(JSON.stringify(userParts));
-            modifiedUserParts[textPartIndex].text = firstMessageContext + modifiedUserParts[textPartIndex].text;
-            apiChatHistory[lastMessageIndex].parts = modifiedUserParts;
+        if (textPartIndex > -1) {
+            userParts[textPartIndex].text = firstMessageContext + userParts[textPartIndex].text;
         } else if (firstMessageContext) {
-             // If only files were sent on first message
-            const modifiedUserParts = [{ text: firstMessageContext.trim() }, ...JSON.parse(JSON.stringify(userParts))];
-            apiChatHistory[lastMessageIndex].parts = modifiedUserParts;
+            userParts.unshift({
+                text: firstMessageContext.trim()
+            });
         }
 
-
         const payload = {
-            contents: apiChatHistory, // Use the prepared history
+            contents: processedChatHistory,
             systemInstruction: {
                 parts: [{
                     text: dynamicInstruction
@@ -816,13 +821,6 @@ Formatting Rules (MUST FOLLOW):
         // --- DYNAMIC URL CONSTRUCTION ---
         const DYNAMIC_API_URL = `${BASE_API_URL}${model}:generateContent?key=${API_KEY}`;
         // --- END DYNAMIC URL CONSTRUCTION ---
-
-        // NEW: Add grounding tool if web search is enabled
-        if (appSettings.webSearch) {
-            payload.tools = [{
-                "google_search": {}
-            }];
-        }
 
         try {
             const response = await fetch(DYNAMIC_API_URL, {
@@ -838,18 +836,18 @@ Formatting Rules (MUST FOLLOW):
                 throw new Error(`Network response was not ok. Status: ${response.status}. Details: ${JSON.stringify(errorData)}`);
             }
             const data = await response.json();
-
-            // MODIFIED: Candidate extraction
-            const candidate = data.candidates?.[0];
-            // Allow empty string response, but throw error if structure is wrong
-            if (!candidate?.content?.parts) {
-                 if (data.promptFeedback && data.promptFeedback.blockReason) {
+            if (!data.candidates || data.candidates.length === 0) {
+                if (data.promptFeedback && data.promptFeedback.blockReason) {
                     throw new Error(`Content blocked due to: ${data.promptFeedback.blockReason}. Safety ratings: ${JSON.stringify(data.promptFeedback.safetyRatings)}`);
                 }
-                throw new Error("Invalid response from API: Missing content parts.");
+                throw new Error("Invalid response from API: No candidates or empty candidates array.");
             }
 
-            let text = candidate.content.parts[0]?.text ?? ""; // Default to empty string if text is missing
+            let text = data.candidates[0].content.parts[0]?.text || '';
+            if (!text) {
+                responseBubble.innerHTML = `<div class="ai-error">The AI generated an empty response. Please try again or rephrase.</div>`;
+                return;
+            }
 
             // NEW: Check for web search requirement
             if (text.includes('[NEEDS_WEB_SEARCH]')) {
@@ -857,62 +855,25 @@ Formatting Rules (MUST FOLLOW):
                 text = text.replace(/\[NEEDS_WEB_SEARCH\]/g, ''); // Remove token
             }
 
-            // NEW: Parse Grounding Metadata
-            let sourcesHTML = '';
-            let sources = [];
-            const groundingMetadata = candidate.groundingMetadata;
-            if (groundingMetadata && groundingMetadata.groundingAttributions) {
-                sources = groundingMetadata.groundingAttributions
-                    .map(attr => ({
-                        uri: attr.web?.uri,
-                        title: attr.web?.title,
-                    }))
-                    .filter(source => source.uri && source.title); // Ensure valid sources
-
-                if (sources.length > 0) {
-                    sourcesHTML = `<div class="ai-sources-list"><h4>Sources:</h4><ul>`;
-                    sources.forEach(source => {
-                        let hostname = '';
-                        try {
-                            hostname = new URL(source.uri).hostname;
-                        } catch (e) {
-                            hostname = 'unknown-source';
-                        }
-                        const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
-                        sourcesHTML += `<li><img src="${faviconUrl}" alt="Favicon" class="favicon"><a href="${source.uri}" target="_blank">${escapeHTML(source.title)}</a></li>`;
-                    });
-                    sourcesHTML += `</ul></div>`;
-                }
-            }
-            // END: Parse Grounding Metadata
-
-            // Store message for API history (without sources field)
-            const apiHistoryEntry = {
+            chatHistory.push({
                 role: "model",
-                parts: [{ text: text }]
-            };
-            chatHistory.push(apiHistoryEntry);
+                parts: [{
+                    text: text
+                }]
+            });
 
-             // Store message for rendering (with sources field)
-            const renderHistoryEntry = {
-                role: "model",
-                parts: [{ text: text }],
-                sources: sources
-            };
-            chatHistoryWithSources.push(renderHistoryEntry);
-
-
-            // MODIFIED: parseGeminiResponse no longer returns sourcesHTML
+            // New parsing and rendering logic
             const {
                 html: contentHTML,
-                thoughtProcess
+                thoughtProcess,
+                sourcesHTML
             } = parseGeminiResponse(text);
 
             responseBubble.style.opacity = '0';
             setTimeout(() => {
                 let fullContent = `<div class="ai-response-content">${contentHTML}</div>`;
 
-                // Use the new sourcesHTML generated from metadata
+                // NEW: Sources first
                 if (sourcesHTML) {
                     fullContent += sourcesHTML;
                 }
@@ -964,7 +925,6 @@ Formatting Rules (MUST FOLLOW):
                 responseBubble.innerHTML = `<div class="ai-error">Message generation stopped.</div>`;
             } else {
                 console.error('AI API Error:', error);
-                // FIX: Corrected class name typo
                 responseBubble.innerHTML = `<div class="ai-error">Sorry, an error occurred: ${error.message || "Unknown error"}.</div>`;
             }
         } finally {
@@ -1067,14 +1027,9 @@ Formatting Rules (MUST FOLLOW):
             saveAppSettings();
         });
 
-        // MODIFIED: Location toggle logic
         menu.querySelector('#settings-location-sharing').addEventListener('change', (e) => {
             appSettings.locationSharing = e.target.checked;
             saveAppSettings();
-            if (!e.target.checked) {
-                localStorage.removeItem('ai-user-location'); // Clear cache if turned off
-            }
-            // Permission will be asked by getUserLocationForContext() on next message if needed
         });
 
         return menu;
@@ -1435,16 +1390,10 @@ Formatting Rules (MUST FOLLOW):
                     inlineData: file.inlineData
                 });
             });
-
-            // Store user message for API history
-            const userApiHistoryEntry = { role: "user", parts: parts };
-            chatHistory.push(userApiHistoryEntry);
-
-             // Store user message for rendering history
-            const userRenderHistoryEntry = { role: "user", parts: parts };
-            chatHistoryWithSources.push(userRenderHistoryEntry);
-
-
+            chatHistory.push({
+                role: "user",
+                parts: parts
+            });
             const responseContainer = document.getElementById('ai-response-container');
             const userBubble = document.createElement('div');
             userBubble.className = 'ai-message-bubble user-message';
@@ -1475,32 +1424,6 @@ Formatting Rules (MUST FOLLOW):
         const wrapper = btn.closest('.code-block-wrapper');
         const code = wrapper.querySelector('pre > code');
         if (code) {
-            // Use execCommand for broader compatibility within potential iframe restrictions
-            const textarea = document.createElement('textarea');
-            textarea.value = code.innerText;
-            textarea.style.position = 'fixed'; // Prevent scrolling to bottom
-            document.body.appendChild(textarea);
-            textarea.select();
-            try {
-                const successful = document.execCommand('copy');
-                if (successful) {
-                    btn.innerHTML = checkIconSVG;
-                    btn.disabled = true;
-                    setTimeout(() => {
-                        btn.innerHTML = copyIconSVG;
-                        btn.disabled = false;
-                    }, 2000);
-                } else {
-                     console.error('Fallback: Oops, unable to copy');
-                     alert('Failed to copy code using fallback.');
-                }
-            } catch (err) {
-                console.error('Fallback: Oops, unable to copy', err);
-                alert('Failed to copy code.');
-            }
-            document.body.removeChild(textarea);
-
-            /* // Prefer navigator.clipboard but it might fail in some contexts
             navigator.clipboard.writeText(code.innerText).then(() => {
                 btn.innerHTML = checkIconSVG;
                 btn.disabled = true;
@@ -1512,7 +1435,6 @@ Formatting Rules (MUST FOLLOW):
                 console.error('Failed to copy code: ', err);
                 alert('Failed to copy code.');
             });
-            */
         }
     }
 
@@ -1538,11 +1460,6 @@ Formatting Rules (MUST FOLLOW):
         return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
     }
 
-    /**
-     * MODIFIED: Removed <SOURCE> tag parsing.
-     * @param {string} text The raw text from the AI.
-     * @returns {{html: string, thoughtProcess: string}}
-     */
     function parseGeminiResponse(text) {
         let html = text;
         const placeholders = {};
@@ -1561,8 +1478,33 @@ Formatting Rules (MUST FOLLOW):
             return ''; // Remove from main text
         });
 
-        // --- REMOVED: Source tag parsing ---
-        // Sources are now handled by groundingMetadata in callGoogleAI
+        // --- Extract sources ---
+        let sourcesHTML = '';
+        const sources = [];
+        html = html.replace(/<SOURCE URL="([^"]+)" TITLE="([^"]+)"\s*\/>/g, (match, url, title) => {
+            sources.push({
+                url,
+                title
+            });
+            return ''; // Remove from main text
+        });
+
+        if (sources.length > 0) {
+            // Construct the sources list with favicon mockups
+            sourcesHTML = `<div class="ai-sources-list"><h4>Sources:</h4><ul>`;
+            sources.forEach(source => {
+                let hostname = '';
+                try {
+                    hostname = new URL(source.url).hostname;
+                } catch (e) {
+                    hostname = 'unknown-source';
+                }
+                // Use Google's favicon service for the mock favicon
+                const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+                sourcesHTML += `<li><img src="${faviconUrl}" alt="Favicon" class="favicon"><a href="${source.url}" target="_blank">${escapeHTML(source.title)}</a></li>`;
+            });
+            sourcesHTML += `</ul></div>`;
+        }
 
         // 1. Extract graph blocks (most specific)
         html = html.replace(/```graph\n([\s\S]*?)```/g, (match, jsonString) => {
@@ -1652,10 +1594,10 @@ Formatting Rules (MUST FOLLOW):
         // 6. Restore placeholders
         html = html.replace(/%%PLACEHOLDER_\d+%%/g, (match) => placeholders[match] || '');
 
-        // MODIFIED: Return object
         return {
             html: html,
-            thoughtProcess: thoughtProcess
+            thoughtProcess: thoughtProcess,
+            sourcesHTML: sourcesHTML
         };
     }
 
@@ -1721,8 +1663,8 @@ Formatting Rules (MUST FOLLOW):
             
             /* UPDATED STYLES for Sources (Top) and Collapsible Monologue (Bottom) */
             
-            /* CSS FIX: Adjusted margins for spacing */
-            .ai-sources-list { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; margin-top: 12px; }
+            /* CSS FIX: Reduced margin-top from 15px to 10px */
+            .ai-sources-list { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; margin-top: 10px; }
             .ai-sources-list h4 { color: #ccc; margin: 0 0 10px 0; font-family: 'Merriweather', serif; font-size: 1em; }
             .ai-sources-list ul { list-style: none; padding: 0; margin: 0; }
             .ai-sources-list li { display: flex; align-items: center; margin-bottom: 5px; }
@@ -1730,8 +1672,8 @@ Formatting Rules (MUST FOLLOW):
             .ai-sources-list li a:hover { color: #6a9cf6; }
             .ai-sources-list li img.favicon { width: 16px; height: 16px; margin-right: 8px; border-radius: 2px; flex-shrink: 0; }
             
-            /* CSS FIX: Adjusted margins for spacing */
-            .ai-thought-process { background-color: rgba(66, 133, 244, 0.1); border: 1px solid rgba(66, 133, 244, 0.3); border-radius: 12px; padding: 0; margin-top: 8px; font-size: 0.9em; max-width: 100%; transition: all 0.3s ease; }
+            /* CSS FIX: Reduced margin-top from 15px to 10px */
+            .ai-thought-process { background-color: rgba(66, 133, 244, 0.1); border: 1px solid rgba(66, 133, 244, 0.3); border-radius: 12px; padding: 0; margin-top: 10px; font-size: 0.9em; max-width: 100%; transition: all 0.3s ease; }
             .monologue-header { display: flex; justify-content: space-between; align-items: center; padding: 10px; cursor: pointer; }
             .monologue-title { color: #4285f4; margin: 0; font-family: 'Merriweather', serif; font-size: 1em; }
             .monologue-toggle-btn { background: none; border: 1px solid rgba(66, 133, 244, 0.5); color: #4285f4; border-radius: 6px; padding: 4px 8px; font-size: 0.8em; cursor: pointer; transition: background-color 0.2s; }
@@ -1900,9 +1842,7 @@ Formatting Rules (MUST FOLLOW):
                 color: #eee;
                 z-index: 2147483647;
                 padding: 15px;
-                opacity: 0;
-                animation: nudge-fade-in 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-                transition: opacity 0.3s;
+                animation: nudge-fade-in 0.5s cubic-bezier(0.4, 0, 0.2, 1);
             }
             .nudge-content {
                 display: flex;
@@ -1961,4 +1901,3 @@ Formatting Rules (MUST FOLLOW):
         loadAppSettings(); // Replaced loadUserSettings
     });
 })();
-
