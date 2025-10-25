@@ -5,13 +5,11 @@
  * to rendering user-specific information.
  *
  * --- UPDATES & FEATURES ---
- * 1. PURE LOCAL STORAGE: Color setting is loaded ONLY from Local Storage for instant updates.
+ * 1. PURE BLACK CONTRAST: Text/icons now switch to pure black (#000000) for light background colors (Luminance > 0.4).
  * 2. IMMEDIATE COLOR SYNC: CSS styles are injected synchronously immediately after color load, fixing the visual delay.
- * 3. COMPLETE COLOR SYNCHRONIZATION: The navbar, the fading scroll texture, text, icons, and borders all adjust dynamically 
- * based on the color set in Local Storage.
- * 4. CONTRAST SWITCHING: Automatically switches text/icon color to #111111 (near-black) if the background color is light.
- * 5. ADMIN EMAIL SET: The privileged email is set to 4simpleproblems@gmail.com.
- * 6. FIREBASE SETTINGS REMOVED: All Firebase Firestore logic related to color settings has been removed.
+ * 3. COMPLETE COLOR SYNCHRONIZATION: The navbar, the fading scroll texture, text, icons, and borders all adjust dynamically.
+ * 4. PURE LOCAL STORAGE: Color setting is loaded ONLY from Local Storage.
+ * 5. FIREBASE SETTINGS REMOVED: All Firebase Firestore logic related to color settings has been removed.
  */
 
 // =========================================================================
@@ -46,7 +44,7 @@ let userSettings = {
 // --- Utility Functions (Luminance and Contrast) ---
 
 /**
- * Calculates the perceived luminance of a hex color.
+ * Calculates the perceived luminance of a hex color (0 to 1).
  */
 const getLuminance = (hex) => {
     const r = parseInt(hex.slice(1, 3), 16);
@@ -55,6 +53,7 @@ const getLuminance = (hex) => {
 
     const [R, G, B] = [r, g, b].map(c => {
         c /= 255;
+        // Gamma correction
         return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
     });
 
@@ -62,10 +61,13 @@ const getLuminance = (hex) => {
 };
 
 /**
- * Determines the best text color (white or near-black) for contrast.
+ * Determines the best text color (white or pure-black) for contrast.
+ * @param {string} hexColor - The background hex color.
+ * @returns {string} Either 'white' or '#000000' (pure-black).
  */
 const getContrastTextColor = (hexColor) => {
-    return getLuminance(hexColor) > 0.4 ? '#111111' : 'white';
+    // If the background luminance is higher than 0.4 (i.e., a light color), use pure black text.
+    return getLuminance(hexColor) > 0.4 ? '#000000' : 'white';
 };
 
 /**
@@ -113,12 +115,11 @@ const loadLocalNavbarColor = () => {
 
     /**
      * Injects the dynamic CSS styles using the currently set global color variables.
-     * This is called immediately on script load for instant visual sync.
      */
     const injectStyles = () => {
         // Read the currently applied colors from the global state/CSS variables
         const navbarColor = userSettings.navbarColor; 
-        const contrastTextColor = getContrastTextColor(navbarColor);
+        const contrastTextColor = getContrastTextColor(navbarColor); // This will be 'white' or '#000000'
 
         // Dynamic fade effect colors: use the navbar color for the gradient background
         const fadeLeft = `linear-gradient(to right, ${navbarColor} 50%, transparent)`;
@@ -138,7 +139,8 @@ const loadLocalNavbarColor = () => {
             .auth-navbar { 
                 position: fixed; top: 0; left: 0; right: 0; z-index: 1000; 
                 background: var(--navbar-color); 
-                border-bottom: 1px solid ${contrastTextColor === '#111111' ? '#dddddd' : 'rgb(31 41 55)'}; 
+                /* Border contrast adjusted */
+                border-bottom: 1px solid ${contrastTextColor === '#000000' ? '#dddddd' : 'rgb(31 41 55)'}; 
                 height: 4rem; 
                 color: var(--navbar-text-color); 
             }
@@ -149,23 +151,28 @@ const loadLocalNavbarColor = () => {
             .auth-menu-container { 
                 position: absolute; right: 0; top: 50px; width: 16rem; 
                 background: var(--navbar-color);
-                border: 1px solid ${contrastTextColor === '#111111' ? '#bbbbbb' : 'rgb(55 65 81)'}; 
+                /* Border contrast adjusted */
+                border: 1px solid ${contrastTextColor === '#000000' ? '#bbbbbb' : 'rgb(55 65 81)'}; 
                 border-radius: 0.75rem; padding: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
                 transition: transform 0.2s ease-out, opacity 0.2s ease-out; transform-origin: top right; 
             }
             .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
             .auth-menu-link, .auth-menu-button { 
-                color: ${contrastTextColor === '#111111' ? '#374151' : '#d1d5db'}; 
+                /* Link color contrast adjusted */
+                color: ${contrastTextColor === '#000000' ? '#374151' : '#d1d5db'}; 
                 display: flex; align-items: center; gap: 0.75rem; width: 100%; text-align: left; 
                 padding: 0.5rem 0.75rem; font-size: 0.875rem; 
                 border-radius: 0.375rem; transition: background-color 0.2s, color 0.2s; border: none; cursor: pointer;
             }
             .auth-menu-link:hover, .auth-menu-button:hover { 
-                background-color: ${contrastTextColor === '#111111' ? '#f3f4f6' : 'rgb(55 65 81)'}; 
-                color: ${contrastTextColor === '#111111' ? '#000000' : 'white'}; 
+                /* Hover background and text color contrast adjusted */
+                background-color: ${contrastTextColor === '#000000' ? '#f3f4f6' : 'rgb(55 65 81)'}; 
+                color: ${contrastTextColor === '#000000' ? '#000000' : 'white'}; 
             }
-            .logged-out-auth-toggle { background: ${contrastTextColor === '#111111' ? '#ffffff' : '#010101'}; border: 1px solid ${contrastTextColor === '#111111' ? '#dddddd' : '#374151'}; }
-            .logged-out-auth-toggle i { color: ${contrastTextColor === '#111111' ? '#111111' : '#DADADA'}; }
+            /* Logged out button styling contrast adjusted */
+            .logged-out-auth-toggle { background: ${contrastTextColor === '#000000' ? '#ffffff' : '#010101'}; border: 1px solid ${contrastTextColor === '#000000' ? '#dddddd' : '#374151'}; }
+            /* Pure black icon for light backgrounds */
+            .logged-out-auth-toggle i { color: ${contrastTextColor === '#000000' ? '#000000' : '#DADADA'}; }
 
             /* Tab Wrapper and Glide Buttons */
             .tab-wrapper { flex-grow: 1; display: flex; align-items: center; position: relative; min-width: 0; margin: 0 1rem; }
@@ -186,7 +193,8 @@ const loadLocalNavbarColor = () => {
             /* Tab Links - Default state */
             .nav-tab { 
                 flex-shrink: 0; padding: 0.5rem 1rem; 
-                color: ${contrastTextColor === '#111111' ? '#6b7280' : '#9ca3af'}; 
+                /* Default tab text color contrast adjusted */
+                color: ${contrastTextColor === '#000000' ? '#6b7280' : '#9ca3af'}; 
                 font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; 
                 transition: all 0.2s; text-decoration: none; line-height: 1.5; 
                 display: flex; align-items: center; margin-right: 0.5rem; border: 1px solid transparent; 
@@ -194,8 +202,9 @@ const loadLocalNavbarColor = () => {
             /* Tab Hover state */
             .nav-tab:not(.active):hover { 
                 color: var(--navbar-text-color); 
-                border-color: ${contrastTextColor === '#111111' ? '#9ca3af' : '#d1d5db'}; 
-                background-color: ${contrastTextColor === '#111111' ? 'rgba(0,0,0,0.05)' : 'rgba(79, 70, 229, 0.05)'}; 
+                border-color: ${contrastTextColor === '#000000' ? '#9ca3af' : '#d1d5db'}; 
+                /* Hover background color contrast adjusted */
+                background-color: ${contrastTextColor === '#000000' ? 'rgba(0,0,0,0.05)' : 'rgba(79, 70, 229, 0.05)'}; 
             }
             /* Tab Active state (uses fixed blue for consistency) */
             .nav-tab.active { color: #4f46e5; border-color: #4f46e5; background-color: rgba(79, 70, 229, 0.1); }
@@ -326,7 +335,6 @@ const loadLocalNavbarColor = () => {
         auth = firebase.auth();
         db = firebase.firestore();
 
-        // Utility functions (isTabActive, updateScrollGilders) are fine here.
         const isTabActive = (tabUrl) => {
             const tabPathname = new URL(tabUrl, window.location.origin).pathname.toLowerCase();
             const currentPathname = window.location.pathname.toLowerCase();
