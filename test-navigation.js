@@ -6,12 +6,12 @@
  *
  * --- UPDATES & FEATURES ---
  * 1. PURE LOCAL STORAGE: Color setting is loaded ONLY from Local Storage for instant updates.
- * 2. COMPLETE COLOR SYNCHRONIZATION: The navbar, the fading scroll texture, text, icons, and borders all adjust dynamically 
+ * 2. IMMEDIATE COLOR SYNC: CSS styles are injected synchronously immediately after color load, fixing the visual delay.
+ * 3. COMPLETE COLOR SYNCHRONIZATION: The navbar, the fading scroll texture, text, icons, and borders all adjust dynamically 
  * based on the color set in Local Storage.
- * 3. CONTRAST SWITCHING: Automatically switches text/icon color to #111111 (near-black) if the background color is light 
- * to ensure high readability.
- * 4. ADMIN EMAIL SET: The privileged email is set to 4simpleproblems@gmail.com.
- * 5. FIREBASE SETTINGS REMOVED: All Firebase Firestore logic related to color settings has been removed.
+ * 4. CONTRAST SWITCHING: Automatically switches text/icon color to #111111 (near-black) if the background color is light.
+ * 5. ADMIN EMAIL SET: The privileged email is set to 4simpleproblems@gmail.com.
+ * 6. FIREBASE SETTINGS REMOVED: All Firebase Firestore logic related to color settings has been removed.
  */
 
 // =========================================================================
@@ -30,11 +30,7 @@ const FIREBASE_CONFIG = {
 
 // --- Configuration ---
 const PAGE_CONFIG_URL = '../page-identification.json';
-
-// Set the specific email that is considered an administrator.
 const PRIVILEGED_EMAIL = '4simpleproblems@gmail.com'; 
-
-// Key for Local Storage (Must match the one in settings.html)
 const NAVBAR_COLOR_KEY = '4sp_navbar_color';
 const DEFAULT_NAVBAR_COLOR = '#000000'; // Default black
 
@@ -51,8 +47,6 @@ let userSettings = {
 
 /**
  * Calculates the perceived luminance of a hex color.
- * @param {string} hex - The hex color code (e.g., "#000000").
- * @returns {number} The luminance value (0 to 1).
  */
 const getLuminance = (hex) => {
     const r = parseInt(hex.slice(1, 3), 16);
@@ -69,23 +63,15 @@ const getLuminance = (hex) => {
 
 /**
  * Determines the best text color (white or near-black) for contrast.
- * @param {string} hexColor - The background hex color.
- * @returns {string} Either 'white' or '#111111' (near-black).
  */
 const getContrastTextColor = (hexColor) => {
-    // Threshold is 0.4 for visual comfort.
     return getLuminance(hexColor) > 0.4 ? '#111111' : 'white';
 };
 
-// --- Local Storage and Color Application Functions ---
-
 /**
  * Applies the given color to the CSS variable and updates global settings.
- * This function also calculates and sets the contrast text color variable.
- * @param {string} color - The hex color to apply (e.g., '#RRGGBB').
  */
 const applyNavbarColor = (color) => {
-    // Fallback to default if invalid color
     if (!/^#[0-9A-F]{6}$/i.test(color)) {
         color = DEFAULT_NAVBAR_COLOR;
     }
@@ -106,9 +92,8 @@ const loadLocalNavbarColor = () => {
         const localColor = localStorage.getItem(NAVBAR_COLOR_KEY);
         const finalColor = localColor && /^#[0-9A-F]{6}$/i.test(localColor) ? localColor : DEFAULT_NAVBAR_COLOR;
         applyNavbarColor(finalColor);
-        console.log("Navbar color applied from Local Storage/Default:", finalColor);
     } catch (e) {
-        console.error("Could not read from Local Storage:", e);
+        console.error("Could not read from Local Storage, applying default:", e);
         applyNavbarColor(DEFAULT_NAVBAR_COLOR);
     }
 };
@@ -116,7 +101,7 @@ const loadLocalNavbarColor = () => {
 // --- Self-invoking function to encapsulate all logic ---
 (function() {
     
-    // ⭐️ STEP 1: Load the color from Local Storage IMMEDIATELY before doing anything else
+    // ⭐️ STEP 1: Load the color from Local Storage IMMEDIATELY and set CSS variables
     loadLocalNavbarColor(); 
     
     if (!FIREBASE_CONFIG || !FIREBASE_CONFIG.apiKey) {
@@ -124,7 +109,118 @@ const loadLocalNavbarColor = () => {
         return;
     }
 
-    // --- 1. DYNAMICALLY LOAD EXTERNAL ASSETS ---
+    // --- 2. DYNAMICALLY INJECT STYLES (LIFTED & FIXED) ---
+
+    /**
+     * Injects the dynamic CSS styles using the currently set global color variables.
+     * This is called immediately on script load for instant visual sync.
+     */
+    const injectStyles = () => {
+        // Read the currently applied colors from the global state/CSS variables
+        const navbarColor = userSettings.navbarColor; 
+        const contrastTextColor = getContrastTextColor(navbarColor);
+
+        // Dynamic fade effect colors: use the navbar color for the gradient background
+        const fadeLeft = `linear-gradient(to right, ${navbarColor} 50%, transparent)`;
+        const fadeRight = `linear-gradient(to left, ${navbarColor} 50%, transparent)`;
+        
+        let existingStyle = document.getElementById('navbar-dynamic-styles');
+        if (existingStyle) {
+            existingStyle.remove();
+        }
+
+        const style = document.createElement('style');
+        style.id = 'navbar-dynamic-styles';
+        
+        style.textContent = `
+            /* Base Styles */
+            body { padding-top: 4rem; }
+            .auth-navbar { 
+                position: fixed; top: 0; left: 0; right: 0; z-index: 1000; 
+                background: var(--navbar-color); 
+                border-bottom: 1px solid ${contrastTextColor === '#111111' ? '#dddddd' : 'rgb(31 41 55)'}; 
+                height: 4rem; 
+                color: var(--navbar-text-color); 
+            }
+            .auth-navbar nav { padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
+            .initial-avatar { background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; }
+            
+            /* Auth Dropdown Menu Styles */
+            .auth-menu-container { 
+                position: absolute; right: 0; top: 50px; width: 16rem; 
+                background: var(--navbar-color);
+                border: 1px solid ${contrastTextColor === '#111111' ? '#bbbbbb' : 'rgb(55 65 81)'}; 
+                border-radius: 0.75rem; padding: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
+                transition: transform 0.2s ease-out, opacity 0.2s ease-out; transform-origin: top right; 
+            }
+            .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
+            .auth-menu-link, .auth-menu-button { 
+                color: ${contrastTextColor === '#111111' ? '#374151' : '#d1d5db'}; 
+                display: flex; align-items: center; gap: 0.75rem; width: 100%; text-align: left; 
+                padding: 0.5rem 0.75rem; font-size: 0.875rem; 
+                border-radius: 0.375rem; transition: background-color 0.2s, color 0.2s; border: none; cursor: pointer;
+            }
+            .auth-menu-link:hover, .auth-menu-button:hover { 
+                background-color: ${contrastTextColor === '#111111' ? '#f3f4f6' : 'rgb(55 65 81)'}; 
+                color: ${contrastTextColor === '#111111' ? '#000000' : 'white'}; 
+            }
+            .logged-out-auth-toggle { background: ${contrastTextColor === '#111111' ? '#ffffff' : '#010101'}; border: 1px solid ${contrastTextColor === '#111111' ? '#dddddd' : '#374151'}; }
+            .logged-out-auth-toggle i { color: ${contrastTextColor === '#111111' ? '#111111' : '#DADADA'}; }
+
+            /* Tab Wrapper and Glide Buttons */
+            .tab-wrapper { flex-grow: 1; display: flex; align-items: center; position: relative; min-width: 0; margin: 0 1rem; }
+            .tab-scroll-container { flex-grow: 1; display: flex; align-items: center; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; -ms-overflow-style: none; padding-bottom: 5px; margin-bottom: -5px; scroll-behavior: smooth; }
+            .tab-scroll-container::-webkit-scrollbar { display: none; }
+            .scroll-glide-button {
+                position: absolute; top: 0; height: 100%; width: 4rem; display: flex; align-items: center; justify-content: center; 
+                background: var(--navbar-color); 
+                color: var(--navbar-text-color); 
+                font-size: 1.2rem; cursor: pointer; 
+                opacity: 1; transition: opacity 0.3s, background 0.3s; z-index: 10; pointer-events: auto;
+            }
+            /* Dynamic fade effect using the navbar color */
+            #glide-left { left: 0; background: ${fadeLeft}; justify-content: flex-start; padding-left: 0.5rem; }
+            #glide-right { right: 0; background: ${fadeRight}; justify-content: flex-end; padding-right: 0.5rem; }
+            .scroll-glide-button.hidden { opacity: 0 !important; pointer-events: none !important; }
+            
+            /* Tab Links - Default state */
+            .nav-tab { 
+                flex-shrink: 0; padding: 0.5rem 1rem; 
+                color: ${contrastTextColor === '#111111' ? '#6b7280' : '#9ca3af'}; 
+                font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; 
+                transition: all 0.2s; text-decoration: none; line-height: 1.5; 
+                display: flex; align-items: center; margin-right: 0.5rem; border: 1px solid transparent; 
+            }
+            /* Tab Hover state */
+            .nav-tab:not(.active):hover { 
+                color: var(--navbar-text-color); 
+                border-color: ${contrastTextColor === '#111111' ? '#9ca3af' : '#d1d5db'}; 
+                background-color: ${contrastTextColor === '#111111' ? 'rgba(0,0,0,0.05)' : 'rgba(79, 70, 229, 0.05)'}; 
+            }
+            /* Tab Active state (uses fixed blue for consistency) */
+            .nav-tab.active { color: #4f46e5; border-color: #4f46e5; background-color: rgba(79, 70, 229, 0.1); }
+            .nav-tab.active:hover { color: #6366f1; border-color: #6366f1; background-color: rgba(79, 70, 229, 0.15); }
+            
+            /* Admin Tab styling remains independent of base color for gold effect */
+            .nav-tab.admin-tab {
+                background: linear-gradient(45deg, #f0e68c, #ffd700, #daa520, #f0e68c);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                color: transparent; 
+                font-weight: 700;
+                border: 2px solid gold;
+                box-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
+                transition: all 0.3s ease;
+            }
+        `;
+        document.head.appendChild(style);
+    };
+
+    // ⭐️ STEP 3: Call injectStyles IMMEDIATELY after loading color. THIS IS THE FIX.
+    injectStyles();
+
+
+    // --- 1. DYNAMICALLY LOAD EXTERNAL ASSETS (Helper functions) ---
 
     const loadScript = (src) => {
         return new Promise((resolve, reject) => {
@@ -155,7 +251,6 @@ const loadLocalNavbarColor = () => {
     };
     
     const getIconClass = (iconName) => {
-        // [Existing getIconClass logic remains the same]
         if (!iconName) return '';
         const nameParts = iconName.trim().split(/\s+/).filter(p => p.length > 0);
         let stylePrefix = 'fa-solid'; 
@@ -185,12 +280,13 @@ const loadLocalNavbarColor = () => {
         return '';
     };
 
-
+    // --- Main run sequence ---
     const run = async () => {
         let pages = {};
 
         await loadCSS("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css");
         
+        // Fetch page config for tabs
         try {
             const response = await fetch(PAGE_CONFIG_URL);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -212,7 +308,7 @@ const loadLocalNavbarColor = () => {
         }
 
         try {
-            // Load Firebase Compat modules (keeping Firestore for general user data fetch)
+            // Load Firebase
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js");
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js");
@@ -230,125 +326,8 @@ const loadLocalNavbarColor = () => {
         auth = firebase.auth();
         db = firebase.firestore();
 
-        // --- 3. INJECT CSS STYLES ---
-        const injectStyles = () => {
-            
-            // Read the currently applied colors from the CSS variables/global state
-            const navbarColor = userSettings.navbarColor; 
-            const contrastTextColor = getContrastTextColor(navbarColor);
-
-            // ⭐️ Dynamic fade effect colors: use the navbar color for the gradient background
-            const fadeLeft = `linear-gradient(to right, ${navbarColor} 50%, transparent)`;
-            const fadeRight = `linear-gradient(to left, ${navbarColor} 50%, transparent)`;
-            
-            // If an old style sheet exists, remove it before injecting the new one
-            let existingStyle = document.getElementById('navbar-dynamic-styles');
-            if (existingStyle) {
-                existingStyle.remove();
-            }
-
-            const style = document.createElement('style');
-            style.id = 'navbar-dynamic-styles';
-            
-            style.textContent = `
-                /* Base Styles */
-                body { padding-top: 4rem; }
-                .auth-navbar { 
-                    position: fixed; top: 0; left: 0; right: 0; z-index: 1000; 
-                    /* Use the dynamic color variable */
-                    background: var(--navbar-color); 
-                    /* Adjust border for visibility against potentially light colors */
-                    border-bottom: 1px solid ${contrastTextColor === '#111111' ? '#dddddd' : 'rgb(31 41 55)'}; 
-                    height: 4rem; 
-                    color: var(--navbar-text-color); /* Base text color for non-tabs (for logo text, etc.) */
-                }
-                .auth-navbar nav { padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
-                .initial-avatar { background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; }
-                
-                /* Auth Dropdown Menu Styles - uses the same color scheme */
-                .auth-menu-container { 
-                    position: absolute; right: 0; top: 50px; width: 16rem; 
-                    background: var(--navbar-color);
-                    border: 1px solid ${contrastTextColor === '#111111' ? '#bbbbbb' : 'rgb(55 65 81)'}; 
-                    border-radius: 0.75rem; padding: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
-                    transition: transform 0.2s ease-out, opacity 0.2s ease-out; transform-origin: top right; 
-                }
-                .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
-                .auth-menu-link, .auth-menu-button { 
-                    display: flex; align-items: center; gap: 0.75rem; width: 100%; text-align: left; 
-                    padding: 0.5rem 0.75rem; font-size: 0.875rem; 
-                    /* ⭐️ Adjust link color for contrast (darker gray for light background) */
-                    color: ${contrastTextColor === '#111111' ? '#374151' : '#d1d5db'}; 
-                    border-radius: 0.375rem; 
-                    transition: background-color 0.2s, color 0.2s; border: none; cursor: pointer;
-                }
-                /* ⭐️ Adjust hover background and text color for contrast */
-                .auth-menu-link:hover, .auth-menu-button:hover { 
-                    background-color: ${contrastTextColor === '#111111' ? '#f3f4f6' : 'rgb(55 65 81)'}; 
-                    color: ${contrastTextColor === '#111111' ? '#000000' : 'white'}; 
-                }
-                /* ⭐️ Logged out button styling for contrast */
-                .logged-out-auth-toggle { background: ${contrastTextColor === '#111111' ? '#ffffff' : '#010101'}; border: 1px solid ${contrastTextColor === '#111111' ? '#dddddd' : '#374151'}; }
-                .logged-out-auth-toggle i { color: ${contrastTextColor === '#111111' ? '#111111' : '#DADADA'}; }
-
-                /* Tab Wrapper and Glide Buttons */
-                .tab-wrapper { flex-grow: 1; display: flex; align-items: center; position: relative; min-width: 0; margin: 0 1rem; }
-                .tab-scroll-container { flex-grow: 1; display: flex; align-items: center; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; -ms-overflow-style: none; padding-bottom: 5px; margin-bottom: -5px; scroll-behavior: smooth; }
-                .tab-scroll-container::-webkit-scrollbar { display: none; }
-                .scroll-glide-button {
-                    position: absolute; top: 0; height: 100%; width: 4rem; display: flex; align-items: center; justify-content: center; 
-                    background: var(--navbar-color); 
-                    color: var(--navbar-text-color); /* Contrast text color for icon */
-                    font-size: 1.2rem; cursor: pointer; 
-                    opacity: 1; 
-                    transition: opacity 0.3s, background 0.3s; z-index: 10; pointer-events: auto;
-                }
-                /* ⭐️ Use dynamic colors for the gradient fade effect (fading into the navbar color) */
-                #glide-left { left: 0; background: ${fadeLeft}; justify-content: flex-start; padding-left: 0.5rem; }
-                #glide-right { right: 0; background: ${fadeRight}; justify-content: flex-end; padding-right: 0.5rem; }
-                .scroll-glide-button.hidden { opacity: 0 !important; pointer-events: none !important; }
-                
-                /* Tab Links - Default state */
-                .nav-tab { 
-                    flex-shrink: 0; padding: 0.5rem 1rem; 
-                    /* ⭐️ Default tab text color (darker gray for light background) */
-                    color: ${contrastTextColor === '#111111' ? '#6b7280' : '#9ca3af'}; 
-                    font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; 
-                    transition: all 0.2s; text-decoration: none; line-height: 1.5; 
-                    display: flex; align-items: center; margin-right: 0.5rem; border: 1px solid transparent; 
-                }
-                /* Tab Hover state */
-                .nav-tab:not(.active):hover { 
-                    color: var(--navbar-text-color); 
-                    border-color: ${contrastTextColor === '#111111' ? '#9ca3af' : '#d1d5db'}; 
-                    background-color: ${contrastTextColor === '#111111' ? 'rgba(0,0,0,0.05)' : 'rgba(79, 70, 229, 0.05)'}; 
-                }
-                /* Tab Active state (uses fixed blue for consistency) */
-                .nav-tab.active { color: #4f46e5; border-color: #4f46e5; background-color: rgba(79, 70, 229, 0.1); }
-                .nav-tab.active:hover { color: #6366f1; border-color: #6366f1; background-color: rgba(79, 70, 229, 0.15); }
-                
-                /* Admin Tab styling remains independent of base color for gold effect */
-                .nav-tab.admin-tab {
-                    background: linear-gradient(45deg, #f0e68c, #ffd700, #daa520, #f0e68c);
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                    color: transparent; 
-                    font-weight: 700;
-                    border: 2px solid gold;
-                    box-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
-                    transition: all 0.3s ease;
-                }
-                .nav-tab.admin-tab:not(.active):hover {
-                    border-color: #ffd700;
-                    background-color: rgba(255, 215, 0, 0.1);
-                    box-shadow: 0 0 12px rgba(255, 215, 0, 0.9);
-                }
-            `;
-            document.head.appendChild(style);
-        };
-
+        // Utility functions (isTabActive, updateScrollGilders) are fine here.
         const isTabActive = (tabUrl) => {
-            // [Existing isTabActive logic remains the same]
             const tabPathname = new URL(tabUrl, window.location.origin).pathname.toLowerCase();
             const currentPathname = window.location.pathname.toLowerCase();
 
@@ -379,7 +358,6 @@ const loadLocalNavbarColor = () => {
         };
 
         const updateScrollGilders = () => {
-            // [Existing updateScrollGilders logic remains the same]
             const container = document.querySelector('.tab-scroll-container');
             const leftButton = document.getElementById('glide-left');
             const rightButton = document.getElementById('glide-right');
@@ -412,7 +390,7 @@ const loadLocalNavbarColor = () => {
             const container = document.getElementById('navbar-container');
             if (!container) return; 
             
-            // Re-inject styles to ensure any color change (on load or after auth check) is applied
+            // Re-inject styles here to catch potential live updates from the settings page
             injectStyles();
 
             const logoPath = "/images/logo.png"; 
@@ -428,7 +406,7 @@ const loadLocalNavbarColor = () => {
                     return `<a href="${page.url}" class="nav-tab ${activeClass} ${adminClass}"><i class="${iconClasses} mr-2"></i>${page.name}</a>`;
                 }).join('');
 
-            // --- Auth Views ---
+            // --- Auth Views (loggedInView and loggedOutView definitions) ---
             const loggedOutView = `
                 <div class="relative flex-shrink-0">
                     <button id="auth-toggle" class="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-700 transition logged-out-auth-toggle">
@@ -506,6 +484,7 @@ const loadLocalNavbarColor = () => {
             // --- 5. SETUP EVENT LISTENERS ---
             setupEventListeners(user);
 
+            // Auto-scroll to active tab
             const activeTab = document.querySelector('.nav-tab.active');
             const tabContainer = document.querySelector('.tab-scroll-container');
             if (activeTab && tabContainer) {
@@ -523,7 +502,6 @@ const loadLocalNavbarColor = () => {
         };
 
         const setupEventListeners = (user) => {
-            // [Existing setupEventListeners logic remains the same]
             const toggleButton = document.getElementById('auth-toggle');
             const menu = document.getElementById('auth-menu-container');
 
@@ -591,19 +569,16 @@ const loadLocalNavbarColor = () => {
             if (user) {
                 isPrivilegedUser = user.email === PRIVILEGED_EMAIL;
                 
-                // 1. **(No Firestore Settings Load)** - Color is already loaded from Local Storage.
-
-                // 2. User is signed in. Fetch their data for username/photo.
                 let userData = null;
                 try {
-                    // Keeping this call to populate the dropdown avatar/username
+                    // Fetch user data for the dropdown (username/photo)
                     const userDoc = await db.collection('users').doc(user.uid).get();
                     userData = userDoc.exists ? userDoc.data() : null;
                 } catch (error) {
                     console.error("Error fetching user data for dropdown:", error);
                 }
                 
-                // Re-render the navbar with authenticated data and the current color setting
+                // Re-render the navbar with authenticated data
                 renderNavbar(user, userData, pages, isPrivilegedUser);
                 
             } else {
@@ -631,8 +606,10 @@ const loadLocalNavbarColor = () => {
             navbarDiv.id = 'navbar-container';
             document.body.prepend(navbarDiv);
         }
-        
-        // Inject styles immediately after the document loads using the color already applied from Local Storage.
-        document.addEventListener('DOMContentLoaded', run);
+    };
+
+    // --- START THE PROCESS ---
+    // Wait for the DOM to be ready before fetching scripts and running Firebase init
+    document.addEventListener('DOMContentLoaded', run);
 
 })();
