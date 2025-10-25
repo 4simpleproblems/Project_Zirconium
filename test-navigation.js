@@ -8,10 +8,10 @@
  * 1. AUTOMATIC REFRESH: Implements a bootstrap/cleanup pattern (startNavigationBootstrap) to allow the script to re-run
  * without a page refresh when the file is updated in the Canvas environment.
  * 2. DYNAMIC LOGO SWITCHING: Uses '/images/logo-dark.png' for light backgrounds (Luminance > 0.4) and '/images/logo.png' for dark backgrounds.
- * 3. TINTED TEXT/ICONS: Implements color manipulation (HSL) to subtly tint the contrast text/icon color toward the background color's hue,
- * providing a more cohesive design. This tint is also applied to the logo image.
- * 4. PURE BLACK CONTRAST: Text/icons switch to pure black (#000000) for light background colors (Luminance > 0.4).
- * 5. IMMEDIATE COLOR SYNC: CSS styles are injected synchronously immediately after color load, fixing the visual delay.
+ * 3. TINTED TEXT/ICONS: Implements color manipulation (HSL) to subtly tint the contrast text/icon color toward the background color's hue.
+ * 4. REFINED CONTRAST LOGIC: Implements a three-tier luminance system (Light, Mid-Dark, Very Dark) to ensure text is always highly visible:
+ * - Mid-Dark backgrounds now result in a dark, tinted text (as requested).
+ * 5. TINTED LOGO: The logo is fully tinted to match the text/icon color using a CSS filter.
  */
 
 // =========================================================================
@@ -41,7 +41,8 @@ let db;
 // --- Global Variable for User Settings ---
 let userSettings = {
     navbarColor: DEFAULT_NAVBAR_COLOR,
-    textColor: 'white' // Final determined text color (tinted or pure)
+    textColor: 'white', // Final determined text color (tinted or pure)
+    linkBaseColor: '#9ca3af' // Base color for non-active links
 };
 
 // --- HSL Utility Functions ---
@@ -78,9 +79,9 @@ const hexToHsl = (hex) => {
  * Converts HSL (0-360, 0-100, 0-100) back to Hex.
  */
 const hslToHex = (h, s, l) => {
-    h /= 360;
-    s /= 100;
-    l /= 100;
+    h = h < 0 ? h + 360 : h % 360;
+    s = Math.max(0, Math.min(100, s)) / 100;
+    l = Math.max(0, Math.min(100, l)) / 100;
 
     let r, g, b;
 
@@ -132,37 +133,50 @@ const getLuminance = (hex) => {
 };
 
 /**
- * Determines the final, possibly tinted, color for text/icons.
- * @param {string} bgColor - The background hex color.
+ * Determines the final, possibly tinted, color for text/icons based on a three-tier luminance system.
+ * * Logic:
+ * L > 0.5 (Light) -> Very Dark Text (L: 5)
+ * 0.2 < L <= 0.5 (Mid-Dark) -> Dark Text (L: 15) - fulfills the user's request for "very dark version of the color"
+ * L <= 0.2 (Very Dark) -> Very Light Text (L: 95)
+ * * @param {string} bgColor - The background hex color.
  * @returns {string} The final hex color for the text/icons.
  */
 const getTintedContrastColor = (bgColor) => {
-    const isLightBg = getLuminance(bgColor) > 0.4;
-    const baseColor = isLightBg ? '#000000' : 'white'; 
+    const luminance = getLuminance(bgColor);
+    const { h, s } = hexToHsl(bgColor);
     
-    // Check if the background color is saturated enough to warrant a tint
-    const { h, s, l } = hexToHsl(bgColor);
-
-    // If saturation is low (near grayscale), return the base contrast color.
+    const isVeryDarkBg = luminance <= 0.2; 
+    const isMidDarkBg = luminance > 0.2 && luminance <= 0.5;
+    const isLightBg = luminance > 0.5;
+    
+    // 1. If low saturation (grayscale), use pure black/white bases.
     // Threshold of 10% saturation to consider it 'tintable'.
     if (s < 10) { 
-        return baseColor;
+        if (isVeryDarkBg) return '#FFFFFF';
+        return '#000000'; 
     }
 
-    // Apply a subtle tint toward the background's hue.
-    if (isLightBg) {
-        // Light background (uses black text): Tint the black darker/more saturated.
-        // Hue (h), slight saturation (15), and very low luminance (5)
-        return hslToHex(h, 15, 5); 
-    } else {
-        // Dark background (uses white text): Tint the white lighter/more saturated.
-        // Hue (h), slight saturation (15), and very high luminance (95)
-        return hslToHex(h, 15, 95); 
+    // 2. Apply Tint based on the three tiers
+    // Use a moderate saturation (20-30) for a visible but subtle tint
+    const tintSaturation = 25;
+
+    if (isVeryDarkBg) {
+        // Very Dark Background (L <= 0.2): Use very bright text
+        return hslToHex(h, tintSaturation, 95); 
+    } else if (isMidDarkBg) {
+        // Mid-Dark Background (0.2 < L <= 0.5): Use dark text (user requested)
+        return hslToHex(h, tintSaturation, 15); 
+    } else if (isLightBg) {
+        // Light Background (L > 0.5): Use very dark text
+        return hslToHex(h, tintSaturation, 5); 
     }
+
+    // Fallback
+    return luminance > 0.5 ? '#000000' : '#FFFFFF';
 };
 
 /**
- * Applies the given color to the CSS variable and updates global settings.
+ * Applies the given color to the CSS variables and updates global settings.
  */
 const applyNavbarColor = (color) => {
     if (!/^#[0-9A-F]{6}$/i.test(color)) {
@@ -170,14 +184,30 @@ const applyNavbarColor = (color) => {
     }
     
     const finalTextColor = getTintedContrastColor(color);
+    const luminance = getLuminance(color);
+    const textHsl = hexToHsl(finalTextColor);
+
+    // Calculate a muted, less saturated link base color for non-active tabs.
+    // Dark link text for light/mid-dark backgrounds (L > 0.2)
+    let linkBaseColor;
+    if (luminance > 0.2) {
+        linkBaseColor = hslToHex(textHsl.h, 15, 45); // Muted dark for visibility
+    } else {
+        linkBaseColor = hslToHex(textHsl.h, 10, 75); // Muted light for dark backgrounds
+    }
     
     // Set global settings and CSS variables
     userSettings.navbarColor = color;
     userSettings.textColor = finalTextColor;
+    userSettings.linkBaseColor = linkBaseColor;
+
     document.documentElement.style.setProperty('--navbar-color', color);
     document.documentElement.style.setProperty('--navbar-text-color', finalTextColor);
-    document.documentElement.style.setProperty('--navbar-text-color-dark', '#374151'); // Darkened link color for light modes
-    document.documentElement.style.setProperty('--navbar-text-color-light', '#d1d5db'); // Light link color for dark modes
+    document.documentElement.style.setProperty('--navbar-link-base-color', linkBaseColor);
+
+    // Fixed colors used in the dropdown menu for links that don't need tinting
+    document.documentElement.style.setProperty('--navbar-text-color-dark', '#374151'); 
+    document.documentElement.style.setProperty('--navbar-text-color-light', '#d1d5db'); 
 };
 
 /**
@@ -185,6 +215,7 @@ const applyNavbarColor = (color) => {
  */
 const loadLocalNavbarColor = () => {
     try {
+        // Use a color saved in local storage, or the default black if none is found.
         const localColor = localStorage.getItem(NAVBAR_COLOR_KEY);
         const finalColor = localColor && /^#[0-9A-F]{6}$/i.test(localColor) ? localColor : DEFAULT_NAVBAR_COLOR;
         applyNavbarColor(finalColor);
@@ -195,12 +226,6 @@ const loadLocalNavbarColor = () => {
 };
 
 // --- Core Logic Wrapped for Refreshability ---
-
-// ---------------------------------------------------------------------
-// ⭐️ AUTOMATIC REFRESH MECHANISM
-// The entire application is wrapped in this structure to allow the
-// Canvas environment to re-run the script without a page refresh.
-// ---------------------------------------------------------------------
 
 /**
  * Handles cleanup of old elements before re-running the script.
@@ -240,12 +265,12 @@ const startNavigationBootstrap = () => {
      */
     const injectStyles = () => {
         const navbarColor = userSettings.navbarColor; 
-        const finalTextColor = userSettings.textColor; // The tinted color
+        const finalTextColor = userSettings.textColor; // The fully tinted color
         const isLightBg = getLuminance(navbarColor) > 0.4;
         
         // Dynamic fade effect colors: use the navbar color for the gradient background
-        const fadeLeft = `linear-gradient(to right, ${navbarColor} 50%, transparent)`;
-        const fadeRight = `linear-gradient(to left, ${navbarColor} 50%, transparent)`;
+        const fadeLeft = `linear-gradient(to right, var(--navbar-color) 50%, transparent)`;
+        const fadeRight = `linear-gradient(to left, var(--navbar-color) 50%, transparent)`;
         
         const style = document.createElement('style');
         style.id = 'navbar-dynamic-styles';
@@ -256,18 +281,26 @@ const startNavigationBootstrap = () => {
             .auth-navbar { 
                 position: fixed; top: 0; left: 0; right: 0; z-index: 1000; 
                 background: var(--navbar-color); 
+                /* Text color is the fully tinted color */
+                color: var(--navbar-text-color); 
                 /* Border color based on contrast */
                 border-bottom: 1px solid ${isLightBg ? '#dddddd' : 'rgb(31 41 55)'}; 
                 height: 4rem; 
-                color: var(--navbar-text-color); 
             }
             .auth-navbar nav { padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
-            .initial-avatar { background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; }
+            .initial-avatar { 
+                background: var(--navbar-color); 
+                border: 1px solid var(--navbar-text-color);
+                font-family: sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; 
+                /* Text color of initial must be the fully tinted color */
+                color: var(--navbar-text-color); 
+            }
             
             /* Dynamic Logo Tinting */
             .navbar-logo {
                 height: 2rem;
-                filter: drop-shadow(0 0 0 ${finalTextColor});
+                /* Apply the text color tint to the logo image. This requires the logo to be monochromatic (white/light on transparent). */
+                filter: drop-shadow(0 0 0 var(--navbar-text-color));
             }
 
             /* Auth Dropdown Menu Styles */
@@ -280,7 +313,7 @@ const startNavigationBootstrap = () => {
             }
             .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
             .auth-menu-link, .auth-menu-button { 
-                /* Link color is dark/light fallback, not fully tinted for legibility */
+                /* Link color uses a fixed dark/light gray for contrast in the dropdown */
                 color: ${isLightBg ? 'var(--navbar-text-color-dark)' : 'var(--navbar-text-color-light)'}; 
                 display: flex; align-items: center; gap: 0.75rem; width: 100%; text-align: left; 
                 padding: 0.5rem 0.75rem; font-size: 0.875rem; 
@@ -288,12 +321,16 @@ const startNavigationBootstrap = () => {
             }
             .auth-menu-link:hover, .auth-menu-button:hover { 
                 background-color: ${isLightBg ? '#f3f4f6' : 'rgb(55 65 81)'}; 
-                color: var(--navbar-text-color); /* Hover color is the fully tinted color */
+                /* Hover color is the fully tinted color (high contrast) */
+                color: var(--navbar-text-color); 
             }
             
             /* Logged out button styling */
             .logged-out-auth-toggle { background: ${isLightBg ? '#ffffff' : '#010101'}; border: 1px solid ${isLightBg ? '#dddddd' : '#374151'}; }
-            .logged-out-auth-toggle i { color: var(--navbar-text-color); }
+            .logged-out-auth-toggle i { 
+                /* Icon color is the fully tinted color */
+                color: var(--navbar-text-color); 
+            }
 
             /* Tab Wrapper and Glide Buttons */
             .tab-wrapper { flex-grow: 1; display: flex; align-items: center; position: relative; min-width: 0; margin: 0 1rem; }
@@ -302,6 +339,7 @@ const startNavigationBootstrap = () => {
             .scroll-glide-button {
                 position: absolute; top: 0; height: 100%; width: 4rem; display: flex; align-items: center; justify-content: center; 
                 background: var(--navbar-color); 
+                /* Icon color is the fully tinted color */
                 color: var(--navbar-text-color); 
                 font-size: 1.2rem; cursor: pointer; 
                 opacity: 1; transition: opacity 0.3s, background 0.3s; z-index: 10; pointer-events: auto;
@@ -314,15 +352,16 @@ const startNavigationBootstrap = () => {
             /* Tab Links - Default state */
             .nav-tab { 
                 flex-shrink: 0; padding: 0.5rem 1rem; 
-                /* Default tab text color uses dark/light fallback */
-                color: ${isLightBg ? '#6b7280' : '#9ca3af'}; 
+                /* Base link color is the MUTED tinted color */
+                color: var(--navbar-link-base-color); 
                 font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; 
                 transition: all 0.2s; text-decoration: none; line-height: 1.5; 
                 display: flex; align-items: center; margin-right: 0.5rem; border: 1px solid transparent; 
             }
             /* Tab Hover state */
             .nav-tab:not(.active):hover { 
-                color: var(--navbar-text-color); /* Hover color is the fully tinted color */
+                /* Hover color is the fully tinted color */
+                color: var(--navbar-text-color); 
                 border-color: ${isLightBg ? '#9ca3af' : '#d1d5db'}; 
                 background-color: ${isLightBg ? 'rgba(0,0,0,0.05)' : 'rgba(79, 70, 229, 0.05)'}; 
             }
@@ -566,11 +605,11 @@ const startNavigationBootstrap = () => {
                         <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
                             ${avatar}
                         </button>
+                        <div class="px-3 py-2 border-b border-gray-700 mb-2">
+                            <p class="text-sm font-semibold text-white truncate">${username}</p>
+                            <p class="text-xs text-gray-400 truncate">${email}</p>
+                        </div>
                         <div id="auth-menu-container" class="auth-menu-container closed">
-                            <div class="px-3 py-2 border-b border-gray-700 mb-2">
-                                <p class="text-sm font-semibold text-white truncate">${username}</p>
-                                <p class="text-xs text-gray-400 truncate">${email}</p>
-                            </div>
                             <a href="/logged-in/dashboard.html" class="auth-menu-link">
                                 <i class="fa-solid fa-house-user"></i>
                                 Dashboard
@@ -696,6 +735,10 @@ const startNavigationBootstrap = () => {
         auth.onAuthStateChanged(async (user) => {
             let isPrivilegedUser = false;
             
+            // Re-apply the locally saved color (or default) inside the listener
+            // to ensure the latest setting is used when state changes.
+            loadLocalNavbarColor();
+
             if (user) {
                 isPrivilegedUser = user.email === PRIVILEGED_EMAIL;
                 
@@ -713,8 +756,6 @@ const startNavigationBootstrap = () => {
                 
             } else {
                 // User is signed out.
-                // Re-apply the locally saved color (or default)
-                loadLocalNavbarColor();
                 renderNavbar(null, null, pages, false);
                 
                 // KICK USER TO INDEX: 
