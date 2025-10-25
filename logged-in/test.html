@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="page-title">4SP - Settings</title>
+    <meta name="description" content="User settings and application configuration for 4SP.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="../navigation.js"></script>
+    <script src="../injector.js"></script>
+
+    <style>
+        /* --- FONT & BASE STYLING (MATCHING base-template.html) --- */
+        :root {
+            /* Default or loaded navbar color variable - Initialized by JS */
+            --navbar-color: #000000;
+        }
+
+        body { 
+            font-family: 'Geist', sans-serif; 
+            background-color: #070707; 
+            color: #c0c0c0; 
+            transition: all 0.3s ease;
+            font-weight: 300; 
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
+            font-weight: 400 !important;
+        }
+
+        /* Full-screen content wrapper */
+        .settings-wrapper {
+            flex-grow: 1; 
+            display: flex;
+            flex-direction: column;
+            padding: 0 1rem; 
+        }
+
+        /* Header Styling */
+        .page-header {
+            padding: 2rem 1rem 1rem 1rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Settings Grid Layout */
+        .settings-layout {
+            display: flex;
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            padding-bottom: 2rem;
+            flex-grow: 1;
+        }
+
+        /* Sidebar Styling */
+        .settings-sidebar {
+            width: 100%;
+            min-width: 200px;
+            max-width: 280px;
+            flex-shrink: 0;
+        }
+
+        /* Sidebar Item Styling */
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.25rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            color: #c0c0c0;
+        }
+
+        .sidebar-item:hover {
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
+
+        .sidebar-item.active {
+            background-color: #3b82f6; /* Blue-500 */
+            color: #ffffff;
+            font-weight: 500;
+        }
+
+        /* Main Content Panel */
+        .settings-panel {
+            flex-grow: 1;
+            background-color: #111111;
+            border: 1px solid #252525;
+            border-radius: 0.75rem;
+            padding: 2rem;
+            min-height: 70vh;
+        }
+
+        /* Standard loading screen style */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #070707;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        
+        /* Mobile adjustments: Hide sidebar and adjust layout */
+        @media (max-width: 768px) {
+            .settings-layout {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            .settings-sidebar {
+                max-width: 100%;
+                margin-bottom: 0;
+            }
+        }
+
+        /* Color Palette Styles */
+        .color-option {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.1s, border-color 0.2s;
+        }
+        .color-option:hover {
+            transform: scale(1.1);
+        }
+        .color-option.selected {
+            border-color: #3b82f6; /* Blue-500 */
+            box-shadow: 0 0 0 2px #3b82f640;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading-screen">
+        <p class="text-xl text-gray-400">Verifying authentication and loading settings...</p>
+    </div>
+
+    <main id="page-content" class="settings-wrapper hidden">
+        
+        <header class="page-header">
+            <h1 id="main-title" class="text-3xl text-white font-bold mb-3 tracking-wide">Settings</h1>
+            <div class="h-px bg-white/20 w-full"></div>
+        </header>
+
+        <div class="settings-layout">
+            
+            <nav id="settings-sidebar" class="settings-sidebar"></nav>
+
+            <section class="settings-panel">
+                <h2 id="panel-title" class="text-2xl font-semibold text-indigo-400 mb-6">General</h2>
+                <div id="panel-content" class="text-gray-400">
+                    <p>Configure basic application behavior like language, theme, and startup settings.</p>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script type="module">
+        // Assuming navigation.js has already loaded Firebase and set up global auth listener.
+
+        // --- CONSTANTS AND DOM ELEMENTS ---
+        const BASE_TITLE = "Settings";
+        // Key for Local Storage (Must match the one in navigation.js)
+        const NAVBAR_COLOR_KEY = '4sp_navbar_color';
+        // Default color for the navbar (Must match the default in navigation.js)
+        const DEFAULT_NAVBAR_COLOR = '#000000'; 
+        
+        const settingsSections = [
+            { id: 'general', title: 'General', icon: 'fa-cog', content: 'Configure basic application behavior like language, theme, and startup settings.', color: 'text-yellow-400' },
+            { id: 'privacy', title: 'Privacy & Security', icon: 'fa-shield-alt', content: 'Manage your data permissions, account security, and two-factor authentication. Strong security is a priority!', color: 'text-red-400' },
+            { id: 'personalization', title: 'Personalization', icon: 'fa-palette', content: 'Customize the look and feel of the application, including colors and layout. Make it truly yours!', color: 'text-pink-400' },
+            { id: 'notifications', title: 'Notifications', icon: 'fa-bell', content: 'Set your preferences for alerts and communication methods. Never miss an important update.', color: 'text-green-400' },
+            { id: 'data', title: 'Data Management', icon: 'fa-database', content: 'View, export, or request deletion of your stored data.', color: 'text-blue-400' },
+            { id: 'about', title: 'About 4SP', icon: 'fa-info-circle', content: 'Application version, legal notices, and credits.', color: 'text-gray-400' }
+        ];
+
+        // Nice-looking 16-color palette
+        const colorPalette = [
+            '#000000', // Black (Default)
+            '#1f2937', // Blue-Gray (Dark Mode Accent)
+            '#f7f7f7', // Light Gray
+            '#FFFFFF', // White
+            '#3b82f6', // Bright Blue
+            '#10b981', // Emerald Green
+            '#f59e0b', // Amber Yellow
+            '#ef4444', // Red
+            '#8b5cf6', // Violet
+            '#ec4899', // Pink
+            '#06b6d4', // Cyan
+            '#65a30d', // Lime Green
+            '#7c3aed', // Purple
+            '#f97316', // Orange
+            '#475569', // Slate Gray
+            '#16a34a'  // Dark Green
+        ];
+        
+        // --- DOM Elements ---
+        const loadingScreen = document.getElementById('loading-screen');
+        const pageContent = document.getElementById('page-content');
+        const mainTitle = document.getElementById('main-title');
+        const sidebarNav = document.getElementById('settings-sidebar');
+        const panelTitle = document.getElementById('panel-title');
+        const panelContent = document.getElementById('panel-content');
+        const pageHtmlTitle = document.getElementById('page-title');
+
+        let currentNavbarColor = DEFAULT_NAVBAR_COLOR;
+
+        // --- LOCAL STORAGE FUNCTIONS ---
+
+        /**
+         * Loads the navbar color from Local Storage, falling back to default.
+         * @returns {string} The loaded or default color.
+         */
+        function loadLocalNavbarColor() {
+            try {
+                const localColor = localStorage.getItem(NAVBAR_COLOR_KEY);
+                return localColor && /^#[0-9A-F]{6}$/i.test(localColor) ? localColor : DEFAULT_NAVBAR_COLOR;
+            } catch (e) {
+                console.error("Could not read from Local Storage:", e);
+                return DEFAULT_NAVBAR_COLOR;
+            }
+        }
+        
+        /**
+         * Saves a new navbar color setting to Local Storage.
+         * @param {string} color - The new color to save (e.g., '#RRGGBB').
+         */
+        function saveLocalNavbarColor(color) {
+            try {
+                localStorage.setItem(NAVBAR_COLOR_KEY, color);
+                currentNavbarColor = color;
+                updateNavbarColor(color);
+                alert(`Navbar color updated to ${color} and saved locally.`);
+            } catch (error) {
+                console.error("Error saving navbar color to Local Storage:", error);
+                alert("Failed to save color setting locally. See console.");
+            }
+        }
+        
+        /**
+         * Removes the navbar color setting from Local Storage.
+         */
+        function deleteLocalNavbarColor() {
+            try {
+                localStorage.removeItem(NAVBAR_COLOR_KEY);
+                currentNavbarColor = DEFAULT_NAVBAR_COLOR;
+                updateNavbarColor(DEFAULT_NAVBAR_COLOR);
+                alert("Navbar color restored to default. You may need to refresh the page for the change to take full effect across the site.");
+            } catch (error) {
+                console.error("Error deleting navbar color from Local Storage:", error);
+                alert("Failed to restore default setting. See console.");
+            }
+        }
+
+        /**
+         * Updates the CSS variable on the document root, which `navigation.js` 
+         * should use for the live preview.
+         * @param {string} color - The color to set.
+         */
+        function updateNavbarColor(color) {
+            document.documentElement.style.setProperty('--navbar-color', color);
+            // This relies on navigation.js checking this variable for dynamic updates
+        }
+
+        // --- AUTHENTICATION & REDIRECTION LOGIC ---
+
+        /**
+         * Starts the authentication listener. We rely entirely on navigation.js.
+         */
+        function startAuthFlow() {
+            // Check for the global `firebase` object loaded by navigation.js
+            if (typeof firebase === 'undefined' || typeof firebase.auth === 'undefined') {
+                console.error("Firebase Auth is not available. Ensure navigation.js loads before this script.");
+                // Fallback rendering in case navigation.js fails to load
+                renderSidebar();
+                loadSection('general');
+                loadingScreen.style.display = 'none';
+                pageContent.classList.remove('hidden');
+                return;
+            }
+
+            // We use the listener primarily to confirm the page is ready after navigation.js runs
+            firebase.auth().onAuthStateChanged((currentUser) => {
+                // Initial load of the color setting
+                currentNavbarColor = loadLocalNavbarColor();
+                updateNavbarColor(currentNavbarColor);
+
+                console.log("Settings Page: Authentication state checked.");
+                
+                // navigation.js handles redirecting logged-out users away, so if we reach here
+                // and currentUser is null, we still proceed to render, assuming the user will be
+                // redirected soon, or is on a public page with the settings component.
+                
+                // Initialization successful, now load the content
+                renderSidebar();
+                loadSection('general');
+                
+                // Hide loading screen and show content
+                loadingScreen.style.display = 'none';
+                pageContent.classList.remove('hidden');
+            });
+        }
+        
+        // --- SETTINGS UI LOGIC ---
+
+        function renderSidebar() {
+            sidebarNav.innerHTML = ''; // Clear existing content
+            settingsSections.forEach(section => {
+                const item = document.createElement('div');
+                item.className = 'sidebar-item group';
+                item.id = `sidebar-${section.id}`;
+                item.setAttribute('data-section', section.id);
+                item.innerHTML = `
+                    <i class="fas ${section.icon} w-6 h-6 mr-3 ${section.color} transition-transform group-hover:scale-110"></i>
+                    <span class="text-sm font-medium">${section.title}</span>
+                `;
+                item.addEventListener('click', () => loadSection(section.id));
+                sidebarNav.appendChild(item);
+            });
+        }
+
+        function loadSection(sectionId) {
+            const section = settingsSections.find(s => s.id === sectionId);
+            if (!section) return;
+
+            // 1. Update main title and HTML title
+            mainTitle.textContent = `${BASE_TITLE} - ${section.title}`;
+            pageHtmlTitle.textContent = `4SP - ${BASE_TITLE} - ${section.title}`;
+
+            // 2. Update content panel
+            panelTitle.innerHTML = `<i class="fas ${section.icon} mr-2 ${section.color}"></i> ${section.title}`;
+            panelContent.innerHTML = `
+                <div class="flex flex-col space-y-4">
+                    <p class="text-lg">${section.content}</p>
+                    <div id="section-details" class="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                        <h3 class="text-xl font-semibold mb-2 text-white">Section Details</h3>
+                        <p class="text-sm text-gray-500">
+                            This is where the detailed controls, forms, and toggles for the 
+                            ${section.title} section would be implemented. 
+                            <i class="fas fa-magic text-purple-400 ml-1"></i>
+                        </p>
+                    </div>
+                    ${sectionId === 'personalization' ? '' : `
+                    <button id="save-settings-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg shadow-lg transition-all duration-200 mt-4 self-start flex items-center">
+                        <i class="fas fa-save mr-2"></i> Save Changes
+                    </button>
+                    `}
+                </div>
+            `;
+            
+            // --- PERSONALIZATION SPECIFIC CONTENT ---
+            if (sectionId === 'personalization') {
+                // Ensure currentNavbarColor is the latest from local storage
+                currentNavbarColor = loadLocalNavbarColor();
+                updateNavbarColor(currentNavbarColor);
+
+                document.getElementById('section-details').innerHTML = `
+                    <h3 class="text-xl font-semibold mb-4 text-white">Universal Navbar Color</h3>
+                    <p class="text-sm text-gray-500 mb-4">
+                        Choose a color for your main navigation bar. This setting is saved locally to your browser.
+                    </p>
+                    
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Color Palette</label>
+                    <div id="color-palette" class="flex flex-wrap gap-3 mb-6">
+                        </div>
+                    
+                    <label for="custom-color-picker" class="block text-sm font-medium text-gray-400 mb-2">Custom Color Picker</label>
+                    <div class="flex items-center space-x-3 mb-6">
+                        <input type="color" id="custom-color-picker" class="w-12 h-12 rounded-lg cursor-pointer" value="${currentNavbarColor}">
+                        <input type="text" id="custom-color-input" class="bg-gray-700 text-white border border-gray-600 rounded-lg p-2 font-mono text-sm w-32" value="${currentNavbarColor}" maxlength="7" pattern="#[0-9a-fA-F]{6}">
+                    </div>
+                    
+                    <div class="flex space-x-4 mt-6">
+                        <button id="save-color-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg shadow-lg transition-all duration-200 flex items-center">
+                            <i class="fas fa-save mr-2"></i> Apply and Save Locally
+                        </button>
+                        <button id="restore-button" class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg shadow-lg transition-all duration-200 flex items-center">
+                            <i class="fas fa-undo-alt mr-2"></i> Restore to Defaults
+                        </button>
+                    </div>
+                `;
+                
+                // Initialize the color palette
+                const paletteContainer = document.getElementById('color-palette');
+                colorPalette.forEach(color => {
+                    const colorDiv = document.createElement('div');
+                    // Normalize case for comparison
+                    const isSelected = currentNavbarColor.toLowerCase() === color.toLowerCase();
+
+                    colorDiv.className = `color-option ${isSelected ? 'selected' : ''}`;
+                    colorDiv.style.backgroundColor = color;
+                    colorDiv.setAttribute('data-color', color);
+                    colorDiv.addEventListener('click', () => {
+                        // Apply color change to UI/preview only
+                        applyColorChange(color);
+                    });
+                    paletteContainer.appendChild(colorDiv);
+                });
+                
+                // Custom color picker logic
+                const customPicker = document.getElementById('custom-color-picker');
+                const customInput = document.getElementById('custom-color-input');
+                
+                customPicker.addEventListener('input', (e) => {
+                    applyColorChange(e.target.value);
+                });
+                
+                customInput.addEventListener('input', (e) => {
+                    const color = e.target.value.trim();
+                    if (/^#[0-9A-F]{6}$/i.test(color)) {
+                        applyColorChange(color);
+                    }
+                });
+
+                // Helper function to update UI/preview on color change
+                const applyColorChange = (color) => {
+                    // Update input fields
+                    customPicker.value = color;
+                    customInput.value = color;
+                    
+                    // Update palette selection
+                    document.querySelectorAll('.color-option').forEach(item => item.classList.remove('selected'));
+                    const selectedPaletteItem = document.querySelector(`.color-option[data-color="${color.toLowerCase()}"]`);
+                    if (selectedPaletteItem) {
+                        selectedPaletteItem.classList.add('selected');
+                    }
+                    
+                    // Live preview update
+                    updateNavbarColor(color); 
+                };
+
+                // Setup Save and Restore Buttons
+                document.getElementById('save-color-button').addEventListener('click', () => {
+                    // Get the currently displayed color from the picker
+                    const newColor = document.getElementById('custom-color-picker').value;
+                    saveLocalNavbarColor(newColor);
+                });
+                
+                document.getElementById('restore-button').addEventListener('click', () => {
+                    deleteLocalNavbarColor();
+                    // Reset the UI components
+                    applyColorChange(DEFAULT_NAVBAR_COLOR);
+                });
+            }
+            // --- END PERSONALIZATION SPECIFIC CONTENT ---
+            
+            // 3. Update sidebar active state
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.getElementById(`sidebar-${sectionId}`).classList.add('active');
+        }
+        
+        // --- START APPLICATION ---
+        // This will start the Firebase Auth listener (relying on navigation.js for global objects)
+        document.addEventListener('DOMContentLoaded', startAuthFlow);
+    </script>
+</body>
+</html>
