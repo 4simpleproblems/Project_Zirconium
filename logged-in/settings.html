@@ -6,19 +6,22 @@
     <title id="page-title">4SP - Settings</title>
     <meta name="description" content="User settings and application configuration for 4SP.">
 
-    <!-- Fonts, Icons, and Tailwind CSS -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- navigation.js and injector.js must be loaded here if they are external files -->
     <script src="../navigation.js"></script>
     <script src="../injector.js"></script>
 
     <style>
         /* --- FONT & BASE STYLING (MATCHING base-template.html) --- */
+        :root {
+            /* Default or loaded navbar color variable */
+            --navbar-color: #000000;
+        }
+
         body { 
             font-family: 'Geist', sans-serif; 
             background-color: #070707; 
@@ -129,36 +132,45 @@
                 margin-bottom: 0;
             }
         }
+
+        /* Color Palette Styles */
+        .color-option {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.1s, border-color 0.2s;
+        }
+        .color-option:hover {
+            transform: scale(1.1);
+        }
+        .color-option.selected {
+            border-color: #3b82f6; /* Blue-500 */
+            box-shadow: 0 0 0 2px #3b82f640;
+        }
     </style>
 </head>
 <body>
 
-    <!-- Loading Screen (Shown until authentication check is complete) -->
     <div id="loading-screen">
         <p class="text-xl text-gray-400">Verifying authentication and loading settings...</p>
     </div>
 
-    <!-- Main Page Content (Hidden until authenticated) -->
     <main id="page-content" class="settings-wrapper hidden">
         
-        <!-- HEADER AND TITLE AREA -->
         <header class="page-header">
             <h1 id="main-title" class="text-3xl text-white font-bold mb-3 tracking-wide">Settings</h1>
-            <!-- Thin white line spanning the width -->
             <div class="h-px bg-white/20 w-full"></div>
         </header>
 
-        <!-- SETTINGS LAYOUT (SIDEBAR + CONTENT) -->
         <div class="settings-layout">
             
-            <!-- SIDEBAR NAVIGATION -->
             <nav id="settings-sidebar" class="settings-sidebar"></nav>
 
-            <!-- MAIN SETTINGS PANEL -->
             <section class="settings-panel">
                 <h2 id="panel-title" class="text-2xl font-semibold text-indigo-400 mb-6">General</h2>
                 <div id="panel-content" class="text-gray-400">
-                    <!-- Dynamic content will be injected here -->
                     <p>Configure basic application behavior like language, theme, and startup settings.</p>
                 </div>
             </section>
@@ -166,10 +178,11 @@
     </main>
 
     <script type="module">
-        // --- Firebase Core Imports ---
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        
+        // Since `navigation.js` already loads the full Firebase compat SDKs and initializes `auth` and `db` globally, 
+        // we can remove the second initialization attempt and use the global objects.
+        // We still need to ensure the modern Firestore is available for modular code.
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
         // --- CONSTANTS AND DOM ELEMENTS ---
         const BASE_TITLE = "Settings";
         const settingsSections = [
@@ -181,10 +194,27 @@
             { id: 'about', title: 'About 4SP', icon: 'fa-info-circle', content: 'Application version, legal notices, and credits.', color: 'text-gray-400' }
         ];
 
-        // Canvas Global Variables (MANDATORY USE)
-        const rawFirebaseConfig = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        // Nice-looking 16-color palette
+        const colorPalette = [
+            '#000000', // Black
+            '#1a1a1a', // Dark Gray
+            '#f7f7f7', // Light Gray
+            '#FFFFFF', // White
+            '#1f2937', // Blue-Gray (Default navbar color in navigation.js is similar)
+            '#3b82f6', // Bright Blue
+            '#10b981', // Emerald Green
+            '#f59e0b', // Amber Yellow
+            '#ef4444', // Red
+            '#8b5cf6', // Violet
+            '#ec4899', // Pink
+            '#06b6d4', // Cyan
+            '#65a30d', // Lime Green
+            '#7c3aed', // Purple
+            '#f97316', // Orange
+            '#a1a1aa'  // Cool Gray
+        ];
         
+        // --- DOM Elements ---
         const loadingScreen = document.getElementById('loading-screen');
         const pageContent = document.getElementById('page-content');
         const mainTitle = document.getElementById('main-title');
@@ -193,96 +223,109 @@
         const panelContent = document.getElementById('panel-content');
         const pageHtmlTitle = document.getElementById('page-title');
 
-        // --- FIREBASE CONFIGURATION & INITIALIZATION ---
-        let firebaseConfig = {};
+        // --- GLOBAL FIREBASE REFERENCES ---
+        // Expecting `auth` and `db` (compat Firestore) to be globally available from navigation.js
+        // For modular access to Firestore, we'll use the imported `getFirestore`
+        let user; // To hold the authenticated user object
+        let navbarColorSetting = '#000000'; // Default color
 
-        if (rawFirebaseConfig) {
-            try {
-                firebaseConfig = JSON.parse(rawFirebaseConfig);
-                console.log("Firebase config loaded successfully from __firebase_config.");
-            } catch (e) {
-                console.error("Failed to parse __firebase_config:", e);
-            }
-        } else {
-            console.error("Firebase config is missing from Canvas globals. Initialization will likely fail.");
-        }
-
-        let app, auth;
-        let initializationSuccessful = false;
-
-        // Ensure config is not empty before attempting to initialize
-        if (Object.keys(firebaseConfig).length > 0) {
-            try {
-                app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                initializationSuccessful = true;
-            } catch (e) {
-                // This catches the fatal config errors like 'auth/invalid-api-key'
-                console.error("Firebase initialization failed:", e);
-                loadingScreen.querySelector('p').textContent = 'Error: Application configuration failed. See console for details.';
-            }
-        }
-        
-        // --- AUTHENTICATION & REDIRECTION LOGIC (Encapsulated) ---
+        // --- AUTHENTICATION & REDIRECTION LOGIC (Minimal for settings page) ---
 
         /**
-         * Attempts to sign in using the provided custom token or anonymously.
-         */
-        async function initializeAuth() {
-            if (!auth) return; // Should not happen if initializationSuccessful is false
-
-            try {
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (error) {
-                // This catches authentication errors after init, like invalid tokens
-                console.error("Initial Firebase authentication failed:", error);
-            }
-        }
-
-        /**
-         * Starts the authentication listener and sign-in process.
+         * Starts the authentication listener. We rely *entirely* on navigation.js
+         * for initialization and redirection if the user is logged out.
+         * This listener is primarily for getting the `user` object to fetch data.
          */
         function startAuthFlow() {
-            if (!initializationSuccessful || !auth) {
-                // Handle failed initialization by forcing redirect
-                console.error("Cannot start auth flow: Firebase not initialized successfully.");
-                loadingScreen.querySelector('p').textContent = 'Error: Configuration failed. Redirecting to login...';
-                
-                // Wait briefly then redirect, matching the failed auth flow
-                setTimeout(() => {
-                    window.location.href = '../index.html'; 
-                }, 1000); 
+            // Check for the global `auth` object loaded by navigation.js
+            if (typeof firebase === 'undefined' || typeof firebase.auth === 'undefined') {
+                console.error("Firebase Auth is not available. Please ensure navigation.js loads before this script.");
+                loadingScreen.querySelector('p').textContent = 'Error: Core application script missing. Check console.';
                 return;
             }
 
-            // 1. Listen for the authentication state change
-            onAuthStateChanged(auth, (user) => {
+            // The onAuthStateChanged from navigation.js will handle the initial redirect
+            // We set up a *second* listener to get the `user` object reliably, but
+            // the primary responsibility is on `navigation.js`.
+            firebase.auth().onAuthStateChanged(async (currentUser) => {
+                user = currentUser;
                 if (user) {
-                    // User is authenticated
-                    console.log("User authenticated. UID:", user.uid);
+                    console.log("User authenticated in settings page. UID:", user.uid);
+                    
+                    // Initialization successful, now load the content
+                    await loadUserSettings();
+                    updateNavbarColor(navbarColorSetting); // Apply the loaded color
+                    renderSidebar();
+                    loadSection('general');
                     
                     // Hide loading screen and show content
                     loadingScreen.style.display = 'none';
                     pageContent.classList.remove('hidden');
 
-                    // Initialize the settings UI
-                    renderSidebar();
-                    loadSection('general');
-
                 } else {
-                    // User is NOT authenticated. Redirect to login/index page.
-                    console.log("User not authenticated. Redirecting to ../index.html...");
-                    window.location.href = '../index.html'; 
+                    // navigation.js will already redirect, but as a fallback/stability measure:
+                    console.log("User not authenticated. Navigation.js should be redirecting...");
                 }
             });
-
-            // 2. Start the authentication process on load
-            initializeAuth();
         }
+        
+        // --- USER SETTINGS (Firestore) LOGIC ---
+        
+        /**
+         * Fetches user settings from Firestore.
+         */
+        async function loadUserSettings() {
+            if (!user) return;
+            try {
+                // Use the modern getFirestore API to ensure compatibility with modular imports
+                const fstore = getFirestore();
+                const settingsRef = doc(fstore, 'users', user.uid, 'settings', 'navbar');
+                const docSnap = await getDoc(settingsRef);
+
+                if (docSnap.exists()) {
+                    const settings = docSnap.data();
+                    navbarColorSetting = settings.color || navbarColorSetting;
+                    console.log("Loaded navbar color:", navbarColorSetting);
+                } else {
+                    console.log("No custom navbar color found, using default.");
+                }
+            } catch (error) {
+                console.error("Error loading user settings:", error);
+            }
+        }
+        
+        /**
+         * Saves a new navbar color setting to Firestore.
+         * @param {string} color - The new color to save (e.g., '#RRGGBB').
+         */
+        async function saveNavbarColor(color) {
+            if (!user) return;
+            try {
+                const fstore = getFirestore();
+                const settingsRef = doc(fstore, 'users', user.uid, 'settings', 'navbar');
+                await setDoc(settingsRef, { color: color }, { merge: true });
+                navbarColorSetting = color;
+                updateNavbarColor(color);
+                console.log("Navbar color saved successfully:", color);
+                alert(`Navbar color updated to ${color}! You may need to refresh for navigation.js to fully apply the change.`);
+            } catch (error) {
+                console.error("Error saving navbar color:", error);
+                alert("Failed to save color setting. See console.");
+            }
+        }
+        
+        /**
+         * Updates the CSS variable on the document root, which `navigation.js` 
+         * should use.
+         * @param {string} color - The color to set.
+         */
+        function updateNavbarColor(color) {
+            document.documentElement.style.setProperty('--navbar-color', color);
+            // NOTE: For this to work universally, the CSS in navigation.js's 
+            // `injectStyles` function MUST be updated to use this CSS variable.
+            // e.g., `.auth-navbar { background: var(--navbar-color); ... }`
+        }
+
 
         // --- SETTINGS UI LOGIC ---
 
@@ -315,7 +358,7 @@
             panelContent.innerHTML = `
                 <div class="flex flex-col space-y-4">
                     <p class="text-lg">${section.content}</p>
-                    <div class="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                    <div id="section-details" class="bg-gray-800 p-4 rounded-lg border border-gray-700">
                         <h3 class="text-xl font-semibold mb-2 text-white">Section Details</h3>
                         <p class="text-sm text-gray-500">
                             This is where the detailed controls, forms, and toggles for the 
@@ -323,21 +366,97 @@
                             <i class="fas fa-magic text-purple-400 ml-1"></i>
                         </p>
                     </div>
-                    <button class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg shadow-lg transition-all duration-200 mt-4 self-start flex items-center">
+                    <button id="save-settings-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg shadow-lg transition-all duration-200 mt-4 self-start flex items-center">
                         <i class="fas fa-save mr-2"></i> Save Changes
                     </button>
                 </div>
             `;
+            
+            // --- PERSONALIZATION SPECIFIC CONTENT ---
+            if (sectionId === 'personalization') {
+                document.getElementById('section-details').innerHTML = `
+                    <h3 class="text-xl font-semibold mb-4 text-white">Universal Navbar Color</h3>
+                    <p class="text-sm text-gray-500 mb-4">
+                        Choose a color for your main navigation bar. This setting is saved to your profile.
+                    </p>
+                    
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Color Palette</label>
+                    <div id="color-palette" class="flex flex-wrap gap-3 mb-6">
+                        </div>
+                    
+                    <label for="custom-color-picker" class="block text-sm font-medium text-gray-400 mb-2">Custom Color Picker</label>
+                    <div class="flex items-center space-x-3">
+                        <input type="color" id="custom-color-picker" class="w-12 h-12 rounded-lg cursor-pointer" value="${navbarColorSetting}">
+                        <input type="text" id="custom-color-input" class="bg-gray-700 text-white border border-gray-600 rounded-lg p-2 font-mono text-sm w-32" value="${navbarColorSetting}" maxlength="7" pattern="#[0-9a-fA-F]{6}">
+                    </div>
+                `;
+                
+                // Initialize the color palette
+                const paletteContainer = document.getElementById('color-palette');
+                colorPalette.forEach(color => {
+                    const colorDiv = document.createElement('div');
+                    colorDiv.className = `color-option ${navbarColorSetting.toLowerCase() === color.toLowerCase() ? 'selected' : ''}`;
+                    colorDiv.style.backgroundColor = color;
+                    colorDiv.setAttribute('data-color', color);
+                    colorDiv.addEventListener('click', () => {
+                        applyColorChange(color);
+                    });
+                    paletteContainer.appendChild(colorDiv);
+                });
+                
+                // Custom color picker logic
+                const customPicker = document.getElementById('custom-color-picker');
+                const customInput = document.getElementById('custom-color-input');
+                
+                customPicker.addEventListener('input', (e) => {
+                    applyColorChange(e.target.value);
+                });
+                
+                customInput.addEventListener('input', (e) => {
+                    const color = e.target.value.trim();
+                    if (/^#[0-9A-F]{6}$/i.test(color)) {
+                        applyColorChange(color);
+                    }
+                });
 
+                // Helper function to update UI on color change
+                const applyColorChange = (color) => {
+                    customPicker.value = color;
+                    customInput.value = color;
+                    document.querySelectorAll('.color-option').forEach(item => item.classList.remove('selected'));
+                    const selectedPaletteItem = document.querySelector(`.color-option[data-color="${color.toLowerCase()}"]`);
+                    if (selectedPaletteItem) {
+                        selectedPaletteItem.classList.add('selected');
+                    }
+                    updateNavbarColor(color); // Live preview
+                };
+            }
+            // --- END PERSONALIZATION SPECIFIC CONTENT ---
+            
             // 3. Update sidebar active state
             document.querySelectorAll('.sidebar-item').forEach(item => {
                 item.classList.remove('active');
             });
             document.getElementById(`sidebar-${sectionId}`).classList.add('active');
+            
+            // 4. Setup Save Button
+            const saveButton = document.getElementById('save-settings-button');
+            if (saveButton) {
+                saveButton.addEventListener('click', () => {
+                    if (sectionId === 'personalization') {
+                        const newColor = document.getElementById('custom-color-picker').value;
+                        saveNavbarColor(newColor);
+                    } else {
+                        // Placeholder save logic for other sections
+                        alert(`Changes for '${section.title}' would be saved here.`);
+                    }
+                });
+            }
         }
         
         // --- START APPLICATION ---
-        startAuthFlow();
+        // This will start the Firebase Auth listener (relying on navigation.js for global objects)
+        document.addEventListener('DOMContentLoaded', startAuthFlow);
     </script>
 </body>
 </html>
