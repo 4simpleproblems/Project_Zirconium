@@ -2,20 +2,16 @@
  * navigation.js
  * * This is a fully self-contained script to create a dynamic, authentication-aware
  * navigation bar for your website. It handles everything from Firebase initialization
- * to rendering user-specific information. It now includes a horizontally scrollable
- * tab menu loaded from page-identification.json.
+ * to rendering user-specific information.
  *
  * --- UPDATES & FEATURES ---
- * 1. ADMIN EMAIL SET: The privileged email is set to 4simpleproblems@gmail.com.
- * 2. AI FEATURES REMOVED: All AI-related code has been removed.
- * 3. GOLD ADMIN TAB: The 'Beta Settings' tab now has a premium gold-textured look and uses the path: ../logged-in/beta-settings.html.
- * 4. SETTINGS LINK: Includes the 'Settings' link in the authenticated user's dropdown menu.
- * 5. ACTIVE TAB SCROLL: Auto-scrolls the active tab to the center of the viewport for visibility.
- * 6. LOGOUT REDIRECT: Redirects logged-out users away from logged-in pages.
- * 7. NEW: **NAVBAR COLOR CUSTOMIZATION:**
- * - **Prioritizes Local Storage** for instant color loading.
- * - Falls back to **Firestore** if no local setting is found.
- * - Dynamically applies color and adjusts text color for contrast.
+ * 1. PURE LOCAL STORAGE: Color setting is loaded ONLY from Local Storage for instant updates.
+ * 2. COMPLETE COLOR SYNCHRONIZATION: The navbar, the fading scroll texture, text, icons, and borders all adjust dynamically 
+ * based on the color set in Local Storage.
+ * 3. CONTRAST SWITCHING: Automatically switches text/icon color to #111111 (near-black) if the background color is light 
+ * to ensure high readability.
+ * 4. ADMIN EMAIL SET: The privileged email is set to 4simpleproblems@gmail.com.
+ * 5. FIREBASE SETTINGS REMOVED: All Firebase Firestore logic related to color settings has been removed.
  */
 
 // =========================================================================
@@ -35,11 +31,12 @@ const FIREBASE_CONFIG = {
 // --- Configuration ---
 const PAGE_CONFIG_URL = '../page-identification.json';
 
-// NEW: Set the specific email that is considered an administrator.
+// Set the specific email that is considered an administrator.
 const PRIVILEGED_EMAIL = '4simpleproblems@gmail.com'; 
 
-// Key for Local Storage
+// Key for Local Storage (Must match the one in settings.html)
 const NAVBAR_COLOR_KEY = '4sp_navbar_color';
+const DEFAULT_NAVBAR_COLOR = '#000000'; // Default black
 
 // Variables to hold Firebase objects
 let auth;
@@ -47,10 +44,10 @@ let db;
 
 // --- Global Variable for User Settings ---
 let userSettings = {
-    navbarColor: '#000000' // Default black
+    navbarColor: DEFAULT_NAVBAR_COLOR
 };
 
-// --- Utility Functions ---
+// --- Utility Functions (Luminance and Contrast) ---
 
 /**
  * Calculates the perceived luminance of a hex color.
@@ -58,12 +55,10 @@ let userSettings = {
  * @returns {number} The luminance value (0 to 1).
  */
 const getLuminance = (hex) => {
-    // Convert hex to RGB components
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
     const b = parseInt(hex.slice(5, 7), 16);
 
-    // Normalize and apply luminance formula (Luminance = 0.2126*R + 0.7152*G + 0.0722*B)
     const [R, G, B] = [r, g, b].map(c => {
         c /= 255;
         return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
@@ -82,15 +77,17 @@ const getContrastTextColor = (hexColor) => {
     return getLuminance(hexColor) > 0.4 ? '#111111' : 'white';
 };
 
+// --- Local Storage and Color Application Functions ---
+
 /**
  * Applies the given color to the CSS variable and updates global settings.
+ * This function also calculates and sets the contrast text color variable.
  * @param {string} color - The hex color to apply (e.g., '#RRGGBB').
  */
 const applyNavbarColor = (color) => {
-    // Basic validation
+    // Fallback to default if invalid color
     if (!/^#[0-9A-F]{6}$/i.test(color)) {
-        console.warn("Invalid color format, using default.");
-        color = '#000000';
+        color = DEFAULT_NAVBAR_COLOR;
     }
     
     const contrastTextColor = getContrastTextColor(color);
@@ -99,31 +96,20 @@ const applyNavbarColor = (color) => {
     userSettings.navbarColor = color;
     document.documentElement.style.setProperty('--navbar-color', color);
     document.documentElement.style.setProperty('--navbar-text-color', contrastTextColor);
-    
-    // Also store the color in Local Storage for fast access on next page load
-    try {
-        localStorage.setItem(NAVBAR_COLOR_KEY, color);
-    } catch (e) {
-        console.error("Could not write to Local Storage:", e);
-    }
 };
 
 /**
- * Loads the navbar color from Local Storage.
+ * Loads the navbar color from Local Storage and applies it.
  */
 const loadLocalNavbarColor = () => {
     try {
         const localColor = localStorage.getItem(NAVBAR_COLOR_KEY);
-        if (localColor) {
-            console.log("Loaded navbar color from Local Storage:", localColor);
-            applyNavbarColor(localColor);
-        } else {
-            // Apply default color if nothing in local storage
-            applyNavbarColor(userSettings.navbarColor);
-        }
+        const finalColor = localColor && /^#[0-9A-F]{6}$/i.test(localColor) ? localColor : DEFAULT_NAVBAR_COLOR;
+        applyNavbarColor(finalColor);
+        console.log("Navbar color applied from Local Storage/Default:", finalColor);
     } catch (e) {
         console.error("Could not read from Local Storage:", e);
-        applyNavbarColor(userSettings.navbarColor);
+        applyNavbarColor(DEFAULT_NAVBAR_COLOR);
     }
 };
 
@@ -133,7 +119,6 @@ const loadLocalNavbarColor = () => {
     // ⭐️ STEP 1: Load the color from Local Storage IMMEDIATELY before doing anything else
     loadLocalNavbarColor(); 
     
-    // Stop execution if Firebase config is not provided
     if (!FIREBASE_CONFIG || !FIREBASE_CONFIG.apiKey) {
         console.error("Firebase configuration is missing! Please paste your config into navigation.js.");
         return;
@@ -141,7 +126,6 @@ const loadLocalNavbarColor = () => {
 
     // --- 1. DYNAMICALLY LOAD EXTERNAL ASSETS ---
 
-    // Helper to load external JS files
     const loadScript = (src) => {
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
@@ -152,7 +136,6 @@ const loadLocalNavbarColor = () => {
         });
     };
 
-    // Helper to load external CSS files (For icons)
     const loadCSS = (href) => {
         return new Promise((resolve) => {
             const link = document.createElement('link');
@@ -163,7 +146,6 @@ const loadLocalNavbarColor = () => {
         });
     };
 
-    // Simple debounce utility for performance
     const debounce = (func, delay) => {
         let timeoutId;
         return (...args) => {
@@ -173,6 +155,7 @@ const loadLocalNavbarColor = () => {
     };
     
     const getIconClass = (iconName) => {
+        // [Existing getIconClass logic remains the same]
         if (!iconName) return '';
         const nameParts = iconName.trim().split(/\s+/).filter(p => p.length > 0);
         let stylePrefix = 'fa-solid'; 
@@ -206,16 +189,13 @@ const loadLocalNavbarColor = () => {
     const run = async () => {
         let pages = {};
 
-        // Load Icons CSS first
         await loadCSS("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css");
         
-        // Fetch page configuration for the tabs
         try {
             const response = await fetch(PAGE_CONFIG_URL);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             pages = await response.json();
             
-            // INJECTION: Add the requested admin-only tab for demonstration
             pages['beta-settings'] = { 
                 name: "Beta Settings", 
                 url: "../logged-in/beta-settings.html", 
@@ -225,7 +205,6 @@ const loadLocalNavbarColor = () => {
             
         } catch (error) {
             console.error("Failed to load page identification config:", error);
-            // If the configuration fails to load, use a minimal set of pages for stability
             pages = {
                 'home': { name: "Home", url: "../../index.html", icon: "fa-solid fa-house" },
                 'admin': { name: "Beta Settings", url: "../logged-in/beta-settings.html", icon: "fa-solid fa-flask", adminOnly: true } 
@@ -233,12 +212,11 @@ const loadLocalNavbarColor = () => {
         }
 
         try {
-            // ONLY load the stable Firebase Compat modules
+            // Load Firebase Compat modules (keeping Firestore for general user data fetch)
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js");
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js");
             
-            // Initialize Firebase and start the rendering/auth process
             initializeApp(pages);
 
         } catch (error) {
@@ -248,7 +226,6 @@ const loadLocalNavbarColor = () => {
 
     // --- 2. INITIALIZE FIREBASE AND RENDER NAVBAR ---
     const initializeApp = (pages) => {
-        // Initialize Firebase with the compat libraries
         const app = firebase.initializeApp(FIREBASE_CONFIG);
         auth = firebase.auth();
         db = firebase.firestore();
@@ -256,15 +233,23 @@ const loadLocalNavbarColor = () => {
         // --- 3. INJECT CSS STYLES ---
         const injectStyles = () => {
             
-            // Read the currently applied colors from the CSS variables
-            const navbarColor = userSettings.navbarColor; // Already set by applyNavbarColor
-            const contrastTextColor = document.documentElement.style.getPropertyValue('--navbar-text-color');
+            // Read the currently applied colors from the CSS variables/global state
+            const navbarColor = userSettings.navbarColor; 
+            const contrastTextColor = getContrastTextColor(navbarColor);
 
-            // Determine colors for the fade effect
+            // ⭐️ Dynamic fade effect colors: use the navbar color for the gradient background
             const fadeLeft = `linear-gradient(to right, ${navbarColor} 50%, transparent)`;
             const fadeRight = `linear-gradient(to left, ${navbarColor} 50%, transparent)`;
+            
+            // If an old style sheet exists, remove it before injecting the new one
+            let existingStyle = document.getElementById('navbar-dynamic-styles');
+            if (existingStyle) {
+                existingStyle.remove();
+            }
 
             const style = document.createElement('style');
+            style.id = 'navbar-dynamic-styles';
+            
             style.textContent = `
                 /* Base Styles */
                 body { padding-top: 4rem; }
@@ -275,36 +260,34 @@ const loadLocalNavbarColor = () => {
                     /* Adjust border for visibility against potentially light colors */
                     border-bottom: 1px solid ${contrastTextColor === '#111111' ? '#dddddd' : 'rgb(31 41 55)'}; 
                     height: 4rem; 
-                    color: var(--navbar-text-color); /* Base text color for non-tabs */
+                    color: var(--navbar-text-color); /* Base text color for non-tabs (for logo text, etc.) */
                 }
                 .auth-navbar nav { padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
-                /* Text color for avatar initial and fallback background gradient */
                 .initial-avatar { background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; }
                 
                 /* Auth Dropdown Menu Styles - uses the same color scheme */
                 .auth-menu-container { 
                     position: absolute; right: 0; top: 50px; width: 16rem; 
-                    /* Use the dynamic color variable */
                     background: var(--navbar-color);
                     border: 1px solid ${contrastTextColor === '#111111' ? '#bbbbbb' : 'rgb(55 65 81)'}; 
                     border-radius: 0.75rem; padding: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
                     transition: transform 0.2s ease-out, opacity 0.2s ease-out; transform-origin: top right; 
                 }
-                .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
                 .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
                 .auth-menu-link, .auth-menu-button { 
                     display: flex; align-items: center; gap: 0.75rem; width: 100%; text-align: left; 
                     padding: 0.5rem 0.75rem; font-size: 0.875rem; 
-                    /* Adjust link color for contrast */
+                    /* ⭐️ Adjust link color for contrast (darker gray for light background) */
                     color: ${contrastTextColor === '#111111' ? '#374151' : '#d1d5db'}; 
                     border-radius: 0.375rem; 
                     transition: background-color 0.2s, color 0.2s; border: none; cursor: pointer;
                 }
-                /* Adjust hover background and text color for contrast */
+                /* ⭐️ Adjust hover background and text color for contrast */
                 .auth-menu-link:hover, .auth-menu-button:hover { 
                     background-color: ${contrastTextColor === '#111111' ? '#f3f4f6' : 'rgb(55 65 81)'}; 
                     color: ${contrastTextColor === '#111111' ? '#000000' : 'white'}; 
                 }
+                /* ⭐️ Logged out button styling for contrast */
                 .logged-out-auth-toggle { background: ${contrastTextColor === '#111111' ? '#ffffff' : '#010101'}; border: 1px solid ${contrastTextColor === '#111111' ? '#dddddd' : '#374151'}; }
                 .logged-out-auth-toggle i { color: ${contrastTextColor === '#111111' ? '#111111' : '#DADADA'}; }
 
@@ -314,14 +297,13 @@ const loadLocalNavbarColor = () => {
                 .tab-scroll-container::-webkit-scrollbar { display: none; }
                 .scroll-glide-button {
                     position: absolute; top: 0; height: 100%; width: 4rem; display: flex; align-items: center; justify-content: center; 
-                    /* Use the dynamic color variable */
                     background: var(--navbar-color); 
                     color: var(--navbar-text-color); /* Contrast text color for icon */
                     font-size: 1.2rem; cursor: pointer; 
                     opacity: 1; 
                     transition: opacity 0.3s, background 0.3s; z-index: 10; pointer-events: auto;
                 }
-                /* Use dynamic colors for the gradient fade effect (fading into the navbar color) */
+                /* ⭐️ Use dynamic colors for the gradient fade effect (fading into the navbar color) */
                 #glide-left { left: 0; background: ${fadeLeft}; justify-content: flex-start; padding-left: 0.5rem; }
                 #glide-right { right: 0; background: ${fadeRight}; justify-content: flex-end; padding-right: 0.5rem; }
                 .scroll-glide-button.hidden { opacity: 0 !important; pointer-events: none !important; }
@@ -329,7 +311,7 @@ const loadLocalNavbarColor = () => {
                 /* Tab Links - Default state */
                 .nav-tab { 
                     flex-shrink: 0; padding: 0.5rem 1rem; 
-                    /* Default tab text color */
+                    /* ⭐️ Default tab text color (darker gray for light background) */
                     color: ${contrastTextColor === '#111111' ? '#6b7280' : '#9ca3af'}; 
                     font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; 
                     transition: all 0.2s; text-decoration: none; line-height: 1.5; 
@@ -345,7 +327,7 @@ const loadLocalNavbarColor = () => {
                 .nav-tab.active { color: #4f46e5; border-color: #4f46e5; background-color: rgba(79, 70, 229, 0.1); }
                 .nav-tab.active:hover { color: #6366f1; border-color: #6366f1; background-color: rgba(79, 70, 229, 0.15); }
                 
-                /* NEW: Gold textured style for Admin Tab remains independent of base color */
+                /* Admin Tab styling remains independent of base color for gold effect */
                 .nav-tab.admin-tab {
                     background: linear-gradient(45deg, #f0e68c, #ffd700, #daa520, #f0e68c);
                     -webkit-background-clip: text;
@@ -356,23 +338,17 @@ const loadLocalNavbarColor = () => {
                     box-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
                     transition: all 0.3s ease;
                 }
-                
                 .nav-tab.admin-tab:not(.active):hover {
                     border-color: #ffd700;
                     background-color: rgba(255, 215, 0, 0.1);
                     box-shadow: 0 0 12px rgba(255, 215, 0, 0.9);
-                }
-
-                .nav-tab.admin-tab.active {
-                    background-color: rgba(255, 215, 0, 0.25);
-                    border-color: #f0e68c;
-                    box-shadow: 0 0 10px rgba(255, 215, 0, 1);
                 }
             `;
             document.head.appendChild(style);
         };
 
         const isTabActive = (tabUrl) => {
+            // [Existing isTabActive logic remains the same]
             const tabPathname = new URL(tabUrl, window.location.origin).pathname.toLowerCase();
             const currentPathname = window.location.pathname.toLowerCase();
 
@@ -403,6 +379,7 @@ const loadLocalNavbarColor = () => {
         };
 
         const updateScrollGilders = () => {
+            // [Existing updateScrollGilders logic remains the same]
             const container = document.querySelector('.tab-scroll-container');
             const leftButton = document.getElementById('glide-left');
             const rightButton = document.getElementById('glide-right');
@@ -412,11 +389,9 @@ const loadLocalNavbarColor = () => {
             const hasHorizontalOverflow = container.scrollWidth > container.offsetWidth;
 
             if (hasHorizontalOverflow) {
-                // Tolerance for floating point math
                 const isScrolledToLeft = container.scrollLeft < 5; 
                 const isScrolledToRight = container.scrollLeft + container.offsetWidth >= container.scrollWidth - 5; 
 
-                // Ensure the buttons are visible initially if there is overflow
                 leftButton.classList.remove('hidden');
                 rightButton.classList.remove('hidden');
 
@@ -427,7 +402,6 @@ const loadLocalNavbarColor = () => {
                     rightButton.classList.add('hidden');
                 }
             } else {
-                // If there is no overflow, hide both buttons
                 leftButton.classList.add('hidden');
                 rightButton.classList.add('hidden');
             }
@@ -438,14 +412,13 @@ const loadLocalNavbarColor = () => {
             const container = document.getElementById('navbar-container');
             if (!container) return; 
             
-            // ⭐️ IMPORTANT: Inject or re-inject styles now to ensure any Firestore update is reflected
+            // Re-inject styles to ensure any color change (on load or after auth check) is applied
             injectStyles();
 
             const logoPath = "/images/logo.png"; 
             
-            // Filter and map pages for tabs, applying adminOnly filter
             const tabsHtml = Object.values(pages || {})
-                .filter(page => !(page.adminOnly && !isPrivilegedUser)) // Filter out adminOnly tabs for non-privileged users
+                .filter(page => !(page.adminOnly && !isPrivilegedUser))
                 .map(page => {
                     const isActive = isTabActive(page.url);
                     const activeClass = isActive ? 'active' : '';
@@ -533,7 +506,6 @@ const loadLocalNavbarColor = () => {
             // --- 5. SETUP EVENT LISTENERS ---
             setupEventListeners(user);
 
-            // Auto-scroll to the active tab, centering it in the view.
             const activeTab = document.querySelector('.nav-tab.active');
             const tabContainer = document.querySelector('.tab-scroll-container');
             if (activeTab && tabContainer) {
@@ -547,11 +519,11 @@ const loadLocalNavbarColor = () => {
                 }, 100);
             }
             
-            // Initial check to hide/show them correctly after load
             updateScrollGilders();
         };
 
         const setupEventListeners = (user) => {
+            // [Existing setupEventListeners logic remains the same]
             const toggleButton = document.getElementById('auth-toggle');
             const menu = document.getElementById('auth-menu-container');
 
@@ -599,7 +571,7 @@ const loadLocalNavbarColor = () => {
                 const logoutButton = document.getElementById('logout-button');
                 if (logoutButton) {
                     logoutButton.addEventListener('click', () => {
-                        // Clear local color on logout to prevent it from persisting for other users
+                        // Clear local color on logout
                         try {
                             localStorage.removeItem(NAVBAR_COLOR_KEY);
                         } catch (e) {
@@ -611,65 +583,36 @@ const loadLocalNavbarColor = () => {
             }
         };
 
-        /**
-         * Fetches user-specific settings from Firestore, including the navbar color.
-         * This is called AFTER the user logs in and AFTER we've checked Local Storage.
-         * If the Firestore color is different, it will override the Local Storage value
-         * (which may be from a previous, unauthenticated session).
-         * @param {firebase.User} user - The authenticated Firebase user object.
-         * @returns {Promise<void>}
-         */
-        const loadUserSettingsFromFirestore = async (user) => {
-            if (!user || !db) return;
-            try {
-                const settingsRef = db.collection('users').doc(user.uid).collection('settings').doc('navbar');
-                const docSnap = await settingsRef.get();
-
-                if (docSnap.exists) {
-                    const settings = docSnap.data();
-                    if (settings && settings.color && settings.color !== userSettings.navbarColor) {
-                        const firestoreColor = settings.color;
-                        
-                        // Apply and save to Local Storage, overriding the previous value
-                        applyNavbarColor(firestoreColor); 
-                        console.log("Loaded custom navbar color from Firestore and updated Local Storage:", firestoreColor);
-                    }
-                }
-            } catch (error) {
-                console.error("Error loading user settings (navbar color) from Firestore:", error);
-            }
-        };
-
 
         // --- 6. AUTH STATE LISTENER ---
         auth.onAuthStateChanged(async (user) => {
             let isPrivilegedUser = false;
             
             if (user) {
-                // Check for the privileged user email
                 isPrivilegedUser = user.email === PRIVILEGED_EMAIL;
-
-                // 1. Fetch User Settings from Firestore (will override local storage if different)
-                await loadUserSettingsFromFirestore(user);
                 
-                // 2. User is signed in. Fetch their data from Firestore.
+                // 1. **(No Firestore Settings Load)** - Color is already loaded from Local Storage.
+
+                // 2. User is signed in. Fetch their data for username/photo.
+                let userData = null;
                 try {
+                    // Keeping this call to populate the dropdown avatar/username
                     const userDoc = await db.collection('users').doc(user.uid).get();
-                    const userData = userDoc.exists ? userDoc.data() : null;
-                    
-                    // Re-render the navbar with authenticated data and the final color setting
-                    renderNavbar(user, userData, pages, isPrivilegedUser);
+                    userData = userDoc.exists ? userDoc.data() : null;
                 } catch (error) {
-                    console.error("Error fetching user data:", error);
-                    renderNavbar(user, null, pages, isPrivilegedUser);
+                    console.error("Error fetching user data for dropdown:", error);
                 }
+                
+                // Re-render the navbar with authenticated data and the current color setting
+                renderNavbar(user, userData, pages, isPrivilegedUser);
+                
             } else {
                 // User is signed out.
-                // Apply the locally saved color (or default)
+                // Re-apply the locally saved color (or default)
                 loadLocalNavbarColor();
                 renderNavbar(null, null, pages, false);
                 
-                // KICK USER TO INDEX: If the user is logged out, redirect them to ../../index.html
+                // KICK USER TO INDEX: 
                 const targetUrl = '../../index.html';
                 const currentPathname = window.location.pathname;
                 
@@ -683,19 +626,13 @@ const loadLocalNavbarColor = () => {
         });
 
         // --- FINAL SETUP ---
-        // Create a div for the navbar to live in if it doesn't exist.
         if (!document.getElementById('navbar-container')) {
             const navbarDiv = document.createElement('div');
             navbarDiv.id = 'navbar-container';
             document.body.prepend(navbarDiv);
         }
         
-        // Inject styles immediately after the document loads, using the color
-        // that was loaded from Local Storage in the initial steps.
-        document.addEventListener('DOMContentLoaded', injectStyles);
-    };
-
-    // --- START THE PROCESS ---
-    document.addEventListener('DOMContentLoaded', run);
+        // Inject styles immediately after the document loads using the color already applied from Local Storage.
+        document.addEventListener('DOMContentLoaded', run);
 
 })();
