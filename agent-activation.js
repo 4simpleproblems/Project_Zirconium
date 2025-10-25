@@ -18,10 +18,11 @@
  *
  * NEW: The AI's response now includes an internal <THOUGHT_PROCESS> and lists of <SOURCE URL="..." TITLE="..."/>.
  * UPDATED: Removed authenticated email feature.
- * REPLACED: Geolocation now uses AbstractAPI via XMLHttpRequest, toggleable via settings.
+ * REPLACED: Geolocation now uses the browser's native `navigator.geolocation` API, toggleable via settings.
  * NEW: Added a "nudge" popup if AI needs web search but the setting is disabled.
  * UPDATED: Swapped order of monologue and sources. Monologue is now a collapsible dropdown.
  * CSS: Reduced margins between response content, sources, and monologue for a tighter layout.
+ * MODIFIED: Location Sharing is now OFF by default.
  */
 (function() {
     // --- CONFIGURATION ---
@@ -44,10 +45,10 @@
     let currentAIRequestController = null;
     let chatHistory = [];
     let attachedFiles = [];
-    // NEW: Replaced userSettings with appSettings
+    // NEW: Replaced userSettings with appSettings. Location sharing is now off by default.
     let appSettings = {
         webSearch: true,
-        locationSharing: true
+        locationSharing: false
     };
 
     // Simple debounce utility for performance
@@ -81,29 +82,10 @@
 
     // --- UTILITIES FOR GEOLOCATION ---
 
-    /**
-     * NEW: Helper function for async HTTP GET request.
-     */
-    function httpGetAsync(url, callback) {
-        const xmlHttp = new XMLHttpRequest();
-        xmlHttp.onreadystatechange = function() {
-            if (xmlHttp.readyState === 4) {
-                if (xmlHttp.status === 200) {
-                    callback(xmlHttp.responseText, null);
-                } else {
-                    callback(null, new Error(`HTTP Error: ${xmlHttp.status} ${xmlHttp.statusText}`));
-                }
-            }
-        }
-        xmlHttp.open("GET", url, true); // true for asynchronous
-        xmlHttp.onerror = function() {
-            callback(null, new Error("Network request failed"));
-        };
-        xmlHttp.send(null);
-    }
+    // REMOVED: httpGetAsync function is no longer needed as we use navigator.geolocation.
 
     /**
-     * REPLACED: Gets user location via AbstractAPI, if setting is enabled.
+     * REPLACED: Gets user location via Browser's Geolocation API, if setting is enabled.
      * @returns {Promise<string>} Resolves with location string or a fallback.
      */
     function getUserLocationForContext() {
@@ -116,41 +98,46 @@
                 return;
             }
 
-            // Use the provided URL and API key
-            const url = "https://ipgeolocation.abstractapi.com/v1/?api_key=9e522ec72e554164bab14e7895db90b2&ip_address=2600:1700:6260:1790:56e6:a7aa:af32:1908";
+            // Check if browser supports Geolocation
+            if (!navigator.geolocation) {
+                const fallback = 'Geolocation is not supported by this browser.';
+                localStorage.setItem('ai-user-location', fallback);
+                resolve(fallback);
+                return;
+            }
 
-            httpGetAsync(url, (response, error) => {
-                if (error) {
-                    console.warn('Geolocation failed:', error.message);
-                    let fallback = localStorage.getItem('ai-user-location') || 'Location API Error/Unavailable';
+            // Browser API will prompt user for permission if not already granted
+            navigator.geolocation.getCurrentPosition(
+                // Success Callback
+                (position) => {
+                    const lat = position.coords.latitude.toFixed(4);
+                    const lon = position.coords.longitude.toFixed(4);
+                    const locationString = `Coordinates: Latitude: ${lat}, Longitude: ${lon}`;
+                    localStorage.setItem('ai-user-location', locationString);
+                    resolve(locationString);
+                },
+                // Error Callback
+                (error) => {
+                    let fallback;
+                    switch (error.code) {
+                        case error.PERMISSION_DENIED:
+                            fallback = "Location permission denied by user.";
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            fallback = "Location information is unavailable.";
+                            break;
+                        case error.TIMEOUT:
+                            fallback = "Location request timed out.";
+                            break;
+                        default:
+                            fallback = "An unknown error occurred while getting location.";
+                            break;
+                    }
+                    console.warn('Geolocation failed:', fallback);
                     localStorage.setItem('ai-user-location', fallback);
                     resolve(fallback);
-                } else {
-                    try {
-                        const data = JSON.parse(response);
-                        const {
-                            city,
-                            region,
-                            country,
-                            latitude,
-                            longitude
-                        } = data;
-                        // Format a location string similar to the old one
-                        const lat = parseFloat(latitude).toFixed(4);
-                        const lon = parseFloat(longitude).toFixed(4);
-                        const address = [city, region, country].filter(Boolean).join(', ');
-
-                        const locationString = `Coordinates: Latitude: ${lat}, Longitude: ${lon}\nGeneral Location/Address: ${address}`;
-                        localStorage.setItem('ai-user-location', locationString);
-                        resolve(locationString);
-                    } catch (e) {
-                        console.error('Failed to parse location response:', e);
-                        let fallback = 'Location response parsing failed.';
-                        localStorage.setItem('ai-user-location', fallback);
-                        resolve(fallback);
-                    }
                 }
-            });
+            );
         });
     }
 
@@ -1030,6 +1017,8 @@ Formatting Rules (MUST FOLLOW):
         menu.querySelector('#settings-location-sharing').addEventListener('change', (e) => {
             appSettings.locationSharing = e.target.checked;
             saveAppSettings();
+            // Note: We don't need to request permission here.
+            // The permission will be requested by the browser when getUserLocationForContext is called.
         });
 
         return menu;
