@@ -9,10 +9,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <script src="../navigation.js"></script>
+    <script src="test-navigation.js"></script>
     <script src="../injector.js"></script>
 
     <style>
@@ -33,6 +32,8 @@
             display: flex;
             flex-direction: column;
         }
+        
+        /* The body padding-top is now handled by the CSS injected in test-navigation.js to account for the fixed navbar height */
         
         h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
             font-weight: 400 !important;
@@ -177,27 +178,31 @@
     </main>
 
     <script type="module">
-        // Assuming navigation.js has already loaded Firebase and set up global auth listener.
+        // Assuming test-navigation.js has already loaded Firebase and set up global auth listener.
 
         // --- CONSTANTS AND DOM ELEMENTS ---
         const BASE_TITLE = "Settings";
-        // Key for Local Storage - MUST MATCH NAVBAR_KEY in navigation.js
-        // NAVBAR_KEY in navigation.js is '4sp_navbar_background'
-        const NAVBAR_SETTINGS_KEY = '4sp_navbar_background'; 
-        // Default settings object - MUST REFLECT DEFAULT_NAVBAR_SETTINGS in navigation.js
+        // Key for Local Storage - MUST MATCH THEME_STORAGE_KEY in test-navigation.js
+        const NAVBAR_SETTINGS_KEY = 'user-navbar-theme'; 
+        // Default settings object - MUST REFLECT DEFAULT_THEME in test-navigation.js
         const DEFAULT_NAVBAR_SETTINGS = {
-            type: 'color', 
-            value: '#000000', 
-            imgPosition: 'center', 
-            imgSize: 'cover'
+            navbarBg: '#000000', 
+            tabActiveColor: '#4f46e5', 
+            borderColor: 'rgb(31 41 55)', 
         };
-        const DEFAULT_NAVBAR_COLOR = DEFAULT_NAVBAR_SETTINGS.value;
+        const DEFAULT_NAVBAR_COLOR = DEFAULT_NAVBAR_SETTINGS.navbarBg;
 
-        // The test-navigation.js script exposes the applyNavbarBackground function globally (via the scope of its execution), 
-        // but since it's an external script, we must rely on its internal state management. 
-        // The most robust approach is to update localStorage and then reload the component logic, 
-        // which navigation.js is set up to do via loadLocalNavbarSettings and re-render.
-        // For a live update, we'll try to call the main function from navigation.js.
+        // Note: The new test-navigation.js does NOT expose the applyNavbarBackground function.
+        // It relies on the presence of the 'user-navbar-theme' in localStorage and recalculates 
+        // the theme on page load via initializeTheme(). However, the original code relied on a 
+        // global 'applyNavbarBackground' for live updates. For compatibility with the *original* // intention of live update, the function `applyNavbarBackground` is still checked for,
+        // but now it would need to be made global in test-navigation.js, or we must fall back
+        // to a simpler color setting that test-navigation.js expects.
+
+        // For the purpose of this update, we will assume a function *similar* to the old
+        // logic for live-update exists or that the original `applyNavbarBackground` was 
+        // correctly exposed globally as was stated in the old file's comments.
+        // We will adjust the logic to work with the *new* theme object structure.
         
         const settingsSections = [
             { id: 'general', title: 'General', icon: 'fa-cog', content: 'Configure basic application behavior like language, theme, and startup settings.', color: 'text-yellow-400' },
@@ -239,7 +244,7 @@
 
         let currentNavbarColor = DEFAULT_NAVBAR_COLOR;
 
-        // --- LOCAL STORAGE FUNCTIONS (UPDATED) ---
+        // --- LOCAL STORAGE FUNCTIONS (ADJUSTED FOR NEW THEME STRUCTURE) ---
 
         /**
          * Loads the full navbar settings object from Local Storage, extracting the color value.
@@ -249,14 +254,9 @@
             try {
                 const localSettingsString = localStorage.getItem(NAVBAR_SETTINGS_KEY);
                 const localSettings = localSettingsString ? JSON.parse(localSettingsString) : DEFAULT_NAVBAR_SETTINGS;
-                // Check if it's a valid color setting and return the hex value
-                if (localSettings.type === 'color' && /^#[0-9A-F]{6}$/i.test(localSettings.value)) {
-                    return localSettings.value;
-                }
-                // If it's an image setting, we don't return the color, but the color logic in nav.js will use a fallback. 
-                // For the purpose of the settings page UI, we'll return the default.
-                if (localSettings.type === 'image') {
-                    return DEFAULT_NAVBAR_COLOR; // Display default color in picker if an image is set
+                // The new key for the background color is 'navbarBg'
+                if (localSettings.navbarBg && /^#[0-9A-F]{6}$/i.test(localSettings.navbarBg)) {
+                    return localSettings.navbarBg;
                 }
                 return DEFAULT_NAVBAR_COLOR;
             } catch (e) {
@@ -267,15 +267,20 @@
         
         /**
          * Saves a new navbar color setting to Local Storage as the required JSON structure.
-         * Then, it calls the `applyNavbarBackground` function from `navigation.js` 
-         * to force a live update to the navbar.
+         * This will only change the 'navbarBg' property of the theme object.
+         * For live update, it tries to call the global `applyNavbarBackground` (if exposed).
+         * Since `test-navigation.js` is self-contained and *does not* expose this function,
+         * a page refresh will be required for the change to take full effect in a real scenario.
          * @param {string} color - The new color to save (e.g., '#RRGGBB').
          */
         function saveLocalNavbarColor(color) {
+            // Get the current settings (or default) to preserve other keys like tabActiveColor
+            const localSettingsString = localStorage.getItem(NAVBAR_SETTINGS_KEY);
+            const baseSettings = localSettingsString ? JSON.parse(localSettingsString) : DEFAULT_NAVBAR_SETTINGS;
+            
             const newSettings = { 
-                ...DEFAULT_NAVBAR_SETTINGS, // Preserve image settings if they were loaded/set, though only color is changed here
-                type: 'color', 
-                value: color 
+                ...baseSettings, 
+                navbarBg: color 
             };
             
             try {
@@ -283,16 +288,17 @@
                 localStorage.setItem(NAVBAR_SETTINGS_KEY, JSON.stringify(newSettings));
                 currentNavbarColor = color;
 
-                // 2. Force the navigation script to re-apply settings
-                // We rely on the navigation script exposing its core function, or manually calling it.
-                // Assuming applyNavbarBackground is a globally accessible function due to its scope in navigation.js
+                // 2. Force the navigation script to re-apply settings (assuming the function is globally available)
+                // In the new test-navigation.js, this call will likely fail unless the function is manually exposed.
+                // We keep the old check for a smoother transition/assumption of the original intent.
                 if (typeof applyNavbarBackground === 'function') {
                     applyNavbarBackground(newSettings);
                 } else {
-                    console.warn("Could not find global 'applyNavbarBackground' function for live update. Please refresh the page.");
+                    // Because the new navigation script doesn't expose a live update function, we provide a warning.
+                    console.warn("Could not find global 'applyNavbarBackground' function for live update. Page refresh required for theme change to fully apply.");
                 }
 
-                alert(`Navbar color updated to ${color} and saved locally.`);
+                alert(`Navbar color updated to ${color} and saved locally. (Requires refresh without 'applyNavbarBackground'.)`);
             } catch (error) {
                 console.error("Error saving navbar color to Local Storage:", error);
                 alert("Failed to save color setting locally. See console.");
@@ -311,37 +317,28 @@
                 if (typeof applyNavbarBackground === 'function') {
                     applyNavbarBackground(DEFAULT_NAVBAR_SETTINGS);
                 } else {
-                    console.warn("Could not find global 'applyNavbarBackground' function for live update. Please refresh the page.");
+                    // Because the new navigation script doesn't expose a live update function, we provide a warning.
+                    console.warn("Could not find global 'applyNavbarBackground' function for live update. Page refresh required for theme change to fully apply.");
                 }
 
-                alert("Navbar color restored to default.");
+                alert("Navbar color restored to default. (Requires refresh without 'applyNavbarBackground'.)");
             } catch (error) {
                 console.error("Error deleting navbar color from Local Storage:", error);
                 alert("Failed to restore default setting. See console.");
             }
         }
 
-        /**
-         * The function to update the CSS variable for the live preview is now redundant 
-         * because `saveLocalNavbarColor` calls the logic in `navigation.js` which 
-         * directly updates the necessary CSS variables (`--navbar-background`, etc.)
-         * The UI update is handled by `applyColorChange` which only updates the picker/input.
-         */
-        function updateNavbarColor(color) {
-            // No action needed here, as the update happens through navigation.js logic now.
-            // This function is kept for structural compatibility but is effectively a no-op 
-            // since the main color setting is now done via saveLocalNavbarColor.
-        }
+        // The updateNavbarColor function is removed as it was a no-op in the original logic.
 
         // --- AUTHENTICATION & REDIRECTION LOGIC ---
 
         /**
-         * Starts the authentication listener. We rely entirely on navigation.js.
+         * Starts the authentication listener. We rely entirely on test-navigation.js.
          */
         function startAuthFlow() {
-            // Check for the global `firebase` object loaded by navigation.js
+            // Check for the global `firebase` object loaded by test-navigation.js
             if (typeof firebase === 'undefined' || typeof firebase.auth === 'undefined') {
-                console.error("Firebase Auth is not available. Ensure navigation.js loads before this script.");
+                console.error("Firebase Auth is not available. Ensure test-navigation.js loads before this script.");
                 // Fallback rendering in case navigation.js fails to load
                 renderSidebar();
                 loadSection('general');
@@ -354,13 +351,8 @@
             firebase.auth().onAuthStateChanged((currentUser) => {
                 // Initial load of the color setting
                 currentNavbarColor = loadLocalNavbarColor();
-                // updateNavbarColor(currentNavbarColor); // Removed as it's a no-op now
 
                 console.log("Settings Page: Authentication state checked.");
-                
-                // navigation.js handles redirecting logged-out users away, so if we reach here
-                // and currentUser is null, we still proceed to render, assuming the user will be
-                // redirected soon, or is on a public page with the settings component.
                 
                 // Initialization successful, now load the content
                 renderSidebar();
@@ -496,13 +488,12 @@
                     }
                     
                     // 3. Live preview update: **Temporary/Preview Update**
-                    // This creates a temporary setting object and attempts a live update
-                    const tempSettings = { ...DEFAULT_NAVBAR_SETTINGS, type: 'color', value: color };
-                    if (typeof applyNavbarBackground === 'function') {
-                        applyNavbarBackground(tempSettings);
-                    } else {
-                        console.warn("Live preview not available. 'applyNavbarBackground' not found.");
-                    }
+                    // We must update the CSS variable directly as the new navigation.js doesn't expose a live update function.
+                    document.documentElement.style.setProperty('--navbar-bg', color);
+                    
+                    // For a complete live update (including logo/text color), we would need to 
+                    // replicate the new navigation script's contrast logic, but for a minimal 
+                    // change, we only update the background variable.
                 };
 
                 // Setup Save and Restore Buttons
@@ -528,7 +519,7 @@
         }
         
         // --- START APPLICATION ---
-        // This will start the Firebase Auth listener (relying on navigation.js for global objects)
+        // This will start the Firebase Auth listener (relying on test-navigation.js for global objects)
         document.addEventListener('DOMContentLoaded', startAuthFlow);
     </script>
 </body>
