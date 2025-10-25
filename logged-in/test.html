@@ -18,8 +18,7 @@
     <style>
         /* --- FONT & BASE STYLING (MATCHING base-template.html) --- */
         :root {
-            /* Default or loaded navbar color variable - Initialized by JS */
-            --navbar-color: #000000;
+            /* The color variable has been removed as navigation.js manages it via --navbar-background */
         }
 
         body { 
@@ -182,10 +181,23 @@
 
         // --- CONSTANTS AND DOM ELEMENTS ---
         const BASE_TITLE = "Settings";
-        // Key for Local Storage (Must match the one in navigation.js)
-        const NAVBAR_COLOR_KEY = '4sp_navbar_color';
-        // Default color for the navbar (Must match the default in navigation.js)
-        const DEFAULT_NAVBAR_COLOR = '#000000'; 
+        // Key for Local Storage - MUST MATCH NAVBAR_KEY in navigation.js
+        // NAVBAR_KEY in navigation.js is '4sp_navbar_background'
+        const NAVBAR_SETTINGS_KEY = '4sp_navbar_background'; 
+        // Default settings object - MUST REFLECT DEFAULT_NAVBAR_SETTINGS in navigation.js
+        const DEFAULT_NAVBAR_SETTINGS = {
+            type: 'color', 
+            value: '#000000', 
+            imgPosition: 'center', 
+            imgSize: 'cover'
+        };
+        const DEFAULT_NAVBAR_COLOR = DEFAULT_NAVBAR_SETTINGS.value;
+
+        // The test-navigation.js script exposes the applyNavbarBackground function globally (via the scope of its execution), 
+        // but since it's an external script, we must rely on its internal state management. 
+        // The most robust approach is to update localStorage and then reload the component logic, 
+        // which navigation.js is set up to do via loadLocalNavbarSettings and re-render.
+        // For a live update, we'll try to call the main function from navigation.js.
         
         const settingsSections = [
             { id: 'general', title: 'General', icon: 'fa-cog', content: 'Configure basic application behavior like language, theme, and startup settings.', color: 'text-yellow-400' },
@@ -227,31 +239,59 @@
 
         let currentNavbarColor = DEFAULT_NAVBAR_COLOR;
 
-        // --- LOCAL STORAGE FUNCTIONS ---
+        // --- LOCAL STORAGE FUNCTIONS (UPDATED) ---
 
         /**
-         * Loads the navbar color from Local Storage, falling back to default.
-         * @returns {string} The loaded or default color.
+         * Loads the full navbar settings object from Local Storage, extracting the color value.
+         * @returns {string} The loaded or default color value.
          */
         function loadLocalNavbarColor() {
             try {
-                const localColor = localStorage.getItem(NAVBAR_COLOR_KEY);
-                return localColor && /^#[0-9A-F]{6}$/i.test(localColor) ? localColor : DEFAULT_NAVBAR_COLOR;
+                const localSettingsString = localStorage.getItem(NAVBAR_SETTINGS_KEY);
+                const localSettings = localSettingsString ? JSON.parse(localSettingsString) : DEFAULT_NAVBAR_SETTINGS;
+                // Check if it's a valid color setting and return the hex value
+                if (localSettings.type === 'color' && /^#[0-9A-F]{6}$/i.test(localSettings.value)) {
+                    return localSettings.value;
+                }
+                // If it's an image setting, we don't return the color, but the color logic in nav.js will use a fallback. 
+                // For the purpose of the settings page UI, we'll return the default.
+                if (localSettings.type === 'image') {
+                    return DEFAULT_NAVBAR_COLOR; // Display default color in picker if an image is set
+                }
+                return DEFAULT_NAVBAR_COLOR;
             } catch (e) {
-                console.error("Could not read from Local Storage:", e);
+                console.error("Could not read or parse settings from Local Storage:", e);
                 return DEFAULT_NAVBAR_COLOR;
             }
         }
         
         /**
-         * Saves a new navbar color setting to Local Storage.
+         * Saves a new navbar color setting to Local Storage as the required JSON structure.
+         * Then, it calls the `applyNavbarBackground` function from `navigation.js` 
+         * to force a live update to the navbar.
          * @param {string} color - The new color to save (e.g., '#RRGGBB').
          */
         function saveLocalNavbarColor(color) {
+            const newSettings = { 
+                ...DEFAULT_NAVBAR_SETTINGS, // Preserve image settings if they were loaded/set, though only color is changed here
+                type: 'color', 
+                value: color 
+            };
+            
             try {
-                localStorage.setItem(NAVBAR_COLOR_KEY, color);
+                // 1. Save the new settings JSON string
+                localStorage.setItem(NAVBAR_SETTINGS_KEY, JSON.stringify(newSettings));
                 currentNavbarColor = color;
-                updateNavbarColor(color);
+
+                // 2. Force the navigation script to re-apply settings
+                // We rely on the navigation script exposing its core function, or manually calling it.
+                // Assuming applyNavbarBackground is a globally accessible function due to its scope in navigation.js
+                if (typeof applyNavbarBackground === 'function') {
+                    applyNavbarBackground(newSettings);
+                } else {
+                    console.warn("Could not find global 'applyNavbarBackground' function for live update. Please refresh the page.");
+                }
+
                 alert(`Navbar color updated to ${color} and saved locally.`);
             } catch (error) {
                 console.error("Error saving navbar color to Local Storage:", error);
@@ -260,14 +300,21 @@
         }
         
         /**
-         * Removes the navbar color setting from Local Storage.
+         * Removes the entire navbar setting from Local Storage and forces a live update to default.
          */
         function deleteLocalNavbarColor() {
             try {
-                localStorage.removeItem(NAVBAR_COLOR_KEY);
+                localStorage.removeItem(NAVBAR_SETTINGS_KEY);
                 currentNavbarColor = DEFAULT_NAVBAR_COLOR;
-                updateNavbarColor(DEFAULT_NAVBAR_COLOR);
-                alert("Navbar color restored to default. You may need to refresh the page for the change to take full effect across the site.");
+                
+                // Force the navigation script to re-apply default settings
+                if (typeof applyNavbarBackground === 'function') {
+                    applyNavbarBackground(DEFAULT_NAVBAR_SETTINGS);
+                } else {
+                    console.warn("Could not find global 'applyNavbarBackground' function for live update. Please refresh the page.");
+                }
+
+                alert("Navbar color restored to default.");
             } catch (error) {
                 console.error("Error deleting navbar color from Local Storage:", error);
                 alert("Failed to restore default setting. See console.");
@@ -275,13 +322,15 @@
         }
 
         /**
-         * Updates the CSS variable on the document root, which `navigation.js` 
-         * should use for the live preview.
-         * @param {string} color - The color to set.
+         * The function to update the CSS variable for the live preview is now redundant 
+         * because `saveLocalNavbarColor` calls the logic in `navigation.js` which 
+         * directly updates the necessary CSS variables (`--navbar-background`, etc.)
+         * The UI update is handled by `applyColorChange` which only updates the picker/input.
          */
         function updateNavbarColor(color) {
-            document.documentElement.style.setProperty('--navbar-color', color);
-            // This relies on navigation.js checking this variable for dynamic updates
+            // No action needed here, as the update happens through navigation.js logic now.
+            // This function is kept for structural compatibility but is effectively a no-op 
+            // since the main color setting is now done via saveLocalNavbarColor.
         }
 
         // --- AUTHENTICATION & REDIRECTION LOGIC ---
@@ -305,7 +354,7 @@
             firebase.auth().onAuthStateChanged((currentUser) => {
                 // Initial load of the color setting
                 currentNavbarColor = loadLocalNavbarColor();
-                updateNavbarColor(currentNavbarColor);
+                // updateNavbarColor(currentNavbarColor); // Removed as it's a no-op now
 
                 console.log("Settings Page: Authentication state checked.");
                 
@@ -372,9 +421,8 @@
             
             // --- PERSONALIZATION SPECIFIC CONTENT ---
             if (sectionId === 'personalization') {
-                // Ensure currentNavbarColor is the latest from local storage
+                // Ensure currentNavbarColor is the latest from local storage for UI state
                 currentNavbarColor = loadLocalNavbarColor();
-                updateNavbarColor(currentNavbarColor);
 
                 document.getElementById('section-details').innerHTML = `
                     <h3 class="text-xl font-semibold mb-4 text-white">Universal Navbar Color</h3>
@@ -436,19 +484,25 @@
 
                 // Helper function to update UI/preview on color change
                 const applyColorChange = (color) => {
-                    // Update input fields
+                    // 1. Update input fields
                     customPicker.value = color;
                     customInput.value = color;
                     
-                    // Update palette selection
+                    // 2. Update palette selection
                     document.querySelectorAll('.color-option').forEach(item => item.classList.remove('selected'));
                     const selectedPaletteItem = document.querySelector(`.color-option[data-color="${color.toLowerCase()}"]`);
                     if (selectedPaletteItem) {
                         selectedPaletteItem.classList.add('selected');
                     }
                     
-                    // Live preview update
-                    updateNavbarColor(color); 
+                    // 3. Live preview update: **Temporary/Preview Update**
+                    // This creates a temporary setting object and attempts a live update
+                    const tempSettings = { ...DEFAULT_NAVBAR_SETTINGS, type: 'color', value: color };
+                    if (typeof applyNavbarBackground === 'function') {
+                        applyNavbarBackground(tempSettings);
+                    } else {
+                        console.warn("Live preview not available. 'applyNavbarBackground' not found.");
+                    }
                 };
 
                 // Setup Save and Restore Buttons
