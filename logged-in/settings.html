@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <script src="../injector.js"></script>
+    <script src="../test-navigation.js"></script>
 
     <style>
         /* --- FONT & BASE STYLING (MATCHING base-template.html) --- */
@@ -80,8 +80,8 @@
             top: 5rem; 
             /* Aligns item to the start of the flex container, crucial for sticky */
             align-self: flex-start;
-            /* Set a max-height based on viewport, minus the sticky offset */
-            height: calc(100vh - 5rem);
+            /* Set a MAX-height based on viewport, minus the sticky offset */
+            max-height: calc(100vh - 5rem);
             /* Allow sidebar to scroll internally if its content is too tall */
             overflow-y: auto;
         }
@@ -230,6 +230,7 @@
                 /* On mobile, un-stick the sidebar */
                 position: static;
                 height: auto;
+                max-height: none; /* Reset max-height for mobile */
                 overflow-y: visible;
             }
         }
@@ -1124,3 +1125,6 @@
     </script>
 </body>
 </html>
+
+
+
