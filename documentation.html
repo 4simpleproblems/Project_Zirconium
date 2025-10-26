@@ -40,7 +40,7 @@
                     <span class="gradient-text font-bold">4SP Documentation</span>
                 </h1>
                 <p class="text-xl text-gray-400 max-w-2xl mx-auto mb-6">
-                    Your comprehensive guide to getting the most out of the Essential Student Toolkit.
+                    Your comprehensive guide to getting the most out of the **Essential Student Toolkit**.
                 </p>
             </div>
         </section>
@@ -52,13 +52,13 @@
                 <div>
                     <h3 class="text-2xl font-medium mb-3 mt-2"><i class="fas fa-arrow-right-to-bracket text-blue-400 mr-2"></i> Account Authentication</h3>
                     <p class="text-lg text-gray-400">
-                        Access the full suite of tools by logging into or creating your 4SP account. The **Authentication** page supports both standard email/password registration and social sign-in methods like **Google**, **GitHub**, and **Microsoft**.
+                        Access the full suite of tools by logging into or creating your 4SP account. The **Authentication** page supports both standard **email/password** registration and social sign-in methods like **Google**, **GitHub**, and **Microsoft**.
                     </p>
                 </div>
                 <div>
                     <h3 class="text-2xl font-medium mb-3 mt-2"><i class="fas fa-envelope-circle-check text-blue-400 mr-2"></i> Email Verification</h3>
                     <p class="text-lg text-gray-400">
-                        **Email/password accounts** must verify their email address to complete registration. Accounts created using **social sign-in methods** (Google, GitHub, Microsoft) are typically **pre-verified** and do not require this step.
+                        Only **email/password accounts** must verify their email address to complete registration. Accounts created using **social sign-in methods** (Google, GitHub, Microsoft) are typically **pre-verified** and do not require this step.
                     </p>
                 </div>
             </div>
@@ -79,10 +79,10 @@
                 <div class="lg:pr-4 order-2 lg:order-1">
                     <h3 class="text-2xl font-medium mb-3 mt-2"><i class="fas fa-thumbtack text-green-400 mr-2"></i> The Pin Button</h3>
                     <p class="text-lg text-gray-400 mb-4">
-                        The Pin Button is a **persistent Quality-of-Life feature** located in the navigation bar, offering quick, one-click access to your most-used page.
+                        The Pin Button is a **persistent Quality-of-Life feature** located in the navigation bar, offering quick, one-click access to your **most-used page**.
                     </p>
-                    <ul class="text-gray-400 space-y-2 list-disc list-inside ml-4">
-                        <li>**Pinning & Repinning:** Click the Pin Button on any page to pin that page. The **Repin option** is available via right-click if the current page is different from the pinned page, or if no page is currently pinned.</li>
+                    <ul class="text-gray-400 space-y-2 ml-4">
+                        <li>**Pinning & Repinning:** Click the Pin Button on any page to pin that page. The **Repin option** is available via **right-click** if the current page is different from the pinned page, or if no page is currently pinned.</li>
                         <li>**Options Menu:** You can **right-click** on the Pin Button to access its context menu.</li>
                         <li>**Visibility:** The button can be **hidden** via the right-click menu. If hidden, a **Show Pin Button** option appears in your main user dropdown menu.</li>
                         <li>**Pin Hint:** A **one-time hint** appears on the first click of the Pin Button to explain its primary function.</li>
@@ -98,72 +98,145 @@
 
         <hr class="border-gray-900">
 
-        <section id="core-apps" class="py-16 mx-auto max-w-7xl px-4 space-y-12">
-            <h2 class="text-4xl font-medium mb-8 border-b border-gray-800 pb-4">3. Core Applications</h2>
+        <section id="core-apps" class="py-16 mx-auto max-w-7xl px-4 space-y-16">
+            <h2 class="text-4xl font-medium border-b border-gray-800 pb-4">3. Core Applications</h2>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                
-                <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 hover:border-red-500 transition">
-                    <h3 class="text-2xl font-medium mb-2"><i class="fas fa-gauge-high text-red-400 mr-2"></i> Dashboard</h3>
-                    <p class="text-lg text-gray-400">
-                        The primary landing page for authenticated users. It provides a clean interface that prominently displays the **current date and time**.
-                    </p>
-                    <div class="text-center text-gray-500 h-24 mt-4 flex items-center justify-center bg-gray-800 rounded-lg">
-                        [IMAGE PLACEHOLDER: Dashboard UI]
+            <div id="dashboard" class="border border-gray-900 p-8 rounded-xl bg-gray-950/70">
+                <h3 class="text-3xl font-medium mb-4"><i class="fas fa-gauge-high text-red-400 mr-2"></i> Dashboard</h3>
+                <div class="lg:grid lg:grid-cols-3 lg:gap-8 items-center">
+                    <div class="lg:col-span-2">
+                        <p class="text-lg text-gray-400 mb-4">
+                            The primary landing page for **authenticated users**. It provides a clean, distraction-free interface that prominently displays the **current date and time**. This allows you to quickly verify your access and get a clear sense of the time without navigating away from the main application environment.
+                        </p>
+                        <ul class="text-gray-400 space-y-2 ml-4">
+                            <li>**Default Landing:** The page users are redirected to upon **successful sign-in**.</li>
+                            <li>**Time Display:** Features a real-time, high-contrast **digital clock** display.</li>
+                        </ul>
+                    </div>
+                    <div class="relative p-4 rounded-xl border border-red-800/50 bg-gray-900 h-48 flex items-center justify-center mt-6 lg:mt-0">
+                        <div class="text-center text-gray-500">
+                            [IMAGE PLACEHOLDER: Dashboard UI]
+                        </div>
                     </div>
                 </div>
-
-                <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 hover:border-blue-700 transition">
-                    <h3 class="text-2xl font-medium mb-2"><i class="fas fa-comment-dots text-blue-400 mr-2"></i> Messenger V2</h3>
-                    <p class="text-lg text-gray-400">
-                        A **secure, peer-to-peer messenger** that supports **group chat** functionality, **image sharing**, and utilizes a **hybrid message storage** system. Features include a friend code input and an **image lightbox** for full-screen viewing of shared media.
-                    </p>
-                     <div class="text-center text-gray-500 h-24 mt-4 flex items-center justify-center bg-gray-800 rounded-lg">
-                        [IMAGE PLACEHOLDER: Messenger V2 Chat Interface]
-                    </div>
-                </div>
-
-                <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 hover:border-yellow-700 transition">
-                    <h3 class="text-2xl font-medium mb-2"><i class="fas fa-book-open text-yellow-400 mr-2"></i> Interactive Dictionary</h3>
-                    <p class="text-lg text-gray-400">
-                        A utility for students, offering a simple interface for **searching and displaying word definitions**. It utilizes the **dictionaryapi.dev** service for comprehensive data.
-                    </p>
-                     <div class="text-center text-gray-500 h-24 mt-4 flex items-center justify-center bg-gray-800 rounded-lg">
-                        [IMAGE PLACEHOLDER: Dictionary Search Result]
-                    </div>
-                </div>
-
-                <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 hover:border-purple-700 transition">
-                    <h3 class="text-2xl font-medium mb-2"><i class="fas fa-lock text-purple-400 mr-2"></i> Notes</h3>
-                    <p class="text-lg text-gray-400">
-                        A simple note-taking application designed for privacy, featuring **password-encrypted storage** for your notes. It uses the **Crypto-JS** library for secure client-side encryption.
-                    </p>
-                    <div class="text-center text-gray-500 h-24 mt-4 flex items-center justify-center bg-gray-800 rounded-lg">
-                        [IMAGE PLACEHOLDER: Notes Lock/Editor]
-                    </div>
-                </div>
-
-                <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 hover:border-cyan-700 transition">
-                    <h3 class="text-2xl font-medium mb-2"><i class="fas fa-gear text-cyan-400 mr-2"></i> Settings</h3>
-                    <p class="text-lg text-gray-400">
-                        The central hub for managing your account and configuring application options. A key customization feature is the ability to select, **save, and restore your desired navigation bar color**.
-                    </p>
-                    <div class="text-center text-gray-500 h-24 mt-4 flex items-center justify-center bg-gray-800 rounded-lg">
-                        [IMAGE PLACEHOLDER: Settings Color Picker UI]
-                    </div>
-                </div>
-
-                <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 hover:border-green-700 transition">
-                    <h3 class="text-2xl font-medium mb-2"><i class="fas fa-wand-magic-sparkles text-green-400 mr-2"></i> Humanity Agent (AI)</h3>
-                    <p class="text-lg text-gray-400">
-                        A context-aware AI persona that can be activated via the **Ctrl + \** keyboard shortcut. It features an **intelligent system instruction** that changes based on your query and includes a **Web Search** toggle.
-                    </p>
-                    <div class="text-center text-gray-500 h-24 mt-4 flex items-center justify-center bg-gray-800 rounded-lg">
-                        [IMAGE PLACEHOLDER: Agent Interface/Nudge]
-                    </div>
-                </div>
-
             </div>
+            
+            <hr class="border-gray-900">
+
+            <div id="messenger-v2" class="border border-gray-900 p-8 rounded-xl bg-gray-950/70">
+                <h3 class="text-3xl font-medium mb-4"><i class="fas fa-comment-dots text-blue-400 mr-2"></i> Messenger V2</h3>
+                <div class="lg:grid lg:grid-cols-3 lg:gap-8 items-center">
+                    <div class="lg:col-span-2 order-2 lg:order-1">
+                        <p class="text-lg text-gray-400 mb-4">
+                            A **secure, peer-to-peer messenger** designed for student collaboration. It supports both one-on-one and **group chat** functionality, as well as **image sharing**.
+                        </p>
+                        <ul class="text-gray-400 space-y-2 ml-4">
+                            <li>**Hybrid Storage:** Messages are stored using a combination of **real-time database** for speed and a **serverless storage** solution for media.</li>
+                            <li>**Image Lightbox:** Shared images can be viewed in a full-screen **image lightbox** for detailed viewing.</li>
+                            <li>**Friend Code:** Users connect using a unique **friend code** to initiate chats.</li>
+                        </ul>
+                    </div>
+                    <div class="relative p-4 rounded-xl border border-blue-800/50 bg-gray-900 h-48 flex items-center justify-center mt-6 lg:mt-0 order-1 lg:order-2">
+                        <div class="text-center text-gray-500">
+                            [IMAGE PLACEHOLDER: Messenger V2 Chat Interface]
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-gray-900">
+
+            <div id="dictionary" class="border border-gray-900 p-8 rounded-xl bg-gray-950/70">
+                <h3 class="text-3xl font-medium mb-4"><i class="fas fa-book-open text-yellow-400 mr-2"></i> Interactive Dictionary</h3>
+                <div class="lg:grid lg:grid-cols-3 lg:gap-8 items-center">
+                    <div class="lg:col-span-2">
+                        <p class="text-lg text-gray-400 mb-4">
+                            A quick-reference utility for students, offering a simple interface for **searching and displaying word definitions**. It leverages the comprehensive **dictionaryapi.dev** service.
+                        </p>
+                        <ul class="text-gray-400 space-y-2 ml-4">
+                            <li>**Phonetics:** Provides phonetic spellings and, where available, **audio pronunciations**.</li>
+                            <li>**Synonyms & Examples:** Displays **synonyms**, **antonyms**, and **example** sentences for improved comprehension.</li>
+                            <li>**Part-of-Speech Grouping:** Definitions are clearly organized by **Part of Speech** (e.g., Noun, Verb, Adjective).</li>
+                        </ul>
+                    </div>
+                    <div class="relative p-4 rounded-xl border border-yellow-800/50 bg-gray-900 h-48 flex items-center justify-center mt-6 lg:mt-0">
+                        <div class="text-center text-gray-500">
+                            [IMAGE PLACEHOLDER: Dictionary Search Result]
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-gray-900">
+
+            <div id="notes" class="border border-gray-900 p-8 rounded-xl bg-gray-950/70">
+                <h3 class="text-3xl font-medium mb-4"><i class="fas fa-lock text-purple-400 mr-2"></i> Notes</h3>
+                <div class="lg:grid lg:grid-cols-3 lg:gap-8 items-center">
+                    <div class="lg:col-span-2 order-2 lg:order-1">
+                        <p class="text-lg text-gray-400 mb-4">
+                            A secure, simple note-taking application designed for privacy, featuring **password-encrypted storage** for your private notes.
+                        </p>
+                        <ul class="text-gray-400 space-y-2 ml-4">
+                            <li>**Client-Side Encryption:** Uses the **Crypto-JS** library for secure encryption, meaning only you can read your notes.</li>
+                            <li>**Lock/Unlock:** Notes are locked behind a user-defined **password**.</li>
+                            <li>**Autosave:** Includes an **autosave** feature for a seamless note-taking experience.</li>
+                        </ul>
+                    </div>
+                    <div class="relative p-4 rounded-xl border border-purple-800/50 bg-gray-900 h-48 flex items-center justify-center mt-6 lg:mt-0 order-1 lg:order-2">
+                        <div class="text-center text-gray-500">
+                            [IMAGE PLACEHOLDER: Notes Lock/Editor]
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-gray-900">
+
+            <div id="settings" class="border border-gray-900 p-8 rounded-xl bg-gray-950/70">
+                <h3 class="text-3xl font-medium mb-4"><i class="fas fa-gear text-cyan-400 mr-2"></i> Settings</h3>
+                <div class="lg:grid lg:grid-cols-3 lg:gap-8 items-center">
+                    <div class="lg:col-span-2">
+                        <p class="text-lg text-gray-400 mb-4">
+                            The central hub for managing your user account and configuring application options. **Personalization features** are managed here.
+                        </p>
+                        <ul class="text-gray-400 space-y-2 ml-4">
+                            <li>**Navigation Color:** Customize your experience by selecting, **saving, and restoring your desired navigation bar color**.</li>
+                            <li>**Restore Defaults:** Option to **restore** all saved settings to their default values.</li>
+                            <li>**Account Management:** Links for managing your **password**, **email**, and **social** account connections.</li>
+                        </ul>
+                    </div>
+                    <div class="relative p-4 rounded-xl border border-cyan-800/50 bg-gray-900 h-48 flex items-center justify-center mt-6 lg:mt-0">
+                        <div class="text-center text-gray-500">
+                            [IMAGE PLACEHOLDER: Settings Color Picker UI]
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-gray-900">
+
+            <div id="humanity-agent" class="border border-gray-900 p-8 rounded-xl bg-gray-950/70">
+                <h3 class="text-3xl font-medium mb-4"><i class="fas fa-wand-magic-sparkles text-green-400 mr-2"></i> Humanity Agent (AI)</h3>
+                <div class="lg:grid lg:grid-cols-3 lg:gap-8 items-center">
+                    <div class="lg:col-span-2 order-2 lg:order-1">
+                        <p class="text-lg text-gray-400 mb-4">
+                            A **context-aware AI persona** designed to assist with your educational needs.
+                        </p>
+                        <ul class="text-gray-400 space-y-2 ml-4">
+                            <li>**Activation:** Quickly activate the agent using the **Ctrl + \** keyboard shortcut.</li>
+                            <li>**Dynamic Persona:** Features an **intelligent system instruction** that automatically changes based on the nature of your query.</li>
+                            <li>**Web Search:** Includes a **Web Search** toggle in the settings menu, allowing the agent to access **up-to-date information**.</li>
+                            <li>**KaTeX Support:** Renders mathematical formulas and equations using **KaTeX** for **high-quality display**.</li>
+                        </ul>
+                    </div>
+                    <div class="relative p-4 rounded-xl border border-green-800/50 bg-gray-900 h-48 flex items-center justify-center mt-6 lg:mt-0 order-1 lg:order-2">
+                        <div class="text-center text-gray-500">
+                            [IMAGE PLACEHOLDER: Agent Interface/Nudge]
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </section>
     </main>
 </body>
