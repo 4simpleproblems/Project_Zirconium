@@ -49,9 +49,9 @@
         "icon": "fa-solid fa-gamepad", 
         "url": "../GAMES/index.html"
     },
-    "idk": {
-        "name": "idk",
-        "icon": "fa-solid fa-question", 
-        "url": "../logged-in/idontknow.html"
+    "test": {
+        "name": "Test",
+        "icon": "fa-solid fa-vial", 
+        "url": "../logged-in/test.html"
     }
 }
