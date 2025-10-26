@@ -17,6 +17,7 @@
  * 9. INSTANT GLIDE: Scroll-end glide buttons (arrows) now update instantly with no delay.
  * 10. PIN HINT: A one-time hint now appears on first click of the pin button.
  * 11. PIN ICON: Pin icon is now solid at all times (hover effect removed).
+ * 12. SCROLL PERSISTENCE: The scroll position is now saved and restored during re-renders caused by pin interactions.
  */
 
 // =========================================================================
@@ -203,6 +204,8 @@ let db;
         let currentUser = null;
         let currentUserData = null;
         let currentIsPrivileged = false;
+        // NEW: State for current scroll position
+        let currentScrollLeft = 0; 
 
         // --- LocalStorage Keys ---
         const PINNED_PAGE_KEY = 'navbar_pinnedPage';
@@ -221,8 +224,20 @@ let db;
             return null;
         };
 
-        // Function to re-render the entire navbar when state changes (like pinning)
-        const rerenderNavbar = () => {
+        /**
+         * The rerenderNavbar function is now responsible for saving the current
+         * scroll position before initiating the re-render.
+         * @param {boolean} preserveScroll - If true, saves and restores the current scroll position.
+         */
+        const rerenderNavbar = (preserveScroll = true) => {
+             if (preserveScroll) {
+                const tabContainer = document.querySelector('.tab-scroll-container');
+                if (tabContainer) {
+                    currentScrollLeft = tabContainer.scrollLeft;
+                } else {
+                    currentScrollLeft = 0;
+                }
+            }
             renderNavbar(currentUser, currentUserData, allPages, currentIsPrivileged);
         };
 
@@ -491,24 +506,33 @@ let db;
             // --- 5. SETUP EVENT LISTENERS ---
             setupEventListeners(user);
 
-            // Auto-scroll to the active tab, centering it in the view.
-            const activeTab = document.querySelector('.nav-tab.active');
             const tabContainer = document.querySelector('.tab-scroll-container');
-            if (activeTab && tabContainer) {
-                // Calculate the scroll position needed to center the active tab
-                const centerOffset = (tabContainer.offsetWidth - activeTab.offsetWidth) / 2;
-                let scrollTarget = activeTab.offsetLeft - centerOffset;
-                
-                // Clamp the scroll target to prevent scrolling beyond content
-                const maxScroll = tabContainer.scrollWidth - tabContainer.offsetWidth;
-                scrollTarget = Math.max(0, Math.min(scrollTarget, maxScroll));
-
-                // Wait a brief moment to ensure the layout is settled before scrolling
-                setTimeout(() => {
-                    tabContainer.scrollLeft = scrollTarget;
-                }, 100);
-            }
             
+            // If the scroll position was saved (i.e., this is a pin-related re-render)
+            if (currentScrollLeft !== 0) {
+                // Restore the saved scroll position
+                tabContainer.scrollLeft = currentScrollLeft;
+                currentScrollLeft = 0; // Reset state
+            } else {
+                // If scroll position wasn't saved (i.e., first load or auth change), 
+                // perform the auto-center on the active tab.
+                const activeTab = document.querySelector('.nav-tab.active');
+                if (activeTab && tabContainer) {
+                    // Calculate the scroll position needed to center the active tab
+                    const centerOffset = (tabContainer.offsetWidth - activeTab.offsetWidth) / 2;
+                    let scrollTarget = activeTab.offsetLeft - centerOffset;
+                    
+                    // Clamp the scroll target to prevent scrolling beyond content
+                    const maxScroll = tabContainer.scrollWidth - tabContainer.offsetWidth;
+                    scrollTarget = Math.max(0, Math.min(scrollTarget, maxScroll));
+
+                    // Wait a brief moment to ensure the layout is settled before scrolling
+                    setTimeout(() => {
+                        tabContainer.scrollLeft = scrollTarget;
+                    }, 100);
+                }
+            }
+
             // Initial check to hide/show them correctly after load
             updateScrollGilders();
         };
@@ -586,7 +610,7 @@ let db;
                         const currentPageKey = getCurrentPageKey();
                         if (currentPageKey) {
                             localStorage.setItem(PINNED_PAGE_KEY, currentPageKey);
-                            rerenderNavbar(); // Re-render to show new icon and URL
+                            rerenderNavbar(true); // Preserve scroll on pin
                         } else {
                             // Optional: Add feedback that page can't be pinned
                             console.warn("This page cannot be pinned as it's not in page-identification.json");
@@ -613,27 +637,27 @@ let db;
                     const currentPageKey = getCurrentPageKey();
                     if (currentPageKey) {
                         localStorage.setItem(PINNED_PAGE_KEY, currentPageKey);
-                        rerenderNavbar();
+                        rerenderNavbar(true); // Preserve scroll on repin
                     }
                 });
             }
             if (removePinButton) {
                 removePinButton.addEventListener('click', () => {
                     localStorage.removeItem(PINNED_PAGE_KEY);
-                    rerenderNavbar();
+                    rerenderNavbar(true); // Preserve scroll on remove
                 });
             }
             if (hidePinButton) {
                 hidePinButton.addEventListener('click', () => {
                     localStorage.setItem(PIN_BUTTON_HIDDEN_KEY, 'true');
-                    rerenderNavbar();
+                    rerenderNavbar(true); // Preserve scroll on hide
                 });
             }
             // Auth Menu Action
             if (showPinButton) {
                 showPinButton.addEventListener('click', () => {
                     localStorage.setItem(PIN_BUTTON_HIDDEN_KEY, 'false'); // 'false' string
-                    rerenderNavbar();
+                    rerenderNavbar(true); // Preserve scroll on show
                 });
             }
 
@@ -684,7 +708,8 @@ let db;
             currentUserData = userData;
             currentIsPrivileged = isPrivilegedUser;
             
-            // Render the navbar with the new state
+            // Render the navbar with the new state. Do NOT preserve scroll here 
+            // as this is an auth change and should reset/center the tabs.
             renderNavbar(currentUser, currentUserData, allPages, currentIsPrivileged);
 
             if (!user) {
@@ -719,4 +744,3 @@ let db;
     document.addEventListener('DOMContentLoaded', run);
 
 })();
-
