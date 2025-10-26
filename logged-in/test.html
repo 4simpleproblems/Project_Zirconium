@@ -130,7 +130,7 @@
             }
         }
 
-        /* --- (RE-ADDED) Color Palette Styles --- */
+        /* --- Color Palette Styles --- */
         .color-option {
             width: 2rem;
             height: 2rem;
@@ -231,11 +231,14 @@
          */
         function hexToRgb(hex) {
             let r = 0, g = 0, b = 0;
-            if (hex.length == 4) { // #RGB
+            // Handle shorthand hex
+            if (hex.length === 4) { 
                 r = parseInt(hex[1] + hex[1], 16);
                 g = parseInt(hex[2] + hex[2], 16);
                 b = parseInt(hex[3] + hex[3], 16);
-            } else if (hex.length == 7) { // #RRGGBB
+            } 
+            // Handle standard hex
+            else if (hex.length === 7) { 
                 r = parseInt(hex[1] + hex[2], 16);
                 g = parseInt(hex[3] + hex[4], 16);
                 b = parseInt(hex[5] + hex[6], 16);
@@ -249,6 +252,11 @@
          * @returns {boolean} True if the color is light, false if dark.
          */
         function isColorLight(hex) {
+            // Normalize hex to 6 digits (for safety, though hexToRgb handles 3-digit)
+            if (hex.length === 4) {
+                hex = '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
+            }
+            
             const rgb = hexToRgb(hex).split(',').map(Number);
             const [r, g, b] = rgb.map(c => {
                 c /= 255;
@@ -260,7 +268,7 @@
 
         /**
          * Generates a full style object for the navbar based on a single base color.
-         * This function now holds all the "theme" logic.
+         * This function now holds all the "theme" logic, including hex codes for text/icons/highlights.
          * @param {string} hex - The base hex color.
          * @returns {object} A full style object compatible with test-navigation.js.
          */
@@ -268,38 +276,68 @@
             const isLight = isColorLight(hex);
             let styleObj;
 
-            if (hex.toLowerCase() === '#000000') {
-                // Special case for default dark theme
+            // Define common color palettes based on light/dark mode
+            const lightModeText = {
+                // Navbar Text/Icon Hex Codes
+                '--nav-tab-dim-hex': '#6B7280',   // Gray-500
+                '--nav-tab-normal-hex': '#1F2937',// Gray-800 for hover border
+                '--nav-tab-hover-hex': '#000000', // Black for hover text
+                
+                // Active/Accent Color
+                '--nav-accent-hex': '#4F46E5',    // Indigo-600
+                '--nav-accent-hover-hex': '#4338CA', // Indigo-700
+                '--nav-highlight-bg-rgb': hexToRgb('#4F46E5'), // Indigo-600 for translucent BG
+
+                // Menu Text RGB
+                '--nav-text-dim': 'rgb(75, 85, 99)', // Gray-600
+                '--nav-text-normal': 'rgb(31, 41, 55)', // Gray-800
+                '--nav-text-hover': 'rgb(0, 0, 0)', // Black
+            };
+            
+            const darkModeText = {
+                // Navbar Text/Icon Hex Codes
+                '--nav-tab-dim-hex': '#9CA3AF',   // Gray-400
+                '--nav-tab-normal-hex': '#E5E7EB',// Gray-200 for hover border
+                '--nav-tab-hover-hex': '#FFFFFF', // White for hover text
+                
+                // Active/Accent Color
+                '--nav-accent-hex': '#A5B4FC',    // Indigo-300
+                '--nav-accent-hover-hex': '#C7D2FE', // Indigo-200
+                '--nav-highlight-bg-rgb': hexToRgb('#A5B4FC'), // Indigo-300 for translucent BG
+                
+                // Menu Text RGB
+                '--nav-text-dim': 'rgb(156, 163, 175)', // Gray-400
+                '--nav-text-normal': 'rgb(229, 231, 235)', // Gray-200
+                '--nav-text-hover': 'rgb(255, 255, 255)', // White
+            };
+
+
+            if (hex.toLowerCase() === '#000000' || hex.toLowerCase() === '#1f2937') {
+                // Special case for default black and dark accent themes: use standard dark theme styles
                 styleObj = {
-                    '--nav-bg-rgb': '0, 0, 0',
-                    '--nav-border': 'rgb(31, 41, 55)',
-                    '--nav-text-dim': 'rgb(156, 163, 175)',
-                    '--nav-text-normal': 'rgb(209, 213, 219)',
-                    '--nav-text-hover': 'rgb(255, 255, 255)',
-                    '--nav-accent-rgb': '79, 70, 229',
-                    '--nav-accent-hover-rgb': '99, 102, 241',
-                    '--nav-menu-bg': 'rgb(0, 0, 0)',
+                    ...darkModeText,
+                    '--nav-bg-rgb': hexToRgb(hex),
+                    '--nav-border': 'rgb(31, 41, 55)', // Gray-700
+                    
+                    '--nav-menu-bg': `rgb(${hexToRgb(hex)})`,
                     '--nav-menu-border': 'rgb(55, 65, 81)',
                     '--nav-menu-hover-bg': 'rgb(55, 65, 81)',
-                    '--nav-menu-glass-bg': 'rgba(10, 10, 10, 0.8)',
+                    '--nav-menu-glass-bg': `rgba(${hexToRgb(hex)}, 0.8)`,
                     '--nav-menu-border-glass': 'rgba(55, 65, 81, 0.8)',
                     '--nav-avatar-bg': 'linear-gradient(135deg, #374151 0%, #111827 100%)',
                     'logoPath': '/images/logo.png',
                     'isLight': false
                 };
             } else if (isLight) {
-                // Generate a light theme
+                // Generate a generic light theme
                 styleObj = {
+                    ...lightModeText,
                     '--nav-bg-rgb': hexToRgb(hex),
-                    '--nav-border': 'rgb(209, 213, 219)', // gray-300
-                    '--nav-text-dim': 'rgb(75, 85, 99)', // gray-600
-                    '--nav-text-normal': 'rgb(31, 41, 55)', // gray-800
-                    '--nav-text-hover': 'rgb(0, 0, 0)', // black
-                    '--nav-accent-rgb': '67, 56, 202', // indigo-700
-                    '--nav-accent-hover-rgb': '55, 48, 163', // indigo-800
+                    '--nav-border': 'rgb(209, 213, 219)', // Gray-300
+                    
                     '--nav-menu-bg': 'rgb(255, 255, 255)',
-                    '--nav-menu-border': 'rgb(229, 231, 235)', // gray-200
-                    '--nav-menu-hover-bg': 'rgb(243, 244, 246)', // gray-100
+                    '--nav-menu-border': 'rgb(229, 231, 235)', // Gray-200
+                    '--nav-menu-hover-bg': 'rgb(243, 244, 246)', // Gray-100
                     '--nav-menu-glass-bg': 'rgba(255, 255, 255, 0.8)',
                     '--nav-menu-border-glass': 'rgba(229, 231, 235, 0.8)',
                     '--nav-avatar-bg': 'linear-gradient(135deg, #E0E7FF 0%, #C7D2FE 100%)',
@@ -309,15 +347,12 @@
             } else {
                 // Generate a generic dark theme
                 styleObj = {
+                    ...darkModeText,
                     '--nav-bg-rgb': hexToRgb(hex),
                     '--nav-border': 'rgba(255, 255, 255, 0.1)',
-                    '--nav-text-dim': 'rgb(156, 163, 175)', // gray-400
-                    '--nav-text-normal': 'rgb(229, 231, 235)', // gray-200
-                    '--nav-text-hover': 'rgb(255, 255, 255)', // white
-                    '--nav-accent-rgb': '99, 102, 241', // indigo-400
-                    '--nav-accent-hover-rgb': '129, 140, 248', // indigo-300
+                    
                     '--nav-menu-bg': `rgb(${hexToRgb(hex)})`,
-                    '--nav-menu-border': 'rgb(55, 65, 81)', // gray-700
+                    '--nav-menu-border': 'rgb(55, 65, 81)', // Gray-700
                     '--nav-menu-hover-bg': 'rgba(255, 255, 255, 0.1)',
                     '--nav-menu-glass-bg': `rgba(${hexToRgb(hex)}, 0.8)`,
                     '--nav-menu-border-glass': 'rgba(55, 65, 81, 0.8)',
@@ -332,7 +367,7 @@
             return styleObj;
         }
 
-        // --- LOCAL STORAGE FUNCTIONS (REVERTED) ---
+        // --- LOCAL STORAGE FUNCTIONS (UNCHANGED) ---
 
         /**
          * Loads the full navbar style object from Local Storage.
@@ -400,7 +435,7 @@
             }
         }
 
-        // --- AUTHENTICATION & REDIRECTION LOGIC ---
+        // --- AUTHENTICATION & REDIRECTION LOGIC (UNCHANGED) ---
 
         function startAuthFlow() {
             if (typeof firebase === 'undefined' || typeof firebase.auth === 'undefined') {
@@ -421,7 +456,7 @@
             });
         }
         
-        // --- SETTINGS UI LOGIC ---
+        // --- SETTINGS UI LOGIC (UPDATED) ---
 
         function renderSidebar() {
             sidebarNav.innerHTML = '';
@@ -465,7 +500,7 @@
                 </div>
             `;
             
-            // --- PERSONALIZATION SPECIFIC CONTENT (REVERTED) ---
+            // --- PERSONALIZATION SPECIFIC CONTENT (UPDATED) ---
             if (sectionId === 'personalization') {
                 // Get the *full settings object* to find the base color
                 const currentSettings = loadLocalStyleSettings();
@@ -474,19 +509,13 @@
                 document.getElementById('section-details').innerHTML = `
                     <h3 class="text-xl font-semibold mb-4 text-white">Universal Navbar Color</h3>
                     <p class="text-sm text-gray-500 mb-4">
-                        Choose a color for your main navigation bar. This setting is saved locally. 
+                        Choose a color for your main navigation bar from the palette below. This setting is saved locally. 
                         Light colors will automatically use a dark logo.
                     </p>
                     
                     <label class="block text-sm font-medium text-gray-400 mb-2">Color Palette</label>
                     <div id="color-palette" class="flex flex-wrap gap-3 mb-6">
                         </div>
-                    
-                    <label for="custom-color-picker" class="block text-sm font-medium text-gray-400 mb-2">Custom Color Picker</label>
-                    <div class="flex items-center space-x-3 mb-6">
-                        <input type="color" id="custom-color-picker" class="w-12 h-12 rounded-lg cursor-pointer border-0 p-0" value="${currentNavbarColor}">
-                        <input type="text" id="custom-color-input" class="bg-gray-700 text-white border border-gray-600 rounded-lg p-2 font-mono text-sm w-32" value="${currentNavbarColor}" maxlength="7" pattern="#[0-9a-fA-F]{6}">
-                    </div>
                     
                     <div class="flex space-x-4 mt-6">
                         <button id="save-color-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg shadow-lg transition-all duration-200 flex items-center">
@@ -499,26 +528,20 @@
                 `;
                 
                 const paletteContainer = document.getElementById('color-palette');
-                const customPicker = document.getElementById('custom-color-picker');
-                const customInput = document.getElementById('custom-color-input');
                 
                 /**
                  * Helper function to update UI and live-preview the navbar
                  * This DOES NOT save to local storage.
                  */
                 const applyColorChange = (color) => {
-                    // 1. Update input fields
-                    customPicker.value = color;
-                    customInput.value = color;
-                    
-                    // 2. Update palette selection
+                    // 1. Update palette selection
                     document.querySelectorAll('.color-option').forEach(item => item.classList.remove('selected'));
                     const selectedPaletteItem = document.querySelector(`.color-option[data-color="${color.toLowerCase()}"]`);
                     if (selectedPaletteItem) {
                         selectedPaletteItem.classList.add('selected');
                     }
                     
-                    // 3. Live preview update:
+                    // 2. Live preview update:
                     if (typeof window.applyNavbarStyle === 'function') {
                         // Generate the style object and pass it for a live preview
                         const styleObj = generateStyleObject(color);
@@ -540,23 +563,17 @@
                     paletteContainer.appendChild(colorDiv);
                 });
                 
-                // Custom color picker logic
-                customPicker.addEventListener('input', (e) => {
-                    applyColorChange(e.target.value);
-                });
-                
-                customInput.addEventListener('input', (e) => {
-                    const color = e.target.value.trim();
-                    if (/^#[0-9A-F]{6}$/i.test(color)) {
-                        applyColorChange(color);
-                    }
-                });
-
                 // Setup Save and Restore Buttons
                 document.getElementById('save-color-button').addEventListener('click', () => {
-                    // Get the currently displayed color from the picker
-                    const newColor = document.getElementById('custom-color-picker').value;
-                    saveLocalStyleSettings(newColor);
+                    // Find the currently selected color in the palette
+                    const newColorElement = document.querySelector('#color-palette .color-option.selected');
+                    const newColor = newColorElement ? newColorElement.getAttribute('data-color') : DEFAULT_NAVBAR_COLOR;
+
+                    if (newColor) {
+                         saveLocalStyleSettings(newColor);
+                    } else {
+                         console.error("Could not determine selected color to save.");
+                    }
                 });
                 
                 document.getElementById('restore-button').addEventListener('click', () => {
