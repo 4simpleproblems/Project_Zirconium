@@ -20,8 +20,9 @@
  * 12. SCROLL PERSISTENCE: The scroll position is now saved and restored using requestAnimationFrame during re-renders caused by pin interactions, ensuring a smooth experience.
  * 13. PARTIAL UPDATE: Pin menu interactions now only refresh the pin area's HTML, leaving the main tab scroll container untouched, eliminating all scrolling jumps.
  * 14. AUTH PARTIAL UPDATE: Hiding or showing the pin button now partially refreshes the *entire* auth/pin control area (excluding the scroll menu), ensuring the auth dropdown menu updates instantly.
- * 15. **(FIXED)** DASHBOARD MENU ALIGNMENT: Fixed an issue where the user info in the dropdown menu was incorrectly centered on some pages (e.g., dashboard.html).
- * 16. **(UPDATED)** REPIN BUTTON: Repurposed 'Repin Current' to a simple 'Repin' button that shows up whenever the current page is not the one pinned, or no page is pinned.
+ * 15. (FIXED) DASHBOARD MENU ALIGNMENT: Fixed an issue where the user info in the dropdown menu was incorrectly centered.
+ * 16. (UPDATED) REPIN BUTTON: Repurposed 'Repin Current' to a simple 'Repin' button that shows up whenever the current page is not the one pinned, or no page is pinned.
+ * 17. **(UPDATED)** LOGOUT REDIRECT PATH: Changed redirect path for logged-out users to an **absolute path** (`/index.html`) for consistency.
  */
 
 // =========================================================================
@@ -840,8 +841,8 @@ let db;
 
             if (!user) {
                 // User is signed out.
-                // KICK USER TO INDEX: If the user is logged out, redirect them to ../../index.html
-                const targetUrl = '../../index.html';
+                // KICK USER TO INDEX: If the user is logged out, redirect them to /index.html
+                const targetUrl = '/index.html'; // <--- UPDATED TO ABSOLUTE PATH
                 const currentPathname = window.location.pathname;
                 
                 // Determine if the current page is one of the designated entry points 
