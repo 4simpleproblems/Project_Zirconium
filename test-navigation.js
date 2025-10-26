@@ -17,7 +17,7 @@
  * 9. INSTANT GLIDE: Scroll-end glide buttons (arrows) now update instantly with no delay.
  * 10. PIN HINT: A one-time hint now appears on first click of the pin button.
  * 11. PIN ICON: Pin icon is now solid at all times (hover effect removed).
- * 12. SCROLL PERSISTENCE: The scroll position is now saved and restored during re-renders caused by pin interactions.
+ * 12. SCROLL PERSISTENCE: The scroll position is now saved and restored using requestAnimationFrame during re-renders caused by pin interactions, ensuring a smooth experience.
  */
 
 // =========================================================================
@@ -204,7 +204,7 @@ let db;
         let currentUser = null;
         let currentUserData = null;
         let currentIsPrivileged = false;
-        // NEW: State for current scroll position
+        // State for current scroll position
         let currentScrollLeft = 0; 
 
         // --- LocalStorage Keys ---
@@ -508,17 +508,22 @@ let db;
 
             const tabContainer = document.querySelector('.tab-scroll-container');
             
-            // If the scroll position was saved (i.e., this is a pin-related re-render)
-            if (currentScrollLeft !== 0) {
-                // Restore the saved scroll position
-                tabContainer.scrollLeft = currentScrollLeft;
-                currentScrollLeft = 0; // Reset state
+            // Check if we need to restore scroll position (from a pin interaction)
+            if (currentScrollLeft > 0) {
+                const savedScroll = currentScrollLeft;
+                // Use requestAnimationFrame to ensure the DOM has painted the new content
+                // before setting the scroll, preventing the jump.
+                requestAnimationFrame(() => {
+                    if (tabContainer) {
+                        tabContainer.scrollLeft = savedScroll;
+                    }
+                    currentScrollLeft = 0; // Reset state after restoration
+                });
             } else {
                 // If scroll position wasn't saved (i.e., first load or auth change), 
-                // perform the auto-center on the active tab.
+                // perform the auto-center on the active tab immediately.
                 const activeTab = document.querySelector('.nav-tab.active');
                 if (activeTab && tabContainer) {
-                    // Calculate the scroll position needed to center the active tab
                     const centerOffset = (tabContainer.offsetWidth - activeTab.offsetWidth) / 2;
                     let scrollTarget = activeTab.offsetLeft - centerOffset;
                     
@@ -526,10 +531,8 @@ let db;
                     const maxScroll = tabContainer.scrollWidth - tabContainer.offsetWidth;
                     scrollTarget = Math.max(0, Math.min(scrollTarget, maxScroll));
 
-                    // Wait a brief moment to ensure the layout is settled before scrolling
-                    setTimeout(() => {
-                        tabContainer.scrollLeft = scrollTarget;
-                    }, 100);
+                    // Set scroll immediately, no delay needed for stable initial load
+                    tabContainer.scrollLeft = scrollTarget;
                 }
             }
 
@@ -627,8 +630,6 @@ let db;
                     menu?.classList.add('closed');
                     menu?.classList.remove('open');
                 });
-
-                // REMOVED: Hover listeners for pin icon
             }
 
             // Context Menu Actions
