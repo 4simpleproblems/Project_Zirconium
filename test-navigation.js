@@ -10,7 +10,7 @@
  * 2. AI FEATURES REMOVED: All AI-related code has been removed.
  * 3. GOLD ADMIN TAB REMOVED: The 'Beta Settings' tab no longer has a special texture.
  * 4. SETTINGS LINK: Includes the 'Settings' link in the authenticated user's dropdown menu.
- * 5. ACTIVE TAB SCROLL: Auto-scrolls the active tab to the center of the viewport for visibility.
+ * 5. **ACTIVE TAB SCROLL:** Now scrolls the active tab to the center only on the **initial page load**, preventing unwanted centering during subsequent re-renders (like sign-in/out).
  * 6. LOGOUT REDIRECT: Redirects logged-out users away from logged-in pages.
  * 7. PIN BUTTON: Adds a persistent 'Pin' button next to the auth icon for quick page access.
  * 8. GLIDE FADE UPDATED: Glide button fade now spans the full navbar height smoothly.
@@ -18,7 +18,7 @@
  * 10. PIN HINT: A one-time hint now appears on first click of the pin button.
  * 11. PIN ICON: Pin icon is now solid at all times (hover effect removed).
  * 12. SCROLL PERSISTENCE: The scroll position is now saved and restored using requestAnimationFrame during re-renders caused by pin interactions, ensuring a smooth experience.
- * 13. **NEW: PARTIAL UPDATE:** Pin menu interactions now only refresh the pin area's HTML, leaving the main tab scroll container untouched, eliminating all scrolling jumps.
+ * 13. PARTIAL UPDATE: Pin menu interactions now only refresh the pin area's HTML, leaving the main tab scroll container untouched, eliminating all scrolling jumps.
  */
 
 // =========================================================================
@@ -207,6 +207,8 @@ let db;
         let currentIsPrivileged = false;
         // State for current scroll position
         let currentScrollLeft = 0; 
+        // NEW: Flag to ensure active tab centering only happens once per page load
+        let hasScrolledToActiveTab = false; 
 
         // --- LocalStorage Keys ---
         const PINNED_PAGE_KEY = 'navbar_pinnedPage';
@@ -564,9 +566,9 @@ let db;
                     }
                     currentScrollLeft = 0; // Reset state after restoration
                 });
-            } else if (!user) {
-                // If it's a full render due to sign-out (or first load), center the active tab.
-                // Do not center on auth changes if scroll was preserved.
+            // NEW: Only run centering logic if we are NOT restoring scroll AND we haven't scrolled yet.
+            } else if (!hasScrolledToActiveTab) { 
+                // If it's the first load, center the active tab.
                 const activeTab = document.querySelector('.nav-tab.active');
                 if (activeTab && tabContainer) {
                     const centerOffset = (tabContainer.offsetWidth - activeTab.offsetWidth) / 2;
@@ -578,6 +580,9 @@ let db;
 
                     // Set scroll immediately, no delay needed for stable initial load
                     tabContainer.scrollLeft = scrollTarget;
+                    
+                    // IMPORTANT: Set flag to prevent future automatic centering
+                    hasScrolledToActiveTab = true; 
                 }
             }
 
@@ -768,7 +773,7 @@ let db;
             currentIsPrivileged = isPrivilegedUser;
             
             // Render the navbar with the new state. 
-            // Full re-render on auth change, don't preserve scroll.
+            // Full re-render on auth change, don't preserve scroll unless explicitly requested.
             renderNavbar(currentUser, currentUserData, allPages, currentIsPrivileged);
 
             if (!user) {
