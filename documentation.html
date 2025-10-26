@@ -39,7 +39,7 @@
             padding-top: 56.25%; 
             overflow: hidden;
             cursor: pointer;
-            border-radius: inherit; /* Ensure inner image container respects parent's rounded corners */
+            border-radius: inherit;
         }
         .image-container-16-9 img {
             position: absolute;
@@ -47,66 +47,92 @@
             left: 0;
             width: 100%;
             height: 100%;
-            object-fit: cover; /* Use cover to fill the 16:9 container, cropping if necessary for a clean look */
+            object-fit: cover; 
             transition: transform 0.3s ease;
         }
         .image-container-16-9:hover img {
             transform: scale(1.02);
         }
         
-        /* Special case for Pin Button image, which isn't 16:9 in source HTML */
+        /* Pin Button image special case */
         #pin-button-feature .image-container-16-9 {
-            /* Override to better suit the surrounding height constraint (h-64) for this specific section */
             padding-top: 0; 
             height: 100%; 
         }
         #pin-button-feature .image-container-16-9 img {
-            object-fit: contain; /* Contain for Pin Button image */
+            object-fit: contain; 
         }
 
-        /* Lightbox/Modal Styles (REVISED for padding and better view) */
-        #lightbox-overlay {
+        /* Lightbox/Modal Styles - REPLICATED FROM dailyphoto.html */
+        #photo-modal {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.95);
+            background-color: rgba(0, 0, 0, 0.95); /* Dark background */
             display: none;
             align-items: center;
             justify-content: center;
-            z-index: 100;
-            cursor: zoom-out; /* Hint that clicking closes it */
-            backdrop-filter: blur(5px);
-            padding: 20px; /* General padding */
+            z-index: 1000;
+            cursor: zoom-out;
+            padding: 20px;
         }
 
-        #lightbox-content {
-            /* Limit the size of the container so it doesn't cover the entire screen */
-            max-width: 80%; 
-            max-height: 80vh; 
-            box-shadow: 0 0 40px rgba(0, 70, 255, 0.5); /* Subtle glowing effect */
-            background: #111; /* Dark background behind image */
+        #photo-modal-content {
+            /* Ensures it doesn't cover the entire screen, but looks good */
+            max-width: 90%; 
+            max-height: 90vh; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             border-radius: 8px;
-            padding: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+            position: relative;
         }
 
-        #lightbox-content img {
+        #modal-image {
             display: block;
             width: auto;
             max-width: 100%; 
             height: auto;
-            max-height: calc(80vh - 20px); /* Adjust for padding on the content box */
-            object-fit: contain; /* Ensures image fits without stretching and maintains aspect ratio */
+            max-height: 80vh; 
+            object-fit: contain; 
             border-radius: 4px;
+        }
+
+        #modal-caption {
+            color: white;
+            padding: 10px 0 0 0;
+            text-align: center;
+            font-size: 1rem;
+            max-width: 100%;
+        }
+
+        #modal-close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1001;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+        #modal-close-btn:hover {
+            opacity: 1;
         }
     </style>
 </head>
 <body class="bg-black text-white min-h-screen">
     
-    <div id="lightbox-overlay">
-        <div id="lightbox-content">
-            <img id="lightbox-image" src="" alt="">
+    <div id="photo-modal">
+        <div id="photo-modal-content">
+            <span id="modal-close-btn">&times;</span>
+            <img id="modal-image" src="" alt="">
+            <div id="modal-caption" class="text-sm text-gray-400"></div>
         </div>
     </div>
     
@@ -140,10 +166,16 @@
                 </div>
             </div>
 
-             <div class="relative mt-8 p-4 rounded-xl border border-gray-700 bg-gray-900/50 flex items-center justify-center">
-                <div class="image-container-16-9" onclick="openLightbox('doc-images/authentication-flow.png')">
+             <div class="relative mt-8 p-4 rounded-xl border border-gray-700 bg-gray-900/50 flex flex-col items-center justify-center">
+                <div 
+                    class="image-container-16-9" 
+                    onclick="openModal('doc-images/authentication-flow.png', 'Authentication and Verification Flow')"
+                    role="button"
+                    tabindex="0"
+                >
                     <img src="doc-images/authentication-flow.png" alt="Diagram showing the authentication and verification process flow.">
                 </div>
+                <p class="text-sm text-gray-400 mt-3 font-medium">Authentication and Verification Flow</p>
             </div>
         </section>
 
@@ -165,10 +197,18 @@
                         <li>**Pin Hint:** A **one-time hint** appears on the first click of the Pin Button to explain its primary function.</li>
                     </ul>
                 </div>
-                <div class="relative p-8 rounded-3xl border border-green-800/50 overflow-hidden shadow-2xl bg-gray-900 h-64 flex items-center justify-center order-1 lg:order-2 mb-6 lg:mb-0">
-                    <div class="image-container-16-9 h-full" onclick="openLightbox('doc-images/pin-menu.png')">
-                        <img src="doc-images/pin-menu.png" alt="Screenshot of the Pin Button context menu with Repin and Hide options." class="rounded-lg shadow-lg">
+                <div class="relative p-8 rounded-3xl border border-green-800/50 overflow-hidden shadow-2xl bg-gray-900 flex flex-col items-center justify-center order-1 lg:order-2 mb-6 lg:mb-0">
+                    <div class="h-64 flex flex-col items-center justify-center w-full">
+                        <div 
+                            class="image-container-16-9 h-full w-full" 
+                            onclick="openModal('doc-images/pin-menu.png', 'Pin Button Context Menu')"
+                            role="button"
+                            tabindex="0"
+                        >
+                            <img src="doc-images/pin-menu.png" alt="Screenshot of the Pin Button context menu with Repin and Hide options.">
+                        </div>
                     </div>
+                    <p class="text-sm text-gray-400 mt-3 font-medium">Pin Button Context Menu</p>
                 </div>
             </div>
         </section>
@@ -190,10 +230,16 @@
                             <li>**Time Display:** Features a real-time, high-contrast **digital clock** display.</li>
                         </ul>
                     </div>
-                    <div class="relative p-4 rounded-xl border border-red-800/50 bg-gray-900 flex items-center justify-center mt-6 lg:mt-0">
-                        <div class="image-container-16-9" onclick="openLightbox('doc-images/dashboard.png')">
+                    <div class="relative p-4 rounded-xl border border-red-800/50 bg-gray-900 flex flex-col items-center justify-center mt-6 lg:mt-0">
+                        <div 
+                            class="image-container-16-9" 
+                            onclick="openModal('doc-images/dashboard.png', '4SP Dashboard Interface')"
+                            role="button"
+                            tabindex="0"
+                        >
                             <img src="doc-images/dashboard.png" alt="Screenshot of the Dashboard UI showing the date and time.">
                         </div>
+                        <p class="text-sm text-gray-400 mt-3 font-medium">4SP Dashboard Interface</p>
                     </div>
                 </div>
             </div>
@@ -205,18 +251,24 @@
                 <div class="lg:grid lg:grid-cols-3 lg:gap-8 items-center">
                     <div class="lg:col-span-2 order-2 lg:order-1">
                         <p class="text-lg text-gray-400 mb-4">
-                            A social feature that encourages mindful sharing by limiting users to **three photos per day** to share with their friends. This creates a focused, high-quality sharing experience.
+                            A social feature that encourages mindful sharing by limiting users to **five photos per day** to share with their friends. This creates a focused, high-quality sharing experience.
                         </p>
                         <ul class="text-gray-400 space-y-2 ml-4">
                             <li>**Friend System:** Users can send and manage **friend requests** to create a private sharing circle.</li>
-                            <li>**Daily Limit:** Users can only upload a maximum of **three photos** within a 24-hour period.</li>
+                            <li>**Daily Limit:** Users can only upload a maximum of **five photos** within a 24-hour period.</li>
                             <li>**Profile Display:** Displays shared photos from your friends in a clean, scrollable feed.</li>
                         </ul>
                     </div>
-                    <div class="relative p-4 rounded-xl border border-blue-800/50 bg-gray-900 flex items-center justify-center mt-6 lg:mt-0 order-1 lg:order-2">
-                        <div class="image-container-16-9" onclick="openLightbox('doc-images/dailyphoto.png')">
+                    <div class="relative p-4 rounded-xl border border-blue-800/50 bg-gray-900 flex flex-col items-center justify-center mt-6 lg:mt-0 order-1 lg:order-2">
+                        <div 
+                            class="image-container-16-9" 
+                            onclick="openModal('doc-images/dailyphoto.png', 'DailyPhoto Upload & Feed')"
+                            role="button"
+                            tabindex="0"
+                        >
                             <img src="doc-images/dailyphoto.png" alt="Screenshot of the DailyPhoto upload and friend feed interface.">
                         </div>
+                        <p class="text-sm text-gray-400 mt-3 font-medium">DailyPhoto Upload & Feed</p>
                     </div>
                 </div>
             </div>
@@ -236,10 +288,16 @@
                             <li>**Part-of-Speech Grouping:** Definitions are clearly organized by **Part of Speech** (e.g., Noun, Verb, Adjective).</li>
                         </ul>
                     </div>
-                    <div class="relative p-4 rounded-xl border border-yellow-800/50 bg-gray-900 flex items-center justify-center mt-6 lg:mt-0">
-                        <div class="image-container-16-9" onclick="openLightbox('doc-images/dictionary.png')">
+                    <div class="relative p-4 rounded-xl border border-yellow-800/50 bg-gray-900 flex flex-col items-center justify-center mt-6 lg:mt-0">
+                        <div 
+                            class="image-container-16-9" 
+                            onclick="openModal('doc-images/dictionary.png', 'Interactive Dictionary Search')"
+                            role="button"
+                            tabindex="0"
+                        >
                             <img src="doc-images/dictionary.png" alt="Screenshot of a dictionary search result with definitions and phonetics.">
                         </div>
+                        <p class="text-sm text-gray-400 mt-3 font-medium">Interactive Dictionary Search</p>
                     </div>
                 </div>
             </div>
@@ -259,10 +317,16 @@
                             <li>**Autosave:** Includes an **autosave** feature for a seamless note-taking experience.</li>
                         </ul>
                     </div>
-                    <div class="relative p-4 rounded-xl border border-purple-800/50 bg-gray-900 flex items-center justify-center mt-6 lg:mt-0 order-1 lg:order-2">
-                        <div class="image-container-16-9" onclick="openLightbox('doc-images/notes.png')">
+                    <div class="relative p-4 rounded-xl border border-purple-800/50 bg-gray-900 flex flex-col items-center justify-center mt-6 lg:mt-0 order-1 lg:order-2">
+                        <div 
+                            class="image-container-16-9" 
+                            onclick="openModal('doc-images/notes.png', 'Notes Application Interface')"
+                            role="button"
+                            tabindex="0"
+                        >
                             <img src="doc-images/notes.png" alt="Screenshot of the Notes application in locked or editor state.">
                         </div>
+                        <p class="text-sm text-gray-400 mt-3 font-medium">Notes Application Interface</p>
                     </div>
                 </div>
             </div>
@@ -282,10 +346,16 @@
                             <li>**Account Management:** Links for managing your **password**, **email**, and **social** account connections.</li>
                         </ul>
                     </div>
-                    <div class="relative p-4 rounded-xl border border-cyan-800/50 bg-gray-900 flex items-center justify-center mt-6 lg:mt-0">
-                        <div class="image-container-16-9" onclick="openLightbox('doc-images/settings-personalization.png')">
+                    <div class="relative p-4 rounded-xl border border-cyan-800/50 bg-gray-900 flex flex-col items-center justify-center mt-6 lg:mt-0">
+                        <div 
+                            class="image-container-16-9" 
+                            onclick="openModal('doc-images/settings-personalization.png', 'Settings Personalization Menu')"
+                            role="button"
+                            tabindex="0"
+                        >
                             <img src="doc-images/settings-personalization.png" alt="Screenshot of the Settings page showing the navigation color picker UI.">
                         </div>
+                        <p class="text-sm text-gray-400 mt-3 font-medium">Settings Personalization Menu</p>
                     </div>
                 </div>
             </div>
@@ -306,10 +376,16 @@
                             <li>**KaTeX Support:** Renders mathematical formulas and equations using **KaTeX** for **high-quality display**.</li>
                         </ul>
                     </div>
-                    <div class="relative p-4 rounded-xl border border-green-800/50 bg-gray-900 flex items-center justify-center mt-6 lg:mt-0 order-1 lg:order-2">
-                        <div class="image-container-16-9" onclick="openLightbox('doc-images/humanity-ai.png')">
+                    <div class="relative p-4 rounded-xl border border-green-800/50 bg-gray-900 flex flex-col items-center justify-center mt-6 lg:mt-0 order-1 lg:order-2">
+                        <div 
+                            class="image-container-16-9" 
+                            onclick="openModal('doc-images/humanity-ai.png', 'Humanity Agent (AI) Chat')"
+                            role="button"
+                            tabindex="0"
+                        >
                             <img src="doc-images/humanity-ai.png" alt="Screenshot of the Humanity Agent AI chat interface.">
                         </div>
+                        <p class="text-sm text-gray-400 mt-3 font-medium">Humanity Agent (AI) Chat</p>
                     </div>
                 </div>
             </div>
@@ -318,27 +394,38 @@
     </main>
     
     <script>
-        function openLightbox(imageSrc) {
-            const overlay = document.getElementById('lightbox-overlay');
-            const image = document.getElementById('lightbox-image');
-            
-            image.src = imageSrc;
-            overlay.style.display = 'flex';
+        const modal = document.getElementById('photo-modal');
+        const modalImage = document.getElementById('modal-image');
+        const modalCaption = document.getElementById('modal-caption');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
+
+        // Function to open the modal
+        function openModal(imageSrc, captionText) {
+            modalImage.src = imageSrc;
+            modalCaption.textContent = captionText;
+            modal.style.display = 'flex';
         }
 
-        // Close lightbox when the overlay is clicked
-        document.getElementById('lightbox-overlay').addEventListener('click', function() {
-            this.style.display = 'none';
-            document.getElementById('lightbox-image').src = ''; // Clear image source
-        });
+        // Close modal when clicking the close button or the background
+        modalCloseBtn.onclick = function() {
+            modal.style.display = 'none';
+        }
+        modal.onclick = function(event) {
+            // Check if the click occurred on the modal background itself, not the content
+            if (event.target === modal || event.target.id === 'modal-close-btn') {
+                modal.style.display = 'none';
+            }
+        }
 
-        // Close lightbox with ESC key
+        // Close modal with ESC key
         document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape' && document.getElementById('lightbox-overlay').style.display === 'flex') {
-                document.getElementById('lightbox-overlay').style.display = 'none';
-                document.getElementById('lightbox-image').src = '';
+            if (event.key === 'Escape' && modal.style.display === 'flex') {
+                modal.style.display = 'none';
             }
         });
+
+        // Expose openModal to the global scope (required for onclick HTML attributes)
+        window.openModal = openModal;
     </script>
 </body>
 </html>
