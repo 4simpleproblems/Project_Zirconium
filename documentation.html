@@ -30,9 +30,68 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
+
+        /* NEW CSS for the lightbox/modal effect */
+        .image-container-16-9 {
+            position: relative;
+            width: 100%;
+            /* 16:9 aspect ratio (height is 9/16 or 56.25% of width) */
+            padding-top: 56.25%; 
+            overflow: hidden;
+            cursor: pointer; /* Indicate it's clickable */
+        }
+        .image-container-16-9 img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Ensure the image is fully visible within the container */
+            transition: transform 0.3s ease; /* Smooth hover effect */
+        }
+        .image-container-16-9:hover img {
+            transform: scale(1.02);
+        }
+
+        /* Lightbox/Modal Styles */
+        #lightbox-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.95); /* Darker background */
+            display: none; /* Hidden by default */
+            align-items: center;
+            justify-content: center;
+            z-index: 100; /* Ensure it's on top of everything */
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+        }
+
+        #lightbox-content {
+            max-width: 90%;
+            max-height: 90%;
+        }
+
+        #lightbox-content img {
+            display: block;
+            width: auto;
+            max-width: 100vw; /* Limit image size to viewport */
+            height: auto;
+            max-height: 100vh;
+            object-fit: contain;
+        }
     </style>
 </head>
 <body class="bg-black text-white min-h-screen">
+    
+    <div id="lightbox-overlay">
+        <div id="lightbox-content">
+            <img id="lightbox-image" src="" alt="">
+        </div>
+    </div>
+    
     <main>
         <section class="text-center py-12 sm:py-20 border-b border-gray-900">
             <div class="mx-auto max-w-4xl px-4">
@@ -64,7 +123,9 @@
             </div>
 
              <div class="relative mt-8 p-4 rounded-xl border border-gray-700 bg-gray-900/50 flex items-center justify-center">
-                <img src="doc-images/authentication-flow.png" alt="Diagram showing the authentication and verification process flow." class="max-w-full h-auto rounded-lg shadow-lg">
+                <div class="image-container-16-9" onclick="openLightbox('doc-images/authentication-flow.png')">
+                    <img src="doc-images/authentication-flow.png" alt="Diagram showing the authentication and verification process flow." class="rounded-lg shadow-lg">
+                </div>
             </div>
         </section>
 
@@ -87,7 +148,9 @@
                     </ul>
                 </div>
                 <div class="relative p-8 rounded-3xl border border-green-800/50 overflow-hidden shadow-2xl bg-gray-900 h-64 flex items-center justify-center order-1 lg:order-2 mb-6 lg:mb-0">
-                    <img src="doc-images/pin-menu.png" alt="Screenshot of the Pin Button context menu with Repin and Hide options." class="max-w-full h-auto rounded-lg shadow-lg">
+                    <div class="image-container-16-9 h-full" onclick="openLightbox('doc-images/pin-menu.png')">
+                        <img src="doc-images/pin-menu.png" alt="Screenshot of the Pin Button context menu with Repin and Hide options." class="rounded-lg shadow-lg">
+                    </div>
                 </div>
             </div>
         </section>
@@ -110,7 +173,9 @@
                         </ul>
                     </div>
                     <div class="relative p-4 rounded-xl border border-red-800/50 bg-gray-900 h-48 flex items-center justify-center mt-6 lg:mt-0">
-                        <img src="doc-images/dashboard.png" alt="Screenshot of the Dashboard UI showing the date and time." class="max-w-full h-auto rounded-lg shadow-lg">
+                        <div class="image-container-16-9" onclick="openLightbox('doc-images/dashboard.png')">
+                            <img src="doc-images/dashboard.png" alt="Screenshot of the Dashboard UI showing the date and time." class="rounded-lg shadow-lg">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -131,7 +196,9 @@
                         </ul>
                     </div>
                     <div class="relative p-4 rounded-xl border border-blue-800/50 bg-gray-900 h-48 flex items-center justify-center mt-6 lg:mt-0 order-1 lg:order-2">
-                        <img src="doc-images/dailyphoto.png" alt="Screenshot of the DailyPhoto upload and friend feed interface." class="max-w-full h-auto rounded-lg shadow-lg">
+                        <div class="image-container-16-9" onclick="openLightbox('doc-images/dailyphoto.png')">
+                            <img src="doc-images/dailyphoto.png" alt="Screenshot of the DailyPhoto upload and friend feed interface." class="rounded-lg shadow-lg">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -152,7 +219,9 @@
                         </ul>
                     </div>
                     <div class="relative p-4 rounded-xl border border-yellow-800/50 bg-gray-900 h-48 flex items-center justify-center mt-6 lg:mt-0">
-                        <img src="doc-images/dictionary.png" alt="Screenshot of a dictionary search result with definitions and phonetics." class="max-w-full h-auto rounded-lg shadow-lg">
+                        <div class="image-container-16-9" onclick="openLightbox('doc-images/dictionary.png')">
+                            <img src="doc-images/dictionary.png" alt="Screenshot of a dictionary search result with definitions and phonetics." class="rounded-lg shadow-lg">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -173,7 +242,9 @@
                         </ul>
                     </div>
                     <div class="relative p-4 rounded-xl border border-purple-800/50 bg-gray-900 h-48 flex items-center justify-center mt-6 lg:mt-0 order-1 lg:order-2">
-                        <img src="doc-images/notes.png" alt="Screenshot of the Notes application in locked or editor state." class="max-w-full h-auto rounded-lg shadow-lg">
+                        <div class="image-container-16-9" onclick="openLightbox('doc-images/notes.png')">
+                            <img src="doc-images/notes.png" alt="Screenshot of the Notes application in locked or editor state." class="rounded-lg shadow-lg">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -194,7 +265,9 @@
                         </ul>
                     </div>
                     <div class="relative p-4 rounded-xl border border-cyan-800/50 bg-gray-900 h-48 flex items-center justify-center mt-6 lg:mt-0">
-                        <img src="doc-images/settings-personalization.png" alt="Screenshot of the Settings page showing the navigation color picker UI." class="max-w-full h-auto rounded-lg shadow-lg">
+                        <div class="image-container-16-9" onclick="openLightbox('doc-images/settings-personalization.png')">
+                            <img src="doc-images/settings-personalization.png" alt="Screenshot of the Settings page showing the navigation color picker UI." class="rounded-lg shadow-lg">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -216,12 +289,38 @@
                         </ul>
                     </div>
                     <div class="relative p-4 rounded-xl border border-green-800/50 bg-gray-900 h-48 flex items-center justify-center mt-6 lg:mt-0 order-1 lg:order-2">
-                        <img src="doc-images/humanity-ai.png" alt="Screenshot of the Humanity Agent AI chat interface." class="max-w-full h-auto rounded-lg shadow-lg">
+                        <div class="image-container-16-9" onclick="openLightbox('doc-images/humanity-ai.png')">
+                            <img src="doc-images/humanity-ai.png" alt="Screenshot of the Humanity Agent AI chat interface." class="rounded-lg shadow-lg">
+                        </div>
                     </div>
                 </div>
             </div>
 
         </section>
     </main>
+    
+    <script>
+        function openLightbox(imageSrc) {
+            const overlay = document.getElementById('lightbox-overlay');
+            const image = document.getElementById('lightbox-image');
+            
+            image.src = imageSrc;
+            overlay.style.display = 'flex';
+        }
+
+        // Close lightbox when the overlay is clicked
+        document.getElementById('lightbox-overlay').addEventListener('click', function() {
+            this.style.display = 'none';
+            document.getElementById('lightbox-image').src = ''; // Clear image source
+        });
+
+        // Close lightbox with ESC key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape' && document.getElementById('lightbox-overlay').style.display === 'flex') {
+                document.getElementById('lightbox-overlay').style.display = 'none';
+                document.getElementById('lightbox-image').src = '';
+            }
+        });
+    </script>
 </body>
 </html>
