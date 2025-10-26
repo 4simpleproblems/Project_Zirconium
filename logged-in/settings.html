@@ -12,14 +12,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <script src="../navigation.js"></script>
-    <script src="../injector.js"></script>
+    <script src="../test-navigation.js"></script>
 
     <style>
         /* --- FONT & BASE STYLING (MATCHING base-template.html) --- */
         :root {
-            /* Default or loaded navbar color variable */
-            --navbar-color: #000000;
+            /* The color variable has been removed as navigation.js manages it via --navbar-background */
         }
 
         body { 
@@ -34,6 +32,8 @@
             display: flex;
             flex-direction: column;
         }
+        
+        /* The body padding-top is now handled by the CSS injected in test-navigation.js to account for the fixed navbar height */
         
         h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
             font-weight: 400 !important;
@@ -85,6 +85,12 @@
             transition: background-color 0.2s ease, color 0.2s ease;
             color: #c0c0c0;
         }
+        
+        /* FIX: Ensure icon is centered in its box */
+        .sidebar-item i {
+            text-align: center;
+            line-height: 1.5rem; /* Matches h-6 (1.5rem) */
+        }
 
         .sidebar-item:hover {
             background-color: #1a1a1a;
@@ -106,6 +112,85 @@
             padding: 2rem;
             min-height: 70vh;
         }
+        
+        /* --- General Settings UI --- */
+        .settings-section {
+            border-bottom: 1px solid #252525;
+            padding-bottom: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .settings-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .settings-label {
+            display: block;
+            font-medium text-white mb-2;
+        }
+        .settings-input {
+            width: 100%;
+            max-width: 400px;
+            background-color: #1f2937; /* gray-800 */
+            border: 1px solid #374151; /* gray-700 */
+            color: #f3f4f6; /* gray-100 */
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .settings-input:focus {
+            outline: none;
+            border-color: #3b82f6; /* blue-500 */
+            box-shadow: 0 0 0 2px #3b82f640;
+        }
+        .settings-input:disabled {
+            background-color: #374151; /* gray-700 */
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .settings-button {
+            background-color: #3b82f6; /* blue-500 */
+            color: white;
+            padding: 0.6rem 1.25rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+            cursor: pointer;
+        }
+        .settings-button:hover {
+            background-color: #2563eb; /* blue-600 */
+        }
+        .settings-button:disabled {
+            background-color: #374151; /* gray-700 */
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .settings-button-danger {
+            background-color: #dc2626; /* red-600 */
+        }
+        .settings-button-danger:hover {
+            background-color: #b91c1c; /* red-700 */
+        }
+        .settings-button-secondary {
+            background-color: #374151; /* gray-700 */
+        }
+        .settings-button-secondary:hover {
+            background-color: #4b5563; /* gray-600 */
+        }
+        .settings-description {
+            font-size: 0.875rem;
+            color: #9ca3af; /* gray-400 */
+            margin-top: 0.5rem;
+            max-width: 600px;
+        }
+        .message-area {
+            font-size: 0.875rem;
+            margin-top: 0.75rem;
+            font-weight: 500;
+        }
+        .message-error { color: #f87171; /* red-400 */ }
+        .message-success { color: #4ade80; /* green-400 */ }
+        .message-warning { color: #facc15; /* yellow-400 */ }
 
         /* Standard loading screen style */
         #loading-screen {
@@ -171,22 +256,69 @@
             <section class="settings-panel">
                 <h2 id="panel-title" class="text-2xl font-semibold text-indigo-400 mb-6">General</h2>
                 <div id="panel-content" class="text-gray-400">
-                    <p>Configure basic application behavior like language, theme, and startup settings.</p>
+                    <p>Loading account details...</p>
                 </div>
             </section>
         </div>
     </main>
 
     <script type="module">
-        // Since `navigation.js` already loads the full Firebase compat SDKs and initializes `auth` and `db` globally, 
-        // we can remove the second initialization attempt and use the global objects.
-        // We still need to ensure the modern Firestore is available for modular code.
-        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // --- NEW: Firebase v10 (Modular) Imports ---
+        import { firebaseConfig } from '../firebase-config.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import {
+            getAuth,
+            onAuthStateChanged,
+            reauthenticateWithCredential,
+            reauthenticateWithPopup,
+            EmailAuthProvider,
+            GoogleAuthProvider,
+            GithubAuthProvider,
+            OAuthProvider,
+            linkWithPopup,
+            unlink,
+            updatePassword,
+            deleteUser
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import {
+            getFirestore,
+            doc,
+            getDoc,
+            setDoc,
+            updateDoc,
+            onSnapshot,
+            serverTimestamp,
+            collection,
+            query,
+            where,
+            getDocs
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // --- NEW: Firebase v10 Initialization ---
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // --- NEW: Global State Variables ---
+        let currentUser = null;         // Firebase Auth User object
+        let currentUserData = null;     // Firestore 'users' document data
+        let unsubscribeUserDoc = null;  // Function to stop the onSnapshot listener
+        let activeSection = 'general';  // Track the currently loaded section
 
         // --- CONSTANTS AND DOM ELEMENTS ---
         const BASE_TITLE = "Settings";
+        // Key for Local Storage - MUST MATCH THEME_STORAGE_KEY in test-navigation.js
+        const NAVBAR_SETTINGS_KEY = 'user-navbar-theme'; 
+        // Default settings object - MUST REFLECT DEFAULT_THEME in test-navigation.js
+        const DEFAULT_NAVBAR_SETTINGS = {
+            navbarBg: '#000000', 
+            tabActiveColor: '#4f46e5', 
+            borderColor: 'rgb(31 41 55)', 
+        };
+        const DEFAULT_NAVBAR_COLOR = DEFAULT_NAVBAR_SETTINGS.navbarBg;
+
         const settingsSections = [
-            { id: 'general', title: 'General', icon: 'fa-cog', content: 'Configure basic application behavior like language, theme, and startup settings.', color: 'text-yellow-400' },
+            { id: 'general', title: 'General', icon: 'fa-cog', content: 'Manage your core account settings, username, and password.', color: 'text-yellow-400' },
             { id: 'privacy', title: 'Privacy & Security', icon: 'fa-shield-alt', content: 'Manage your data permissions, account security, and two-factor authentication. Strong security is a priority!', color: 'text-red-400' },
             { id: 'personalization', title: 'Personalization', icon: 'fa-palette', content: 'Customize the look and feel of the application, including colors and layout. Make it truly yours!', color: 'text-pink-400' },
             { id: 'notifications', title: 'Notifications', icon: 'fa-bell', content: 'Set your preferences for alerts and communication methods. Never miss an important update.', color: 'text-green-400' },
@@ -196,22 +328,10 @@
 
         // Nice-looking 16-color palette
         const colorPalette = [
-            '#000000', // Black
-            '#1a1a1a', // Dark Gray
-            '#f7f7f7', // Light Gray
-            '#FFFFFF', // White
-            '#1f2937', // Blue-Gray (Default navbar color in navigation.js is similar)
-            '#3b82f6', // Bright Blue
-            '#10b981', // Emerald Green
-            '#f59e0b', // Amber Yellow
-            '#ef4444', // Red
-            '#8b5cf6', // Violet
-            '#ec4899', // Pink
-            '#06b6d4', // Cyan
-            '#65a30d', // Lime Green
-            '#7c3aed', // Purple
-            '#f97316', // Orange
-            '#a1a1aa'  // Cool Gray
+            '#000000', '#1f2937', '#f7f7f7', '#FFFFFF',
+            '#3b82f6', '#10b981', '#f59e0b', '#ef4444',
+            '#8b5cf6', '#ec4899', '#06b6d4', '#65a30d',
+            '#7c3aed', '#f97316', '#475569', '#16a34a'
         ];
         
         // --- DOM Elements ---
@@ -223,110 +343,139 @@
         const panelContent = document.getElementById('panel-content');
         const pageHtmlTitle = document.getElementById('page-title');
 
-        // --- GLOBAL FIREBASE REFERENCES ---
-        // Expecting `auth` and `db` (compat Firestore) to be globally available from navigation.js
-        // For modular access to Firestore, we'll use the imported `getFirestore`
-        let user; // To hold the authenticated user object
-        let navbarColorSetting = '#000000'; // Default color
+        let currentNavbarColor = DEFAULT_NAVBAR_COLOR;
 
-        // --- AUTHENTICATION & REDIRECTION LOGIC (Minimal for settings page) ---
-
-        /**
-         * Starts the authentication listener. We rely *entirely* on navigation.js
-         * for initialization and redirection if the user is logged out.
-         * This listener is primarily for getting the `user` object to fetch data.
-         */
-        function startAuthFlow() {
-            // Check for the global `auth` object loaded by navigation.js
-            if (typeof firebase === 'undefined' || typeof firebase.auth === 'undefined') {
-                console.error("Firebase Auth is not available. Please ensure navigation.js loads before this script.");
-                loadingScreen.querySelector('p').textContent = 'Error: Core application script missing. Check console.';
-                return;
+        // --- LOCAL STORAGE FUNCTIONS (ADJUSTED FOR NEW THEME STRUCTURE) ---
+        function loadLocalNavbarColor() {
+            try {
+                const localSettingsString = localStorage.getItem(NAVBAR_SETTINGS_KEY);
+                const localSettings = localSettingsString ? JSON.parse(localSettingsString) : DEFAULT_NAVBAR_SETTINGS;
+                if (localSettings.navbarBg && /^#[0-9A-F]{6}$/i.test(localSettings.navbarBg)) {
+                    return localSettings.navbarBg;
+                }
+                return DEFAULT_NAVBAR_COLOR;
+            } catch (e) {
+                console.error("Could not read or parse settings from Local Storage:", e);
+                return DEFAULT_NAVBAR_COLOR;
             }
+        }
+        
+        function saveLocalNavbarColor(color) {
+            const localSettingsString = localStorage.getItem(NAVBAR_SETTINGS_KEY);
+            const baseSettings = localSettingsString ? JSON.parse(localSettingsString) : DEFAULT_NAVBAR_SETTINGS;
+            
+            const newSettings = { ...baseSettings, navbarBg: color };
+            
+            try {
+                localStorage.setItem(NAVBAR_SETTINGS_KEY, JSON.stringify(newSettings));
+                currentNavbarColor = color;
 
-            // The onAuthStateChanged from navigation.js will handle the initial redirect
-            // We set up a *second* listener to get the `user` object reliably, but
-            // the primary responsibility is on `navigation.js`.
-            firebase.auth().onAuthStateChanged(async (currentUser) => {
-                user = currentUser;
+                if (typeof applyNavbarBackground === 'function') {
+                    applyNavbarBackground(newSettings);
+                } else {
+                    console.warn("Could not find global 'applyNavbarBackground' function for live update. Page refresh required for theme change to fully apply.");
+                }
+
+                alert(`Navbar color updated to ${color} and saved locally. (Requires refresh without 'applyNavbarBackground'.)`);
+            } catch (error) {
+                console.error("Error saving navbar color to Local Storage:", error);
+                alert("Failed to save color setting locally. See console.");
+            }
+        }
+        
+        function deleteLocalNavbarColor() {
+            try {
+                localStorage.removeItem(NAVBAR_SETTINGS_KEY);
+                currentNavbarColor = DEFAULT_NAVBAR_COLOR;
+                
+                if (typeof applyNavbarBackground === 'function') {
+                    applyNavbarBackground(DEFAULT_NAVBAR_SETTINGS);
+                } else {
+                    console.warn("Could not find global 'applyNavbarBackground' function for live update. Page refresh required for theme change to fully apply.");
+                }
+
+                alert("Navbar color restored to default. (Requires refresh without 'applyNavbarBackground'.)");
+            } catch (error) {
+                console.error("Error deleting navbar color from Local Storage:", error);
+                alert("Failed to restore default setting. See console.");
+            }
+        }
+
+        // --- NEW: AUTHENTICATION & DATA FLOW ---
+
+        function startAuthFlow() {
+            onAuthStateChanged(auth, (user) => {
                 if (user) {
-                    console.log("User authenticated in settings page. UID:", user.uid);
+                    // User is signed in.
+                    currentUser = user;
                     
-                    // Initialization successful, now load the content
-                    await loadUserSettings();
-                    updateNavbarColor(navbarColorSetting); // Apply the loaded color
-                    renderSidebar();
-                    loadSection('general');
+                    // Stop any previous listener
+                    if (unsubscribeUserDoc) {
+                        unsubscribeUserDoc();
+                    }
                     
-                    // Hide loading screen and show content
-                    loadingScreen.style.display = 'none';
-                    pageContent.classList.remove('hidden');
+                    // Get the user's document reference
+                    const userDocRef = doc(db, 'users', user.uid);
+                    
+                    // Set up a real-time listener for the user's data
+                    unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
+                        if (docSnap.exists()) {
+                            currentUserData = docSnap.data();
+                        } else {
+                            // This case should ideally not happen for a logged-in user
+                            // But if it does, we have their basic auth data
+                            currentUserData = {
+                                email: user.email,
+                                username: user.displayName || 'User',
+                                authMethod: user.providerData[0]?.providerId || 'unknown'
+                            };
+                            console.warn("Firestore document not found for user:", user.uid);
+                        }
+                        
+                        // Initial page setup
+                        if (loadingScreen.style.display !== 'none') {
+                            initializePage();
+                        } else {
+                            // If page is already loaded, just refresh the active panel
+                            // This is for real-time updates (e.g., username cooldown)
+                            loadSection(activeSection);
+                        }
+                    }, (error) => {
+                        console.error("Error listening to user document:", error);
+                        // Show page even if Firestore listener fails
+                        currentUserData = { email: user.email, username: user.displayName || 'User' };
+                        initializePage();
+                    });
 
                 } else {
-                    // navigation.js will already redirect, but as a fallback/stability measure:
-                    console.log("User not authenticated. Navigation.js should be redirecting...");
+                    // User is signed out.
+                    currentUser = null;
+                    currentUserData = null;
+                    if (unsubscribeUserDoc) {
+                        unsubscribeUserDoc();
+                    }
+                    // Redirect to login page
+                    console.log("User is not authenticated. Redirecting to login.");
+                    // We assume test-navigation.js handles the redirect if it's a protected page
+                    // But we can force it.
+                    window.location.href = '../authentication.html';
                 }
             });
         }
         
-        // --- USER SETTINGS (Firestore) LOGIC ---
-        
         /**
-         * Fetches user settings from Firestore.
+         * Runs once after the first successful auth check and data load.
          */
-        async function loadUserSettings() {
-            if (!user) return;
-            try {
-                // Use the modern getFirestore API to ensure compatibility with modular imports
-                const fstore = getFirestore();
-                const settingsRef = doc(fstore, 'users', user.uid, 'settings', 'navbar');
-                const docSnap = await getDoc(settingsRef);
-
-                if (docSnap.exists()) {
-                    const settings = docSnap.data();
-                    navbarColorSetting = settings.color || navbarColorSetting;
-                    console.log("Loaded navbar color:", navbarColorSetting);
-                } else {
-                    console.log("No custom navbar color found, using default.");
-                }
-            } catch (error) {
-                console.error("Error loading user settings:", error);
-            }
+        function initializePage() {
+            currentNavbarColor = loadLocalNavbarColor();
+            renderSidebar();
+            loadSection('general'); // Load 'general' by default
+            
+            // Hide loading screen and show content
+            loadingScreen.style.display = 'none';
+            pageContent.classList.remove('hidden');
         }
         
-        /**
-         * Saves a new navbar color setting to Firestore.
-         * @param {string} color - The new color to save (e.g., '#RRGGBB').
-         */
-        async function saveNavbarColor(color) {
-            if (!user) return;
-            try {
-                const fstore = getFirestore();
-                const settingsRef = doc(fstore, 'users', user.uid, 'settings', 'navbar');
-                await setDoc(settingsRef, { color: color }, { merge: true });
-                navbarColorSetting = color;
-                updateNavbarColor(color);
-                console.log("Navbar color saved successfully:", color);
-                alert(`Navbar color updated to ${color}! You may need to refresh for navigation.js to fully apply the change.`);
-            } catch (error) {
-                console.error("Error saving navbar color:", error);
-                alert("Failed to save color setting. See console.");
-            }
-        }
-        
-        /**
-         * Updates the CSS variable on the document root, which `navigation.js` 
-         * should use.
-         * @param {string} color - The color to set.
-         */
-        function updateNavbarColor(color) {
-            document.documentElement.style.setProperty('--navbar-color', color);
-            // NOTE: For this to work universally, the CSS in navigation.js's 
-            // `injectStyles` function MUST be updated to use this CSS variable.
-            // e.g., `.auth-navbar { background: var(--navbar-color); ... }`
-        }
-
-
         // --- SETTINGS UI LOGIC ---
 
         function renderSidebar() {
@@ -346,6 +495,7 @@
         }
 
         function loadSection(sectionId) {
+            activeSection = sectionId; // Update global state
             const section = settingsSections.find(s => s.id === sectionId);
             if (!section) return;
 
@@ -353,109 +503,604 @@
             mainTitle.textContent = `${BASE_TITLE} - ${section.title}`;
             pageHtmlTitle.textContent = `4SP - ${BASE_TITLE} - ${section.title}`;
 
-            // 2. Update content panel
+            // 2. Update content panel header
             panelTitle.innerHTML = `<i class="fas ${section.icon} mr-2 ${section.color}"></i> ${section.title}`;
-            panelContent.innerHTML = `
-                <div class="flex flex-col space-y-4">
-                    <p class="text-lg">${section.content}</p>
-                    <div id="section-details" class="bg-gray-800 p-4 rounded-lg border border-gray-700">
-                        <h3 class="text-xl font-semibold mb-2 text-white">Section Details</h3>
-                        <p class="text-sm text-gray-500">
-                            This is where the detailed controls, forms, and toggles for the 
-                            ${section.title} section would be implemented. 
-                            <i class="fas fa-magic text-purple-400 ml-1"></i>
-                        </p>
-                    </div>
-                    <button id="save-settings-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg shadow-lg transition-all duration-200 mt-4 self-start flex items-center">
-                        <i class="fas fa-save mr-2"></i> Save Changes
-                    </button>
-                </div>
-            `;
             
-            // --- PERSONALIZATION SPECIFIC CONTENT ---
-            if (sectionId === 'personalization') {
-                document.getElementById('section-details').innerHTML = `
-                    <h3 class="text-xl font-semibold mb-4 text-white">Universal Navbar Color</h3>
-                    <p class="text-sm text-gray-500 mb-4">
-                        Choose a color for your main navigation bar. This setting is saved to your profile.
-                    </p>
-                    
-                    <label class="block text-sm font-medium text-gray-400 mb-2">Color Palette</label>
-                    <div id="color-palette" class="flex flex-wrap gap-3 mb-6">
+            // 3. Render content based on section ID
+            if (sectionId === 'general') {
+                renderGeneralSettings();
+            } else if (sectionId === 'personalization') {
+                renderPersonalizationSettings();
+            } else {
+                // Render placeholder for other sections
+                panelContent.innerHTML = `
+                    <div class="flex flex-col space-y-4">
+                        <p class="text-lg">${section.content}</p>
+                        <div id="section-details" class="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                            <h3 class="text-xl font-semibold mb-2 text-white">Section Details</h3>
+                            <p class="text-sm text-gray-500">
+                                This is where the detailed controls, forms, and toggles for the 
+                                ${section.title} section would be implemented. 
+                                <i class="fas fa-magic text-purple-400 ml-1"></i>
+                            </p>
                         </div>
-                    
-                    <label for="custom-color-picker" class="block text-sm font-medium text-gray-400 mb-2">Custom Color Picker</label>
-                    <div class="flex items-center space-x-3">
-                        <input type="color" id="custom-color-picker" class="w-12 h-12 rounded-lg cursor-pointer" value="${navbarColorSetting}">
-                        <input type="text" id="custom-color-input" class="bg-gray-700 text-white border border-gray-600 rounded-lg p-2 font-mono text-sm w-32" value="${navbarColorSetting}" maxlength="7" pattern="#[0-9a-fA-F]{6}">
+                        <button id="save-settings-button" class="settings-button self-start">
+                            <i class="fas fa-save mr-2"></i> Save Changes
+                        </button>
                     </div>
                 `;
-                
-                // Initialize the color palette
-                const paletteContainer = document.getElementById('color-palette');
-                colorPalette.forEach(color => {
-                    const colorDiv = document.createElement('div');
-                    colorDiv.className = `color-option ${navbarColorSetting.toLowerCase() === color.toLowerCase() ? 'selected' : ''}`;
-                    colorDiv.style.backgroundColor = color;
-                    colorDiv.setAttribute('data-color', color);
-                    colorDiv.addEventListener('click', () => {
-                        applyColorChange(color);
-                    });
-                    paletteContainer.appendChild(colorDiv);
-                });
-                
-                // Custom color picker logic
-                const customPicker = document.getElementById('custom-color-picker');
-                const customInput = document.getElementById('custom-color-input');
-                
-                customPicker.addEventListener('input', (e) => {
-                    applyColorChange(e.target.value);
-                });
-                
-                customInput.addEventListener('input', (e) => {
-                    const color = e.target.value.trim();
-                    if (/^#[0-9A-F]{6}$/i.test(color)) {
-                        applyColorChange(color);
-                    }
-                });
-
-                // Helper function to update UI on color change
-                const applyColorChange = (color) => {
-                    customPicker.value = color;
-                    customInput.value = color;
-                    document.querySelectorAll('.color-option').forEach(item => item.classList.remove('selected'));
-                    const selectedPaletteItem = document.querySelector(`.color-option[data-color="${color.toLowerCase()}"]`);
-                    if (selectedPaletteItem) {
-                        selectedPaletteItem.classList.add('selected');
-                    }
-                    updateNavbarColor(color); // Live preview
-                };
             }
-            // --- END PERSONALIZATION SPECIFIC CONTENT ---
             
-            // 3. Update sidebar active state
+            // 4. Update sidebar active state
             document.querySelectorAll('.sidebar-item').forEach(item => {
                 item.classList.remove('active');
             });
             document.getElementById(`sidebar-${sectionId}`).classList.add('active');
+        }
+        
+        // --- NEW: General Settings Implementation ---
+        
+        /**
+         * Renders the content for the "General" tab
+         */
+        function renderGeneralSettings() {
+            if (!currentUser || !currentUserData) {
+                panelContent.innerHTML = '<p>Loading account data...</p>';
+                return;
+            }
+
+            const primaryAuthMethod = currentUserData.authMethod || 'unknown';
+            const isEmailUser = primaryAuthMethod === 'email';
             
-            // 4. Setup Save Button
-            const saveButton = document.getElementById('save-settings-button');
-            if (saveButton) {
-                saveButton.addEventListener('click', () => {
-                    if (sectionId === 'personalization') {
-                        const newColor = document.getElementById('custom-color-picker').value;
-                        saveNavbarColor(newColor);
-                    } else {
-                        // Placeholder save logic for other sections
-                        alert(`Changes for '${section.title}' would be saved here.`);
-                    }
-                });
+            panelContent.innerHTML = `
+                <div class="settings-section">
+                    <h3 class="text-xl font-semibold text-white mb-4">Username</h3>
+                    <label for="username-input" class="settings-label">Change Username</label>
+                    <div class="flex flex-col sm:flex-row sm:items-start sm:gap-4">
+                        <input type="text" id="username-input" class="settings-input" value="${currentUserData.username || ''}" placeholder="Enter new username">
+                        <button id="username-save-btn" class="settings-button mt-3 sm:mt-0 sm:flex-shrink-0">
+                            <i class="fas fa-save mr-2"></i> Save
+                        </button>
+                    </div>
+                    <div id="username-message" class="message-area"></div>
+                    <p class="settings-description">
+                        You can change your username once every 7 days. 
+                        Your username must be 4-24 characters and can include: .,-+\\_!?$
+                    </p>
+                </div>
+
+                <div class="settings-section" id="password-section">
+                    <h3 class="text-xl font-semibold text-white mb-4">Change Password</h3>
+                    <form id="password-change-form">
+                        ${isEmailUser ? `
+                        <div class="mb-4">
+                            <label for="current-password" class="settings-label">Current Password</label>
+                            <input type="password" id="current-password" class="settings-input" required autocomplete="current-password">
+                            <p class="settings-description">Required to confirm your identity.</p>
+                        </div>
+                        ` : `
+                        <p class_="message-warning mb-4">
+                            You signed in using a social provider (${primaryAuthMethod}), so you don't have a password set with 4SP.
+                        </p>
+                        `}
+                        <div class="mb-4">
+                            <label for="new-password" class="settings-label">New Password</label>
+                            <input type="password" id="new-password" class="settings-input" required autocomplete="new-password" ${!isEmailUser ? 'disabled' : ''}>
+                        </div>
+                        <div class="mb-4">
+                            <label for="confirm-password" class="settings-label">Confirm New Password</label>
+                            <input type="password" id="confirm-password" class="settings-input" required autocomplete="new-password" ${!isEmailUser ? 'disabled' : ''}>
+                        </div>
+                        <button type="submit" id="password-save-btn" class="settings-button" ${!isEmailUser ? 'disabled' : ''}>
+                            <i class="fas fa-key mr-2"></i> Change Password
+                        </button>
+                    </form>
+                    <div id="password-message" class="message-area"></div>
+                </div>
+
+                <div class="settings-section">
+                    <h3 class="text-xl font-semibold text-white mb-4">Linked Accounts</h3>
+                    <p class="settings-description mb-4">
+                        Link multiple social accounts to sign in. Email/Password accounts cannot be linked to other accounts at this time.
+                    </p>
+                    <div id="linking-container" class="space-y-3">
+                        </div>
+                    <div id="linking-message" class="message-area"></div>
+                </div>
+
+                <div class="settings-section">
+                    <h3 class="text-xl font-semibold text-red-400 mb-4">Danger Zone</h3>
+                    <p class="settings-description mb-4">
+                        Deleting your account is permanent and cannot be undone. All your data will be removed.
+                    </p>
+                    <button id="delete-account-btn" class="settings-button settings-button-danger">
+                        <i class="fas fa-trash-alt mr-2"></i> Delete My Account
+                    </button>
+                    <div id="delete-message" class="message-area"></div>
+                </div>
+            `;
+            
+            // Now that HTML is in the DOM, attach listeners and update UI states
+            attachGeneralSettingsListeners();
+            updateUsernameUI();
+            updateAccountLinkingUI();
+        }
+
+        /**
+         * Attaches all event listeners for the General Settings panel
+         */
+        function attachGeneralSettingsListeners() {
+            // Username
+            const usernameSaveBtn = document.getElementById('username-save-btn');
+            if (usernameSaveBtn) {
+                usernameSaveBtn.addEventListener('click', handleUsernameChange);
+            }
+
+            // Password
+            const passwordForm = document.getElementById('password-change-form');
+            if (passwordForm) {
+                passwordForm.addEventListener('submit', handlePasswordChange);
+            }
+
+            // Account Deletion
+            const deleteBtn = document.getElementById('delete-account-btn');
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', handleAccountDelete);
             }
         }
         
+        /**
+         * Updates the username input and button based on the cooldown
+         */
+        function updateUsernameUI() {
+            const input = document.getElementById('username-input');
+            const button = document.getElementById('username-save-btn');
+            const message = document.getElementById('username-message');
+            if (!input || !button || !message) return;
+            
+            const lastChanged = currentUserData?.usernameLastChanged?.toDate();
+            if (lastChanged) {
+                const now = new Date();
+                const sevenDays = 7 * 24 * 60 * 60 * 1000;
+                const timeSinceChange = now.getTime() - lastChanged.getTime();
+                
+                if (timeSinceChange < sevenDays) {
+                    const remainingTime = sevenDays - timeSinceChange;
+                    const days = Math.ceil(remainingTime / (1000 * 60 * 60 * 24));
+                    input.disabled = true;
+                    button.disabled = true;
+                    message.textContent = `You can change your username again in ${days} day(s).`;
+                    message.className = 'message-area message-warning';
+                } else {
+                    input.disabled = false;
+                    button.disabled = false;
+                    message.textContent = '';
+                    message.className = 'message-area';
+                }
+            } else {
+                // No timestamp, user can change it
+                input.disabled = false;
+                button.disabled = false;
+                message.textContent = '';
+                message.className = 'message-area';
+            }
+        }
+        
+        /**
+         * Renders the list of linked accounts and link/unlink buttons
+         */
+        function updateAccountLinkingUI() {
+            const container = document.getElementById('linking-container');
+            if (!container) return;
+
+            const primaryMethod = currentUserData.authMethod || 'unknown';
+            if (primaryMethod === 'email') {
+                container.innerHTML = `<p class="message-warning">Account linking is not available for email/password accounts.</p>`;
+                return;
+            }
+            
+            const providerData = currentUser.providerData;
+            const linkedProviders = providerData.map(p => p.providerId);
+            
+            const allProviders = [
+                { id: 'google.com', name: 'Google', icon: 'fa-brands fa-google', btnClass: 'bg-[#4285F4] hover:bg-[#357afe]' },
+                { id: 'github.com', name: 'GitHub', icon: 'fa-brands fa-github', btnClass: 'bg-[#333] hover:bg-[#444]' },
+                { id: 'microsoft.com', name: 'Microsoft', icon: 'fa-brands fa-microsoft', btnClass: 'bg-[#00A4EF] hover:bg-[#0093d8]' }
+            ];
+
+            let html = '';
+            allProviders.forEach(p => {
+                const isLinked = linkedProviders.includes(p.id);
+                html += `
+                    <div class="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                        <div class="flex items-center gap-3">
+                            <i class="${p.icon} text-xl w-6 text-center"></i>
+                            <span class="font-medium text-white">${p.name}</span>
+                        </div>
+                        ${isLinked ? `
+                            <button class="settings-button settings-button-secondary text-xs" 
+                                    data-provider-id="${p.id}" 
+                                    onclick="window.handleAccountUnlink('${p.id}')"
+                                    ${linkedProviders.length <= 1 ? 'disabled title="Cannot unlink the only sign-in method"' : ''}>
+                                <i class="fas fa-times mr-2"></i> Unlink
+                            </button>
+                        ` : `
+                            <button class="settings-button text-xs ${p.btnClass}" 
+                                    data-provider-id="${p.id}"
+                                    onclick="window.handleAccountLink('${p.id}')">
+                                <i class="fas fa-link mr-2"></i> Link
+                            </button>
+                        `}
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        // --- NEW: Helper Functions for "General" Settings ---
+
+        // Make link/unlink functions globally accessible to inline 'onclick'
+        window.handleAccountLink = async (providerId) => {
+            const message = document.getElementById('linking-message');
+            message.textContent = 'Opening provider popup...';
+            message.className = 'message-area message-warning';
+            
+            let provider;
+            if (providerId === 'google.com') provider = new GoogleAuthProvider();
+            else if (providerId === 'github.com') provider = new GithubAuthProvider();
+            else if (providerId === 'microsoft.com') provider = new OAuthProvider('microsoft.com');
+            else return;
+            
+            try {
+                await linkWithPopup(currentUser, provider);
+                message.textContent = 'Successfully linked account!';
+                message.className = 'message-area message-success';
+                // The onAuthStateChanged listener *should* pick up the new
+                // providerData, but we can force a UI refresh.
+                updateAccountLinkingUI(); 
+            } catch (error) {
+                console.error("Link error:", error);
+                message.textContent = `Error: ${error.message}`;
+                message.className = 'message-area message-error';
+            }
+        };
+
+        window.handleAccountUnlink = async (providerId) => {
+            if (currentUser.providerData.length <= 1) {
+                alert("You cannot unlink your only sign-in method.");
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to unlink your ${providerId} account?`)) {
+                return;
+            }
+
+            const message = document.getElementById('linking-message');
+            message.textContent = 'Unlinking account...';
+            message.className = 'message-area message-warning';
+
+            try {
+                await unlink(currentUser, providerId);
+                message.textContent = 'Successfully unlinked account!';
+                message.className = 'message-area message-success';
+                updateAccountLinkingUI(); // Force refresh
+            } catch (error) {
+                console.error("Unlink error:", error);
+                message.textContent = `Error: ${error.message}`;
+                message.className = 'message-area message-error';
+            }
+        };
+
+        // Re-usable helper for profanity/uniqueness (copied from authentication.html)
+        const checkProfanity = async (text) => {
+            try {
+                const response = await fetch(`https://www.purgomalum.com/service/containsprofanity?text=${encodeURIComponent(text)}`);
+                const result = await response.text();
+                return result.toLowerCase() === 'true';
+            } catch (error) { console.error('Profanity API error:', error); return false; }
+        };
+        const isUsernameTaken = async (username) => {
+            const q = query(collection(db, 'users'), where('username', '==', username));
+            const querySnapshot = await getDocs(q);
+            return !querySnapshot.empty;
+        };
+
+        async function handleUsernameChange() {
+            const input = document.getElementById('username-input');
+            const button = document.getElementById('username-save-btn');
+            const message = document.getElementById('username-message');
+            const newUsername = input.value.trim();
+            
+            button.disabled = true;
+            message.textContent = 'Checking...';
+            message.className = 'message-area message-warning';
+
+            // 1. Check cooldown (client-side check, server-side rules should enforce)
+            const lastChanged = currentUserData?.usernameLastChanged?.toDate();
+            if (lastChanged) {
+                const sevenDays = 7 * 24 * 60 * 60 * 1000;
+                if (new Date().getTime() - lastChanged.getTime() < sevenDays) {
+                    message.textContent = 'You cannot change your username yet.';
+                    message.className = 'message-area message-error';
+                    button.disabled = false;
+                    return;
+                }
+            }
+            
+            // 2. Check if username is the same
+            if (newUsername.toLowerCase() === (currentUserData.username || '').toLowerCase()) {
+                message.textContent = 'This is already your username.';
+                message.className = 'message-area message-warning';
+                button.disabled = false;
+                return;
+            }
+
+            // 3. Validate new username
+            if (newUsername.length < 4 || newUsername.length > 24) {
+                message.textContent = 'Username must be 4-24 characters.';
+                message.className = 'message-area message-error';
+                button.disabled = false;
+                return;
+            }
+            if (!/^[a-zA-Z0-9.,\-+_\!\?\$\\]+$/.test(newUsername)) {
+                message.textContent = 'Username contains invalid characters.';
+                message.className = 'message-area message-error';
+                button.disabled = false;
+                return;
+            }
+            if (await checkProfanity(newUsername)) {
+                message.textContent = 'This username is not allowed.';
+                message.className = 'message-area message-error';
+                button.disabled = false;
+                return;
+            }
+            if (await isUsernameTaken(newUsername)) {
+                message.textContent = 'This username is already taken.';
+                message.className = 'message-area message-error';
+                button.disabled = false;
+                return;
+            }
+
+            // 4. All checks passed, update Firestore
+            try {
+                message.textContent = 'Updating username...';
+                message.className = 'message-area message-warning';
+                
+                const userDocRef = doc(db, 'users', currentUser.uid);
+                await updateDoc(userDocRef, {
+                    username: newUsername,
+                    usernameLastChanged: serverTimestamp(),
+                    // Store timezone and timestamp for user reference
+                    usernameChangeDetails: {
+                        timestamp: new Date().toISOString(),
+                        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                    }
+                });
+
+                message.textContent = 'Username successfully updated!';
+                message.className = 'message-area message-success';
+                // The onSnapshot listener will automatically update the UI state
+                
+            } catch (error) {
+                console.error("Username update error:", error);
+                message.textContent = 'An error occurred. Please try again.';
+                message.className = 'message-area message-error';
+                button.disabled = false;
+            }
+        }
+        
+        async function handlePasswordChange(e) {
+            e.preventDefault();
+            const currentPass = document.getElementById('current-password').value;
+            const newPass = document.getElementById('new-password').value;
+            const confirmPass = document.getElementById('confirm-password').value;
+            const button = document.getElementById('password-save-btn');
+            const message = document.getElementById('password-message');
+            
+            message.textContent = '';
+            
+            if (newPass !== confirmPass) {
+                message.textContent = 'New passwords do not match.';
+                message.className = 'message-area message-error';
+                return;
+            }
+            
+            // Basic password validation (from authentication.html)
+            if (newPass.length < 8 || newPass.length > 48) {
+                message.textContent = 'Password must be 8-48 characters.';
+                message.className = 'message-area message-error';
+                return;
+            }
+            if (!/[A-Z]/.test(newPass)) {
+                message.textContent = 'Password must contain an uppercase letter.';
+                message.className = 'message-area message-error';
+                return;
+            }
+            // ... (add other password rules if needed) ...
+
+            button.disabled = true;
+            message.textContent = 'Verifying identity...';
+            message.className = 'message-area message-warning';
+            
+            try {
+                // 1. Re-authenticate
+                const credential = EmailAuthProvider.credential(currentUser.email, currentPass);
+                await reauthenticateWithCredential(currentUser, credential);
+                
+                // 2. Update password
+                message.textContent = 'Changing password...';
+                await updatePassword(currentUser, newPass);
+                
+                message.textContent = 'Password successfully updated!';
+                message.className = 'message-area message-success';
+                document.getElementById('password-change-form').reset();
+                
+            } catch (error) {
+                console.error("Password change error:", error);
+                if (error.code === 'auth/wrong-password') {
+                    message.textContent = 'Incorrect current password.';
+                } else {
+                    message.textContent = `Error: ${error.message}`;
+                }
+                message.className = 'message-area message-error';
+            } finally {
+                button.disabled = false;
+            }
+        }
+        
+        async function handleAccountDelete() {
+            const message = document.getElementById('delete-message');
+            const confirmed = prompt(
+                'This action is permanent and cannot be undone.\n' +
+                'To confirm, please type "DELETE" in all caps:'
+            );
+            
+            if (confirmed !== 'DELETE') {
+                message.textContent = 'Account deletion cancelled.';
+                message.className = 'message-area message-warning';
+                return;
+            }
+            
+            message.textContent = 'Please verify your identity to proceed...';
+            message.className = 'message-area message-warning';
+            
+            try {
+                // 1. Re-authenticate
+                const primaryMethod = currentUserData.authMethod || 'unknown';
+                if (primaryMethod === 'email') {
+                    const password = prompt("Please enter your password to confirm deletion:");
+                    if (!password) {
+                        message.textContent = 'Deletion cancelled.';
+                        message.className = 'message-area message-warning';
+                        return;
+                    }
+                    const credential = EmailAuthProvider.credential(currentUser.email, password);
+                    await reauthenticateWithCredential(currentUser, credential);
+                } else {
+                    // Social provider re-auth
+                    let provider;
+                    if (primaryMethod === 'google.com') provider = new GoogleAuthProvider();
+                    else if (primaryMethod === 'github.com') provider = new GithubAuthProvider();
+                    else if (primaryMethod === 'microsoft.com') provider = new OAuthProvider('microsoft.com');
+                    else throw new Error('Unknown social provider for re-authentication');
+                    
+                    await reauthenticateWithPopup(currentUser, provider);
+                }
+                
+                // 2. Re-authentication successful, proceed with deletion
+                message.textContent = 'Deleting account data...';
+                const userDocRef = doc(db, 'users', currentUser.uid);
+                
+                // We should delete the Firestore doc *before* deleting the auth user
+                // (or use a Cloud Function trigger)
+                await setDoc(userDocRef, { _deleted: true, deletedAt: serverTimestamp() }); // Soft delete, or use deleteDoc()
+                
+                // 3. Delete the auth user
+                await deleteUser(currentUser);
+                
+                // This will trigger the onAuthStateChanged listener,
+                // which will redirect to the login page.
+                alert('Account successfully deleted.');
+                
+            } catch (error) {
+                console.error("Account deletion error:", error);
+                if (error.code === 'auth/wrong-password') {
+                    message.textContent = 'Incorrect password. Deletion cancelled.';
+                } else if (error.code === 'auth/popup-closed-by-user') {
+                     message.textContent = 'Verification cancelled. Deletion cancelled.';
+                } else {
+                    message.textContent = `Error: ${error.message}`;
+                }
+                message.className = 'message-area message-error';
+            }
+        }
+        
+        // --- END: General Settings Implementation ---
+        
+        /**
+         * Renders the content for the "Personalization" tab
+         */
+        function renderPersonalizationSettings() {
+            // Ensure currentNavbarColor is the latest from local storage for UI state
+            currentNavbarColor = loadLocalNavbarColor();
+
+            panelContent.innerHTML = `
+                <h3 class="text-xl font-semibold mb-4 text-white">Universal Navbar Color</h3>
+                <p class="settings-description mb-4">
+                    Choose a color for your main navigation bar. This setting is saved locally to your browser.
+                </p>
+                
+                <label class="block text-sm font-medium text-gray-400 mb-2">Color Palette</label>
+                <div id="color-palette" class="flex flex-wrap gap-3 mb-6">
+                    </div>
+                
+                <label for="custom-color-picker" class="block text-sm font-medium text-gray-400 mb-2">Custom Color Picker</label>
+                <div class="flex items-center space-x-3 mb-6">
+                    <input type="color" id="custom-color-picker" class="w-12 h-12 rounded-lg cursor-pointer" value="${currentNavbarColor}">
+                    <input type="text" id="custom-color-input" class="bg-gray-700 text-white border border-gray-600 rounded-lg p-2 font-mono text-sm w-32" value="${currentNavbarColor}" maxlength="7" pattern="#[0-9a-fA-F]{6}">
+                </div>
+                
+                <div class="flex space-x-4 mt-6">
+                    <button id="save-color-button" class="settings-button">
+                        <i class="fas fa-save mr-2"></i> Apply and Save Locally
+                    </button>
+                    <button id="restore-button" class="settings-button settings-button-danger">
+                        <i class="fas fa-undo-alt mr-2"></i> Restore to Defaults
+                    </button>
+                </div>
+            `;
+            
+            // Initialize the color palette
+            const paletteContainer = document.getElementById('color-palette');
+            colorPalette.forEach(color => {
+                const colorDiv = document.createElement('div');
+                const isSelected = currentNavbarColor.toLowerCase() === color.toLowerCase();
+                colorDiv.className = `color-option ${isSelected ? 'selected' : ''}`;
+                colorDiv.style.backgroundColor = color;
+                colorDiv.setAttribute('data-color', color);
+                colorDiv.addEventListener('click', () => applyColorChange(color));
+                paletteContainer.appendChild(colorDiv);
+            });
+            
+            // Custom color picker logic
+            const customPicker = document.getElementById('custom-color-picker');
+            const customInput = document.getElementById('custom-color-input');
+            
+            customPicker.addEventListener('input', (e) => applyColorChange(e.target.value));
+            customInput.addEventListener('input', (e) => {
+                const color = e.target.value.trim();
+                if (/^#[0-9A-F]{6}$/i.test(color)) {
+                    applyColorChange(color);
+                }
+            });
+
+            // Helper function to update UI/preview on color change
+            const applyColorChange = (color) => {
+                customPicker.value = color;
+                customInput.value = color;
+                document.querySelectorAll('.color-option').forEach(item => item.classList.remove('selected'));
+                const selectedPaletteItem = document.querySelector(`.color-option[data-color="${color.toLowerCase()}"]`);
+                if (selectedPaletteItem) {
+                    selectedPaletteItem.classList.add('selected');
+                }
+                // Live preview update
+                document.documentElement.style.setProperty('--navbar-bg', color);
+            };
+
+            // Setup Save and Restore Buttons
+            document.getElementById('save-color-button').addEventListener('click', () => {
+                const newColor = document.getElementById('custom-color-picker').value;
+                saveLocalNavbarColor(newColor);
+            });
+            
+            document.getElementById('restore-button').addEventListener('click', () => {
+                deleteLocalNavbarColor();
+                applyColorChange(DEFAULT_NAVBAR_COLOR);
+            });
+        }
+        
         // --- START APPLICATION ---
-        // This will start the Firebase Auth listener (relying on navigation.js for global objects)
+        // This will start the Firebase Auth listener
         document.addEventListener('DOMContentLoaded', startAuthFlow);
     </script>
 </body>
