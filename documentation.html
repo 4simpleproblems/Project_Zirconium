@@ -30,6 +30,12 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
+        
+        /* Enforce bold text to stand out using the strong tag (Matching legal.html style) */
+        strong {
+            font-weight: 600; /* Semi-bold weight from Geist font */
+            color: #ffffff; /* Ensure bold text is white for contrast */
+        }
 
         /* Aspect Ratio Container - 16:9 */
         .image-wrapper {
@@ -140,7 +146,7 @@
                     <span class="gradient-text font-bold">4SP Documentation</span>
                 </h1>
                 <p class="text-xl text-gray-400 max-w-2xl mx-auto mb-6">
-                    Your comprehensive guide to getting the most out of the **Essential Student Toolkit**.
+                    Your comprehensive guide to getting the most out of the <strong>Essential Student Toolkit</strong>.
                 </p>
             </div>
         </section>
@@ -152,13 +158,13 @@
                 <div>
                     <h3 class="text-2xl font-medium mb-3 mt-2"><i class="fas fa-arrow-right-to-bracket text-blue-400 mr-2"></i> Account Authentication</h3>
                     <p class="text-lg text-gray-400">
-                        Access the full suite of tools by logging into or creating your 4SP account. The **Authentication** page supports both standard **email/password** registration and social sign-in methods like **Google**, **GitHub**, and **Microsoft**.
+                        Access the full suite of tools by logging into or creating your 4SP account. The <strong>Authentication</strong> page supports both standard <strong>email/password</strong> registration and social sign-in methods like <strong>Google</strong>, <strong>GitHub</strong>, and <strong>Microsoft</strong>.
                     </p>
                 </div>
                 <div>
                     <h3 class="text-2xl font-medium mb-3 mt-2"><i class="fas fa-envelope-circle-check text-blue-400 mr-2"></i> Email Verification</h3>
                     <p class="text-lg text-gray-400">
-                        Only **email/password accounts** must verify their email address to complete registration. Accounts created using **social sign-in methods** (Google, GitHub, Microsoft) are typically **pre-verified** and do not require this step.
+                        Only <strong>email/password accounts</strong> must verify their email address to complete registration. Accounts created using <strong>social sign-in methods</strong> (Google, GitHub, Microsoft) are typically <strong>pre-verified</strong> and do not require this step.
                     </p>
                 </div>
             </div>
@@ -174,13 +180,13 @@
                 <div class="lg:pr-4 order-2 lg:order-1">
                     <h3 class="text-2xl font-medium mb-3 mt-2"><i class="fas fa-thumbtack text-green-400 mr-2"></i> The Pin Button</h3>
                     <p class="text-lg text-gray-400 mb-4">
-                        The Pin Button is a **persistent Quality-of-Life feature** located in the navigation bar, offering quick, one-click access to your **most-used page**.
+                        The Pin Button is a <strong>persistent Quality-of-Life feature</strong> located in the navigation bar, offering quick, one-click access to your <strong>most-used page</strong>.
                     </p>
                     <ul class="text-gray-400 space-y-2 ml-4">
-                        <li>**Pinning & Repinning:** Click the Pin Button on any page to pin that page. The **Repin option** is available via **right-click** if the current page is different from the pinned page, or if no page is currently pinned.</li>
-                        <li>**Options Menu:** You can **right-click** on the Pin Button to access its context menu.</li>
-                        <li>**Visibility:** The button can be **hidden** via the right-click menu. If hidden, a **Show Pin Button** option appears in your main user dropdown menu.</li>
-                        <li>**Pin Hint:** A **one-time hint** appears on the first click of the Pin Button to explain its primary function.</li>
+                        <li><strong>Pinning & Repinning:</strong> Click the Pin Button on any page to pin that page. The <strong>Repin option</strong> is available via <strong>right-click</strong> if the current page is different from the pinned page, or if no page is currently pinned.</li>
+                        <li><strong>Options Menu:</strong> You can <strong>right-click</strong> on the Pin Button to access its context menu.</li>
+                        <li><strong>Visibility:</strong> The button can be <strong>hidden</strong> via the right-click menu. If hidden, a <strong>Show Pin Button</strong> option appears in your main user dropdown menu.</li>
+                        <li><strong>Pin Hint:</strong> A <strong>one-time hint</strong> appears on the first click of the Pin Button to explain its primary function.</li>
                     </ul>
                 </div>
                 <div class="relative p-4 rounded-xl border border-green-800/50 bg-gray-900 flex flex-col items-center justify-center order-1 lg:order-2 mb-6 lg:mb-0">
@@ -209,11 +215,11 @@
                 <div class="lg:grid lg:grid-cols-3 lg:gap-8 items-center">
                     <div class="lg:col-span-2">
                         <p class="text-lg text-gray-400 mb-4">
-                            The primary landing page for **authenticated users**. It provides a clean, distraction-free interface that prominently displays the **current date and time**. This allows you to quickly verify your access and get a clear sense of the time without navigating away from the main application environment.
+                            The primary landing page for <strong>authenticated users</strong>. It provides a clean, distraction-free interface that prominently displays the <strong>current date and time</strong>. This allows you to quickly verify your access and get a clear sense of the time without navigating away from the main application environment.
                         </p>
                         <ul class="text-gray-400 space-y-2 ml-4">
-                            <li>**Default Landing:** The page users are redirected to upon **successful sign-in**.</li>
-                            <li>**Time Display:** Features a real-time, high-contrast **digital clock** display.</li>
+                            <li><strong>Default Landing:</strong> The page users are redirected to upon <strong>successful sign-in</strong>.</li>
+                            <li><strong>Time Display:</strong> Features a real-time, high-contrast <strong>digital clock</strong> display.</li>
                         </ul>
                     </div>
                     <div class="relative flex flex-col items-center justify-center mt-6 lg:mt-0">
@@ -239,12 +245,12 @@
                 <div class="lg:grid lg:grid-cols-3 lg:gap-8 items-center">
                     <div class="lg:col-span-2 order-2 lg:order-1">
                         <p class="text-lg text-gray-400 mb-4">
-                            A social feature that encourages mindful sharing by limiting users to **five photos per day** to share with their friends. This creates a focused, high-quality sharing experience.
+                            A social feature that encourages mindful sharing by limiting users to <strong>five photos per day</strong> to share with their friends. This creates a focused, high-quality sharing experience.
                         </p>
                         <ul class="text-gray-400 space-y-2 ml-4">
-                            <li>**Friend System:** Users can send and manage **friend requests** to create a private sharing circle.</li>
-                            <li>**Daily Limit:** Users can only upload a maximum of **five photos** within a 24-hour period.</li>
-                            <li>**Profile Display:** Displays shared photos from your friends in a clean, scrollable feed.</li>
+                            <li><strong>Friend System:</strong> Users can send and manage <strong>friend requests</strong> to create a private sharing circle.</li>
+                            <li><strong>Daily Limit:</strong> Users can only upload a maximum of <strong>five photos</strong> within a 24-hour period.</li>
+                            <li><strong>Profile Display:</strong> Displays shared photos from your friends in a clean, scrollable feed.</li>
                         </ul>
                     </div>
                     <div class="relative flex flex-col items-center justify-center mt-6 lg:mt-0 order-1 lg:order-2">
@@ -270,12 +276,12 @@
                 <div class="lg:grid lg:grid-cols-3 lg:gap-8 items-center">
                     <div class="lg:col-span-2">
                         <p class="text-lg text-gray-400 mb-4">
-                            A quick-reference utility for students, offering a simple interface for **searching and displaying word definitions**. It leverages the comprehensive **dictionaryapi.dev** service.
+                            A quick-reference utility for students, offering a simple interface for <strong>searching and displaying word definitions</strong>. It leverages the comprehensive <strong>dictionaryapi.dev</strong> service.
                         </p>
                         <ul class="text-gray-400 space-y-2 ml-4">
-                            <li>**Phonetics:** Provides phonetic spellings and, where available, **audio pronunciations**.</li>
-                            <li>**Synonyms & Examples:** Displays **synonyms**, **antonyms**, and **example** sentences for improved comprehension.</li>
-                            <li>**Part-of-Speech Grouping:** Definitions are clearly organized by **Part of Speech** (e.g., Noun, Verb, Adjective).</li>
+                            <li><strong>Phonetics:</strong> Provides phonetic spellings and, where available, <strong>audio pronunciations</strong>.</li>
+                            <li><strong>Synonyms & Examples:</strong> Displays <strong>synonyms</strong>, <strong>antonyms</strong>, and <strong>example</strong> sentences for improved comprehension.</li>
+                            <li><strong>Part-of-Speech Grouping:</strong> Definitions are clearly organized by <strong>Part of Speech</strong> (e.g., Noun, Verb, Adjective).</li>
                         </ul>
                     </div>
                     <div class="relative flex flex-col items-center justify-center mt-6 lg:mt-0">
@@ -301,12 +307,12 @@
                 <div class="lg:grid lg:grid-cols-3 lg:gap-8 items-center">
                     <div class="lg:col-span-2 order-2 lg:order-1">
                         <p class="text-lg text-gray-400 mb-4">
-                            A secure, simple note-taking application designed for privacy, featuring **password-encrypted storage** for your private notes.
+                            A secure, simple note-taking application designed for privacy, featuring <strong>password-encrypted storage</strong> for your private notes.
                         </p>
                         <ul class="text-gray-400 space-y-2 ml-4">
-                            <li>**Client-Side Encryption:** Uses the **Crypto-JS** library for secure encryption, meaning only you can read your notes.</li>
-                            <li>**Lock/Unlock:** Notes are locked behind a user-defined **password**.</li>
-                            <li>**Autosave:** Includes an **autosave** feature for a seamless note-taking experience.</li>
+                            <li><strong>Client-Side Encryption:</strong> Uses the <strong>Crypto-JS</strong> library for secure encryption, meaning only you can read your notes.</li>
+                            <li><strong>Lock/Unlock:</strong> Notes are locked behind a user-defined <strong>password</strong>.</li>
+                            <li><strong>Autosave:</strong> Includes an <strong>autosave</strong> feature for a seamless note-taking experience.</li>
                         </ul>
                     </div>
                     <div class="relative flex flex-col items-center justify-center mt-6 lg:mt-0 order-1 lg:order-2">
@@ -332,12 +338,12 @@
                 <div class="lg:grid lg:grid-cols-3 lg:gap-8 items-center">
                     <div class="lg:col-span-2">
                         <p class="text-lg text-gray-400 mb-4">
-                            The central hub for managing your user account and configuring application options. **Personalization features** are managed here.
+                            The central hub for managing your user account and configuring application options. <strong>Personalization features</strong> are managed here.
                         </p>
                         <ul class="text-gray-400 space-y-2 ml-4">
-                            <li>**Navigation Color:** Customize your experience by selecting, **saving, and restoring your desired navigation bar color**.</li>
-                            <li>**Restore Defaults:** Option to **restore** all saved settings to their default values.</li>
-                            <li>**Account Management:** Links for managing your **password**, **email**, and **social** account connections.</li>
+                            <li><strong>Navigation Color:</strong> Customize your experience by selecting, <strong>saving, and restoring your desired navigation bar color</strong>.</li>
+                            <li><strong>Restore Defaults:</strong> Option to <strong>restore</strong> all saved settings to their default values.</li>
+                            <li><strong>Account Management:</strong> Links for managing your <strong>password</strong>, <strong>email</strong>, and <strong>social</strong> account connections.</li>
                         </ul>
                     </div>
                     <div class="relative flex flex-col items-center justify-center mt-6 lg:mt-0">
@@ -363,13 +369,13 @@
                 <div class="lg:grid lg:grid-cols-3 lg:gap-8 items-center">
                     <div class="lg:col-span-2 order-2 lg:order-1">
                         <p class="text-lg text-gray-400 mb-4">
-                            A **context-aware AI persona** designed to assist with your educational needs.
+                            A <strong>context-aware AI persona</strong> designed to assist with your educational needs.
                         </p>
                         <ul class="text-gray-400 space-y-2 ml-4">
-                            <li>**Activation:** Quickly activate the agent using the **Ctrl + \** keyboard shortcut.</li>
-                            <li>**Dynamic Persona:** Features an **intelligent system instruction** that automatically changes based on the nature of your query.</li>
-                            <li>**Web Search:** Includes a **Web Search** toggle in the settings menu, allowing the agent to access **up-to-date information**.</li>
-                            <li>**KaTeX Support:** Renders mathematical formulas and equations using **KaTeX** for **high-quality display**.</li>
+                            <li><strong>Activation:</strong> Quickly activate the agent using the <strong>Ctrl + \</strong> keyboard shortcut.</li>
+                            <li><strong>Dynamic Persona:</strong> Features an <strong>intelligent system instruction</strong> that automatically changes based on the nature of your query.</li>
+                            <li><strong>Web Search:</strong> Includes a <strong>Web Search</strong> toggle in the settings menu, allowing the agent to access <strong>up-to-date information</strong>.</li>
+                            <li><strong>KaTeX Support:</strong> Renders mathematical formulas and equations using <strong>KaTeX</strong> for <strong>high-quality display</strong>.</li>
                         </ul>
                     </div>
                     <div class="relative flex flex-col items-center justify-center mt-6 lg:mt-0 order-1 lg:order-2">
