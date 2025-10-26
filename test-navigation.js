@@ -10,7 +10,7 @@
  * 2. AI FEATURES REMOVED: All AI-related code has been removed.
  * 3. GOLD ADMIN TAB REMOVED: The 'Beta Settings' tab no longer has a special texture.
  * 4. SETTINGS LINK: Includes the 'Settings' link in the authenticated user's dropdown menu.
- * 5. ACTIVE TAB SCROLL: Now scrolls the active tab to the center only on the initial page load, preventing unwanted centering during subsequent re-renders (like sign-in/out).
+ * 5. **ACTIVE TAB SCROLL:** Now scrolls the active tab to the center only on the **initial page load**, preventing unwanted centering during subsequent re-renders (like sign-in/out).
  * 6. LOGOUT REDIRECT: Redirects logged-out users away from logged-in pages.
  * 7. PIN BUTTON: Adds a persistent 'Pin' button next to the auth icon for quick page access.
  * 8. GLIDE FADE UPDATED: Glide button fade now spans the full navbar height smoothly.
@@ -19,7 +19,6 @@
  * 11. PIN ICON: Pin icon is now solid at all times (hover effect removed).
  * 12. SCROLL PERSISTENCE: The scroll position is now saved and restored using requestAnimationFrame during re-renders caused by pin interactions, ensuring a smooth experience.
  * 13. PARTIAL UPDATE: Pin menu interactions now only refresh the pin area's HTML, leaving the main tab scroll container untouched, eliminating all scrolling jumps.
- * 14. **BUGFIX**: Hiding the pin button now triggers a full navbar re-render, ensuring the "Show Pin Button" option appears in the main auth menu immediately.
  */
 
 // =========================================================================
@@ -643,7 +642,7 @@ let db;
                 });
             }
 
-            // Context Menu Actions - ALL NOW USE PARTIAL UPDATE where possible
+            // Context Menu Actions - ALL NOW USE PARTIAL UPDATE
             if (repinButton) {
                 repinButton.addEventListener('click', () => {
                     const currentPageKey = getCurrentPageKey();
@@ -662,9 +661,7 @@ let db;
             if (hidePinButton) {
                 hidePinButton.addEventListener('click', () => {
                     localStorage.setItem(PIN_BUTTON_HIDDEN_KEY, 'true');
-                    // FIX: We must re-render the entire navbar to ensure the 'Show Pin Button'
-                    // option appears in the main auth menu, which is not updated by updatePinButtonArea().
-                    rerenderNavbar(false); 
+                    updatePinButtonArea(); // Will result in removal of the pin area wrapper
                 });
             }
         }
@@ -720,6 +717,7 @@ let db;
                 showPinButton.addEventListener('click', () => {
                     localStorage.setItem(PIN_BUTTON_HIDDEN_KEY, 'false'); // 'false' string
                     // This action requires updating the pin area AND the auth menu (which has the show button)
+                    // The easiest way is to trigger a full auth re-render, which only happens on the right side.
                     // This is acceptable as the scroll tabs are on the left.
                     rerenderNavbar(false); // Do not preserve scroll, this is an auth menu interaction
                 });
