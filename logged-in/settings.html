@@ -9,10 +9,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    <!-- Font Awesome is loaded by test-navigation.js, but we can link it here for safety -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <script src="../test-navigation.js"></script>
+    <script src="../injector.js"></script>
 
     <style>
         /* --- FONT & BASE STYLING (MATCHING base-template.html) --- */
@@ -66,12 +67,23 @@
             flex-grow: 1;
         }
 
-        /* Sidebar Styling */
+        /* --- UPDATED: Sidebar Styling --- */
         .settings-sidebar {
             width: 100%;
             min-width: 200px;
             max-width: 280px;
             flex-shrink: 0;
+            
+            /* NEW: Sticky Sidebar Implementation */
+            position: sticky;
+            /* 4rem for main navbar + 1rem desired gap */
+            top: 5rem; 
+            /* Aligns item to the start of the flex container, crucial for sticky */
+            align-self: flex-start;
+            /* Set a max-height based on viewport, minus the sticky offset */
+            height: calc(100vh - 5rem);
+            /* Allow sidebar to scroll internally if its content is too tall */
+            overflow-y: auto;
         }
 
         /* Sidebar Item Styling */
@@ -215,6 +227,10 @@
             .settings-sidebar {
                 max-width: 100%;
                 margin-bottom: 0;
+                /* On mobile, un-stick the sidebar */
+                position: static;
+                height: auto;
+                overflow-y: visible;
             }
         }
 
@@ -553,6 +569,7 @@
             const isEmailUser = primaryAuthMethod === 'email';
             
             panelContent.innerHTML = `
+                <!-- === Username Section === -->
                 <div class="settings-section">
                     <h3 class="text-xl font-semibold text-white mb-4">Username</h3>
                     <label for="username-input" class="settings-label">Change Username</label>
@@ -569,45 +586,47 @@
                     </p>
                 </div>
 
+                <!-- === UPDATED: Password Section (Conditional) === -->
+                ${isEmailUser ? `
                 <div class="settings-section" id="password-section">
                     <h3 class="text-xl font-semibold text-white mb-4">Change Password</h3>
                     <form id="password-change-form">
-                        ${isEmailUser ? `
                         <div class="mb-4">
                             <label for="current-password" class="settings-label">Current Password</label>
                             <input type="password" id="current-password" class="settings-input" required autocomplete="current-password">
                             <p class="settings-description">Required to confirm your identity.</p>
                         </div>
-                        ` : `
-                        <p class_="message-warning mb-4">
-                            You signed in using a social provider (${primaryAuthMethod}), so you don't have a password set with 4SP.
-                        </p>
-                        `}
                         <div class="mb-4">
                             <label for="new-password" class="settings-label">New Password</label>
-                            <input type="password" id="new-password" class="settings-input" required autocomplete="new-password" ${!isEmailUser ? 'disabled' : ''}>
+                            <input type="password" id="new-password" class="settings-input" required autocomplete="new-password">
                         </div>
                         <div class="mb-4">
                             <label for="confirm-password" class="settings-label">Confirm New Password</label>
-                            <input type="password" id="confirm-password" class="settings-input" required autocomplete="new-password" ${!isEmailUser ? 'disabled' : ''}>
+                            <input type="password" id="confirm-password" class="settings-input" required autocomplete="new-password">
                         </div>
-                        <button type="submit" id="password-save-btn" class="settings-button" ${!isEmailUser ? 'disabled' : ''}>
+                        <button type="submit" id="password-save-btn" class="settings-button">
                             <i class="fas fa-key mr-2"></i> Change Password
                         </button>
                     </form>
                     <div id="password-message" class="message-area"></div>
                 </div>
+                ` : ''}
 
+                <!-- === UPDATED: Account Linking Section (Conditional) === -->
+                ${!isEmailUser ? `
                 <div class="settings-section">
-                    <h3 class="text-xl font-semibold text-white mb-4">Linked Accounts</h3>
+                    <h3 class="text-xl font-semibold text-white mb-4">Link Providers</h3>
                     <p class="settings-description mb-4">
-                        Link multiple social accounts to sign in. Email/Password accounts cannot be linked to other accounts at this time.
+                        Link multiple social accounts to sign in.
                     </p>
                     <div id="linking-container" class="space-y-3">
-                        </div>
+                        <!-- Content injected by JS -->
+                    </div>
                     <div id="linking-message" class="message-area"></div>
                 </div>
+                ` : ''}
 
+                <!-- === Delete Account Section === -->
                 <div class="settings-section">
                     <h3 class="text-xl font-semibold text-red-400 mb-4">Danger Zone</h3>
                     <p class="settings-description mb-4">
@@ -621,25 +640,31 @@
             `;
             
             // Now that HTML is in the DOM, attach listeners and update UI states
-            attachGeneralSettingsListeners();
+            attachGeneralSettingsListeners(isEmailUser);
             updateUsernameUI();
-            updateAccountLinkingUI();
+            
+            // Only update linking UI if the section exists
+            if (!isEmailUser) {
+                updateAccountLinkingUI();
+            }
         }
 
         /**
          * Attaches all event listeners for the General Settings panel
          */
-        function attachGeneralSettingsListeners() {
+        function attachGeneralSettingsListeners(isEmailUser) {
             // Username
             const usernameSaveBtn = document.getElementById('username-save-btn');
             if (usernameSaveBtn) {
                 usernameSaveBtn.addEventListener('click', handleUsernameChange);
             }
 
-            // Password
-            const passwordForm = document.getElementById('password-change-form');
-            if (passwordForm) {
-                passwordForm.addEventListener('submit', handlePasswordChange);
+            // Password (only attach if it exists)
+            if (isEmailUser) {
+                const passwordForm = document.getElementById('password-change-form');
+                if (passwordForm) {
+                    passwordForm.addEventListener('submit', handlePasswordChange);
+                }
             }
 
             // Account Deletion
@@ -691,13 +716,7 @@
          */
         function updateAccountLinkingUI() {
             const container = document.getElementById('linking-container');
-            if (!container) return;
-
-            const primaryMethod = currentUserData.authMethod || 'unknown';
-            if (primaryMethod === 'email') {
-                container.innerHTML = `<p class="message-warning">Account linking is not available for email/password accounts.</p>`;
-                return;
-            }
+            if (!container) return; // Exit if the container doesn't exist
             
             const providerData = currentUser.providerData;
             const linkedProviders = providerData.map(p => p.providerId);
