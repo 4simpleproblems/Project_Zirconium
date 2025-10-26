@@ -11,7 +11,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="../navigation-mini.js"></script>
 
     <style>
         :root {
@@ -38,6 +37,10 @@
             font-weight: 600; /* Semi-bold weight from Geist font */
             color: #ffffff; /* Ensure bold text is white for contrast */
         }
+        /* Ensure anchors for smooth scroll don't show the default dotted outline */
+        a {
+            outline: none;
+        }
     </style>
 </head>
 <body class="bg-black text-white min-h-screen">
@@ -48,16 +51,16 @@
                     Transparency and Compliance
                 </h1>
                 <h2 class="text-5xl sm:text-6xl font-semibold tracking-tighter mb-4 leading-tight">
-                    <span class="gradient-text font-bold">Legal & Policies</span>
+                    <span class="gradient-text font-bold">Terms & Policies</span>
                 </h2>
                 <p class="text-xl text-gray-400 max-w-2xl mx-auto mb-6">
                     Last Updated: October 26, 2025.
                 </p>
                 <div class="text-center space-x-4">
-                    <a href="#terms-of-service" class="inline-flex items-center justify-center px-6 py-2 border border-blue-500 text-base font-normal rounded-xl text-white bg-blue-500/10 hover:bg-blue-500/20 transition">
+                    <a href="#terms-of-service" data-scroll-to="terms-of-service" class="scroll-button inline-flex items-center justify-center px-6 py-2 border border-blue-500 text-base font-normal rounded-xl text-white bg-blue-500/10 hover:bg-blue-500/20 transition">
                         Terms of Service
                     </a>
-                    <a href="#privacy-policy" class="inline-flex items-center justify-center px-6 py-2 border border-purple-500 text-base font-normal rounded-xl text-white bg-purple-500/10 hover:bg-purple-500/20 transition">
+                    <a href="#privacy-policy" data-scroll-to="privacy-policy" class="scroll-button inline-flex items-center justify-center px-6 py-2 border border-purple-500 text-base font-normal rounded-xl text-white bg-purple-500/10 hover:bg-purple-500/20 transition">
                         Privacy Policy
                     </a>
                 </div>
@@ -176,5 +179,27 @@
             &copy; 2025 4simpleproblems (4SP). Built for students.
         </div>
     </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.scroll-button').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    
+                    // Get the target element ID from the data attribute
+                    const targetId = button.getAttribute('data-scroll-to');
+                    const targetElement = document.getElementById(targetId);
+
+                    if (targetElement) {
+                        // Use scrollIntoView with smooth behavior for the desired effect
+                        targetElement.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start' // Scroll to the top of the element
+                        });
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 </html>
