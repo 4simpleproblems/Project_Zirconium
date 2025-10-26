@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4SP - Documentation</title>
+    <meta name="description" content="Your comprehensive guide to getting the most out of the 4SP Essential Student Toolkit.">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script src="navigation-mini.js" defer></script> 
+    
+    <style>
+        :root {
+            --geist-foreground: 255, 255, 255;
+            --geist-background: 0, 0, 0;
+        }
+        .dark { color-scheme: dark; }
+        body { font-family: 'Geist', sans-serif; }
+        .gradient-text {
+            /* Copied from index (2).html */
+            background-image: linear-gradient(90deg, #0070f3, #f81ce5); 
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+    </style>
+</head>
+<body class="bg-black text-white min-h-screen">
+    <main>
+        <section class="text-center py-12 sm:py-20 border-b border-gray-900">
+            <div class="mx-auto max-w-4xl px-4">
+                <h1 class="text-5xl sm:text-6xl font-semibold tracking-tighter mb-4 leading-tight">
+                    <span class="gradient-text font-bold">4SP Documentation</span>
+                </h1>
+                <p class="text-xl text-gray-400 max-w-2xl mx-auto mb-6">
+                    Your comprehensive guide to getting the most out of the Essential Student Toolkit.
+                </p>
+            </div>
+        </section>
+
+        <section id="getting-started" class="py-16 mx-auto max-w-7xl px-4 space-y-12">
+            <h2 class="text-4xl font-medium mb-8 border-b border-gray-800 pb-4">1. Getting Started</h2>
+            
+            <div class="lg:grid lg:grid-cols-2 lg:gap-12">
+                <div>
+                    <h3 class="text-2xl font-medium mb-3 mt-2"><i class="fas fa-arrow-right-to-bracket text-blue-400 mr-2"></i> Account Authentication</h3>
+                    <p class="text-lg text-gray-400">
+                        To access the full suite of tools, you must first log into or create your 4SP account. Use the 'Get Started Instantly' button on the homepage or navigate directly to the **Authentication** page.
+                    </p>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-medium mb-3 mt-2"><i class="fas fa-envelope-circle-check text-blue-400 mr-2"></i> Email Verification</h3>
+                    <p class="text-lg text-gray-400">
+                        After registration, you will be prompted to verify your email address to complete your registration. You can check the verification status from the **Verify Email** page.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <hr class="border-gray-900">
+
+        <section id="pin-button-feature" class="py-16 mx-auto max-w-7xl px-4 space-y-12">
+            <h2 class="text-4xl font-medium mb-8 border-b border-gray-800 pb-4">2. Navigation Features</h2>
+            
+            <div class="lg:grid lg:grid-cols-2 lg:gap-12 items-center">
+                <div class="lg:pr-4 order-2 lg:order-1">
+                    <h3 class="text-2xl font-medium mb-3 mt-2"><i class="fas fa-thumbtack text-green-400 mr-2"></i> The Pin Button</h3>
+                    <p class="text-lg text-gray-400 mb-4">
+                        The Pin Button is a **persistent Quality-of-Life feature** located next to the user authentication icon in the navigation bar, offering quick access to your most-used page.
+                    </p>
+                    <ul class="text-gray-400 space-y-2 list-disc list-inside ml-4">
+                        <li>**Pinning & Repinning:** Click the Pin Button on any page to pin that page. The Repin option appears in the right-click menu if the current page is different from the one currently pinned, or if no page is pinned.</li>
+                        <li>**Options Menu:** You can **right-click** on the Pin Button to access its context menu.</li>
+                        <li>**Visibility:** The button can be **hidden** via the right-click menu. If hidden, a **Show Pin Button** option appears in your main user dropdown menu.</li>
+                    </ul>
+                </div>
+                <div class="relative p-8 rounded-3xl border border-green-800/50 overflow-hidden shadow-2xl bg-gray-900 h-64 flex items-center justify-center order-1 lg:order-2 mb-6 lg:mb-0">
+                    <div class="text-center">
+                        <i class="fa-solid fa-map-pin text-7xl text-green-400 mb-4"></i>
+                        <p class="text-sm text-gray-400">Right-click for options!</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <hr class="border-gray-900">
+
+        <section id="core-apps" class="py-16 mx-auto max-w-7xl px-4 space-y-12">
+            <h2 class="text-4xl font-medium mb-8 border-b border-gray-800 pb-4">3. Core Applications</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                
+                <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 hover:border-blue-700 transition">
+                    <h3 class="text-2xl font-medium mb-2"><i class="fas fa-gauge-high text-red-400 mr-2"></i> Dashboard</h3>
+                    <p class="text-lg text-gray-400">
+                        The authenticated landing page for users, providing a clean interface that displays the current date and time.
+                    </p>
+                </div>
+
+                <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 hover:border-blue-700 transition">
+                    <h3 class="text-2xl font-medium mb-2"><i class="fas fa-comment-dots text-blue-400 mr-2"></i> Messenger V2</h3>
+                    <p class="text-lg text-gray-400">
+                        A secure, **peer-to-peer messenger** that supports **group chat** functionality, **image sharing**, and utilizes a **hybrid message storage** system.
+                    </p>
+                </div>
+
+                <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 hover:border-blue-700 transition">
+                    <h3 class="text-2xl font-medium mb-2"><i class="fas fa-book-open text-yellow-400 mr-2"></i> Interactive Dictionary</h3>
+                    <p class="text-lg text-gray-400">
+                        A utility for students, offering a simple interface for searching and displaying word definitions powered by `dictionaryapi.dev`.
+                    </p>
+                </div>
+
+                <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 hover:border-blue-700 transition">
+                    <h3 class="text-2xl font-medium mb-2"><i class="fas fa-lock text-purple-400 mr-2"></i> Notes</h3>
+                    <p class="text-lg text-gray-400">
+                        A simple note-taking application featuring **password-encrypted storage** for your private notes.
+                    </p>
+                </div>
+
+                <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 hover:border-blue-700 transition">
+                    <h3 class="text-2xl font-medium mb-2"><i class="fas fa-gear text-cyan-400 mr-2"></i> Settings</h3>
+                    <p class="text-lg text-gray-400">
+                        The page for managing your user account and configuring application options. This includes the ability to customize features like the **navigation bar color**.
+                    </p>
+                </div>
+
+            </div>
+        </section>
+    </main>
+</body>
+</html>
