@@ -18,6 +18,7 @@
  * 10. PIN HINT: A one-time hint now appears on first click of the pin button.
  * 11. PIN ICON: Pin icon is now solid at all times (hover effect removed).
  * 12. SCROLL PERSISTENCE: The scroll position is now saved and restored using requestAnimationFrame during re-renders caused by pin interactions, ensuring a smooth experience.
+ * 13. **NEW: PARTIAL UPDATE:** Pin menu interactions now only refresh the pin area's HTML, leaving the main tab scroll container untouched, eliminating all scrolling jumps.
  */
 
 // =========================================================================
@@ -223,13 +224,91 @@ let db;
             }
             return null;
         };
+        
+        /**
+         * Generates the HTML for the pin button and its context menu.
+         * @returns {string} The HTML string for the pin button area.
+         */
+        const getPinButtonHtml = () => {
+            const pinnedPageKey = localStorage.getItem(PINNED_PAGE_KEY);
+            const isPinButtonHidden = localStorage.getItem(PIN_BUTTON_HIDDEN_KEY) === 'true';
+            const currentPageKey = getCurrentPageKey();
+            const pages = allPages;
+            const pinnedPageData = (pinnedPageKey && pages[pinnedPageKey]) ? pages[pinnedPageKey] : null;
+
+            if (isPinButtonHidden) {
+                return '';
+            }
+            
+            const pinButtonIcon = pinnedPageData ? getIconClass(pinnedPageData.icon) : 'fa-solid fa-map-pin';
+            const pinButtonUrl = pinnedPageData ? pinnedPageData.url : '#'; // '#' signals 'pin current'
+            const pinButtonTitle = pinnedPageData ? `Go to ${pinnedPageData.name}` : 'Pin current page';
+
+            // Context Menu Options
+            const repinOption = currentPageKey 
+                ? `<button id="repin-button" class="auth-menu-link"><i class="fa-solid fa-thumbtack w-4"></i>Repin Current</button>` 
+                : ''; 
+            
+            const removeOrHideOption = pinnedPageData 
+                ? `<button id="remove-pin-button" class="auth-menu-link text-red-400 hover:text-red-300"><i class="fa-solid fa-xmark w-4"></i>Remove Pin</button>`
+                : `<button id="hide-pin-button" class="auth-menu-link text-red-400 hover:text-red-300"><i class="fa-solid fa-eye-slash w-4"></i>Hide Button</button>`;
+
+            return `
+                <div id="pin-area-wrapper" class="relative flex-shrink-0 flex items-center">
+                    <a href="${pinButtonUrl}" id="pin-button" class="w-8 h-8 rounded-full border border-gray-600 flex items-center justify-center hover:bg-gray-700 transition" title="${pinButtonTitle}">
+                        <i id="pin-button-icon" class="${pinButtonIcon}"></i>
+                    </a>
+                    <div id="pin-context-menu" class="auth-menu-container glass-menu closed" style="width: 12rem;">
+                        ${repinOption}
+                        ${removeOrHideOption}
+                    </div>
+                    <!-- NEW HINT -->
+                    <div id="pin-hint" class="pin-hint-container">
+                        Right-click for options!
+                    </div>
+                </div>
+            `;
+        }
 
         /**
-         * The rerenderNavbar function is now responsible for saving the current
-         * scroll position before initiating the re-render.
+         * Replaces the pin button area HTML and re-attaches its event listeners.
+         * Used for all pin interactions that do not require a full navbar re-render.
+         */
+        const updatePinButtonArea = () => {
+            const pinWrapper = document.getElementById('pin-area-wrapper');
+            const newPinHtml = getPinButtonHtml();
+
+            if (pinWrapper) {
+                 // Check if the pin button is now hidden, if so, remove the wrapper entirely
+                if (newPinHtml === '') {
+                    pinWrapper.remove();
+                } else {
+                    // Update the HTML content
+                    pinWrapper.outerHTML = newPinHtml;
+                }
+                // Need to re-attach listeners after DOM replacement
+                setupPinEventListeners();
+            } else {
+                // If wrapper was not found, it might be the initial render of the pin button 
+                // after it was hidden, so we need to find the parent and append.
+                const authButtonContainer = document.getElementById('auth-button-container');
+                if (authButtonContainer) {
+                    authButtonContainer.insertAdjacentHTML('afterbegin', newPinHtml);
+                    setupPinEventListeners();
+                }
+            }
+            
+            // Ensure auth menu closes if it was open when the pin area was updated
+            document.getElementById('auth-menu-container')?.classList.add('closed');
+            document.getElementById('auth-menu-container')?.classList.remove('open');
+        };
+
+        /**
+         * The rerenderNavbar function is now primarily for initial load and auth changes.
+         * Pin interactions will use updatePinButtonArea for partial updates.
          * @param {boolean} preserveScroll - If true, saves and restores the current scroll position.
          */
-        const rerenderNavbar = (preserveScroll = true) => {
+        const rerenderNavbar = (preserveScroll = false) => {
              if (preserveScroll) {
                 const tabContainer = document.querySelector('.tab-scroll-container');
                 if (tabContainer) {
@@ -379,47 +458,13 @@ let db;
                 }).join('');
 
             
-            // --- NEW: Pin Button Logic ---
-            const pinnedPageKey = localStorage.getItem(PINNED_PAGE_KEY);
-            const isPinButtonHidden = localStorage.getItem(PIN_BUTTON_HIDDEN_KEY) === 'true';
-            const currentPageKey = getCurrentPageKey();
-            const pinnedPageData = (pinnedPageKey && pages[pinnedPageKey]) ? pages[pinnedPageKey] : null;
-
-            let pinButtonHtml = '';
-            if (!isPinButtonHidden) {
-                const pinButtonIcon = pinnedPageData ? getIconClass(pinnedPageData.icon) : 'fa-solid fa-map-pin';
-                const pinButtonUrl = pinnedPageData ? pinnedPageData.url : '#'; // '#' signals 'pin current'
-                const pinButtonTitle = pinnedPageData ? `Go to ${pinnedPageData.name}` : 'Pin current page';
-
-                // Context Menu Options
-                const repinOption = currentPageKey 
-                    ? `<button id="repin-button" class="auth-menu-link"><i class="fa-solid fa-thumbtack w-4"></i>Repin Current</button>` 
-                    : ''; // Don't show "Repin" if current page isn't in JSON
-                
-                const removeOrHideOption = pinnedPageData 
-                    ? `<button id="remove-pin-button" class="auth-menu-link text-red-400 hover:text-red-300"><i class="fa-solid fa-xmark w-4"></i>Remove Pin</button>`
-                    : `<button id="hide-pin-button" class="auth-menu-link text-red-400 hover:text-red-300"><i class="fa-solid fa-eye-slash w-4"></i>Hide Button</button>`;
-
-                pinButtonHtml = `
-                    <div class="relative flex-shrink-0 flex items-center">
-                        <a href="${pinButtonUrl}" id="pin-button" class="w-8 h-8 rounded-full border border-gray-600 flex items-center justify-center hover:bg-gray-700 transition" title="${pinButtonTitle}">
-                            <i id="pin-button-icon" class="${pinButtonIcon}"></i>
-                        </a>
-                        <div id="pin-context-menu" class="auth-menu-container glass-menu closed" style="width: 12rem;">
-                            ${repinOption}
-                            ${removeOrHideOption}
-                        </div>
-                        <!-- NEW HINT -->
-                        <div id="pin-hint" class="pin-hint-container">
-                            Right-click for options!
-                        </div>
-                    </div>
-                `;
-            }
+            // --- NEW: Pin Button Logic (Calls the helper) ---
+            const pinButtonHtml = getPinButtonHtml();
 
             // --- Auth Views ---
+            // Moved auth view generation to renderNavbar for simplicity, but wrapper added an ID.
             const loggedOutView = `
-                <div class="relative flex-shrink-0 flex items-center">
+                <div id="auth-button-container" class="relative flex-shrink-0 flex items-center">
                     <button id="auth-toggle" class="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-700 transition logged-out-auth-toggle">
                         <i class="fa-solid fa-user"></i>
                     </button>
@@ -449,7 +494,7 @@ let db;
                     : '';
 
                 return `
-                    <div class="relative flex-shrink-0 flex items-center">
+                    <div id="auth-button-container" class="relative flex-shrink-0 flex items-center">
                         <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
                             ${avatar}
                         </button>
@@ -503,12 +548,12 @@ let db;
                 </header>
             `;
 
-            // --- 5. SETUP EVENT LISTENERS ---
+            // --- 5. SETUP EVENT LISTENERS (Called after full render) ---
             setupEventListeners(user);
 
             const tabContainer = document.querySelector('.tab-scroll-container');
             
-            // Check if we need to restore scroll position (from a pin interaction)
+            // Check if we need to restore scroll position (from a full re-render)
             if (currentScrollLeft > 0) {
                 const savedScroll = currentScrollLeft;
                 // Use requestAnimationFrame to ensure the DOM has painted the new content
@@ -519,9 +564,9 @@ let db;
                     }
                     currentScrollLeft = 0; // Reset state after restoration
                 });
-            } else {
-                // If scroll position wasn't saved (i.e., first load or auth change), 
-                // perform the auto-center on the active tab immediately.
+            } else if (!user) {
+                // If it's a full render due to sign-out (or first load), center the active tab.
+                // Do not center on auth changes if scroll was preserved.
                 const activeTab = document.querySelector('.nav-tab.active');
                 if (activeTab && tabContainer) {
                     const centerOffset = (tabContainer.offsetWidth - activeTab.offsetWidth) / 2;
@@ -536,9 +581,85 @@ let db;
                 }
             }
 
+
             // Initial check to hide/show them correctly after load
             updateScrollGilders();
         };
+        
+        // Split setupEventListeners into main and pin-specific, 
+        // as pin listeners need to be re-attached on partial update.
+        const setupPinEventListeners = () => {
+            const pinButton = document.getElementById('pin-button');
+            const pinContextMenu = document.getElementById('pin-context-menu');
+            const repinButton = document.getElementById('repin-button');
+            const removePinButton = document.getElementById('remove-pin-button');
+            const hidePinButton = document.getElementById('hide-pin-button');
+
+            if (pinButton && pinContextMenu) {
+                // Left-click: Navigate or Pin
+                pinButton.addEventListener('click', (e) => {
+                    if (pinButton.getAttribute('href') === '#') {
+                        e.preventDefault(); // Stop navigation
+                        
+                        // --- NEW HINT LOGIC ---
+                        const hintShown = localStorage.getItem(PIN_HINT_SHOWN_KEY) === 'true';
+                        if (!hintShown) {
+                            const hintEl = document.getElementById('pin-hint');
+                            if (hintEl) {
+                                hintEl.classList.add('show');
+                                localStorage.setItem(PIN_HINT_SHOWN_KEY, 'true');
+                                setTimeout(() => {
+                                    hintEl.classList.remove('show');
+                                }, 6000); // 6 seconds
+                            }
+                        }
+                        // --- END HINT LOGIC ---
+
+                        const currentPageKey = getCurrentPageKey();
+                        if (currentPageKey) {
+                            localStorage.setItem(PINNED_PAGE_KEY, currentPageKey);
+                            updatePinButtonArea(); // Use partial update!
+                        } else {
+                            // Optional: Add feedback that page can't be pinned
+                            console.warn("This page cannot be pinned as it's not in page-identification.json");
+                        }
+                    }
+                });
+
+                // Right-click: Open Context Menu
+                pinButton.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    pinContextMenu.classList.toggle('closed');
+                    pinContextMenu.classList.toggle('open');
+                    // Close auth menu if open
+                    document.getElementById('auth-menu-container')?.classList.add('closed');
+                    document.getElementById('auth-menu-container')?.classList.remove('open');
+                });
+            }
+
+            // Context Menu Actions - ALL NOW USE PARTIAL UPDATE
+            if (repinButton) {
+                repinButton.addEventListener('click', () => {
+                    const currentPageKey = getCurrentPageKey();
+                    if (currentPageKey) {
+                        localStorage.setItem(PINNED_PAGE_KEY, currentPageKey);
+                        updatePinButtonArea(); 
+                    }
+                });
+            }
+            if (removePinButton) {
+                removePinButton.addEventListener('click', () => {
+                    localStorage.removeItem(PINNED_PAGE_KEY);
+                    updatePinButtonArea(); 
+                });
+            }
+            if (hidePinButton) {
+                hidePinButton.addEventListener('click', () => {
+                    localStorage.setItem(PIN_BUTTON_HIDDEN_KEY, 'true');
+                    updatePinButtonArea(); // Will result in removal of the pin area wrapper
+                });
+            }
+        }
 
         const setupEventListeners = (user) => {
             const toggleButton = document.getElementById('auth-toggle');
@@ -582,83 +703,18 @@ let db;
                 });
             }
 
-            // --- NEW: Pin Button Event Listeners ---
-            const pinButton = document.getElementById('pin-button');
-            const pinContextMenu = document.getElementById('pin-context-menu');
-            const repinButton = document.getElementById('repin-button');
-            const removePinButton = document.getElementById('remove-pin-button');
-            const hidePinButton = document.getElementById('hide-pin-button');
+            // --- NEW: Pin Button Event Listeners (Called on full render) ---
+            setupPinEventListeners();
+
+            // Auth Menu Action (Show Pin Button) - This element only exists on logged-in view
             const showPinButton = document.getElementById('show-pin-button');
-
-            if (pinButton && pinContextMenu) {
-                // Left-click: Navigate or Pin
-                pinButton.addEventListener('click', (e) => {
-                    if (pinButton.getAttribute('href') === '#') {
-                        e.preventDefault(); // Stop navigation
-                        
-                        // --- NEW HINT LOGIC ---
-                        const hintShown = localStorage.getItem(PIN_HINT_SHOWN_KEY) === 'true';
-                        if (!hintShown) {
-                            const hintEl = document.getElementById('pin-hint');
-                            if (hintEl) {
-                                hintEl.classList.add('show');
-                                localStorage.setItem(PIN_HINT_SHOWN_KEY, 'true');
-                                setTimeout(() => {
-                                    hintEl.classList.remove('show');
-                                }, 6000); // 6 seconds
-                            }
-                        }
-                        // --- END HINT LOGIC ---
-
-                        const currentPageKey = getCurrentPageKey();
-                        if (currentPageKey) {
-                            localStorage.setItem(PINNED_PAGE_KEY, currentPageKey);
-                            rerenderNavbar(true); // Preserve scroll on pin
-                        } else {
-                            // Optional: Add feedback that page can't be pinned
-                            console.warn("This page cannot be pinned as it's not in page-identification.json");
-                        }
-                    }
-                });
-
-                // Right-click: Open Context Menu
-                pinButton.addEventListener('contextmenu', (e) => {
-                    e.preventDefault();
-                    pinContextMenu.classList.toggle('closed');
-                    pinContextMenu.classList.toggle('open');
-                    // Close auth menu if open
-                    menu?.classList.add('closed');
-                    menu?.classList.remove('open');
-                });
-            }
-
-            // Context Menu Actions
-            if (repinButton) {
-                repinButton.addEventListener('click', () => {
-                    const currentPageKey = getCurrentPageKey();
-                    if (currentPageKey) {
-                        localStorage.setItem(PINNED_PAGE_KEY, currentPageKey);
-                        rerenderNavbar(true); // Preserve scroll on repin
-                    }
-                });
-            }
-            if (removePinButton) {
-                removePinButton.addEventListener('click', () => {
-                    localStorage.removeItem(PINNED_PAGE_KEY);
-                    rerenderNavbar(true); // Preserve scroll on remove
-                });
-            }
-            if (hidePinButton) {
-                hidePinButton.addEventListener('click', () => {
-                    localStorage.setItem(PIN_BUTTON_HIDDEN_KEY, 'true');
-                    rerenderNavbar(true); // Preserve scroll on hide
-                });
-            }
-            // Auth Menu Action
             if (showPinButton) {
                 showPinButton.addEventListener('click', () => {
                     localStorage.setItem(PIN_BUTTON_HIDDEN_KEY, 'false'); // 'false' string
-                    rerenderNavbar(true); // Preserve scroll on show
+                    // This action requires updating the pin area AND the auth menu (which has the show button)
+                    // The easiest way is to trigger a full auth re-render, which only happens on the right side.
+                    // This is acceptable as the scroll tabs are on the left.
+                    rerenderNavbar(false); // Do not preserve scroll, this is an auth menu interaction
                 });
             }
 
@@ -669,7 +725,9 @@ let db;
                     menu.classList.add('closed');
                     menu.classList.remove('open');
                 }
-                if (pinContextMenu && pinContextMenu.classList.contains('open') && !pinContextMenu.contains(e.target) && !pinButton.contains(e.target)) {
+                const pinButton = document.getElementById('pin-button');
+                const pinContextMenu = document.getElementById('pin-context-menu');
+                if (pinContextMenu && pinContextMenu.classList.contains('open') && !pinContextMenu.contains(e.target) && pinButton && !pinButton.contains(e.target)) {
                     pinContextMenu.classList.add('closed');
                     pinContextMenu.classList.remove('open');
                 }
@@ -709,8 +767,8 @@ let db;
             currentUserData = userData;
             currentIsPrivileged = isPrivilegedUser;
             
-            // Render the navbar with the new state. Do NOT preserve scroll here 
-            // as this is an auth change and should reset/center the tabs.
+            // Render the navbar with the new state. 
+            // Full re-render on auth change, don't preserve scroll.
             renderNavbar(currentUser, currentUserData, allPages, currentIsPrivileged);
 
             if (!user) {
