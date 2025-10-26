@@ -10,7 +10,7 @@
  * 2. AI FEATURES REMOVED: All AI-related code has been removed.
  * 3. GOLD ADMIN TAB REMOVED: The 'Beta Settings' tab no longer has a special texture.
  * 4. SETTINGS LINK: Includes the 'Settings' link in the authenticated user's dropdown menu.
- * 5. **ACTIVE TAB SCROLL:** Now scrolls the active tab to the center only on the **initial page load**, preventing unwanted centering during subsequent re-renders (like sign-in/out).
+ * 5. ACTIVE TAB SCROLL: Now scrolls the active tab to the center only on the initial page load, preventing unwanted centering during subsequent re-renders (like sign-in/out).
  * 6. LOGOUT REDIRECT: Redirects logged-out users away from logged-in pages.
  * 7. PIN BUTTON: Adds a persistent 'Pin' button next to the auth icon for quick page access.
  * 8. GLIDE FADE UPDATED: Glide button fade now spans the full navbar height smoothly.
@@ -19,7 +19,11 @@
  * 11. PIN ICON: Pin icon is now solid at all times (hover effect removed).
  * 12. SCROLL PERSISTENCE: The scroll position is now saved and restored using requestAnimationFrame during re-renders caused by pin interactions, ensuring a smooth experience.
  * 13. PARTIAL UPDATE: Pin menu interactions now only refresh the pin area's HTML, leaving the main tab scroll container untouched, eliminating all scrolling jumps.
- * 14. **(NEW) AUTH PARTIAL UPDATE**: Hiding or showing the pin button now partially refreshes the *entire* auth/pin control area (excluding the scroll menu), ensuring the auth dropdown menu updates instantly.
+ * 14. AUTH PARTIAL UPDATE: Hiding or showing the pin button now partially refreshes the *entire* auth/pin control area (excluding the scroll menu), ensuring the auth dropdown menu updates instantly.
+ * 15. (FIXED) DASHBOARD MENU ALIGNMENT: Fixed an issue where the user info in the dropdown menu was incorrectly centered.
+ * 16. (UPDATED) REPIN BUTTON: Repurposed 'Repin Current' to a simple 'Repin' button that shows up whenever the current page is not the one pinned, or no page is pinned.
+ * 17. (UPDATED) LOGOUT REDIRECT PATH: Changed redirect path for logged-out users to an absolute path (`/index.html`) for consistency.
+ * 18. **(NEW)** THEMEING: Added 16 color themes, settable via localStorage. The bar now fades to the user's chosen color on load.
  */
 
 // =========================================================================
@@ -41,6 +45,305 @@ const PAGE_CONFIG_URL = '../page-identification.json';
 
 // NEW: Set the specific email that is considered an administrator.
 const PRIVILEGED_EMAIL = '4simpleproblems@gmail.com'; 
+
+// =========================================================================
+// >> NEW: COLOR THEME DEFINITIONS <<
+// =========================================================================
+// This object holds all 16 color themes. Your settings page can read these
+// keys and names to create a selector. Calling `window.setNavbarTheme('ocean')`
+// will apply and save the theme.
+const COLOR_THEMES = {
+    'default': {
+        name: 'Default Dark',
+        colors: {
+            '--nav-bg-rgb': '0, 0, 0',
+            '--nav-border': 'rgb(31, 41, 55)',
+            '--nav-text-dim': 'rgb(156, 163, 175)',
+            '--nav-text-normal': 'rgb(209, 213, 219)',
+            '--nav-text-hover': 'rgb(255, 255, 255)',
+            '--nav-accent-rgb': '79, 70, 229', // blue
+            '--nav-accent-hover-rgb': '99, 102, 241', // lighter blue
+            '--nav-menu-bg': 'rgb(0, 0, 0)',
+            '--nav-menu-border': 'rgb(55, 65, 81)',
+            '--nav-menu-hover-bg': 'rgb(55, 65, 81)',
+            '--nav-menu-glass-bg': 'rgba(10, 10, 10, 0.8)',
+            '--nav-menu-border-glass': 'rgba(55, 65, 81, 0.8)',
+            '--nav-avatar-bg': 'linear-gradient(135deg, #374151 0%, #111827 100%)'
+        }
+    },
+    'ocean': {
+        name: 'Ocean',
+        colors: {
+            '--nav-bg-rgb': '5, 44, 80',
+            '--nav-border': 'rgb(0, 77, 133)',
+            '--nav-text-dim': 'rgb(173, 216, 230)',
+            '--nav-text-normal': 'rgb(240, 248, 255)',
+            '--nav-text-hover': 'rgb(255, 255, 255)',
+            '--nav-accent-rgb': '30, 144, 255', // dodger blue
+            '--nav-accent-hover-rgb': '100, 149, 237', // cornflower blue
+            '--nav-menu-bg': 'rgb(5, 44, 80)',
+            '--nav-menu-border': 'rgb(0, 77, 133)',
+            '--nav-menu-hover-bg': 'rgb(0, 77, 133)',
+            '--nav-menu-glass-bg': 'rgba(5, 44, 80, 0.8)',
+            '--nav-menu-border-glass': 'rgba(0, 77, 133, 0.8)',
+            '--nav-avatar-bg': 'linear-gradient(135deg, #005A9C 0%, #003B66 100%)'
+        }
+    },
+    'forest': {
+        name: 'Forest',
+        colors: {
+            '--nav-bg-rgb': '18, 41, 19',
+            '--nav-border': 'rgb(34, 77, 35)',
+            '--nav-text-dim': 'rgb(173, 204, 173)',
+            '--nav-text-normal': 'rgb(230, 245, 230)',
+            '--nav-text-hover': 'rgb(255, 255, 255)',
+            '--nav-accent-rgb': '85, 170, 85', // forest green
+            '--nav-accent-hover-rgb': '102, 187, 102', // lighter green
+            '--nav-menu-bg': 'rgb(18, 41, 19)',
+            '--nav-menu-border': 'rgb(34, 77, 35)',
+            '--nav-menu-hover-bg': 'rgb(34, 77, 35)',
+            '--nav-menu-glass-bg': 'rgba(18, 41, 19, 0.8)',
+            '--nav-menu-border-glass': 'rgba(34, 77, 35, 0.8)',
+            '--nav-avatar-bg': 'linear-gradient(135deg, #346751 0%, #1E392A 100%)'
+        }
+    },
+    'sunset': {
+        name: 'Sunset',
+        colors: {
+            '--nav-bg-rgb': '51, 22, 51',
+            '--nav-border': 'rgb(92, 38, 92)',
+            '--nav-text-dim': 'rgb(248, 218, 222)',
+            '--nav-text-normal': 'rgb(255, 240, 245)',
+            '--nav-text-hover': 'rgb(255, 255, 255)',
+            '--nav-accent-rgb': '255, 105, 180', // hot pink
+            '--nav-accent-hover-rgb': '255, 140, 200', // lighter pink
+            '--nav-menu-bg': 'rgb(51, 22, 51)',
+            '--nav-menu-border': 'rgb(92, 38, 92)',
+            '--nav-menu-hover-bg': 'rgb(92, 38, 92)',
+            '--nav-menu-glass-bg': 'rgba(51, 22, 51, 0.8)',
+            '--nav-menu-border-glass': 'rgba(92, 38, 92, 0.8)',
+            '--nav-avatar-bg': 'linear-gradient(135deg, #FF6B6B 0%, #8E2D2D 100%)'
+        }
+    },
+    'matrix': {
+        name: 'Matrix',
+        colors: {
+            '--nav-bg-rgb': '0, 15, 0',
+            '--nav-border': 'rgb(0, 40, 0)',
+            '--nav-text-dim': 'rgb(0, 150, 0)',
+            '--nav-text-normal': 'rgb(0, 220, 0)',
+            '--nav-text-hover': 'rgb(120, 255, 120)',
+            '--nav-accent-rgb': '0, 255, 0', // lime
+            '--nav-accent-hover-rgb': '128, 255, 128', // light lime
+            '--nav-menu-bg': 'rgb(0, 15, 0)',
+            '--nav-menu-border': 'rgb(0, 40, 0)',
+            '--nav-menu-hover-bg': 'rgb(0, 40, 0)',
+            '--nav-menu-glass-bg': 'rgba(0, 15, 0, 0.8)',
+            '--nav-menu-border-glass': 'rgba(0, 40, 0, 0.8)',
+            '--nav-avatar-bg': 'linear-gradient(135deg, #008F11 0%, #003B00 100%)'
+        }
+    },
+    'rose_gold': {
+        name: 'Rose Gold',
+        colors: {
+            '--nav-bg-rgb': '69, 34, 34',
+            '--nav-border': 'rgb(105, 59, 59)',
+            '--nav-text-dim': 'rgb(243, 223, 223)',
+            '--nav-text-normal': 'rgb(255, 240, 240)',
+            '--nav-text-hover': 'rgb(255, 255, 255)',
+            '--nav-accent-rgb': '218, 170, 151', // rose
+            '--nav-accent-hover-rgb': '227, 190, 178', // lighter rose
+            '--nav-menu-bg': 'rgb(69, 34, 34)',
+            '--nav-menu-border': 'rgb(105, 59, 59)',
+            '--nav-menu-hover-bg': 'rgb(105, 59, 59)',
+            '--nav-menu-glass-bg': 'rgba(69, 34, 34, 0.8)',
+            '--nav-menu-border-glass': 'rgba(105, 59, 59, 0.8)',
+            '--nav-avatar-bg': 'linear-gradient(135deg, #B76E79 0%, #8A4D54 100%)'
+        }
+    },
+    'deep_space': {
+        name: 'Deep Space',
+        colors: {
+            '--nav-bg-rgb': '10, 0, 30',
+            '--nav-border': 'rgb(30, 0, 50)',
+            '--nav-text-dim': 'rgb(200, 180, 220)',
+            '--nav-text-normal': 'rgb(230, 220, 240)',
+            '--nav-text-hover': 'rgb(255, 255, 255)',
+            '--nav-accent-rgb': '140, 100, 255', // light purple
+            '--nav-accent-hover-rgb': '160, 120, 255', // lighter purple
+            '--nav-menu-bg': 'rgb(10, 0, 30)',
+            '--nav-menu-border': 'rgb(30, 0, 50)',
+            '--nav-menu-hover-bg': 'rgb(30, 0, 50)',
+            '--nav-menu-glass-bg': 'rgba(10, 0, 30, 0.8)',
+            '--nav-menu-border-glass': 'rgba(30, 0, 50, 0.8)',
+            '--nav-avatar-bg': 'linear-gradient(135deg, #483D8B 0%, #2E256B 100%)'
+        }
+    },
+    'minty': {
+        name: 'Minty',
+        colors: {
+            '--nav-bg-rgb': '240, 255, 248',
+            '--nav-border': 'rgb(204, 255, 232)',
+            '--nav-text-dim': 'rgb(64, 112, 90)',
+            '--nav-text-normal': 'rgb(27, 77, 56)',
+            '--nav-text-hover': 'rgb(0, 0, 0)',
+            '--nav-accent-rgb': '60, 179, 113', // medium sea green
+            '--nav-accent-hover-rgb': '84, 192, 137', // lighter green
+            '--nav-menu-bg': 'rgb(240, 255, 248)',
+            '--nav-menu-border': 'rgb(204, 255, 232)',
+            '--nav-menu-hover-bg': 'rgb(204, 255, 232)',
+            '--nav-menu-glass-bg': 'rgba(240, 255, 248, 0.8)',
+            '--nav-menu-border-glass': 'rgba(204, 255, 232, 0.8)',
+            '--nav-avatar-bg': 'linear-gradient(135deg, #3CB371 0%, #2E8B57 100%)'
+        }
+    },
+    'cherry': {
+        name: 'Cherry',
+        colors: {
+            '--nav-bg-rgb': '40, 0, 10',
+            '--nav-border': 'rgb(70, 0, 20)',
+            '--nav-text-dim': 'rgb(240, 190, 200)',
+            '--nav-text-normal': 'rgb(255, 220, 230)',
+            '--nav-text-hover': 'rgb(255, 255, 255)',
+            '--nav-accent-rgb': '220, 20, 60', // crimson
+            '--nav-accent-hover-rgb': '255, 50, 90', // lighter crimson
+            '--nav-menu-bg': 'rgb(40, 0, 10)',
+            '--nav-menu-border': 'rgb(70, 0, 20)',
+            '--nav-menu-hover-bg': 'rgb(70, 0, 20)',
+            '--nav-menu-glass-bg': 'rgba(40, 0, 10, 0.8)',
+            '--nav-menu-border-glass': 'rgba(70, 0, 20, 0.8)',
+            '--nav-avatar-bg': 'linear-gradient(135deg, #DC143C 0%, #8B0000 100%)'
+        }
+    },
+    'royal': {
+        name: 'Royal',
+        colors: {
+            '--nav-bg-rgb': '28, 0, 66',
+            '--nav-border': 'rgb(54, 0, 133)',
+            '--nav-text-dim': 'rgb(234, 219, 255)',
+            '--nav-text-normal': 'rgb(248, 240, 255)',
+            '--nav-text-hover': 'rgb(255, 215, 0)', // gold
+            '--nav-accent-rgb': '255, 215, 0', // gold
+            '--nav-accent-hover-rgb': '255, 223, 80', // light gold
+            '--nav-menu-bg': 'rgb(28, 0, 66)',
+            '--nav-menu-border': 'rgb(54, 0, 133)',
+            '--nav-menu-hover-bg': 'rgb(54, 0, 133)',
+            '--nav-menu-glass-bg': 'rgba(28, 0, 66, 0.8)',
+            '--nav-menu-border-glass': 'rgba(54, 0, 133, 0.8)',
+            '--nav-avatar-bg': 'linear-gradient(135deg, #4B0082 0%, #FFD700 100%)'
+        }
+    },
+    'grayscale': {
+        name: 'Grayscale',
+        colors: {
+            '--nav-bg-rgb': '20, 20, 20',
+            '--nav-border': 'rgb(60, 60, 60)',
+            '--nav-text-dim': 'rgb(160, 160, 160)',
+            '--nav-text-normal': 'rgb(220, 220, 220)',
+            '--nav-text-hover': 'rgb(255, 255, 255)',
+            '--nav-accent-rgb': '240, 240, 240', // white-ish
+            '--nav-accent-hover-rgb': '255, 255, 255', // white
+            '--nav-menu-bg': 'rgb(20, 20, 20)',
+            '--nav-menu-border': 'rgb(60, 60, 60)',
+            '--nav-menu-hover-bg': 'rgb(60, 60, 60)',
+            '--nav-menu-glass-bg': 'rgba(20, 20, 20, 0.8)',
+            '--nav-menu-border-glass': 'rgba(60, 60, 60, 0.8)',
+            '--nav-avatar-bg': 'linear-gradient(135deg, #808080 0%, #303030 100%)'
+        }
+    },
+    'vampire': {
+        name: 'Vampire',
+        colors: {
+            '--nav-bg-rgb': '10, 0, 0',
+            '--nav-border': 'rgb(50, 0, 0)',
+            '--nav-text-dim': 'rgb(180, 150, 150)',
+            '--nav-text-normal': 'rgb(230, 200, 200)',
+            '--nav-text-hover': 'rgb(255, 255, 255)',
+            '--nav-accent-rgb': '255, 0, 0', // red
+            '--nav-accent-hover-rgb': '255, 80, 80', // light red
+            '--nav-menu-bg': 'rgb(10, 0, 0)',
+            '--nav-menu-border': 'rgb(50, 0, 0)',
+            '--nav-menu-hover-bg': 'rgb(50, 0, 0)',
+            '--nav-menu-glass-bg': 'rgba(10, 0, 0, 0.8)',
+            '--nav-menu-border-glass': 'rgba(50, 0, 0, 0.8)',
+            '--nav-avatar-bg': 'linear-gradient(135deg, #FF0000 0%, #8B0000 100%)'
+        }
+    },
+    'cyberpunk': {
+        name: 'Cyberpunk',
+        colors: {
+            '--nav-bg-rgb': '20, 0, 40',
+            '--nav-border': 'rgb(40, 0, 60)',
+            '--nav-text-dim': 'rgb(220, 180, 255)',
+            '--nav-text-normal': 'rgb(255, 220, 255)',
+            '--nav-text-hover': 'rgb(255, 255, 0)', // yellow
+            '--nav-accent-rgb': '255, 0, 255', // magenta
+            '--nav-accent-hover-rgb': '255, 80, 255', // light magenta
+            '--nav-menu-bg': 'rgb(20, 0, 40)',
+            '--nav-menu-border': 'rgb(40, 0, 60)',
+            '--nav-menu-hover-bg': 'rgb(40, 0, 60)',
+            '--nav-menu-glass-bg': 'rgba(20, 0, 40, 0.8)',
+            '--nav-menu-border-glass': 'rgba(40, 0, 60, 0.8)',
+            '--nav-avatar-bg': 'linear-gradient(135deg, #FFFF00 0%, #FF00FF 100%)'
+        }
+    },
+    'coffee': {
+        name: 'Coffee',
+        colors: {
+            '--nav-bg-rgb': '38, 26, 17',
+            '--nav-border': 'rgb(66, 46, 30)',
+            '--nav-text-dim': 'rgb(210, 180, 160)',
+            '--nav-text-normal': 'rgb(245, 222, 179)',
+            '--nav-text-hover': 'rgb(255, 255, 255)',
+            '--nav-accent-rgb': '205, 133, 63', // peru
+            '--nav-accent-hover-rgb': '210, 150, 80', // lighter peru
+            '--nav-menu-bg': 'rgb(38, 26, 17)',
+            '--nav-menu-border': 'rgb(66, 46, 30)',
+            '--nav-menu-hover-bg': 'rgb(66, 46, 30)',
+            '--nav-menu-glass-bg': 'rgba(38, 26, 17, 0.8)',
+            '--nav-menu-border-glass': 'rgba(66, 46, 30, 0.8)',
+            '--nav-avatar-bg': 'linear-gradient(135deg, #8B4513 0%, #D2691E 100%)'
+        }
+    },
+    'sky': {
+        name: 'Sky',
+        colors: {
+            '--nav-bg-rgb': '240, 248, 255',
+            '--nav-border': 'rgb(176, 224, 230)',
+            '--nav-text-dim': 'rgb(100, 149, 237)',
+            '--nav-text-normal': 'rgb(70, 130, 180)',
+            '--nav-text-hover': 'rgb(0, 0, 0)',
+            '--nav-accent-rgb': '30, 144, 255', // dodger blue
+            '--nav-accent-hover-rgb': '0, 191, 255', // deep sky blue
+            '--nav-menu-bg': 'rgb(240, 248, 255)',
+            '--nav-menu-border': 'rgb(176, 224, 230)',
+            '--nav-menu-hover-bg': 'rgb(176, 224, 230)',
+            '--nav-menu-glass-bg': 'rgba(240, 248, 255, 0.8)',
+            '--nav-menu-border-glass': 'rgba(176, 224, 230, 0.8)',
+            '--nav-avatar-bg': 'linear-gradient(135deg, #87CEEB 0%, #1E90FF 100%)'
+        }
+    },
+    'lava': {
+        name: 'Lava',
+        colors: {
+            '--nav-bg-rgb': '20, 0, 0',
+            '--nav-border': 'rgb(70, 0, 0)',
+            '--nav-text-dim': 'rgb(255, 165, 0)',
+            '--nav-text-normal': 'rgb(255, 100, 0)',
+            '--nav-text-hover': 'rgb(255, 255, 255)',
+            '--nav-accent-rgb': '255, 69, 0', // orange-red
+            '--nav-accent-hover-rgb': '255, 100, 50', // lighter orange-red
+            '--nav-menu-bg': 'rgb(20, 0, 0)',
+            '--nav-menu-border': 'rgb(70, 0, 0)',
+            '--nav-menu-hover-bg': 'rgb(70, 0, 0)',
+            '--nav-menu-glass-bg': 'rgba(20, 0, 0, 0.8)',
+            '--nav-menu-border-glass': 'rgba(70, 0, 0, 0.8)',
+            '--nav-avatar-bg': 'linear-gradient(135deg, #FF4500 0%, #FF6347 100%)'
+        }
+    },
+};
+
+// =========================================================================
 
 // Variables to hold Firebase objects
 let auth;
@@ -217,6 +520,7 @@ let db;
         const PINNED_PAGE_KEY = 'navbar_pinnedPage';
         const PIN_BUTTON_HIDDEN_KEY = 'navbar_pinButtonHidden';
         const PIN_HINT_SHOWN_KEY = 'navbar_pinHintShown';
+        const NAVBAR_THEME_KEY = 'navbar_theme_id'; // NEW: Theme key
 
         // --- Helper Functions ---
 
@@ -250,8 +554,12 @@ let db;
             const pinButtonTitle = pinnedPageData ? `Go to ${pinnedPageData.name}` : 'Pin current page';
 
             // Context Menu Options
-            const repinOption = currentPageKey 
-                ? `<button id="repin-button" class="auth-menu-link"><i class="fa-solid fa-thumbtack w-4"></i>Repin Current</button>` 
+
+            // NEW: Only show 'Repin' if a pin exists AND it's not the current page, OR if no pin exists but the current page is pin-able.
+            const shouldShowRepin = (pinnedPageKey && pinnedPageKey !== currentPageKey) || (!pinnedPageKey && currentPageKey);
+            
+            const repinOption = shouldShowRepin
+                ? `<button id="repin-button" class="auth-menu-link"><i class="fa-solid fa-thumbtack w-4"></i>Repin</button>` 
                 : ''; 
             
             const removeOrHideOption = pinnedPageData 
@@ -295,7 +603,7 @@ let db;
             } else {
                 // If wrapper was not found, it might be the initial render of the pin button 
                 // after it was hidden, so we need to find the parent and append.
-                const authButtonContainer = document.getElementById('auth-button-container');
+                const authButtonContainer = document.getElementById('auth-controls-wrapper');
                 if (authButtonContainer) {
                     authButtonContainer.insertAdjacentHTML('afterbegin', newPinHtml);
                     setupPinEventListeners();
@@ -325,7 +633,7 @@ let db;
                     <button id="auth-toggle" class="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-700 transition logged-out-auth-toggle">
                         <i class="fa-solid fa-user"></i>
                     </button>
-                    <div id="auth-menu-container" class="auth-menu-container closed">
+                    <div id="auth-menu-container" class="auth-menu-container closed" style="width: 12rem;">
                         <a href="/authentication.html" class="auth-menu-link">
                             <i class="fa-solid fa-lock w-4"></i>
                             Authenticate
@@ -348,14 +656,15 @@ let db;
                 const showPinOption = isPinHidden 
                     ? `<button id="show-pin-button" class="auth-menu-link"><i class="fa-solid fa-map-pin w-4"></i>Show Pin Button</button>` 
                     : '';
-
+                
+                // FIX: Added w-full and min-w-0 to the header div to prevent centering bug
                 return `
                     <div id="auth-button-container" class="relative flex-shrink-0 flex items-center">
                         <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
                             ${avatar}
                         </button>
                         <div id="auth-menu-container" class="auth-menu-container closed">
-                            <div class="px-3 py-2 border-b border-gray-700 mb-2">
+                            <div class="px-3 py-2 border-b border-gray-700 mb-2 w-full min-w-0">
                                 <p class="text-sm font-semibold text-white truncate">${username}</p>
                                 <p class="text-xs text-gray-400 truncate">${email}</p>
                             </div>
@@ -459,40 +768,90 @@ let db;
         };
 
 
-        // --- 3. INJECT CSS STYLES ---
+        // --- 3. INJECT CSS STYLES (NOW WITH CSS VARIABLES) ---
         const injectStyles = () => {
             const style = document.createElement('style');
             style.textContent = `
+                /* NEW: :root definition for default theme and variables */
+                :root {
+                    --nav-bg-rgb: ${COLOR_THEMES.default.colors['--nav-bg-rgb']};
+                    --nav-border: ${COLOR_THEMES.default.colors['--nav-border']};
+                    --nav-text-dim: ${COLOR_THEMES.default.colors['--nav-text-dim']};
+                    --nav-text-normal: ${COLOR_THEMES.default.colors['--nav-text-normal']};
+                    --nav-text-hover: ${COLOR_THEMES.default.colors['--nav-text-hover']};
+                    --nav-accent-rgb: ${COLOR_THEMES.default.colors['--nav-accent-rgb']};
+                    --nav-accent-hover-rgb: ${COLOR_THEMES.default.colors['--nav-accent-hover-rgb']};
+                    --nav-menu-bg: ${COLOR_THEMES.default.colors['--nav-menu-bg']};
+                    --nav-menu-border: ${COLOR_THEMES.default.colors['--nav-menu-border']};
+                    --nav-menu-hover-bg: ${COLOR_THEMES.default.colors['--nav-menu-hover-bg']};
+                    --nav-menu-glass-bg: ${COLOR_THEMES.default.colors['--nav-menu-glass-bg']};
+                    --nav-menu-border-glass: ${COLOR_THEMES.default.colors['--nav-menu-border-glass']};
+                    --nav-avatar-bg: ${COLOR_THEMES.default.colors['--nav-avatar-bg']};
+                }
+
                 /* Base Styles */
                 body { padding-top: 4rem; }
-                .auth-navbar { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: #000000; border-bottom: 1px solid rgb(31 41 55); height: 4rem; }
+                .auth-navbar { 
+                    position: fixed; top: 0; left: 0; right: 0; z-index: 1000; 
+                    background: rgb(var(--nav-bg-rgb)); 
+                    border-bottom: 1px solid var(--nav-border); 
+                    height: 4rem; 
+                    /* NEW: Added transitions for color fade */
+                    transition: background-color 0.7s ease, border-color 0.7s ease;
+                }
                 .auth-navbar nav { padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
-                .initial-avatar { background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; }
+                .initial-avatar { 
+                    background: var(--nav-avatar-bg); 
+                    font-family: sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white;
+                    transition: background 0.7s ease;
+                }
                 
                 /* Auth Dropdown Menu Styles */
                 .auth-menu-container { 
                     position: absolute; right: 0; top: 50px; width: 16rem; 
-                    background: #000000;
-                    border: 1px solid rgb(55 65 81); border-radius: 0.75rem; padding: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
-                    transition: transform 0.2s ease-out, opacity 0.2s ease-out; transform-origin: top right; z-index: 1010;
+                    background: var(--nav-menu-bg);
+                    border: 1px solid var(--nav-menu-border); 
+                    border-radius: 0.75rem; padding: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
+                    /* NEW: Added color transitions */
+                    transition: transform 0.2s ease-out, opacity 0.2s ease-out, background-color 0.7s ease, border-color 0.7s ease; 
+                    transform-origin: top right; z-index: 1010;
                 }
                 .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
                 .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
                 .auth-menu-link, .auth-menu-button { 
                     display: flex; align-items: center; gap: 0.75rem; width: 100%; text-align: left; 
-                    padding: 0.5rem 0.75rem; font-size: 0.875rem; color: #d1d5db; border-radius: 0.375rem; 
-                    transition: background-color 0.2s, color 0.2s; border: none; cursor: pointer;
+                    padding: 0.5rem 0.75rem; font-size: 0.875rem; 
+                    color: var(--nav-text-normal); 
+                    border-radius: 0.375rem; 
+                    /* NEW: Added color transitions */
+                    transition: background-color 0.2s, color 0.2s; 
+                    border: none; cursor: pointer;
                 }
-                .auth-menu-link:hover, .auth-menu-button:hover { background-color: rgb(55 65 81); color: white; }
-                .logged-out-auth-toggle { background: #010101; border: 1px solid #374151; }
-                .logged-out-auth-toggle i { color: #DADADA; }
+                .auth-menu-link:hover, .auth-menu-button:hover { 
+                    background-color: var(--nav-menu-hover-bg); 
+                    color: var(--nav-text-hover); 
+                }
+                /* Special state for user info in dropdown */
+                .auth-menu-container .text-white { color: var(--nav-text-hover); }
+                .auth-menu-container .text-gray-400 { color: var(--nav-text-dim); }
+                .auth-menu-container .border-gray-700 { border-color: var(--nav-menu-border); }
+
+                .logged-out-auth-toggle { 
+                    background: var(--nav-menu-hover-bg); 
+                    border: 1px solid var(--nav-menu-border); 
+                    transition: background-color 0.7s ease, border-color 0.7s ease;
+                }
+                .logged-out-auth-toggle i { 
+                    color: var(--nav-text-normal); 
+                    transition: color 0.7s ease;
+                }
 
                 /* NEW: Glass Menu Style for Pin Context Menu */
                 .glass-menu { 
-                    background: rgba(10, 10, 10, 0.8); /* Near black */
+                    background: var(--nav-menu-glass-bg); 
                     backdrop-filter: blur(10px); 
                     -webkit-backdrop-filter: blur(10px); 
-                    border: 1px solid rgba(55, 65, 81, 0.8);
+                    border: 1px solid var(--nav-menu-border-glass);
                 }
                 /* Helper for icons in menus */
                 .auth-menu-link i.w-4, .auth-menu-button i.w-4 { width: 1rem; text-align: center; } 
@@ -503,36 +862,68 @@ let db;
                 .tab-scroll-container::-webkit-scrollbar { display: none; }
                 .scroll-glide-button {
                     position: absolute; top: 0; height: 100%; width: 4rem; display: flex; align-items: center; justify-content: center; 
-                    color: white; font-size: 1.2rem; cursor: pointer; 
+                    color: var(--nav-text-hover); font-size: 1.2rem; cursor: pointer; 
                     opacity: 1; 
-                    /* MODIFIED: Transition is now only for opacity */
-                    transition: opacity 0.3s; 
+                    transition: opacity 0.3s, color 0.7s ease; 
                     z-index: 10; pointer-events: auto;
                 }
-                #glide-left { left: 0; background: linear-gradient(to right, #000000, transparent); justify-content: flex-start; padding-left: 0.5rem; }
-                #glide-right { right: 0; background: linear-gradient(to left, #000000, transparent); justify-content: flex-end; padding-right: 0.5rem; }
+                /* NEW: Gradients use the --nav-bg-rgb variable */
+                #glide-left { left: 0; background: linear-gradient(to right, rgb(var(--nav-bg-rgb)), transparent); justify-content: flex-start; padding-left: 0.5rem; }
+                #glide-right { right: 0; background: linear-gradient(to left, rgb(var(--nav-bg-rgb)), transparent); justify-content: flex-end; padding-right: 0.5rem; }
                 .scroll-glide-button.hidden { opacity: 0 !important; pointer-events: none !important; }
-                .nav-tab { flex-shrink: 0; padding: 0.5rem 1rem; color: #9ca3af; font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; transition: all 0.2s; text-decoration: none; line-height: 1.5; display: flex; align-items: center; margin-right: 0.5rem; border: 1px solid transparent; }
-                .nav-tab:not(.active):hover { color: white; border-color: #d1d5db; background-color: rgba(79, 70, 229, 0.05); }
-                .nav-tab.active { color: #4f46e5; border-color: #4f46e5; background-color: rgba(79, 70, 229, 0.1); }
-                .nav-tab.active:hover { color: #6366f1; border-color: #6366f1; background-color: rgba(79, 70, 229, 0.15); }
                 
+                .nav-tab { 
+                    flex-shrink: 0; padding: 0.5rem 1rem; 
+                    color: var(--nav-text-dim); 
+                    font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; 
+                    /* NEW: Updated transition for smooth color fade */
+                    transition: all 0.2s, background-color 0.7s ease, color 0.7s ease, border-color 0.7s ease; 
+                    text-decoration: none; line-height: 1.5; display: flex; align-items: center; margin-right: 0.5rem; border: 1px solid transparent; 
+                }
+                .nav-tab:not(.active):hover { 
+                    color: var(--nav-text-hover); 
+                    border-color: var(--nav-text-normal); 
+                    /* NEW: Using accent RGB variable */
+                    background-color: rgba(var(--nav-accent-rgb), 0.05); 
+                }
+                .nav-tab.active { 
+                    color: rgb(var(--nav-accent-rgb)); 
+                    border-color: rgb(var(--nav-accent-rgb)); 
+                    background-color: rgba(var(--nav-accent-rgb), 0.1); 
+                }
+                .nav-tab.active:hover { 
+                    color: rgb(var(--nav-accent-hover-rgb)); 
+                    border-color: rgb(var(--nav-accent-hover-rgb)); 
+                    background-color: rgba(var(--nav-accent-rgb), 0.15); 
+                }
+                
+                /* Pin Button Styles */
+                #pin-button {
+                    border-color: var(--nav-menu-border);
+                    color: var(--nav-text-dim);
+                    transition: background-color 0.2s, border-color 0.7s ease, color 0.7s ease;
+                }
+                #pin-button:hover {
+                    background-color: var(--nav-menu-hover-bg);
+                }
+
                 /* NEW: Pin Hint Styles */
                 .pin-hint-container {
                     position: absolute;
                     bottom: calc(100% + 10px); /* 10px above the button */
                     left: 50%;
                     transform: translateX(-50%) scale(0.8);
-                    background: #010101;
-                    border: 1px solid #374151;
-                    color: white;
+                    background: var(--nav-menu-hover-bg);
+                    border: 1px solid var(--nav-menu-border);
+                    color: var(--nav-text-hover);
                     padding: 0.5rem 1rem;
                     border-radius: 0.75rem;
                     box-shadow: 0 4px 10px rgba(0,0,0,0.5);
                     opacity: 0;
                     pointer-events: none;
                     z-index: 1020;
-                    transition: opacity 0.3s ease, transform 0.3s ease;
+                    /* NEW: Added color transitions */
+                    transition: opacity 0.3s ease, transform 0.3s ease, background-color 0.7s ease, border-color 0.7s ease, color 0.7s ease;
                     white-space: nowrap;
                     font-size: 0.875rem;
                 }
@@ -726,6 +1117,9 @@ let db;
                         localStorage.setItem(PINNED_PAGE_KEY, currentPageKey);
                         updatePinButtonArea(); // This only affects the pin button, so partial update is fine
                     }
+                    // Regardless of success, close the menu
+                    pinContextMenu.classList.add('closed');
+                    pinContextMenu.classList.remove('open');
                 });
             }
             if (removePinButton) {
@@ -830,8 +1224,8 @@ let db;
 
             if (!user) {
                 // User is signed out.
-                // KICK USER TO INDEX: If the user is logged out, redirect them to ../../index.html
-                const targetUrl = '../../index.html';
+                // KICK USER TO INDEX: If the user is logged out, redirect them to /index.html
+                const targetUrl = '/index.html'; // <--- UPDATED TO ABSOLUTE PATH
                 const currentPathname = window.location.pathname;
                 
                 // Determine if the current page is one of the designated entry points 
@@ -852,8 +1246,60 @@ let db;
             navbarDiv.id = 'navbar-container';
             document.body.prepend(navbarDiv);
         }
+        
         // Inject styles before anything else is rendered for best stability
+        // This sets the :root defaults immediately.
         injectStyles();
+
+        // --- NEW: THEME APPLY LOGIC ---
+        
+        /**
+         * Applies a color theme by setting CSS variables on the :root element.
+         * Can optionally save the theme ID to localStorage.
+         * @param {string} themeId - The key of the theme (e.g., 'ocean')
+         * @param {boolean} [save=false] - If true, saves the themeId to localStorage.
+         */
+        const applyTheme = (themeId, save = false) => {
+            let theme = COLOR_THEMES[themeId];
+            
+            if (!theme) {
+                console.warn(`Navbar theme "${themeId}" not found. Reverting to default.`);
+                theme = COLOR_THEMES['default'];
+                themeId = 'default';
+            }
+            
+            const root = document.documentElement;
+            
+            // Apply all colors from the theme
+            for (const [key, value] of Object.entries(theme.colors)) {
+                root.style.setProperty(key, value);
+            }
+            
+            // Special case for gradients that need the RGB value
+            root.style.setProperty('--nav-bg-rgb', theme.colors['--nav-bg-rgb']);
+            root.style.setProperty('--nav-accent-rgb', theme.colors['--nav-accent-rgb']);
+            root.style.setProperty('--nav-accent-hover-rgb', theme.colors['--nav-accent-hover-rgb']);
+
+            if (save) {
+                localStorage.setItem(NAVBAR_THEME_KEY, themeId);
+            }
+        };
+
+        // Expose the theme setter so other files (e.g., settings.js) can call it.
+        // Your settings page UI should call `window.setNavbarTheme('theme_id_here')`
+        window.setNavbarTheme = (themeId) => {
+            applyTheme(themeId, true); // Save when called externally
+        };
+
+        // On initial page load, check localStorage for a saved theme.
+        // This runs *after* injectStyles, so the colors will fade from
+        // the :root defaults to the new saved theme.
+        const savedThemeId = localStorage.getItem(NAVBAR_THEME_KEY);
+        if (savedThemeId) {
+            applyTheme(savedThemeId, false); // Apply without re-saving
+        }
+        
+        // -----------------------------
     };
 
     // --- START THE PROCESS ---
