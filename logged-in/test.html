@@ -132,20 +132,33 @@
             }
         }
 
-        /* Color Palette Styles */
-        .color-option {
-            width: 2rem;
-            height: 2rem;
+        /* --- NEW THEME SELECTOR STYLES --- */
+        .theme-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 1rem;
+        }
+        .theme-card {
+            padding: 1rem 0.5rem;
             border-radius: 0.5rem;
+            border: 2px solid #374151; /* gray-700 */
+            background-color: #1f2937; /* gray-800 */
+            color: #d1d5db; /* gray-300 */
+            font-weight: 500;
+            text-align: center;
             cursor: pointer;
-            border: 2px solid transparent;
-            transition: transform 0.1s, border-color 0.2s;
+            transition: all 0.2s ease;
+            font-size: 0.875rem;
         }
-        .color-option:hover {
-            transform: scale(1.1);
+        .theme-card:hover {
+            border-color: #6b7280; /* gray-500 */
+            background-color: #374151; /* gray-700 */
+            color: #ffffff;
         }
-        .color-option.selected {
-            border-color: #3b82f6; /* Blue-500 */
+        .theme-card.selected {
+            border-color: #3b82f6; /* blue-500 */
+            background-color: #3b82f6; /* blue-500 */
+            color: #ffffff;
             box-shadow: 0 0 0 2px #3b82f640;
         }
     </style>
@@ -181,27 +194,31 @@
 
         // --- CONSTANTS AND DOM ELEMENTS ---
         const BASE_TITLE = "Settings";
-        // Key for Local Storage - MUST MATCH THEME_STORAGE_KEY in test-navigation.js
-        const NAVBAR_SETTINGS_KEY = 'user-navbar-theme'; 
-        // Default settings object - MUST REFLECT DEFAULT_THEME in test-navigation.js
-        const DEFAULT_NAVBAR_SETTINGS = {
-            navbarBg: '#000000', 
-            tabActiveColor: '#4f46e5', 
-            borderColor: 'rgb(31 41 55)', 
+        
+        // Key for Local Storage - MUST MATCH NAVBAR_THEME_KEY in test-navigation.js
+        const NAVBAR_THEME_KEY = 'navbar_theme_id'; 
+        const DEFAULT_THEME_ID = 'default';
+
+        // Data for the new theme selector. This mirrors the `COLOR_THEMES` object
+        // in test-navigation.js so we can build the UI.
+        const THEME_DATA = {
+            'default': { name: 'Default Dark' },
+            'ocean': { name: 'Ocean' },
+            'forest': { name: 'Forest' },
+            'sunset': { name: 'Sunset' },
+            'matrix': { name: 'Matrix' },
+            'rose_gold': { name: 'Rose Gold' },
+            'deep_space': { name: 'Deep Space' },
+            'minty': { name: 'Minty' },
+            'cherry': { name: 'Cherry' },
+            'royal': { name: 'Royal' },
+            'grayscale': { name: 'Grayscale' },
+            'vampire': { name: 'Vampire' },
+            'cyberpunk': { name: 'Cyberpunk' },
+            'coffee': { name: 'Coffee' },
+            'sky': { name: 'Sky' },
+            'lava': { name: 'Lava' },
         };
-        const DEFAULT_NAVBAR_COLOR = DEFAULT_NAVBAR_SETTINGS.navbarBg;
-
-        // Note: The new test-navigation.js does NOT expose the applyNavbarBackground function.
-        // It relies on the presence of the 'user-navbar-theme' in localStorage and recalculates 
-        // the theme on page load via initializeTheme(). However, the original code relied on a 
-        // global 'applyNavbarBackground' for live updates. For compatibility with the *original* // intention of live update, the function `applyNavbarBackground` is still checked for,
-        // but now it would need to be made global in test-navigation.js, or we must fall back
-        // to a simpler color setting that test-navigation.js expects.
-
-        // For the purpose of this update, we will assume a function *similar* to the old
-        // logic for live-update exists or that the original `applyNavbarBackground` was 
-        // correctly exposed globally as was stated in the old file's comments.
-        // We will adjust the logic to work with the *new* theme object structure.
         
         const settingsSections = [
             { id: 'general', title: 'General', icon: 'fa-cog', content: 'Configure basic application behavior like language, theme, and startup settings.', color: 'text-yellow-400' },
@@ -210,26 +227,6 @@
             { id: 'notifications', title: 'Notifications', icon: 'fa-bell', content: 'Set your preferences for alerts and communication methods. Never miss an important update.', color: 'text-green-400' },
             { id: 'data', title: 'Data Management', icon: 'fa-database', content: 'View, export, or request deletion of your stored data.', color: 'text-blue-400' },
             { id: 'about', title: 'About 4SP', icon: 'fa-info-circle', content: 'Application version, legal notices, and credits.', color: 'text-gray-400' }
-        ];
-
-        // Nice-looking 16-color palette
-        const colorPalette = [
-            '#000000', // Black (Default)
-            '#1f2937', // Blue-Gray (Dark Mode Accent)
-            '#f7f7f7', // Light Gray
-            '#FFFFFF', // White
-            '#3b82f6', // Bright Blue
-            '#10b981', // Emerald Green
-            '#f59e0b', // Amber Yellow
-            '#ef4444', // Red
-            '#8b5cf6', // Violet
-            '#ec4899', // Pink
-            '#06b6d4', // Cyan
-            '#65a30d', // Lime Green
-            '#7c3aed', // Purple
-            '#f97316', // Orange
-            '#475569', // Slate Gray
-            '#16a34a'  // Dark Green
         ];
         
         // --- DOM Elements ---
@@ -241,93 +238,51 @@
         const panelContent = document.getElementById('panel-content');
         const pageHtmlTitle = document.getElementById('page-title');
 
-        let currentNavbarColor = DEFAULT_NAVBAR_COLOR;
-
-        // --- LOCAL STORAGE FUNCTIONS (ADJUSTED FOR NEW THEME STRUCTURE) ---
+        // --- NEW THEME FUNCTIONS ---
 
         /**
-         * Loads the full navbar settings object from Local Storage, extracting the color value.
-         * @returns {string} The loaded or default color value.
+         * Loads the current theme ID string from Local Storage.
+         * @returns {string} The loaded or default theme ID.
          */
-        function loadLocalNavbarColor() {
+        function loadCurrentThemeId() {
             try {
-                const localSettingsString = localStorage.getItem(NAVBAR_SETTINGS_KEY);
-                const localSettings = localSettingsString ? JSON.parse(localSettingsString) : DEFAULT_NAVBAR_SETTINGS;
-                // The new key for the background color is 'navbarBg'
-                if (localSettings.navbarBg && /^#[0-9A-F]{6}$/i.test(localSettings.navbarBg)) {
-                    return localSettings.navbarBg;
+                const localThemeId = localStorage.getItem(NAVBAR_THEME_KEY);
+                // Check if the loaded ID is a valid theme key
+                if (localThemeId && THEME_DATA[localThemeId]) {
+                    return localThemeId;
                 }
-                return DEFAULT_NAVBAR_COLOR;
+                return DEFAULT_THEME_ID;
             } catch (e) {
-                console.error("Could not read or parse settings from Local Storage:", e);
-                return DEFAULT_NAVBAR_COLOR;
+                console.error("Could not read theme from Local Storage:", e);
+                return DEFAULT_THEME_ID;
             }
         }
         
         /**
-         * Saves a new navbar color setting to Local Storage as the required JSON structure.
-         * This will only change the 'navbarBg' property of the theme object.
-         * For live update, it tries to call the global `applyNavbarBackground` (if exposed).
-         * Since `test-navigation.js` is self-contained and *does not* expose this function,
-         * a page refresh will be required for the change to take full effect in a real scenario.
-         * @param {string} color - The new color to save (e.g., '#RRGGBB').
+         * Saves a new theme ID.
+         * This function calls the global `setNavbarTheme` from test-navigation.js,
+         * which handles both the live update (with fade) and saving to localStorage.
+         * @param {string} themeId - The new theme ID to save (e.g., 'ocean').
          */
-        function saveLocalNavbarColor(color) {
-            // Get the current settings (or default) to preserve other keys like tabActiveColor
-            const localSettingsString = localStorage.getItem(NAVBAR_SETTINGS_KEY);
-            const baseSettings = localSettingsString ? JSON.parse(localSettingsString) : DEFAULT_NAVBAR_SETTINGS;
-            
-            const newSettings = { 
-                ...baseSettings, 
-                navbarBg: color 
-            };
-            
-            try {
-                // 1. Save the new settings JSON string
-                localStorage.setItem(NAVBAR_SETTINGS_KEY, JSON.stringify(newSettings));
-                currentNavbarColor = color;
-
-                // 2. Force the navigation script to re-apply settings (assuming the function is globally available)
-                // In the new test-navigation.js, this call will likely fail unless the function is manually exposed.
-                // We keep the old check for a smoother transition/assumption of the original intent.
-                if (typeof applyNavbarBackground === 'function') {
-                    applyNavbarBackground(newSettings);
+        function saveCurrentThemeId(themeId) {
+            if (typeof window.setNavbarTheme === 'function') {
+                if (THEME_DATA[themeId]) {
+                    window.setNavbarTheme(themeId);
                 } else {
-                    // Because the new navigation script doesn't expose a live update function, we provide a warning.
-                    console.warn("Could not find global 'applyNavbarBackground' function for live update. Page refresh required for theme change to fully apply.");
+                    console.error(`Invalid theme ID: ${themeId}. Cannot set theme.`);
                 }
-
-                alert(`Navbar color updated to ${color} and saved locally. (Requires refresh without 'applyNavbarBackground'.)`);
-            } catch (error) {
-                console.error("Error saving navbar color to Local Storage:", error);
-                alert("Failed to save color setting locally. See console.");
+            } else {
+                console.error("Global function 'setNavbarTheme' not found. Ensure test-navigation.js is loaded correctly.");
+                alert("Error: Cannot change theme. The navigation script is missing.");
             }
         }
         
         /**
-         * Removes the entire navbar setting from Local Storage and forces a live update to default.
+         * Restores the default theme by calling the save function with 'default'.
          */
-        function deleteLocalNavbarColor() {
-            try {
-                localStorage.removeItem(NAVBAR_SETTINGS_KEY);
-                currentNavbarColor = DEFAULT_NAVBAR_COLOR;
-                
-                // Force the navigation script to re-apply default settings
-                if (typeof applyNavbarBackground === 'function') {
-                    applyNavbarBackground(DEFAULT_NAVBAR_SETTINGS);
-                } else {
-                    // Because the new navigation script doesn't expose a live update function, we provide a warning.
-                    console.warn("Could not find global 'applyNavbarBackground' function for live update. Page refresh required for theme change to fully apply.");
-                }
-
-                alert("Navbar color restored to default. (Requires refresh without 'applyNavbarBackground'.)");
-            } catch (error) {
-                console.error("Error deleting navbar color from Local Storage:", error);
-                alert("Failed to restore default setting. See console.");
-            }
+        function restoreDefaultTheme() {
+            saveCurrentThemeId(DEFAULT_THEME_ID);
         }
-
-        // The updateNavbarColor function is removed as it was a no-op in the original logic.
 
         // --- AUTHENTICATION & REDIRECTION LOGIC ---
 
@@ -348,9 +303,6 @@
 
             // We use the listener primarily to confirm the page is ready after navigation.js runs
             firebase.auth().onAuthStateChanged((currentUser) => {
-                // Initial load of the color setting
-                currentNavbarColor = loadLocalNavbarColor();
-
                 console.log("Settings Page: Authentication state checked.");
                 
                 // Initialization successful, now load the content
@@ -410,103 +362,52 @@
                 </div>
             `;
             
-            // --- PERSONALIZATION SPECIFIC CONTENT ---
+            // --- PERSONALIZATION SPECIFIC CONTENT (NEW) ---
             if (sectionId === 'personalization') {
-                // Ensure currentNavbarColor is the latest from local storage for UI state
-                currentNavbarColor = loadLocalNavbarColor();
-
-                document.getElementById('section-details').innerHTML = `
-                    <h3 class="text-xl font-semibold mb-4 text-white">Universal Navbar Color</h3>
-                    <p class="text-sm text-gray-500 mb-4">
-                        Choose a color for your main navigation bar. This setting is saved locally to your browser.
+                
+                const sectionDetails = document.getElementById('section-details');
+                
+                // Set up the new UI for theme selection
+                sectionDetails.innerHTML = `
+                    <h3 class="text-xl font-semibold mb-4 text-white">Universal Navbar Theme</h3>
+                    <p class="text-sm text-gray-500 mb-6">
+                        Choose a theme for your main navigation bar. This setting is saved locally to your browser and will apply instantly.
                     </p>
                     
-                    <label class="block text-sm font-medium text-gray-400 mb-2">Color Palette</label>
-                    <div id="color-palette" class="flex flex-wrap gap-3 mb-6">
+                    <div id="theme-selector" class="theme-selector">
                         </div>
-                    
-                    <label for="custom-color-picker" class="block text-sm font-medium text-gray-400 mb-2">Custom Color Picker</label>
-                    <div class="flex items-center space-x-3 mb-6">
-                        <input type="color" id="custom-color-picker" class="w-12 h-12 rounded-lg cursor-pointer" value="${currentNavbarColor}">
-                        <input type="text" id="custom-color-input" class="bg-gray-700 text-white border border-gray-600 rounded-lg p-2 font-mono text-sm w-32" value="${currentNavbarColor}" maxlength="7" pattern="#[0-9a-fA-F]{6}">
-                    </div>
-                    
-                    <div class="flex space-x-4 mt-6">
-                        <button id="save-color-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg shadow-lg transition-all duration-200 flex items-center">
-                            <i class="fas fa-save mr-2"></i> Apply and Save Locally
-                        </button>
-                        <button id="restore-button" class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg shadow-lg transition-all duration-200 flex items-center">
-                            <i class="fas fa-undo-alt mr-2"></i> Restore to Defaults
-                        </button>
-                    </div>
                 `;
                 
-                // Initialize the color palette
-                const paletteContainer = document.getElementById('color-palette');
-                colorPalette.forEach(color => {
-                    const colorDiv = document.createElement('div');
-                    // Normalize case for comparison
-                    const isSelected = currentNavbarColor.toLowerCase() === color.toLowerCase();
+                // Initialize the theme selector
+                const themeContainer = document.getElementById('theme-selector');
+                const currentThemeId = loadCurrentThemeId();
 
-                    colorDiv.className = `color-option ${isSelected ? 'selected' : ''}`;
-                    colorDiv.style.backgroundColor = color;
-                    colorDiv.setAttribute('data-color', color);
-                    colorDiv.addEventListener('click', () => {
-                        // Apply color change to UI/preview only
-                        applyColorChange(color);
+                // Create a card for each theme
+                for (const [themeId, themeInfo] of Object.entries(THEME_DATA)) {
+                    const themeCard = document.createElement('div');
+                    themeCard.className = 'theme-card';
+                    themeCard.setAttribute('data-theme-id', themeId);
+                    themeCard.textContent = themeInfo.name;
+                    
+                    if (themeId === currentThemeId) {
+                        themeCard.classList.add('selected');
+                    }
+
+                    // Add click event listener
+                    themeCard.addEventListener('click', () => {
+                        // 1. Get the ID of the clicked theme
+                        const newThemeId = themeCard.getAttribute('data-theme-id');
+                        
+                        // 2. Apply and save the new theme
+                        saveCurrentThemeId(newThemeId);
+                        
+                        // 3. Update the UI selection state
+                        document.querySelectorAll('.theme-card').forEach(card => card.classList.remove('selected'));
+                        themeCard.classList.add('selected');
                     });
-                    paletteContainer.appendChild(colorDiv);
-                });
-                
-                // Custom color picker logic
-                const customPicker = document.getElementById('custom-color-picker');
-                const customInput = document.getElementById('custom-color-input');
-                
-                customPicker.addEventListener('input', (e) => {
-                    applyColorChange(e.target.value);
-                });
-                
-                customInput.addEventListener('input', (e) => {
-                    const color = e.target.value.trim();
-                    if (/^#[0-9A-F]{6}$/i.test(color)) {
-                        applyColorChange(color);
-                    }
-                });
-
-                // Helper function to update UI/preview on color change
-                const applyColorChange = (color) => {
-                    // 1. Update input fields
-                    customPicker.value = color;
-                    customInput.value = color;
                     
-                    // 2. Update palette selection
-                    document.querySelectorAll('.color-option').forEach(item => item.classList.remove('selected'));
-                    const selectedPaletteItem = document.querySelector(`.color-option[data-color="${color.toLowerCase()}"]`);
-                    if (selectedPaletteItem) {
-                        selectedPaletteItem.classList.add('selected');
-                    }
-                    
-                    // 3. Live preview update: **Temporary/Preview Update**
-                    // We must update the CSS variable directly as the new navigation.js doesn't expose a live update function.
-                    document.documentElement.style.setProperty('--navbar-bg', color);
-                    
-                    // For a complete live update (including logo/text color), we would need to 
-                    // replicate the new navigation script's contrast logic, but for a minimal 
-                    // change, we only update the background variable.
-                };
-
-                // Setup Save and Restore Buttons
-                document.getElementById('save-color-button').addEventListener('click', () => {
-                    // Get the currently displayed color from the picker
-                    const newColor = document.getElementById('custom-color-picker').value;
-                    saveLocalNavbarColor(newColor);
-                });
-                
-                document.getElementById('restore-button').addEventListener('click', () => {
-                    deleteLocalNavbarColor();
-                    // Reset the UI components
-                    applyColorChange(DEFAULT_NAVBAR_COLOR);
-                });
+                    themeContainer.appendChild(themeCard);
+                }
             }
             // --- END PERSONALIZATION SPECIFIC CONTENT ---
             
