@@ -10,7 +10,7 @@
  * 2. AI FEATURES REMOVED: All AI-related code has been removed.
  * 3. GOLD ADMIN TAB REMOVED: The 'Beta Settings' tab no longer has a special texture.
  * 4. SETTINGS LINK: Includes the 'Settings' link in the authenticated user's dropdown menu.
- * 5. **ACTIVE TAB SCROLL:** Now scrolls the active tab to the center only on the **initial page load**, preventing unwanted centering during subsequent re-renders (like sign-in/out).
+ * 5. ACTIVE TAB SCROLL: Now scrolls the active tab to the center only on the initial page load, preventing unwanted centering during subsequent re-renders (like sign-in/out).
  * 6. LOGOUT REDIRECT: Redirects logged-out users away from logged-in pages.
  * 7. PIN BUTTON: Adds a persistent 'Pin' button next to the auth icon for quick page access.
  * 8. GLIDE FADE UPDATED: Glide button fade now spans the full navbar height smoothly.
@@ -19,7 +19,9 @@
  * 11. PIN ICON: Pin icon is now solid at all times (hover effect removed).
  * 12. SCROLL PERSISTENCE: The scroll position is now saved and restored using requestAnimationFrame during re-renders caused by pin interactions, ensuring a smooth experience.
  * 13. PARTIAL UPDATE: Pin menu interactions now only refresh the pin area's HTML, leaving the main tab scroll container untouched, eliminating all scrolling jumps.
- * 14. **(NEW) AUTH PARTIAL UPDATE**: Hiding or showing the pin button now partially refreshes the *entire* auth/pin control area (excluding the scroll menu), ensuring the auth dropdown menu updates instantly.
+ * 14. AUTH PARTIAL UPDATE: Hiding or showing the pin button now partially refreshes the *entire* auth/pin control area (excluding the scroll menu), ensuring the auth dropdown menu updates instantly.
+ * 15. **(FIXED)** DASHBOARD MENU ALIGNMENT: Fixed an issue where the user info in the dropdown menu was incorrectly centered on some pages (e.g., dashboard.html).
+ * 16. **(UPDATED)** REPIN BUTTON: Repurposed 'Repin Current' to a simple 'Repin' button that shows up whenever the current page is not the one pinned, or no page is pinned.
  */
 
 // =========================================================================
@@ -250,8 +252,12 @@ let db;
             const pinButtonTitle = pinnedPageData ? `Go to ${pinnedPageData.name}` : 'Pin current page';
 
             // Context Menu Options
-            const repinOption = currentPageKey 
-                ? `<button id="repin-button" class="auth-menu-link"><i class="fa-solid fa-thumbtack w-4"></i>Repin Current</button>` 
+
+            // NEW: Only show 'Repin' if a pin exists AND it's not the current page, OR if no pin exists but the current page is pin-able.
+            const shouldShowRepin = (pinnedPageKey && pinnedPageKey !== currentPageKey) || (!pinnedPageKey && currentPageKey);
+            
+            const repinOption = shouldShowRepin
+                ? `<button id="repin-button" class="auth-menu-link"><i class="fa-solid fa-thumbtack w-4"></i>Repin</button>` 
                 : ''; 
             
             const removeOrHideOption = pinnedPageData 
@@ -295,7 +301,7 @@ let db;
             } else {
                 // If wrapper was not found, it might be the initial render of the pin button 
                 // after it was hidden, so we need to find the parent and append.
-                const authButtonContainer = document.getElementById('auth-button-container');
+                const authButtonContainer = document.getElementById('auth-controls-wrapper');
                 if (authButtonContainer) {
                     authButtonContainer.insertAdjacentHTML('afterbegin', newPinHtml);
                     setupPinEventListeners();
@@ -325,7 +331,7 @@ let db;
                     <button id="auth-toggle" class="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-700 transition logged-out-auth-toggle">
                         <i class="fa-solid fa-user"></i>
                     </button>
-                    <div id="auth-menu-container" class="auth-menu-container closed">
+                    <div id="auth-menu-container" class="auth-menu-container closed" style="width: 12rem;">
                         <a href="/authentication.html" class="auth-menu-link">
                             <i class="fa-solid fa-lock w-4"></i>
                             Authenticate
@@ -348,14 +354,15 @@ let db;
                 const showPinOption = isPinHidden 
                     ? `<button id="show-pin-button" class="auth-menu-link"><i class="fa-solid fa-map-pin w-4"></i>Show Pin Button</button>` 
                     : '';
-
+                
+                // FIX: Added w-full and min-w-0 to the header div to prevent centering bug
                 return `
                     <div id="auth-button-container" class="relative flex-shrink-0 flex items-center">
                         <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
                             ${avatar}
                         </button>
                         <div id="auth-menu-container" class="auth-menu-container closed">
-                            <div class="px-3 py-2 border-b border-gray-700 mb-2">
+                            <div class="px-3 py-2 border-b border-gray-700 mb-2 w-full min-w-0">
                                 <p class="text-sm font-semibold text-white truncate">${username}</p>
                                 <p class="text-xs text-gray-400 truncate">${email}</p>
                             </div>
@@ -726,6 +733,9 @@ let db;
                         localStorage.setItem(PINNED_PAGE_KEY, currentPageKey);
                         updatePinButtonArea(); // This only affects the pin button, so partial update is fine
                     }
+                    // Regardless of success, close the menu
+                    pinContextMenu.classList.add('closed');
+                    pinContextMenu.classList.remove('open');
                 });
             }
             if (removePinButton) {
