@@ -52,14 +52,20 @@
                 <div>
                     <h3 class="text-2xl font-medium mb-3 mt-2"><i class="fas fa-arrow-right-to-bracket text-blue-400 mr-2"></i> Account Authentication</h3>
                     <p class="text-lg text-gray-400">
-                        To access the full suite of tools, you must first log into or create your 4SP account. Use the 'Get Started Instantly' button on the homepage or navigate directly to the **Authentication** page.
+                        Access the full suite of tools by logging into or creating your 4SP account. The **Authentication** page supports both standard email/password registration and social sign-in methods like **Google**, **GitHub**, and **Microsoft**.
                     </p>
                 </div>
                 <div>
                     <h3 class="text-2xl font-medium mb-3 mt-2"><i class="fas fa-envelope-circle-check text-blue-400 mr-2"></i> Email Verification</h3>
                     <p class="text-lg text-gray-400">
-                        After registration, you will be prompted to verify your email address to complete your registration. You can check the verification status from the **Verify Email** page.
+                        **Email/password accounts** must verify their email address to complete registration. Accounts created using **social sign-in methods** (Google, GitHub, Microsoft) are typically **pre-verified** and do not require this step.
                     </p>
+                </div>
+            </div>
+
+             <div class="relative mt-8 p-4 rounded-xl border border-gray-700 bg-gray-900/50">
+                <div class="text-center text-gray-500 py-10">
+                    [IMAGE PLACEHOLDER: Authentication and Verification Flow Diagram]
                 </div>
             </div>
         </section>
@@ -73,18 +79,18 @@
                 <div class="lg:pr-4 order-2 lg:order-1">
                     <h3 class="text-2xl font-medium mb-3 mt-2"><i class="fas fa-thumbtack text-green-400 mr-2"></i> The Pin Button</h3>
                     <p class="text-lg text-gray-400 mb-4">
-                        The Pin Button is a **persistent Quality-of-Life feature** located next to the user authentication icon in the navigation bar, offering quick access to your most-used page.
+                        The Pin Button is a **persistent Quality-of-Life feature** located in the navigation bar, offering quick, one-click access to your most-used page.
                     </p>
                     <ul class="text-gray-400 space-y-2 list-disc list-inside ml-4">
-                        <li>**Pinning & Repinning:** Click the Pin Button on any page to pin that page. The Repin option appears in the right-click menu if the current page is different from the one currently pinned, or if no page is pinned.</li>
+                        <li>**Pinning & Repinning:** Click the Pin Button on any page to pin that page. The **Repin option** is available via right-click if the current page is different from the pinned page, or if no page is currently pinned.</li>
                         <li>**Options Menu:** You can **right-click** on the Pin Button to access its context menu.</li>
                         <li>**Visibility:** The button can be **hidden** via the right-click menu. If hidden, a **Show Pin Button** option appears in your main user dropdown menu.</li>
+                        <li>**Pin Hint:** A **one-time hint** appears on the first click of the Pin Button to explain its primary function.</li>
                     </ul>
                 </div>
                 <div class="relative p-8 rounded-3xl border border-green-800/50 overflow-hidden shadow-2xl bg-gray-900 h-64 flex items-center justify-center order-1 lg:order-2 mb-6 lg:mb-0">
-                    <div class="text-center">
-                        <i class="fa-solid fa-map-pin text-7xl text-green-400 mb-4"></i>
-                        <p class="text-sm text-gray-400">Right-click for options!</p>
+                    <div class="text-center text-gray-500">
+                        [IMAGE PLACEHOLDER: Pin Button Context Menu]
                     </div>
                 </div>
             </div>
@@ -97,39 +103,64 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 
-                <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 hover:border-blue-700 transition">
+                <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 hover:border-red-500 transition">
                     <h3 class="text-2xl font-medium mb-2"><i class="fas fa-gauge-high text-red-400 mr-2"></i> Dashboard</h3>
                     <p class="text-lg text-gray-400">
-                        The authenticated landing page for users, providing a clean interface that displays the current date and time.
+                        The primary landing page for authenticated users. It provides a clean interface that prominently displays the **current date and time**.
                     </p>
+                    <div class="text-center text-gray-500 h-24 mt-4 flex items-center justify-center bg-gray-800 rounded-lg">
+                        [IMAGE PLACEHOLDER: Dashboard UI]
+                    </div>
                 </div>
 
                 <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 hover:border-blue-700 transition">
                     <h3 class="text-2xl font-medium mb-2"><i class="fas fa-comment-dots text-blue-400 mr-2"></i> Messenger V2</h3>
                     <p class="text-lg text-gray-400">
-                        A secure, **peer-to-peer messenger** that supports **group chat** functionality, **image sharing**, and utilizes a **hybrid message storage** system.
+                        A **secure, peer-to-peer messenger** that supports **group chat** functionality, **image sharing**, and utilizes a **hybrid message storage** system. Features include a friend code input and an **image lightbox** for full-screen viewing of shared media.
                     </p>
+                     <div class="text-center text-gray-500 h-24 mt-4 flex items-center justify-center bg-gray-800 rounded-lg">
+                        [IMAGE PLACEHOLDER: Messenger V2 Chat Interface]
+                    </div>
                 </div>
 
-                <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 hover:border-blue-700 transition">
+                <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 hover:border-yellow-700 transition">
                     <h3 class="text-2xl font-medium mb-2"><i class="fas fa-book-open text-yellow-400 mr-2"></i> Interactive Dictionary</h3>
                     <p class="text-lg text-gray-400">
-                        A utility for students, offering a simple interface for searching and displaying word definitions powered by `dictionaryapi.dev`.
+                        A utility for students, offering a simple interface for **searching and displaying word definitions**. It utilizes the **dictionaryapi.dev** service for comprehensive data.
                     </p>
+                     <div class="text-center text-gray-500 h-24 mt-4 flex items-center justify-center bg-gray-800 rounded-lg">
+                        [IMAGE PLACEHOLDER: Dictionary Search Result]
+                    </div>
                 </div>
 
-                <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 hover:border-blue-700 transition">
+                <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 hover:border-purple-700 transition">
                     <h3 class="text-2xl font-medium mb-2"><i class="fas fa-lock text-purple-400 mr-2"></i> Notes</h3>
                     <p class="text-lg text-gray-400">
-                        A simple note-taking application featuring **password-encrypted storage** for your private notes.
+                        A simple note-taking application designed for privacy, featuring **password-encrypted storage** for your notes. It uses the **Crypto-JS** library for secure client-side encryption.
                     </p>
+                    <div class="text-center text-gray-500 h-24 mt-4 flex items-center justify-center bg-gray-800 rounded-lg">
+                        [IMAGE PLACEHOLDER: Notes Lock/Editor]
+                    </div>
                 </div>
 
-                <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 hover:border-blue-700 transition">
+                <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 hover:border-cyan-700 transition">
                     <h3 class="text-2xl font-medium mb-2"><i class="fas fa-gear text-cyan-400 mr-2"></i> Settings</h3>
                     <p class="text-lg text-gray-400">
-                        The page for managing your user account and configuring application options. This includes the ability to customize features like the **navigation bar color**.
+                        The central hub for managing your account and configuring application options. A key customization feature is the ability to select, **save, and restore your desired navigation bar color**.
                     </p>
+                    <div class="text-center text-gray-500 h-24 mt-4 flex items-center justify-center bg-gray-800 rounded-lg">
+                        [IMAGE PLACEHOLDER: Settings Color Picker UI]
+                    </div>
+                </div>
+
+                <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 hover:border-green-700 transition">
+                    <h3 class="text-2xl font-medium mb-2"><i class="fas fa-wand-magic-sparkles text-green-400 mr-2"></i> Humanity Agent (AI)</h3>
+                    <p class="text-lg text-gray-400">
+                        A context-aware AI persona that can be activated via the **Ctrl + \** keyboard shortcut. It features an **intelligent system instruction** that changes based on your query and includes a **Web Search** toggle.
+                    </p>
+                    <div class="text-center text-gray-500 h-24 mt-4 flex items-center justify-center bg-gray-800 rounded-lg">
+                        [IMAGE PLACEHOLDER: Agent Interface/Nudge]
+                    </div>
                 </div>
 
             </div>
