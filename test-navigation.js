@@ -19,6 +19,7 @@
  * 11. PIN ICON: Pin icon is now solid at all times (hover effect removed).
  * 12. SCROLL PERSISTENCE: The scroll position is now saved and restored using requestAnimationFrame during re-renders caused by pin interactions, ensuring a smooth experience.
  * 13. PARTIAL UPDATE: Pin menu interactions now only refresh the pin area's HTML, leaving the main tab scroll container untouched, eliminating all scrolling jumps.
+ * 14. **(NEW) AUTH PARTIAL UPDATE**: Hiding or showing the pin button now partially refreshes the *entire* auth/pin control area (excluding the scroll menu), ensuring the auth dropdown menu updates instantly.
  */
 
 // =========================================================================
@@ -207,13 +208,15 @@ let db;
         let currentIsPrivileged = false;
         // State for current scroll position
         let currentScrollLeft = 0; 
-        // NEW: Flag to ensure active tab centering only happens once per page load
+        // Flag to ensure active tab centering only happens once per page load
         let hasScrolledToActiveTab = false; 
+        // NEW: Flag to ensure global click listener is only added once
+        let globalClickListenerAdded = false;
 
         // --- LocalStorage Keys ---
         const PINNED_PAGE_KEY = 'navbar_pinnedPage';
         const PIN_BUTTON_HIDDEN_KEY = 'navbar_pinButtonHidden';
-        const PIN_HINT_SHOWN_KEY = 'navbar_pinHintShown'; // NEW
+        const PIN_HINT_SHOWN_KEY = 'navbar_pinHintShown';
 
         // --- Helper Functions ---
 
@@ -264,7 +267,6 @@ let db;
                         ${repinOption}
                         ${removeOrHideOption}
                     </div>
-                    <!-- NEW HINT -->
                     <div id="pin-hint" class="pin-hint-container">
                         Right-click for options!
                     </div>
@@ -306,8 +308,142 @@ let db;
         };
 
         /**
+         * NEW: Generates the HTML for the entire right-side auth/pin controls area.
+         * This uses the global state variables (currentUser, currentUserData).
+         * @returns {string} The HTML string for the auth controls.
+         */
+        const getAuthControlsHtml = () => {
+            // Use the global state variables
+            const user = currentUser;
+            const userData = currentUserData;
+            
+            const pinButtonHtml = getPinButtonHtml();
+
+            // --- Auth Views ---
+            const loggedOutView = `
+                <div id="auth-button-container" class="relative flex-shrink-0 flex items-center">
+                    <button id="auth-toggle" class="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-700 transition logged-out-auth-toggle">
+                        <i class="fa-solid fa-user"></i>
+                    </button>
+                    <div id="auth-menu-container" class="auth-menu-container closed">
+                        <a href="/authentication.html" class="auth-menu-link">
+                            <i class="fa-solid fa-lock w-4"></i>
+                            Authenticate
+                        </a>
+                    </div>
+                </div>
+            `;
+
+            const loggedInView = (user, userData) => {
+                const photoURL = user.photoURL || userData?.photoURL;
+                const username = userData?.username || user.displayName || 'User';
+                const email = user.email || 'No email';
+                const initial = username.charAt(0).toUpperCase();
+
+                const avatar = photoURL ?
+                    `<img src="${photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">` :
+                    `<div class="initial-avatar w-8 h-8 rounded-full text-sm font-semibold">${initial}</div>`;
+                
+                const isPinHidden = localStorage.getItem(PIN_BUTTON_HIDDEN_KEY) === 'true';
+                const showPinOption = isPinHidden 
+                    ? `<button id="show-pin-button" class="auth-menu-link"><i class="fa-solid fa-map-pin w-4"></i>Show Pin Button</button>` 
+                    : '';
+
+                return `
+                    <div id="auth-button-container" class="relative flex-shrink-0 flex items-center">
+                        <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
+                            ${avatar}
+                        </button>
+                        <div id="auth-menu-container" class="auth-menu-container closed">
+                            <div class="px-3 py-2 border-b border-gray-700 mb-2">
+                                <p class="text-sm font-semibold text-white truncate">${username}</p>
+                                <p class="text-xs text-gray-400 truncate">${email}</p>
+                            </div>
+                            <a href="/logged-in/dashboard.html" class="auth-menu-link">
+                                <i class="fa-solid fa-house-user w-4"></i>
+                                Dashboard
+                            </a>
+                            <a href="/logged-in/settings.html" class="auth-menu-link">
+                                <i class="fa-solid fa-gear w-4"></i>
+                                Settings
+                            </a>
+                            ${showPinOption}
+                            <button id="logout-button" class="auth-menu-button text-red-400 hover:bg-red-900/50 hover:text-red-300">
+                                <i class="fa-solid fa-right-from-bracket w-4"></i>
+                                Log Out
+                            </button>
+                        </div>
+                    </div>
+                `;
+            };
+
+            return `
+                ${pinButtonHtml}
+                ${user ? loggedInView(user, userData) : loggedOutView}
+            `;
+        }
+
+        /**
+         * NEW: Encapsulates all listeners for the auth button, dropdown, and actions.
+         * This is separated so it can be re-called during a partial update.
+         * @param {object} user - The current Firebase user object (or null)
+         */
+        const setupAuthToggleListeners = (user) => {
+            const toggleButton = document.getElementById('auth-toggle');
+            const menu = document.getElementById('auth-menu-container');
+
+            // Auth Toggle
+            if (toggleButton && menu) {
+                toggleButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    menu.classList.toggle('closed');
+                    menu.classList.toggle('open');
+                    // Close pin menu if open
+                    document.getElementById('pin-context-menu')?.classList.add('closed');
+                    document.getElementById('pin-context-menu')?.classList.remove('open');
+                });
+            }
+
+            // Auth Menu Action (Show Pin Button)
+            const showPinButton = document.getElementById('show-pin-button');
+            if (showPinButton) {
+                showPinButton.addEventListener('click', () => {
+                    localStorage.setItem(PIN_BUTTON_HIDDEN_KEY, 'false'); // 'false' string
+                    // UPDATED: Call partial update instead of full re-render
+                    updateAuthControlsArea();
+                });
+            }
+
+            if (user) {
+                const logoutButton = document.getElementById('logout-button');
+                if (logoutButton) {
+                    logoutButton.addEventListener('click', () => {
+                        auth.signOut().catch(err => console.error("Logout failed:", err));
+                    });
+                }
+            }
+        };
+
+        /**
+         * NEW: Replaces the auth/pin area HTML and re-attaches its event listeners.
+         * Used for all pin/auth-menu interactions that do not require a full navbar re-render.
+         */
+        const updateAuthControlsArea = () => {
+            const authWrapper = document.getElementById('auth-controls-wrapper');
+            if (!authWrapper) return;
+
+            // Get new HTML using the *current* global state
+            authWrapper.innerHTML = getAuthControlsHtml();
+
+            // Re-attach listeners for the new DOM elements
+            setupPinEventListeners();
+            setupAuthToggleListeners(currentUser); // Pass in the global user state
+        }
+
+
+        /**
          * The rerenderNavbar function is now primarily for initial load and auth changes.
-         * Pin interactions will use updatePinButtonArea for partial updates.
+         * Pin interactions will use updatePinButtonArea or updateAuthControlsArea.
          * @param {boolean} preserveScroll - If true, saves and restores the current scroll position.
          */
         const rerenderNavbar = (preserveScroll = false) => {
@@ -460,68 +596,10 @@ let db;
                 }).join('');
 
             
-            // --- NEW: Pin Button Logic (Calls the helper) ---
-            const pinButtonHtml = getPinButtonHtml();
-
-            // --- Auth Views ---
-            // Moved auth view generation to renderNavbar for simplicity, but wrapper added an ID.
-            const loggedOutView = `
-                <div id="auth-button-container" class="relative flex-shrink-0 flex items-center">
-                    <button id="auth-toggle" class="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-700 transition logged-out-auth-toggle">
-                        <i class="fa-solid fa-user"></i>
-                    </button>
-                    <div id="auth-menu-container" class="auth-menu-container closed">
-                        <a href="/authentication.html" class="auth-menu-link">
-                            <i class="fa-solid fa-lock w-4"></i>
-                            Authenticate
-                        </a>
-                    </div>
-                </div>
-            `;
-
-            const loggedInView = (user, userData) => {
-                const photoURL = user.photoURL || userData?.photoURL;
-                const username = userData?.username || user.displayName || 'User';
-                const email = user.email || 'No email';
-                const initial = username.charAt(0).toUpperCase();
-
-                const avatar = photoURL ?
-                    `<img src="${photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">` :
-                    `<div class="initial-avatar w-8 h-8 rounded-full text-sm font-semibold">${initial}</div>`;
-                
-                // NEW: Check if pin button is hidden to show the 'Show' option
-                const isPinHidden = localStorage.getItem(PIN_BUTTON_HIDDEN_KEY) === 'true';
-                const showPinOption = isPinHidden 
-                    ? `<button id="show-pin-button" class="auth-menu-link"><i class="fa-solid fa-map-pin w-4"></i>Show Pin Button</button>` 
-                    : '';
-
-                return `
-                    <div id="auth-button-container" class="relative flex-shrink-0 flex items-center">
-                        <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
-                            ${avatar}
-                        </button>
-                        <div id="auth-menu-container" class="auth-menu-container closed">
-                            <div class="px-3 py-2 border-b border-gray-700 mb-2">
-                                <p class="text-sm font-semibold text-white truncate">${username}</p>
-                                <p class="text-xs text-gray-400 truncate">${email}</p>
-                            </div>
-                            <a href="/logged-in/dashboard.html" class="auth-menu-link">
-                                <i class="fa-solid fa-house-user w-4"></i>
-                                Dashboard
-                            </a>
-                            <a href="/logged-in/settings.html" class="auth-menu-link">
-                                <i class="fa-solid fa-gear w-4"></i>
-                                Settings
-                            </a>
-                            ${showPinOption}
-                            <button id="logout-button" class="auth-menu-button text-red-400 hover:bg-red-900/50 hover:text-red-300">
-                                <i class="fa-solid fa-right-from-bracket w-4"></i>
-                                Log Out
-                            </button>
-                        </div>
-                    </div>
-                `;
-            };
+            // --- NEW: Auth controls HTML is generated by a helper ---
+            // This now uses the global state, as renderNavbar is only called
+            // after the global state is updated.
+            const authControlsHtml = getAuthControlsHtml();
 
             // --- Assemble Final Navbar HTML ---
             container.innerHTML = `
@@ -541,10 +619,8 @@ let db;
                             <button id="glide-right" class="scroll-glide-button"><i class="fa-solid fa-chevron-right"></i></button>
                         </div>
 
-                        <!-- NEW: Wrapper for Pin and Auth buttons -->
-                        <div class="flex items-center gap-3 flex-shrink-0">
-                            ${pinButtonHtml}
-                            ${user ? loggedInView(user, userData) : loggedOutView}
+                        <div id="auth-controls-wrapper" class="flex items-center gap-3 flex-shrink-0">
+                            ${authControlsHtml}
                         </div>
                     </nav>
                 </header>
@@ -642,34 +718,33 @@ let db;
                 });
             }
 
-            // Context Menu Actions - ALL NOW USE PARTIAL UPDATE
+            // Context Menu Actions
             if (repinButton) {
                 repinButton.addEventListener('click', () => {
                     const currentPageKey = getCurrentPageKey();
                     if (currentPageKey) {
                         localStorage.setItem(PINNED_PAGE_KEY, currentPageKey);
-                        updatePinButtonArea(); 
+                        updatePinButtonArea(); // This only affects the pin button, so partial update is fine
                     }
                 });
             }
             if (removePinButton) {
                 removePinButton.addEventListener('click', () => {
                     localStorage.removeItem(PINNED_PAGE_KEY);
-                    updatePinButtonArea(); 
+                    updatePinButtonArea(); // This only affects the pin button, so partial update is fine
                 });
             }
             if (hidePinButton) {
                 hidePinButton.addEventListener('click', () => {
                     localStorage.setItem(PIN_BUTTON_HIDDEN_KEY, 'true');
-                    updatePinButtonArea(); // Will result in removal of the pin area wrapper
+                    // **UPDATED**: Call the full auth controls update,
+                    // as this action needs to update the auth menu too.
+                    updateAuthControlsArea();
                 });
             }
         }
 
         const setupEventListeners = (user) => {
-            const toggleButton = document.getElementById('auth-toggle');
-            const menu = document.getElementById('auth-menu-container');
-
             // Scroll Glide Button setup
             const tabContainer = document.querySelector('.tab-scroll-container');
             const leftButton = document.getElementById('glide-left');
@@ -696,55 +771,32 @@ let db;
                 }
             }
 
-            // Auth Toggle
-            if (toggleButton && menu) {
-                toggleButton.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    menu.classList.toggle('closed');
-                    menu.classList.toggle('open');
-                    // Close pin menu if open
-                    document.getElementById('pin-context-menu')?.classList.add('closed');
-                    document.getElementById('pin-context-menu')?.classList.remove('open');
-                });
-            }
+            // --- NEW: Auth Toggle Listeners (Called on full render) ---
+            // This function now contains the auth toggle, logout, and "show pin" listeners
+            setupAuthToggleListeners(user);
 
             // --- NEW: Pin Button Event Listeners (Called on full render) ---
             setupPinEventListeners();
 
-            // Auth Menu Action (Show Pin Button) - This element only exists on logged-in view
-            const showPinButton = document.getElementById('show-pin-button');
-            if (showPinButton) {
-                showPinButton.addEventListener('click', () => {
-                    localStorage.setItem(PIN_BUTTON_HIDDEN_KEY, 'false'); // 'false' string
-                    // This action requires updating the pin area AND the auth menu (which has the show button)
-                    // The easiest way is to trigger a full auth re-render, which only happens on the right side.
-                    // This is acceptable as the scroll tabs are on the left.
-                    rerenderNavbar(false); // Do not preserve scroll, this is an auth menu interaction
-                });
-            }
-
-
             // Global click listener to close *both* menus
-            document.addEventListener('click', (e) => {
-                if (menu && menu.classList.contains('open') && !menu.contains(e.target) && e.target !== toggleButton) {
-                    menu.classList.add('closed');
-                    menu.classList.remove('open');
-                }
-                const pinButton = document.getElementById('pin-button');
-                const pinContextMenu = document.getElementById('pin-context-menu');
-                if (pinContextMenu && pinContextMenu.classList.contains('open') && !pinContextMenu.contains(e.target) && pinButton && !pinButton.contains(e.target)) {
-                    pinContextMenu.classList.add('closed');
-                    pinContextMenu.classList.remove('open');
-                }
-            });
-
-            if (user) {
-                const logoutButton = document.getElementById('logout-button');
-                if (logoutButton) {
-                    logoutButton.addEventListener('click', () => {
-                        auth.signOut().catch(err => console.error("Logout failed:", err));
-                    });
-                }
+            // NEW: Only add this listener ONCE
+            if (!globalClickListenerAdded) {
+                document.addEventListener('click', (e) => {
+                    const menu = document.getElementById('auth-menu-container');
+                    const toggleButton = document.getElementById('auth-toggle');
+                    if (menu && menu.classList.contains('open') && !menu.contains(e.target) && e.target !== toggleButton) {
+                        menu.classList.add('closed');
+                        menu.classList.remove('open');
+                    }
+                    
+                    const pinButton = document.getElementById('pin-button');
+                    const pinContextMenu = document.getElementById('pin-context-menu');
+                    if (pinContextMenu && pinContextMenu.classList.contains('open') && !pinContextMenu.contains(e.target) && pinButton && !pinButton.contains(e.target)) {
+                        pinContextMenu.classList.add('closed');
+                        pinContextMenu.classList.remove('open');
+                    }
+                });
+                globalClickListenerAdded = true;
             }
         };
 
