@@ -439,7 +439,7 @@
 
         const brandTitle = document.createElement('div');
         brandTitle.id = 'ai-brand-title';
-        const brandText = "4SP - AI AGENT";
+        const brandText = "4SP - HUMANITY AGENT";
         brandText.split('').forEach(char => {
             const span = document.createElement('span');
             span.textContent = char;
@@ -448,11 +448,11 @@
 
         const persistentTitle = document.createElement('div');
         persistentTitle.id = 'ai-persistent-title';
-        persistentTitle.textContent = "AI Agent"; // Fixed title
+        persistentTitle.textContent = "Humanity Agent"; // Fixed title
 
         const welcomeMessage = document.createElement('div');
         welcomeMessage.id = 'ai-welcome-message';
-        const welcomeHeader = chatHistory.length > 0 ? "Welcome Back" : "Welcome to AI Agent";
+        const welcomeHeader = chatHistory.length > 0 ? "Welcome Back" : "Welcome to Humanity";
         // Updated welcome message to reflect location sharing.
         welcomeMessage.innerHTML = `<h2>${welcomeHeader}</h2><p>This is a beta feature. To improve your experience, your general location (if permitted) will be shared with your first message. You may be subject to message limits.</p><p class="shortcut-tip">(Press Ctrl + \\ to close)</p>`;
 
@@ -660,7 +660,7 @@
         return 'CASUAL';
     }
 
-    const FSP_HISTORY = `You are the exclusive AI Agent for the website 4SP (4simpleproblems), the platform you are hosted on. You must be knowledgeable about its history and purpose. When asked about 4SP, use the following information as your source of truth:
+    const FSP_HISTORY = `You are the exclusive AI Agent, called the Humanity AI Agent for the website 4SP (4simpleproblems), the platform you are hosted on. You must be knowledgeable about its history and purpose. When asked about 4SP, use the following information as your source of truth:
 
 ### The History of 4SP (4simpleproblems)
 
@@ -686,7 +686,7 @@
 
 **Version 5 — Project Zirconium (Slated for: August 23, 2026)**
 * **Concept:** The most ambitious version yet, evolving 4SP into a fully integrated digital ecosystem.
-* **Features:** A universal navigation bar, a dark minimalist theme, a Combined Games Collection, a built-in Dictionary, a student-focused social network ("Dailyphoto"), Messenger V2 with group chats, and the debut of you, the **4SP AI Agent**, accessible via secret shortcuts.
+* **Features:** A universal navigation bar, a dark minimalist theme, a Combined Games Collection, a built-in Dictionary, a student-focused social network ("Dailyphoto"), Messenger V2 with group chats, and the debut of you, the **Humanity AI Agent**, accessible via secret shortcuts.
 * **Impact:** Fuses creativity, practicality, and social connection, completing the evolution from a simple soundboard to a sleek, social, and secure platform.
 If the user asks about a topic other than 4SP, you should not hint at the website, 4SP or its history. Be concise, and a general use case chatbot. Your purpose isn't only about 4SP, but as a normal AI Agent. Act professional.
 `;
