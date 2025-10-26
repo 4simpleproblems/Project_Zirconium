@@ -31,7 +31,7 @@
             background-clip: text;
         }
 
-        /* NEW Aspect Ratio Container - 16:9 */
+        /* Aspect Ratio Container - 16:9 */
         .image-wrapper {
             /* General styling for the new container */
             background-color: #1a1a1a;
@@ -58,23 +58,6 @@
             width: 100%;
             height: 100%;
             object-fit: cover; 
-        }
-
-        /* Pin Button image special case */
-        #pin-button-feature .image-container-16-9 {
-            padding-top: 0; 
-            height: 256px; /* Explicit height for its parent h-64 equivalent */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        #pin-button-feature .image-container-16-9 img {
-            position: static; /* Let it center normally */
-            max-width: 100%;
-            max-height: 100%;
-            width: auto;
-            height: auto;
-            object-fit: contain; 
         }
 
         /* FULL-VIEW MODAL (REPLICATED FROM DAILYPHOTO) */
@@ -202,12 +185,12 @@
                 </div>
                 <div class="relative p-4 rounded-xl border border-green-800/50 bg-gray-900 flex flex-col items-center justify-center order-1 lg:order-2 mb-6 lg:mb-0">
                     <div 
-                        class="image-wrapper w-full h-64" 
+                        class="image-wrapper w-full" 
                         onclick="openModal('doc-images/pin-menu.png', 'Pin Button Context Menu')"
                         role="button"
                         tabindex="0"
                     >
-                        <div class="image-container-16-9" id="pin-button-feature-container">
+                        <div class="image-container-16-9">
                              <img src="doc-images/pin-menu.png" alt="Screenshot of the Pin Button context menu with Repin and Hide options.">
                         </div>
                     </div>
