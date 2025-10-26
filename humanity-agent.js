@@ -439,7 +439,7 @@
 
         const brandTitle = document.createElement('div');
         brandTitle.id = 'ai-brand-title';
-        const brandText = "4SP - HUMANITY AGENT";
+        const brandText = "4SP - HUMANITY";
         brandText.split('').forEach(char => {
             const span = document.createElement('span');
             span.textContent = char;
