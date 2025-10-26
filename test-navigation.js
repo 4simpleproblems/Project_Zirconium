@@ -7,16 +7,13 @@
  * --- UPDATES & FEATURES ---
  * 1. ADMIN EMAIL SET: The privileged email is set to 4simpleproblems@gmail.com.
  * 2. (REVERTED) THEMEING: All theme logic has been removed.
- * 3. (NEW) DYNAMIC STYLING: The script now reads a 'navbar_style_settings' object 
+ * 3. DYNAMIC STYLING: The script now reads a 'navbar_style_settings' object 
  * from localStorage. This object contains all CSS variables and a logo path.
- * 4. (NEW) GLOBAL APPLIER: Exposes 'window.applyNavbarStyle(styleObject)' for
+ * 4. NEW HEX VARIABLES: Now supports hex code variables for button text, icons, 
+ * and highlights (`--nav-tab-dim-hex`, `--nav-accent-hex`, etc.) defined in the HTML settings.
+ * 5. GLOBAL APPLIER: Exposes 'window.applyNavbarStyle(styleObject)' for
  * external pages (like settings) to call for live previews.
- * 5. (NEW) LOGO SWITCHING: Now reads a 'logoPath' from the style object to 
- * support light/dark logos.
- * 6. LOGOUT REDIRECT: Redirects logged-out users away from logged-in pages.
- * 7. PIN BUTTON: Adds a persistent 'Pin' button.
- * 8. PARTIAL UPDATES: Pin and auth interactions use partial re-renders to
- * prevent scrolling jumps.
+ * 6. LOGO SWITCHING: Reads a 'logoPath' from the style object to support light/dark logos.
  */
 
 // =========================================================================
@@ -40,17 +37,30 @@ const PAGE_CONFIG_URL = '../page-identification.json';
 const PRIVILEGED_EMAIL = '4simpleproblems@gmail.com'; 
 
 // =========================================================================
-// >> NEW: DEFAULT STYLE DEFINITION <<
+// >> NEW: DEFAULT STYLE DEFINITION (With Hex Variables) <<
 // =========================================================================
 // This is the fallback style if nothing is found in localStorage.
+// The hex values match the default #000000 theme from test.html
 const DEFAULT_STYLE = {
     '--nav-bg-rgb': '0, 0, 0',
     '--nav-border': 'rgb(31, 41, 55)',
-    '--nav-text-dim': 'rgb(156, 163, 175)',
-    '--nav-text-normal': 'rgb(209, 213, 219)',
+    
+    // Navbar Text/Icon Hex Codes
+    '--nav-tab-dim-hex': '#9CA3AF',   
+    '--nav-tab-normal-hex': '#E5E7EB',
+    '--nav-tab-hover-hex': '#FFFFFF', 
+    
+    // Active/Accent Color
+    '--nav-accent-hex': '#A5B4FC',    
+    '--nav-accent-hover-hex': '#C7D2FE',
+    '--nav-highlight-bg-rgb': '165, 180, 252', // RGB of #A5B4FC
+    
+    // Menu Text RGB
+    '--nav-text-dim': 'rgb(156, 163, 175)', 
+    '--nav-text-normal': 'rgb(229, 231, 235)', 
     '--nav-text-hover': 'rgb(255, 255, 255)',
-    '--nav-accent-rgb': '79, 70, 229', // blue
-    '--nav-accent-hover-rgb': '99, 102, 241', // lighter blue
+    
+    // Menu Backgrounds (Dark Mode)
     '--nav-menu-bg': 'rgb(0, 0, 0)',
     '--nav-menu-border': 'rgb(55, 65, 81)',
     '--nav-menu-hover-bg': 'rgb(55, 65, 81)',
@@ -74,7 +84,7 @@ let db;
         return;
     }
 
-    // --- 1. DYNAMICALLY LOAD EXTERNAL ASSETS ---
+    // --- 1. DYNAMICALLY LOAD EXTERNAL ASSETS (UNCHANGED) ---
 
     // Helper to load external JS files
     const loadScript = (src) => {
@@ -214,7 +224,7 @@ let db;
         }
     };
 
-    // --- 2. INITIALIZE FIREBASE AND RENDER NAVBAR ---
+    // --- 2. INITIALIZE FIREBASE AND RENDER NAVBAR (UNCHANGED LOGIC) ---
     const initializeApp = (pages) => {
         // Initialize Firebase with the compat libraries
         const app = firebase.initializeApp(FIREBASE_CONFIG);
@@ -239,7 +249,7 @@ let db;
         const PIN_HINT_SHOWN_KEY = 'navbar_pinHintShown';
         const NAVBAR_STYLE_KEY = 'navbar_style_settings'; // NEW: Style object key
 
-        // --- Helper Functions ---
+        // --- Helper Functions (UNCHANGED) ---
 
         // Gets the key (e.g., 'home', 'dashboard') of the current page from the config
         const getCurrentPageKey = () => {
@@ -333,7 +343,7 @@ let db;
         };
 
         /**
-         * NEW: Generates the HTML for the entire right-side auth/pin controls area.
+         * Generates the HTML for the entire right-side auth/pin controls area.
          * This uses the global state variables (currentUser, currentUserData).
          * @returns {string} The HTML string for the auth controls.
          */
@@ -410,7 +420,7 @@ let db;
         }
 
         /**
-         * NEW: Encapsulates all listeners for the auth button, dropdown, and actions.
+         * Encapsulates all listeners for the auth button, dropdown, and actions.
          * This is separated so it can be re-called during a partial update.
          * @param {object} user - The current Firebase user object (or null)
          */
@@ -451,7 +461,7 @@ let db;
         };
 
         /**
-         * NEW: Replaces the auth/pin area HTML and re-attaches its event listeners.
+         * Replaces the auth/pin area HTML and re-attaches its event listeners.
          * Used for all pin/auth-menu interactions that do not require a full navbar re-render.
          */
         const updateAuthControlsArea = () => {
@@ -485,7 +495,7 @@ let db;
         };
 
 
-        // --- 3. INJECT CSS STYLES (NOW WITH CSS VARIABLES) ---
+        // --- 3. INJECT CSS STYLES (UPDATED WITH HEX VARIABLES) ---
         const injectStyles = () => {
             const style = document.createElement('style');
             style.textContent = `
@@ -493,11 +503,21 @@ let db;
                 :root {
                     --nav-bg-rgb: ${DEFAULT_STYLE['--nav-bg-rgb']};
                     --nav-border: ${DEFAULT_STYLE['--nav-border']};
+                    
+                    /* NEW HEX VARIABLES */
+                    --nav-tab-dim-hex: ${DEFAULT_STYLE['--nav-tab-dim-hex']};
+                    --nav-tab-normal-hex: ${DEFAULT_STYLE['--nav-tab-normal-hex']};
+                    --nav-tab-hover-hex: ${DEFAULT_STYLE['--nav-tab-hover-hex']};
+                    --nav-accent-hex: ${DEFAULT_STYLE['--nav-accent-hex']};
+                    --nav-accent-hover-hex: ${DEFAULT_STYLE['--nav-accent-hover-hex']};
+                    --nav-highlight-bg-rgb: ${DEFAULT_STYLE['--nav-highlight-bg-rgb']};
+                    
+                    /* Menu Text/RGB Variables */
                     --nav-text-dim: ${DEFAULT_STYLE['--nav-text-dim']};
                     --nav-text-normal: ${DEFAULT_STYLE['--nav-text-normal']};
                     --nav-text-hover: ${DEFAULT_STYLE['--nav-text-hover']};
-                    --nav-accent-rgb: ${DEFAULT_STYLE['--nav-accent-rgb']};
-                    --nav-accent-hover-rgb: ${DEFAULT_STYLE['--nav-accent-hover-rgb']};
+                    
+                    /* Menu/Avatar Variables */
                     --nav-menu-bg: ${DEFAULT_STYLE['--nav-menu-bg']};
                     --nav-menu-border: ${DEFAULT_STYLE['--nav-menu-border']};
                     --nav-menu-hover-bg: ${DEFAULT_STYLE['--nav-menu-hover-bg']};
@@ -513,7 +533,6 @@ let db;
                     background: rgb(var(--nav-bg-rgb)); 
                     border-bottom: 1px solid var(--nav-border); 
                     height: 4rem; 
-                    /* NEW: Added transitions for color fade */
                     transition: background-color 0.7s ease, border-color 0.7s ease;
                 }
                 .auth-navbar nav { padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
@@ -523,13 +542,12 @@ let db;
                     transition: background 0.7s ease;
                 }
                 
-                /* Auth Dropdown Menu Styles */
+                /* Auth Dropdown Menu Styles (Uses RGB variables for menu items) */
                 .auth-menu-container { 
                     position: absolute; right: 0; top: 50px; width: 16rem; 
                     background: var(--nav-menu-bg);
                     border: 1px solid var(--nav-menu-border); 
                     border-radius: 0.75rem; padding: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
-                    /* NEW: Added color transitions */
                     transition: transform 0.2s ease-out, opacity 0.2s ease-out, background-color 0.7s ease, border-color 0.7s ease; 
                     transform-origin: top right; z-index: 1010;
                 }
@@ -538,9 +556,8 @@ let db;
                 .auth-menu-link, .auth-menu-button { 
                     display: flex; align-items: center; gap: 0.75rem; width: 100%; text-align: left; 
                     padding: 0.5rem 0.75rem; font-size: 0.875rem; 
-                    color: var(--nav-text-normal); 
+                    color: var(--nav-text-normal); /* Uses standard menu text color */
                     border-radius: 0.375rem; 
-                    /* NEW: Added color transitions */
                     transition: background-color 0.2s, color 0.2s; 
                     border: none; cursor: pointer;
                 }
@@ -563,17 +580,16 @@ let db;
                     transition: color 0.7s ease;
                 }
 
-                /* NEW: Glass Menu Style for Pin Context Menu */
+                /* Pin Context Menu Style */
                 .glass-menu { 
                     background: var(--nav-menu-glass-bg); 
                     backdrop-filter: blur(10px); 
                     -webkit-backdrop-filter: blur(10px); 
                     border: 1px solid var(--nav-menu-border-glass);
                 }
-                /* Helper for icons in menus */
                 .auth-menu-link i.w-4, .auth-menu-button i.w-4 { width: 1rem; text-align: center; } 
 
-                /* Tab Wrapper and Glide Buttons */
+                /* Tab Wrapper and Glide Buttons (UNCHANGED) */
                 .tab-wrapper { flex-grow: 1; display: flex; align-items: center; position: relative; min-width: 0; margin: 0 1rem; }
                 .tab-scroll-container { flex-grow: 1; display: flex; align-items: center; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; -ms-overflow-style: none; padding-bottom: 5px; margin-bottom: -5px; scroll-behavior: smooth; }
                 .tab-scroll-container::-webkit-scrollbar { display: none; }
@@ -584,50 +600,48 @@ let db;
                     transition: opacity 0.3s, color 0.7s ease; 
                     z-index: 10; pointer-events: auto;
                 }
-                /* NEW: Gradients use the --nav-bg-rgb variable */
                 #glide-left { left: 0; background: linear-gradient(to right, rgb(var(--nav-bg-rgb)), transparent); justify-content: flex-start; padding-left: 0.5rem; }
                 #glide-right { right: 0; background: linear-gradient(to left, rgb(var(--nav-bg-rgb)), transparent); justify-content: flex-end; padding-right: 0.5rem; }
                 .scroll-glide-button.hidden { opacity: 0 !important; pointer-events: none !important; }
                 
+                /* NAV TAB STYLING (UPDATED TO USE HEX VARIABLES) */
                 .nav-tab { 
                     flex-shrink: 0; padding: 0.5rem 1rem; 
-                    color: var(--nav-text-dim); 
+                    color: var(--nav-tab-dim-hex); /* Inactive text/icon color */
                     font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; 
-                    /* NEW: Updated transition for smooth color fade */
                     transition: all 0.2s, background-color 0.7s ease, color 0.7s ease, border-color 0.7s ease; 
                     text-decoration: none; line-height: 1.5; display: flex; align-items: center; margin-right: 0.5rem; border: 1px solid transparent; 
                 }
                 .nav-tab:not(.active):hover { 
-                    color: var(--nav-text-hover); 
-                    border-color: var(--nav-text-normal); 
-                    /* NEW: Using accent RGB variable */
-                    background-color: rgba(var(--nav-accent-rgb), 0.05); 
+                    color: var(--nav-tab-hover-hex); /* Inactive hover text/icon color */
+                    border-color: var(--nav-tab-normal-hex); /* Inactive hover border color */
+                    background-color: rgba(var(--nav-highlight-bg-rgb), 0.1); /* Highlight BG */
                 }
                 .nav-tab.active { 
-                    color: rgb(var(--nav-accent-rgb)); 
-                    border-color: rgb(var(--nav-accent-rgb)); 
-                    background-color: rgba(var(--nav-accent-rgb), 0.1); 
+                    color: var(--nav-accent-hex); /* Active text/icon color */
+                    border-color: var(--nav-accent-hex); 
+                    background-color: rgba(var(--nav-highlight-bg-rgb), 0.1); /* Highlight BG */
                 }
                 .nav-tab.active:hover { 
-                    color: rgb(var(--nav-accent-hover-rgb)); 
-                    border-color: rgb(var(--nav-accent-hover-rgb)); 
-                    background-color: rgba(var(--nav-accent-rgb), 0.15); 
+                    color: var(--nav-accent-hover-hex); /* Active hover text/icon color */
+                    border-color: var(--nav-accent-hover-hex); 
+                    background-color: rgba(var(--nav-highlight-bg-rgb), 0.15); /* Slightly stronger Highlight BG */
                 }
                 
                 /* Pin Button Styles */
                 #pin-button {
                     border-color: var(--nav-menu-border);
-                    color: var(--nav-text-dim);
+                    color: var(--nav-tab-dim-hex); /* Uses dimmed tab color for pin icon */
                     transition: background-color 0.2s, border-color 0.7s ease, color 0.7s ease;
                 }
                 #pin-button:hover {
                     background-color: var(--nav-menu-hover-bg);
                 }
 
-                /* NEW: Pin Hint Styles */
+                /* Pin Hint Styles */
                 .pin-hint-container {
                     position: absolute;
-                    bottom: calc(100% + 10px); /* 10px above the button */
+                    bottom: calc(100% + 10px); 
                     left: 50%;
                     transform: translateX(-50%) scale(0.8);
                     background: var(--nav-menu-hover-bg);
@@ -639,7 +653,6 @@ let db;
                     opacity: 0;
                     pointer-events: none;
                     z-index: 1020;
-                    /* NEW: Added color transitions */
                     transition: opacity 0.3s ease, transform 0.3s ease, background-color 0.7s ease, border-color 0.7s ease, color 0.7s ease;
                     white-space: nowrap;
                     font-size: 0.875rem;
@@ -647,7 +660,7 @@ let db;
                 .pin-hint-container.show {
                     opacity: 1;
                     transform: translateX(-50%) scale(1);
-                    transition-delay: 0.2s; /* Slight delay on show */
+                    transition-delay: 0.2s; 
                 }
             `;
             document.head.appendChild(style);
@@ -684,30 +697,27 @@ let db;
             }
         };
 
-        // --- 4. RENDER THE NAVBAR HTML ---
+        // --- 4. RENDER THE NAVBAR HTML (UNCHANGED LOGIC) ---
         const renderNavbar = (user, userData, pages, isPrivilegedUser) => {
             const container = document.getElementById('navbar-container');
             if (!container) return; 
 
-            // NEW: Get the logo path from the default style for initial render
+            // Get the logo path from the default style for initial render
             const logoPath = DEFAULT_STYLE.logoPath; 
             
-            // Filter and map pages for tabs, applying adminOnly filter
+            // Filter and map pages for tabs
             const tabsHtml = Object.values(pages || {})
-                .filter(page => !(page.adminOnly && !isPrivilegedUser)) // Filter out adminOnly tabs for non-privileged users
+                .filter(page => !(page.adminOnly && !isPrivilegedUser)) 
                 .map(page => {
                     const isActive = isTabActive(page.url);
                     const activeClass = isActive ? 'active' : '';
                     const iconClasses = getIconClass(page.icon);
                     
-                    // Admin class removed
                     return `<a href="${page.url}" class="nav-tab ${activeClass}"><i class="${iconClasses} mr-2"></i>${page.name}</a>`;
                 }).join('');
 
             
-            // --- NEW: Auth controls HTML is generated by a helper ---
-            // This now uses the global state, as renderNavbar is only called
-            // after the global state is updated.
+            // Auth controls HTML is generated by a helper
             const authControlsHtml = getAuthControlsHtml();
 
             // --- Assemble Final Navbar HTML ---
@@ -743,15 +753,12 @@ let db;
             // Check if we need to restore scroll position (from a full re-render)
             if (currentScrollLeft > 0) {
                 const savedScroll = currentScrollLeft;
-                // Use requestAnimationFrame to ensure the DOM has painted the new content
-                // before setting the scroll, preventing the jump.
                 requestAnimationFrame(() => {
                     if (tabContainer) {
                         tabContainer.scrollLeft = savedScroll;
                     }
                     currentScrollLeft = 0; // Reset state after restoration
                 });
-            // NEW: Only run centering logic if we are NOT restoring scroll AND we haven't scrolled yet.
             } else if (!hasScrolledToActiveTab) { 
                 // If it's the first load, center the active tab.
                 const activeTab = document.querySelector('.nav-tab.active');
@@ -759,14 +766,10 @@ let db;
                     const centerOffset = (tabContainer.offsetWidth - activeTab.offsetWidth) / 2;
                     let scrollTarget = activeTab.offsetLeft - centerOffset;
                     
-                    // Clamp the scroll target to prevent scrolling beyond content
                     const maxScroll = tabContainer.scrollWidth - tabContainer.offsetWidth;
                     scrollTarget = Math.max(0, Math.min(scrollTarget, maxScroll));
 
-                    // Set scroll immediately, no delay needed for stable initial load
                     tabContainer.scrollLeft = scrollTarget;
-                    
-                    // IMPORTANT: Set flag to prevent future automatic centering
                     hasScrolledToActiveTab = true; 
                 }
             }
@@ -883,11 +886,10 @@ let db;
                 }
             }
 
-            // --- NEW: Auth Toggle Listeners (Called on full render) ---
-            // This function now contains the auth toggle, logout, and "show pin" listeners
+            // --- Auth Toggle Listeners ---
             setupAuthToggleListeners(user);
 
-            // --- NEW: Pin Button Event Listeners (Called on full render) ---
+            // --- Pin Button Event Listeners ---
             setupPinEventListeners();
 
             // Global click listener to close *both* menus
@@ -912,7 +914,7 @@ let db;
             }
         };
 
-        // --- 6. AUTH STATE LISTENER ---
+        // --- 6. AUTH STATE LISTENER (UNCHANGED) ---
         auth.onAuthStateChanged(async (user) => {
             let isPrivilegedUser = false;
             let userData = null;
@@ -937,17 +939,14 @@ let db;
             currentIsPrivileged = isPrivilegedUser;
             
             // Render the navbar with the new state. 
-            // Full re-render on auth change, don't preserve scroll unless explicitly requested.
             renderNavbar(currentUser, currentUserData, allPages, currentIsPrivileged);
 
             if (!user) {
                 // User is signed out.
                 // KICK USER TO INDEX: If the user is logged out, redirect them to /index.html
-                const targetUrl = '/index.html'; // <--- UPDATED TO ABSOLUTE PATH
+                const targetUrl = '/index.html'; 
                 const currentPathname = window.location.pathname;
                 
-                // Determine if the current page is one of the designated entry points 
-                // (index or authentication page) to prevent an infinite loop.
                 const isEntryPoint = currentPathname.includes('index.html') || currentPathname.includes('authentication.html') || currentPathname === '/';
                 
                 if (!isEntryPoint) {
@@ -969,7 +968,7 @@ let db;
         // This sets the :root defaults immediately.
         injectStyles();
 
-        // --- NEW: STYLE APPLY LOGIC ---
+        // --- NEW: STYLE APPLY LOGIC (UPDATED) ---
         
         /**
          * Applies a style object by setting CSS variables on the :root element
@@ -1022,7 +1021,6 @@ let db;
         }
         
         // Apply either the loaded settings or the defaults.
-        // This runs *after* injectStyles, so colors will fade.
         applyStyleSettings(settingsToApply);
         
         // -----------------------------
