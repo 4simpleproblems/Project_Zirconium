@@ -2,28 +2,21 @@
  * navigation.js
  * * This is a fully self-contained script to create a dynamic, authentication-aware
  * navigation bar for your website. It handles everything from Firebase initialization
- * to rendering user-specific information. It now includes a horizontally scrollable
- * tab menu loaded from page-identification.json.
+ * to rendering user-specific information.
  *
  * --- UPDATES & FEATURES ---
  * 1. ADMIN EMAIL SET: The privileged email is set to 4simpleproblems@gmail.com.
- * 2. AI FEATURES REMOVED: All AI-related code has been removed.
- * 3. GOLD ADMIN TAB REMOVED: The 'Beta Settings' tab no longer has a special texture.
- * 4. SETTINGS LINK: Includes the 'Settings' link in the authenticated user's dropdown menu.
- * 5. ACTIVE TAB SCROLL: Now scrolls the active tab to the center only on the initial page load, preventing unwanted centering during subsequent re-renders (like sign-in/out).
+ * 2. (REVERTED) THEMEING: All theme logic has been removed.
+ * 3. (NEW) DYNAMIC STYLING: The script now reads a 'navbar_style_settings' object 
+ * from localStorage. This object contains all CSS variables and a logo path.
+ * 4. (NEW) GLOBAL APPLIER: Exposes 'window.applyNavbarStyle(styleObject)' for
+ * external pages (like settings) to call for live previews.
+ * 5. (NEW) LOGO SWITCHING: Now reads a 'logoPath' from the style object to 
+ * support light/dark logos.
  * 6. LOGOUT REDIRECT: Redirects logged-out users away from logged-in pages.
- * 7. PIN BUTTON: Adds a persistent 'Pin' button next to the auth icon for quick page access.
- * 8. GLIDE FADE UPDATED: Glide button fade now spans the full navbar height smoothly.
- * 9. INSTANT GLIDE: Scroll-end glide buttons (arrows) now update instantly with no delay.
- * 10. PIN HINT: A one-time hint now appears on first click of the pin button.
- * 11. PIN ICON: Pin icon is now solid at all times (hover effect removed).
- * 12. SCROLL PERSISTENCE: The scroll position is now saved and restored using requestAnimationFrame during re-renders caused by pin interactions, ensuring a smooth experience.
- * 13. PARTIAL UPDATE: Pin menu interactions now only refresh the pin area's HTML, leaving the main tab scroll container untouched, eliminating all scrolling jumps.
- * 14. AUTH PARTIAL UPDATE: Hiding or showing the pin button now partially refreshes the *entire* auth/pin control area (excluding the scroll menu), ensuring the auth dropdown menu updates instantly.
- * 15. (FIXED) DASHBOARD MENU ALIGNMENT: Fixed an issue where the user info in the dropdown menu was incorrectly centered.
- * 16. (UPDATED) REPIN BUTTON: Repurposed 'Repin Current' to a simple 'Repin' button that shows up whenever the current page is not the one pinned, or no page is pinned.
- * 17. (UPDATED) LOGOUT REDIRECT PATH: Changed redirect path for logged-out users to an absolute path (`/index.html`) for consistency.
- * 18. **(NEW)** THEMEING: Added 16 color themes, settable via localStorage. The bar now fades to the user's chosen color on load.
+ * 7. PIN BUTTON: Adds a persistent 'Pin' button.
+ * 8. PARTIAL UPDATES: Pin and auth interactions use partial re-renders to
+ * prevent scrolling jumps.
  */
 
 // =========================================================================
@@ -47,302 +40,26 @@ const PAGE_CONFIG_URL = '../page-identification.json';
 const PRIVILEGED_EMAIL = '4simpleproblems@gmail.com'; 
 
 // =========================================================================
-// >> NEW: COLOR THEME DEFINITIONS <<
+// >> NEW: DEFAULT STYLE DEFINITION <<
 // =========================================================================
-// This object holds all 16 color themes. Your settings page can read these
-// keys and names to create a selector. Calling `window.setNavbarTheme('ocean')`
-// will apply and save the theme.
-const COLOR_THEMES = {
-    'default': {
-        name: 'Default Dark',
-        colors: {
-            '--nav-bg-rgb': '0, 0, 0',
-            '--nav-border': 'rgb(31, 41, 55)',
-            '--nav-text-dim': 'rgb(156, 163, 175)',
-            '--nav-text-normal': 'rgb(209, 213, 219)',
-            '--nav-text-hover': 'rgb(255, 255, 255)',
-            '--nav-accent-rgb': '79, 70, 229', // blue
-            '--nav-accent-hover-rgb': '99, 102, 241', // lighter blue
-            '--nav-menu-bg': 'rgb(0, 0, 0)',
-            '--nav-menu-border': 'rgb(55, 65, 81)',
-            '--nav-menu-hover-bg': 'rgb(55, 65, 81)',
-            '--nav-menu-glass-bg': 'rgba(10, 10, 10, 0.8)',
-            '--nav-menu-border-glass': 'rgba(55, 65, 81, 0.8)',
-            '--nav-avatar-bg': 'linear-gradient(135deg, #374151 0%, #111827 100%)'
-        }
-    },
-    'ocean': {
-        name: 'Ocean',
-        colors: {
-            '--nav-bg-rgb': '5, 44, 80',
-            '--nav-border': 'rgb(0, 77, 133)',
-            '--nav-text-dim': 'rgb(173, 216, 230)',
-            '--nav-text-normal': 'rgb(240, 248, 255)',
-            '--nav-text-hover': 'rgb(255, 255, 255)',
-            '--nav-accent-rgb': '30, 144, 255', // dodger blue
-            '--nav-accent-hover-rgb': '100, 149, 237', // cornflower blue
-            '--nav-menu-bg': 'rgb(5, 44, 80)',
-            '--nav-menu-border': 'rgb(0, 77, 133)',
-            '--nav-menu-hover-bg': 'rgb(0, 77, 133)',
-            '--nav-menu-glass-bg': 'rgba(5, 44, 80, 0.8)',
-            '--nav-menu-border-glass': 'rgba(0, 77, 133, 0.8)',
-            '--nav-avatar-bg': 'linear-gradient(135deg, #005A9C 0%, #003B66 100%)'
-        }
-    },
-    'forest': {
-        name: 'Forest',
-        colors: {
-            '--nav-bg-rgb': '18, 41, 19',
-            '--nav-border': 'rgb(34, 77, 35)',
-            '--nav-text-dim': 'rgb(173, 204, 173)',
-            '--nav-text-normal': 'rgb(230, 245, 230)',
-            '--nav-text-hover': 'rgb(255, 255, 255)',
-            '--nav-accent-rgb': '85, 170, 85', // forest green
-            '--nav-accent-hover-rgb': '102, 187, 102', // lighter green
-            '--nav-menu-bg': 'rgb(18, 41, 19)',
-            '--nav-menu-border': 'rgb(34, 77, 35)',
-            '--nav-menu-hover-bg': 'rgb(34, 77, 35)',
-            '--nav-menu-glass-bg': 'rgba(18, 41, 19, 0.8)',
-            '--nav-menu-border-glass': 'rgba(34, 77, 35, 0.8)',
-            '--nav-avatar-bg': 'linear-gradient(135deg, #346751 0%, #1E392A 100%)'
-        }
-    },
-    'sunset': {
-        name: 'Sunset',
-        colors: {
-            '--nav-bg-rgb': '51, 22, 51',
-            '--nav-border': 'rgb(92, 38, 92)',
-            '--nav-text-dim': 'rgb(248, 218, 222)',
-            '--nav-text-normal': 'rgb(255, 240, 245)',
-            '--nav-text-hover': 'rgb(255, 255, 255)',
-            '--nav-accent-rgb': '255, 105, 180', // hot pink
-            '--nav-accent-hover-rgb': '255, 140, 200', // lighter pink
-            '--nav-menu-bg': 'rgb(51, 22, 51)',
-            '--nav-menu-border': 'rgb(92, 38, 92)',
-            '--nav-menu-hover-bg': 'rgb(92, 38, 92)',
-            '--nav-menu-glass-bg': 'rgba(51, 22, 51, 0.8)',
-            '--nav-menu-border-glass': 'rgba(92, 38, 92, 0.8)',
-            '--nav-avatar-bg': 'linear-gradient(135deg, #FF6B6B 0%, #8E2D2D 100%)'
-        }
-    },
-    'matrix': {
-        name: 'Matrix',
-        colors: {
-            '--nav-bg-rgb': '0, 15, 0',
-            '--nav-border': 'rgb(0, 40, 0)',
-            '--nav-text-dim': 'rgb(0, 150, 0)',
-            '--nav-text-normal': 'rgb(0, 220, 0)',
-            '--nav-text-hover': 'rgb(120, 255, 120)',
-            '--nav-accent-rgb': '0, 255, 0', // lime
-            '--nav-accent-hover-rgb': '128, 255, 128', // light lime
-            '--nav-menu-bg': 'rgb(0, 15, 0)',
-            '--nav-menu-border': 'rgb(0, 40, 0)',
-            '--nav-menu-hover-bg': 'rgb(0, 40, 0)',
-            '--nav-menu-glass-bg': 'rgba(0, 15, 0, 0.8)',
-            '--nav-menu-border-glass': 'rgba(0, 40, 0, 0.8)',
-            '--nav-avatar-bg': 'linear-gradient(135deg, #008F11 0%, #003B00 100%)'
-        }
-    },
-    'rose_gold': {
-        name: 'Rose Gold',
-        colors: {
-            '--nav-bg-rgb': '69, 34, 34',
-            '--nav-border': 'rgb(105, 59, 59)',
-            '--nav-text-dim': 'rgb(243, 223, 223)',
-            '--nav-text-normal': 'rgb(255, 240, 240)',
-            '--nav-text-hover': 'rgb(255, 255, 255)',
-            '--nav-accent-rgb': '218, 170, 151', // rose
-            '--nav-accent-hover-rgb': '227, 190, 178', // lighter rose
-            '--nav-menu-bg': 'rgb(69, 34, 34)',
-            '--nav-menu-border': 'rgb(105, 59, 59)',
-            '--nav-menu-hover-bg': 'rgb(105, 59, 59)',
-            '--nav-menu-glass-bg': 'rgba(69, 34, 34, 0.8)',
-            '--nav-menu-border-glass': 'rgba(105, 59, 59, 0.8)',
-            '--nav-avatar-bg': 'linear-gradient(135deg, #B76E79 0%, #8A4D54 100%)'
-        }
-    },
-    'deep_space': {
-        name: 'Deep Space',
-        colors: {
-            '--nav-bg-rgb': '10, 0, 30',
-            '--nav-border': 'rgb(30, 0, 50)',
-            '--nav-text-dim': 'rgb(200, 180, 220)',
-            '--nav-text-normal': 'rgb(230, 220, 240)',
-            '--nav-text-hover': 'rgb(255, 255, 255)',
-            '--nav-accent-rgb': '140, 100, 255', // light purple
-            '--nav-accent-hover-rgb': '160, 120, 255', // lighter purple
-            '--nav-menu-bg': 'rgb(10, 0, 30)',
-            '--nav-menu-border': 'rgb(30, 0, 50)',
-            '--nav-menu-hover-bg': 'rgb(30, 0, 50)',
-            '--nav-menu-glass-bg': 'rgba(10, 0, 30, 0.8)',
-            '--nav-menu-border-glass': 'rgba(30, 0, 50, 0.8)',
-            '--nav-avatar-bg': 'linear-gradient(135deg, #483D8B 0%, #2E256B 100%)'
-        }
-    },
-    'minty': {
-        name: 'Minty',
-        colors: {
-            '--nav-bg-rgb': '240, 255, 248',
-            '--nav-border': 'rgb(204, 255, 232)',
-            '--nav-text-dim': 'rgb(64, 112, 90)',
-            '--nav-text-normal': 'rgb(27, 77, 56)',
-            '--nav-text-hover': 'rgb(0, 0, 0)',
-            '--nav-accent-rgb': '60, 179, 113', // medium sea green
-            '--nav-accent-hover-rgb': '84, 192, 137', // lighter green
-            '--nav-menu-bg': 'rgb(240, 255, 248)',
-            '--nav-menu-border': 'rgb(204, 255, 232)',
-            '--nav-menu-hover-bg': 'rgb(204, 255, 232)',
-            '--nav-menu-glass-bg': 'rgba(240, 255, 248, 0.8)',
-            '--nav-menu-border-glass': 'rgba(204, 255, 232, 0.8)',
-            '--nav-avatar-bg': 'linear-gradient(135deg, #3CB371 0%, #2E8B57 100%)'
-        }
-    },
-    'cherry': {
-        name: 'Cherry',
-        colors: {
-            '--nav-bg-rgb': '40, 0, 10',
-            '--nav-border': 'rgb(70, 0, 20)',
-            '--nav-text-dim': 'rgb(240, 190, 200)',
-            '--nav-text-normal': 'rgb(255, 220, 230)',
-            '--nav-text-hover': 'rgb(255, 255, 255)',
-            '--nav-accent-rgb': '220, 20, 60', // crimson
-            '--nav-accent-hover-rgb': '255, 50, 90', // lighter crimson
-            '--nav-menu-bg': 'rgb(40, 0, 10)',
-            '--nav-menu-border': 'rgb(70, 0, 20)',
-            '--nav-menu-hover-bg': 'rgb(70, 0, 20)',
-            '--nav-menu-glass-bg': 'rgba(40, 0, 10, 0.8)',
-            '--nav-menu-border-glass': 'rgba(70, 0, 20, 0.8)',
-            '--nav-avatar-bg': 'linear-gradient(135deg, #DC143C 0%, #8B0000 100%)'
-        }
-    },
-    'royal': {
-        name: 'Royal',
-        colors: {
-            '--nav-bg-rgb': '28, 0, 66',
-            '--nav-border': 'rgb(54, 0, 133)',
-            '--nav-text-dim': 'rgb(234, 219, 255)',
-            '--nav-text-normal': 'rgb(248, 240, 255)',
-            '--nav-text-hover': 'rgb(255, 215, 0)', // gold
-            '--nav-accent-rgb': '255, 215, 0', // gold
-            '--nav-accent-hover-rgb': '255, 223, 80', // light gold
-            '--nav-menu-bg': 'rgb(28, 0, 66)',
-            '--nav-menu-border': 'rgb(54, 0, 133)',
-            '--nav-menu-hover-bg': 'rgb(54, 0, 133)',
-            '--nav-menu-glass-bg': 'rgba(28, 0, 66, 0.8)',
-            '--nav-menu-border-glass': 'rgba(54, 0, 133, 0.8)',
-            '--nav-avatar-bg': 'linear-gradient(135deg, #4B0082 0%, #FFD700 100%)'
-        }
-    },
-    'grayscale': {
-        name: 'Grayscale',
-        colors: {
-            '--nav-bg-rgb': '20, 20, 20',
-            '--nav-border': 'rgb(60, 60, 60)',
-            '--nav-text-dim': 'rgb(160, 160, 160)',
-            '--nav-text-normal': 'rgb(220, 220, 220)',
-            '--nav-text-hover': 'rgb(255, 255, 255)',
-            '--nav-accent-rgb': '240, 240, 240', // white-ish
-            '--nav-accent-hover-rgb': '255, 255, 255', // white
-            '--nav-menu-bg': 'rgb(20, 20, 20)',
-            '--nav-menu-border': 'rgb(60, 60, 60)',
-            '--nav-menu-hover-bg': 'rgb(60, 60, 60)',
-            '--nav-menu-glass-bg': 'rgba(20, 20, 20, 0.8)',
-            '--nav-menu-border-glass': 'rgba(60, 60, 60, 0.8)',
-            '--nav-avatar-bg': 'linear-gradient(135deg, #808080 0%, #303030 100%)'
-        }
-    },
-    'vampire': {
-        name: 'Vampire',
-        colors: {
-            '--nav-bg-rgb': '10, 0, 0',
-            '--nav-border': 'rgb(50, 0, 0)',
-            '--nav-text-dim': 'rgb(180, 150, 150)',
-            '--nav-text-normal': 'rgb(230, 200, 200)',
-            '--nav-text-hover': 'rgb(255, 255, 255)',
-            '--nav-accent-rgb': '255, 0, 0', // red
-            '--nav-accent-hover-rgb': '255, 80, 80', // light red
-            '--nav-menu-bg': 'rgb(10, 0, 0)',
-            '--nav-menu-border': 'rgb(50, 0, 0)',
-            '--nav-menu-hover-bg': 'rgb(50, 0, 0)',
-            '--nav-menu-glass-bg': 'rgba(10, 0, 0, 0.8)',
-            '--nav-menu-border-glass': 'rgba(50, 0, 0, 0.8)',
-            '--nav-avatar-bg': 'linear-gradient(135deg, #FF0000 0%, #8B0000 100%)'
-        }
-    },
-    'cyberpunk': {
-        name: 'Cyberpunk',
-        colors: {
-            '--nav-bg-rgb': '20, 0, 40',
-            '--nav-border': 'rgb(40, 0, 60)',
-            '--nav-text-dim': 'rgb(220, 180, 255)',
-            '--nav-text-normal': 'rgb(255, 220, 255)',
-            '--nav-text-hover': 'rgb(255, 255, 0)', // yellow
-            '--nav-accent-rgb': '255, 0, 255', // magenta
-            '--nav-accent-hover-rgb': '255, 80, 255', // light magenta
-            '--nav-menu-bg': 'rgb(20, 0, 40)',
-            '--nav-menu-border': 'rgb(40, 0, 60)',
-            '--nav-menu-hover-bg': 'rgb(40, 0, 60)',
-            '--nav-menu-glass-bg': 'rgba(20, 0, 40, 0.8)',
-            '--nav-menu-border-glass': 'rgba(40, 0, 60, 0.8)',
-            '--nav-avatar-bg': 'linear-gradient(135deg, #FFFF00 0%, #FF00FF 100%)'
-        }
-    },
-    'coffee': {
-        name: 'Coffee',
-        colors: {
-            '--nav-bg-rgb': '38, 26, 17',
-            '--nav-border': 'rgb(66, 46, 30)',
-            '--nav-text-dim': 'rgb(210, 180, 160)',
-            '--nav-text-normal': 'rgb(245, 222, 179)',
-            '--nav-text-hover': 'rgb(255, 255, 255)',
-            '--nav-accent-rgb': '205, 133, 63', // peru
-            '--nav-accent-hover-rgb': '210, 150, 80', // lighter peru
-            '--nav-menu-bg': 'rgb(38, 26, 17)',
-            '--nav-menu-border': 'rgb(66, 46, 30)',
-            '--nav-menu-hover-bg': 'rgb(66, 46, 30)',
-            '--nav-menu-glass-bg': 'rgba(38, 26, 17, 0.8)',
-            '--nav-menu-border-glass': 'rgba(66, 46, 30, 0.8)',
-            '--nav-avatar-bg': 'linear-gradient(135deg, #8B4513 0%, #D2691E 100%)'
-        }
-    },
-    'sky': {
-        name: 'Sky',
-        colors: {
-            '--nav-bg-rgb': '240, 248, 255',
-            '--nav-border': 'rgb(176, 224, 230)',
-            '--nav-text-dim': 'rgb(100, 149, 237)',
-            '--nav-text-normal': 'rgb(70, 130, 180)',
-            '--nav-text-hover': 'rgb(0, 0, 0)',
-            '--nav-accent-rgb': '30, 144, 255', // dodger blue
-            '--nav-accent-hover-rgb': '0, 191, 255', // deep sky blue
-            '--nav-menu-bg': 'rgb(240, 248, 255)',
-            '--nav-menu-border': 'rgb(176, 224, 230)',
-            '--nav-menu-hover-bg': 'rgb(176, 224, 230)',
-            '--nav-menu-glass-bg': 'rgba(240, 248, 255, 0.8)',
-            '--nav-menu-border-glass': 'rgba(176, 224, 230, 0.8)',
-            '--nav-avatar-bg': 'linear-gradient(135deg, #87CEEB 0%, #1E90FF 100%)'
-        }
-    },
-    'lava': {
-        name: 'Lava',
-        colors: {
-            '--nav-bg-rgb': '20, 0, 0',
-            '--nav-border': 'rgb(70, 0, 0)',
-            '--nav-text-dim': 'rgb(255, 165, 0)',
-            '--nav-text-normal': 'rgb(255, 100, 0)',
-            '--nav-text-hover': 'rgb(255, 255, 255)',
-            '--nav-accent-rgb': '255, 69, 0', // orange-red
-            '--nav-accent-hover-rgb': '255, 100, 50', // lighter orange-red
-            '--nav-menu-bg': 'rgb(20, 0, 0)',
-            '--nav-menu-border': 'rgb(70, 0, 0)',
-            '--nav-menu-hover-bg': 'rgb(70, 0, 0)',
-            '--nav-menu-glass-bg': 'rgba(20, 0, 0, 0.8)',
-            '--nav-menu-border-glass': 'rgba(70, 0, 0, 0.8)',
-            '--nav-avatar-bg': 'linear-gradient(135deg, #FF4500 0%, #FF6347 100%)'
-        }
-    },
+// This is the fallback style if nothing is found in localStorage.
+const DEFAULT_STYLE = {
+    '--nav-bg-rgb': '0, 0, 0',
+    '--nav-border': 'rgb(31, 41, 55)',
+    '--nav-text-dim': 'rgb(156, 163, 175)',
+    '--nav-text-normal': 'rgb(209, 213, 219)',
+    '--nav-text-hover': 'rgb(255, 255, 255)',
+    '--nav-accent-rgb': '79, 70, 229', // blue
+    '--nav-accent-hover-rgb': '99, 102, 241', // lighter blue
+    '--nav-menu-bg': 'rgb(0, 0, 0)',
+    '--nav-menu-border': 'rgb(55, 65, 81)',
+    '--nav-menu-hover-bg': 'rgb(55, 65, 81)',
+    '--nav-menu-glass-bg': 'rgba(10, 10, 10, 0.8)',
+    '--nav-menu-border-glass': 'rgba(55, 65, 81, 0.8)',
+    '--nav-avatar-bg': 'linear-gradient(135deg, #374151 0%, #111827 100%)',
+    'logoPath': '/images/logo.png',
+    'isLight': false
 };
-
 // =========================================================================
 
 // Variables to hold Firebase objects
@@ -520,7 +237,7 @@ let db;
         const PINNED_PAGE_KEY = 'navbar_pinnedPage';
         const PIN_BUTTON_HIDDEN_KEY = 'navbar_pinButtonHidden';
         const PIN_HINT_SHOWN_KEY = 'navbar_pinHintShown';
-        const NAVBAR_THEME_KEY = 'navbar_theme_id'; // NEW: Theme key
+        const NAVBAR_STYLE_KEY = 'navbar_style_settings'; // NEW: Style object key
 
         // --- Helper Functions ---
 
@@ -774,19 +491,19 @@ let db;
             style.textContent = `
                 /* NEW: :root definition for default theme and variables */
                 :root {
-                    --nav-bg-rgb: ${COLOR_THEMES.default.colors['--nav-bg-rgb']};
-                    --nav-border: ${COLOR_THEMES.default.colors['--nav-border']};
-                    --nav-text-dim: ${COLOR_THEMES.default.colors['--nav-text-dim']};
-                    --nav-text-normal: ${COLOR_THEMES.default.colors['--nav-text-normal']};
-                    --nav-text-hover: ${COLOR_THEMES.default.colors['--nav-text-hover']};
-                    --nav-accent-rgb: ${COLOR_THEMES.default.colors['--nav-accent-rgb']};
-                    --nav-accent-hover-rgb: ${COLOR_THEMES.default.colors['--nav-accent-hover-rgb']};
-                    --nav-menu-bg: ${COLOR_THEMES.default.colors['--nav-menu-bg']};
-                    --nav-menu-border: ${COLOR_THEMES.default.colors['--nav-menu-border']};
-                    --nav-menu-hover-bg: ${COLOR_THEMES.default.colors['--nav-menu-hover-bg']};
-                    --nav-menu-glass-bg: ${COLOR_THEMES.default.colors['--nav-menu-glass-bg']};
-                    --nav-menu-border-glass: ${COLOR_THEMES.default.colors['--nav-menu-border-glass']};
-                    --nav-avatar-bg: ${COLOR_THEMES.default.colors['--nav-avatar-bg']};
+                    --nav-bg-rgb: ${DEFAULT_STYLE['--nav-bg-rgb']};
+                    --nav-border: ${DEFAULT_STYLE['--nav-border']};
+                    --nav-text-dim: ${DEFAULT_STYLE['--nav-text-dim']};
+                    --nav-text-normal: ${DEFAULT_STYLE['--nav-text-normal']};
+                    --nav-text-hover: ${DEFAULT_STYLE['--nav-text-hover']};
+                    --nav-accent-rgb: ${DEFAULT_STYLE['--nav-accent-rgb']};
+                    --nav-accent-hover-rgb: ${DEFAULT_STYLE['--nav-accent-hover-rgb']};
+                    --nav-menu-bg: ${DEFAULT_STYLE['--nav-menu-bg']};
+                    --nav-menu-border: ${DEFAULT_STYLE['--nav-menu-border']};
+                    --nav-menu-hover-bg: ${DEFAULT_STYLE['--nav-menu-hover-bg']};
+                    --nav-menu-glass-bg: ${DEFAULT_STYLE['--nav-menu-glass-bg']};
+                    --nav-menu-border-glass: ${DEFAULT_STYLE['--nav-menu-border-glass']};
+                    --nav-avatar-bg: ${DEFAULT_STYLE['--nav-avatar-bg']};
                 }
 
                 /* Base Styles */
@@ -972,7 +689,8 @@ let db;
             const container = document.getElementById('navbar-container');
             if (!container) return; 
 
-            const logoPath = "/images/logo.png"; 
+            // NEW: Get the logo path from the default style for initial render
+            const logoPath = DEFAULT_STYLE.logoPath; 
             
             // Filter and map pages for tabs, applying adminOnly filter
             const tabsHtml = Object.values(pages || {})
@@ -997,7 +715,7 @@ let db;
                 <header class="auth-navbar">
                     <nav>
                         <a href="/" class="flex items-center space-x-2 flex-shrink-0">
-                            <img src="${logoPath}" alt="4SP Logo" class="h-8 w-auto">
+                            <img src="${logoPath}" alt="4SP Logo" class="h-8 w-auto" id="navbar-logo-img">
                         </a>
 
                         <div class="tab-wrapper">
@@ -1251,53 +969,61 @@ let db;
         // This sets the :root defaults immediately.
         injectStyles();
 
-        // --- NEW: THEME APPLY LOGIC ---
+        // --- NEW: STYLE APPLY LOGIC ---
         
         /**
-         * Applies a color theme by setting CSS variables on the :root element.
-         * Can optionally save the theme ID to localStorage.
-         * @param {string} themeId - The key of the theme (e.g., 'ocean')
-         * @param {boolean} [save=false] - If true, saves the themeId to localStorage.
+         * Applies a style object by setting CSS variables on the :root element
+         * and updating the logo.
+         * @param {object | null} styleObject - The full style object, or null to apply defaults.
          */
-        const applyTheme = (themeId, save = false) => {
-            let theme = COLOR_THEMES[themeId];
-            
-            if (!theme) {
-                console.warn(`Navbar theme "${themeId}" not found. Reverting to default.`);
-                theme = COLOR_THEMES['default'];
-                themeId = 'default';
-            }
-            
+        const applyStyleSettings = (styleObject) => {
             const root = document.documentElement;
+            // The logo image might not exist yet on the very first call, so we check
+            const logoImg = document.getElementById('navbar-logo-img');
             
-            // Apply all colors from the theme
-            for (const [key, value] of Object.entries(theme.colors)) {
-                root.style.setProperty(key, value);
+            // If null or undefined, use default
+            if (!styleObject) {
+                styleObject = DEFAULT_STYLE;
             }
             
-            // Special case for gradients that need the RGB value
-            root.style.setProperty('--nav-bg-rgb', theme.colors['--nav-bg-rgb']);
-            root.style.setProperty('--nav-accent-rgb', theme.colors['--nav-accent-rgb']);
-            root.style.setProperty('--nav-accent-hover-rgb', theme.colors['--nav-accent-hover-rgb']);
+            // Ensure all defaults are present just in case of a partial/old object
+            styleObject = { ...DEFAULT_STYLE, ...styleObject };
 
-            if (save) {
-                localStorage.setItem(NAVBAR_THEME_KEY, themeId);
+            // Apply all CSS variables
+            for (const [key, value] of Object.entries(styleObject)) {
+                if (key.startsWith('--')) {
+                    root.style.setProperty(key, value);
+                }
+            }
+
+            // Update logo path
+            if (logoImg && styleObject.logoPath) {
+                logoImg.src = styleObject.logoPath;
+            } else if (logoImg) {
+                // Fallback if logoPath is missing
+                logoImg.src = DEFAULT_STYLE.logoPath;
             }
         };
 
-        // Expose the theme setter so other files (e.g., settings.js) can call it.
-        // Your settings page UI should call `window.setNavbarTheme('theme_id_here')`
-        window.setNavbarTheme = (themeId) => {
-            applyTheme(themeId, true); // Save when called externally
-        };
+        // Expose the style setter so settings.html can call it for live preview.
+        window.applyNavbarStyle = applyStyleSettings;
 
-        // On initial page load, check localStorage for a saved theme.
-        // This runs *after* injectStyles, so the colors will fade from
-        // the :root defaults to the new saved theme.
-        const savedThemeId = localStorage.getItem(NAVBAR_THEME_KEY);
-        if (savedThemeId) {
-            applyTheme(savedThemeId, false); // Apply without re-saving
+        // On initial page load, check localStorage for saved style settings.
+        const savedSettingsString = localStorage.getItem(NAVBAR_STYLE_KEY);
+        let settingsToApply = null; // Will trigger default
+        
+        if (savedSettingsString) {
+            try {
+                settingsToApply = JSON.parse(savedSettingsString);
+            } catch (e) {
+                console.error("Failed to parse navbar style settings, reverting to default.", e);
+                settingsToApply = null; // Use default
+            }
         }
+        
+        // Apply either the loaded settings or the defaults.
+        // This runs *after* injectStyles, so colors will fade.
+        applyStyleSettings(settingsToApply);
         
         // -----------------------------
     };
