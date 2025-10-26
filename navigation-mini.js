@@ -11,6 +11,8 @@
  * 4. USER REQUEST: Replaced Login/Signup links with a single "Authenticate" link pointing to /authentication.html.
  * 5. USER REQUEST: Updated logged-out button background to #010101 and icon color to #DADADA, using 'fa-solid fa-user'.
  * 6. WIDESCREEN UPDATE: Removed max-width from the 'nav' element to allow it to fill the screen.
+ * 7. NEW FEATURE: Added conditional "Documentation," "Terms & Policies," and "Donate" links to the logged-out menu.
+ * 8. NEW FEATURE: Links are hidden if the user is currently on the destination page (e.g., "Authenticate" is hidden on /authentication.html).
  *
  * --- INSTRUCTIONS ---
  * 1. ACTION REQUIRED: Paste your own Firebase project configuration into the `FIREBASE_CONFIG` object below.
@@ -60,9 +62,6 @@ const FIREBASE_CONFIG = {
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
             script.src = src;
-            // The Firebase compat libraries are not true ES modules, but using type='module' can sometimes cause issues.
-            // Let's remove type='module' as the SDKs are designed to be globally available.
-            // script.type = 'module'; 
             script.onload = resolve;
             script.onerror = reject;
             document.head.appendChild(script);
@@ -71,15 +70,10 @@ const FIREBASE_CONFIG = {
 
     // Helper to load external CSS files
     const loadCSS = (href) => {
-        // This helper is fine and uses a Promise to ensure the link element is created.
-        // The browser will handle downloading the CSS.
         return new Promise((resolve) => {
             const link = document.createElement('link');
             link.rel = 'stylesheet';
             link.href = href;
-            // Crucially, resolve the promise when the link is created, 
-            // but the browser will download and apply the CSS in the background.
-            // Since this is a critical component, we will wait for it in the 'run' function.
             link.onload = resolve;
             link.onerror = resolve; // Resolve even on error to not block the app
             document.head.appendChild(link);
@@ -88,10 +82,8 @@ const FIREBASE_CONFIG = {
 
     const run = async () => {
         try {
-            // Load Font Awesome 7.1.0 CSS - **WAIT FOR IT TO BE ADDED TO HEAD**
-            // The wait here ensures the link tag is in the DOM before we proceed.
-            // The CSS itself will load in parallel with the JS, which is desired.
-            await loadCSS("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"); // Updated to 6.5.2 (latest stable CDN)
+            // Load Font Awesome 6.5.2 CSS - **WAIT FOR IT TO BE ADDED TO HEAD**
+            await loadCSS("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css");
             
             // Sequentially load Firebase modules.
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
@@ -186,24 +178,62 @@ const FIREBASE_CONFIG = {
         document.head.appendChild(style);
     };
 
+    // --- NEW HELPER: CONDITIONAL LINKS ---
+    /**
+     * Generates HTML for the optional links, hiding them if the user is on that page.
+     * @param {string} currentPage The current window.location.pathname.
+     * @returns {string} The HTML string for the links.
+     */
+    const getOptionalLinks = (currentPage) => {
+        let links = '';
+        const normalizePath = (path) => path.replace(/^\/+/, '').toLowerCase();
+        const currentPath = normalizePath(currentPage);
+
+        // 1. Authenticate Link
+        if (!currentPath.includes('authentication.html')) {
+             links += `<a href="/authentication.html" class="auth-menu-link"><i class="fa-solid fa-lock"></i>Authenticate</a>`;
+        }
+
+        // 2. Documentation Link
+        if (!currentPath.includes('documentation.html')) {
+            links += `<a href="/documentation.html" class="auth-menu-link"><i class="fa-solid fa-book"></i>Documentation</a>`;
+        }
+        
+        // 3. Terms & Policies Link (Assumes file is named legal.html)
+        if (!currentPath.includes('legal.html')) {
+            links += `<a href="/legal.html" class="auth-menu-link"><i class="fa-solid fa-gavel"></i>Terms & Policies</a>`;
+        }
+
+        // 4. Donate Link (Always visible, opens in new tab)
+        links += `<a href="https://buymeacoffee.com/4simpleproblems" target="_blank" class="auth-menu-link"><i class="fa-solid fa-mug-hot"></i>Donate</a>`;
+        
+        return links;
+    }
+
+
     // --- 4. RENDER THE NAVBAR HTML (UPDATED with Icons and Authenticate link) ---
     const renderNavbar = (user, userData) => {
         const container = document.getElementById('navbar-container');
         if (!container) return; // Should not happen if setupContainer runs
 
         const logoPath = "/images/logo.png"; // Using root-relative path
+        const currentPagePath = window.location.pathname; // Get current path for conditional links
 
-        // UPDATED: Use fa-user icon, #010101 background via class, and single "Authenticate" link
-        const loggedOutView = `
-            <div class="relative">
-                <button id="auth-toggle" class="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-700 transition logged-out-auth-toggle">
-                    <i class="fa-solid fa-user"></i>
-                </button>
-                <div id="auth-menu-container" class="auth-menu-container closed">
-                    <a href="/authentication.html" class="auth-menu-link"><i class="fa-solid fa-lock"></i>Authenticate</a>
+        // UPDATED: Use a function to render the conditional links
+        const loggedOutView = (currentPage) => {
+            const optionalLinks = getOptionalLinks(currentPage);
+
+            return `
+                <div class="relative">
+                    <button id="auth-toggle" class="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-700 transition logged-out-auth-toggle">
+                        <i class="fa-solid fa-user"></i>
+                    </button>
+                    <div id="auth-menu-container" class="auth-menu-container closed">
+                        ${optionalLinks}
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
+        }
 
         const loggedInView = (user, userData) => {
             const photoURL = user.photoURL || userData?.photoURL;
@@ -239,7 +269,7 @@ const FIREBASE_CONFIG = {
                     <a href="/" class="flex items-center space-x-2">
                         <img src="${logoPath}" alt="4SP Logo" class="h-8 w-auto">
                     </a>
-                    ${user ? loggedInView(user, userData) : loggedOutView}
+                    ${user ? loggedInView(user, userData) : loggedOutView(currentPagePath)}
                 </nav>
             </header>
         `;
