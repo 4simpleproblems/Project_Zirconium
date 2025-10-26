@@ -8,12 +8,15 @@
  * --- UPDATES & FEATURES ---
  * 1. ADMIN EMAIL SET: The privileged email is set to 4simpleproblems@gmail.com.
  * 2. AI FEATURES REMOVED: All AI-related code has been removed.
- * 3. GOLD ADMIN TAB: The 'Beta Settings' tab now has a premium gold-textured look and uses the path: ../logged-in/beta-settings.html.
+ * 3. GOLD ADMIN TAB REMOVED: The 'Beta Settings' tab no longer has a special texture.
  * 4. SETTINGS LINK: Includes the 'Settings' link in the authenticated user's dropdown menu.
  * 5. ACTIVE TAB SCROLL: Auto-scrolls the active tab to the center of the viewport for visibility.
  * 6. LOGOUT REDIRECT: Redirects logged-out users away from logged-in pages.
- * 7. NEW: PIN BUTTON: Adds a persistent 'Pin' button next to the auth icon for quick page access,
- * managed via localStorage and a right-click context menu.
+ * 7. PIN BUTTON: Adds a persistent 'Pin' button next to the auth icon for quick page access.
+ * 8. GLIDE FADE UPDATED: Glide button fade now spans the full navbar height smoothly.
+ * 9. INSTANT GLIDE: Scroll-end glide buttons (arrows) now update instantly with no delay.
+ * 10. PIN HINT: A one-time hint now appears on first click of the pin button.
+ * 11. PIN ICON: Pin icon is now solid at all times (hover effect removed).
  */
 
 // =========================================================================
@@ -72,7 +75,7 @@ let db;
         });
     };
 
-    // Simple debounce utility for performance
+    // Simple debounce utility for performance (still used for 'resize')
     const debounce = (func, delay) => {
         let timeoutId;
         return (...args) => {
@@ -204,6 +207,7 @@ let db;
         // --- LocalStorage Keys ---
         const PINNED_PAGE_KEY = 'navbar_pinnedPage';
         const PIN_BUTTON_HIDDEN_KEY = 'navbar_pinButtonHidden';
+        const PIN_HINT_SHOWN_KEY = 'navbar_pinHintShown'; // NEW
 
         // --- Helper Functions ---
 
@@ -253,7 +257,7 @@ let db;
 
                 /* NEW: Glass Menu Style for Pin Context Menu */
                 .glass-menu { 
-                    background: rgba(17, 24, 39, 0.7); /* Dark glass */
+                    background: rgba(10, 10, 10, 0.8); /* Near black */
                     backdrop-filter: blur(10px); 
                     -webkit-backdrop-filter: blur(10px); 
                     border: 1px solid rgba(55, 65, 81, 0.8);
@@ -266,42 +270,44 @@ let db;
                 .tab-scroll-container { flex-grow: 1; display: flex; align-items: center; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; -ms-overflow-style: none; padding-bottom: 5px; margin-bottom: -5px; scroll-behavior: smooth; }
                 .tab-scroll-container::-webkit-scrollbar { display: none; }
                 .scroll-glide-button {
-                    position: absolute; top: 0; height: 100%; width: 4rem; display: flex; align-items: center; justify-content: center; background: #000000; 
+                    position: absolute; top: 0; height: 100%; width: 4rem; display: flex; align-items: center; justify-content: center; 
                     color: white; font-size: 1.2rem; cursor: pointer; 
                     opacity: 1; 
-                    transition: opacity 0.3s, background 0.3s; z-index: 10; pointer-events: auto;
+                    /* MODIFIED: Transition is now only for opacity */
+                    transition: opacity 0.3s; 
+                    z-index: 10; pointer-events: auto;
                 }
-                #glide-left { left: 0; background: linear-gradient(to right, #000000 50%, transparent); justify-content: flex-start; padding-left: 0.5rem; }
-                #glide-right { right: 0; background: linear-gradient(to left, #000000 50%, transparent); justify-content: flex-end; padding-right: 0.5rem; }
+                #glide-left { left: 0; background: linear-gradient(to right, #000000, transparent); justify-content: flex-start; padding-left: 0.5rem; }
+                #glide-right { right: 0; background: linear-gradient(to left, #000000, transparent); justify-content: flex-end; padding-right: 0.5rem; }
                 .scroll-glide-button.hidden { opacity: 0 !important; pointer-events: none !important; }
                 .nav-tab { flex-shrink: 0; padding: 0.5rem 1rem; color: #9ca3af; font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; transition: all 0.2s; text-decoration: none; line-height: 1.5; display: flex; align-items: center; margin-right: 0.5rem; border: 1px solid transparent; }
                 .nav-tab:not(.active):hover { color: white; border-color: #d1d5db; background-color: rgba(79, 70, 229, 0.05); }
                 .nav-tab.active { color: #4f46e5; border-color: #4f46e5; background-color: rgba(79, 70, 229, 0.1); }
                 .nav-tab.active:hover { color: #6366f1; border-color: #6366f1; background-color: rgba(79, 70, 229, 0.15); }
                 
-                /* NEW: Gold textured style for Admin Tab */
-                .nav-tab.admin-tab {
-                    /* Gold Gradient Text - ensures the text color is not overridden by default states */
-                    background: linear-gradient(45deg, #f0e68c, #ffd700, #daa520, #f0e68c);
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                    color: transparent; /* Required for the gradient effect to work */
-                    font-weight: 700;
-                    border: 2px solid gold;
-                    box-shadow: 0 0 8px rgba(255, 215, 0, 0.6); /* Soft glow */
-                    transition: all 0.3s ease;
+                /* NEW: Pin Hint Styles */
+                .pin-hint-container {
+                    position: absolute;
+                    bottom: calc(100% + 10px); /* 10px above the button */
+                    left: 50%;
+                    transform: translateX(-50%) scale(0.8);
+                    background: #010101;
+                    border: 1px solid #374151;
+                    color: white;
+                    padding: 0.5rem 1rem;
+                    border-radius: 0.75rem;
+                    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+                    opacity: 0;
+                    pointer-events: none;
+                    z-index: 1020;
+                    transition: opacity 0.3s ease, transform 0.3s ease;
+                    white-space: nowrap;
+                    font-size: 0.875rem;
                 }
-                
-                .nav-tab.admin-tab:not(.active):hover {
-                    border-color: #ffd700;
-                    background-color: rgba(255, 215, 0, 0.1);
-                    box-shadow: 0 0 12px rgba(255, 215, 0, 0.9);
-                }
-
-                .nav-tab.admin-tab.active {
-                    background-color: rgba(255, 215, 0, 0.25);
-                    border-color: #f0e68c;
-                    box-shadow: 0 0 10px rgba(255, 215, 0, 1);
+                .pin-hint-container.show {
+                    opacity: 1;
+                    transform: translateX(-50%) scale(1);
+                    transition-delay: 0.2s; /* Slight delay on show */
                 }
             `;
             document.head.appendChild(style);
@@ -351,11 +357,10 @@ let db;
                 .map(page => {
                     const isActive = isTabActive(page.url);
                     const activeClass = isActive ? 'active' : '';
-                    const adminClass = page.adminOnly ? 'admin-tab' : ''; // <--- NEW: Apply admin-tab class
                     const iconClasses = getIconClass(page.icon);
                     
-                    // The admin badge (span) is removed, now styling is applied to the tab anchor tag itself
-                    return `<a href="${page.url}" class="nav-tab ${activeClass} ${adminClass}"><i class="${iconClasses} mr-2"></i>${page.name}</a>`;
+                    // Admin class removed
+                    return `<a href="${page.url}" class="nav-tab ${activeClass}"><i class="${iconClasses} mr-2"></i>${page.name}</a>`;
                 }).join('');
 
             
@@ -388,6 +393,10 @@ let db;
                         <div id="pin-context-menu" class="auth-menu-container glass-menu closed" style="width: 12rem;">
                             ${repinOption}
                             ${removeOrHideOption}
+                        </div>
+                        <!-- NEW HINT -->
+                        <div id="pin-hint" class="pin-hint-container">
+                            Right-click for options!
                         </div>
                     </div>
                 `;
@@ -470,6 +479,7 @@ let db;
                             <button id="glide-right" class="scroll-glide-button"><i class="fa-solid fa-chevron-right"></i></button>
                         </div>
 
+                        <!-- NEW: Wrapper for Pin and Auth buttons -->
                         <div class="flex items-center gap-3 flex-shrink-0">
                             ${pinButtonHtml}
                             ${user ? loggedInView(user, userData) : loggedOutView}
@@ -512,11 +522,13 @@ let db;
             const leftButton = document.getElementById('glide-left');
             const rightButton = document.getElementById('glide-right');
 
+            // Debounce resize, but NOT scroll
             const debouncedUpdateGilders = debounce(updateScrollGilders, 50);
 
             if (tabContainer) {
                 const scrollAmount = tabContainer.offsetWidth * 0.8; 
-                tabContainer.addEventListener('scroll', debouncedUpdateGilders);
+                // UPDATED: Scroll listener is no longer debounced
+                tabContainer.addEventListener('scroll', updateScrollGilders);
                 window.addEventListener('resize', debouncedUpdateGilders);
                 
                 if (leftButton) {
@@ -545,7 +557,6 @@ let db;
 
             // --- NEW: Pin Button Event Listeners ---
             const pinButton = document.getElementById('pin-button');
-            const pinButtonIconEl = document.getElementById('pin-button-icon');
             const pinContextMenu = document.getElementById('pin-context-menu');
             const repinButton = document.getElementById('repin-button');
             const removePinButton = document.getElementById('remove-pin-button');
@@ -557,6 +568,21 @@ let db;
                 pinButton.addEventListener('click', (e) => {
                     if (pinButton.getAttribute('href') === '#') {
                         e.preventDefault(); // Stop navigation
+                        
+                        // --- NEW HINT LOGIC ---
+                        const hintShown = localStorage.getItem(PIN_HINT_SHOWN_KEY) === 'true';
+                        if (!hintShown) {
+                            const hintEl = document.getElementById('pin-hint');
+                            if (hintEl) {
+                                hintEl.classList.add('show');
+                                localStorage.setItem(PIN_HINT_SHOWN_KEY, 'true');
+                                setTimeout(() => {
+                                    hintEl.classList.remove('show');
+                                }, 6000); // 6 seconds
+                            }
+                        }
+                        // --- END HINT LOGIC ---
+
                         const currentPageKey = getCurrentPageKey();
                         if (currentPageKey) {
                             localStorage.setItem(PINNED_PAGE_KEY, currentPageKey);
@@ -578,17 +604,7 @@ let db;
                     menu?.classList.remove('open');
                 });
 
-                // Hover: Change icon
-                pinButton.addEventListener('mouseenter', () => {
-                    if (!localStorage.getItem(PINNED_PAGE_KEY)) { // Only change if it's the default pin
-                        pinButtonIconEl.className = 'fa-regular fa-map-pin';
-                    }
-                });
-                pinButton.addEventListener('mouseleave', () => {
-                    if (!localStorage.getItem(PINNED_PAGE_KEY)) { // Revert
-                        pinButtonIconEl.className = 'fa-solid fa-map-pin';
-                    }
-                });
+                // REMOVED: Hover listeners for pin icon
             }
 
             // Context Menu Actions
@@ -698,6 +714,8 @@ let db;
         // Inject styles before anything else is rendered for best stability
         injectStyles();
     };
+
+Read a brief summary of a file
 
     // --- START THE PROCESS ---
     document.addEventListener('DOMContentLoaded', run);
