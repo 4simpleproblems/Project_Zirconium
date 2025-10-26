@@ -715,9 +715,8 @@ let db;
         injectStyles();
     };
 
-Read a brief summary of a file
-
     // --- START THE PROCESS ---
     document.addEventListener('DOMContentLoaded', run);
 
 })();
+
