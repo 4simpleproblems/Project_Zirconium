@@ -386,7 +386,7 @@ let db;
                     : `<button id="hide-pin-button" class="auth-menu-link text-red-400 hover:text-red-300"><i class="fa-solid fa-eye-slash w-4"></i>Hide Button</button>`;
 
                 pinButtonHtml = `
-                    <div class="relative flex-shrink-0">
+                    <div class="relative flex-shrink-0 flex items-center">
                         <a href="${pinButtonUrl}" id="pin-button" class="w-8 h-8 rounded-full border border-gray-600 flex items-center justify-center hover:bg-gray-700 transition" title="${pinButtonTitle}">
                             <i id="pin-button-icon" class="${pinButtonIcon}"></i>
                         </a>
@@ -404,7 +404,7 @@ let db;
 
             // --- Auth Views ---
             const loggedOutView = `
-                <div class="relative flex-shrink-0">
+                <div class="relative flex-shrink-0 flex items-center">
                     <button id="auth-toggle" class="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-700 transition logged-out-auth-toggle">
                         <i class="fa-solid fa-user"></i>
                     </button>
@@ -434,7 +434,7 @@ let db;
                     : '';
 
                 return `
-                    <div class="relative flex-shrink-0">
+                    <div class="relative flex-shrink-0 flex items-center">
                         <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
                             ${avatar}
                         </button>
