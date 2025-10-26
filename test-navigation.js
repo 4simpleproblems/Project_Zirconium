@@ -12,7 +12,8 @@
  * 4. SETTINGS LINK: Includes the 'Settings' link in the authenticated user's dropdown menu.
  * 5. ACTIVE TAB SCROLL: Auto-scrolls the active tab to the center of the viewport for visibility.
  * 6. LOGOUT REDIRECT: Redirects logged-out users away from logged-in pages.
- * 7. NEW: DYNAMIC THEMING AND CONTRAST LOGIC: Implements customizable background, text, icon, and logo colors based on local storage and brightness calculations.
+ * 7. NEW: PIN BUTTON: Adds a persistent 'Pin' button next to the auth icon for quick page access,
+ * managed via localStorage and a right-click context menu.
  */
 
 // =========================================================================
@@ -31,95 +32,13 @@ const FIREBASE_CONFIG = {
 
 // --- Configuration ---
 const PAGE_CONFIG_URL = '../page-identification.json';
+
+// NEW: Set the specific email that is considered an administrator.
 const PRIVILEGED_EMAIL = '4simpleproblems@gmail.com'; 
-
-// --- NEW: THEME CONFIGURATION ---
-const THEME_STORAGE_KEY = 'user-navbar-theme';
-
-// Default theme (standard dark mode)
-const DEFAULT_THEME = {
-    // Standard dark mode background: Black
-    navbarBg: '#000000', 
-    // Accent/Active color: Indigo 500
-    tabActiveColor: '#4f46e5', 
-    // Primary border/separator color: Gray 800
-    borderColor: 'rgb(31 41 55)', 
-};
 
 // Variables to hold Firebase objects
 let auth;
 let db;
-
-// --- Helper Functions for Theme Logic ---
-
-/**
- * Converts a hex color string (e.g., #FFFFFF or #FFF) to an RGB array [r, g, b].
- * @param {string} hex - The hex color code.
- * @returns {number[]} An array of [R, G, B] values (0-255).
- */
-const hexToRgb = (hex) => {
-    // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
-    const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
-    hex = hex.replace(shorthandRegex, (m, r, g, b) => r + r + g + g + b + b);
-    
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? [
-        parseInt(result[1], 16),
-        parseInt(result[2], 16),
-        parseInt(result[3], 16)
-    ] : [0, 0, 0]; // Default to black on failure
-};
-
-/**
- * Calculates the relative luminance of a color, which determines its perceived brightness.
- * This is the standard WCAG/W3C formula.
- * @param {number[]} rgb - An array of [R, G, B] values (0-255).
- * @returns {number} The relative luminance (0 to 1).
- */
-const getRelativeLuminance = (rgb) => {
-    const sRGB = rgb.map(v => {
-        v /= 255; // Normalize to 0-1
-        return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
-    });
-    // Luminance formula: L = 0.2126 * R + 0.7152 * G + 0.0722 * B
-    return 0.2126 * sRGB[0] + 0.7152 * sRGB[1] + 0.0722 * sRGB[2];
-};
-
-/**
- * Determines the ideal text/icon color (light, dark, or very dark) 
- * based on the background color's luminance.
- * * @param {string} hexBg - The hex background color.
- * @returns {{color: string, class: string, isLight: boolean}} Object with color and flag.
- */
-const getContrastColor = (hexBg) => {
-    const rgb = hexToRgb(hexBg);
-    const luminance = getRelativeLuminance(rgb);
-    
-    // Luminance thresholds (WCAG is typically 0.179 for AA contrast)
-    const LIGHT_THRESHOLD = 0.5; // Anything above this is considered 'light'
-    const MEDIUM_DARK_UPPER_THRESHOLD = 0.25; // Upper bound for the medium-dark range
-    const MEDIUM_DARK_LOWER_THRESHOLD = 0.05; // Lower bound for the medium-dark range
-    
-    // Default light and dark colors
-    const LIGHT_TEXT = '#FFFFFF';
-    const DARK_TEXT = '#1F2937'; // A dark gray/almost black
-    const VERY_DARK_TEXT = '#000000'; // Pure black for maximum contrast on medium-dark
-
-    // 1. Light background: Use a dark color (standard dark gray)
-    if (luminance > LIGHT_THRESHOLD) {
-        return { color: DARK_TEXT, class: 'dark', isLight: true };
-    }
-    
-    // 2. Medium-Dark background: Use a VERY dark color (pure black)
-    // This addresses the user's request for better aesthetics on medium tones
-    if (luminance > MEDIUM_DARK_LOWER_THRESHOLD && luminance <= MEDIUM_DARK_UPPER_THRESHOLD) {
-        return { color: VERY_DARK_TEXT, class: 'very-dark', isLight: false };
-    }
-
-    // 3. Dark background: Use a light color (white)
-    return { color: LIGHT_TEXT, class: 'light', isLight: false };
-};
-
 
 // --- Self-invoking function to encapsulate all logic ---
 (function() {
@@ -129,36 +48,8 @@ const getContrastColor = (hexBg) => {
         return;
     }
 
-    // --- 1. THEME INITIALIZATION ---
-    let currentTheme = DEFAULT_THEME;
-    let contrast;
-    let logoPath;
+    // --- 1. DYNAMICALLY LOAD EXTERNAL ASSETS ---
 
-    const initializeTheme = () => {
-        try {
-            const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
-            if (savedTheme) {
-                // Merge saved settings with defaults to ensure all keys exist
-                currentTheme = { ...DEFAULT_THEME, ...JSON.parse(savedTheme) };
-            }
-        } catch (e) {
-            console.warn("Could not retrieve theme from local storage. Using default.", e);
-        }
-
-        // Calculate contrast colors based on the finalized navbar background
-        contrast = getContrastColor(currentTheme.navbarBg);
-        
-        // Dynamic logo switching
-        // If the background is calculated as 'light' (luminance > 0.5), use the dark logo.
-        // Otherwise (medium-dark or dark), use the light logo.
-        logoPath = contrast.isLight ? "/images/logo-dark.png" : "/images/logo.png";
-    };
-
-
-    // --- Existing Asset Loading and Utility Functions (Omitted for brevity, assumed unchanged) ---
-    // ... (loadScript, loadCSS, debounce, getIconClass remain here) ...
-    // ... (Re-insert all original functions here for the complete file) ...
-    
     // Helper to load external JS files
     const loadScript = (src) => {
         return new Promise((resolve, reject) => {
@@ -221,11 +112,39 @@ const getContrastColor = (hexBg) => {
         return '';
     };
 
-    // --- Main run function ---
-    const run = async () => {
-        // NEW: Initialize theme before loading assets (in case assets depend on theme)
-        initializeTheme();
+    // Moved isTabActive here as it has no dependencies on firebase init
+    const isTabActive = (tabUrl) => {
+        const tabPathname = new URL(tabUrl, window.location.origin).pathname.toLowerCase();
+        const currentPathname = window.location.pathname.toLowerCase();
+
+        const cleanPath = (path) => {
+            if (path.endsWith('/index.html')) {
+                path = path.substring(0, path.lastIndexOf('/')) + '/';
+            }
+            if (path.length > 1 && path.endsWith('/')) {
+                path = path.slice(0, -1);
+            }
+            return path;
+        };
+
+        const currentCanonical = cleanPath(currentPathname);
+        const tabCanonical = cleanPath(tabPathname);
         
+        if (currentCanonical === tabCanonical) {
+            return true;
+        }
+
+        const tabPathSuffix = tabPathname.startsWith('/') ? tabPathname.substring(1) : tabPathname;
+        
+        if (currentPathname.endsWith(tabPathSuffix)) {
+            return true;
+        }
+
+        return false;
+    };
+
+
+    const run = async () => {
         let pages = {};
 
         // Load Icons CSS first
@@ -276,126 +195,101 @@ const getContrastColor = (hexBg) => {
         auth = firebase.auth();
         db = firebase.firestore();
 
-        // --- 3. INJECT CSS STYLES (NOW USING CSS VARIABLES) ---
+        // --- State variables for re-rendering ---
+        let allPages = pages;
+        let currentUser = null;
+        let currentUserData = null;
+        let currentIsPrivileged = false;
+
+        // --- LocalStorage Keys ---
+        const PINNED_PAGE_KEY = 'navbar_pinnedPage';
+        const PIN_BUTTON_HIDDEN_KEY = 'navbar_pinButtonHidden';
+
+        // --- Helper Functions ---
+
+        // Gets the key (e.g., 'home', 'dashboard') of the current page from the config
+        const getCurrentPageKey = () => {
+            for (const [key, page] of Object.entries(allPages)) {
+                if (isTabActive(page.url)) {
+                    return key;
+                }
+            }
+            return null;
+        };
+
+        // Function to re-render the entire navbar when state changes (like pinning)
+        const rerenderNavbar = () => {
+            renderNavbar(currentUser, currentUserData, allPages, currentIsPrivileged);
+        };
+
+
+        // --- 3. INJECT CSS STYLES ---
         const injectStyles = () => {
             const style = document.createElement('style');
-            
-            // NEW: Define CSS variables using the dynamically determined theme values
-            const rootVariables = `
-                --navbar-bg: ${currentTheme.navbarBg};
-                --navbar-border: ${currentTheme.borderColor};
-                --text-color: ${contrast.color};
-                --tab-inactive-color: ${contrast.isLight ? '#374151' : '#9ca3af'}; /* Darker gray for light mode, light gray for dark mode */
-                --tab-active-color: ${currentTheme.tabActiveColor};
-                --tab-active-bg: ${currentTheme.tabActiveColor}1A; /* 10% opacity */
-                --tab-active-hover-bg: ${currentTheme.tabActiveColor}26; /* 15% opacity */
-                --tab-hover-bg: ${contrast.isLight ? '#E5E7EB' : 'rgba(79, 70, 229, 0.05)'};
-                --tab-hover-color: ${contrast.isLight ? '#000000' : 'white'};
-                --tab-hover-border: ${contrast.isLight ? '#000000' : '#d1d5db'};
-                --glide-bg-base: ${currentTheme.navbarBg};
-                --auth-menu-bg: ${currentTheme.navbarBg};
-                --auth-menu-border: ${contrast.isLight ? 'rgb(209 213 219)' : 'rgb(55 65 81)'};
-                --initial-avatar-color: ${contrast.isLight ? 'black' : 'white'};
-            `;
-
             style.textContent = `
-                :root { ${rootVariables} }
-                /* Base Styles - Using CSS Variables */
+                /* Base Styles */
                 body { padding-top: 4rem; }
-                .auth-navbar { 
-                    position: fixed; top: 0; left: 0; right: 0; z-index: 1000; 
-                    background: var(--navbar-bg); 
-                    border-bottom: 1px solid var(--navbar-border); 
-                    height: 4rem; 
-                }
+                .auth-navbar { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: #000000; border-bottom: 1px solid rgb(31 41 55); height: 4rem; }
                 .auth-navbar nav { padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
-                
-                /* Updated Initial Avatar Color */
-                .initial-avatar { 
-                    background: linear-gradient(135deg, #374151 0%, #111827 100%); 
-                    font-family: sans-serif; text-transform: uppercase; display: flex; 
-                    align-items: center; justify-content: center; 
-                    color: var(--initial-avatar-color); /* Dynamically set color */
-                }
+                .initial-avatar { background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; }
                 
                 /* Auth Dropdown Menu Styles */
                 .auth-menu-container { 
                     position: absolute; right: 0; top: 50px; width: 16rem; 
-                    background: var(--auth-menu-bg);
-                    border: 1px solid var(--auth-menu-border); border-radius: 0.75rem; padding: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
-                    transition: transform 0.2s ease-out, opacity 0.2s ease-out; transform-origin: top right; 
+                    background: #000000;
+                    border: 1px solid rgb(55 65 81); border-radius: 0.75rem; padding: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
+                    transition: transform 0.2s ease-out, opacity 0.2s ease-out; transform-origin: top right; z-index: 1010;
                 }
                 .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
                 .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
                 .auth-menu-link, .auth-menu-button { 
                     display: flex; align-items: center; gap: 0.75rem; width: 100%; text-align: left; 
-                    padding: 0.5rem 0.75rem; font-size: 0.875rem; color: var(--text-color); /* Dynamic text color */
-                    border-radius: 0.375rem; 
+                    padding: 0.5rem 0.75rem; font-size: 0.875rem; color: #d1d5db; border-radius: 0.375rem; 
                     transition: background-color 0.2s, color 0.2s; border: none; cursor: pointer;
                 }
                 .auth-menu-link:hover, .auth-menu-button:hover { background-color: rgb(55 65 81); color: white; }
                 .logged-out-auth-toggle { background: #010101; border: 1px solid #374151; }
                 .logged-out-auth-toggle i { color: #DADADA; }
 
+                /* NEW: Glass Menu Style for Pin Context Menu */
+                .glass-menu { 
+                    background: rgba(17, 24, 39, 0.7); /* Dark glass */
+                    backdrop-filter: blur(10px); 
+                    -webkit-backdrop-filter: blur(10px); 
+                    border: 1px solid rgba(55, 65, 81, 0.8);
+                }
+                /* Helper for icons in menus */
+                .auth-menu-link i.w-4, .auth-menu-button i.w-4 { width: 1rem; text-align: center; } 
+
                 /* Tab Wrapper and Glide Buttons */
                 .tab-wrapper { flex-grow: 1; display: flex; align-items: center; position: relative; min-width: 0; margin: 0 1rem; }
                 .tab-scroll-container { flex-grow: 1; display: flex; align-items: center; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; -ms-overflow-style: none; padding-bottom: 5px; margin-bottom: -5px; scroll-behavior: smooth; }
                 .tab-scroll-container::-webkit-scrollbar { display: none; }
                 .scroll-glide-button {
-                    position: absolute; top: 0; height: 100%; width: 4rem; display: flex; align-items: center; justify-content: center; 
-                    background: var(--glide-bg-base); /* Dynamic background for gliders */
-                    color: var(--text-color); /* Dynamic icon color */ 
-                    font-size: 1.2rem; cursor: pointer; 
+                    position: absolute; top: 0; height: 100%; width: 4rem; display: flex; align-items: center; justify-content: center; background: #000000; 
+                    color: white; font-size: 1.2rem; cursor: pointer; 
                     opacity: 1; 
                     transition: opacity 0.3s, background 0.3s; z-index: 10; pointer-events: auto;
                 }
-                #glide-left { left: 0; background: linear-gradient(to right, var(--glide-bg-base) 50%, transparent); justify-content: flex-start; padding-left: 0.5rem; }
-                #glide-right { right: 0; background: linear-gradient(to left, var(--glide-bg-base) 50%, transparent); justify-content: flex-end; padding-right: 0.5rem; }
+                #glide-left { left: 0; background: linear-gradient(to right, #000000 50%, transparent); justify-content: flex-start; padding-left: 0.5rem; }
+                #glide-right { right: 0; background: linear-gradient(to left, #000000 50%, transparent); justify-content: flex-end; padding-right: 0.5rem; }
                 .scroll-glide-button.hidden { opacity: 0 !important; pointer-events: none !important; }
-                .nav-tab { 
-                    flex-shrink: 0; padding: 0.5rem 1rem; 
-                    color: var(--tab-inactive-color); /* Dynamic inactive color */
-                    font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; transition: all 0.2s; text-decoration: none; line-height: 1.5; display: flex; align-items: center; margin-right: 0.5rem; border: 1px solid transparent; 
-                }
-                .nav-tab i { color: var(--tab-inactive-color); transition: all 0.2s; } /* Icon color follows text */
-                .nav-tab:not(.active):hover { 
-                    color: var(--tab-hover-color); /* Dynamic hover text color */
-                    border-color: var(--tab-hover-border); 
-                    background-color: var(--tab-hover-bg); 
-                }
-                .nav-tab:not(.active):hover i { color: var(--tab-hover-color); } /* Dynamic hover icon color */
-
-                /* Active Tab */
-                .nav-tab.active { 
-                    color: var(--tab-active-color); 
-                    border-color: var(--tab-active-color); 
-                    background-color: var(--tab-active-bg); 
-                }
-                .nav-tab.active i { color: var(--tab-active-color); }
-                .nav-tab.active:hover { 
-                    color: var(--tab-active-color); /* Keep color */
-                    border-color: var(--tab-active-color); 
-                    background-color: var(--tab-active-hover-bg); 
-                }
-                .nav-tab.active:hover i { color: var(--tab-active-color); }
-
-                /* Gold textured style for Admin Tab (remains mostly static for the special effect) */
+                .nav-tab { flex-shrink: 0; padding: 0.5rem 1rem; color: #9ca3af; font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; transition: all 0.2s; text-decoration: none; line-height: 1.5; display: flex; align-items: center; margin-right: 0.5rem; border: 1px solid transparent; }
+                .nav-tab:not(.active):hover { color: white; border-color: #d1d5db; background-color: rgba(79, 70, 229, 0.05); }
+                .nav-tab.active { color: #4f46e5; border-color: #4f46e5; background-color: rgba(79, 70, 229, 0.1); }
+                .nav-tab.active:hover { color: #6366f1; border-color: #6366f1; background-color: rgba(79, 70, 229, 0.15); }
+                
+                /* NEW: Gold textured style for Admin Tab */
                 .nav-tab.admin-tab {
+                    /* Gold Gradient Text - ensures the text color is not overridden by default states */
                     background: linear-gradient(45deg, #f0e68c, #ffd700, #daa520, #f0e68c);
                     -webkit-background-clip: text;
                     -webkit-text-fill-color: transparent;
-                    color: transparent; 
+                    color: transparent; /* Required for the gradient effect to work */
                     font-weight: 700;
                     border: 2px solid gold;
-                    box-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
+                    box-shadow: 0 0 8px rgba(255, 215, 0, 0.6); /* Soft glow */
                     transition: all 0.3s ease;
-                }
-                .nav-tab.admin-tab i { 
-                    /* Special override for the admin tab icon to also be gold */
-                    background: linear-gradient(45deg, #f0e68c, #ffd700, #daa520, #f0e68c);
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                    color: transparent; 
                 }
                 
                 .nav-tab.admin-tab:not(.active):hover {
@@ -411,39 +305,6 @@ const getContrastColor = (hexBg) => {
                 }
             `;
             document.head.appendChild(style);
-        };
-        
-        // ... (isTabActive, updateScrollGilders, setupEventListeners remain here) ...
-        // ... (Re-insert all original functions here for the complete file) ...
-        
-        const isTabActive = (tabUrl) => {
-            const tabPathname = new URL(tabUrl, window.location.origin).pathname.toLowerCase();
-            const currentPathname = window.location.pathname.toLowerCase();
-
-            const cleanPath = (path) => {
-                if (path.endsWith('/index.html')) {
-                    path = path.substring(0, path.lastIndexOf('/')) + '/';
-                }
-                if (path.length > 1 && path.endsWith('/')) {
-                    path = path.slice(0, -1);
-                }
-                return path;
-            };
-
-            const currentCanonical = cleanPath(currentPathname);
-            const tabCanonical = cleanPath(tabPathname);
-            
-            if (currentCanonical === tabCanonical) {
-                return true;
-            }
-
-            const tabPathSuffix = tabPathname.startsWith('/') ? tabPathname.substring(1) : tabPathname;
-            
-            if (currentPathname.endsWith(tabPathSuffix)) {
-                return true;
-            }
-
-            return false;
         };
 
         const updateScrollGilders = () => {
@@ -477,14 +338,12 @@ const getContrastColor = (hexBg) => {
             }
         };
 
-
         // --- 4. RENDER THE NAVBAR HTML ---
         const renderNavbar = (user, userData, pages, isPrivilegedUser) => {
             const container = document.getElementById('navbar-container');
             if (!container) return; 
 
-            // Use the dynamically determined logoPath
-            const finalLogoPath = logoPath; 
+            const logoPath = "/images/logo.png"; 
             
             // Filter and map pages for tabs, applying adminOnly filter
             const tabsHtml = Object.values(pages || {})
@@ -499,15 +358,50 @@ const getContrastColor = (hexBg) => {
                     return `<a href="${page.url}" class="nav-tab ${activeClass} ${adminClass}"><i class="${iconClasses} mr-2"></i>${page.name}</a>`;
                 }).join('');
 
+            
+            // --- NEW: Pin Button Logic ---
+            const pinnedPageKey = localStorage.getItem(PINNED_PAGE_KEY);
+            const isPinButtonHidden = localStorage.getItem(PIN_BUTTON_HIDDEN_KEY) === 'true';
+            const currentPageKey = getCurrentPageKey();
+            const pinnedPageData = (pinnedPageKey && pages[pinnedPageKey]) ? pages[pinnedPageKey] : null;
+
+            let pinButtonHtml = '';
+            if (!isPinButtonHidden) {
+                const pinButtonIcon = pinnedPageData ? getIconClass(pinnedPageData.icon) : 'fa-solid fa-map-pin';
+                const pinButtonUrl = pinnedPageData ? pinnedPageData.url : '#'; // '#' signals 'pin current'
+                const pinButtonTitle = pinnedPageData ? `Go to ${pinnedPageData.name}` : 'Pin current page';
+
+                // Context Menu Options
+                const repinOption = currentPageKey 
+                    ? `<button id="repin-button" class="auth-menu-link"><i class="fa-solid fa-thumbtack w-4"></i>Repin Current</button>` 
+                    : ''; // Don't show "Repin" if current page isn't in JSON
+                
+                const removeOrHideOption = pinnedPageData 
+                    ? `<button id="remove-pin-button" class="auth-menu-link text-red-400 hover:text-red-300"><i class="fa-solid fa-xmark w-4"></i>Remove Pin</button>`
+                    : `<button id="hide-pin-button" class="auth-menu-link text-red-400 hover:text-red-300"><i class="fa-solid fa-eye-slash w-4"></i>Hide Button</button>`;
+
+                pinButtonHtml = `
+                    <div class="relative flex-shrink-0">
+                        <a href="${pinButtonUrl}" id="pin-button" class="w-8 h-8 rounded-full border border-gray-600 flex items-center justify-center hover:bg-gray-700 transition" title="${pinButtonTitle}">
+                            <i id="pin-button-icon" class="${pinButtonIcon}"></i>
+                        </a>
+                        <div id="pin-context-menu" class="auth-menu-container glass-menu closed" style="width: 12rem;">
+                            ${repinOption}
+                            ${removeOrHideOption}
+                        </div>
+                    </div>
+                `;
+            }
+
             // --- Auth Views ---
             const loggedOutView = `
                 <div class="relative flex-shrink-0">
                     <button id="auth-toggle" class="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-700 transition logged-out-auth-toggle">
-                        <i class="fa-solid fa-user" style="color: var(--text-color);"></i> 
+                        <i class="fa-solid fa-user"></i>
                     </button>
                     <div id="auth-menu-container" class="auth-menu-container closed">
                         <a href="/authentication.html" class="auth-menu-link">
-                            <i class="fa-solid fa-lock" style="color: var(--text-color);"></i>
+                            <i class="fa-solid fa-lock w-4"></i>
                             Authenticate
                         </a>
                     </div>
@@ -523,6 +417,12 @@ const getContrastColor = (hexBg) => {
                 const avatar = photoURL ?
                     `<img src="${photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">` :
                     `<div class="initial-avatar w-8 h-8 rounded-full text-sm font-semibold">${initial}</div>`;
+                
+                // NEW: Check if pin button is hidden to show the 'Show' option
+                const isPinHidden = localStorage.getItem(PIN_BUTTON_HIDDEN_KEY) === 'true';
+                const showPinOption = isPinHidden 
+                    ? `<button id="show-pin-button" class="auth-menu-link"><i class="fa-solid fa-map-pin w-4"></i>Show Pin Button</button>` 
+                    : '';
 
                 return `
                     <div class="relative flex-shrink-0">
@@ -531,19 +431,20 @@ const getContrastColor = (hexBg) => {
                         </button>
                         <div id="auth-menu-container" class="auth-menu-container closed">
                             <div class="px-3 py-2 border-b border-gray-700 mb-2">
-                                <p class="text-sm font-semibold text-white truncate" style="color: var(--text-color);">${username}</p>
+                                <p class="text-sm font-semibold text-white truncate">${username}</p>
                                 <p class="text-xs text-gray-400 truncate">${email}</p>
                             </div>
                             <a href="/logged-in/dashboard.html" class="auth-menu-link">
-                                <i class="fa-solid fa-house-user" style="color: var(--text-color);"></i>
+                                <i class="fa-solid fa-house-user w-4"></i>
                                 Dashboard
                             </a>
                             <a href="/logged-in/settings.html" class="auth-menu-link">
-                                <i class="fa-solid fa-gear" style="color: var(--text-color);"></i>
+                                <i class="fa-solid fa-gear w-4"></i>
                                 Settings
                             </a>
+                            ${showPinOption}
                             <button id="logout-button" class="auth-menu-button text-red-400 hover:bg-red-900/50 hover:text-red-300">
-                                <i class="fa-solid fa-right-from-bracket"></i>
+                                <i class="fa-solid fa-right-from-bracket w-4"></i>
                                 Log Out
                             </button>
                         </div>
@@ -556,7 +457,7 @@ const getContrastColor = (hexBg) => {
                 <header class="auth-navbar">
                     <nav>
                         <a href="/" class="flex items-center space-x-2 flex-shrink-0">
-                            <img src="${finalLogoPath}" alt="4SP Logo" class="h-8 w-auto">
+                            <img src="${logoPath}" alt="4SP Logo" class="h-8 w-auto">
                         </a>
 
                         <div class="tab-wrapper">
@@ -569,7 +470,10 @@ const getContrastColor = (hexBg) => {
                             <button id="glide-right" class="scroll-glide-button"><i class="fa-solid fa-chevron-right"></i></button>
                         </div>
 
-                        ${user ? loggedInView(user, userData) : loggedOutView}
+                        <div class="flex items-center gap-3 flex-shrink-0">
+                            ${pinButtonHtml}
+                            ${user ? loggedInView(user, userData) : loggedOutView}
+                        </div>
                     </nav>
                 </header>
             `;
@@ -633,13 +537,100 @@ const getContrastColor = (hexBg) => {
                     e.stopPropagation();
                     menu.classList.toggle('closed');
                     menu.classList.toggle('open');
+                    // Close pin menu if open
+                    document.getElementById('pin-context-menu')?.classList.add('closed');
+                    document.getElementById('pin-context-menu')?.classList.remove('open');
                 });
             }
 
+            // --- NEW: Pin Button Event Listeners ---
+            const pinButton = document.getElementById('pin-button');
+            const pinButtonIconEl = document.getElementById('pin-button-icon');
+            const pinContextMenu = document.getElementById('pin-context-menu');
+            const repinButton = document.getElementById('repin-button');
+            const removePinButton = document.getElementById('remove-pin-button');
+            const hidePinButton = document.getElementById('hide-pin-button');
+            const showPinButton = document.getElementById('show-pin-button');
+
+            if (pinButton && pinContextMenu) {
+                // Left-click: Navigate or Pin
+                pinButton.addEventListener('click', (e) => {
+                    if (pinButton.getAttribute('href') === '#') {
+                        e.preventDefault(); // Stop navigation
+                        const currentPageKey = getCurrentPageKey();
+                        if (currentPageKey) {
+                            localStorage.setItem(PINNED_PAGE_KEY, currentPageKey);
+                            rerenderNavbar(); // Re-render to show new icon and URL
+                        } else {
+                            // Optional: Add feedback that page can't be pinned
+                            console.warn("This page cannot be pinned as it's not in page-identification.json");
+                        }
+                    }
+                });
+
+                // Right-click: Open Context Menu
+                pinButton.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    pinContextMenu.classList.toggle('closed');
+                    pinContextMenu.classList.toggle('open');
+                    // Close auth menu if open
+                    menu?.classList.add('closed');
+                    menu?.classList.remove('open');
+                });
+
+                // Hover: Change icon
+                pinButton.addEventListener('mouseenter', () => {
+                    if (!localStorage.getItem(PINNED_PAGE_KEY)) { // Only change if it's the default pin
+                        pinButtonIconEl.className = 'fa-regular fa-map-pin';
+                    }
+                });
+                pinButton.addEventListener('mouseleave', () => {
+                    if (!localStorage.getItem(PINNED_PAGE_KEY)) { // Revert
+                        pinButtonIconEl.className = 'fa-solid fa-map-pin';
+                    }
+                });
+            }
+
+            // Context Menu Actions
+            if (repinButton) {
+                repinButton.addEventListener('click', () => {
+                    const currentPageKey = getCurrentPageKey();
+                    if (currentPageKey) {
+                        localStorage.setItem(PINNED_PAGE_KEY, currentPageKey);
+                        rerenderNavbar();
+                    }
+                });
+            }
+            if (removePinButton) {
+                removePinButton.addEventListener('click', () => {
+                    localStorage.removeItem(PINNED_PAGE_KEY);
+                    rerenderNavbar();
+                });
+            }
+            if (hidePinButton) {
+                hidePinButton.addEventListener('click', () => {
+                    localStorage.setItem(PIN_BUTTON_HIDDEN_KEY, 'true');
+                    rerenderNavbar();
+                });
+            }
+            // Auth Menu Action
+            if (showPinButton) {
+                showPinButton.addEventListener('click', () => {
+                    localStorage.setItem(PIN_BUTTON_HIDDEN_KEY, 'false'); // 'false' string
+                    rerenderNavbar();
+                });
+            }
+
+
+            // Global click listener to close *both* menus
             document.addEventListener('click', (e) => {
                 if (menu && menu.classList.contains('open') && !menu.contains(e.target) && e.target !== toggleButton) {
                     menu.classList.add('closed');
                     menu.classList.remove('open');
+                }
+                if (pinContextMenu && pinContextMenu.classList.contains('open') && !pinContextMenu.contains(e.target) && !pinButton.contains(e.target)) {
+                    pinContextMenu.classList.add('closed');
+                    pinContextMenu.classList.remove('open');
                 }
             });
 
@@ -656,6 +647,7 @@ const getContrastColor = (hexBg) => {
         // --- 6. AUTH STATE LISTENER ---
         auth.onAuthStateChanged(async (user) => {
             let isPrivilegedUser = false;
+            let userData = null;
             
             if (user) {
                 // Check for the privileged user email
@@ -664,16 +656,23 @@ const getContrastColor = (hexBg) => {
                 // User is signed in. Fetch their data from Firestore.
                 try {
                     const userDoc = await db.collection('users').doc(user.uid).get();
-                    const userData = userDoc.exists ? userDoc.data() : null;
-                    renderNavbar(user, userData, pages, isPrivilegedUser);
+                    userData = userDoc.exists ? userDoc.data() : null;
                 } catch (error) {
                     console.error("Error fetching user data:", error);
-                    renderNavbar(user, null, pages, isPrivilegedUser); // Render even if Firestore fails
+                    // Continue rendering even if Firestore fails
                 }
-            } else {
+            }
+            
+            // Update global state
+            currentUser = user;
+            currentUserData = userData;
+            currentIsPrivileged = isPrivilegedUser;
+            
+            // Render the navbar with the new state
+            renderNavbar(currentUser, currentUserData, allPages, currentIsPrivileged);
+
+            if (!user) {
                 // User is signed out.
-                renderNavbar(null, null, pages, false);
-                
                 // KICK USER TO INDEX: If the user is logged out, redirect them to ../../index.html
                 const targetUrl = '../../index.html';
                 const currentPathname = window.location.pathname;
