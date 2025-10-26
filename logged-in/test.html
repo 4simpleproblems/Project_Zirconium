@@ -15,9 +15,7 @@
 
     <style>
         /* --- FONT & BASE STYLING (MATCHING base-template.html) --- */
-        :root {
-            /* The color variable has been removed as navigation.js manages it via --navbar-background */
-        }
+        :root { }
 
         body { 
             font-family: 'Geist', sans-serif; 
@@ -32,7 +30,7 @@
             flex-direction: column;
         }
         
-        /* The body padding-top is now handled by the CSS injected in test-navigation.js to account for the fixed navbar height */
+        /* body padding-top is handled by test-navigation.js */
         
         h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
             font-weight: 400 !important;
@@ -132,33 +130,21 @@
             }
         }
 
-        /* --- NEW THEME SELECTOR STYLES --- */
-        .theme-selector {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            gap: 1rem;
-        }
-        .theme-card {
-            padding: 1rem 0.5rem;
-            border-radius: 0.5rem;
-            border: 2px solid #374151; /* gray-700 */
-            background-color: #1f2937; /* gray-800 */
-            color: #d1d5db; /* gray-300 */
-            font-weight: 500;
-            text-align: center;
+        /* --- (RE-ADDED) Color Palette Styles --- */
+        .color-option {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 0.5rem; /* Squircle */
             cursor: pointer;
-            transition: all 0.2s ease;
-            font-size: 0.875rem;
+            border: 2px solid #4b5563; /* gray-600 */
+            transition: transform 0.1s, border-color 0.2s;
         }
-        .theme-card:hover {
-            border-color: #6b7280; /* gray-500 */
-            background-color: #374151; /* gray-700 */
-            color: #ffffff;
+        .color-option:hover {
+            transform: scale(1.1);
+            border-color: #9ca3af; /* gray-400 */
         }
-        .theme-card.selected {
-            border-color: #3b82f6; /* blue-500 */
-            background-color: #3b82f6; /* blue-500 */
-            color: #ffffff;
+        .color-option.selected {
+            border-color: #3b82f6; /* Blue-500 */
             box-shadow: 0 0 0 2px #3b82f640;
         }
     </style>
@@ -194,31 +180,29 @@
 
         // --- CONSTANTS AND DOM ELEMENTS ---
         const BASE_TITLE = "Settings";
-        
-        // Key for Local Storage - MUST MATCH NAVBAR_THEME_KEY in test-navigation.js
-        const NAVBAR_THEME_KEY = 'navbar_theme_id'; 
-        const DEFAULT_THEME_ID = 'default';
+        // Key for Local Storage - MUST MATCH NAVBAR_STYLE_KEY in test-navigation.js
+        const NAVBAR_STYLE_KEY = 'navbar_style_settings'; 
+        const DEFAULT_NAVBAR_COLOR = '#000000';
 
-        // Data for the new theme selector. This mirrors the `COLOR_THEMES` object
-        // in test-navigation.js so we can build the UI.
-        const THEME_DATA = {
-            'default': { name: 'Default Dark' },
-            'ocean': { name: 'Ocean' },
-            'forest': { name: 'Forest' },
-            'sunset': { name: 'Sunset' },
-            'matrix': { name: 'Matrix' },
-            'rose_gold': { name: 'Rose Gold' },
-            'deep_space': { name: 'Deep Space' },
-            'minty': { name: 'Minty' },
-            'cherry': { name: 'Cherry' },
-            'royal': { name: 'Royal' },
-            'grayscale': { name: 'Grayscale' },
-            'vampire': { name: 'Vampire' },
-            'cyberpunk': { name: 'Cyberpunk' },
-            'coffee': { name: 'Coffee' },
-            'sky': { name: 'Sky' },
-            'lava': { name: 'Lava' },
-        };
+        // The 16-color "squircle" palette
+        const colorPalette = [
+            '#000000', // Black (Default)
+            '#1f2937', // Blue-Gray (Dark Mode Accent)
+            '#f7f7f7', // Light Gray
+            '#FFFFFF', // White
+            '#3b82f6', // Bright Blue
+            '#10b981', // Emerald Green
+            '#f59e0b', // Amber Yellow
+            '#ef4444', // Red
+            '#8b5cf6', // Violet
+            '#ec4899', // Pink
+            '#06b6d4', // Cyan
+            '#65a30d', // Lime Green
+            '#7c3aed', // Purple
+            '#f97316', // Orange
+            '#475569', // Slate Gray
+            '#16a34a'  // Dark Green
+        ];
         
         const settingsSections = [
             { id: 'general', title: 'General', icon: 'fa-cog', content: 'Configure basic application behavior like language, theme, and startup settings.', color: 'text-yellow-400' },
@@ -238,62 +222,189 @@
         const panelContent = document.getElementById('panel-content');
         const pageHtmlTitle = document.getElementById('page-title');
 
-        // --- NEW THEME FUNCTIONS ---
+        // --- NEW STYLE GENERATION & HELPER FUNCTIONS ---
 
         /**
-         * Loads the current theme ID string from Local Storage.
-         * @returns {string} The loaded or default theme ID.
+         * Converts a hex color string to an "r, g, b" string.
+         * @param {string} hex - The hex color (e.g., #FFFFFF).
+         * @returns {string} The RGB string (e.g., "255, 255, 255").
          */
-        function loadCurrentThemeId() {
-            try {
-                const localThemeId = localStorage.getItem(NAVBAR_THEME_KEY);
-                // Check if the loaded ID is a valid theme key
-                if (localThemeId && THEME_DATA[localThemeId]) {
-                    return localThemeId;
-                }
-                return DEFAULT_THEME_ID;
-            } catch (e) {
-                console.error("Could not read theme from Local Storage:", e);
-                return DEFAULT_THEME_ID;
+        function hexToRgb(hex) {
+            let r = 0, g = 0, b = 0;
+            if (hex.length == 4) { // #RGB
+                r = parseInt(hex[1] + hex[1], 16);
+                g = parseInt(hex[2] + hex[2], 16);
+                b = parseInt(hex[3] + hex[3], 16);
+            } else if (hex.length == 7) { // #RRGGBB
+                r = parseInt(hex[1] + hex[2], 16);
+                g = parseInt(hex[3] + hex[4], 16);
+                b = parseInt(hex[5] + hex[6], 16);
             }
+            return `${r}, ${g}, ${b}`;
         }
-        
+
         /**
-         * Saves a new theme ID.
-         * This function calls the global `setNavbarTheme` from test-navigation.js,
-         * which handles both the live update (with fade) and saving to localStorage.
-         * @param {string} themeId - The new theme ID to save (e.g., 'ocean').
+         * Calculates if a hex color is "light" or "dark" based on luminance.
+         * @param {string} hex - The hex color.
+         * @returns {boolean} True if the color is light, false if dark.
          */
-        function saveCurrentThemeId(themeId) {
-            if (typeof window.setNavbarTheme === 'function') {
-                if (THEME_DATA[themeId]) {
-                    window.setNavbarTheme(themeId);
-                } else {
-                    console.error(`Invalid theme ID: ${themeId}. Cannot set theme.`);
-                }
+        function isColorLight(hex) {
+            const rgb = hexToRgb(hex).split(',').map(Number);
+            const [r, g, b] = rgb.map(c => {
+                c /= 255;
+                return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+            });
+            const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            return luminance > 0.5; // Threshold for "light"
+        }
+
+        /**
+         * Generates a full style object for the navbar based on a single base color.
+         * This function now holds all the "theme" logic.
+         * @param {string} hex - The base hex color.
+         * @returns {object} A full style object compatible with test-navigation.js.
+         */
+        function generateStyleObject(hex) {
+            const isLight = isColorLight(hex);
+            let styleObj;
+
+            if (hex.toLowerCase() === '#000000') {
+                // Special case for default dark theme
+                styleObj = {
+                    '--nav-bg-rgb': '0, 0, 0',
+                    '--nav-border': 'rgb(31, 41, 55)',
+                    '--nav-text-dim': 'rgb(156, 163, 175)',
+                    '--nav-text-normal': 'rgb(209, 213, 219)',
+                    '--nav-text-hover': 'rgb(255, 255, 255)',
+                    '--nav-accent-rgb': '79, 70, 229',
+                    '--nav-accent-hover-rgb': '99, 102, 241',
+                    '--nav-menu-bg': 'rgb(0, 0, 0)',
+                    '--nav-menu-border': 'rgb(55, 65, 81)',
+                    '--nav-menu-hover-bg': 'rgb(55, 65, 81)',
+                    '--nav-menu-glass-bg': 'rgba(10, 10, 10, 0.8)',
+                    '--nav-menu-border-glass': 'rgba(55, 65, 81, 0.8)',
+                    '--nav-avatar-bg': 'linear-gradient(135deg, #374151 0%, #111827 100%)',
+                    'logoPath': '/images/logo.png',
+                    'isLight': false
+                };
+            } else if (isLight) {
+                // Generate a light theme
+                styleObj = {
+                    '--nav-bg-rgb': hexToRgb(hex),
+                    '--nav-border': 'rgb(209, 213, 219)', // gray-300
+                    '--nav-text-dim': 'rgb(75, 85, 99)', // gray-600
+                    '--nav-text-normal': 'rgb(31, 41, 55)', // gray-800
+                    '--nav-text-hover': 'rgb(0, 0, 0)', // black
+                    '--nav-accent-rgb': '67, 56, 202', // indigo-700
+                    '--nav-accent-hover-rgb': '55, 48, 163', // indigo-800
+                    '--nav-menu-bg': 'rgb(255, 255, 255)',
+                    '--nav-menu-border': 'rgb(229, 231, 235)', // gray-200
+                    '--nav-menu-hover-bg': 'rgb(243, 244, 246)', // gray-100
+                    '--nav-menu-glass-bg': 'rgba(255, 255, 255, 0.8)',
+                    '--nav-menu-border-glass': 'rgba(229, 231, 235, 0.8)',
+                    '--nav-avatar-bg': 'linear-gradient(135deg, #E0E7FF 0%, #C7D2FE 100%)',
+                    'logoPath': '/images/logo-dark.png', // Use dark logo
+                    'isLight': true
+                };
             } else {
-                console.error("Global function 'setNavbarTheme' not found. Ensure test-navigation.js is loaded correctly.");
-                alert("Error: Cannot change theme. The navigation script is missing.");
+                // Generate a generic dark theme
+                styleObj = {
+                    '--nav-bg-rgb': hexToRgb(hex),
+                    '--nav-border': 'rgba(255, 255, 255, 0.1)',
+                    '--nav-text-dim': 'rgb(156, 163, 175)', // gray-400
+                    '--nav-text-normal': 'rgb(229, 231, 235)', // gray-200
+                    '--nav-text-hover': 'rgb(255, 255, 255)', // white
+                    '--nav-accent-rgb': '99, 102, 241', // indigo-400
+                    '--nav-accent-hover-rgb': '129, 140, 248', // indigo-300
+                    '--nav-menu-bg': `rgb(${hexToRgb(hex)})`,
+                    '--nav-menu-border': 'rgb(55, 65, 81)', // gray-700
+                    '--nav-menu-hover-bg': 'rgba(255, 255, 255, 0.1)',
+                    '--nav-menu-glass-bg': `rgba(${hexToRgb(hex)}, 0.8)`,
+                    '--nav-menu-border-glass': 'rgba(55, 65, 81, 0.8)',
+                    '--nav-avatar-bg': 'linear-gradient(135deg, #4B5563 0%, #1F2937 100%)',
+                    'logoPath': '/images/logo.png', // Use light logo
+                    'isLight': false
+                };
+            }
+            
+            // IMPORTANT: Store the base color for the settings page UI
+            styleObj.baseHexColor = hex;
+            return styleObj;
+        }
+
+        // --- LOCAL STORAGE FUNCTIONS (REVERTED) ---
+
+        /**
+         * Loads the full navbar style object from Local Storage.
+         * @returns {object} The loaded or a default style object.
+         */
+        function loadLocalStyleSettings() {
+            try {
+                const localSettingsString = localStorage.getItem(NAVBAR_STYLE_KEY);
+                if (localSettingsString) {
+                    return JSON.parse(localSettingsString);
+                }
+            } catch (e) {
+                console.error("Could not read or parse settings from Local Storage:", e);
+            }
+            // Fallback to generating the default
+            return generateStyleObject(DEFAULT_NAVBAR_COLOR);
+        }
+        
+        /**
+         * Saves a new navbar color setting. It generates the full style object,
+         * saves it to Local Storage, and triggers a live update.
+         * @param {string} color - The new color to save (e.g., '#RRGGBB').
+         */
+        function saveLocalStyleSettings(color) {
+            try {
+                // 1. Generate the full style object
+                const newSettings = generateStyleObject(color);
+                
+                // 2. Save the new settings JSON string
+                localStorage.setItem(NAVBAR_STYLE_KEY, JSON.stringify(newSettings));
+
+                // 3. Force the navigation script to re-apply settings
+                if (typeof window.applyNavbarStyle === 'function') {
+                    window.applyNavbarStyle(newSettings);
+                } else {
+                    console.warn("Could not find global 'applyNavbarStyle' function for live update.");
+                }
+
+                console.log(`Navbar color updated to ${color} and saved.`);
+            } catch (error) {
+                console.error("Error saving navbar color to Local Storage:", error);
+                alert("Failed to save color setting locally. See console.");
             }
         }
         
         /**
-         * Restores the default theme by calling the save function with 'default'.
+         * Removes the navbar setting from Local Storage and forces a live update to default.
          */
-        function restoreDefaultTheme() {
-            saveCurrentThemeId(DEFAULT_THEME_ID);
+        function restoreDefaultStyle() {
+            try {
+                localStorage.removeItem(NAVBAR_STYLE_KEY);
+                
+                // Force the navigation script to re-apply default settings
+                if (typeof window.applyNavbarStyle === 'function') {
+                    // Pass null to tell the applier to use its internal default
+                    window.applyNavbarStyle(null); 
+                } else {
+                    console.warn("Could not find global 'applyNavbarStyle' function for live update.");
+                }
+
+                console.log("Navbar color restored to default.");
+            } catch (error) {
+                console.error("Error deleting navbar color from Local Storage:", error);
+                alert("Failed to restore default setting. See console.");
+            }
         }
 
         // --- AUTHENTICATION & REDIRECTION LOGIC ---
 
-        /**
-         * Starts the authentication listener. We rely entirely on test-navigation.js.
-         */
         function startAuthFlow() {
-            // Check for the global `firebase` object loaded by test-navigation.js
             if (typeof firebase === 'undefined' || typeof firebase.auth === 'undefined') {
                 console.error("Firebase Auth is not available. Ensure test-navigation.js loads before this script.");
-                // Fallback rendering in case navigation.js fails to load
                 renderSidebar();
                 loadSection('general');
                 loadingScreen.style.display = 'none';
@@ -301,15 +412,10 @@
                 return;
             }
 
-            // We use the listener primarily to confirm the page is ready after navigation.js runs
             firebase.auth().onAuthStateChanged((currentUser) => {
                 console.log("Settings Page: Authentication state checked.");
-                
-                // Initialization successful, now load the content
                 renderSidebar();
                 loadSection('general');
-                
-                // Hide loading screen and show content
                 loadingScreen.style.display = 'none';
                 pageContent.classList.remove('hidden');
             });
@@ -318,7 +424,7 @@
         // --- SETTINGS UI LOGIC ---
 
         function renderSidebar() {
-            sidebarNav.innerHTML = ''; // Clear existing content
+            sidebarNav.innerHTML = '';
             settingsSections.forEach(section => {
                 const item = document.createElement('div');
                 item.className = 'sidebar-item group';
@@ -337,12 +443,10 @@
             const section = settingsSections.find(s => s.id === sectionId);
             if (!section) return;
 
-            // 1. Update main title and HTML title
             mainTitle.textContent = `${BASE_TITLE} - ${section.title}`;
             pageHtmlTitle.textContent = `4SP - ${BASE_TITLE} - ${section.title}`;
-
-            // 2. Update content panel
             panelTitle.innerHTML = `<i class="fas ${section.icon} mr-2 ${section.color}"></i> ${section.title}`;
+            
             panelContent.innerHTML = `
                 <div class="flex flex-col space-y-4">
                     <p class="text-lg">${section.content}</p>
@@ -351,7 +455,6 @@
                         <p class="text-sm text-gray-500">
                             This is where the detailed controls, forms, and toggles for the 
                             ${section.title} section would be implemented. 
-                            <i class="fas fa-magic text-purple-400 ml-1"></i>
                         </p>
                     </div>
                     ${sectionId === 'personalization' ? '' : `
@@ -362,52 +465,105 @@
                 </div>
             `;
             
-            // --- PERSONALIZATION SPECIFIC CONTENT (NEW) ---
+            // --- PERSONALIZATION SPECIFIC CONTENT (REVERTED) ---
             if (sectionId === 'personalization') {
-                
-                const sectionDetails = document.getElementById('section-details');
-                
-                // Set up the new UI for theme selection
-                sectionDetails.innerHTML = `
-                    <h3 class="text-xl font-semibold mb-4 text-white">Universal Navbar Theme</h3>
-                    <p class="text-sm text-gray-500 mb-6">
-                        Choose a theme for your main navigation bar. This setting is saved locally to your browser and will apply instantly.
+                // Get the *full settings object* to find the base color
+                const currentSettings = loadLocalStyleSettings();
+                const currentNavbarColor = currentSettings.baseHexColor || DEFAULT_NAVBAR_COLOR;
+
+                document.getElementById('section-details').innerHTML = `
+                    <h3 class="text-xl font-semibold mb-4 text-white">Universal Navbar Color</h3>
+                    <p class="text-sm text-gray-500 mb-4">
+                        Choose a color for your main navigation bar. This setting is saved locally. 
+                        Light colors will automatically use a dark logo.
                     </p>
                     
-                    <div id="theme-selector" class="theme-selector">
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Color Palette</label>
+                    <div id="color-palette" class="flex flex-wrap gap-3 mb-6">
                         </div>
+                    
+                    <label for="custom-color-picker" class="block text-sm font-medium text-gray-400 mb-2">Custom Color Picker</label>
+                    <div class="flex items-center space-x-3 mb-6">
+                        <input type="color" id="custom-color-picker" class="w-12 h-12 rounded-lg cursor-pointer border-0 p-0" value="${currentNavbarColor}">
+                        <input type="text" id="custom-color-input" class="bg-gray-700 text-white border border-gray-600 rounded-lg p-2 font-mono text-sm w-32" value="${currentNavbarColor}" maxlength="7" pattern="#[0-9a-fA-F]{6}">
+                    </div>
+                    
+                    <div class="flex space-x-4 mt-6">
+                        <button id="save-color-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg shadow-lg transition-all duration-200 flex items-center">
+                            <i class="fas fa-save mr-2"></i> Apply and Save
+                        </button>
+                        <button id="restore-button" class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg shadow-lg transition-all duration-200 flex items-center">
+                            <i class="fas fa-undo-alt mr-2"></i> Restore to Default
+                        </button>
+                    </div>
                 `;
                 
-                // Initialize the theme selector
-                const themeContainer = document.getElementById('theme-selector');
-                const currentThemeId = loadCurrentThemeId();
-
-                // Create a card for each theme
-                for (const [themeId, themeInfo] of Object.entries(THEME_DATA)) {
-                    const themeCard = document.createElement('div');
-                    themeCard.className = 'theme-card';
-                    themeCard.setAttribute('data-theme-id', themeId);
-                    themeCard.textContent = themeInfo.name;
+                const paletteContainer = document.getElementById('color-palette');
+                const customPicker = document.getElementById('custom-color-picker');
+                const customInput = document.getElementById('custom-color-input');
+                
+                /**
+                 * Helper function to update UI and live-preview the navbar
+                 * This DOES NOT save to local storage.
+                 */
+                const applyColorChange = (color) => {
+                    // 1. Update input fields
+                    customPicker.value = color;
+                    customInput.value = color;
                     
-                    if (themeId === currentThemeId) {
-                        themeCard.classList.add('selected');
+                    // 2. Update palette selection
+                    document.querySelectorAll('.color-option').forEach(item => item.classList.remove('selected'));
+                    const selectedPaletteItem = document.querySelector(`.color-option[data-color="${color.toLowerCase()}"]`);
+                    if (selectedPaletteItem) {
+                        selectedPaletteItem.classList.add('selected');
                     }
-
-                    // Add click event listener
-                    themeCard.addEventListener('click', () => {
-                        // 1. Get the ID of the clicked theme
-                        const newThemeId = themeCard.getAttribute('data-theme-id');
-                        
-                        // 2. Apply and save the new theme
-                        saveCurrentThemeId(newThemeId);
-                        
-                        // 3. Update the UI selection state
-                        document.querySelectorAll('.theme-card').forEach(card => card.classList.remove('selected'));
-                        themeCard.classList.add('selected');
-                    });
                     
-                    themeContainer.appendChild(themeCard);
-                }
+                    // 3. Live preview update:
+                    if (typeof window.applyNavbarStyle === 'function') {
+                        // Generate the style object and pass it for a live preview
+                        const styleObj = generateStyleObject(color);
+                        window.applyNavbarStyle(styleObj);
+                    }
+                };
+                
+                // Initialize the color palette
+                colorPalette.forEach(color => {
+                    const colorDiv = document.createElement('div');
+                    const isSelected = currentNavbarColor.toLowerCase() === color.toLowerCase();
+
+                    colorDiv.className = `color-option ${isSelected ? 'selected' : ''}`;
+                    colorDiv.style.backgroundColor = color;
+                    colorDiv.setAttribute('data-color', color);
+                    colorDiv.addEventListener('click', () => {
+                        applyColorChange(color);
+                    });
+                    paletteContainer.appendChild(colorDiv);
+                });
+                
+                // Custom color picker logic
+                customPicker.addEventListener('input', (e) => {
+                    applyColorChange(e.target.value);
+                });
+                
+                customInput.addEventListener('input', (e) => {
+                    const color = e.target.value.trim();
+                    if (/^#[0-9A-F]{6}$/i.test(color)) {
+                        applyColorChange(color);
+                    }
+                });
+
+                // Setup Save and Restore Buttons
+                document.getElementById('save-color-button').addEventListener('click', () => {
+                    // Get the currently displayed color from the picker
+                    const newColor = document.getElementById('custom-color-picker').value;
+                    saveLocalStyleSettings(newColor);
+                });
+                
+                document.getElementById('restore-button').addEventListener('click', () => {
+                    restoreDefaultStyle();
+                    // Reset the UI components to default
+                    applyColorChange(DEFAULT_NAVBAR_COLOR);
+                });
             }
             // --- END PERSONALIZATION SPECIFIC CONTENT ---
             
