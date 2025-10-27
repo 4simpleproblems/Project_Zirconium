@@ -251,8 +251,8 @@
         // --- AUTH AND ADMIN CHECK ---
         // List of authorized admin emails to access this page
         const ADMIN_WHITELIST = [
-            "belkwy30@minerva.sparcc.org", // Updated: The current admin requested to be kept
-            "4simpleproblems@gmail.com"   // Updated: The new admin email
+            "belkwy30@minerva.sparcc.org",
+            "4simpleproblems@gmail.com"
         ];
 
         function checkAdminAuthorization(user) {
@@ -383,26 +383,35 @@
         });
 
 
-        // --- Main Initialization ---
+        // --- Main Initialization (Updated Auth Flow) ---
         
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // User is logged in. Check for admin authorization.
+                // Step 1: Check if the user's email is verified
+                if (!user.emailVerified) {
+                    loadingScreen.innerHTML = '<div class="text-xl text-red-500 text-center p-8">Access Denied: Your email address must be **verified** to access these administrative settings.</div>';
+                    loadingScreen.classList.remove('hidden');
+                    console.log("User email not verified.");
+                    return; // Stop execution
+                }
+
+                // Step 2: Check for admin authorization. (Email is verified at this point)
                 if (checkAdminAuthorization(user)) {
-                    // Admin is authorized. Start the data listener and show content.
-                    console.log("Admin authorized. Starting beta list listener.");
+                    // Admin is authorized and verified. Start the data listener and show content.
+                    console.log("Admin authorized and verified. Starting beta list listener.");
                     setupRealtimeListener();
                     loadingScreen.classList.add('hidden');
                     pageContent.classList.remove('hidden');
                 } else {
-                    // Not authorized. Display a message or redirect.
-                    loadingScreen.innerHTML = '<div class="text-xl text-red-500">Access Denied: You must be an authorized admin to view this page.</div>';
+                    // Authorized user is logged in and verified, but not on the ADMIN_WHITELIST.
+                    loadingScreen.innerHTML = '<div class="text-xl text-red-500 text-center p-8">Access Denied: You must be an **authorized admin** to view this page.</div>';
                     loadingScreen.classList.remove('hidden');
+                    console.log("User is verified but not an authorized admin.");
                 }
             } else {
                 // User is not logged in. Navigation script handles redirection.
                 console.log("User not authenticated. Navigation script handles redirection.");
-                // FIX: Ensure loading screen is hidden to allow the navigation script to complete its redirect flow.
+                // Ensure loading screen is hidden to allow the navigation script to complete its redirect flow.
                 loadingScreen.classList.add('hidden');
             }
         });
