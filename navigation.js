@@ -22,7 +22,11 @@
  * 14. AUTH PARTIAL UPDATE: Hiding or showing the pin button now partially refreshes the *entire* auth/pin control area (excluding the scroll menu), ensuring the auth dropdown menu updates instantly.
  * 15. (FIXED) DASHBOARD MENU ALIGNMENT: Fixed an issue where the user info in the dropdown menu was incorrectly centered.
  * 16. (UPDATED) REPIN BUTTON: Repurposed 'Repin Current' to a simple 'Repin' button that shows up whenever the current page is not the one pinned, or no page is pinned.
- * 17. **(UPDATED)** LOGOUT REDIRECT PATH: Changed redirect path for logged-out users to an **absolute path** (`/index.html`) for consistency.
+ * 17. (UPDATED) LOGOUT REDIRECT PATH: Changed redirect path for logged-out users to an absolute path (`/index.html`) for consistency.
+ * 18. (NEW) FULL THEMING SYSTEM: Replaced all hardcoded colors with CSS variables. Added a global `window.applyTheme` function to set themes. Navbar now loads the user's saved theme from Local Storage on startup. Added CSS transitions for smooth theme fading.
+ * 19. (FIXED) GLOBAL CLICK LISTENER: The global click listener now fetches button references on every click, preventing stale references after a navbar re-render.
+ * 20. (FIXED) SCROLL GLIDER LOGIC: Updated scroll arrow logic to be explicit, ensuring arrows hide/show correctly at scroll edges.
+ * 21. **(FIXED)** USERNAME COLOR: Replaced hardcoded `text-white` on username with a CSS variable (`--menu-username-text`) and updated `window.applyTheme` to set this to black for specific light themes.
  */
 
 // =========================================================================
@@ -44,6 +48,97 @@ const PAGE_CONFIG_URL = '../page-identification.json';
 
 // NEW: Set the specific email that is considered an administrator.
 const PRIVILEGED_EMAIL = '4simpleproblems@gmail.com'; 
+
+// --- NEW: Theming Configuration ---
+const THEME_STORAGE_KEY = 'user-navbar-theme';
+
+// This object defines the default "Dark" theme.
+// It must contain ALL CSS variables used in injectStyles.
+const DEFAULT_THEME = {
+    'logo-src': '/images/logo.png',
+    'navbar-bg': '#000000',
+    'navbar-border': 'rgb(31 41 55)',
+    'avatar-gradient': 'linear-gradient(135deg, #374151 0%, #111827 100%)',
+    'avatar-border': '#4b5563',
+    'menu-bg': '#000000',
+    'menu-border': 'rgb(55 65 81)',
+    'menu-divider': '#374151',
+    'menu-text': '#d1d5db',
+    'menu-username-text': '#ffffff', // --- USERNAME COLOR FIX --- (1/3) Added new variable
+    'menu-item-hover-bg': 'rgb(55 65 81)',
+    'menu-item-hover-text': '#ffffff',
+    'glass-menu-bg': 'rgba(10, 10, 10, 0.8)',
+    'glass-menu-border': 'rgba(55, 65, 81, 0.8)',
+    'logged-out-icon-bg': '#010101',
+    'logged-out-icon-border': '#374151',
+    'logged-out-icon-color': '#DADADA',
+    'glide-icon-color': '#ffffff',
+    'glide-gradient-left': 'linear-gradient(to right, #000000, transparent)',
+    'glide-gradient-right': 'linear-gradient(to left, #000000, transparent)',
+    'tab-text': '#9ca3af',
+    'tab-hover-text': '#ffffff',
+    'tab-hover-border': '#d1d5db',
+    'tab-hover-bg': 'rgba(79, 70, 229, 0.05)',
+    'tab-active-text': '#4f46e5',
+    'tab-active-border': '#4f46e5',
+    'tab-active-bg': 'rgba(79, 70, 229, 0.1)',
+    'tab-active-hover-text': '#6366f1',
+    'tab-active-hover-border': '#6366f1',
+    'tab-active-hover-bg': 'rgba(79, 70, 229, 0.15)',
+    'pin-btn-border': '#4b5563',
+    'pin-btn-hover-bg': '#374151',
+    'pin-btn-icon-color': '#d1d5db',
+    'hint-bg': '#010101',
+    'hint-border': '#374151',
+    'hint-text': '#ffffff'
+};
+
+/**
+ * NEW: Global Theme Applicator Function
+ * Applies a theme object to the :root element and updates the logo.
+ * This is exposed on `window` so settings.html can call it for live preview.
+ * @param {object} theme - A theme object (like DEFAULT_THEME)
+ */
+// --- USERNAME COLOR FIX --- (2/3) Modified this function
+window.applyTheme = (theme) => {
+    const root = document.documentElement;
+    if (!root) return;
+
+    // Fallback to default theme if input is invalid
+    const themeToApply = theme && typeof theme === 'object' ? theme : DEFAULT_THEME;
+
+    // Set all CSS variables
+    for (const [key, value] of Object.entries(themeToApply)) {
+        // Don't try to set 'name' or 'logo-src' as a CSS variable
+        if (key !== 'logo-src' && key !== 'name') {
+            root.style.setProperty(`--${key}`, value);
+        }
+    }
+
+    // --- FIX: Handle username color for light themes ---
+    // Get the default from the theme object, or the hardcoded default
+    let usernameColor = themeToApply['menu-username-text'] || DEFAULT_THEME['menu-username-text']; 
+    
+    // Check if the theme name matches one of the light themes
+    const lightThemeNames = ['Light', 'Lavender', 'Rose Gold', 'Mint'];
+    if (themeToApply.name && lightThemeNames.includes(themeToApply.name)) {
+        usernameColor = '#000000'; // Force black
+    }
+    
+    root.style.setProperty('--menu-username-text', usernameColor);
+    // --- END FIX ---
+
+    // Handle logo swap
+    const logoImg = document.getElementById('navbar-logo');
+    if (logoImg) {
+        const newLogoSrc = themeToApply['logo-src'] || DEFAULT_THEME['logo-src'];
+        if (logoImg.src !== newLogoSrc) {
+            logoImg.src = newLogoSrc;
+        }
+    }
+};
+// --- End Theming Configuration ---
+
 
 // Variables to hold Firebase objects
 let auth;
@@ -197,8 +292,192 @@ let db;
         }
     };
 
+    // --- 3. INJECT CSS STYLES (MOVED BEFORE INITIALIZEAPP) ---
+    // This now uses CSS variables for all colors and adds transitions.
+    const injectStyles = () => {
+        const style = document.createElement('style');
+        style.textContent = `
+            /* Base Styles */
+            body { padding-top: 4rem; }
+            .auth-navbar { 
+                position: fixed; top: 0; left: 0; right: 0; z-index: 1000; 
+                background: var(--navbar-bg); 
+                border-bottom: 1px solid var(--navbar-border); 
+                height: 4rem; 
+                transition: background-color 0.3s ease, border-color 0.3s ease;
+            }
+            .auth-navbar nav { padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
+            .initial-avatar { 
+                background: var(--avatar-gradient); 
+                font-family: sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; 
+            }
+            #auth-toggle {
+                border-color: var(--avatar-border);
+                transition: border-color 0.3s ease;
+            }
+            
+            /* Auth Dropdown Menu Styles */
+            .auth-menu-container { 
+                position: absolute; right: 0; top: 50px; width: 16rem; 
+                background: var(--menu-bg);
+                border: 1px solid var(--menu-border); 
+                border-radius: 0.75rem; padding: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
+                transition: transform 0.2s ease-out, opacity 0.2s ease-out, background-color 0.3s ease, border-color 0.3s ease; 
+                transform-origin: top right; z-index: 1010;
+            }
+            .auth-menu-container .border-b { /* User info divider */
+                border-color: var(--menu-divider) !important;
+                transition: border-color 0.3s ease;
+            }
+            /* --- USERNAME COLOR FIX --- (3/3) Added new style rule */
+            .auth-menu-username {
+                color: var(--menu-username-text);
+                transition: color 0.3s ease;
+            }
+            .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
+            .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
+            .auth-menu-link, .auth-menu-button { 
+                display: flex; align-items: center; gap: 0.75rem; width: 100%; text-align: left; 
+                padding: 0.5rem 0.75rem; font-size: 0.875rem; color: var(--menu-text); border-radius: 0.375rem; 
+                transition: background-color 0.2s, color 0.3s; border: none; cursor: pointer;
+            }
+            .auth-menu-link:hover, .auth-menu-button:hover { 
+                background-color: var(--menu-item-hover-bg); 
+                color: var(--menu-item-hover-text); 
+            }
+            .logged-out-auth-toggle { 
+                background: var(--logged-out-icon-bg); 
+                border: 1px solid var(--logged-out-icon-border); 
+                transition: background-color 0.3s ease, border-color 0.3s ease;
+            }
+            .logged-out-auth-toggle i { 
+                color: var(--logged-out-icon-color); 
+                transition: color 0.3s ease;
+            }
+
+            /* NEW: Glass Menu Style for Pin Context Menu */
+            .glass-menu { 
+                background: var(--glass-menu-bg); 
+                backdrop-filter: blur(10px); 
+                -webkit-backdrop-filter: blur(10px); 
+                border: 1px solid var(--glass-menu-border);
+                transition: background-color 0.3s ease, border-color 0.3s ease;
+            }
+            /* Helper for icons in menus */
+            .auth-menu-link i.w-4, .auth-menu-button i.w-4 { width: 1rem; text-align: center; } 
+
+            /* Tab Wrapper and Glide Buttons */
+            .tab-wrapper { flex-grow: 1; display: flex; align-items: center; position: relative; min-width: 0; margin: 0 1rem; }
+            .tab-scroll-container { flex-grow: 1; display: flex; align-items: center; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; -ms-overflow-style: none; padding-bottom: 5px; margin-bottom: -5px; scroll-behavior: smooth; }
+            .tab-scroll-container::-webkit-scrollbar { display: none; }
+            .scroll-glide-button {
+                position: absolute; top: 0; height: 100%; width: 4rem; display: flex; align-items: center; justify-content: center; 
+                color: var(--glide-icon-color); font-size: 1.2rem; cursor: pointer; 
+                opacity: 1; 
+                transition: opacity 0.3s, color 0.3s ease; 
+                z-index: 10; pointer-events: auto;
+            }
+            #glide-left { 
+                left: 0; background: var(--glide-gradient-left); 
+                justify-content: flex-start; padding-left: 0.5rem; 
+                transition: opacity 0.3s, color 0.3s ease, background 0.3s ease;
+            }
+            #glide-right { 
+                right: 0; background: var(--glide-gradient-right); 
+                justify-content: flex-end; padding-right: 0.5rem; 
+                transition: opacity 0.3s, color 0.3s ease, background 0.3s ease;
+            }
+            .scroll-glide-button.hidden { opacity: 0 !important; pointer-events: none !important; }
+            
+            .nav-tab { 
+                flex-shrink: 0; padding: 0.5rem 1rem; color: var(--tab-text); 
+                font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; 
+                transition: all 0.2s, color 0.3s ease, border-color 0.3s ease, background-color 0.3s ease; 
+                text-decoration: none; line-height: 1.5; display: flex; align-items: center; margin-right: 0.5rem; 
+                border: 1px solid transparent; 
+            }
+            .nav-tab:not(.active):hover { 
+                color: var(--tab-hover-text); 
+                border-color: var(--tab-hover-border); 
+                background-color: var(--tab-hover-bg); 
+            }
+            .nav-tab.active { 
+                color: var(--tab-active-text); 
+                border-color: var(--tab-active-border); 
+                background-color: var(--tab-active-bg); 
+            }
+            .nav-tab.active:hover { 
+                color: var(--tab-active-hover-text); 
+                border-color: var(--tab-active-hover-border); 
+                background-color: var(--tab-active-hover-bg); 
+            }
+            
+            /* Pin Button */
+            #pin-button {
+                border-color: var(--pin-btn-border);
+                transition: background-color 0.2s, border-color 0.3s ease;
+            }
+            #pin-button:hover {
+                background-color: var(--pin-btn-hover-bg);
+            }
+            #pin-button-icon {
+                color: var(--pin-btn-icon-color);
+                transition: color 0.3s ease;
+            }
+
+            /* NEW: Pin Hint Styles */
+            .pin-hint-container {
+                position: absolute;
+                bottom: calc(100% + 10px); /* 10px above the button */
+                left: 50%;
+                transform: translateX(-50%) scale(0.8);
+                background: var(--hint-bg);
+                border: 1px solid var(--hint-border);
+                color: var(--hint-text);
+                padding: 0.5rem 1rem;
+                border-radius: 0.75rem;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+                opacity: 0;
+                pointer-events: none;
+                z-index: 1020;
+                transition: opacity 0.3s ease, transform 0.3s ease, background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+                white-space: nowrap;
+                font-size: 0.875rem;
+            }
+            .pin-hint-container.show {
+                opacity: 1;
+                transform: translateX(-50%) scale(1);
+                transition-delay: 0.2s; /* Slight delay on show */
+            }
+        `;
+        document.head.appendChild(style);
+    };
+
+
     // --- 2. INITIALIZE FIREBASE AND RENDER NAVBAR ---
     const initializeApp = (pages) => {
+        // --- Create a div for the navbar to live in if it doesn't exist.
+        if (!document.getElementById('navbar-container')) {
+            const navbarDiv = document.createElement('div');
+            navbarDiv.id = 'navbar-container';
+            document.body.prepend(navbarDiv);
+        }
+        
+        // --- Inject styles *before* anything else.
+        injectStyles();
+        
+        // --- NEW: Load and apply theme *before* first render.
+        let savedTheme;
+        try {
+            savedTheme = JSON.parse(localStorage.getItem(THEME_STORAGE_KEY));
+        } catch (e) {
+            savedTheme = null;
+            console.warn("Could not parse saved theme from Local Storage.");
+        }
+        // Apply saved theme or default theme
+        window.applyTheme(savedTheme || DEFAULT_THEME); 
+        // --- End Theme Loading ---
+
         // Initialize Firebase with the compat libraries
         const app = firebase.initializeApp(FIREBASE_CONFIG);
         auth = firebase.auth();
@@ -267,7 +546,7 @@ let db;
 
             return `
                 <div id="pin-area-wrapper" class="relative flex-shrink-0 flex items-center">
-                    <a href="${pinButtonUrl}" id="pin-button" class="w-8 h-8 rounded-full border border-gray-600 flex items-center justify-center hover:bg-gray-700 transition" title="${pinButtonTitle}">
+                    <a href="${pinButtonUrl}" id="pin-button" class="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-700 transition" title="${pinButtonTitle}">
                         <i id="pin-button-icon" class="${pinButtonIcon}"></i>
                     </a>
                     <div id="pin-context-menu" class="auth-menu-container glass-menu closed" style="width: 12rem;">
@@ -364,7 +643,7 @@ let db;
                         </button>
                         <div id="auth-menu-container" class="auth-menu-container closed">
                             <div class="px-3 py-2 border-b border-gray-700 mb-2 w-full min-w-0">
-                                <p class="text-sm font-semibold text-white truncate">${username}</p>
+                                <p class="text-sm font-semibold auth-menu-username truncate">${username}</p>
                                 <p class="text-xs text-gray-400 truncate">${email}</p>
                             </div>
                             <a href="/logged-in/dashboard.html" class="auth-menu-link">
@@ -466,129 +745,13 @@ let db;
             renderNavbar(currentUser, currentUserData, allPages, currentIsPrivileged);
         };
 
-
-        // --- 3. INJECT CSS STYLES ---
-        const injectStyles = () => {
-            const style = document.createElement('style');
-            style.textContent = `
-                /* Base Styles */
-                body { padding-top: 4rem; }
-                .auth-navbar { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: #000000; border-bottom: 1px solid rgb(31 41 55); height: 4rem; }
-                .auth-navbar nav { padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
-                .initial-avatar { background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; }
-                
-                /* Auth Dropdown Menu Styles */
-                .auth-menu-container { 
-                    position: absolute; right: 0; top: 50px; width: 16rem; 
-                    background: #000000;
-                    border: 1px solid rgb(55 65 81); border-radius: 0.75rem; padding: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
-                    transition: transform 0.2s ease-out, opacity 0.2s ease-out; transform-origin: top right; z-index: 1010;
-                }
-                .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
-                .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
-                .auth-menu-link, .auth-menu-button { 
-                    display: flex; align-items: center; gap: 0.75rem; width: 100%; text-align: left; 
-                    padding: 0.5rem 0.75rem; font-size: 0.875rem; color: #d1d5db; border-radius: 0.375rem; 
-                    transition: background-color 0.2s, color 0.2s; border: none; cursor: pointer;
-                }
-                .auth-menu-link:hover, .auth-menu-button:hover { background-color: rgb(55 65 81); color: white; }
-                .logged-out-auth-toggle { background: #010101; border: 1px solid #374151; }
-                .logged-out-auth-toggle i { color: #DADADA; }
-
-                /* NEW: Glass Menu Style for Pin Context Menu */
-                .glass-menu { 
-                    background: rgba(10, 10, 10, 0.8); /* Near black */
-                    backdrop-filter: blur(10px); 
-                    -webkit-backdrop-filter: blur(10px); 
-                    border: 1px solid rgba(55, 65, 81, 0.8);
-                }
-                /* Helper for icons in menus */
-                .auth-menu-link i.w-4, .auth-menu-button i.w-4 { width: 1rem; text-align: center; } 
-
-                /* Tab Wrapper and Glide Buttons */
-                .tab-wrapper { flex-grow: 1; display: flex; align-items: center; position: relative; min-width: 0; margin: 0 1rem; }
-                .tab-scroll-container { flex-grow: 1; display: flex; align-items: center; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; -ms-overflow-style: none; padding-bottom: 5px; margin-bottom: -5px; scroll-behavior: smooth; }
-                .tab-scroll-container::-webkit-scrollbar { display: none; }
-                .scroll-glide-button {
-                    position: absolute; top: 0; height: 100%; width: 4rem; display: flex; align-items: center; justify-content: center; 
-                    color: white; font-size: 1.2rem; cursor: pointer; 
-                    opacity: 1; 
-                    /* MODIFIED: Transition is now only for opacity */
-                    transition: opacity 0.3s; 
-                    z-index: 10; pointer-events: auto;
-                }
-                #glide-left { left: 0; background: linear-gradient(to right, #000000, transparent); justify-content: flex-start; padding-left: 0.5rem; }
-                #glide-right { right: 0; background: linear-gradient(to left, #000000, transparent); justify-content: flex-end; padding-right: 0.5rem; }
-                .scroll-glide-button.hidden { opacity: 0 !important; pointer-events: none !important; }
-                .nav-tab { flex-shrink: 0; padding: 0.5rem 1rem; color: #9ca3af; font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; transition: all 0.2s; text-decoration: none; line-height: 1.5; display: flex; align-items: center; margin-right: 0.5rem; border: 1px solid transparent; }
-                .nav-tab:not(.active):hover { color: white; border-color: #d1d5db; background-color: rgba(79, 70, 229, 0.05); }
-                .nav-tab.active { color: #4f46e5; border-color: #4f46e5; background-color: rgba(79, 70, 229, 0.1); }
-                .nav-tab.active:hover { color: #6366f1; border-color: #6366f1; background-color: rgba(79, 70, 229, 0.15); }
-                
-                /* NEW: Pin Hint Styles */
-                .pin-hint-container {
-                    position: absolute;
-                    bottom: calc(100% + 10px); /* 10px above the button */
-                    left: 50%;
-                    transform: translateX(-50%) scale(0.8);
-                    background: #010101;
-                    border: 1px solid #374151;
-                    color: white;
-                    padding: 0.5rem 1rem;
-                    border-radius: 0.75rem;
-                    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-                    opacity: 0;
-                    pointer-events: none;
-                    z-index: 1020;
-                    transition: opacity 0.3s ease, transform 0.3s ease;
-                    white-space: nowrap;
-                    font-size: 0.875rem;
-                }
-                .pin-hint-container.show {
-                    opacity: 1;
-                    transform: translateX(-50%) scale(1);
-                    transition-delay: 0.2s; /* Slight delay on show */
-                }
-            `;
-            document.head.appendChild(style);
-        };
-
-        const updateScrollGilders = () => {
-            const container = document.querySelector('.tab-scroll-container');
-            const leftButton = document.getElementById('glide-left');
-            const rightButton = document.getElementById('glide-right');
-
-            if (!container || !leftButton || !rightButton) return;
-            
-            const hasHorizontalOverflow = container.scrollWidth > container.offsetWidth;
-
-            if (hasHorizontalOverflow) {
-                // Tolerance for floating point math
-                const isScrolledToLeft = container.scrollLeft < 5; 
-                const isScrolledToRight = container.scrollLeft + container.offsetWidth >= container.scrollWidth - 5; 
-
-                // Ensure the buttons are visible initially if there is overflow
-                leftButton.classList.remove('hidden');
-                rightButton.classList.remove('hidden');
-
-                if (isScrolledToLeft) {
-                    leftButton.classList.add('hidden');
-                }
-                if (isScrolledToRight) {
-                    rightButton.classList.add('hidden');
-                }
-            } else {
-                // If there is no overflow, hide both buttons
-                leftButton.classList.add('hidden');
-                rightButton.classList.add('hidden');
-            }
-        };
-
         // --- 4. RENDER THE NAVBAR HTML ---
         const renderNavbar = (user, userData, pages, isPrivilegedUser) => {
             const container = document.getElementById('navbar-container');
             if (!container) return; 
 
+            // Logo path is now handled by the applyTheme function,
+            // but we need a default src for the img tag itself.
             const logoPath = "/images/logo.png"; 
             
             // Filter and map pages for tabs, applying adminOnly filter
@@ -614,7 +777,7 @@ let db;
                 <header class="auth-navbar">
                     <nav>
                         <a href="/" class="flex items-center space-x-2 flex-shrink-0">
-                            <img src="${logoPath}" alt="4SP Logo" class="h-8 w-auto">
+                            <img src="${logoPath}" alt="4SP Logo" class="h-8 w-auto" id="navbar-logo">
                         </a>
 
                         <div class="tab-wrapper">
@@ -636,6 +799,15 @@ let db;
 
             // --- 5. SETUP EVENT LISTENERS (Called after full render) ---
             setupEventListeners(user);
+
+            // --- Apply theme again after render ---
+            // This ensures the logo src is correct if it was just rendered.
+            let savedTheme;
+            try {
+                savedTheme = JSON.parse(localStorage.getItem(THEME_STORAGE_KEY));
+            } catch (e) { savedTheme = null; }
+            window.applyTheme(savedTheme || DEFAULT_THEME); 
+            // --- End theme apply ---
 
             const tabContainer = document.querySelector('.tab-scroll-container');
             
@@ -674,6 +846,46 @@ let db;
             // Initial check to hide/show them correctly after load
             updateScrollGilders();
         };
+
+        // --- FIX START: Bug 2 ---
+        // Updated the logic to be an explicit if/else, ensuring
+        // the 'hidden' class is correctly added or removed.
+        const updateScrollGilders = () => {
+            const container = document.querySelector('.tab-scroll-container');
+            const leftButton = document.getElementById('glide-left');
+            const rightButton = document.getElementById('glide-right');
+
+            if (!container || !leftButton || !rightButton) return;
+            
+            const hasHorizontalOverflow = container.scrollWidth > container.offsetWidth + 2; // Add 2px tolerance
+
+            if (hasHorizontalOverflow) {
+                // Use a small tolerance
+                const isScrolledToLeft = container.scrollLeft <= 5;
+                
+                // Calculate max scroll and check against it with tolerance
+                const maxScrollLeft = container.scrollWidth - container.offsetWidth;
+                const isScrolledToRight = container.scrollLeft >= maxScrollLeft - 5;
+
+                // Explicitly add or remove the class
+                if (isScrolledToLeft) {
+                    leftButton.classList.add('hidden');
+                } else {
+                    leftButton.classList.remove('hidden');
+                }
+
+                if (isScrolledToRight) {
+                    rightButton.classList.add('hidden');
+                } else {
+                    rightButton.classList.remove('hidden');
+                }
+            } else {
+                // If there is no overflow, hide both buttons
+                leftButton.classList.add('hidden');
+                rightButton.classList.add('hidden');
+            }
+        };
+        // --- FIX END: Bug 2 ---
         
         // Split setupEventListeners into main and pin-specific, 
         // as pin listeners need to be re-attached on partial update.
@@ -793,19 +1005,31 @@ let db;
             // NEW: Only add this listener ONCE
             if (!globalClickListenerAdded) {
                 document.addEventListener('click', (e) => {
+                    // --- FIX START: Bug 1 ---
+                    // Fetched elements *inside* the listener to avoid stale references
+                    // after a re-render. Used .contains() to handle clicks on child icons.
                     const menu = document.getElementById('auth-menu-container');
                     const toggleButton = document.getElementById('auth-toggle');
-                    if (menu && menu.classList.contains('open') && !menu.contains(e.target) && e.target !== toggleButton) {
-                        menu.classList.add('closed');
-                        menu.classList.remove('open');
+                    
+                    if (menu && menu.classList.contains('open')) {
+                        // Check if the click was outside the menu AND outside the toggle button
+                        if (!menu.contains(e.target) && (toggleButton && !toggleButton.contains(e.target))) {
+                            menu.classList.add('closed');
+                            menu.classList.remove('open');
+                        }
                     }
                     
                     const pinButton = document.getElementById('pin-button');
                     const pinContextMenu = document.getElementById('pin-context-menu');
-                    if (pinContextMenu && pinContextMenu.classList.contains('open') && !pinContextMenu.contains(e.target) && pinButton && !pinButton.contains(e.target)) {
-                        pinContextMenu.classList.add('closed');
-                        pinContextMenu.classList.remove('open');
+
+                    if (pinContextMenu && pinContextMenu.classList.contains('open')) {
+                         // Check if the click was outside the pin menu AND outside the pin button
+                        if (!pinContextMenu.contains(e.target) && (pinButton && !pinButton.contains(e.target))) {
+                            pinContextMenu.classList.add('closed');
+                            pinContextMenu.classList.remove('open');
+                        }
                     }
+                    // --- FIX END: Bug 1 ---
                 });
                 globalClickListenerAdded = true;
             }
@@ -857,14 +1081,7 @@ let db;
         });
 
         // --- FINAL SETUP ---
-        // Create a div for the navbar to live in if it doesn't exist.
-        if (!document.getElementById('navbar-container')) {
-            const navbarDiv = document.createElement('div');
-            navbarDiv.id = 'navbar-container';
-            document.body.prepend(navbarDiv);
-        }
-        // Inject styles before anything else is rendered for best stability
-        injectStyles();
+        // (MOVED to start of initializeApp)
     };
 
     // --- START THE PROCESS ---
