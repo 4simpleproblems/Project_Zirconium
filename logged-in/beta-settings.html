@@ -331,8 +331,7 @@
         // --- ADMIN CONFIGURATION ---
         // List of emails authorized to access this beta page.
         const ADMIN_EMAILS = [
-            "first_admin@4sp.co",
-            "second_admin@4sp.co",
+            "4simpleproblems@gmail.com",
             "belkwy30@minerva.sparcc.org" // New admin added as requested
         ];
 
@@ -352,11 +351,7 @@
             if (ADMIN_EMAILS.includes(user.email)) {
                 return true;
             }
-            // Optionally allow any user from a specific domain
-            if (user.email.endsWith("@4sp.co")) {
-                return true;
-            }
-            // For testing/fallback, allow a specific user
+
             if (user.email === "test_admin@4sp.co") {
                 return true;
             }
