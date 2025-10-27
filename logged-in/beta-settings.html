@@ -304,7 +304,7 @@
             testerCountSpan.textContent = emails.length;
         }
 
-        // --- Realtime Database Listener (Added final safeguard to hide loader) ---
+        // --- Realtime Database Listener ---
 
         function setupRealtimeListener() {
             onSnapshot(adminDocRef, (docSnap) => {
@@ -315,17 +315,9 @@
                     renderList([]);
                 }
                 listPlaceholder.classList.add('hidden');
-                
-                // Final safeguard: ensure the loader is hidden once data retrieval is successful
-                loadingScreen.classList.add('hidden');
-                pageContent.classList.remove('hidden');
-
             }, (error) => {
                 console.error("Error setting up realtime listener:", error);
                 listPlaceholder.textContent = 'Failed to load list.';
-                // If listener fails, display an error and ensure loader is still removed/updated
-                loadingScreen.innerHTML = '<div class="text-xl text-red-500 text-center p-8">Error: Failed to load beta list data.</div>';
-                loadingScreen.classList.remove('hidden');
             });
         }
 
@@ -389,43 +381,54 @@
         });
 
 
-        // --- Main Initialization (Wrapped in DOMContentLoaded for robustness) ---
-        
-        document.addEventListener('DOMContentLoaded', () => {
+        // --- Main Initialization Function (Replicated settings.html structure) ---
+
+        function startAuthFlow() {
             onAuthStateChanged(auth, (user) => {
                 if (user) {
+                    // Logged in. Check verification and authorization.
+
                     // Step 1: Check if the user's email is verified
                     if (!user.emailVerified) {
-                        console.log("User email not verified.");
+                        console.log("Access Denied: User email not verified.");
                         loadingScreen.innerHTML = '<div class="text-xl text-red-500 text-center p-8">Access Denied: Your email address must be **verified** to access these administrative settings.</div>';
+                        // Ensure the loading screen is visible with the error message
                         loadingScreen.classList.remove('hidden');
+                        pageContent.classList.add('hidden');
                         return; // Stop execution
                     }
 
                     // Step 2: Check for admin authorization. (Email is verified at this point)
                     if (checkAdminAuthorization(user)) {
-                        // Admin is authorized and verified. Start the data listener and show content.
-                        console.log("Admin authorized and verified. Starting beta list listener.");
+                        // Admin is fully authorized and verified.
+                        console.log("Admin authorized and verified. Starting beta list listener and showing content.");
                         
-                        // We will rely on the listener's success callback to hide the loader,
-                        // as that's the point data is confirmed ready.
-                        // Remove the immediate hide/show here to avoid a race condition with onSnapshot
+                        // Start the database listener
                         setupRealtimeListener(); 
+
+                        // Hide the loading screen and show content
+                        loadingScreen.classList.add('hidden');
+                        pageContent.classList.remove('hidden');
                         
                     } else {
                         // User is verified but not an authorized admin.
-                        console.log("User is verified but not an authorized admin.");
+                        console.log("Access Denied: User is verified but not an authorized admin.");
                         loadingScreen.innerHTML = '<div class="text-xl text-red-500 text-center p-8">Access Denied: You must be an **authorized admin** to view this page.</div>';
+                        // Ensure the loading screen is visible with the error message
                         loadingScreen.classList.remove('hidden');
+                        pageContent.classList.add('hidden');
                     }
                 } else {
-                    // User is not logged in. Navigation script handles redirection.
+                    // User is not logged in.
                     console.log("User not authenticated. Navigation script handles redirection.");
-                    // Ensure loading screen is hidden to allow the navigation script to complete its redirect flow.
+                    // Hide loading screen immediately to allow navigation.js to redirect.
                     loadingScreen.classList.add('hidden');
                 }
             });
-        });
+        }
+        
+        // --- START APPLICATION ---
+        document.addEventListener('DOMContentLoaded', startAuthFlow);
 
     </script>
 </body>
