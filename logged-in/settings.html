@@ -9,7 +9,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
-    <!-- Font Awesome is loaded by test-navigation.js, but we can link it here for safety -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -344,6 +343,7 @@
         ];
 
         // Nice-looking 16-color palette
+        // NOTE: This palette is no longer used but is kept to preserve original context
         const colorPalette = [
             '#000000', '#1f2937', '#f7f7f7', '#FFFFFF',
             '#3b82f6', '#10b981', '#f59e0b', '#ef4444',
@@ -363,6 +363,8 @@
         let currentNavbarColor = DEFAULT_NAVBAR_COLOR;
 
         // --- LOCAL STORAGE FUNCTIONS (ADJUSTED FOR NEW THEME STRUCTURE) ---
+        // NOTE: These functions are no longer needed for the UI, but are kept 
+        // as they are utilities that might be called elsewhere (e.g. test-navigation.js)
         function loadLocalNavbarColor() {
             try {
                 const localSettingsString = localStorage.getItem(NAVBAR_SETTINGS_KEY);
@@ -526,10 +528,12 @@
             // 3. Render content based on section ID
             if (sectionId === 'general') {
                 renderGeneralSettings();
-            } else if (sectionId === 'personalization') {
-                renderPersonalizationSettings();
-            } else {
-                // Render placeholder for other sections
+            } 
+            /* --- MODIFICATION START --- */
+            // Removed 'else if (sectionId === 'personalization')' block
+            else { 
+            /* --- MODIFICATION END --- */
+                // Render placeholder for all other sections
                 panelContent.innerHTML = `
                     <div class="flex flex-col space-y-4">
                         <p class="text-lg">${section.content}</p>
@@ -570,7 +574,6 @@
             const isEmailUser = primaryAuthMethod === 'email';
             
             panelContent.innerHTML = `
-                <!-- === Username Section === -->
                 <div class="settings-section">
                     <h3 class="text-xl font-semibold text-white mb-4">Username</h3>
                     <label for="username-input" class="settings-label">Change Username</label>
@@ -587,7 +590,6 @@
                     </p>
                 </div>
 
-                <!-- === UPDATED: Password Section (Conditional) === -->
                 ${isEmailUser ? `
                 <div class="settings-section" id="password-section">
                     <h3 class="text-xl font-semibold text-white mb-4">Change Password</h3>
@@ -613,7 +615,6 @@
                 </div>
                 ` : ''}
 
-                <!-- === UPDATED: Account Linking Section (Conditional) === -->
                 ${!isEmailUser ? `
                 <div class="settings-section">
                     <h3 class="text-xl font-semibold text-white mb-4">Link Providers</h3>
@@ -621,13 +622,11 @@
                         Link multiple social accounts to sign in.
                     </p>
                     <div id="linking-container" class="space-y-3">
-                        <!-- Content injected by JS -->
-                    </div>
+                        </div>
                     <div id="linking-message" class="message-area"></div>
                 </div>
                 ` : ''}
 
-                <!-- === Delete Account Section === -->
                 <div class="settings-section">
                     <h3 class="text-xl font-semibold text-red-400 mb-4">Danger Zone</h3>
                     <p class="settings-description mb-4">
@@ -822,7 +821,14 @@
         const isUsernameTaken = async (username) => {
             const q = query(collection(db, 'users'), where('username', '==', username));
             const querySnapshot = await getDocs(q);
-            return !querySnapshot.empty;
+            // Check if any document exists that IS NOT the current user's document
+            let isTaken = false;
+            querySnapshot.forEach(doc => {
+                if (doc.id !== currentUser.uid) {
+                    isTaken = true;
+                }
+            });
+            return isTaken;
         };
 
         async function handleUsernameChange() {
@@ -1037,87 +1043,9 @@
         
         // --- END: General Settings Implementation ---
         
-        /**
-         * Renders the content for the "Personalization" tab
-         */
-        function renderPersonalizationSettings() {
-            // Ensure currentNavbarColor is the latest from local storage for UI state
-            currentNavbarColor = loadLocalNavbarColor();
-
-            panelContent.innerHTML = `
-                <h3 class="text-xl font-semibold mb-4 text-white">Universal Navbar Color</h3>
-                <p class="settings-description mb-4">
-                    Choose a color for your main navigation bar. This setting is saved locally to your browser.
-                </p>
-                
-                <label class="block text-sm font-medium text-gray-400 mb-2">Color Palette</label>
-                <div id="color-palette" class="flex flex-wrap gap-3 mb-6">
-                    </div>
-                
-                <label for="custom-color-picker" class="block text-sm font-medium text-gray-400 mb-2">Custom Color Picker</label>
-                <div class="flex items-center space-x-3 mb-6">
-                    <input type="color" id="custom-color-picker" class="w-12 h-12 rounded-lg cursor-pointer" value="${currentNavbarColor}">
-                    <input type="text" id="custom-color-input" class="bg-gray-700 text-white border border-gray-600 rounded-lg p-2 font-mono text-sm w-32" value="${currentNavbarColor}" maxlength="7" pattern="#[0-9a-fA-F]{6}">
-                </div>
-                
-                <div class="flex space-x-4 mt-6">
-                    <button id="save-color-button" class="settings-button">
-                        <i class="fas fa-save mr-2"></i> Apply and Save Locally
-                    </button>
-                    <button id="restore-button" class="settings-button settings-button-danger">
-                        <i class="fas fa-undo-alt mr-2"></i> Restore to Defaults
-                    </button>
-                </div>
-            `;
-            
-            // Initialize the color palette
-            const paletteContainer = document.getElementById('color-palette');
-            colorPalette.forEach(color => {
-                const colorDiv = document.createElement('div');
-                const isSelected = currentNavbarColor.toLowerCase() === color.toLowerCase();
-                colorDiv.className = `color-option ${isSelected ? 'selected' : ''}`;
-                colorDiv.style.backgroundColor = color;
-                colorDiv.setAttribute('data-color', color);
-                colorDiv.addEventListener('click', () => applyColorChange(color));
-                paletteContainer.appendChild(colorDiv);
-            });
-            
-            // Custom color picker logic
-            const customPicker = document.getElementById('custom-color-picker');
-            const customInput = document.getElementById('custom-color-input');
-            
-            customPicker.addEventListener('input', (e) => applyColorChange(e.target.value));
-            customInput.addEventListener('input', (e) => {
-                const color = e.target.value.trim();
-                if (/^#[0-9A-F]{6}$/i.test(color)) {
-                    applyColorChange(color);
-                }
-            });
-
-            // Helper function to update UI/preview on color change
-            const applyColorChange = (color) => {
-                customPicker.value = color;
-                customInput.value = color;
-                document.querySelectorAll('.color-option').forEach(item => item.classList.remove('selected'));
-                const selectedPaletteItem = document.querySelector(`.color-option[data-color="${color.toLowerCase()}"]`);
-                if (selectedPaletteItem) {
-                    selectedPaletteItem.classList.add('selected');
-                }
-                // Live preview update
-                document.documentElement.style.setProperty('--navbar-bg', color);
-            };
-
-            // Setup Save and Restore Buttons
-            document.getElementById('save-color-button').addEventListener('click', () => {
-                const newColor = document.getElementById('custom-color-picker').value;
-                saveLocalNavbarColor(newColor);
-            });
-            
-            document.getElementById('restore-button').addEventListener('click', () => {
-                deleteLocalNavbarColor();
-                applyColorChange(DEFAULT_NAVBAR_COLOR);
-            });
-        }
+        /* --- MODIFICATION START: Removed renderPersonalizationSettings function --- */
+        // function renderPersonalizationSettings() { ... }
+        /* --- MODIFICATION END: Removed renderPersonalizationSettings function --- */
         
         // --- START APPLICATION ---
         // This will start the Firebase Auth listener
@@ -1125,4 +1053,3 @@
     </script>
 </body>
 </html>
-
