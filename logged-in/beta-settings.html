@@ -3,42 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="page-title">4SP - Super Admin Panel</title>
-    <meta name="description" content="Super Admin only page for managing users and application features.">
+    <title id="page-title">4SP - Admin - Beta Access</title>
+    <meta name="description" content="Admin page for managing beta tester access list.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    
-    <script src="../navigation.js"></script> 
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        // Tailwind CSS configuration for a consistent dark theme (REPLICATED)
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'custom-darkest-gray': '#070707',
-                        'custom-dark-gray': '#111111',
-                        'custom-medium-gray': '#252525',
-                        'custom-light-gray': '#505050',
-                        'custom-lighter-gray': '#808080',
-                        'custom-white-gray': '#c0c0c0',
-                    }
-                }
-            }
-        }
-    </script>
+    
+    <script src="../test-navigation.js"></script>
     
     <style>
-        /* --- FONT & BASE STYLING (REPLICATED from settings.html) --- */
+        /* --- FONT & BASE STYLING (MATCHING base-template.html) --- */
+        :root {
+            /* The color variable has been removed as navigation.js manages it via --navbar-background */
+        }
+
         body { 
             font-family: 'Geist', sans-serif; 
             background-color: #070707; 
             color: #c0c0c0; 
             transition: all 0.3s ease;
-            /* REPLICATED FONT WEIGHT */
             font-weight: 300; 
             min-height: 100vh;
             margin: 0;
@@ -47,12 +33,13 @@
             flex-direction: column;
         }
         
-        /* REPLICATED FONT WEIGHT OVERRIDE */
+        /* The body padding-top is now handled by the CSS injected in test-navigation.js to account for the fixed navbar height */
+        
         h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
             font-weight: 400 !important;
         }
 
-        /* Full-screen content wrapper (REPLICATED) */
+        /* Full-screen content wrapper */
         .settings-wrapper {
             flex-grow: 1; 
             display: flex;
@@ -60,7 +47,7 @@
             padding: 0 1rem; 
         }
 
-        /* Header Styling (REPLICATED) */
+        /* Header Styling */
         .page-header {
             padding: 2rem 1rem 1rem 1rem;
             max-width: 1200px;
@@ -68,7 +55,7 @@
             width: 100%;
         }
 
-        /* Settings Grid Layout (REPLICATED) */
+        /* Settings Grid Layout */
         .settings-layout {
             display: flex;
             gap: 2rem;
@@ -79,22 +66,26 @@
             flex-grow: 1;
         }
 
-        /* --- Sidebar Styling (REPLICATED) --- */
+        /* --- UPDATED: Sidebar Styling --- */
         .settings-sidebar {
             width: 100%;
             min-width: 200px;
             max-width: 280px;
             flex-shrink: 0;
             
-            /* Sticky Sidebar Implementation (REPLICATED) */
+            /* NEW: Sticky Sidebar Implementation */
             position: sticky;
+            /* 4rem for main navbar + 1rem desired gap */
             top: 5rem; 
+            /* Aligns item to the start of the flex container, crucial for sticky */
             align-self: flex-start;
+            /* Set a MAX-height based on viewport, minus the sticky offset */
             max-height: calc(100vh - 5rem);
+            /* Allow sidebar to scroll internally if its content is too tall */
             overflow-y: auto;
         }
 
-        /* Sidebar Item Styling (REPLICATED) */
+        /* Sidebar Item Styling */
         .sidebar-item {
             display: flex;
             align-items: center;
@@ -106,9 +97,10 @@
             color: #c0c0c0;
         }
         
+        /* FIX: Ensure icon is centered in its box */
         .sidebar-item i {
             text-align: center;
-            line-height: 1.5rem; 
+            line-height: 1.5rem; /* Matches h-6 (1.5rem) */
         }
 
         .sidebar-item:hover {
@@ -122,7 +114,7 @@
             font-weight: 500;
         }
 
-        /* Main Content Panel (REPLICATED) */
+        /* Main Content Panel */
         .settings-panel {
             flex-grow: 1;
             background-color: #111111;
@@ -132,7 +124,7 @@
             min-height: 70vh;
         }
         
-        /* --- General Settings UI (REPLICATED) --- */
+        /* --- General Settings UI --- */
         .settings-section {
             border-bottom: 1px solid #252525;
             padding-bottom: 1.5rem;
@@ -143,28 +135,32 @@
             margin-bottom: 0;
             padding-bottom: 0;
         }
+        .settings-label {
+            display: block;
+            font-medium text-white mb-2;
+        }
         .settings-input {
             width: 100%;
             max-width: 400px;
-            background-color: #1f2937;
-            border: 1px solid #374151;
-            color: #f3f4f6;
+            background-color: #1f2937; /* gray-800 */
+            border: 1px solid #374151; /* gray-700 */
+            color: #f3f4f6; /* gray-100 */
             border-radius: 0.5rem;
             padding: 0.75rem 1rem;
             transition: border-color 0.2s, box-shadow 0.2s;
         }
         .settings-input:focus {
             outline: none;
-            border-color: #3b82f6;
+            border-color: #3b82f6; /* blue-500 */
             box-shadow: 0 0 0 2px #3b82f640;
         }
         .settings-input:disabled {
-            background-color: #374151;
+            background-color: #374151; /* gray-700 */
             cursor: not-allowed;
             opacity: 0.7;
         }
         .settings-button {
-            background-color: #3b82f6;
+            background-color: #3b82f6; /* blue-500 */
             color: white;
             padding: 0.6rem 1.25rem;
             border-radius: 0.5rem;
@@ -173,40 +169,28 @@
             cursor: pointer;
         }
         .settings-button:hover {
-            background-color: #2563eb;
+            background-color: #2563eb; /* blue-600 */
         }
         .settings-button:disabled {
-            background-color: #374151;
+            background-color: #374151; /* gray-700 */
             cursor: not-allowed;
             opacity: 0.7;
         }
         .settings-button-danger {
-            background-color: #dc2626;
-            color: white;
-            padding: 0.6rem 1.25rem;
-            border-radius: 0.5rem;
-            font-weight: 500;
-            transition: background-color 0.2s;
-            cursor: pointer;
+            background-color: #dc2626; /* red-600 */
         }
         .settings-button-danger:hover {
-            background-color: #b91c1c;
+            background-color: #b91c1c; /* red-700 */
         }
         .settings-button-secondary {
-            background-color: #374151;
-            color: white;
-            padding: 0.6rem 1.25rem;
-            border-radius: 0.5rem;
-            font-weight: 500;
-            transition: background-color 0.2s;
-            cursor: pointer;
+            background-color: #374151; /* gray-700 */
         }
         .settings-button-secondary:hover {
-            background-color: #4b5563;
+            background-color: #4b5563; /* gray-600 */
         }
         .settings-description {
             font-size: 0.875rem;
-            color: #9ca3af;
+            color: #9ca3af; /* gray-400 */
             margin-top: 0.5rem;
             max-width: 600px;
         }
@@ -215,11 +199,11 @@
             margin-top: 0.75rem;
             font-weight: 500;
         }
-        .message-error { color: #f87171; }
-        .message-success { color: #4ade80; }
-        .message-warning { color: #facc15; }
+        .message-error { color: #f87171; /* red-400 */ }
+        .message-success { color: #4ade80; /* green-400 */ }
+        .message-warning { color: #facc15; /* yellow-400 */ }
 
-        /* Standard loading screen style (REPLICATED) */
+        /* Standard loading screen style */
         #loading-screen {
             position: fixed;
             top: 0;
@@ -233,13 +217,30 @@
             z-index: 100;
         }
         
-        /* Custom styles for list items */
+        /* Mobile adjustments: Hide sidebar and adjust layout */
+        @media (max-width: 768px) {
+            .settings-layout {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            .settings-sidebar {
+                max-width: 100%;
+                margin-bottom: 0;
+                /* On mobile, un-stick the sidebar */
+                position: static;
+                height: auto;
+                max-height: none; /* Reset max-height for mobile */
+                overflow-y: visible;
+            }
+        }
+        
+        /* --- ADDED from old beta-settings.html for the tester list --- */
         .list-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 0.75rem;
-            background-color: #111111;
+            background-color: #1a1a1a; /* Darker bg */
             border-radius: 6px;
             margin-bottom: 0.5rem;
             border: 1px solid #252525;
@@ -249,13 +250,13 @@
 <body>
 
     <div id="loading-screen">
-        <p class="text-xl text-gray-400">Verifying super-admin status and loading features...</p>
+        <p class="text-xl text-gray-400">Verifying Admin Access and loading data...</p>
     </div>
-
+    
     <main id="page-content" class="settings-wrapper hidden">
         
         <header class="page-header">
-            <h1 id="main-title" class="text-3xl text-white font-bold mb-3 tracking-wide">Super Admin Panel</h1>
+            <h1 id="main-title" class="text-3xl text-white font-bold mb-3 tracking-wide">Admin Settings</h1>
             <div class="h-px bg-white/20 w-full"></div>
         </header>
 
@@ -264,478 +265,362 @@
             <nav id="settings-sidebar" class="settings-sidebar"></nav>
 
             <section class="settings-panel">
-                <h2 id="panel-title" class="text-2xl font-semibold text-indigo-400 mb-6"></h2>
+                <h2 id="panel-title" class="text-2xl font-semibold text-indigo-400 mb-6">Loading...</h2>
                 <div id="panel-content" class="text-gray-400">
-                    <p>Welcome, Super Admin. Select a feature from the sidebar to manage application tasks.</p>
-                </div>
+                    <p>Loading admin panel...</p>
+                    </div>
             </section>
         </div>
     </main>
 
     <script type="module">
-        // --- Firebase Imports ---
-        import { firebaseConfig } from '../firebase-config.js'; 
+        // --- Firebase Imports (Modular SDK) ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import {
+            getAuth,
+            onAuthStateChanged
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { 
             getFirestore, 
             doc, 
             getDoc, 
             setDoc, 
-            updateDoc, // Added for updating user roles
-            onSnapshot
+            onSnapshot,
+            arrayUnion,
+            arrayRemove
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-        // --- Configuration ---
-        const HARDCODED_ADMIN_EMAIL = '4simpleproblems@gmail.com'; 
-
-        // --- Firebase Initialization ---
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
         
-        // --- DOM Elements ---
-        const pageContent = document.getElementById('page-content');
-        const loadingScreen = document.getElementById('loading-screen');
-        const sidebarNav = document.getElementById('settings-sidebar');
-        const panelContent = document.getElementById('panel-content');
-        const panelTitle = document.getElementById('panel-title');
-        
-        let activeSection = 'beta-access'; // Default active section
+        // --- Import Firebase Config ---
+        import { firebaseConfig } from "../firebase-config.js"; 
 
-        // --- ADMIN FEATURES (UPDATED TABS) ---
-        const ADMIN_FEATURES = [
-            { id: 'beta-access', name: 'Manage Beta Testers', icon: 'fa-user-lock', render: renderBetaAccessPanel },
-            { id: 'sub-admins', name: 'Manage Sub Admins', icon: 'fa-user-shield', render: renderSubAdminsPanel },
-            { id: 'system-status', name: 'System Status & Logs', icon: 'fa-server', render: renderSystemStatusPanel }
+        // --- Canvas Global Variables (MANDATORY USE) ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // --- Constants (MODIFIED ADMIN EMAIL LIST) ---
+        // *** AUTHORIZATION LOGIC - UNCHANGED ***
+        const ADMIN_EMAILS = [
+            '4simpleproblems@gmail.com',
+            'belkwy30@minerva.sparcc.org'
+        ];
+        const CONFIG_DOC_PATH = ['artifacts', appId, 'public', 'data', 'app_config', 'beta_testers'];
+        // *** END AUTHORIZATION LOGIC ***
+
+        // --- NEW: UI State and Constants ---
+        const BASE_TITLE = "Admin Settings";
+        let activeSection = 'beta'; // Default section
+        
+        // --- NEW: Admin-specific sidebar sections ---
+        const settingsSections = [
+            { id: 'beta', title: 'Beta Access', icon: 'fa-user-check', content: 'Manage the beta tester email list.', color: 'text-blue-400' },
+            { id: 'logs', title: 'Audit Logs', icon: 'fa-clipboard-list', content: 'View application audit logs (Not Implemented).', color: 'text-gray-400' },
+            { id: 'config', title: 'App Config', icon: 'fa-cogs', content: 'Manage global application configuration (Not Implemented).', color: 'text-yellow-400' }
         ];
 
-        // --- Utility Functions ---
+        // --- DOM Elements (Declared with 'let' to be assigned after auth) ---
+        let loadingScreen = document.getElementById('loading-screen');
+        let pageContent = document.getElementById('page-content');
         
-        /**
-         * HARDCODED SUPER ADMIN AUTHORIZATION CHECK
-         * Only allows access if the user's email matches the hardcoded super admin email.
-         */
+        // New layout elements
+        let mainTitle = document.getElementById('main-title');
+        let sidebarNav = document.getElementById('settings-sidebar');
+        let panelTitle = document.getElementById('panel-title');
+        let panelContent = document.getElementById('panel-content');
+        let pageHtmlTitle = document.getElementById('page-title');
+        
+        // Original content elements (will be queried after panel renders)
+        let betaTesterList = null;
+        let newTesterEmailInput = null;
+        let addMessageDiv = null;
+        let listMessageDiv = null;
+        let testerCountSpan = null;
+        let addTesterForm = null;
+
+        // --- Firebase Initialization ---
+        let db = null;
+        let auth = null;
+        
+        try {
+            const app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+        } catch (e) {
+            console.error("Firebase Initialization Failed:", e);
+            // This will show on the loading screen if it hasn't been hidden
+            loadingScreen.innerHTML = `<p class="text-xl text-red-400">ERROR: Firebase configuration is invalid or missing.</p>`;
+        }
+
+
+        // --- Helper Functions (MODIFIED checkAdminAuthorization) ---
+        // *** AUTHORIZATION CHECK - UNCHANGED ***
         const checkAdminAuthorization = (user) => {
-            if (!user) return false;
-            // DIRECT EMAIL CHECK
-            return user.email === HARDCODED_ADMIN_EMAIL;
-        };
-        
-        const showMessage = (element, message, type) => {
-            element.textContent = message;
-            element.className = `message-area message-${type}`;
-            setTimeout(() => { element.textContent = '', element.className = 'message-area' }, 5000);
-        };
-
-        // --- PANEL RENDERING FUNCTIONS ---
-        
-        // 1. Manage Beta Testers (Same as before)
-        function renderBetaAccessPanel() {
-            panelTitle.textContent = 'Manage Beta Testers';
-            
-            panelContent.innerHTML = `
-                <div class="settings-section mb-6">
-                    <p class="settings-description mb-6">
-                        Manage the list of user emails authorized to access the 4SP application (beta list).
-                    </p>
-                </div>
-                
-                <div class="settings-section">
-                    <h3 class="text-xl text-white font-semibold mb-4">Current Beta Testers (<span id="testerCount">0</span>)</h3>
-                    <div id="betaTesterList" class="space-y-2 max-h-96 overflow-y-auto pr-2">
-                        <p id="listPlaceholder" class="text-gray-500 text-center p-4">Loading list...</p>
+            const adminEmailListString = ADMIN_EMAILS.join(', ');
+            if (!user || !ADMIN_EMAILS.includes(user.email.toLowerCase())) {
+                console.error("Access Denied: Not an authorized Admin Email.");
+                loadingScreen.innerHTML = `
+                    <div class="text-center p-8 bg-custom-dark-gray rounded-xl shadow-2xl">
+                        <i class="fa-solid fa-hand-holding-hand text-red-500 text-4xl mb-4"></i>
+                        <h2 class="text-xl font-bold text-red-400 mb-2">ACCESS DENIED</h2>
+                        <p class="text-custom-lighter-gray">This page is restricted to the administrators (${adminEmailListString}).</p>
+                        <a href="./dashboard.html" class="mt-4 inline-block text-custom-white-gray hover:text-custom-lighter-gray underline">Go to Dashboard</a>
                     </div>
-                    <div id="listMessage" class="message-area"></div>
-                </div>
-
-                <div class="settings-section">
-                    <h3 class="text-xl text-white font-semibold mb-4">Add Beta Tester</h3>
-                    <form id="addTesterForm" class="flex flex-col md:flex-row gap-4">
-                        <input type="email" id="newTesterEmail" placeholder="Enter email address" required 
-                               class="flex-grow settings-input" 
-                               pattern="[a-z0-9._%+\\-]+@[a-z0-9.\\-]+\\.[a-z]{2,}$" title="Must be a valid email address">
-                        <button type="submit" class="settings-button flex-shrink-0">
-                            <i class="fa-solid fa-plus mr-2"></i> Add Email
-                        </button>
-                    </form>
-                    <div id="addMessage" class="message-area"></div>
-                </div>
-            `;
-            
-            setupRealtimeListener('betaAccess');
-            
-            const addTesterForm = document.getElementById('addTesterForm');
-            const newTesterEmailInput = document.getElementById('newTesterEmail');
-            
-            addTesterForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const email = newTesterEmailInput.value;
-                if (email) {
-                    addToList(email, 'betaAccess', 'addMessage');
-                    newTesterEmailInput.value = '';
-                }
-            });
-        }
-        
-        // 2. Manage Sub Admins (NEW FUNCTIONALITY)
-        function renderSubAdminsPanel() {
-            panelTitle.textContent = 'Manage Sub Admins';
-            
-            panelContent.innerHTML = `
-                <div class="settings-section mb-6">
-                    <p class="settings-description mb-6">
-                        Grant or revoke **admin privileges** for registered users. Sub-admins can access this panel (excluding this tab's management features).
-                    </p>
-                </div>
-                
-                <div class="settings-section">
-                    <h3 class="text-xl text-white font-semibold mb-4">Current Sub Admins (<span id="adminCount">Loading...</span>)</h3>
-                    <div id="subAdminList" class="space-y-2 max-h-96 overflow-y-auto pr-2">
-                        <p class="text-gray-500 text-center p-4">Loading list...</p>
-                    </div>
-                    <div id="adminListMessage" class="message-area"></div>
-                </div>
-
-                <div class="settings-section">
-                    <h3 class="text-xl text-white font-semibold mb-4">Grant Admin Privilege</h3>
-                    <form id="grantAdminForm" class="flex flex-col md:flex-row gap-4">
-                        <input type="email" id="adminEmailInput" placeholder="Enter registered user's email" required 
-                               class="flex-grow settings-input" 
-                               pattern="[a-z0-9._%+\\-]+@[a-z0-9.\\-]+\\.[a-z]{2,}$" title="Must be a valid email address">
-                        <button type="submit" class="settings-button flex-shrink-0">
-                            <i class="fa-solid fa-crown mr-2"></i> Grant Role
-                        </button>
-                    </form>
-                    <div id="grantAdminMessage" class="message-area"></div>
-                </div>
-            `;
-            
-            // Logic to fetch and listen to admins
-            setupSubAdminListener();
-            
-            document.getElementById('grantAdminForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const email = document.getElementById('adminEmailInput').value;
-                if (email) {
-                    await setAdminRole(email, true);
-                    document.getElementById('adminEmailInput').value = '';
-                }
-            });
-        }
-
-        // 3. System Status (Same as before)
-        function renderSystemStatusPanel() {
-            panelTitle.textContent = 'System Status & Logs';
-            panelContent.innerHTML = `
-                <div class="settings-section">
-                    <p class="settings-description mb-4">
-                        This panel provides real-time status updates for core services and access to recent application logs.
-                    </p>
-                    <h3 class="text-xl text-white font-semibold mb-4">Service Health</h3>
-                    <div class="space-y-2">
-                        <div class="list-item">
-                            <span class="font-semibold">Authentication Service</span>
-                            <span class="text-green-500"><i class="fa-solid fa-circle-check mr-2"></i> Operational</span>
-                        </div>
-                        <div class="list-item">
-                            <span class="font-semibold">Database Service</span>
-                            <span class="text-green-500"><i class="fa-solid fa-circle-check mr-2"></i> Operational</span>
-                        </div>
-                        <div class="list-item">
-                            <span class="font-semibold">Backend API Gateway</span>
-                            <span class="text-yellow-500"><i class="fa-solid fa-triangle-exclamation mr-2"></i> Degraded</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="settings-section">
-                    <h3 class="text-xl text-white font-semibold mb-4">Recent Critical Logs</h3>
-                    <div class="bg-gray-900 p-4 rounded-lg text-sm font-mono whitespace-pre-wrap max-h-60 overflow-y-auto">
-                        [2025-10-27 16:40:01] INFO: API Health Check OK
-                        [2025-10-27 16:35:10] WARN: Low disk space on /var/log. Current usage: 85%
-                        [2025-10-27 16:30:22] ERROR: Database connection failed (Retry 3/3). Switching to read-only mode.
-                        [2025-10-27 16:25:45] INFO: User 'admin@4sp.com' logged in successfully.
-                    </div>
-                    <button class="settings-button-secondary mt-4">Download Full Logs</button>
-                </div>
-            `;
-        }
-
-
-        // --- DATA MANAGEMENT FUNCTIONS (Beta Access) ---
-        
-        let unsubscribeBetaTesters = null;
-
-        const setupRealtimeListener = (docId) => {
-            if (unsubscribeBetaTesters) {
-                unsubscribeBetaTesters();
+                `;
+                return false;
             }
+            return true;
+        };
+        // *** END AUTHORIZATION CHECK ***
 
-            const ref = doc(db, "admin", docId);
-            const listDiv = document.getElementById('betaTesterList');
-            const countSpan = document.getElementById('testerCount');
-            const listMessageDiv = document.getElementById('listMessage');
+        // --- NEW: UI Rendering Functions (from settings.html) ---
+        
+        function renderSidebar() {
+            sidebarNav.innerHTML = ''; // Clear existing content
+            settingsSections.forEach(section => {
+                const item = document.createElement('div');
+                item.className = 'sidebar-item group';
+                item.id = `sidebar-${section.id}`;
+                item.setAttribute('data-section', section.id);
+                item.innerHTML = `
+                    <i class="fas ${section.icon} w-6 h-6 mr-3 ${section.color} transition-transform group-hover:scale-110"></i>
+                    <span class="text-sm font-medium">${section.title}</span>
+                `;
+                item.addEventListener('click', () => loadSection(section.id));
+                sidebarNav.appendChild(item);
+            });
+        }
 
-            unsubscribeBetaTesters = onSnapshot(ref, (docSnap) => {
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    const listItems = Array.isArray(data.emails) ? data.emails : []; 
-                    countSpan.textContent = listItems.length;
+        function loadSection(sectionId) {
+            activeSection = sectionId; // Update global state
+            const section = settingsSections.find(s => s.id === sectionId);
+            if (!section) return;
 
-                    if (listItems.length === 0) {
-                        listDiv.innerHTML = `<p class="text-gray-500 text-center p-4">No emails currently added.</p>`;
-                    } else {
-                        const listHtml = listItems.map(email => `
-                            <div class="list-item">
-                                <span class="text-white">${email}</span>
-                                <button data-email="${email}" class="settings-button-danger text-xs px-2 py-1 remove-btn">
-                                    <i class="fa-solid fa-trash-can"></i> Remove
+            // 1. Update titles
+            mainTitle.textContent = `${BASE_TITLE} - ${section.title}`;
+            pageHtmlTitle.textContent = `4SP - Admin - ${section.title}`;
+            panelTitle.innerHTML = `<i class="fas ${section.icon} mr-2 ${section.color}"></i> ${section.title}`;
+            
+            // 2. Render content
+            if (sectionId === 'beta') {
+                // Render the Beta Management UI
+                panelContent.innerHTML = `
+                    <div class="settings-section">
+                        <h3 class="text-xl font-semibold text-white mb-4">Add Beta Tester</h3>
+                        <form id="addTesterForm">
+                            <label for="newTesterEmail" class="settings-label">New Tester Email</label>
+                            <div class="flex flex-col sm:flex-row sm:items-start sm:gap-4">
+                                <input type="email" id="newTesterEmail" placeholder="Enter email address" required 
+                                    class="settings-input" 
+                                    pattern="[a-z0-9._%+\\-]+@[a-z0-9.\\-]+\\.[a-z]{2,}$" 
+                                    title="Must be a valid email address">
+                                <button type="submit" class="settings-button mt-3 sm:mt-0 sm:flex-shrink-0">
+                                    <i class="fa-solid fa-plus mr-2"></i> Add Email
                                 </button>
                             </div>
-                        `).join('');
-                        listDiv.innerHTML = listHtml;
-                        
-                        // Attach remove listeners
-                        listDiv.querySelectorAll('.remove-btn').forEach(button => {
-                            button.addEventListener('click', (e) => {
-                                const emailToRemove = e.currentTarget.getAttribute('data-email');
-                                removeFromList(emailToRemove, docId, 'listMessage');
-                            });
-                        });
-                    }
-                } else {
-                    listDiv.innerHTML = `<p class="text-gray-500 text-center p-4">Admin list document is missing. Create 'admin/${docId}' with an 'emails' array.</p>`;
-                    countSpan.textContent = '0';
-                    showMessage(listMessageDiv, 'Error: Admin document is missing.', 'error');
-                }
-            }, (error) => {
-                console.error("Error fetching list:", error);
-                showMessage(listMessageDiv, `Realtime error: ${error.message}`, 'error');
-            });
-        };
-        
-        const addToList = async (email, docId, messageId) => {
-            const messageDiv = document.getElementById(messageId);
-            try {
-                const ref = doc(db, "admin", docId);
-                const docSnap = await getDoc(ref);
-                const currentEmails = docSnap.exists() ? (Array.isArray(docSnap.data().emails) ? docSnap.data().emails : []) : [];
+                        </form>
+                        <div id="addMessage" class="message-area"></div>
+                        <p class="settings-description">
+                            Manage the list of user emails authorized to access the 4SP application.
+                        </p>
+                    </div>
 
-                if (currentEmails.includes(email)) {
-                    showMessage(messageDiv, `${email} is already on the list.`, 'warning');
-                    return;
-                }
-
-                const updatedEmails = [...currentEmails, email];
-
-                await setDoc(ref, {
-                    emails: updatedEmails
-                }, { merge: true });
-
-                showMessage(messageDiv, `Successfully added ${email}.`, 'success');
-
-            } catch (error) {
-                console.error("Error adding to list:", error);
-                showMessage(messageDiv, `Failed to add email: ${error.message}`, 'error');
-            }
-        };
-
-        const removeFromList = async (email, docId, messageId) => {
-            const messageDiv = document.getElementById(messageId);
-            try {
-                const ref = doc(db, "admin", docId);
-                const docSnap = await getDoc(ref);
-                const currentEmails = docSnap.exists() ? (Array.isArray(docSnap.data().emails) ? docSnap.data().emails : []) : [];
-
-                const updatedEmails = currentEmails.filter(e => e !== email);
-
-                await setDoc(ref, {
-                    emails: updatedEmails
-                }, { merge: true });
-
-                showMessage(messageDiv, `Successfully removed ${email}.`, 'success');
-            } catch (error) {
-                console.error("Error removing from list:", error);
-                showMessage(messageDiv, `Failed to remove email: ${error.message}`, 'error');
-            }
-        };
-
-        // --- DATA MANAGEMENT FUNCTIONS (Sub Admins) ---
-        let unsubscribeSubAdmins = null;
-
-        const setupSubAdminListener = () => {
-            if (unsubscribeSubAdmins) {
-                unsubscribeSubAdmins();
-            }
-
-            const subAdminListDiv = document.getElementById('subAdminList');
-            const adminCountSpan = document.getElementById('adminCount');
-            const listMessageDiv = document.getElementById('adminListMessage');
-
-            // Query users collection for documents where isAdmin is true
-            // NOTE: Firestore queries are complex for real-time. For this simple case, we'll
-            // mock the admin list display and rely on the `setAdminRole` function to handle the update.
-            // *Real-world note: A Cloud Function should be used to maintain a separate 'admins' list
-            // for efficient real-time querying.*
-            
-            // Placeholder: Fetch all users once and filter, since Firestore doesn't provide easy 'where' real-time list listeners in the web SDK.
-            
-            // A simple, one-time fetch to display active sub-admins (not realtime for simplicity)
-            const usersCollectionRef = db.collection("users"); 
-            
-            // Fallback for sub-admin display (non-realtime, simple query to show functionality)
-            const fetchSubAdmins = async () => {
-                 try {
-                    const snapshot = await db.collection("users").where("isAdmin", "==", true).get();
-                    const subAdmins = [];
-                    snapshot.forEach(doc => {
-                        const data = doc.data();
-                        if (data.email !== HARDCODED_ADMIN_EMAIL) { // Exclude super admin
-                            subAdmins.push({ email: data.email, uid: doc.id });
-                        }
-                    });
-
-                    adminCountSpan.textContent = subAdmins.length;
-                    
-                    if (subAdmins.length === 0) {
-                        subAdminListDiv.innerHTML = `<p class="text-gray-500 text-center p-4">No sub admins currently set.</p>`;
-                    } else {
-                        const listHtml = subAdmins.map(admin => `
-                            <div class="list-item">
-                                <span class="text-white">${admin.email}</span>
-                                <button data-email="${admin.email}" data-uid="${admin.uid}" class="settings-button-danger text-xs px-2 py-1 revoke-btn">
-                                    <i class="fa-solid fa-ban"></i> Revoke
-                                </button>
-                            </div>
-                        `).join('');
-                        subAdminListDiv.innerHTML = listHtml;
-                        
-                        // Attach revoke listeners
-                        subAdminListDiv.querySelectorAll('.revoke-btn').forEach(button => {
-                            button.addEventListener('click', (e) => {
-                                const uidToRevoke = e.currentTarget.getAttribute('data-uid');
-                                setAdminRole(uidToRevoke, false, true); // Revoke by UID
-                            });
-                        });
-                    }
-
-                } catch (error) {
-                    console.error("Error fetching sub-admins:", error);
-                    showMessage(listMessageDiv, `Error fetching admins: ${error.message}`, 'error');
-                }
-            };
-
-            // Call it initially and set up a refresh mechanism (not a standard onSnapshot)
-            fetchSubAdmins();
-            
-            // Simple timer to refresh sub-admin list every 10 seconds
-            if (unsubscribeSubAdmins) clearInterval(unsubscribeSubAdmins);
-            unsubscribeSubAdmins = setInterval(fetchSubAdmins, 10000); 
-        };
-
-        /**
-         * Finds a user by email and sets their 'isAdmin' flag.
-         * For revoking, it accepts the UID directly.
-         */
-        const setAdminRole = async (identifier, isAdmin, isRevokeByUid = false) => {
-            const messageDiv = document.getElementById('grantAdminMessage');
-            try {
-                let userDocRef;
-
-                if (isRevokeByUid) {
-                    // Identifier is the UID
-                    userDocRef = doc(db, "users", identifier);
-                } else {
-                    // Identifier is the Email (Granting) - requires a query to find UID
-                    const userQuerySnapshot = await db.collection("users").where("email", "==", identifier).limit(1).get();
-                    
-                    if (userQuerySnapshot.empty) {
-                        showMessage(messageDiv, `User with email ${identifier} not found. Must be a registered user.`, 'error');
-                        return;
-                    }
-                    userDocRef = userQuerySnapshot.docs[0].ref;
+                    <div class="settings-section">
+                        <h3 class="text-xl font-semibold text-white mb-4">Current Beta Testers (<span id="testerCount">0</span>)</h3>
+                        <div id="betaTesterList" class="space-y-2 max-h-96 overflow-y-auto pr-2 bg-black/20 p-4 rounded-lg border border-custom-medium-gray">
+                            <p id="listPlaceholder" class="text-custom-light-gray text-center p-4">Loading list...</p>
+                        </div>
+                        <div id="listMessage" class="message-area"></div>
+                    </div>
+                `;
+                
+                // 3. Re-query DOM elements for this panel and attach listeners
+                betaTesterList = document.getElementById('betaTesterList');
+                newTesterEmailInput = document.getElementById('newTesterEmail');
+                addMessageDiv = document.getElementById('addMessage');
+                listMessageDiv = document.getElementById('listMessage');
+                testerCountSpan = document.getElementById('testerCount');
+                addTesterForm = document.getElementById('addTesterForm');
+                
+                if(addTesterForm) {
+                    addTesterForm.addEventListener('submit', handleAddTesterSubmit);
                 }
                 
-                // Update the user document
-                await updateDoc(userDocRef, {
-                    isAdmin: isAdmin
-                });
-
-                if (isRevokeByUid) {
-                    showMessage(document.getElementById('adminListMessage'), `Admin role revoked.`, 'success');
-                    // Manually refresh the list for better UX
-                    setupSubAdminListener(); 
-                } else {
-                    showMessage(messageDiv, `Admin role ${isAdmin ? 'granted' : 'revoked'} for ${identifier}.`, 'success');
-                }
-
-            } catch (error) {
-                console.error(`Error setting admin role:`, error);
-                showMessage(messageDiv, `Failed to update user role: ${error.message}`, 'error');
+                // 4. Start the data listener
+                // We restart it every time the tab is loaded to ensure data is fresh
+                // Note: onSnapshot returns an unsubscribe function, but for this simple
+                // admin panel, re-attaching is acceptable.
+                setupRealtimeListener(); 
+                
+            } else {
+                // Render placeholder for all other sections
+                panelContent.innerHTML = `
+                    <div class="flex flex-col space-y-4">
+                        <p class="text-lg">${section.content}</p>
+                        <div id="section-details" class="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                            <h3 class="text-xl font-semibold mb-2 text-white">Section Details</h3>
+                            <p class="text-sm text-gray-500">This section is not yet implemented.</p>
+                        </div>
+                    </div>
+                `;
             }
-        };
-
-
-        // --- SIDEBAR LOGIC ---
-        
-        function navigate(featureId) {
-            const feature = ADMIN_FEATURES.find(f => f.id === featureId);
-            if (!feature) return;
-
+            
+            // 5. Update sidebar active state
             document.querySelectorAll('.sidebar-item').forEach(item => {
                 item.classList.remove('active');
             });
-            document.getElementById(`sidebar-${feature.id}`).classList.add('active');
-
-            activeSection = featureId;
-            feature.render();
+            document.getElementById(`sidebar-${sectionId}`).classList.add('active');
         }
 
-        function renderSidebar() {
-            sidebarNav.innerHTML = ADMIN_FEATURES.map(feature => `
-                <div id="sidebar-${feature.id}" 
-                     class="sidebar-item" 
-                     data-feature-id="${feature.id}">
-                    <i class="fa-solid ${feature.icon} w-6 mr-3"></i>
-                    <span>${feature.name}</span>
-                </div>
-            `).join('');
+        // --- List Rendering (MODIFIED for new button style) ---
+        const renderTesterList = (emails) => {
+            // Ensure elements are valid before proceeding
+            if (!betaTesterList || !testerCountSpan || !listMessageDiv) {
+                console.warn("Beta panel elements not found. Skipping render.");
+                return;
+            }
             
-            sidebarNav.querySelectorAll('.sidebar-item').forEach(item => {
-                item.addEventListener('click', (e) => {
-                    const featureId = e.currentTarget.getAttribute('data-feature-id');
-                    navigate(featureId);
-                });
+            betaTesterList.innerHTML = '';
+            testerCountSpan.textContent = emails.length;
+
+            if (emails.length === 0) {
+                betaTesterList.innerHTML = '<p class="text-custom-light-gray text-center p-4">No beta testers currently registered.</p>';
+                return;
+            }
+
+            emails.forEach(email => {
+                const item = document.createElement('div');
+                item.className = 'list-item';
+                // UPDATED Button to use settings-button-danger
+                item.innerHTML = `
+                    <span class="text-custom-white-gray break-all">${email}</span>
+                    <button data-email="${email}" class="remove-btn settings-button settings-button-danger text-xs py-1 px-2 ml-4">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                `;
+                betaTesterList.appendChild(item);
             });
+
+            // Attach removal listeners
+            document.querySelectorAll('.remove-btn').forEach(button => {
+                button.addEventListener('click', (e) => removeTester(e.currentTarget.getAttribute('data-email')));
+            });
+        };
+
+        // --- Firestore Operations (UNCHANGED CORE LOGIC) ---
+
+        // Real-time listener for the beta tester list
+        const setupRealtimeListener = () => {
+            const docRef = doc(db, ...CONFIG_DOC_PATH);
+
+            onSnapshot(docRef, (docSnap) => {
+                const emails = docSnap.data()?.emails || [];
+                // Sort for cleaner display
+                emails.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+                renderTesterList(emails);
+            }, (error) => {
+                console.error("Firestore realtime listener failed:", error);
+                if (listMessageDiv) {
+                    showMessage(listMessageDiv, 'Failed to load beta tester list in real-time.', 'error');
+                }
+            });
+        };
+
+        const addTester = async (email) => {
+            if (!email || !addMessageDiv) return;
+            showMessage(addMessageDiv, 'Adding email...', 'warning');
+
+            const docRef = doc(db, ...CONFIG_DOC_PATH);
+            const normalizedEmail = email.toLowerCase().trim();
+
+            try {
+                // Check if document exists, if not, create it
+                const docSnap = await getDoc(docRef);
+                if (!docSnap.exists()) {
+                     await setDoc(docRef, { emails: [] }, { merge: true });
+                }
+
+                // Add the email using arrayUnion for atomicity and to prevent duplicates
+                await setDoc(docRef, {
+                    emails: arrayUnion(normalizedEmail)
+                }, { merge: true });
+
+                showMessage(addMessageDiv, `Successfully added ${email} to the beta list.`, 'success');
+                if (newTesterEmailInput) {
+                    newTesterEmailInput.value = ''; // Clear input
+                }
+            } catch (error) {
+                console.error("Error adding beta tester:", error);
+                showMessage(addMessageDiv, `Failed to add email: ${error.message}`, 'error');
+            }
+        };
+
+        const removeTester = async (email) => {
+            if (!email || !listMessageDiv) return;
+            
+            // Note: We use the list message area for removal status
+            showMessage(listMessageDiv, `Removing ${email}...`, 'warning');
+            
+            const docRef = doc(db, ...CONFIG_DOC_PATH);
+            const normalizedEmail = email.toLowerCase().trim();
+
+            try {
+                // Remove the email using arrayRemove
+                await setDoc(docRef, {
+                    emails: arrayRemove(normalizedEmail)
+                }, { merge: true });
+
+                showMessage(listMessageDiv, `Successfully removed ${email}.`, 'success');
+            } catch (error) {
+                console.error("Error removing beta tester:", error);
+                showMessage(listMessageDiv, `Failed to remove email: ${error.message}`, 'error');
+            }
+        };
+
+        // Re-usable message helper
+        const showMessage = (element, text, type) => {
+            if (!element) return;
+            element.textContent = text;
+            if (type === 'error') {
+                element.className = 'message-area message-error';
+            } else if (type === 'success') {
+                element.className = 'message-area message-success';
+            } else {
+                element.className = 'message-area message-warning';
+            }
+        };
+
+        // --- Event Listeners ---
+        // Wrapped the original listener in a function
+        function handleAddTesterSubmit(e) {
+            e.preventDefault();
+            if (newTesterEmailInput) {
+                const email = newTesterEmailInput.value;
+                if (email) {
+                    addTester(email);
+                }
+            }
         }
+
+        // --- Main Initialization (MODIFIED to load new UI) ---
         
-        // --- Main Initialization (AUTHENTICATION) ---
-        
-        onAuthStateChanged(auth, async (user) => {
+        onAuthStateChanged(auth, (user) => {
             if (user) {
-                // Check if the user is the hardcoded super admin
-                const isAuthorized = checkAdminAuthorization(user);
-                
-                if (isAuthorized) {
-                    console.log("Super Admin authorized.");
+                // User is logged in. Check for admin authorization.
+                // *** AUTHORIZATION CHECK IS CALLED HERE - UNCHANGED ***
+                if (checkAdminAuthorization(user)) {
+                    // Admin is authorized. Start the new UI.
+                    console.log("Admin authorized. Initializing Admin UI.");
                     
+                    // Render the sidebar
                     renderSidebar(); 
-                    navigate(activeSection); 
+                    // Load the default 'beta' section (which queries elements and starts listener)
+                    loadSection(activeSection); 
                     
                     loadingScreen.classList.add('hidden');
                     pageContent.classList.remove('hidden');
-                } else {
-                    // Not authorized - Block and redirect
-                    console.error("ACCESS DENIED: User is not the super administrator.");
-                    loadingScreen.innerHTML = '<p class="text-xl text-red-400">ACCESS DENIED. You are not authorized to view this page. Redirecting...</p>';
-                    
-                    setTimeout(() => {
-                        window.location.href = "/dashboard.html"; // Redirect unauthorized users
-                    }, 3000);
                 }
+                // If checkAdminAuthorization is false, it handles showing the error message
             } else {
-                // User is not logged in. Navigation script handles redirection.
+                // User is not logged in. Redirect logic is handled by navigation.js
                 console.log("User not authenticated. Navigation script handles redirection.");
             }
         });
