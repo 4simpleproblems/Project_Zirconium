@@ -50,8 +50,8 @@
         "url": "../GAMES/index.html"
     },
     "test": {
-        "name": "Test",
-        "icon": "fa-solid fa-vial", 
-        "url": "../logged-in/test.html"
+        "name": "Settings",
+        "icon": "fa-solid fa-gear", 
+        "url": "../logged-in/settings.html"
     }
 }
