@@ -249,14 +249,12 @@
         const db = getFirestore(app);
 
         // --- AUTH AND ADMIN CHECK ---
-        // List of authorized admin emails to access this page
         const ADMIN_WHITELIST = [
             "belkwy30@minerva.sparcc.org",
             "4simpleproblems@gmail.com"
         ];
 
         function checkAdminAuthorization(user) {
-            console.log("Checking admin authorization for:", user.email);
             return ADMIN_WHITELIST.includes(user.email);
         }
 
@@ -306,7 +304,7 @@
             testerCountSpan.textContent = emails.length;
         }
 
-        // --- Realtime Database Listener ---
+        // --- Realtime Database Listener (Added final safeguard to hide loader) ---
 
         function setupRealtimeListener() {
             onSnapshot(adminDocRef, (docSnap) => {
@@ -317,14 +315,22 @@
                     renderList([]);
                 }
                 listPlaceholder.classList.add('hidden');
+                
+                // Final safeguard: ensure the loader is hidden once data retrieval is successful
+                loadingScreen.classList.add('hidden');
+                pageContent.classList.remove('hidden');
+
             }, (error) => {
                 console.error("Error setting up realtime listener:", error);
                 listPlaceholder.textContent = 'Failed to load list.';
+                // If listener fails, display an error and ensure loader is still removed/updated
+                loadingScreen.innerHTML = '<div class="text-xl text-red-500 text-center p-8">Error: Failed to load beta list data.</div>';
+                loadingScreen.classList.remove('hidden');
             });
         }
 
 
-        // --- CRUD Operations ---
+        // --- CRUD Operations (Unchanged) ---
 
         const addTester = async (email) => {
             showMessage(addMessageDiv, 'Adding tester...', 'default');
@@ -363,7 +369,7 @@
         };
 
 
-        // --- Event Listeners ---
+        // --- Event Listeners (Unchanged) ---
         document.getElementById('addTesterForm').addEventListener('submit', (e) => {
             e.preventDefault();
             const email = newTesterEmailInput.value;
@@ -383,37 +389,42 @@
         });
 
 
-        // --- Main Initialization (Updated Auth Flow) ---
+        // --- Main Initialization (Wrapped in DOMContentLoaded for robustness) ---
         
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                // Step 1: Check if the user's email is verified
-                if (!user.emailVerified) {
-                    loadingScreen.innerHTML = '<div class="text-xl text-red-500 text-center p-8">Access Denied: Your email address must be **verified** to access these administrative settings.</div>';
-                    loadingScreen.classList.remove('hidden');
-                    console.log("User email not verified.");
-                    return; // Stop execution
-                }
+        document.addEventListener('DOMContentLoaded', () => {
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    // Step 1: Check if the user's email is verified
+                    if (!user.emailVerified) {
+                        console.log("User email not verified.");
+                        loadingScreen.innerHTML = '<div class="text-xl text-red-500 text-center p-8">Access Denied: Your email address must be **verified** to access these administrative settings.</div>';
+                        loadingScreen.classList.remove('hidden');
+                        return; // Stop execution
+                    }
 
-                // Step 2: Check for admin authorization. (Email is verified at this point)
-                if (checkAdminAuthorization(user)) {
-                    // Admin is authorized and verified. Start the data listener and show content.
-                    console.log("Admin authorized and verified. Starting beta list listener.");
-                    setupRealtimeListener();
-                    loadingScreen.classList.add('hidden');
-                    pageContent.classList.remove('hidden');
+                    // Step 2: Check for admin authorization. (Email is verified at this point)
+                    if (checkAdminAuthorization(user)) {
+                        // Admin is authorized and verified. Start the data listener and show content.
+                        console.log("Admin authorized and verified. Starting beta list listener.");
+                        
+                        // We will rely on the listener's success callback to hide the loader,
+                        // as that's the point data is confirmed ready.
+                        // Remove the immediate hide/show here to avoid a race condition with onSnapshot
+                        setupRealtimeListener(); 
+                        
+                    } else {
+                        // User is verified but not an authorized admin.
+                        console.log("User is verified but not an authorized admin.");
+                        loadingScreen.innerHTML = '<div class="text-xl text-red-500 text-center p-8">Access Denied: You must be an **authorized admin** to view this page.</div>';
+                        loadingScreen.classList.remove('hidden');
+                    }
                 } else {
-                    // Authorized user is logged in and verified, but not on the ADMIN_WHITELIST.
-                    loadingScreen.innerHTML = '<div class="text-xl text-red-500 text-center p-8">Access Denied: You must be an **authorized admin** to view this page.</div>';
-                    loadingScreen.classList.remove('hidden');
-                    console.log("User is verified but not an authorized admin.");
+                    // User is not logged in. Navigation script handles redirection.
+                    console.log("User not authenticated. Navigation script handles redirection.");
+                    // Ensure loading screen is hidden to allow the navigation script to complete its redirect flow.
+                    loadingScreen.classList.add('hidden');
                 }
-            } else {
-                // User is not logged in. Navigation script handles redirection.
-                console.log("User not authenticated. Navigation script handles redirection.");
-                // Ensure loading screen is hidden to allow the navigation script to complete its redirect flow.
-                loadingScreen.classList.add('hidden');
-            }
+            });
         });
 
     </script>
