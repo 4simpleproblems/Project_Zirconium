@@ -17,19 +17,18 @@
  * 9. INSTANT GLIDE: Scroll-end glide buttons (arrows) now update instantly with no delay.
  * 10. PIN HINT: A one-time hint now appears on first click of the pin button.
  * 11. PIN ICON: Pin icon is now solid at all times (hover effect removed).
- * 12. SCROLL PERSISTENCE: The scroll position is now saved and restored using requestAnimationFrame during re-renders caused by pin interactions, ensuring a smooth experience.
+ * 12. SCROLL PERSISTENCE: The scroll position is now saved and restored using requestAnimationFrame during re-renders (like pin interactions), ensuring a smooth experience.
  * 13. PARTIAL UPDATE: Pin menu interactions now only refresh the pin area's HTML, leaving the main tab scroll container untouched, eliminating all scrolling jumps.
  * 14. AUTH PARTIAL UPDATE: Hiding or showing the pin button now partially refreshes the *entire* auth/pin control area (excluding the scroll menu), ensuring the auth dropdown menu updates instantly.
  * 15. (FIXED) DASHBOARD MENU ALIGNMENT: Fixed an issue where the user info in the dropdown menu was incorrectly centered.
  * 16. (UPDATED) REPIN BUTTON: Repurposed 'Repin Current' to a simple 'Repin' button that shows up whenever the current page is not the one pinned, or no page is pinned.
  * 17. (UPDATED) LOGOUT REDIRECT PATH: Changed redirect path for logged-out users to an absolute path (`/index.html`) for consistency.
  * 18. (NEW) FULL THEMING SYSTEM: Replaced all hardcoded colors with CSS variables. Added a global `window.applyTheme` function to set themes. Navbar now loads the user's saved theme from Local Storage on startup. Added CSS transitions for smooth theme fading.
- * 19. (FIXED) GLOBAL CLICK LISTENER: The global click listener now fetches button references on every click, preventing stale references after a navbar re-render.
+ * 19. (FIXED) GLOBAL CLICK LISTENER: The global click listener now fetches button references on every click, preventing stale references after a re-render.
  * 20. (FIXED) SCROLL GLIDER LOGIC: Updated scroll arrow logic to be explicit, ensuring arrows hide/show correctly at scroll edges.
  * 21. (FIXED) USERNAME COLOR: Replaced hardcoded `text-white` on username with a CSS variable (`--menu-username-text`) and updated `window.applyTheme` to set this to black for specific light themes.
- * 22. **(NEW)** MULTI-ADMIN SUPPORT: Changed privileged email from a single string to an array to support multiple admins.
- * 23. **(FIXED)** ACTIVE TAB SCROLLING: Logic now scrolls all the way to the edge if the active tab is the first or last item in the menu.
- * 24. **(FIXED)** SCROLL TO EDGE ROBUSTNESS: Refined scroll logic to reliably scroll to the absolute edge for the first and last tabs.
+ * 22. **(NEW)** MULTI-ADMIN SUPPORT: Changed privileged email from a single string to an array to support multiple admins, including **belkwy30@minerva.sparcc.org**.
+ * 23. **(FIXED)** SCROLL TO EDGE ROBUSTNESS: Refined scroll logic to reliably scroll to the absolute edge for the last tab.
  */
 
 // =========================================================================
@@ -826,18 +825,18 @@ let db;
                 const activeTab = document.querySelector('.nav-tab.active');
                 if (activeTab && tabContainer) {
                     
-                    // --- MODIFICATION 2 START: Enhanced Scroll Fix ---
+                    // --- MODIFICATION 2 START: Scrolls to the end if it's the last page. ---
                     const allTabs = Array.from(tabContainer.querySelectorAll('.nav-tab'));
                     const activeIndex = allTabs.findIndex(tab => tab === activeTab);
                     const maxScroll = tabContainer.scrollWidth - tabContainer.offsetWidth;
                     let scrollTarget;
 
-                    if (activeIndex === 0) {
-                        // If it's the first tab, scroll all the way left
-                        scrollTarget = 0;
-                    } else if (activeIndex === allTabs.length - 1) {
+                    if (activeIndex === allTabs.length - 1) {
                         // If it's the last tab, scroll all the way right (maxScroll)
                         scrollTarget = maxScroll;
+                    } else if (activeIndex === 0) {
+                        // If it's the first tab, scroll all the way left
+                        scrollTarget = 0;
                     } else {
                         // Otherwise, center the tab
                         const centerOffset = (tabContainer.offsetWidth - activeTab.offsetWidth) / 2;
@@ -849,7 +848,7 @@ let db;
                     
                     // Set scroll immediately, no delay needed for stable initial load
                     tabContainer.scrollLeft = scrollTarget;
-                    // --- MODIFICATION 2 END: Enhanced Scroll Fix ---
+                    // --- MODIFICATION 2 END: Scrolls to the end if it's the last page. ---
 
                     
                     // IMPORTANT: Set flag to prevent future automatic centering
