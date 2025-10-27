@@ -251,8 +251,8 @@
         // --- AUTH AND ADMIN CHECK ---
         // List of authorized admin emails to access this page
         const ADMIN_WHITELIST = [
-            "4simpleproblems@gmail.com",
-            "belkwy30@minerva.sparcc.org" // Added new admin
+            "belkwy30@minerva.sparcc.org", // Updated: The current admin requested to be kept
+            "4simpleproblems@gmail.com"   // Updated: The new admin email
         ];
 
         function checkAdminAuthorization(user) {
@@ -402,6 +402,8 @@
             } else {
                 // User is not logged in. Navigation script handles redirection.
                 console.log("User not authenticated. Navigation script handles redirection.");
+                // FIX: Ensure loading screen is hidden to allow the navigation script to complete its redirect flow.
+                loadingScreen.classList.add('hidden');
             }
         });
 
