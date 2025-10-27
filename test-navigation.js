@@ -23,7 +23,9 @@
  * 15. (FIXED) DASHBOARD MENU ALIGNMENT: Fixed an issue where the user info in the dropdown menu was incorrectly centered.
  * 16. (UPDATED) REPIN BUTTON: Repurposed 'Repin Current' to a simple 'Repin' button that shows up whenever the current page is not the one pinned, or no page is pinned.
  * 17. (UPDATED) LOGOUT REDIRECT PATH: Changed redirect path for logged-out users to an absolute path (`/index.html`) for consistency.
- * 18. **(NEW) FULL THEMING SYSTEM:** Replaced all hardcoded colors with CSS variables. Added a global `window.applyTheme` function to set themes. Navbar now loads the user's saved theme from Local Storage on startup. Added CSS transitions for smooth theme fading.
+ * 18. (NEW) FULL THEMING SYSTEM: Replaced all hardcoded colors with CSS variables. Added a global `window.applyTheme` function to set themes. Navbar now loads the user's saved theme from Local Storage on startup. Added CSS transitions for smooth theme fading.
+ * 19. **(FIXED)** GLOBAL CLICK LISTENER: The global click listener now fetches button references on every click, preventing stale references after a navbar re-render.
+ * 20. **(FIXED)** SCROLL GLIDER LOGIC: Updated scroll arrow logic to be explicit, ensuring arrows hide/show correctly at scroll edges.
  */
 
 // =========================================================================
@@ -614,11 +616,11 @@ let db;
                 // FIX: Added w-full and min-w-0 to the header div to prevent centering bug
                 return `
                     <div id="auth-button-container" class="relative flex-shrink-0 flex items-center">
-                        <button id="auth-toggle" class="w-8 h-8 rounded-full border overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
+                        <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
                             ${avatar}
                         </button>
                         <div id="auth-menu-container" class="auth-menu-container closed">
-                            <div class="px-3 py-2 border-b mb-2 w-full min-w-0">
+                            <div class="px-3 py-2 border-b border-gray-700 mb-2 w-full min-w-0">
                                 <p class="text-sm font-semibold text-white truncate">${username}</p>
                                 <p class="text-xs text-gray-400 truncate">${email}</p>
                             </div>
@@ -822,6 +824,46 @@ let db;
             // Initial check to hide/show them correctly after load
             updateScrollGilders();
         };
+
+        // --- FIX START: Bug 2 ---
+        // Updated the logic to be an explicit if/else, ensuring
+        // the 'hidden' class is correctly added or removed.
+        const updateScrollGilders = () => {
+            const container = document.querySelector('.tab-scroll-container');
+            const leftButton = document.getElementById('glide-left');
+            const rightButton = document.getElementById('glide-right');
+
+            if (!container || !leftButton || !rightButton) return;
+            
+            const hasHorizontalOverflow = container.scrollWidth > container.offsetWidth + 2; // Add 2px tolerance
+
+            if (hasHorizontalOverflow) {
+                // Use a small tolerance
+                const isScrolledToLeft = container.scrollLeft <= 5;
+                
+                // Calculate max scroll and check against it with tolerance
+                const maxScrollLeft = container.scrollWidth - container.offsetWidth;
+                const isScrolledToRight = container.scrollLeft >= maxScrollLeft - 5;
+
+                // Explicitly add or remove the class
+                if (isScrolledToLeft) {
+                    leftButton.classList.add('hidden');
+                } else {
+                    leftButton.classList.remove('hidden');
+                }
+
+                if (isScrolledToRight) {
+                    rightButton.classList.add('hidden');
+                } else {
+                    rightButton.classList.remove('hidden');
+                }
+            } else {
+                // If there is no overflow, hide both buttons
+                leftButton.classList.add('hidden');
+                rightButton.classList.add('hidden');
+            }
+        };
+        // --- FIX END: Bug 2 ---
         
         // Split setupEventListeners into main and pin-specific, 
         // as pin listeners need to be re-attached on partial update.
@@ -941,19 +983,31 @@ let db;
             // NEW: Only add this listener ONCE
             if (!globalClickListenerAdded) {
                 document.addEventListener('click', (e) => {
+                    // --- FIX START: Bug 1 ---
+                    // Fetched elements *inside* the listener to avoid stale references
+                    // after a re-render. Used .contains() to handle clicks on child icons.
                     const menu = document.getElementById('auth-menu-container');
                     const toggleButton = document.getElementById('auth-toggle');
-                    if (menu && menu.classList.contains('open') && !menu.contains(e.target) && e.target !== toggleButton) {
-                        menu.classList.add('closed');
-                        menu.classList.remove('open');
+                    
+                    if (menu && menu.classList.contains('open')) {
+                        // Check if the click was outside the menu AND outside the toggle button
+                        if (!menu.contains(e.target) && (toggleButton && !toggleButton.contains(e.target))) {
+                            menu.classList.add('closed');
+                            menu.classList.remove('open');
+                        }
                     }
                     
                     const pinButton = document.getElementById('pin-button');
                     const pinContextMenu = document.getElementById('pin-context-menu');
-                    if (pinContextMenu && pinContextMenu.classList.contains('open') && !pinContextMenu.contains(e.target) && pinButton && !pinButton.contains(e.target)) {
-                        pinContextMenu.classList.add('closed');
-                        pinContextMenu.classList.remove('open');
+
+                    if (pinContextMenu && pinContextMenu.classList.contains('open')) {
+                         // Check if the click was outside the pin menu AND outside the pin button
+                        if (!pinContextMenu.contains(e.target) && (pinButton && !pinButton.contains(e.target))) {
+                            pinContextMenu.classList.add('closed');
+                            pinContextMenu.classList.remove('open');
+                        }
                     }
+                    // --- FIX END: Bug 1 ---
                 });
                 globalClickListenerAdded = true;
             }
