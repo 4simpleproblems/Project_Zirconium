@@ -392,7 +392,6 @@
                     if (!user.emailVerified) {
                         console.log("Access Denied: User email not verified.");
                         loadingScreen.innerHTML = '<div class="text-xl text-red-500 text-center p-8">Access Denied: Your email address must be **verified** to access these administrative settings.</div>';
-                        // Ensure the loading screen is visible with the error message
                         loadingScreen.classList.remove('hidden');
                         pageContent.classList.add('hidden');
                         return; // Stop execution
@@ -403,10 +402,9 @@
                         // Admin is fully authorized and verified.
                         console.log("Admin authorized and verified. Starting beta list listener and showing content.");
                         
-                        // Start the database listener
                         setupRealtimeListener(); 
 
-                        // Hide the loading screen and show content
+                        // Show content by hiding the loading screen (Replicating the exact lines)
                         loadingScreen.classList.add('hidden');
                         pageContent.classList.remove('hidden');
                         
@@ -414,7 +412,6 @@
                         // User is verified but not an authorized admin.
                         console.log("Access Denied: User is verified but not an authorized admin.");
                         loadingScreen.innerHTML = '<div class="text-xl text-red-500 text-center p-8">Access Denied: You must be an **authorized admin** to view this page.</div>';
-                        // Ensure the loading screen is visible with the error message
                         loadingScreen.classList.remove('hidden');
                         pageContent.classList.add('hidden');
                     }
