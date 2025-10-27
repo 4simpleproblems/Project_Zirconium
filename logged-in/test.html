@@ -236,11 +236,13 @@
 
         /* --- UPDATED CSS for .color-option --- */
 
+/* --- UPDATED CSS for .color-option (Text Centered) --- */
+
 .color-option {
     /* 1. Wide but not tall / Spacious */
     width: 100%;
-    padding: 0.75rem 1.25rem; /* Increased vertical padding (height) and added horizontal padding */
-    height: auto; /* Allow height to be determined by padding and content */
+    padding: 0.75rem 1.25rem; 
+    height: auto; 
     
     /* 2. Slightly more rounded (12px) */
     border-radius: 12px;
@@ -251,28 +253,27 @@
     /* Standard button styling */
     cursor: pointer;
     border: 3px solid #374151; /* gray-700 */
-    transition: background-color 0.2s, border-color 0.2s; /* Simplified transition */
+    transition: background-color 0.2s, border-color 0.2s; 
     display: flex;
     align-items: center;
-    justify-content: flex-start; /* Align content to the left */
-    font-size: 1rem; /* Slightly larger text for better readability */
+    /* CHANGE: Sets the horizontal alignment of the flex items to the center */
+    justify-content: center; 
+    
+    font-size: 0.9rem; 
     color: white;
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
     font-weight: 500;
-    /* Note: The original 'transform: scale()' has been removed as it distorts wide elements */
 }
 
 .color-option:hover {
-    /* Removed transform: scale(1.05); */
     border-color: #6b7280; /* gray-500 */
-    background-color: #1f1f1f; /* Slight background change on hover */
+    background-color: #1f1f1f; 
 }
 
 .color-option.selected {
     border-color: #3b82f6; /* Blue-500 */
     box-shadow: 0 0 0 3px #3b82f680;
-    /* Removed transform: scale(1.05); */
-    background-color: #18202d; /* Subtle blue-tinted background when selected */
+    background-color: #18202d; 
 }
     </style>
 </head>
@@ -356,7 +357,7 @@
         const themePalettes = [
             // 1. Default Dark (Index 0 is the default)
             {
-                name: 'Default Dark',
+                name: 'Dark',
                 'logo-src': '/images/logo.png',
                 'navbar-bg': '#000000',
                 'navbar-border': 'rgb(31 41 55)',
@@ -1766,7 +1767,7 @@
                 document.querySelectorAll('#theme-palette .color-option').forEach(s => s.classList.remove('selected'));
                 document.querySelector('#theme-palette .color-option[data-theme-index="0"]').classList.add('selected');
                 
-                messageEl.textContent = 'Theme reset to Default Dark.';
+                messageEl.textContent = 'Theme reset to Dark.';
                 messageEl.className = 'message-area message-success';
             });
         }
