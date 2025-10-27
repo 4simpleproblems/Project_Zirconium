@@ -250,7 +250,9 @@
 <body>
 
     <div id="loading-screen">
-        <p class="text-xl text-gray-400">Verifying Admin Access and loading data...</p>
+        <div class="text-xl flex items-center text-gray-400">
+            <i class="fa-solid fa-spinner fa-spin mr-3"></i> Verifying Admin Access and loading data...
+        </div>
     </div>
     
     <main id="page-content" class="settings-wrapper hidden">
@@ -615,7 +617,8 @@
                     // Load the default 'beta' section (which queries elements and starts listener)
                     loadSection(activeSection); 
                     
-                    loadingScreen.classList.add('hidden');
+                    // *** FIX: Use style.display for immediate effect ***
+                    loadingScreen.style.display = 'none'; 
                     pageContent.classList.remove('hidden');
                 }
                 // If checkAdminAuthorization is false, it handles showing the error message
