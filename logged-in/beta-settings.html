@@ -234,16 +234,16 @@
             }
         }
         
-        /* --- ADDED from old beta-settings.html for the tester list --- */
+        /* --- UPDATED LIST ITEM STYLE --- */
         .list-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0.75rem;
+            padding: 0.75rem 0.75rem 0.75rem 0; /* Removed left padding */
             background-color: #1a1a1a; /* Darker bg */
             border-radius: 6px;
             margin-bottom: 0.5rem;
-            border: 1px solid #252525;
+            /* border: 1px solid #252525; */ /* Removed border (outline) */
         }
     </style>
 </head>
@@ -427,7 +427,8 @@
 
                     <div class="settings-section">
                         <h3 class="text-xl font-semibold text-white mb-4">Current Beta Testers (<span id="testerCount">0</span>)</h3>
-                        <div id="betaTesterList" class="space-y-2 max-h-96 overflow-y-auto pr-2 bg-black/20 p-4 rounded-lg border border-custom-medium-gray">
+                        
+                        <div id="betaTesterList" class="space-y-2 max-h-72 overflow-y-auto pr-2">
                             <p id="listPlaceholder" class="text-custom-light-gray text-center p-4">Loading list...</p>
                         </div>
                         <div id="listMessage" class="message-area"></div>
@@ -484,7 +485,8 @@
             testerCountSpan.textContent = emails.length;
 
             if (emails.length === 0) {
-                betaTesterList.innerHTML = '<p class="text-custom-light-gray text-center p-4">No beta testers currently registered.</p>';
+                // Modified placeholder to not need padding (it's now 0)
+                betaTesterList.innerHTML = '<p class="text-custom-light-gray text-center py-4">No beta testers currently registered.</p>';
                 return;
             }
 
