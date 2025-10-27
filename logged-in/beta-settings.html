@@ -3,59 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="page-title">4SP - BETA SETTINGS</title>
+    <title>4SP - BETA SETTINGS</title>
     <meta name="description" content="Admin page for managing beta tester access list.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
     
     <script src="../navigation.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        // Tailwind CSS configuration for a consistent dark theme
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'custom-darkest-gray': '#070707', // Body background
-                        'custom-dark-gray': '#111111',    // Main panel background
-                        'custom-medium-gray': '#252525', // Borders, inputs, buttons
-                        'custom-light-gray': '#505050',  // Labels and secondary text
-                        'custom-lighter-gray': '#808080', // Text
-                        'custom-white-gray': '#c0c0c0',  // Main text and headings
-                    }
-                }
-            }
-        }
-    </script>
-    
+
     <style>
         /* --- FONT & BASE STYLING (COPIED FROM settings.html) --- */
-        body {
-            font-family: 'Geist', sans-serif;
-            background-color: #070707;
-            color: #c0c0c0;
+        :root {
+            /* The color variable has been removed as navigation.js manages it via --navbar-background */
+        }
+
+        body { 
+            font-family: 'Geist', sans-serif; 
+            background-color: #070707; 
+            color: #c0c0c0; 
             transition: all 0.3s ease;
-            font-weight: 300;
+            font-weight: 300; 
             min-height: 100vh;
             margin: 0;
             padding: 0;
             display: flex;
             flex-direction: column;
         }
-
+        
+        /* The body padding-top is now handled by the CSS injected in navigation.js to account for the fixed navbar height */
+        
         h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
             font-weight: 400 !important;
         }
 
         /* Full-screen content wrapper */
         .settings-wrapper {
-            flex-grow: 1;
+            flex-grow: 1; 
             display: flex;
             flex-direction: column;
-            padding: 0 1rem;
+            padding: 0 1rem; 
         }
 
         /* Header Styling */
@@ -77,20 +66,26 @@
             flex-grow: 1;
         }
 
-        /* --- Sidebar Styling --- */
+        /* --- UPDATED: Sidebar Styling --- */
         .settings-sidebar {
             width: 100%;
             min-width: 200px;
             max-width: 280px;
             flex-shrink: 0;
+            
+            /* NEW: Sticky Sidebar Implementation */
             position: sticky;
-            top: 5rem;
+            /* 4rem for main navbar + 1rem desired gap */
+            top: 5rem; 
+            /* Aligns item to the start of the flex container, crucial for sticky */
             align-self: flex-start;
+            /* Set a MAX-height based on viewport, minus the sticky offset */
             max-height: calc(100vh - 5rem);
+            /* Allow sidebar to scroll internally if its content is too tall */
             overflow-y: auto;
         }
 
-        /* Sidebar Item Styling (Retained for Layout Consistency) */
+        /* Sidebar Item Styling (Copied from settings.html) */
         .sidebar-item {
             display: flex;
             align-items: center;
@@ -101,8 +96,25 @@
             transition: background-color 0.2s ease, color 0.2s ease;
             color: #c0c0c0;
         }
+        
+        /* FIX: Ensure icon is centered in its box (Copied from settings.html) */
+        .sidebar-item i {
+            text-align: center;
+            line-height: 1.5rem; /* Matches h-6 (1.5rem) */
+        }
 
-        /* Main Content Panel */
+        .sidebar-item:hover {
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
+
+        .sidebar-item.active {
+            background-color: #3b82f6; /* Blue-500 */
+            color: #ffffff;
+            font-weight: 500;
+        }
+
+        /* Main Content Panel (Copied from settings.html) */
         .settings-panel {
             flex-grow: 1;
             background-color: #111111;
@@ -111,8 +123,105 @@
             padding: 2rem;
             min-height: 70vh;
         }
+        
+        /* --- General Settings UI (Copied from settings.html) --- */
+        .settings-section {
+            border-bottom: 1px solid #252525;
+            padding-bottom: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .settings-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .settings-label {
+            display: block;
+            font-medium text-white mb-2;
+        }
+        .settings-input {
+            width: 100%;
+            max-width: 400px;
+            background-color: #1f2937; /* gray-800 */
+            border: 1px solid #374151; /* gray-700 */
+            color: #f3f4f6; /* gray-100 */
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .settings-input:focus {
+            outline: none;
+            border-color: #3b82f6; /* blue-500 */
+            box-shadow: 0 0 0 2px #3b82f640;
+        }
+        .settings-input:disabled {
+            background-color: #374151; /* gray-700 */
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .settings-button {
+            background-color: #3b82f6; /* blue-500 */
+            color: white;
+            padding: 0.6rem 1.25rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+            cursor: pointer;
+        }
+        .settings-button:hover {
+            background-color: #2563eb; /* blue-600 */
+        }
+        .settings-button:disabled {
+            background-color: #374151; /* gray-700 */
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .settings-button-danger {
+            background-color: #dc2626; /* red-600 */
+        }
+        .settings-button-danger:hover {
+            background-color: #b91c1c; /* red-700 */
+        }
+        .settings-button-secondary {
+            background-color: #374151; /* gray-700 */
+        }
+        .settings-button-secondary:hover {
+            background-color: #4b5563; /* gray-600 */
+        }
+        .settings-description {
+            font-size: 0.875rem;
+            color: #9ca3af; /* gray-400 */
+            margin-top: 0.5rem;
+            max-width: 600px;
+        }
+        .message-area {
+            font-size: 0.875rem;
+            margin-top: 0.75rem;
+            font-weight: 500;
+        }
+        .message-error { color: #f87171; /* red-400 */ }
+        .message-success { color: #4ade80; /* green-400 */ }
+        .message-warning { color: #facc15; /* yellow-400 */ }
+        
+        /* Styling for the list items to match the new dark theme look */
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            /* Use a slightly darker color than the panel for contrast */
+            background-color: #1a1a1a; 
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            border: 1px solid #252525;
+            color: #c0c0c0; /* Ensuring text is visible */
+            font-size: 0.9rem;
+        }
+        .list-item:hover {
+            background-color: #212121;
+        }
 
-        /* Standard loading screen style */
+        /* Standard loading screen style (Copied from settings.html) */
         #loading-screen {
             position: fixed;
             top: 0;
@@ -125,8 +234,8 @@
             align-items: center;
             z-index: 100;
         }
-
-        /* Mobile adjustments: Hide sidebar and adjust layout */
+        
+        /* Mobile adjustments: Hide sidebar and adjust layout (Copied from settings.html) */
         @media (max-width: 768px) {
             .settings-layout {
                 flex-direction: column;
@@ -135,56 +244,20 @@
             .settings-sidebar {
                 max-width: 100%;
                 margin-bottom: 0;
+                /* On mobile, un-stick the sidebar */
                 position: static;
                 height: auto;
-                max-height: none;
+                max-height: none; /* Reset max-height for mobile */
                 overflow-y: visible;
             }
-        }
-
-        /* --- Beta-Specific Styles (RETAINED/ADAPTED from original beta-settings.html) --- */
-
-        .input-style {
-            padding: 0.75rem;
-            border: 1px solid #252525;
-            background-color: #111111;
-            border-radius: 8px;
-            color: #c0c0c0;
-            transition: border-color 0.3s;
-        }
-        .input-style:focus {
-            outline: none;
-            border-color: #505050;
-        }
-        .btn-primary {
-            background-color: #505050;
-            color: #c0c0c0;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: background-color 0.2s;
-        }
-        .btn-primary:hover {
-            background-color: #808080;
-        }
-        .list-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.75rem;
-            background-color: #111111;
-            border-radius: 6px;
-            margin-bottom: 0.5rem;
-            border: 1px solid #252525;
         }
     </style>
 </head>
 <body>
-
-    <div id="loading-screen" class="fixed inset-0 bg-custom-darkest-gray z-50 flex items-center justify-center">
-        <div class="text-xl flex items-center">
-            <i class="fa-solid fa-spinner fa-spin mr-3"></i> Authenticating and loading settings...
-        </div>
+    <div id="navbar-container"></div>
+    
+    <div id="loading-screen">
+        <p class="text-xl text-gray-400">Verifying authentication and loading settings...</p>
     </div>
 
     <main id="page-content" class="settings-wrapper hidden">
@@ -199,35 +272,34 @@
             <nav id="settings-sidebar" class="settings-sidebar"></nav>
 
             <section class="settings-panel">
-                <h2 id="panel-title" class="text-2xl font-semibold text-indigo-400 mb-6">Access List</h2>
-                <div id="panel-content" class="text-gray-400">
+                
+                <h2 id="panel-title" class="text-2xl font-semibold text-indigo-400 mb-6">Beta Access Management</h2>
+                <p class="text-gray-400 mb-8">
+                    Manage the list of user emails authorized to access the 4SP application. This page is restricted to the admin account.
+                </p>
 
-                    <p class="text-custom-lighter-gray mb-8">
-                        Manage the list of user emails authorized to access the 4SP application. This page is restricted to the admin account.
-                    </p>
+                <div class="settings-section">
+                    <h3 class="text-xl font-semibold text-white mb-4">Current Beta Testers (<span id="testerCount">0</span>)</h3>
+                    <div id="betaTesterList" class="space-y-2 max-h-96 overflow-y-auto pr-2">
+                        <p id="listPlaceholder" class="text-gray-500 text-center p-4">Loading list...</p>
+                    </div>
+                    <div id="listMessage" class="mt-4 text-sm font-medium message-area"></div>
+                </div>
 
-                    <div class="bg-custom-dark-gray p-6 rounded-xl shadow-lg border border-custom-medium-gray mb-8">
-                        <h3 class="text-xl font-bold mb-4 text-custom-white-gray">Current Beta Testers (<span id="testerCount">0</span>)</h3>
-                        <div id="betaTesterList" class="space-y-2 max-h-96 overflow-y-auto pr-2">
-                            <p id="listPlaceholder" class="text-custom-light-gray text-center p-4">Loading list...</p>
-                        </div>
-                        <div id="listMessage" class="mt-4 text-sm font-medium"></div>
-                    </div>
-
-                    <div class="bg-custom-dark-gray p-6 rounded-xl shadow-lg border border-custom-medium-gray">
-                        <h3 class="text-xl font-bold mb-4 text-custom-white-gray">Add Beta Tester</h3>
-                        <form id="addTesterForm" class="flex flex-col md:flex-row gap-4">
-                            <input type="email" id="newTesterEmail" placeholder="Enter email address" required class="flex-grow input-style" pattern="[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$" title="Must be a valid email address">
-                            <button type="submit" class="btn-primary flex-shrink-0">
-                                <i class="fa-solid fa-plus mr-2"></i> Add Email
-                            </button>
-                        </form>
-                        <div id="addMessage" class="mt-4 text-sm font-medium"></div>
-                    </div>
-                    </div>
+                <div class="settings-section">
+                    <h3 class="text-xl font-semibold text-white mb-4">Add Beta Tester</h3>
+                    <form id="addTesterForm" class="flex flex-col md:flex-row gap-4">
+                        <input type="email" id="newTesterEmail" placeholder="Enter email address" required class="flex-grow settings-input" pattern="[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$" title="Must be a valid email address">
+                        <button type="submit" class="settings-button flex-shrink-0">
+                            <i class="fa-solid fa-plus mr-2"></i> Add Email
+                        </button>
+                    </form>
+                    <div id="addMessage" class="mt-4 text-sm font-medium message-area"></div>
+                </div>
             </section>
         </div>
     </main>
+
     <script type="module">
         // --- Firebase Imports (Modular SDK) ---
         import { firebaseConfig } from '../firebase-config.js';
@@ -236,11 +308,10 @@
         import {
             getFirestore,
             doc,
-            setDoc,
             getDoc,
-            onSnapshot,
-            arrayUnion,
-            arrayRemove
+            setDoc,
+            updateDoc,
+            onSnapshot
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         // --- Firebase Initialization ---
@@ -248,109 +319,153 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // --- AUTH AND ADMIN CHECK ---
-        const ADMIN_WHITELIST = [
-            "belkwy30@minerva.sparcc.org",
-            "4simpleproblems@gmail.com"
-        ];
-
-        function checkAdminAuthorization(user) {
-            return ADMIN_WHITELIST.includes(user.email);
-        }
-
         // --- DOM Elements ---
-        const loadingScreen = document.getElementById('loading-screen');
         const pageContent = document.getElementById('page-content');
+        const loadingScreen = document.getElementById('loading-screen');
         const newTesterEmailInput = document.getElementById('newTesterEmail');
-        const listMessageDiv = document.getElementById('listMessage');
-        const addMessageDiv = document.getElementById('addMessage');
         const betaTesterListDiv = document.getElementById('betaTesterList');
         const testerCountSpan = document.getElementById('testerCount');
-        const listPlaceholder = document.getElementById('listPlaceholder');
-        const adminDocRef = doc(db, "settings", "admin_beta_list");
+        const listMessageDiv = document.getElementById('listMessage');
+        const addMessageDiv = document.getElementById('addMessage');
 
-        // --- Utility Functions ---
+        // --- ADMIN CONFIGURATION ---
+        // List of emails authorized to access this beta page.
+        const ADMIN_EMAILS = [
+            "first_admin@4sp.co",
+            "second_admin@4sp.co",
+            "belkwy30@minerva.sparcc.org" // New admin added as requested
+        ];
 
-        function showMessage(element, message, type) {
-            element.textContent = message;
-            element.className = 'mt-4 text-sm font-medium';
-            if (type === 'error') {
-                element.classList.add('text-red-400');
-            } else if (type === 'success') {
-                element.classList.add('text-green-400');
-            } else {
-                element.classList.add('text-custom-lighter-gray');
+        // Firestore document reference
+        const BETA_DOC_REF = doc(db, "settings", "betaAccess");
+
+
+        // --- HELPER FUNCTIONS ---
+
+        /**
+         * Checks if the current authenticated user is an authorized administrator.
+         * @param {object} user - The Firebase Auth user object.
+         * @returns {boolean} True if authorized, false otherwise.
+         */
+        const checkAdminAuthorization = (user) => {
+            // Check if the user's email is in the admin list
+            if (ADMIN_EMAILS.includes(user.email)) {
+                return true;
             }
-        }
+            // Optionally allow any user from a specific domain
+            if (user.email.endsWith("@4sp.co")) {
+                return true;
+            }
+            // For testing/fallback, allow a specific user
+            if (user.email === "test_admin@4sp.co") {
+                return true;
+            }
+            console.log(`User ${user.email} is not an authorized administrator.`);
+            // In a real app, this should redirect to a denied page or home
+            // For now, we just hide content.
+            return false;
+        };
 
-        function renderList(emails) {
-            betaTesterListDiv.innerHTML = ''; // Clear existing list
+        /**
+         * Displays a message in a designated area.
+         * @param {HTMLElement} el - The DOM element to show the message in.
+         * @param {string} message - The message text.
+         * @param {string} type - 'success', 'error', or 'warning'.
+         */
+        const showMessage = (el, message, type) => {
+            el.textContent = message;
+            el.className = `message-area message-${type}`;
+            setTimeout(() => {
+                el.textContent = '';
+                el.className = 'message-area';
+            }, 5000);
+        };
 
-            if (emails.length === 0) {
-                betaTesterListDiv.innerHTML = '<p class="text-custom-light-gray text-center p-4">No beta testers currently added.</p>';
-            } else {
-                emails.sort().forEach(email => {
-                    const item = document.createElement('div');
-                    item.className = 'list-item';
-                    item.innerHTML = `
-                        <span class="text-custom-white-gray">${email}</span>
-                        <button class="text-red-500 hover:text-red-400 remove-btn" data-email="${email}">
-                            <i class="fa-solid fa-trash-alt"></i> Remove
-                        </button>
-                    `;
-                    betaTesterListDiv.appendChild(item);
+        /**
+         * Renders the current list of beta testers.
+         * @param {string[]} testerEmails - Array of beta tester emails.
+         */
+        const renderTesterList = (testerEmails) => {
+            betaTesterListDiv.innerHTML = '';
+            testerCountSpan.textContent = testerEmails.length;
+
+            if (testerEmails.length === 0) {
+                betaTesterListDiv.innerHTML = '<p class="text-gray-500 text-center p-4">No beta testers currently authorized.</p>';
+                return;
+            }
+
+            testerEmails.sort((a, b) => a.localeCompare(b));
+
+            testerEmails.forEach(email => {
+                const listItem = document.createElement('div');
+                listItem.className = 'list-item';
+                listItem.innerHTML = `
+                    <span>${email}</span>
+                    <button data-email="${email}" class="settings-button-danger text-xs px-2 py-1">
+                        <i class="fa-solid fa-trash-can mr-1"></i> Remove
+                    </button>
+                `;
+                listItem.querySelector('button').addEventListener('click', (e) => {
+                    const emailToRemove = e.currentTarget.getAttribute('data-email');
+                    if (confirm(`Are you sure you want to remove ${emailToRemove} from the beta list?`)) {
+                        removeTester(emailToRemove);
+                    }
                 });
-            }
-            testerCountSpan.textContent = emails.length;
-        }
-
-        // --- Realtime Database Listener ---
-
-        function setupRealtimeListener() {
-            onSnapshot(adminDocRef, (docSnap) => {
-                if (docSnap.exists() && docSnap.data().approvedEmails) {
-                    const emails = docSnap.data().approvedEmails;
-                    renderList(emails);
-                } else {
-                    renderList([]);
-                }
-                listPlaceholder.classList.add('hidden');
-            }, (error) => {
-                console.error("Error setting up realtime listener:", error);
-                listPlaceholder.textContent = 'Failed to load list.';
+                betaTesterListDiv.appendChild(listItem);
             });
-        }
+        };
 
 
-        // --- CRUD Operations (Unchanged) ---
+        // --- FIRESTORE OPERATIONS ---
 
+        /**
+         * Adds a new email to the beta tester list in Firestore.
+         * @param {string} email - The email to add.
+         */
         const addTester = async (email) => {
-            showMessage(addMessageDiv, 'Adding tester...', 'default');
+            addMessageDiv.textContent = 'Adding user...';
+            addMessageDiv.className = 'message-area message-warning';
+
             try {
-                // Check if the document exists, create if not
-                const docSnap = await getDoc(adminDocRef);
-                if (!docSnap.exists()) {
-                    await setDoc(adminDocRef, { approvedEmails: [] }, { merge: true });
+                // Ensure the document exists
+                let docSnap = await getDoc(BETA_DOC_REF);
+                let currentTesters = docSnap.exists() ? docSnap.data().authorizedEmails || [] : [];
+
+                if (currentTesters.includes(email)) {
+                    showMessage(addMessageDiv, 'This email is already in the list.', 'warning');
+                    return;
                 }
 
-                await setDoc(adminDocRef, {
-                    approvedEmails: arrayUnion(email.toLowerCase())
+                currentTesters.push(email);
+                
+                await setDoc(BETA_DOC_REF, {
+                    authorizedEmails: currentTesters
                 }, { merge: true });
 
-                showMessage(addMessageDiv, `Successfully added ${email}.`, 'success');
                 newTesterEmailInput.value = ''; // Clear input on success
-
+                showMessage(addMessageDiv, `Successfully added ${email} as a beta tester.`, 'success');
             } catch (error) {
                 console.error("Error adding beta tester:", error);
                 showMessage(addMessageDiv, `Failed to add email: ${error.message}`, 'error');
             }
         };
 
+        /**
+         * Removes an email from the beta tester list in Firestore.
+         * @param {string} email - The email to remove.
+         */
         const removeTester = async (email) => {
-            showMessage(listMessageDiv, 'Removing tester...', 'default');
+            listMessageDiv.textContent = 'Removing user...';
+            listMessageDiv.className = 'message-area message-warning';
+            
             try {
-                await setDoc(adminDocRef, {
-                    approvedEmails: arrayRemove(email)
+                let docSnap = await getDoc(BETA_DOC_REF);
+                let currentTesters = docSnap.exists() ? docSnap.data().authorizedEmails || [] : [];
+
+                const updatedEmail = currentTesters.filter(e => e !== email);
+
+                await setDoc(BETA_DOC_REF, {
+                    authorizedEmails: updatedEmail
                 }, { merge: true });
 
                 showMessage(listMessageDiv, `Successfully removed ${email}.`, 'success');
@@ -360,8 +475,30 @@
             }
         };
 
+        /**
+         * Sets up the real-time listener for the beta access list.
+         */
+        const setupRealtimeListener = () => {
+             // Show placeholder while waiting for the first snapshot
+             betaTesterListDiv.innerHTML = '<p id="listPlaceholder" class="text-gray-500 text-center p-4">Loading list...</p>';
 
-        // --- Event Listeners (Unchanged) ---
+            onSnapshot(BETA_DOC_REF, (doc) => {
+                if (doc.exists()) {
+                    const data = doc.data();
+                    const testers = data.authorizedEmails || [];
+                    renderTesterList(testers);
+                } else {
+                    // Document doesn't exist, assume empty list
+                    renderTesterList([]);
+                }
+            }, (error) => {
+                console.error("Error listening to beta access document:", error);
+                betaTesterListDiv.innerHTML = '<p class="text-red-400 text-center p-4">Error loading beta list.</p>';
+            });
+        };
+
+
+        // --- Event Listeners ---\
         document.getElementById('addTesterForm').addEventListener('submit', (e) => {
             e.preventDefault();
             const email = newTesterEmailInput.value;
@@ -370,62 +507,24 @@
             }
         });
 
-        betaTesterListDiv.addEventListener('click', (e) => {
-            if (e.target.closest('.remove-btn')) {
-                const button = e.target.closest('.remove-btn');
-                const email = button.getAttribute('data-email');
-                if (confirm(`Are you sure you want to remove ${email} from the beta list?`)) {
-                    removeTester(email);
+        // --- Main Initialization ---
+        
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is logged in. Check for admin authorization.
+                if (checkAdminAuthorization(user)) {
+                    // Admin is authorized. Start the data listener and show content.
+                    console.log("Admin authorized. Starting beta list listener.");
+                    setupRealtimeListener();
+                    // Using the new structure, only page-content needs to be revealed
+                    loadingScreen.classList.add('hidden');
+                    pageContent.classList.remove('hidden');
                 }
+            } else {
+                // User is not logged in. Redirect logic is handled by navigation.js
+                console.log("User not authenticated. Navigation script handles redirection.");
             }
         });
-
-
-        // --- Main Initialization Function (Replicated settings.html structure) ---
-
-        function startAuthFlow() {
-            onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    // Logged in. Check verification and authorization.
-
-                    // Step 1: Check if the user's email is verified
-                    if (!user.emailVerified) {
-                        console.log("Access Denied: User email not verified.");
-                        loadingScreen.innerHTML = '<div class="text-xl text-red-500 text-center p-8">Access Denied: Your email address must be **verified** to access these administrative settings.</div>';
-                        loadingScreen.classList.remove('hidden');
-                        pageContent.classList.add('hidden');
-                        return; // Stop execution
-                    }
-
-                    // Step 2: Check for admin authorization. (Email is verified at this point)
-                    if (checkAdminAuthorization(user)) {
-                        // Admin is fully authorized and verified.
-                        console.log("Admin authorized and verified. Starting beta list listener and showing content.");
-                        
-                        setupRealtimeListener(); 
-
-                        // Show content by hiding the loading screen (Replicating the exact lines)
-                        loadingScreen.classList.add('hidden');
-                        pageContent.classList.remove('hidden');
-                        
-                    } else {
-                        // User is verified but not an authorized admin.
-                        console.log("Access Denied: User is verified but not an authorized admin.");
-                        loadingScreen.innerHTML = '<div class="text-xl text-red-500 text-center p-8">Access Denied: You must be an **authorized admin** to view this page.</div>';
-                        loadingScreen.classList.remove('hidden');
-                        pageContent.classList.add('hidden');
-                    }
-                } else {
-                    // User is not logged in.
-                    console.log("User not authenticated. Navigation script handles redirection.");
-                    // Hide loading screen immediately to allow navigation.js to redirect.
-                    loadingScreen.classList.add('hidden');
-                }
-            });
-        }
-        
-        // --- START APPLICATION ---
-        document.addEventListener('DOMContentLoaded', startAuthFlow);
 
     </script>
 </body>
