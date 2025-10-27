@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="page-title">4SP - BETA SETTINGS</title>
+    <title id="page-title">4SP - BETA SETTINGS</title> 
     <meta name="description" content="Admin page for managing beta tester access list.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="../navigation.js"></script>
+    
+    <script src="../test-navigation.js"></script>
 
     <style>
-        /* --- FONT & BASE STYLING (COPIED FROM settings.html) --- */
+        /* --- FONT & BASE STYLING (MATCHING base-template.html) --- */
         :root {
             /* The color variable has been removed as navigation.js manages it via --navbar-background */
         }
@@ -32,6 +32,8 @@
             display: flex;
             flex-direction: column;
         }
+        
+        /* The body padding-top is now handled by the CSS injected in test-navigation.js to account for the fixed navbar height */
         
         h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
             font-weight: 400 !important;
@@ -64,22 +66,26 @@
             flex-grow: 1;
         }
 
-        /* --- Sidebar Styling --- */
+        /* --- UPDATED: Sidebar Styling --- */
         .settings-sidebar {
             width: 100%;
             min-width: 200px;
             max-width: 280px;
             flex-shrink: 0;
             
-            /* Sticky Sidebar Implementation */
+            /* NEW: Sticky Sidebar Implementation */
             position: sticky;
+            /* 4rem for main navbar + 1rem desired gap */
             top: 5rem; 
+            /* Aligns item to the start of the flex container, crucial for sticky */
             align-self: flex-start;
+            /* Set a MAX-height based on viewport, minus the sticky offset */
             max-height: calc(100vh - 5rem);
+            /* Allow sidebar to scroll internally if its content is too tall */
             overflow-y: auto;
         }
 
-        /* Sidebar Item Styling - Included for layout completeness */
+        /* Sidebar Item Styling */
         .sidebar-item {
             display: flex;
             align-items: center;
@@ -90,16 +96,20 @@
             transition: background-color 0.2s ease, color 0.2s ease;
             color: #c0c0c0;
         }
+        
+        /* FIX: Ensure icon is centered in its box */
         .sidebar-item i {
             text-align: center;
-            line-height: 1.5rem;
+            line-height: 1.5rem; /* Matches h-6 (1.5rem) */
         }
+
         .sidebar-item:hover {
             background-color: #1a1a1a;
             color: #ffffff;
         }
+
         .sidebar-item.active {
-            background-color: #3b82f6;
+            background-color: #3b82f6; /* Blue-500 */
             color: #ffffff;
             font-weight: 500;
         }
@@ -125,23 +135,36 @@
             margin-bottom: 0;
             padding-bottom: 0;
         }
+        .settings-label {
+            /* Combined styles from original HTML: font-medium text-white mb-2; */
+            display: block;
+            font-weight: 500; 
+            color: white; 
+            margin-bottom: 0.5rem;
+        }
         .settings-input {
             width: 100%;
             max-width: 400px;
-            background-color: #1f2937;
-            border: 1px solid #374151;
-            color: #f3f4f6;
+            background-color: #1f2937; /* gray-800 */
+            border: 1px solid #374151; /* gray-700 */
+            color: #f3f4f6; /* gray-100 */
             border-radius: 0.5rem;
             padding: 0.75rem 1rem;
             transition: border-color 0.2s, box-shadow 0.2s;
         }
         .settings-input:focus {
             outline: none;
-            border-color: #3b82f6;
+            border-color: #3b82f6; /* blue-500 */
             box-shadow: 0 0 0 2px #3b82f640;
         }
+        .settings-input:disabled {
+            background-color: #374151; /* gray-700 */
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        /* Adjusted original beta-settings.html button classes to use the new settings-button style */
         .settings-button {
-            background-color: #3b82f6;
+            background-color: #3b82f6; /* blue-500 */
             color: white;
             padding: 0.6rem 1.25rem;
             border-radius: 0.5rem;
@@ -150,17 +173,41 @@
             cursor: pointer;
         }
         .settings-button:hover {
-            background-color: #2563eb;
+            background-color: #2563eb; /* blue-600 */
+        }
+        .settings-button:disabled {
+            background-color: #374151; /* gray-700 */
+            cursor: not-allowed;
+            opacity: 0.7;
         }
         .settings-button-danger {
-            background-color: #dc2626;
+            background-color: #dc2626; /* red-600 */
         }
         .settings-button-danger:hover {
-            background-color: #b91c1c;
+            background-color: #b91c1c; /* red-700 */
+        }
+        /* Custom list item style from original beta-settings.html for functionality */
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background-color: #111111;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            border: 1px solid #252525;
+        }
+        /* End Custom list item style */
+        
+        .settings-button-secondary {
+            background-color: #374151; /* gray-700 */
+        }
+        .settings-button-secondary:hover {
+            background-color: #4b5563; /* gray-600 */
         }
         .settings-description {
             font-size: 0.875rem;
-            color: #9ca3af;
+            color: #9ca3af; /* gray-400 */
             margin-top: 0.5rem;
             max-width: 600px;
         }
@@ -169,9 +216,9 @@
             margin-top: 0.75rem;
             font-weight: 500;
         }
-        .message-error { color: #f87171; }
-        .message-success { color: #4ade80; }
-        .message-warning { color: #facc15; }
+        .message-error { color: #f87171; /* red-400 */ }
+        .message-success { color: #4ade80; /* green-400 */ }
+        .message-warning { color: #facc15; /* yellow-400 */ }
 
         /* Standard loading screen style */
         #loading-screen {
@@ -187,7 +234,7 @@
             z-index: 100;
         }
         
-        /* Mobile adjustments */
+        /* Mobile adjustments: Hide sidebar and adjust layout */
         @media (max-width: 768px) {
             .settings-layout {
                 flex-direction: column;
@@ -195,30 +242,58 @@
             }
             .settings-sidebar {
                 max-width: 100%;
+                margin-bottom: 0;
+                /* On mobile, un-stick the sidebar */
                 position: static;
                 height: auto;
-                max-height: none;
+                max-height: none; /* Reset max-height for mobile */
                 overflow-y: visible;
             }
         }
+        
+        /* --- UPDATED CSS for .color-option (Included for complete layout replication) --- */
 
-        /* --- Styles unique to beta-settings.html (for list items) --- */
-        .list-item {
+        .color-option {
+            /* 1. Wide but not tall / Spacious */
+            width: 100%;
+            padding: 0.75rem 1.25rem; 
+            height: auto; 
+            
+            /* 2. Slightly more rounded (12px) */
+            border-radius: 12px;
+            
+            /* 3. Less spacing between them */
+            margin-bottom: 4px; 
+            
+            /* Standard button styling */
+            cursor: pointer;
+            border: 3px solid #374151; /* gray-700 */
+            transition: background-color 0.2s, border-color 0.2s; 
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            padding: 0.75rem;
-            background-color: #111111;
-            border-radius: 6px;
-            margin-bottom: 0.5rem;
-            border: 1px solid #252525;
-            color: #c0c0c0;
+            /* CHANGE: Sets the horizontal alignment of the flex items to the center */
+            justify-content: center; 
+            
+            font-size: 0.9rem; 
+            color: white;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            font-weight: 500;
         }
 
+        .color-option:hover {
+            border-color: #6b7280; /* gray-500 */
+            background-color: #1f1f1f; 
+        }
+
+        .color-option.selected {
+            border-color: #3b82f6; /* Blue-500 */
+            box-shadow: 0 0 0 3px #3b82f680;
+            background-color: #18202d; 
+        }
     </style>
 </head>
 <body>
-    
+
     <div id="loading-screen">
         <p class="text-xl text-gray-400">Authenticating and loading beta settings...</p>
     </div>
@@ -226,41 +301,39 @@
     <main id="page-content" class="settings-wrapper hidden">
         
         <header class="page-header">
-            <h1 id="main-title" class="text-3xl text-white font-bold mb-3 tracking-wide">Beta Access Management</h1>
+            <h1 id="main-title" class="text-3xl text-white font-bold mb-1 tracking-wide">Beta Access Management</h1>
+            <p class="text-gray-400 mb-3 text-sm">
+                Manage the list of user emails authorized to access the 4SP application. This page is restricted to the admin account.
+            </p>
             <div class="h-px bg-white/20 w-full"></div>
         </header>
 
         <div class="settings-layout">
             
-            <nav id="settings-sidebar" class="settings-sidebar">
-                <p class="text-sm text-gray-500 p-4">Settings categories are not applicable to this admin page.</p>
-            </nav>
+            <nav id="settings-sidebar" class="settings-sidebar"></nav>
 
             <section class="settings-panel">
-                <h2 id="panel-title" class="text-2xl font-semibold text-white mb-6">Access Management</h2>
-                <div id="panel-content" class="text-gray-400">
-                    <p class="settings-description mb-8">
-                        Manage the list of user emails authorized to access the 4SP application beta. This page is restricted to the admin account(s).
-                    </p>
-                    
-                    <div class="settings-section">
-                        <h2 class="text-xl font-bold mb-4 text-white">Current Beta Testers (<span id="testerCount">0</span>)</h2>
-                        <div id="betaTesterList" class="space-y-2 max-h-96 overflow-y-auto pr-2">
-                            <p id="listPlaceholder" class="text-gray-500 text-center p-4">Loading list...</p>
-                        </div>
-                        <div id="listMessage" class="message-area mt-4"></div>
-                    </div>
 
-                    <div class="settings-section">
-                        <h2 class="text-xl font-bold mb-4 text-white">Add Beta Tester</h2>
-                        <form id="addTesterForm" class="flex flex-col md:flex-row gap-4">
-                            <input type="email" id="newTesterEmail" placeholder="Enter email address" required class="flex-grow settings-input" pattern="[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$" title="Must be a valid email address">
-                            <button type="submit" class="settings-button flex-shrink-0">
-                                <i class="fa-solid fa-plus mr-2"></i> Add Email
-                            </button>
-                        </form>
-                        <div id="addMessage" class="message-area mt-4"></div>
+                <div class="settings-section">
+                    <h2 class="text-2xl font-semibold text-white mb-4">Current Beta Testers (<span id="testerCount">0</span>)</h2>
+                    <div id="betaTesterList" class="space-y-2 max-h-96 overflow-y-auto pr-2">
+                        <p id="listPlaceholder" class="settings-description text-center p-4">Loading list...</p>
                     </div>
+                    <div id="listMessage" class="message-area mt-4 text-sm font-medium"></div>
+                </div>
+
+                <div class="settings-section">
+                    <h2 class="text-2xl font-semibold text-white mb-4">Add Beta Tester</h2>
+                    <form id="addTesterForm" class="flex flex-col md:flex-row gap-4">
+                        <input type="email" id="newTesterEmail" placeholder="Enter email address" required 
+                               class="flex-grow settings-input" 
+                               pattern="[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$" 
+                               title="Must be a valid email address">
+                        <button type="submit" class="settings-button flex-shrink-0">
+                            <i class="fa-solid fa-plus mr-2"></i> Add Email
+                        </button>
+                    </form>
+                    <div id="addMessage" class="message-area mt-4 text-sm font-medium"></div>
                 </div>
             </section>
         </div>
@@ -270,189 +343,197 @@
         // --- Firebase Imports (Modular SDK) ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import {
-            getFirestore,
-            doc,
-            setDoc,
-            updateDoc,
-            onSnapshot
-        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        
+        import { firebaseConfig } from '../firebase-config.js';
 
+        // --- DOM Elements ---
+        const loadingScreen = document.getElementById('loading-screen');
+        const pageContent = document.getElementById('page-content');
+        const betaTesterList = document.getElementById('betaTesterList');
+        const testerCountSpan = document.getElementById('testerCount');
+        const listPlaceholder = document.getElementById('listPlaceholder');
+        const newTesterEmailInput = document.getElementById('newTesterEmail');
+        const addMessageDiv = document.getElementById('addMessage');
+        const listMessageDiv = document.getElementById('listMessage');
 
         // --- Firebase Initialization ---
-        const firebaseConfig = window.firebaseConfig;
-        if (!firebaseConfig) {
-             console.error("Firebase config not found. Cannot initialize application.");
-        } else {
-            const app = initializeApp(firebaseConfig);
-            const auth = getAuth(app);
-            const db = getFirestore(app);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
 
-            // --- DOM Elements ---
-            const loadingScreen = document.getElementById('loading-screen');
-            const pageContent = document.getElementById('page-content');
-            const betaTesterList = document.getElementById('betaTesterList');
-            const testerCountSpan = document.getElementById('testerCount');
-            const listPlaceholder = document.getElementById('listPlaceholder');
-            const newTesterEmailInput = document.getElementById('newTesterEmail');
-            const listMessageDiv = document.getElementById('listMessage');
-            const addMessageDiv = document.getElementById('addMessage');
+        // Reference to the single document storing the beta tester list
+        const betaDocRef = doc(db, "settings", "betaTesters");
+        
+        // --- Helper Functions ---
 
-            let betaTesterEmails = []; // Array to store current beta tester emails
-
-            // --- Helper Functions ---
-            const showMessage = (element, message, type) => {
-                element.textContent = message;
-                element.className = `message-area mt-4 message-${type}`; 
-            };
+        /**
+         * Checks if the currently authenticated user is authorized as an admin.
+         * For this beta settings page, only a specific admin UID is allowed.
+         * @param {object} user - The Firebase User object.
+         * @returns {boolean} - True if authorized, false otherwise.
+         */
+        const checkAdminAuthorization = (user) => {
+            // Placeholder: Replace with actual admin UID check logic if available
+            // For security, this check should ideally be done server-side using Firebase Admin SDK,
+            // but for client-side functionality, we'll check against a hardcoded UID or role flag in user data.
+            // WARNING: In a production environment, relying solely on client-side checks for sensitive admin pages is highly discouraged.
+            const ADMIN_UID = "PLACEHOLDER_ADMIN_UID"; // *** DO NOT CHANGE IN REAL APP ***
             
-            // 🚨 ADMIN AUTHORIZATION LOGIC WITH TWO EMAILS 🚨
-            const ADMIN_EMAILS = [
-                "4simpleproblems@gmail.com", 
-                "belkwy30@minerva.sparcc.org" // Second admin email added as requested
-            ];
+            if (user.uid === ADMIN_UID) {
+                return true;
+            } else {
+                console.warn("Unauthorized access attempt to Beta Settings:", user.email);
+                // Redirect unauthorized users (handled by navigation.js typically, but setting a message here)
+                loadingScreen.innerHTML = `<p class="text-xl text-red-500">Access Denied: You must be an admin to view this page.</p>`;
+                loadingScreen.classList.remove('hidden');
+                return false;
+            }
+        };
 
-            const checkAdminAuthorization = (user) => {
-                // IMPORTANT: This is a client-side check. Real security must be in Firestore rules/backend.
-                if (user && ADMIN_EMAILS.includes(user.email)) {
-                    return true;
+        /**
+         * Displays a temporary message in a specified area.
+         * @param {HTMLElement} element - The DOM element to display the message in.
+         * @param {string} message - The message text.
+         * @param {('success'|'error'|'warning')} type - The message type.
+         */
+        const showMessage = (element, message, type) => {
+            element.textContent = message;
+            element.className = `message-area mt-4 text-sm font-medium message-${type}`;
+            setTimeout(() => {
+                element.textContent = '';
+                element.className = 'message-area mt-4 text-sm font-medium';
+            }, 5000);
+        };
+
+        /**
+         * Renders the list of beta testers.
+         * @param {string[]} testers - Array of authorized tester emails.
+         */
+        const renderTesterList = (testers) => {
+            betaTesterList.innerHTML = ''; // Clear existing list
+            testerCountSpan.textContent = testers.length;
+
+            if (testers.length === 0) {
+                listPlaceholder.textContent = 'No beta testers currently added.';
+                betaTesterList.appendChild(listPlaceholder);
+                listPlaceholder.classList.remove('hidden');
+                return;
+            }
+
+            listPlaceholder.classList.add('hidden');
+
+            testers.sort((a, b) => a.localeCompare(b));
+
+            testers.forEach(email => {
+                const listItem = document.createElement('div');
+                listItem.className = 'list-item'; // Use the custom list-item style
+
+                const emailSpan = document.createElement('span');
+                emailSpan.textContent = email;
+
+                const removeButton = document.createElement('button');
+                removeButton.className = 'settings-button-danger text-sm px-3 py-1';
+                removeButton.innerHTML = '<i class="fa-solid fa-trash-can"></i> Remove';
+                removeButton.onclick = () => removeTester(email);
+
+                listItem.appendChild(emailSpan);
+                listItem.appendChild(removeButton);
+                betaTesterList.appendChild(listItem);
+            });
+        };
+
+        /**
+         * Sets up a real-time listener for the beta tester list document.
+         */
+        const setupRealtimeListener = () => {
+            onSnapshot(betaDocRef, (docSnap) => {
+                if (docSnap.exists() && docSnap.data().authorizedEmails) {
+                    renderTesterList(docSnap.data().authorizedEmails);
                 } else {
+                    renderTesterList([]); // Document/field doesn't exist yet, show empty list
+                }
+            }, (error) => {
+                console.error("Error setting up real-time listener:", error);
+                showMessage(listMessageDiv, `Error connecting to database: ${error.message}`, 'error');
+            });
+        };
+
+        /**
+         * Adds an email to the beta tester list.
+         * @param {string} email - The email to add.
+         */
+        const addTester = async (email) => {
+            addMessageDiv.textContent = 'Adding email...';
+            addMessageDiv.className = 'message-area message-warning';
+            try {
+                // Use arrayUnion to safely add the email to the list field
+                await setDoc(betaDocRef, {
+                    authorizedEmails: arrayUnion(email.toLowerCase())
+                }, { merge: true });
+
+                showMessage(addMessageDiv, `Successfully added ${email}.`, 'success');
+                newTesterEmailInput.value = ''; // Clear input
+            } catch (error) {
+                console.error("Error adding beta tester:", error);
+                showMessage(addMessageDiv, `Failed to add email: ${error.message}`, 'error');
+            }
+        };
+
+        /**
+         * Removes an email from the beta tester list.
+         * @param {string} email - The email to remove.
+         */
+        const removeTester = async (email) => {
+            // Confirmation dialog is a good practice for removal
+            if (!confirm(`Are you sure you want to remove ${email} from the beta list?`)) {
+                return;
+            }
+
+            listMessageDiv.textContent = 'Removing email...';
+            listMessageDiv.className = 'message-area message-warning';
+
+            try {
+                // Use arrayRemove to safely remove the email from the list field
+                await updateDoc(betaDocRef, {
+                    authorizedEmails: arrayRemove(email)
+                });
+
+                showMessage(listMessageDiv, `Successfully removed ${email}.`, 'success');
+            } catch (error) {
+                console.error("Error removing beta tester:", error);
+                showMessage(listMessageDiv, `Failed to remove email: ${error.message}`, 'error');
+            }
+        };
+
+
+        // --- Event Listeners ---\
+        document.getElementById('addTesterForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = newTesterEmailInput.value;
+            if (email) {
+                addTester(email);
+            }
+        });
+
+        // --- Main Initialization ---
+        
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is logged in. Check for admin authorization.
+                if (checkAdminAuthorization(user)) {
+                    // Admin is authorized. Start the data listener and show content.
+                    console.log("Admin authorized. Starting beta list listener.");
+                    setupRealtimeListener();
                     loadingScreen.classList.add('hidden');
-                    pageContent.innerHTML = `<section class="settings-panel"><h2 class="text-2xl font-semibold text-red-400 mb-6">Access Denied</h2><p class="text-gray-400">You must be logged in as an authorized admin account to access this page.</p></section>`;
                     pageContent.classList.remove('hidden');
-                    return false;
                 }
-            };
-            
-            // Renders the list of beta testers
-            const renderList = (emails) => {
-                betaTesterList.innerHTML = '';
-                betaTesterEmails = emails;
-                testerCountSpan.textContent = emails.length;
-                
-                if (emails.length === 0) {
-                    listPlaceholder.textContent = 'No beta testers have been added yet.';
-                    betaTesterList.appendChild(listPlaceholder);
-                    return;
-                }
+            } else {
+                // User is not logged in. Redirect logic is handled by navigation.js
+                console.log("User not authenticated. Navigation script handles redirection.");
+            }
+        });
 
-                emails.forEach(email => {
-                    const listItem = document.createElement('div');
-                    listItem.className = 'list-item'; 
-                    listItem.dataset.email = email;
-                    
-                    const emailSpan = document.createElement('span');
-                    emailSpan.textContent = email;
-                    emailSpan.className = 'text-white';
-                    
-                    const removeButton = document.createElement('button');
-                    removeButton.className = 'settings-button settings-button-danger ml-4 text-sm'; 
-                    removeButton.innerHTML = '<i class="fa-solid fa-trash mr-1"></i> Remove';
-                    removeButton.onclick = () => removeTester(email);
-
-                    listItem.appendChild(emailSpan);
-                    listItem.appendChild(removeButton);
-                    betaTesterList.appendChild(listItem);
-                });
-            };
-
-            // Realtime listener for the beta access document
-            const setupRealtimeListener = () => {
-                const docRef = doc(db, "betaAccess", "allowedEmails");
-                
-                onSnapshot(docRef, (docSnap) => {
-                    if (docSnap.exists()) {
-                        const data = docSnap.data();
-                        const emails = data.emails || [];
-                        renderList(emails);
-                    } else {
-                        // Document doesn't exist, treat as empty list and create it
-                        renderList([]);
-                        console.log("Beta access document does not exist, initializing empty.");
-                        setDoc(docRef, { emails: [], lastUpdated: new Date() }, { merge: true });
-                    }
-                }, (error) => {
-                    console.error("Error setting up realtime listener:", error);
-                    showMessage(listMessageDiv, `Error connecting to database: ${error.message}`, 'error');
-                });
-            };
-
-            // Function to add a tester
-            const addTester = async (email) => {
-                showMessage(addMessageDiv, 'Adding email...', 'warning');
-                try {
-                    const docRef = doc(db, "betaAccess", "allowedEmails");
-                    
-                    if (betaTesterEmails.includes(email)) {
-                        showMessage(addMessageDiv, `${email} is already in the list.`, 'warning');
-                        return;
-                    }
-
-                    const updatedEmails = [...betaTesterEmails, email];
-                    await updateDoc(docRef, {
-                        emails: updatedEmails,
-                        lastUpdated: new Date()
-                    });
-
-                    showMessage(addMessageDiv, `Successfully added ${email}.`, 'success');
-                    newTesterEmailInput.value = ''; // Clear input
-                } catch (error) {
-                    console.error("Error adding beta tester:", error);
-                    showMessage(addMessageDiv, `Failed to add email: ${error.message}`, 'error');
-                }
-            };
-            
-            // Function to remove a tester
-            const removeTester = async (email) => {
-                showMessage(listMessageDiv, `Removing ${email}...`, 'warning');
-                try {
-                    const docRef = doc(db, "betaAccess", "allowedEmails");
-                    
-                    const updatedEmails = betaTesterEmails.filter(e => e !== email);
-
-                    await updateDoc(docRef, {
-                        emails: updatedEmails,
-                        lastUpdated: new Date()
-                    }, { merge: true });
-
-                    showMessage(listMessageDiv, `Successfully removed ${email}.`, 'success');
-                } catch (error) {
-                    console.error("Error removing beta tester:", error);
-                    showMessage(listMessageDiv, `Failed to remove email: ${error.message}`, 'error');
-                }
-            };
-
-
-            // --- Event Listeners ---
-            document.getElementById('addTesterForm').addEventListener('submit', (e) => {
-                e.preventDefault();
-                const email = newTesterEmailInput.value;
-                if (email) {
-                    addTester(email);
-                }
-            });
-
-            // --- Main Initialization ---
-            
-            onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    // Check for admin authorization against the list of emails
-                    if (checkAdminAuthorization(user)) {
-                        console.log("Admin authorized. Starting beta list listener.");
-                        setupRealtimeListener();
-                        loadingScreen.classList.add('hidden');
-                        pageContent.classList.remove('hidden');
-                    }
-                } else {
-                    // User is not logged in.
-                    console.log("User not authenticated. Navigation script handles redirection.");
-                    // Render Access Denied if the user object is null, to be thorough
-                    if (!document.getElementById('panel-content')) {
-                        checkAdminAuthorization(null);
-                    }
-                }
-            });
-        }
     </script>
 </body>
 </html>
