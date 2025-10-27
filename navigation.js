@@ -29,6 +29,7 @@
  * 21. (FIXED) USERNAME COLOR: Replaced hardcoded `text-white` on username with a CSS variable (`--menu-username-text`) and updated `window.applyTheme` to set this to black for specific light themes.
  * 22. **(NEW)** MULTI-ADMIN SUPPORT: Changed privileged email from a single string to an array to support multiple admins.
  * 23. **(FIXED)** ACTIVE TAB SCROLLING: Logic now scrolls all the way to the edge if the active tab is the first or last item in the menu.
+ * 24. **(FIXED)** SCROLL TO EDGE ROBUSTNESS: Refined scroll logic to reliably scroll to the absolute edge for the first and last tabs.
  */
 
 // =========================================================================
@@ -352,16 +353,6 @@ let db;
                 background-color: var(--menu-item-hover-bg); 
                 color: var(--menu-item-hover-text); 
             }
-            .logged-out-auth-toggle { 
-                background: var(--logged-out-icon-bg); 
-                border: 1px solid var(--logged-out-icon-border); 
-                transition: background-color 0.3s ease, border-color 0.3s ease;
-            }
-            .logged-out-auth-toggle i { 
-                color: var(--logged-out-icon-color); 
-                transition: color 0.3s ease;
-            }
-
             /* NEW: Glass Menu Style for Pin Context Menu */
             .glass-menu { 
                 background: var(--glass-menu-bg); 
@@ -831,22 +822,21 @@ let db;
                 });
             // NEW: Only run centering logic if we are NOT restoring scroll AND we haven't scrolled yet.
             } else if (!hasScrolledToActiveTab) { 
-                // If it's the first load, center the active tab.
+                // If it's the first load, scroll the active tab into view.
                 const activeTab = document.querySelector('.nav-tab.active');
                 if (activeTab && tabContainer) {
                     
-                    // --- MODIFICATION 2 START ---
-                    const allTabs = tabContainer.querySelectorAll('.nav-tab');
-                    const firstTab = allTabs[0];
-                    const lastTab = allTabs[allTabs.length - 1];
+                    // --- MODIFICATION 2 START: Enhanced Scroll Fix ---
+                    const allTabs = Array.from(tabContainer.querySelectorAll('.nav-tab'));
+                    const activeIndex = allTabs.findIndex(tab => tab === activeTab);
                     const maxScroll = tabContainer.scrollWidth - tabContainer.offsetWidth;
                     let scrollTarget;
 
-                    if (activeTab === firstTab) {
+                    if (activeIndex === 0) {
                         // If it's the first tab, scroll all the way left
                         scrollTarget = 0;
-                    } else if (activeTab === lastTab) {
-                        // If it's the last tab, scroll all the way right
+                    } else if (activeIndex === allTabs.length - 1) {
+                        // If it's the last tab, scroll all the way right (maxScroll)
                         scrollTarget = maxScroll;
                     } else {
                         // Otherwise, center the tab
@@ -856,10 +846,11 @@ let db;
                         // Clamp the centered position
                         scrollTarget = Math.max(0, Math.min(scrollTarget, maxScroll));
                     }
-                    // --- MODIFICATION 2 END ---
-
+                    
                     // Set scroll immediately, no delay needed for stable initial load
                     tabContainer.scrollLeft = scrollTarget;
+                    // --- MODIFICATION 2 END: Enhanced Scroll Fix ---
+
                     
                     // IMPORTANT: Set flag to prevent future automatic centering
                     hasScrolledToActiveTab = true; 
