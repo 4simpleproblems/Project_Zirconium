@@ -24,8 +24,9 @@
  * 16. (UPDATED) REPIN BUTTON: Repurposed 'Repin Current' to a simple 'Repin' button that shows up whenever the current page is not the one pinned, or no page is pinned.
  * 17. (UPDATED) LOGOUT REDIRECT PATH: Changed redirect path for logged-out users to an absolute path (`/index.html`) for consistency.
  * 18. (NEW) FULL THEMING SYSTEM: Replaced all hardcoded colors with CSS variables. Added a global `window.applyTheme` function to set themes. Navbar now loads the user's saved theme from Local Storage on startup. Added CSS transitions for smooth theme fading.
- * 19. **(FIXED)** GLOBAL CLICK LISTENER: The global click listener now fetches button references on every click, preventing stale references after a navbar re-render.
- * 20. **(FIXED)** SCROLL GLIDER LOGIC: Updated scroll arrow logic to be explicit, ensuring arrows hide/show correctly at scroll edges.
+ * 19. (FIXED) GLOBAL CLICK LISTENER: The global click listener now fetches button references on every click, preventing stale references after a navbar re-render.
+ * 20. (FIXED) SCROLL GLIDER LOGIC: Updated scroll arrow logic to be explicit, ensuring arrows hide/show correctly at scroll edges.
+ * 21. **(FIXED)** USERNAME COLOR: Replaced hardcoded `text-white` on username with a CSS variable (`--menu-username-text`) and updated `window.applyTheme` to set this to black for specific light themes.
  */
 
 // =========================================================================
@@ -63,6 +64,7 @@ const DEFAULT_THEME = {
     'menu-border': 'rgb(55 65 81)',
     'menu-divider': '#374151',
     'menu-text': '#d1d5db',
+    'menu-username-text': '#ffffff', // --- USERNAME COLOR FIX --- (1/3) Added new variable
     'menu-item-hover-bg': 'rgb(55 65 81)',
     'menu-item-hover-text': '#ffffff',
     'glass-menu-bg': 'rgba(10, 10, 10, 0.8)',
@@ -97,6 +99,7 @@ const DEFAULT_THEME = {
  * This is exposed on `window` so settings.html can call it for live preview.
  * @param {object} theme - A theme object (like DEFAULT_THEME)
  */
+// --- USERNAME COLOR FIX --- (2/3) Modified this function
 window.applyTheme = (theme) => {
     const root = document.documentElement;
     if (!root) return;
@@ -106,10 +109,24 @@ window.applyTheme = (theme) => {
 
     // Set all CSS variables
     for (const [key, value] of Object.entries(themeToApply)) {
-        if (key !== 'logo-src') {
+        // Don't try to set 'name' or 'logo-src' as a CSS variable
+        if (key !== 'logo-src' && key !== 'name') {
             root.style.setProperty(`--${key}`, value);
         }
     }
+
+    // --- FIX: Handle username color for light themes ---
+    // Get the default from the theme object, or the hardcoded default
+    let usernameColor = themeToApply['menu-username-text'] || DEFAULT_THEME['menu-username-text']; 
+    
+    // Check if the theme name matches one of the light themes
+    const lightThemeNames = ['Light', 'Lavender', 'Rose Gold', 'Mint'];
+    if (themeToApply.name && lightThemeNames.includes(themeToApply.name)) {
+        usernameColor = '#000000'; // Force black
+    }
+    
+    root.style.setProperty('--menu-username-text', usernameColor);
+    // --- END FIX ---
 
     // Handle logo swap
     const logoImg = document.getElementById('navbar-logo');
@@ -311,6 +328,11 @@ let db;
             .auth-menu-container .border-b { /* User info divider */
                 border-color: var(--menu-divider) !important;
                 transition: border-color 0.3s ease;
+            }
+            /* --- USERNAME COLOR FIX --- (3/3) Added new style rule */
+            .auth-menu-username {
+                color: var(--menu-username-text);
+                transition: color 0.3s ease;
             }
             .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
             .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
@@ -621,7 +643,7 @@ let db;
                         </button>
                         <div id="auth-menu-container" class="auth-menu-container closed">
                             <div class="px-3 py-2 border-b border-gray-700 mb-2 w-full min-w-0">
-                                <p class="text-sm font-semibold text-white truncate">${username}</p>
+                                <p class="text-sm font-semibold auth-menu-username truncate">${username}</p>
                                 <p class="text-xs text-gray-400 truncate">${email}</p>
                             </div>
                             <a href="/logged-in/dashboard.html" class="auth-menu-link">
