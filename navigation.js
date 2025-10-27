@@ -47,7 +47,7 @@ const FIREBASE_CONFIG = {
 const PAGE_CONFIG_URL = '../page-identification.json';
 
 // NEW: Set the specific email that is considered an administrator.
-const PRIVILEGED_EMAIL = '4simpleproblems@gmail.com', 'belkwy30@minerva.sparcc.org'; 
+const PRIVILEGED_EMAIL = '4simpleproblems@gmail.com'; 
 
 // --- NEW: Theming Configuration ---
 const THEME_STORAGE_KEY = 'user-navbar-theme';
