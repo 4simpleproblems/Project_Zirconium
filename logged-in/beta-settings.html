@@ -33,8 +33,6 @@
             flex-direction: column;
         }
         
-        /* The body padding-top is now handled by the CSS injected in test-navigation.js to account for the fixed navbar height */
-        
         h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
             font-weight: 400 !important;
         }
@@ -66,26 +64,22 @@
             flex-grow: 1;
         }
 
-        /* --- UPDATED: Sidebar Styling --- */
+        /* --- Sidebar Styling --- */
         .settings-sidebar {
             width: 100%;
             min-width: 200px;
             max-width: 280px;
             flex-shrink: 0;
             
-            /* NEW: Sticky Sidebar Implementation */
+            /* Sticky Sidebar Implementation */
             position: sticky;
-            /* 4rem for main navbar + 1rem desired gap */
             top: 5rem; 
-            /* Aligns item to the start of the flex container, crucial for sticky */
             align-self: flex-start;
-            /* Set a MAX-height based on viewport, minus the sticky offset */
             max-height: calc(100vh - 5rem);
-            /* Allow sidebar to scroll internally if its content is too tall */
             overflow-y: auto;
         }
 
-        /* Sidebar Item Styling */
+        /* Sidebar Item Styling - Included for layout completeness */
         .sidebar-item {
             display: flex;
             align-items: center;
@@ -96,20 +90,16 @@
             transition: background-color 0.2s ease, color 0.2s ease;
             color: #c0c0c0;
         }
-        
-        /* FIX: Ensure icon is centered in its box */
         .sidebar-item i {
             text-align: center;
-            line-height: 1.5rem; /* Matches h-6 (1.5rem) */
+            line-height: 1.5rem;
         }
-
         .sidebar-item:hover {
             background-color: #1a1a1a;
             color: #ffffff;
         }
-
         .sidebar-item.active {
-            background-color: #3b82f6; /* Blue-500 */
+            background-color: #3b82f6;
             color: #ffffff;
             font-weight: 500;
         }
@@ -135,32 +125,23 @@
             margin-bottom: 0;
             padding-bottom: 0;
         }
-        .settings-label {
-            display: block;
-            font-medium text-white mb-2;
-        }
         .settings-input {
             width: 100%;
             max-width: 400px;
-            background-color: #1f2937; /* gray-800 */
-            border: 1px solid #374151; /* gray-700 */
-            color: #f3f4f6; /* gray-100 */
+            background-color: #1f2937;
+            border: 1px solid #374151;
+            color: #f3f4f6;
             border-radius: 0.5rem;
             padding: 0.75rem 1rem;
             transition: border-color 0.2s, box-shadow 0.2s;
         }
         .settings-input:focus {
             outline: none;
-            border-color: #3b82f6; /* blue-500 */
+            border-color: #3b82f6;
             box-shadow: 0 0 0 2px #3b82f640;
         }
-        .settings-input:disabled {
-            background-color: #374151; /* gray-700 */
-            cursor: not-allowed;
-            opacity: 0.7;
-        }
         .settings-button {
-            background-color: #3b82f6; /* blue-500 */
+            background-color: #3b82f6;
             color: white;
             padding: 0.6rem 1.25rem;
             border-radius: 0.5rem;
@@ -169,28 +150,17 @@
             cursor: pointer;
         }
         .settings-button:hover {
-            background-color: #2563eb; /* blue-600 */
-        }
-        .settings-button:disabled {
-            background-color: #374151; /* gray-700 */
-            cursor: not-allowed;
-            opacity: 0.7;
+            background-color: #2563eb;
         }
         .settings-button-danger {
-            background-color: #dc2626; /* red-600 */
+            background-color: #dc2626;
         }
         .settings-button-danger:hover {
-            background-color: #b91c1c; /* red-700 */
-        }
-        .settings-button-secondary {
-            background-color: #374151; /* gray-700 */
-        }
-        .settings-button-secondary:hover {
-            background-color: #4b5563; /* gray-600 */
+            background-color: #b91c1c;
         }
         .settings-description {
             font-size: 0.875rem;
-            color: #9ca3af; /* gray-400 */
+            color: #9ca3af;
             margin-top: 0.5rem;
             max-width: 600px;
         }
@@ -199,9 +169,9 @@
             margin-top: 0.75rem;
             font-weight: 500;
         }
-        .message-error { color: #f87171; /* red-400 */ }
-        .message-success { color: #4ade80; /* green-400 */ }
-        .message-warning { color: #facc15; /* yellow-400 */ }
+        .message-error { color: #f87171; }
+        .message-success { color: #4ade80; }
+        .message-warning { color: #facc15; }
 
         /* Standard loading screen style */
         #loading-screen {
@@ -217,7 +187,7 @@
             z-index: 100;
         }
         
-        /* Mobile adjustments: Hide sidebar and adjust layout */
+        /* Mobile adjustments */
         @media (max-width: 768px) {
             .settings-layout {
                 flex-direction: column;
@@ -225,11 +195,9 @@
             }
             .settings-sidebar {
                 max-width: 100%;
-                margin-bottom: 0;
-                /* On mobile, un-stick the sidebar */
                 position: static;
                 height: auto;
-                max-height: none; /* Reset max-height for mobile */
+                max-height: none;
                 overflow-y: visible;
             }
         }
@@ -245,36 +213,6 @@
             margin-bottom: 0.5rem;
             border: 1px solid #252525;
             color: #c0c0c0;
-        }
-
-        /* Placeholder for .color-option styles, necessary if they are used elsewhere in a shared component */
-        .color-option {
-            width: 100%;
-            padding: 0.75rem 1.25rem; 
-            height: auto; 
-            border-radius: 12px;
-            margin-bottom: 4px; 
-            cursor: pointer;
-            border: 3px solid #374151;
-            transition: background-color 0.2s, border-color 0.2s; 
-            display: flex;
-            align-items: center;
-            justify-content: center; 
-            font-size: 0.9rem; 
-            color: white;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-            font-weight: 500;
-        }
-
-        .color-option:hover {
-            border-color: #6b7280;
-            background-color: #1f1f1f; 
-        }
-
-        .color-option.selected {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px #3b82f680;
-            background-color: #18202d; 
         }
 
     </style>
@@ -295,14 +233,14 @@
         <div class="settings-layout">
             
             <nav id="settings-sidebar" class="settings-sidebar">
-                <p class="text-sm text-gray-500 p-4">Settings categories are not applicable to this page.</p>
+                <p class="text-sm text-gray-500 p-4">Settings categories are not applicable to this admin page.</p>
             </nav>
 
             <section class="settings-panel">
                 <h2 id="panel-title" class="text-2xl font-semibold text-white mb-6">Access Management</h2>
                 <div id="panel-content" class="text-gray-400">
                     <p class="settings-description mb-8">
-                        Manage the list of user emails authorized to access the 4SP application. This page is restricted to the admin account.
+                        Manage the list of user emails authorized to access the 4SP application beta. This page is restricted to the admin account(s).
                     </p>
                     
                     <div class="settings-section">
@@ -335,7 +273,6 @@
         import {
             getFirestore,
             doc,
-            getDoc,
             setDoc,
             updateDoc,
             onSnapshot
@@ -343,12 +280,9 @@
 
 
         // --- Firebase Initialization ---
-        // NOTE: firebase-config.js must be imported/available elsewhere for this to work
-        // For demonstration, assuming firebaseConfig is globally available or imported in navigation.js
-        const firebaseConfig = window.firebaseConfig; // Assuming global or loaded in navigation.js
+        const firebaseConfig = window.firebaseConfig;
         if (!firebaseConfig) {
-             console.error("Firebase config not found.");
-             // Prevent script from running further without config
+             console.error("Firebase config not found. Cannot initialize application.");
         } else {
             const app = initializeApp(firebaseConfig);
             const auth = getAuth(app);
@@ -369,19 +303,22 @@
             // --- Helper Functions ---
             const showMessage = (element, message, type) => {
                 element.textContent = message;
-                // Using new message-area classes from settings.html
                 element.className = `message-area mt-4 message-${type}`; 
             };
             
-            // Check if the current user is authorized (admin)
+            // 🚨 ADMIN AUTHORIZATION LOGIC WITH TWO EMAILS 🚨
+            const ADMIN_EMAILS = [
+                "4simpleproblems@gmail.com", 
+                "belkwy30@minerva.sparcc.org" // Second admin email added as requested
+            ];
+
             const checkAdminAuthorization = (user) => {
                 // IMPORTANT: This is a client-side check. Real security must be in Firestore rules/backend.
-                // Assuming "admin@4sp.com" is the hardcoded admin email for this example.
-                if (user && user.email === "admin@4sp.com") {
+                if (user && ADMIN_EMAILS.includes(user.email)) {
                     return true;
                 } else {
                     loadingScreen.classList.add('hidden');
-                    pageContent.innerHTML = `<section class="settings-panel"><h2 class="text-2xl font-semibold text-red-400 mb-6">Access Denied</h2><p class="text-gray-400">You must be logged in as the admin account to access this page.</p></section>`;
+                    pageContent.innerHTML = `<section class="settings-panel"><h2 class="text-2xl font-semibold text-red-400 mb-6">Access Denied</h2><p class="text-gray-400">You must be logged in as an authorized admin account to access this page.</p></section>`;
                     pageContent.classList.remove('hidden');
                     return false;
                 }
@@ -401,7 +338,6 @@
 
                 emails.forEach(email => {
                     const listItem = document.createElement('div');
-                    // Retaining .list-item from the original CSS
                     listItem.className = 'list-item'; 
                     listItem.dataset.email = email;
                     
@@ -410,7 +346,6 @@
                     emailSpan.className = 'text-white';
                     
                     const removeButton = document.createElement('button');
-                    // Button now uses .settings-button-danger class
                     removeButton.className = 'settings-button settings-button-danger ml-4 text-sm'; 
                     removeButton.innerHTML = '<i class="fa-solid fa-trash mr-1"></i> Remove';
                     removeButton.onclick = () => removeTester(email);
@@ -431,11 +366,10 @@
                         const emails = data.emails || [];
                         renderList(emails);
                     } else {
-                        // Document doesn't exist, treat as empty list
+                        // Document doesn't exist, treat as empty list and create it
                         renderList([]);
                         console.log("Beta access document does not exist, initializing empty.");
-                        // Optional: Create the document if it doesn't exist
-                        setDoc(docRef, { emails: [], lastUpdated: serverTimestamp() }, { merge: true });
+                        setDoc(docRef, { emails: [], lastUpdated: new Date() }, { merge: true });
                     }
                 }, (error) => {
                     console.error("Error setting up realtime listener:", error);
@@ -449,13 +383,11 @@
                 try {
                     const docRef = doc(db, "betaAccess", "allowedEmails");
                     
-                    // Check if email already exists
                     if (betaTesterEmails.includes(email)) {
                         showMessage(addMessageDiv, `${email} is already in the list.`, 'warning');
                         return;
                     }
 
-                    // Update the array in Firestore
                     const updatedEmails = [...betaTesterEmails, email];
                     await updateDoc(docRef, {
                         emails: updatedEmails,
@@ -480,7 +412,7 @@
 
                     await updateDoc(docRef, {
                         emails: updatedEmails,
-                        lastUpdated: new Date() // No need for serverTimestamp on client update
+                        lastUpdated: new Date()
                     }, { merge: true });
 
                     showMessage(listMessageDiv, `Successfully removed ${email}.`, 'success');
@@ -491,7 +423,7 @@
             };
 
 
-            // --- Event Listeners ---\
+            // --- Event Listeners ---
             document.getElementById('addTesterForm').addEventListener('submit', (e) => {
                 e.preventDefault();
                 const email = newTesterEmailInput.value;
@@ -500,21 +432,24 @@
                 }
             });
 
-            // --- Main Initialization ---\
+            // --- Main Initialization ---
             
             onAuthStateChanged(auth, (user) => {
                 if (user) {
-                    // User is logged in. Check for admin authorization.
+                    // Check for admin authorization against the list of emails
                     if (checkAdminAuthorization(user)) {
-                        // Admin is authorized. Start the data listener and show content.
                         console.log("Admin authorized. Starting beta list listener.");
                         setupRealtimeListener();
                         loadingScreen.classList.add('hidden');
                         pageContent.classList.remove('hidden');
                     }
                 } else {
-                    // User is not logged in. Redirect logic is handled by navigation.js
+                    // User is not logged in.
                     console.log("User not authenticated. Navigation script handles redirection.");
+                    // Render Access Denied if the user object is null, to be thorough
+                    if (!document.getElementById('panel-content')) {
+                        checkAdminAuthorization(null);
+                    }
                 }
             });
         }
