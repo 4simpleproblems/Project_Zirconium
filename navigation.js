@@ -26,7 +26,9 @@
  * 18. (NEW) FULL THEMING SYSTEM: Replaced all hardcoded colors with CSS variables. Added a global `window.applyTheme` function to set themes. Navbar now loads the user's saved theme from Local Storage on startup. Added CSS transitions for smooth theme fading.
  * 19. (FIXED) GLOBAL CLICK LISTENER: The global click listener now fetches button references on every click, preventing stale references after a navbar re-render.
  * 20. (FIXED) SCROLL GLIDER LOGIC: Updated scroll arrow logic to be explicit, ensuring arrows hide/show correctly at scroll edges.
- * 21. **(FIXED)** USERNAME COLOR: Replaced hardcoded `text-white` on username with a CSS variable (`--menu-username-text`) and updated `window.applyTheme` to set this to black for specific light themes.
+ * 21. (FIXED) USERNAME COLOR: Replaced hardcoded `text-white` on username with a CSS variable (`--menu-username-text`) and updated `window.applyTheme` to set this to black for specific light themes.
+ * 22. **(NEW)** MULTI-ADMIN SUPPORT: Changed privileged email from a single string to an array to support multiple admins.
+ * 23. **(FIXED)** ACTIVE TAB SCROLLING: Logic now scrolls all the way to the edge if the active tab is the first or last item in the menu.
  */
 
 // =========================================================================
@@ -46,8 +48,13 @@ const FIREBASE_CONFIG = {
 // --- Configuration ---
 const PAGE_CONFIG_URL = '../page-identification.json';
 
-// NEW: Set the specific email that is considered an administrator.
-const PRIVILEGED_EMAIL = '4simpleproblems@gmail.com'; 
+// --- MODIFICATION 1 START ---
+// NEW: Set the specific emails that are considered administrators. (Use lowercase)
+const PRIVILEGED_EMAILS = [
+    '4simpleproblems@gmail.com',
+    'belkwy30@minerva.sparcc.org'
+]; 
+// --- MODIFICATION 1 END ---
 
 // --- NEW: Theming Configuration ---
 const THEME_STORAGE_KEY = 'user-navbar-theme';
@@ -827,12 +834,29 @@ let db;
                 // If it's the first load, center the active tab.
                 const activeTab = document.querySelector('.nav-tab.active');
                 if (activeTab && tabContainer) {
-                    const centerOffset = (tabContainer.offsetWidth - activeTab.offsetWidth) / 2;
-                    let scrollTarget = activeTab.offsetLeft - centerOffset;
                     
-                    // Clamp the scroll target to prevent scrolling beyond content
+                    // --- MODIFICATION 2 START ---
+                    const allTabs = tabContainer.querySelectorAll('.nav-tab');
+                    const firstTab = allTabs[0];
+                    const lastTab = allTabs[allTabs.length - 1];
                     const maxScroll = tabContainer.scrollWidth - tabContainer.offsetWidth;
-                    scrollTarget = Math.max(0, Math.min(scrollTarget, maxScroll));
+                    let scrollTarget;
+
+                    if (activeTab === firstTab) {
+                        // If it's the first tab, scroll all the way left
+                        scrollTarget = 0;
+                    } else if (activeTab === lastTab) {
+                        // If it's the last tab, scroll all the way right
+                        scrollTarget = maxScroll;
+                    } else {
+                        // Otherwise, center the tab
+                        const centerOffset = (tabContainer.offsetWidth - activeTab.offsetWidth) / 2;
+                        scrollTarget = activeTab.offsetLeft - centerOffset;
+                        
+                        // Clamp the centered position
+                        scrollTarget = Math.max(0, Math.min(scrollTarget, maxScroll));
+                    }
+                    // --- MODIFICATION 2 END ---
 
                     // Set scroll immediately, no delay needed for stable initial load
                     tabContainer.scrollLeft = scrollTarget;
@@ -1041,8 +1065,10 @@ let db;
             let userData = null;
             
             if (user) {
-                // Check for the privileged user email
-                isPrivilegedUser = user.email === PRIVILEGED_EMAIL;
+                // --- MODIFICATION 1 (Usage) START ---
+                // Check if the user's email is in the privileged list
+                isPrivilegedUser = user.email ? PRIVILEGED_EMAILS.includes(user.email.toLowerCase()) : false;
+                // --- MODIFICATION 1 (Usage) END ---
 
                 // User is signed in. Fetch their data from Firestore.
                 try {
