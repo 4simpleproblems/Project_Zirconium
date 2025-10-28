@@ -259,22 +259,13 @@ let db;
             const response = await fetch(PAGE_CONFIG_URL);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             pages = await response.json();
-            
-            // INJECTION: Add the requested admin-only tab for demonstration
-            pages['beta-settings'] = { 
-                name: "Beta Settings", 
-                url: "../logged-in/beta-settings.html", // <--- UPDATED PATH
-                icon: "fa-solid fa-flask", 
-                adminOnly: true 
-            };
+          
             
         } catch (error) {
             console.error("Failed to load page identification config:", error);
             // If the configuration fails to load, use a minimal set of pages for stability
             pages = {
-                'home': { name: "Home", url: "../../index.html", icon: "fa-solid fa-house" },
-                // Fallback using the new path
-                'admin': { name: "Beta Settings", url: "../logged-in/beta-settings.html", icon: "fa-solid fa-flask", adminOnly: true } 
+                'home': { name: "Home", url: "../index.html", icon: "fa-solid fa-house" },
             };
         }
 
