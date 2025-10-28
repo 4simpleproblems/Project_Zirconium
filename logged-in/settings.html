@@ -1125,7 +1125,8 @@
                     selectedSwatch.classList.add('selected');
                     
                     // 2. Get theme data
-                    const themeIndex = selectedSwatch.dataset.theme-index;
+                    // --- FIX: Changed dataset.theme-index to dataset.themeIndex ---
+                    const themeIndex = selectedSwatch.dataset.themeIndex;
                     const theme = themePalettes[themeIndex];
                     
                     if (window.applyTheme) {
