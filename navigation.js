@@ -811,6 +811,10 @@ let db;
 
             const tabContainer = document.querySelector('.tab-scroll-container');
             
+            // =================================================================
+            // ========= MODIFICATION FOR SCROLL TIMING START ================
+            // =================================================================
+
             // Check if we need to restore scroll position (from a full re-render)
             if (currentScrollLeft > 0) {
                 const savedScroll = currentScrollLeft;
@@ -821,6 +825,7 @@ let db;
                         tabContainer.scrollLeft = savedScroll;
                     }
                     currentScrollLeft = 0; // Reset state after restoration
+                    updateScrollGilders(); // <-- UPDATER CALLED *INSIDE* FRAME
                 });
             // NEW: Only run centering logic if we are NOT restoring scroll AND we haven't scrolled yet.
             } else if (!hasScrolledToActiveTab) { 
@@ -828,44 +833,40 @@ let db;
                 const activeTab = document.querySelector('.nav-tab.active');
                 if (activeTab && tabContainer) {
                     
-                    // =================================================================
-                    // ========= MODIFICATION FOR RIGHT-SIDE SCROLLING START =========
-                    // =================================================================
-                    
                     const centerOffset = (tabContainer.offsetWidth - activeTab.offsetWidth) / 2;
                     const idealCenterScroll = activeTab.offsetLeft - centerOffset;
                     
-                    // Calculate max scroll and the "extra room" left on the right if we center
                     const maxScroll = tabContainer.scrollWidth - tabContainer.offsetWidth;
                     const extraRoomOnRight = maxScroll - idealCenterScroll;
                     
                     let scrollTarget;
 
-                    // NEW LOGIC:
-                    // If the "extra room" on the right is less than the center offset (i.e., the tab is on the "far right" side)
-                    // AND we are not at the far left, then snap to the maximum scroll position.
                     if (idealCenterScroll > 0 && extraRoomOnRight < centerOffset) {
                         scrollTarget = maxScroll; // Snap all the way to the right
                     } else {
-                        // Otherwise, just clamp to the left edge (0)
                         scrollTarget = Math.max(0, idealCenterScroll);
                     }
 
-                    // Set scroll immediately, no delay needed for stable initial load
-                    tabContainer.scrollLeft = scrollTarget;
-                    
-                    // =================================================================
-                    // ========= MODIFICATION FOR RIGHT-SIDE SCROLLING END ===========
-                    // =================================================================
+                    // Set scroll and update gilders in the next frame to ensure
+                    // the scrollLeft value is processed by the browser first.
+                    requestAnimationFrame(() => {
+                        tabContainer.scrollLeft = scrollTarget;
+                        updateScrollGilders(); // <-- UPDATER CALLED *INSIDE* FRAME
+                    });
                     
                     // IMPORTANT: Set flag to prevent future automatic centering
                     hasScrolledToActiveTab = true; 
+                } else if (tabContainer) {
+                    // If no active tab (or no tabContainer), still need to update gilders
+                    // to ensure they are hidden correctly on a blank page.
+                    requestAnimationFrame(() => {
+                        updateScrollGilders();
+                    });
                 }
             }
-
-
-            // Initial check to hide/show them correctly after load
-            updateScrollGilders();
+            // =================================================================
+            // ========= MODIFICATION FOR SCROLL TIMING END ==================
+            // =================================================================
         };
 
         // --- FIX START: Bug 2 ---
