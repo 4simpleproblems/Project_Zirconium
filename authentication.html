@@ -43,27 +43,7 @@
             transition: all 0.3s ease;
         }
         
-        /* * NEW STYLE: Main content container uses flex-grow and sets its height
-         * The 'p-0' was removed from the main tag in the HTML below, so this style 
-         * ensures the content inside it correctly takes up the full height.
-         */
-        .main-content-area {
-            flex-grow: 1;
-            display: flex;
-            align-items: stretch; /* Stretch children (auth-split-container) vertically */
-            justify-content: center;
-            padding: 0;
-            min-height: 0; /* Important for flex children when using min-h-screen on body */
-        }
-
-        .auth-split-container { 
-            max-width: 1200px; 
-            margin: 0 auto; 
-            /* NEW: Ensure the split-container takes full height of its parent (main) */
-            height: 100%; 
-            /* The overflow-hidden property remains to prevent any layout shift from internal elements */
-        } 
-
+        /* Layout-specific CSS removed and moved to Tailwind classes for better consistency */
         .btn-social {
             transition: background-color 0.3s ease, border-color 0.3s ease;
         }
@@ -87,8 +67,8 @@
 <body class="bg-custom-darkest-gray text-custom-white-gray min-h-screen flex flex-col">
 
     <div id="navbar-container"></div>
-    <main class="main-content-area">
-        <div class="auth-split-container bg-custom-darkest-gray flex flex-wrap w-full border-0 overflow-hidden p-0">
+    <main class="flex-grow flex items-stretch justify-center p-0">
+        <div class="auth-split-container bg-custom-darkest-gray flex flex-wrap w-full h-full border-0 overflow-hidden p-0 mx-auto max-w-[1200px]">
             
             <div class="auth-col left-col flex-1 flex flex-col justify-center items-center bg-custom-darkest-gray min-w-[300px] md:border-r md:border-custom-medium-gray h-full">
 
