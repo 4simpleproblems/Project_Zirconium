@@ -821,7 +821,10 @@ let db;
                         tabContainer.scrollLeft = savedScroll;
                     }
                     currentScrollLeft = 0; // Reset state after restoration
-                    updateScrollGilders(); // <-- UPDATER CALLED *INSIDE* FRAME
+                    // Nested frame to update arrows *after* scroll is applied
+                    requestAnimationFrame(() => {
+                        updateScrollGilders();
+                    });
                 });
             // NEW: Only run centering logic if we are NOT restoring scroll AND we haven't scrolled yet.
             } else if (!hasScrolledToActiveTab) { 
@@ -837,17 +840,28 @@ let db;
                     
                     let scrollTarget;
 
+                    // =================================================================
+                    // ========= MODIFICATION 1 of 3 (Aggressive Set) ========
+                    // =================================================================
                     if (idealCenterScroll > 0 && extraRoomOnRight < centerOffset) {
-                        scrollTarget = maxScroll; // Snap all the way to the right
+                        // Snap all the way to the right by setting a value
+                        // *larger* than the max, forcing the browser to clamp.
+                        scrollTarget = maxScroll + 50;
                     } else {
                         scrollTarget = Math.max(0, idealCenterScroll);
                     }
+                    // =================================================================
+                    // ====================== END MODIFICATION =========================
+                    // =================================================================
 
                     // Set scroll and update gilders in the next frame to ensure
                     // the scrollLeft value is processed by the browser first.
                     requestAnimationFrame(() => {
                         tabContainer.scrollLeft = scrollTarget;
-                        updateScrollGilders(); // <-- UPDATER CALLED *INSIDE* FRAME
+                        // Nested frame to update arrows *after* scroll is applied
+                        requestAnimationFrame(() => {
+                            updateScrollGilders();
+                        });
                     });
                     
                     // IMPORTANT: Set flag to prevent future automatic centering
@@ -862,9 +876,10 @@ let db;
             }
         };
 
-        // --- FIX START: Bug 2 ---
-        // Updated the logic to be an explicit if/else, ensuring
-        // the 'hidden' class is correctly added or removed.
+
+        // =================================================================
+        // ========= MODIFICATION 2 of 3 (Tolerant Check) ========
+        // =================================================================
         const updateScrollGilders = () => {
             const container = document.querySelector('.tab-scroll-container');
             const leftButton = document.getElementById('glide-left');
@@ -880,7 +895,12 @@ let db;
                 
                 // Calculate max scroll and check against it with tolerance
                 const maxScrollLeft = container.scrollWidth - container.offsetWidth;
-                const isScrolledToRight = container.scrollLeft >= maxScrollLeft - 5;
+
+                // NEW TOLERANCE LOGIC:
+                // Check if the current scroll position, *plus a 5px tolerance*,
+                // is greater than or equal to the max scroll. This handles
+                // browser sub-pixel rounding errors.
+                const isScrolledToRight = (container.scrollLeft + 5) >= maxScrollLeft;
 
                 // Explicitly add or remove the class
                 if (isScrolledToLeft) {
@@ -900,10 +920,13 @@ let db;
                 rightButton.classList.add('hidden');
             }
         };
-        // --- FIX END: Bug 2 ---
+        // =================================================================
+        // ====================== END MODIFICATION =========================
+        // =================================================================
+
 
         // =================================================================
-        // ========= NEW FUNCTION AS REQUESTED ===========================
+        // ========= MODIFICATION 3 of 3 (Aggressive Set) ========
         // =================================================================
         /**
          * NEW: Forcefully scrolls the tab container all the way to the right
@@ -919,14 +942,19 @@ let db;
             // Use requestAnimationFrame to guarantee the scroll happens,
             // and *then* the arrow visibility is updated.
             requestAnimationFrame(() => {
-                tabContainer.scrollLeft = maxScroll;
-                // updateScrollGilders will now correctly see the container
-                // is at the far right and hide the right arrow.
-                updateScrollGilders();
+                // Set scrollLeft to a value *larger* than the max.
+                // The browser will automatically clamp this to the
+                // highest possible value, which is more reliable.
+                tabContainer.scrollLeft = maxScroll + 50;
+                
+                // Use a nested frame to update arrows *after* scroll is applied
+                requestAnimationFrame(() => {
+                    updateScrollGilders();
+                });
             });
         };
         // =================================================================
-        // ========= END NEW FUNCTION ====================================
+        // ====================== END MODIFICATION =========================
         // =================================================================
         
         // Split setupEventListeners into main and pin-specific, 
