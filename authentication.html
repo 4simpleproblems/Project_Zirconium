@@ -56,15 +56,8 @@
         .success-message { color: #4ade80; }
         .warning-message { color: #fbbf24; }
         
-        /* * CRITICAL FIX: The max-width container needs its height fixed for the border 
-         * to stretch to the bottom of its parent <main> element.
-         */
-        .auth-split-container { 
-            max-width: 1200px; 
-            margin: 0 auto; 
-            height: 100%; /* Ensures it fills the height of the main flex-grow container */
-        } 
-        
+        .auth-split-container { max-width: 1200px; margin: 0 auto; min-height: 100vh; }
+        @media (min-width: 768px) { .auth-col { min-height: 100vh; } }
         @media (max-width: 767px) {
             .right-col { display: none; }
             .left-col { border-right: none; }
@@ -76,10 +69,9 @@
     <div id="navbar-container"></div>
     <main class="flex-grow flex items-stretch justify-center p-0">
         <div class="auth-split-container bg-custom-darkest-gray flex flex-wrap w-full border-0 overflow-hidden p-0">
-            
-            <div class="auth-col left-col flex-1 flex flex-col justify-center items-center bg-custom-darkest-gray min-w-[300px] md:border-r md:border-custom-medium-gray h-full">
+            <div class="auth-col left-col flex-1 p-8 flex flex-col justify-center items-center bg-custom-darkest-gray min-w-[300px]">
 
-                <div id="loginContainer" class="w-full flex flex-col items-center px-8 py-16">
+                <div id="loginContainer" class="w-full flex flex-col items-center">
                     <h2 class="text-3xl font-bold text-custom-white-gray mb-6 text-center w-full tracking-tighter">Login to Your Account</h2>
                     <form id="loginForm" novalidate class="w-full max-w-md"> 
                         <div class="mb-5">
@@ -97,7 +89,7 @@
                     <p class="text-sm text-custom-light-gray mt-6 text-center w-full max-w-md">Don't have an account? <a id="showSignupLink" href="#" class="text-custom-light-gray font-semibold hover:text-custom-lighter-gray transition">Sign up here</a></p>
                 </div>
 
-                <div id="resetPasswordContainer" class="w-full flex-col items-center px-8 py-16" style="display: none;">
+                <div id="resetPasswordContainer" class="w-full flex-col items-center" style="display: none;">
                     <h2 class="text-3xl font-bold text-custom-white-gray mb-6 text-center w-full tracking-tighter">Reset Your Password</h2>
                     <p class="text-custom-light-gray text-base mb-6 text-center max-w-md">Enter your email address and we'll send you a link to reset your password.</p>
                     <form id="resetPasswordForm" novalidate class="w-full max-w-md">
@@ -111,7 +103,7 @@
                     <div class="w-full max-w-md mt-6 text-center"> <a id="backToLoginLink" class="text-custom-light-gray hover:text-custom-lighter-gray font-medium text-sm cursor-pointer">&larr; Back to Login</a> </div>
                 </div>
 
-                <div id="usernameContainer" class="w-full flex-col items-center px-8 py-16" style="display: none;">
+                <div id="usernameContainer" class="w-full flex-col items-center" style="display: none;">
                     <h2 class="text-3xl font-bold text-custom-white-gray mb-6 text-center w-full tracking-tighter">Choose Your Username</h2>
                     <form id="usernameForm" novalidate class="w-full max-w-md"> 
                         <div class="mb-5">
@@ -125,7 +117,7 @@
                     <p class="text-sm text-custom-light-gray mt-6 text-center w-full max-w-md">Already have an account? <a id="showLoginLink" href="#" class="text-custom-light-gray font-semibold hover:text-custom-lighter-gray transition">Login here</a></p>
                 </div>
                 
-                <div id="signupContainer" class="w-full flex-col items-center px-8 py-16" style="display: none;">
+                <div id="signupContainer" class="w-full flex-col items-center" style="display: none;">
                     <h2 class="text-3xl font-bold text-custom-white-gray mb-6 text-center w-full tracking-tighter">Set Your Credentials</h2>
                     <form id="signupForm" novalidate class="w-full max-w-md"> 
                         <div class="mb-5">
@@ -145,8 +137,8 @@
 
             </div>
 
-            <div class="auth-col right-col flex-1 flex flex-col items-center justify-center bg-custom-darkest-gray h-full">
-                <div class="w-full flex flex-col items-center justify-start px-8 py-16">
+            <div class="auth-col right-col flex-1 p-8 flex flex-col justify-center items-center bg-custom-darkest-gray">
+                <div class="w-full flex flex-col items-center justify-center">
                     <h2 class="text-3xl font-bold text-custom-white-gray mb-6 text-center w-full tracking-tighter">Continue instantly</h2>
                     <p class="text-lg text-custom-light-gray mb-8 text-center max-w-md">
                         Use a trusted provider to sign in or create an account in one click.
@@ -173,7 +165,7 @@
         </div>
     </main>
 
-    <footer class="w-full py-2 flex items-center justify-center bg-black border-t border-custom-medium-gray">
+    <footer class="w-full h-10 flex items-center justify-center bg-black border-t border-custom-medium-gray">
         <div class="text-center text-custom-light-gray text-xs">
             &copy; 2024 4simpleproblems (4SP). Built for students.
         </div>
@@ -275,7 +267,6 @@
         };
         const messageDivs = {
             login: document.getElementById('loginMessage'),
-            control: document.getElementById('controlMessage'),
             reset: document.getElementById('resetMessage'),
             username: document.getElementById('usernameMessage'),
             signup: document.getElementById('signupMessage')
@@ -502,7 +493,7 @@
                         const isBetaTester = await isUserBetaTester(user.email);
                         if (!isBetaTester) {
                             const googleFormLink = "https://docs.google.com/forms/d/e/1FAIpQLSdWdL4RTE8p7t7gMGYpIHYiYcV__sNa8vOlwOCQyoolKuQimQ/viewform?usp=publish-editor";
-                            const visibleMessageDiv = messageDivs.login.offsetParent ? messageDivs.login : containers.login.style.display === 'flex' ? messageDivs.login : messageDivs.username;
+                            const visibleMessageDiv = messageDivs.login.offsetParent ? messageDivs.login : messageDivs.username;
                             showMessage(visibleMessageDiv, `This account is not on the beta tester list. <a href="${googleFormLink}" target="_blank" class="underline font-bold text-yellow-300">Apply for beta access here</a>.`, 'warning');
                             
                             // Important: Delete the just-created auth user and sign out
@@ -547,7 +538,7 @@
                         return; // User cancelled, do nothing.
                     }
                     // Show error on the currently visible panel
-                    const visibleMessageDiv = containers.login.style.display === 'flex' ? messageDivs.login : messageDivs.username;
+                    const visibleMessageDiv = messageDivs.login.offsetParent ? messageDivs.login : messageDivs.username;
                     showMessage(visibleMessageDiv, msg);
                 }
             };
