@@ -234,47 +234,45 @@
             }
         }
 
-        /* --- UPDATED CSS for .color-option --- */
+        /* --- UPDATED CSS for .color-option (Text Centered) --- */
 
-/* --- UPDATED CSS for .color-option (Text Centered) --- */
+        .color-option {
+            /* 1. Wide but not tall / Spacious */
+            width: 100%;
+            padding: 0.75rem 1.25rem; 
+            height: auto; 
+            
+            /* 2. Slightly more rounded (12px) */
+            border-radius: 12px;
+            
+            /* 3. Less spacing between them */
+            margin-bottom: 4px; 
+            
+            /* Standard button styling */
+            cursor: pointer;
+            border: 3px solid #374151; /* gray-700 */
+            transition: background-color 0.2s, border-color 0.2s; 
+            display: flex;
+            align-items: center;
+            /* CHANGE: Sets the horizontal alignment of the flex items to the center */
+            justify-content: center; 
+            
+            font-size: 0.9rem; 
+            color: white;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            font-weight: 500;
+        }
 
-.color-option {
-    /* 1. Wide but not tall / Spacious */
-    width: 100%;
-    padding: 0.75rem 1.25rem; 
-    height: auto; 
-    
-    /* 2. Slightly more rounded (12px) */
-    border-radius: 12px;
-    
-    /* 3. Less spacing between them */
-    margin-bottom: 4px; 
-    
-    /* Standard button styling */
-    cursor: pointer;
-    border: 3px solid #374151; /* gray-700 */
-    transition: background-color 0.2s, border-color 0.2s; 
-    display: flex;
-    align-items: center;
-    /* CHANGE: Sets the horizontal alignment of the flex items to the center */
-    justify-content: center; 
-    
-    font-size: 0.9rem; 
-    color: white;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-    font-weight: 500;
-}
+        .color-option:hover {
+            border-color: #6b7280; /* gray-500 */
+            background-color: #1f1f1f; 
+        }
 
-.color-option:hover {
-    border-color: #6b7280; /* gray-500 */
-    background-color: #1f1f1f; 
-}
-
-.color-option.selected {
-    border-color: #3b82f6; /* Blue-500 */
-    box-shadow: 0 0 0 3px #3b82f680;
-    background-color: #18202d; 
-}
+        .color-option.selected {
+            border-color: #3b82f6; /* Blue-500 */
+            box-shadow: 0 0 0 3px #3b82f680;
+            background-color: #18202d; 
+        }
     </style>
 </head>
 <body>
@@ -358,7 +356,7 @@
         /**
          * Fetches the theme palettes from the external themes.json file.
          * The path is '../themes.json' as requested.
-         * @returns {Promise<void>}
+         * @returns {Promise<boolean>} True if successful, false otherwise.
          */
         async function loadThemePalettes() {
             const url = '../themes.json';
@@ -369,10 +367,12 @@
                 }
                 themePalettes = await response.json();
                 console.log(`Loaded ${themePalettes.length} themes from ${url}`);
+                return true;
             } catch (error) {
                 console.error("Failed to load theme palettes:", error);
-                // Optionally show a user-facing error if this is critical
-                // alert("Error: Could not load theme data from themes.json. Theme settings may not be available.");
+                // Display a fatal error message on the loading screen
+                document.getElementById('loading-screen').innerHTML = '<p class="text-xl text-red-400">Error: Could not load theme data from themes.json. Cannot start application.</p>';
+                return false;
             }
         }
 
@@ -874,6 +874,7 @@
                     renderGeneralSettings();
                     break;
                 case 'personalization':
+                    // NOTE: This will now run only after themes are successfully loaded
                     renderPersonalizationSettings();
                     break;
                 case 'security':
@@ -935,6 +936,7 @@
             renderPanel('general');
         }
 
+        // MODIFIED: This function is now only called once themes are loaded.
         function startAuthFlow() {
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
@@ -959,11 +961,14 @@
         
         // --- START APPLICATION ---
         document.addEventListener('DOMContentLoaded', async () => {
-            // 1. Load the theme data first
-            await loadThemePalettes();
+            // 1. Load the theme data first and wait for it
+            const themesLoaded = await loadThemePalettes();
 
-            // 2. Then start the Firebase Auth listener
-            startAuthFlow();
+            // 2. ONLY start the Firebase Auth listener if themes are loaded successfully.
+            // If it failed, loadThemePalettes has already updated the loading screen with an error.
+            if (themesLoaded) {
+                startAuthFlow();
+            } 
         });
     </script>
 </body>
