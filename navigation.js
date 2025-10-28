@@ -26,7 +26,8 @@
  * 18. (NEW) FULL THEMING SYSTEM: Replaced all hardcoded colors with CSS variables. Added a global `window.applyTheme` function to set themes. Navbar now loads the user's saved theme from Local Storage on startup. Added CSS transitions for smooth theme fading.
  * 19. (FIXED) GLOBAL CLICK LISTENER: The global click listener now fetches button references on every click, preventing stale references after a navbar re-render.
  * 20. (FIXED) SCROLL GLIDER LOGIC: Updated scroll arrow logic to be explicit, ensuring arrows hide/show correctly at scroll edges.
- * 21. **(FIXED)** USERNAME COLOR: Replaced hardcoded `text-white` on username with a CSS variable (`--menu-username-text`) and updated `window.applyTheme` to set this to black for specific light themes.
+ * 21. (FIXED) USERNAME COLOR: Replaced hardcoded `text-white` on username with a CSS variable (`--menu-username-text`) and updated `window.applyTheme` to set this to black for specific light themes.
+ * 22. **(NEW)** LOGO TINTING: Replaced logo `<img>` tag with a `<div>` using `mask-image`. `window.applyTheme` now supports `logo-tint-color` from themes.json to dynamically color the logo, with smart defaults for themes without a tint color.
  */
 
 // =========================================================================
@@ -55,7 +56,9 @@ const THEME_STORAGE_KEY = 'user-navbar-theme';
 // This object defines the default "Dark" theme.
 // It must contain ALL CSS variables used in injectStyles.
 const DEFAULT_THEME = {
+    'name': 'Dark', // --- NEW: Added name to default theme
     'logo-src': '/images/logo.png',
+    'logo-tint-color': null, // --- NEW: Added logo-tint-color key
     'navbar-bg': '#000000',
     'navbar-border': 'rgb(31 41 55)',
     'avatar-gradient': 'linear-gradient(135deg, #374151 0%, #111827 100%)',
@@ -100,6 +103,7 @@ const DEFAULT_THEME = {
  * @param {object} theme - A theme object (like DEFAULT_THEME)
  */
 // --- USERNAME COLOR FIX --- (2/3) Modified this function
+// --- UPDATED: This function is now modified to support logo tinting ---
 window.applyTheme = (theme) => {
     const root = document.documentElement;
     if (!root) return;
@@ -128,14 +132,39 @@ window.applyTheme = (theme) => {
     root.style.setProperty('--menu-username-text', usernameColor);
     // --- END FIX ---
 
-    // Handle logo swap
-    const logoImg = document.getElementById('navbar-logo');
-    if (logoImg) {
-        const newLogoSrc = themeToApply['logo-src'] || DEFAULT_THEME['logo-src'];
-        if (logoImg.src !== newLogoSrc) {
-            logoImg.src = newLogoSrc;
+    // --- NEW: Handle logo tint color ---
+    let logoTintColor = themeToApply['logo-tint-color']; // Get tint from the applied theme
+
+    // If the theme doesn't specify a tint (i.e., it's null or undefined), we must provide a sensible default.
+    if (!logoTintColor) {
+        // Check if it's one of the known light themes (which use logo-dark.png)
+        if (themeToApply.name && lightThemeNames.includes(themeToApply.name)) {
+            // These themes use the dark logo, so the default "tint" should be a dark color.
+            logoTintColor = '#111827'; // Default dark color
+        } else {
+            // Otherwise, it's a dark theme (using logo.png), so the default "tint" is white.
+            logoTintColor = '#ffffff'; // Default white color
         }
     }
+    
+    root.style.setProperty('--logo-tint-color', logoTintColor);
+    // --- END NEW LOGO TINT LOGIC ---
+
+
+    // --- UPDATED: Handle logo swap (now a mask on a div) ---
+    const logoEl = document.getElementById('navbar-logo');
+    if (logoEl) {
+        // Get the logo src from the applied theme, or fall back to the default theme's src
+        const newLogoSrc = themeToApply['logo-src'] || DEFAULT_THEME['logo-src'];
+        const newMaskUrl = `url(${newLogoSrc})`;
+        
+        // Apply the new logo src as a mask image
+        if (logoEl.style.maskImage !== newMaskUrl) {
+            logoEl.style.webkitMaskImage = newMaskUrl;
+            logoEl.style.maskImage = newMaskUrl;
+        }
+    }
+    // --- END UPDATED LOGO LOGIC ---
 };
 // --- End Theming Configuration ---
 
@@ -298,6 +327,20 @@ let db;
                 transition: background-color 0.3s ease, border-color 0.3s ease;
             }
             .auth-navbar nav { padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
+            
+            /* --- NEW: Logo Div Styling --- */
+            #navbar-logo {
+                background-color: var(--logo-tint-color); /* Color is set by applyTheme logic */
+                -webkit-mask-size: contain;
+                mask-size: contain;
+                -webkit-mask-position: center;
+                mask-position: center;
+                -webkit-mask-repeat: no-repeat;
+                mask-repeat: no-repeat;
+                transition: background-color 0.3s ease; /* Add transition */
+            }
+            /* --- END NEW LOGO STYLE --- */
+            
             .initial-avatar { 
                 background: var(--avatar-gradient); 
                 font-family: sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; 
@@ -741,9 +784,8 @@ let db;
             const container = document.getElementById('navbar-container');
             if (!container) return; 
 
-            // Logo path is now handled by the applyTheme function,
-            // but we need a default src for the img tag itself.
-            const logoPath = "/images/logo.png"; 
+            // --- UPDATED: logoPath variable is no longer needed as logo is a styled div
+            // const logoPath = "/images/logo.png"; 
             
             // Filter and map pages for tabs, applying adminOnly filter
             const tabsHtml = Object.values(pages || {})
@@ -767,10 +809,9 @@ let db;
             container.innerHTML = `
                 <header class="auth-navbar">
                     <nav>
-                        <a href="/" class="flex items-center space-x-2 flex-shrink-0">
-                            <img src="${logoPath}" alt="4SP Logo" class="h-8 w-auto" id="navbar-logo">
+                        <a href="/" class="flex items-center space-x-2 flex-shrink-0" title="4SP Logo">
+                            <div id="navbar-logo" class="h-8 w-24"></div> 
                         </a>
-
                         <div class="tab-wrapper">
                             <button id="glide-left" class="scroll-glide-button"><i class="fa-solid fa-chevron-left"></i></button>
 
