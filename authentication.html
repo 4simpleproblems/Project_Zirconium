@@ -42,8 +42,7 @@
             color: rgb(var(--geist-foreground));
             transition: all 0.3s ease;
         }
-        
-        /* Layout-specific CSS removed and moved to Tailwind classes for better consistency */
+
         .btn-social {
             transition: background-color 0.3s ease, border-color 0.3s ease;
         }
@@ -57,8 +56,16 @@
         .success-message { color: #4ade80; }
         .warning-message { color: #fbbf24; }
         
+        /* * CRITICAL FIX: The max-width container needs its height fixed for the border 
+         * to stretch to the bottom of its parent <main> element.
+         */
+        .auth-split-container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            height: 100%; /* Ensures it fills the height of the main flex-grow container */
+        } 
+        
         @media (max-width: 767px) {
-            /* Keep existing mobile styles */
             .right-col { display: none; }
             .left-col { border-right: none; }
         }
@@ -68,7 +75,7 @@
 
     <div id="navbar-container"></div>
     <main class="flex-grow flex items-stretch justify-center p-0">
-        <div class="auth-split-container bg-custom-darkest-gray flex flex-wrap w-full h-full border-0 overflow-hidden p-0 mx-auto max-w-[1200px]">
+        <div class="auth-split-container bg-custom-darkest-gray flex flex-wrap w-full border-0 overflow-hidden p-0">
             
             <div class="auth-col left-col flex-1 flex flex-col justify-center items-center bg-custom-darkest-gray min-w-[300px] md:border-r md:border-custom-medium-gray h-full">
 
@@ -268,6 +275,7 @@
         };
         const messageDivs = {
             login: document.getElementById('loginMessage'),
+            control: document.getElementById('controlMessage'),
             reset: document.getElementById('resetMessage'),
             username: document.getElementById('usernameMessage'),
             signup: document.getElementById('signupMessage')
@@ -494,7 +502,7 @@
                         const isBetaTester = await isUserBetaTester(user.email);
                         if (!isBetaTester) {
                             const googleFormLink = "https://docs.google.com/forms/d/e/1FAIpQLSdWdL4RTE8p7t7gMGYpIHYiYcV__sNa8vOlwOCQyoolKuQimQ/viewform?usp=publish-editor";
-                            const visibleMessageDiv = messageDivs.login.offsetParent ? messageDivs.login : messageDivs.username;
+                            const visibleMessageDiv = messageDivs.login.offsetParent ? messageDivs.login : containers.login.style.display === 'flex' ? messageDivs.login : messageDivs.username;
                             showMessage(visibleMessageDiv, `This account is not on the beta tester list. <a href="${googleFormLink}" target="_blank" class="underline font-bold text-yellow-300">Apply for beta access here</a>.`, 'warning');
                             
                             // Important: Delete the just-created auth user and sign out
@@ -539,7 +547,7 @@
                         return; // User cancelled, do nothing.
                     }
                     // Show error on the currently visible panel
-                    const visibleMessageDiv = messageDivs.login.offsetParent ? messageDivs.login : messageDivs.username;
+                    const visibleMessageDiv = containers.login.style.display === 'flex' ? messageDivs.login : messageDivs.username;
                     showMessage(visibleMessageDiv, msg);
                 }
             };
