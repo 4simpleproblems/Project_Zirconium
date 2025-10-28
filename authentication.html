@@ -56,7 +56,6 @@
         .success-message { color: #4ade80; }
         .warning-message { color: #fbbf24; }
         
-        /* CORRECTED: Removed min-height: 100vh from auth-split-container and auth-col */
         .auth-split-container { max-width: 1200px; margin: 0 auto; } 
         @media (max-width: 767px) {
             .right-col { display: none; }
@@ -70,9 +69,9 @@
     <main class="flex-grow flex items-stretch justify-center p-0">
         <div class="auth-split-container bg-custom-darkest-gray flex flex-wrap w-full border-0 overflow-hidden p-0 h-full">
             
-            <div class="auth-col left-col flex-1 p-8 flex flex-col justify-center items-center bg-custom-darkest-gray min-w-[300px] md:border-r md:border-custom-medium-gray h-full">
+            <div class="auth-col left-col flex-1 flex flex-col justify-center items-center bg-custom-darkest-gray min-w-[300px] md:border-r md:border-custom-medium-gray h-full">
 
-                <div id="loginContainer" class="w-full flex flex-col items-center">
+                <div id="loginContainer" class="w-full flex flex-col items-center px-8 py-16">
                     <h2 class="text-3xl font-bold text-custom-white-gray mb-6 text-center w-full tracking-tighter">Login to Your Account</h2>
                     <form id="loginForm" novalidate class="w-full max-w-md"> 
                         <div class="mb-5">
@@ -90,7 +89,7 @@
                     <p class="text-sm text-custom-light-gray mt-6 text-center w-full max-w-md">Don't have an account? <a id="showSignupLink" href="#" class="text-custom-light-gray font-semibold hover:text-custom-lighter-gray transition">Sign up here</a></p>
                 </div>
 
-                <div id="resetPasswordContainer" class="w-full flex-col items-center" style="display: none;">
+                <div id="resetPasswordContainer" class="w-full flex-col items-center px-8 py-16" style="display: none;">
                     <h2 class="text-3xl font-bold text-custom-white-gray mb-6 text-center w-full tracking-tighter">Reset Your Password</h2>
                     <p class="text-custom-light-gray text-base mb-6 text-center max-w-md">Enter your email address and we'll send you a link to reset your password.</p>
                     <form id="resetPasswordForm" novalidate class="w-full max-w-md">
@@ -104,7 +103,7 @@
                     <div class="w-full max-w-md mt-6 text-center"> <a id="backToLoginLink" class="text-custom-light-gray hover:text-custom-lighter-gray font-medium text-sm cursor-pointer">&larr; Back to Login</a> </div>
                 </div>
 
-                <div id="usernameContainer" class="w-full flex-col items-center" style="display: none;">
+                <div id="usernameContainer" class="w-full flex-col items-center px-8 py-16" style="display: none;">
                     <h2 class="text-3xl font-bold text-custom-white-gray mb-6 text-center w-full tracking-tighter">Choose Your Username</h2>
                     <form id="usernameForm" novalidate class="w-full max-w-md"> 
                         <div class="mb-5">
@@ -118,7 +117,7 @@
                     <p class="text-sm text-custom-light-gray mt-6 text-center w-full max-w-md">Already have an account? <a id="showLoginLink" href="#" class="text-custom-light-gray font-semibold hover:text-custom-lighter-gray transition">Login here</a></p>
                 </div>
                 
-                <div id="signupContainer" class="w-full flex-col items-center" style="display: none;">
+                <div id="signupContainer" class="w-full flex-col items-center px-8 py-16" style="display: none;">
                     <h2 class="text-3xl font-bold text-custom-white-gray mb-6 text-center w-full tracking-tighter">Set Your Credentials</h2>
                     <form id="signupForm" novalidate class="w-full max-w-md"> 
                         <div class="mb-5">
@@ -138,8 +137,8 @@
 
             </div>
 
-            <div class="auth-col right-col flex-1 p-8 flex flex-col justify-center items-center bg-custom-darkest-gray h-full">
-                <div class="w-full flex flex-col items-center justify-center">
+            <div class="auth-col right-col flex-1 flex flex-col items-center justify-center bg-custom-darkest-gray h-full">
+                <div class="w-full flex flex-col items-center justify-start px-8 py-16">
                     <h2 class="text-3xl font-bold text-custom-white-gray mb-6 text-center w-full tracking-tighter">Continue instantly</h2>
                     <p class="text-lg text-custom-light-gray mb-8 text-center max-w-md">
                         Use a trusted provider to sign in or create an account in one click.
