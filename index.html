@@ -49,12 +49,10 @@
                         Get Started Instantly <i class="fas fa-arrow-right ml-2"></i>
                     </a>
                 </div>
-                <div id="beta-cta-container" class="mt-4" style="display: none;">
-                    <p class="text-base text-yellow-300 font-semibold">
-                        Beta testing is now open. 
-                        <a id="beta-apply-link" href="#" target="_blank" class="underline font-bold text-yellow-300 hover:text-yellow-400 transition">Apply Here.</a>
-                    </p>
-                </div>
+                <p id="beta-cta-container" class="text-sm text-yellow-300 mt-2" style="display: none;">
+                    Beta testing is now open. 
+                    <a id="beta-apply-link" href="#" target="_blank" class="underline font-bold text-yellow-300 hover:text-yellow-400 transition">Apply Here.</a>
+                </p>
                 </div>
         </section>
 
@@ -198,7 +196,9 @@
                     authButton.innerHTML = GET_STARTED_HTML; // Use Font Awesome content
                 }
                 if (betaCtaContainer) {
-                    betaCtaContainer.style.display = 'block'; // Show the beta CTA
+                    // Changed from 'block' back to 'flex' or similar if necessary, 
+                    // but 'block' works fine for a paragraph tag. Using 'block' to keep it simple.
+                    betaCtaContainer.style.display = 'block'; 
                 }
             }
         });
