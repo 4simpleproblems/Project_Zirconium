@@ -811,10 +811,6 @@ let db;
 
             const tabContainer = document.querySelector('.tab-scroll-container');
             
-            // =================================================================
-            // ========= MODIFICATION FOR SCROLL TIMING START ================
-            // =================================================================
-
             // Check if we need to restore scroll position (from a full re-render)
             if (currentScrollLeft > 0) {
                 const savedScroll = currentScrollLeft;
@@ -864,9 +860,6 @@ let db;
                     });
                 }
             }
-            // =================================================================
-            // ========= MODIFICATION FOR SCROLL TIMING END ==================
-            // =================================================================
         };
 
         // --- FIX START: Bug 2 ---
@@ -908,6 +901,33 @@ let db;
             }
         };
         // --- FIX END: Bug 2 ---
+
+        // =================================================================
+        // ========= NEW FUNCTION AS REQUESTED ===========================
+        // =================================================================
+        /**
+         * NEW: Forcefully scrolls the tab container all the way to the right
+         * and ensures the right arrow is hidden.
+         */
+        const forceScrollToRight = () => {
+            const tabContainer = document.querySelector('.tab-scroll-container');
+            if (!tabContainer) return;
+
+            // Calculate the maximum possible scroll position
+            const maxScroll = tabContainer.scrollWidth - tabContainer.offsetWidth;
+
+            // Use requestAnimationFrame to guarantee the scroll happens,
+            // and *then* the arrow visibility is updated.
+            requestAnimationFrame(() => {
+                tabContainer.scrollLeft = maxScroll;
+                // updateScrollGilders will now correctly see the container
+                // is at the far right and hide the right arrow.
+                updateScrollGilders();
+            });
+        };
+        // =================================================================
+        // ========= END NEW FUNCTION ====================================
+        // =================================================================
         
         // Split setupEventListeners into main and pin-specific, 
         // as pin listeners need to be re-attached on partial update.
