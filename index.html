@@ -5,17 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>4SP - HOME</title>
     <meta name="description" content="A multi-tool toolkit for students, featuring soundboards, games, utility apps, and QOL features like Tab Disguising and Panic keys.">
-    
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
-    
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    
+
     <script src="https://cdn.tailwindcss.com"></script>
 
     <script src="navigation-mini.js" defer></script>
-    
+
     <style>
         :root {
             --geist-foreground: 255, 255, 255;
@@ -50,17 +50,17 @@
                     </a>
                 </div>
                 <p id="beta-cta-container" class="text-base text-yellow-300 mt-4 mb-0" style="display: none;">
-                    Beta testing is now open. 
+                    Beta testing is now open.
                     <a id="beta-apply-link" href="#" target="_blank" class="underline font-bold text-yellow-300 hover:text-yellow-400 transition">Apply Here.</a>
                 </p>
                 </div>
         </section>
 
         <section id="features" class="py-16 mx-auto max-w-7xl px-4 space-y-16">
-             <h2 class="text-4xl font-medium text-center mb-8">Core Features of 4SP</h2> 
+             <h2 class="text-4xl font-medium text-center mb-8">Core Features of 4SP</h2>
 
             <div class="lg:grid lg:grid-cols-2 lg:gap-12 items-center">
-                
+
                 <div class="lg:pr-4 order-2 lg:order-1 mb-6 lg:mb-0">
                     <span class="text-sm font-medium text-green-400 uppercase tracking-widest mb-2 block">Toolkit Core</span>
                     <h3 class="text-4xl font-medium mb-3 mt-2">Soundboard & Playlists</h3>
@@ -91,14 +91,14 @@
                     <p class="text-xl text-gray-400 mb-5">
                         A suite of utilities built for academic success, keeping your notes, deadlines, and schedule organized in one place.
                     </p>
-                    <ul class="space-y-2 text-lg text-gray-300"> 
+                    <ul class="space-y-2 text-lg text-gray-300">
                         <li class="flex items-center"><i class="fas fa-sticky-note fa-fw w-5 mr-3 text-blue-500"></i><span class="font-normal mr-2">Notes:</span>Simple, persistent storage for quick thoughts.</li>
                         <li class="flex items-center"><i class="fas fa-hourglass-half fa-fw w-5 mr-3 text-blue-500"></i><span class="font-normal mr-2">Countdowns:</span>Track due dates and exam times seamlessly.</li>
                         <li class="flex items-center"><i class="fas fa-book fa-fw w-5 mr-3 text-blue-500"></i><span class="font-normal mr-2">Dictionary:</span>Quickly look up definitions.</li>
                     </ul>
                 </div>
             </div>
-            
+
             <div class="lg:grid lg:grid-cols-2 lg:gap-12 items-center">
                 <div class="lg:pr-4 order-2 lg:order-1 mb-6 lg:mb-0">
                     <span class="text-sm font-medium text-purple-400 uppercase tracking-widest mb-2 block">Stealth & Utility</span>
@@ -106,13 +106,13 @@
                     <p class="text-xl text-gray-400 mb-5">
                         Quality-of-Life tools designed to help you manage distractions instantly and discreetly, without drawing unwanted attention.
                     </p>
-                    <ul class="space-y-2 text-lg text-gray-300"> 
+                    <ul class="space-y-2 text-lg text-gray-300">
                         <li class="flex items-center"><i class="fas fa-eye-slash fa-fw w-5 mr-3 text-purple-500"></i><span class="font-normal mr-2">Tab Disguising:</span>Instantly change the tab title/favicon to blend in.</li>
                         <li class="flex items-center"><i class="fas fa-bolt fa-fw w-5 mr-3 text-purple-500"></i><span class="font-normal mr-2">Panic Keys:</span>A quick key combination to redirect.</li>
                         <li class="flex items-center"><i class="fas fa-palette fa-fw w-5 mr-3 text-purple-500"></i><span class="font-normal mr-2">Customizable UI:</span>Adjust themes for maximum discretion.</li>
                     </ul>
                 </div>
-                
+
                 <div class="relative p-8 rounded-3xl border border-purple-800/50 overflow-hidden shadow-2xl bg-gray-900 h-40 flex items-center justify-center order-1 lg:order-2 mb-6 lg:mb-0">
                     <i class="fas fa-user-secret text-7xl text-purple-400 z-10"></i>
                     <p class="absolute bottom-4 left-4 text-xs text-purple-500/50 z-10">Discretion and Quick Hiding</p>
@@ -129,7 +129,7 @@
                 ensuring secure, reliable, and scalable user management for all your student tools.
             </p>
         </section>
-        
+
     </main>
 
     <footer class="border-t border-gray-900 py-6">
@@ -138,16 +138,92 @@
         </div>
     </footer>
 
+    <!-- 
+        COOKIE CONSENT OVERLAY AND BANNER 
+        - The overlay (#cookie-overlay) darkens the screen and prevents interaction.
+        - The banner (#cookie-banner) contains the consent information.
+    -->
+    <div id="cookie-overlay" class="fixed inset-0 bg-black/70 z-[9999] transition-opacity duration-300 hidden">
+        <div id="cookie-banner" class="absolute bottom-4 left-1/2 -translate-x-1/2 w-full max-w-7xl px-4">
+            <div class="bg-black/95 text-white p-4 sm:p-6 rounded-3xl border border-gray-700 shadow-2xl backdrop-blur-md flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0 md:space-x-6">
+                <!-- Text Content (Left Side) -->
+                <div class="flex-1 min-w-0">
+                    <h3 class="text-xl font-bold mb-1">4SP Uses Cookies</h3>
+                    <p class="text-sm text-gray-300 mb-2">
+                        We use cookies to ensure the core functionality of authentication (via Firebase) and to analyze site traffic for improvements. This data is non-personal and essential for our services.
+                    </p>
+                    <div class="space-x-3 text-xs">
+                        <a href="https://policies.google.com/technologies/cookies" target="_blank" class="text-blue-400 hover:text-blue-300 underline transition">
+                            Extra (What are cookies?)
+                        </a>
+                        <a href="#" class="text-gray-500 pointer-events-none">|</a>
+                        <a href="#" class="text-blue-400 hover:text-blue-300 underline transition">
+                            Privacy Policy
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Button (Right Side) -->
+                <div class="flex-shrink-0">
+                    <button id="accept-cookies-button" class="w-full md:w-auto inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-xl shadow-lg text-black bg-white hover:bg-gray-200 transition duration-150 transform hover:scale-[1.02]">
+                        I Understand
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- END COOKIE CONSENT -->
+
     <script type="module" src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
     <script type="module" src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
 
     <script type="module" src="../firebase-config.js"></script>
 
     <script type="module">
+        // --- START COOKIE LOGIC ---
+
+        const COOKIE_KEY = '4sp-cookie-consent';
+        const cookieOverlay = document.getElementById('cookie-overlay');
+        const acceptCookiesButton = document.getElementById('accept-cookies-button');
+
+        // Function to hide the banner and allow page interaction
+        const hideCookieBanner = () => {
+            cookieOverlay.style.display = 'none';
+            // Set consent in localStorage so the banner doesn't show on future visits
+            localStorage.setItem(COOKIE_KEY, 'accepted');
+            // Allow scrolling on the body
+            document.body.style.overflow = '';
+        };
+
+        // Function to show the banner and prevent page interaction
+        const showCookieBanner = () => {
+            cookieOverlay.style.display = 'block';
+            // Prevent scrolling on the body
+            document.body.style.overflow = 'hidden';
+        };
+
+        // Check for existing consent when the script loads
+        if (localStorage.getItem(COOKIE_KEY) !== 'accepted') {
+            // If consent is not found, wait for the window to load, then show the banner
+            window.addEventListener('load', showCookieBanner);
+        } else {
+             // If consent is found, ensure the overlay remains hidden
+             cookieOverlay.style.display = 'none';
+             document.body.style.overflow = '';
+        }
+
+        // Add event listener to the "I Understand" button
+        if (acceptCookiesButton) {
+            acceptCookiesButton.addEventListener('click', hideCookieBanner);
+        }
+
+        // --- END COOKIE LOGIC ---
+
+
         // Constants for button content
         const DASHBOARD_HTML = 'Go to Dashboard <i class="fas fa-arrow-right ml-2"></i>';
         const GET_STARTED_HTML = 'Get Started Instantly <i class="fas fa-arrow-right ml-2"></i>';
-        
+
         // Beta Tester Form URL
         const BETA_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdWdL4RTE8p7t7gMGYpIHYiYcV__sNa8vOlwOCQyoolKuQimQ/viewform?usp=publish-editor";
 
@@ -155,11 +231,11 @@
         // Import the required functions and the config object
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
         import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js';
-        
-        // This line imports the configuration object exported from your file.
-        import { firebaseConfig } from '../firebase-config.js'; 
 
-        // 1. Initialize the Firebase App using the imported configuration. 
+        // This line imports the configuration object exported from your file.
+        import { firebaseConfig } from '../firebase-config.js';
+
+        // 1. Initialize the Firebase App using the imported configuration.
         const app = initializeApp(firebaseConfig);
 
         // 2. Get the Firebase Auth instance
