@@ -49,7 +49,7 @@
                         Get Started Instantly <i class="fas fa-arrow-right ml-2"></i>
                     </a>
                 </div>
-                <p id="beta-cta-container" class="text-sm text-yellow-300 mt-2" style="display: none;">
+                <p id="beta-cta-container" class="text-base text-yellow-300 mt-4 mb-0" style="display: none;">
                     Beta testing is now open. 
                     <a id="beta-apply-link" href="#" target="_blank" class="underline font-bold text-yellow-300 hover:text-yellow-400 transition">Apply Here.</a>
                 </p>
@@ -148,7 +148,7 @@
         const DASHBOARD_HTML = 'Go to Dashboard <i class="fas fa-arrow-right ml-2"></i>';
         const GET_STARTED_HTML = 'Get Started Instantly <i class="fas fa-arrow-right ml-2"></i>';
         
-        // NEW: Beta Tester Form URL
+        // Beta Tester Form URL
         const BETA_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdWdL4RTE8p7t7gMGYpIHYiYcV__sNa8vOlwOCQyoolKuQimQ/viewform?usp=publish-editor";
 
 
@@ -168,7 +168,7 @@
         // 3. Reference to the button and new elements
         const authButton = document.getElementById('auth-button');
         const betaCtaContainer = document.getElementById('beta-cta-container');
-        const betaApplyLink = document.getElementById('beta-apply-link'); // NEW
+        const betaApplyLink = document.getElementById('beta-apply-link');
 
         // Set the form URL for the beta link
         if (betaApplyLink) {
@@ -196,9 +196,7 @@
                     authButton.innerHTML = GET_STARTED_HTML; // Use Font Awesome content
                 }
                 if (betaCtaContainer) {
-                    // Changed from 'block' back to 'flex' or similar if necessary, 
-                    // but 'block' works fine for a paragraph tag. Using 'block' to keep it simple.
-                    betaCtaContainer.style.display = 'block'; 
+                    betaCtaContainer.style.display = 'block'; // Show the beta CTA
                 }
             }
         });
