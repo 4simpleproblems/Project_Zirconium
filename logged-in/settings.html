@@ -1094,24 +1094,16 @@
                 `;
             });
             
+            // REMOVED 'Save Theme' and 'Reset to Default' buttons and the message-area div
             panelContent.innerHTML = `
                 <div class="settings-section">
                     <h3 class="text-xl font-semibold text-white mb-4">Navigation Bar Theme</h3>
                     <p class="settings-description mb-4">
-                        Choose a theme for the top navigation bar. Your selection will be previewed live and saved locally in your browser.
+                        Choose a theme for the top navigation bar. Your selection will be applied instantly and saved locally in your browser.
                     </p>
                     <div id="theme-palette" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
                         ${swatchesHtml}
                     </div>
-                    <div class="flex items-center gap-4">
-                        <button id="theme-save-btn" class="settings-button">
-                            <i class="fas fa-save mr-2"></i> Save Theme
-                        </button>
-                        <button id="theme-reset-btn" class="settings-button settings-button-secondary">
-                            <i class="fas fa-undo mr-2"></i> Reset to Default
-                        </button>
-                    </div>
-                    <div id="theme-message" class="message-area"></div>
                 </div>
             `;
             
@@ -1123,79 +1115,44 @@
          * Attaches event listeners for the Personalization panel
          */
         function attachPersonalizationListeners() {
-            const messageEl = document.getElementById('theme-message');
-
-            // Swatch click listener (for live preview)
+            
+            // Swatch click listener (for live preview AND immediate save)
             document.querySelectorAll('#theme-palette .color-option').forEach(swatch => {
                 swatch.addEventListener('click', (e) => {
-                    // Remove 'selected' from all
+                    // 1. Remove 'selected' from all and add to clicked
                     document.querySelectorAll('#theme-palette .color-option').forEach(s => s.classList.remove('selected'));
-                    
-                    // Add 'selected' to clicked
                     const selectedSwatch = e.currentTarget;
                     selectedSwatch.classList.add('selected');
                     
-                    // Apply theme for live preview
-                    const themeIndex = selectedSwatch.dataset.themeIndex;
+                    // 2. Get theme data
+                    const themeIndex = selectedSwatch.dataset.theme-index;
                     const theme = themePalettes[themeIndex];
                     
                     if (window.applyTheme) {
+                        // 3. Apply theme for live preview
                         window.applyTheme(theme);
-                        messageEl.textContent = `Previewing: ${theme.name}. Click "Save Theme" to keep it.`;
-                        messageEl.className = 'message-area message-warning';
+                        
+                        // 4. Save theme to local storage immediately
+                        try {
+                            // If it's the default theme (index 0), just remove the key (effectively setting default)
+                            if (parseInt(themeIndex) === 0) {
+                                localStorage.removeItem(NAVBAR_SETTINGS_KEY);
+                            } else {
+                                // Save the selected theme object
+                                localStorage.setItem(NAVBAR_SETTINGS_KEY, JSON.stringify(theme));
+                            }
+                        } catch (error) {
+                            console.error("Error saving theme to Local Storage:", error);
+                            // In a full implementation, you might want a non-blocking temporary message here
+                        }
+                        
                     } else {
                         console.error("window.applyTheme is not defined. Make sure navigation.js is loaded.");
                     }
                 });
             });
             
-            // Save button listener
-            document.getElementById('theme-save-btn').addEventListener('click', () => {
-                const selectedSwatch = document.querySelector('#theme-palette .color-option.selected');
-                if (!selectedSwatch) {
-                    messageEl.textContent = 'Please select a theme first.';
-                    messageEl.className = 'message-area message-error';
-                    return;
-                }
-                
-                const themeIndex = selectedSwatch.dataset.themeIndex;
-                const theme = themePalettes[themeIndex];
-                
-                try {
-                    // If it's the default theme (index 0), just remove the key
-                    if (themeIndex == 0) {
-                        localStorage.removeItem(NAVBAR_SETTINGS_KEY);
-                    } else {
-                        localStorage.setItem(NAVBAR_SETTINGS_KEY, JSON.stringify(theme));
-                    }
-                    messageEl.textContent = `Theme "${theme.name}" saved successfully!`;
-                    messageEl.className = 'message-area message-success';
-                } catch (error) {
-                    console.error("Error saving theme to Local Storage:", error);
-                    messageEl.textContent = 'Failed to save theme. Storage might be full.';
-                    messageEl.className = 'message-area message-error';
-                }
-            });
-            
-            // Reset button listener
-            document.getElementById('theme-reset-btn').addEventListener('click', () => {
-                const defaultTheme = themePalettes[0];
-                
-                // Apply default theme
-                if (window.applyTheme) {
-                    window.applyTheme(defaultTheme);
-                }
-                
-                // Remove from storage
-                localStorage.removeItem(NAVBAR_SETTINGS_KEY);
-                
-                // Update UI
-                document.querySelectorAll('#theme-palette .color-option').forEach(s => s.classList.remove('selected'));
-                document.querySelector('#theme-palette .color-option[data-theme-index="0"]').classList.add('selected');
-                
-                messageEl.textContent = 'Theme reset to Dark.';
-                messageEl.className = 'message-area message-success';
-            });
+            // REMOVED event listeners for 'theme-save-btn' and 'theme-reset-btn'
         }
         
         /* --- END PERSONALIZATION FUNCTIONS --- */
