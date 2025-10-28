@@ -26,8 +26,7 @@
  * 18. (NEW) FULL THEMING SYSTEM: Replaced all hardcoded colors with CSS variables. Added a global `window.applyTheme` function to set themes. Navbar now loads the user's saved theme from Local Storage on startup. Added CSS transitions for smooth theme fading.
  * 19. (FIXED) GLOBAL CLICK LISTENER: The global click listener now fetches button references on every click, preventing stale references after a navbar re-render.
  * 20. (FIXED) SCROLL GLIDER LOGIC: Updated scroll arrow logic to be explicit, ensuring arrows hide/show correctly at scroll edges.
- * 21. (FIXED) USERNAME COLOR: Replaced hardcoded `text-white` on username with a CSS variable (`--menu-username-text`) and updated `window.applyTheme` to set this to black for specific light themes.
- * 22. **(NEW)** LOGO TINT COLOR: Added support for `logo-tint-color` property from `themes.json`.
+ * 21. **(FIXED)** USERNAME COLOR: Replaced hardcoded `text-white` on username with a CSS variable (`--menu-username-text`) and updated `window.applyTheme` to set this to black for specific light themes.
  */
 
 // =========================================================================
@@ -57,7 +56,6 @@ const THEME_STORAGE_KEY = 'user-navbar-theme';
 // It must contain ALL CSS variables used in injectStyles.
 const DEFAULT_THEME = {
     'logo-src': '/images/logo.png',
-    'logo-tint-color': 'transparent', // <--- ADDED: Default value for logo tint
     'navbar-bg': '#000000',
     'navbar-border': 'rgb(31 41 55)',
     'avatar-gradient': 'linear-gradient(135deg, #374151 0%, #111827 100%)',
@@ -66,7 +64,7 @@ const DEFAULT_THEME = {
     'menu-border': 'rgb(55 65 81)',
     'menu-divider': '#374151',
     'menu-text': '#d1d5db',
-    'menu-username-text': '#ffffff', 
+    'menu-username-text': '#ffffff', // --- USERNAME COLOR FIX --- (1/3) Added new variable
     'menu-item-hover-bg': 'rgb(55 65 81)',
     'menu-item-hover-text': '#ffffff',
     'glass-menu-bg': 'rgba(10, 10, 10, 0.8)',
@@ -101,6 +99,7 @@ const DEFAULT_THEME = {
  * This is exposed on `window` so settings.html can call it for live preview.
  * @param {object} theme - A theme object (like DEFAULT_THEME)
  */
+// --- USERNAME COLOR FIX --- (2/3) Modified this function
 window.applyTheme = (theme) => {
     const root = document.documentElement;
     if (!root) return;
@@ -145,17 +144,6 @@ window.applyTheme = (theme) => {
 let auth;
 let db;
 
-// Global state variables
-let currentScrollPosition = 0; // Stores the scroll position of the tab menu
-let scrollPositionRestored = false; // Flag to ensure scroll restoration runs only once per re-render
-let pagesData = {}; // Stores the fetched pages from the JSON
-let currentUser = null;
-let currentUserData = {};
-let currentIsPrivileged = false;
-let isPinHintShown = false; // Flag for the one-time hint
-let currentPinnedPageId = localStorage.getItem('pinned-page-id');
-
-
 // --- Self-invoking function to encapsulate all logic ---
 (function() {
     // Stop execution if Firebase config is not provided
@@ -197,7 +185,7 @@ let currentPinnedPageId = localStorage.getItem('pinned-page-id');
         };
     };
     
-    // Utility to get the correct icon class string
+    // Icon class utility remains the same
     const getIconClass = (iconName) => {
         if (!iconName) return '';
         const nameParts = iconName.trim().split(/\s+/).filter(p => p.length > 0);
@@ -228,7 +216,7 @@ let currentPinnedPageId = localStorage.getItem('pinned-page-id');
         return '';
     };
 
-    // Utility to determine if a tab is currently active (handles index.html vs folder path)
+    // Moved isTabActive here as it has no dependencies on firebase init
     const isTabActive = (tabUrl) => {
         const tabPathname = new URL(tabUrl, window.location.origin).pathname.toLowerCase();
         const currentPathname = window.location.pathname.toLowerCase();
@@ -271,7 +259,7 @@ let currentPinnedPageId = localStorage.getItem('pinned-page-id');
             const response = await fetch(PAGE_CONFIG_URL);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             pages = await response.json();
-            pagesData = pages; // Save globally
+          
             
         } catch (error) {
             console.error("Failed to load page identification config:", error);
@@ -279,7 +267,6 @@ let currentPinnedPageId = localStorage.getItem('pinned-page-id');
             pages = {
                 'home': { name: "Home", url: "../index.html", icon: "fa-solid fa-house" },
             };
-            pagesData = pages;
         }
 
         try {
@@ -296,7 +283,8 @@ let currentPinnedPageId = localStorage.getItem('pinned-page-id');
         }
     };
 
-    // --- 3. INJECT CSS STYLES ---
+    // --- 3. INJECT CSS STYLES (MOVED BEFORE INITIALIZEAPP) ---
+    // This now uses CSS variables for all colors and adds transitions.
     const injectStyles = () => {
         const style = document.createElement('style');
         style.textContent = `
@@ -310,16 +298,6 @@ let currentPinnedPageId = localStorage.getItem('pinned-page-id');
                 transition: background-color 0.3s ease, border-color 0.3s ease;
             }
             .auth-navbar nav { padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
-            
-            /* NEW: Logo Tinting Support */
-            #navbar-logo {
-                /* Set color for SVG logos or icon fonts */
-                color: var(--logo-tint-color, inherit); 
-                /* Apply a subtle drop shadow to tint a white image (common trick for PNGs/JPEGs) */
-                filter: drop-shadow(0 0 0.1px var(--logo-tint-color, transparent));
-                transition: color 0.3s ease, filter 0.3s ease;
-            }
-            
             .initial-avatar { 
                 background: var(--avatar-gradient); 
                 font-family: sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; 
@@ -342,7 +320,7 @@ let currentPinnedPageId = localStorage.getItem('pinned-page-id');
                 border-color: var(--menu-divider) !important;
                 transition: border-color 0.3s ease;
             }
-            /* Username color */
+            /* --- USERNAME COLOR FIX --- (3/3) Added new style rule */
             .auth-menu-username {
                 color: var(--menu-username-text);
                 transition: color 0.3s ease;
@@ -368,204 +346,780 @@ let currentPinnedPageId = localStorage.getItem('pinned-page-id');
                 transition: color 0.3s ease;
             }
 
-            /* Glass Menu Style for Pin Context Menu */
+            /* NEW: Glass Menu Style for Pin Context Menu */
             .glass-menu { 
                 background: var(--glass-menu-bg); 
-                border: 1px solid var(--glass-menu-border); 
+                backdrop-filter: blur(10px); 
+                -webkit-backdrop-filter: blur(10px); 
+                border: 1px solid var(--glass-menu-border);
                 transition: background-color 0.3s ease, border-color 0.3s ease;
-                backdrop-filter: blur(8px); 
             }
-            .glass-menu::before {
-                background: var(--glass-menu-bg); 
-                border-top: 1px solid var(--glass-menu-border);
-                border-left: 1px solid var(--glass-menu-border);
+            /* Helper for icons in menus */
+            .auth-menu-link i.w-4, .auth-menu-button i.w-4 { width: 1rem; text-align: center; } 
+
+            /* Tab Wrapper and Glide Buttons */
+            .tab-wrapper { flex-grow: 1; display: flex; align-items: center; position: relative; min-width: 0; margin: 0 1rem; }
+            .tab-scroll-container { flex-grow: 1; display: flex; align-items: center; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; -ms-overflow-style: none; padding-bottom: 5px; margin-bottom: -5px; scroll-behavior: smooth; }
+            .tab-scroll-container::-webkit-scrollbar { display: none; }
+            .scroll-glide-button {
+                position: absolute; top: 0; height: 100%; width: 4rem; display: flex; align-items: center; justify-content: center; 
+                color: var(--glide-icon-color); font-size: 1.2rem; cursor: pointer; 
+                opacity: 1; 
+                transition: opacity 0.3s, color 0.3s ease; 
+                z-index: 10; pointer-events: auto;
+            }
+            #glide-left { 
+                left: 0; background: var(--glide-gradient-left); 
+                justify-content: flex-start; padding-left: 0.5rem; 
+                transition: opacity 0.3s, color 0.3s ease, background 0.3s ease;
+            }
+            #glide-right { 
+                right: 0; background: var(--glide-gradient-right); 
+                justify-content: flex-end; padding-right: 0.5rem; 
+                transition: opacity 0.3s, color 0.3s ease, background 0.3s ease;
+            }
+            .scroll-glide-button.hidden { opacity: 0 !important; pointer-events: none !important; }
+            
+            .nav-tab { 
+                flex-shrink: 0; padding: 0.5rem 1rem; color: var(--tab-text); 
+                font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; 
+                transition: all 0.2s, color 0.3s ease, border-color 0.3s ease, background-color 0.3s ease; 
+                text-decoration: none; line-height: 1.5; display: flex; align-items: center; margin-right: 0.5rem; 
+                border: 1px solid transparent; 
+            }
+            .nav-tab:not(.active):hover { 
+                color: var(--tab-hover-text); 
+                border-color: var(--tab-hover-border); 
+                background-color: var(--tab-hover-bg); 
+            }
+            .nav-tab.active { 
+                color: var(--tab-active-text); 
+                border-color: var(--tab-active-border); 
+                background-color: var(--tab-active-bg); 
+            }
+            .nav-tab.active:hover { 
+                color: var(--tab-active-hover-text); 
+                border-color: var(--tab-active-hover-border); 
+                background-color: var(--tab-active-hover-bg); 
             }
             
-            /* Tab Styles */
-            .tab-link { 
-                color: var(--tab-text);
-                transition: color 0.3s, border-color 0.3s, background-color 0.3s; 
-            }
-            .tab-link:hover { 
-                color: var(--tab-hover-text);
-            }
-            .tab-link.active {
-                color: var(--tab-active-text);
-                border-color: var(--tab-active-border);
-                background-color: var(--tab-active-bg);
-            }
-            .tab-link.active:hover {
-                color: var(--tab-active-hover-text);
-                border-color: var(--tab-active-hover-border);
-                background-color: var(--tab-active-hover-bg);
-            }
-            
-            /* Glide/Scroll Button Styles */
-            .glide-btn {
-                color: var(--glide-icon-color);
-                transition: color 0.3s;
-            }
-            .glide-fade-left { 
-                background: var(--glide-gradient-left);
-                transition: background 0.3s ease;
-            }
-            .glide-fade-right { 
-                background: var(--glide-gradient-right);
-                transition: background 0.3s ease;
-            }
-            
-            /* Pin Button Styles */
-            .pin-btn {
+            /* Pin Button */
+            #pin-button {
                 border-color: var(--pin-btn-border);
-                color: var(--pin-btn-icon-color);
-                transition: background-color 0.2s, border-color 0.3s, color 0.3s;
+                transition: background-color 0.2s, border-color 0.3s ease;
             }
-            .pin-btn:hover {
+            #pin-button:hover {
                 background-color: var(--pin-btn-hover-bg);
             }
-            .pin-btn.pinned {
-                background-color: var(--pin-btn-hover-bg); /* Use hover background when pinned */
+            #pin-button-icon {
+                color: var(--pin-btn-icon-color);
+                transition: color 0.3s ease;
             }
-            
-            /* Pin Hint Styles */
-            #pin-hint-popover {
+
+            /* NEW: Pin Hint Styles */
+            .pin-hint-container {
+                position: absolute;
+                bottom: calc(100% + 10px); /* 10px above the button */
+                left: 50%;
+                transform: translateX(-50%) scale(0.8);
                 background: var(--hint-bg);
                 border: 1px solid var(--hint-border);
                 color: var(--hint-text);
-                transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+                padding: 0.5rem 1rem;
+                border-radius: 0.75rem;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+                opacity: 0;
+                pointer-events: none;
+                z-index: 1020;
+                transition: opacity 0.3s ease, transform 0.3s ease, background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+                white-space: nowrap;
+                font-size: 0.875rem;
             }
-            #pin-hint-popover::before {
-                background: var(--hint-bg);
-                border-top: 1px solid var(--hint-border);
-                border-left: 1px solid var(--hint-border);
+            .pin-hint-container.show {
+                opacity: 1;
+                transform: translateX(-50%) scale(1);
+                transition-delay: 0.2s; /* Slight delay on show */
             }
-
-            /* Custom Utility Classes (Tailwind-like) */
-            .flex-grow-0 { flex-grow: 0; }
-            .flex-shrink-0 { flex-shrink: 0; }
-            .hidden { display: none !important; }
-            .block { display: block !important; }
-            .w-12 { width: 3rem; }
-            .h-12 { height: 3rem; }
-            .rounded-full { border-radius: 9999px; }
-            .p-1 { padding: 0.25rem; }
-            .p-2 { padding: 0.5rem; }
-            .ml-auto { margin-left: auto; }
-            .mr-4 { margin-right: 1rem; }
-            .text-sm { font-size: 0.875rem; }
-            .font-semibold { font-weight: 600; }
-            .text-gray-400 { color: #9ca3af; }
-            .border { border-width: 1px; border-style: solid; }
-            .absolute { position: absolute; }
-            .relative { position: relative; }
-            .z-10 { z-index: 10; }
-            .items-center { align-items: center; }
-            .justify-center { justify-content: center; }
-            .cursor-pointer { cursor: pointer; }
-            .text-center { text-align: center; }
-            .whitespace-nowrap { white-space: nowrap; }
-            .overflow-x-scroll { overflow-x: scroll; }
-            .scrollbar-hide::-webkit-scrollbar { display: none; }
-            .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
         `;
         document.head.appendChild(style);
     };
 
-    // --- 4. FIREBASE INITIALIZATION ---
-    const initializeApp = (allPages) => {
-        // Apply initial default theme (or saved theme) immediately
-        injectStyles();
-        loadInitialTheme();
 
-        // 1. Initialize Firebase
-        if (!firebase.apps.length) {
-            firebase.initializeApp(FIREBASE_CONFIG);
+    // --- 2. INITIALIZE FIREBASE AND RENDER NAVBAR ---
+    const initializeApp = (pages) => {
+        // --- Create a div for the navbar to live in if it doesn't exist.
+        if (!document.getElementById('navbar-container')) {
+            const navbarDiv = document.createElement('div');
+            navbarDiv.id = 'navbar-container';
+            document.body.prepend(navbarDiv);
         }
+        
+        // --- Inject styles *before* anything else.
+        injectStyles();
+        
+        // --- NEW: Load and apply theme *before* first render.
+        let savedTheme;
+        try {
+            savedTheme = JSON.parse(localStorage.getItem(THEME_STORAGE_KEY));
+        } catch (e) {
+            savedTheme = null;
+            console.warn("Could not parse saved theme from Local Storage.");
+        }
+        // Apply saved theme or default theme
+        window.applyTheme(savedTheme || DEFAULT_THEME); 
+        // --- End Theme Loading ---
+
+        // Initialize Firebase with the compat libraries
+        const app = firebase.initializeApp(FIREBASE_CONFIG);
         auth = firebase.auth();
         db = firebase.firestore();
 
-        // 2. Set up global click listener for dropdowns
-        document.addEventListener('click', (event) => {
-            const authToggle = document.getElementById('auth-toggle');
-            const authMenu = document.getElementById('auth-menu');
-            const pinBtn = document.getElementById('pin-button');
-            const pinMenu = document.getElementById('pin-context-menu');
-            const pinHint = document.getElementById('pin-hint-popover');
+        // --- State variables for re-rendering ---
+        let allPages = pages;
+        let currentUser = null;
+        let currentUserData = null;
+        let currentIsPrivileged = false;
+        // State for current scroll position
+        let currentScrollLeft = 0; 
+        // Flag to ensure active tab centering only happens once per page load
+        let hasScrolledToActiveTab = false; 
+        // NEW: Flag to ensure global click listener is only added once
+        let globalClickListenerAdded = false;
+
+        // --- LocalStorage Keys ---
+        const PINNED_PAGE_KEY = 'navbar_pinnedPage';
+        const PIN_BUTTON_HIDDEN_KEY = 'navbar_pinButtonHidden';
+        const PIN_HINT_SHOWN_KEY = 'navbar_pinHintShown';
+
+        // --- Helper Functions ---
+
+        // Gets the key (e.g., 'home', 'dashboard') of the current page from the config
+        const getCurrentPageKey = () => {
+            for (const [key, page] of Object.entries(allPages)) {
+                if (isTabActive(page.url)) {
+                    return key;
+                }
+            }
+            return null;
+        };
+        
+        /**
+         * Generates the HTML for the pin button and its context menu.
+         * @returns {string} The HTML string for the pin button area.
+         */
+        const getPinButtonHtml = () => {
+            const pinnedPageKey = localStorage.getItem(PINNED_PAGE_KEY);
+            const isPinButtonHidden = localStorage.getItem(PIN_BUTTON_HIDDEN_KEY) === 'true';
+            const currentPageKey = getCurrentPageKey();
+            const pages = allPages;
+            const pinnedPageData = (pinnedPageKey && pages[pinnedPageKey]) ? pages[pinnedPageKey] : null;
+
+            if (isPinButtonHidden) {
+                return '';
+            }
             
-            // Handle Auth Menu
-            if (authMenu) {
-                const isAuthToggle = authToggle && authToggle.contains(event.target);
-                const isInsideMenu = authMenu.contains(event.target);
+            const pinButtonIcon = pinnedPageData ? getIconClass(pinnedPageData.icon) : 'fa-solid fa-map-pin';
+            const pinButtonUrl = pinnedPageData ? pinnedPageData.url : '#'; // '#' signals 'pin current'
+            const pinButtonTitle = pinnedPageData ? `Go to ${pinnedPageData.name}` : 'Pin current page';
+
+            // Context Menu Options
+
+            // NEW: Only show 'Repin' if a pin exists AND it's not the current page, OR if no pin exists but the current page is pin-able.
+            const shouldShowRepin = (pinnedPageKey && pinnedPageKey !== currentPageKey) || (!pinnedPageKey && currentPageKey);
+            
+            const repinOption = shouldShowRepin
+                ? `<button id="repin-button" class="auth-menu-link"><i class="fa-solid fa-thumbtack w-4"></i>Repin</button>` 
+                : ''; 
+            
+            const removeOrHideOption = pinnedPageData 
+                ? `<button id="remove-pin-button" class="auth-menu-link text-red-400 hover:text-red-300"><i class="fa-solid fa-xmark w-4"></i>Remove Pin</button>`
+                : `<button id="hide-pin-button" class="auth-menu-link text-red-400 hover:text-red-300"><i class="fa-solid fa-eye-slash w-4"></i>Hide Button</button>`;
+
+            return `
+                <div id="pin-area-wrapper" class="relative flex-shrink-0 flex items-center">
+                    <a href="${pinButtonUrl}" id="pin-button" class="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-700 transition" title="${pinButtonTitle}">
+                        <i id="pin-button-icon" class="${pinButtonIcon}"></i>
+                    </a>
+                    <div id="pin-context-menu" class="auth-menu-container glass-menu closed" style="width: 12rem;">
+                        ${repinOption}
+                        ${removeOrHideOption}
+                    </div>
+                    <div id="pin-hint" class="pin-hint-container">
+                        Right-click for options!
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+         * Replaces the pin button area HTML and re-attaches its event listeners.
+         * Used for all pin interactions that do not require a full navbar re-render.
+         */
+        const updatePinButtonArea = () => {
+            const pinWrapper = document.getElementById('pin-area-wrapper');
+            const newPinHtml = getPinButtonHtml();
+
+            if (pinWrapper) {
+                 // Check if the pin button is now hidden, if so, remove the wrapper entirely
+                if (newPinHtml === '') {
+                    pinWrapper.remove();
+                } else {
+                    // Update the HTML content
+                    pinWrapper.outerHTML = newPinHtml;
+                }
+                // Need to re-attach listeners after DOM replacement
+                setupPinEventListeners();
+            } else {
+                // If wrapper was not found, it might be the initial render of the pin button 
+                // after it was hidden, so we need to find the parent and append.
+                const authButtonContainer = document.getElementById('auth-controls-wrapper');
+                if (authButtonContainer) {
+                    authButtonContainer.insertAdjacentHTML('afterbegin', newPinHtml);
+                    setupPinEventListeners();
+                }
+            }
+            
+            // Ensure auth menu closes if it was open when the pin area was updated
+            document.getElementById('auth-menu-container')?.classList.add('closed');
+            document.getElementById('auth-menu-container')?.classList.remove('open');
+        };
+
+        /**
+         * NEW: Generates the HTML for the entire right-side auth/pin controls area.
+         * This uses the global state variables (currentUser, currentUserData).
+         * @returns {string} The HTML string for the auth controls.
+         */
+        const getAuthControlsHtml = () => {
+            // Use the global state variables
+            const user = currentUser;
+            const userData = currentUserData;
+            
+            const pinButtonHtml = getPinButtonHtml();
+
+            // --- Auth Views ---
+            const loggedOutView = `
+                <div id="auth-button-container" class="relative flex-shrink-0 flex items-center">
+                    <button id="auth-toggle" class="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-700 transition logged-out-auth-toggle">
+                        <i class="fa-solid fa-user"></i>
+                    </button>
+                    <div id="auth-menu-container" class="auth-menu-container closed" style="width: 12rem;">
+                        <a href="/authentication.html" class="auth-menu-link">
+                            <i class="fa-solid fa-lock w-4"></i>
+                            Authenticate
+                        </a>
+                    </div>
+                </div>
+            `;
+
+            const loggedInView = (user, userData) => {
+                const photoURL = user.photoURL || userData?.photoURL;
+                const username = userData?.username || user.displayName || 'User';
+                const email = user.email || 'No email';
+                const initial = username.charAt(0).toUpperCase();
+
+                const avatar = photoURL ?
+                    `<img src="${photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">` :
+                    `<div class="initial-avatar w-8 h-8 rounded-full text-sm font-semibold">${initial}</div>`;
                 
-                if (isAuthToggle) {
-                    // Toggle the menu
-                    authMenu.classList.toggle('open');
-                    authMenu.classList.toggle('closed');
-                } else if (!isInsideMenu) {
-                    // Close the menu if clicked outside
-                    authMenu.classList.remove('open');
-                    authMenu.classList.add('closed');
-                }
+                const isPinHidden = localStorage.getItem(PIN_BUTTON_HIDDEN_KEY) === 'true';
+                const showPinOption = isPinHidden 
+                    ? `<button id="show-pin-button" class="auth-menu-link"><i class="fa-solid fa-map-pin w-4"></i>Show Pin Button</button>` 
+                    : '';
+                
+                // FIX: Added w-full and min-w-0 to the header div to prevent centering bug
+                return `
+                    <div id="auth-button-container" class="relative flex-shrink-0 flex items-center">
+                        <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
+                            ${avatar}
+                        </button>
+                        <div id="auth-menu-container" class="auth-menu-container closed">
+                            <div class="px-3 py-2 border-b border-gray-700 mb-2 w-full min-w-0">
+                                <p class="text-sm font-semibold auth-menu-username truncate">${username}</p>
+                                <p class="text-xs text-gray-400 truncate">${email}</p>
+                            </div>
+                            <a href="/logged-in/dashboard.html" class="auth-menu-link">
+                                <i class="fa-solid fa-house-user w-4"></i>
+                                Dashboard
+                            </a>
+                            <a href="/logged-in/settings.html" class="auth-menu-link">
+                                <i class="fa-solid fa-gear w-4"></i>
+                                Settings
+                            </a>
+                            ${showPinOption}
+                            <button id="logout-button" class="auth-menu-button text-red-400 hover:bg-red-900/50 hover:text-red-300">
+                                <i class="fa-solid fa-right-from-bracket w-4"></i>
+                                Log Out
+                            </button>
+                        </div>
+                    </div>
+                `;
+            };
+
+            return `
+                ${pinButtonHtml}
+                ${user ? loggedInView(user, userData) : loggedOutView}
+            `;
+        }
+
+        /**
+         * NEW: Encapsulates all listeners for the auth button, dropdown, and actions.
+         * This is separated so it can be re-called during a partial update.
+         * @param {object} user - The current Firebase user object (or null)
+         */
+        const setupAuthToggleListeners = (user) => {
+            const toggleButton = document.getElementById('auth-toggle');
+            const menu = document.getElementById('auth-menu-container');
+
+            // Auth Toggle
+            if (toggleButton && menu) {
+                toggleButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    menu.classList.toggle('closed');
+                    menu.classList.toggle('open');
+                    // Close pin menu if open
+                    document.getElementById('pin-context-menu')?.classList.add('closed');
+                    document.getElementById('pin-context-menu')?.classList.remove('open');
+                });
             }
 
-            // Handle Pin Menu
-            if (pinMenu) {
-                const isPinToggle = pinBtn && pinBtn.contains(event.target);
-                const isInsidePinMenu = pinMenu.contains(event.target);
-
-                if (isPinToggle) {
-                    // Toggle the pin menu
-                    pinMenu.classList.toggle('closed');
-                    // Hide the hint if it was shown and the button was clicked
-                    if (pinHint) pinHint.classList.add('closed');
-                } else if (!isInsidePinMenu) {
-                    // Close the pin menu if clicked outside
-                    pinMenu.classList.add('closed');
-                }
+            // Auth Menu Action (Show Pin Button)
+            const showPinButton = document.getElementById('show-pin-button');
+            if (showPinButton) {
+                showPinButton.addEventListener('click', () => {
+                    localStorage.setItem(PIN_BUTTON_HIDDEN_KEY, 'false'); // 'false' string
+                    // UPDATED: Call partial update instead of full re-render
+                    updateAuthControlsArea();
+                });
             }
-        });
-
-
-        // 3. Set up Auth State Listener
-        auth.onAuthStateChanged(async (user) => {
-            let userData = null;
-            let isPrivilegedUser = false;
 
             if (user) {
-                // User is signed in. Fetch Firestore data.
-                try {
-                    const docRef = db.collection('users').doc(user.uid);
-                    const doc = await docRef.get();
-                    if (doc.exists) {
-                        userData = doc.data();
-                    }
-                    // Check for admin status
-                    isPrivilegedUser = user.email.toLowerCase() === PRIVILEGED_EMAIL.toLowerCase();
+                const logoutButton = document.getElementById('logout-button');
+                if (logoutButton) {
+                    logoutButton.addEventListener('click', () => {
+                        auth.signOut().catch(err => console.error("Logout failed:", err));
+                    });
+                }
+            }
+        };
 
+        /**
+         * NEW: Replaces the auth/pin area HTML and re-attaches its event listeners.
+         * Used for all pin/auth-menu interactions that do not require a full navbar re-render.
+         */
+        const updateAuthControlsArea = () => {
+            const authWrapper = document.getElementById('auth-controls-wrapper');
+            if (!authWrapper) return;
+
+            // Get new HTML using the *current* global state
+            authWrapper.innerHTML = getAuthControlsHtml();
+
+            // Re-attach listeners for the new DOM elements
+            setupPinEventListeners();
+            setupAuthToggleListeners(currentUser); // Pass in the global user state
+        }
+
+
+        /**
+         * The rerenderNavbar function is now primarily for initial load and auth changes.
+         * Pin interactions will use updatePinButtonArea or updateAuthControlsArea.
+         * @param {boolean} preserveScroll - If true, saves and restores the current scroll position.
+         */
+        const rerenderNavbar = (preserveScroll = false) => {
+             if (preserveScroll) {
+                const tabContainer = document.querySelector('.tab-scroll-container');
+                if (tabContainer) {
+                    currentScrollLeft = tabContainer.scrollLeft;
+                } else {
+                    currentScrollLeft = 0;
+                }
+            }
+            renderNavbar(currentUser, currentUserData, allPages, currentIsPrivileged);
+        };
+
+        // --- 4. RENDER THE NAVBAR HTML ---
+        const renderNavbar = (user, userData, pages, isPrivilegedUser) => {
+            const container = document.getElementById('navbar-container');
+            if (!container) return; 
+
+            // Logo path is now handled by the applyTheme function,
+            // but we need a default src for the img tag itself.
+            const logoPath = "/images/logo.png"; 
+            
+            // Filter and map pages for tabs, applying adminOnly filter
+            const tabsHtml = Object.values(pages || {})
+                .filter(page => !(page.adminOnly && !isPrivilegedUser)) // Filter out adminOnly tabs for non-privileged users
+                .map(page => {
+                    const isActive = isTabActive(page.url);
+                    const activeClass = isActive ? 'active' : '';
+                    const iconClasses = getIconClass(page.icon);
+                    
+                    // Admin class removed
+                    return `<a href="${page.url}" class="nav-tab ${activeClass}"><i class="${iconClasses} mr-2"></i>${page.name}</a>`;
+                }).join('');
+
+            
+            // --- NEW: Auth controls HTML is generated by a helper ---
+            // This now uses the global state, as renderNavbar is only called
+            // after the global state is updated.
+            const authControlsHtml = getAuthControlsHtml();
+
+            // --- Assemble Final Navbar HTML ---
+            container.innerHTML = `
+                <header class="auth-navbar">
+                    <nav>
+                        <a href="/" class="flex items-center space-x-2 flex-shrink-0">
+                            <img src="${logoPath}" alt="4SP Logo" class="h-8 w-auto" id="navbar-logo">
+                        </a>
+
+                        <div class="tab-wrapper">
+                            <button id="glide-left" class="scroll-glide-button"><i class="fa-solid fa-chevron-left"></i></button>
+
+                            <div class="tab-scroll-container">
+                                ${tabsHtml}
+                            </div>
+                            
+                            <button id="glide-right" class="scroll-glide-button"><i class="fa-solid fa-chevron-right"></i></button>
+                        </div>
+
+                        <div id="auth-controls-wrapper" class="flex items-center gap-3 flex-shrink-0">
+                            ${authControlsHtml}
+                        </div>
+                    </nav>
+                </header>
+            `;
+
+            // --- 5. SETUP EVENT LISTENERS (Called after full render) ---
+            setupEventListeners(user);
+
+            // --- Apply theme again after render ---
+            // This ensures the logo src is correct if it was just rendered.
+            let savedTheme;
+            try {
+                savedTheme = JSON.parse(localStorage.getItem(THEME_STORAGE_KEY));
+            } catch (e) { savedTheme = null; }
+            window.applyTheme(savedTheme || DEFAULT_THEME); 
+            // --- End theme apply ---
+
+            const tabContainer = document.querySelector('.tab-scroll-container');
+            
+            // Check if we need to restore scroll position (from a full re-render)
+            if (currentScrollLeft > 0) {
+                const savedScroll = currentScrollLeft;
+                // Use requestAnimationFrame to ensure the DOM has painted the new content
+                // before setting the scroll, preventing the jump.
+                requestAnimationFrame(() => {
+                    if (tabContainer) {
+                        tabContainer.scrollLeft = savedScroll;
+                    }
+                    currentScrollLeft = 0; // Reset state after restoration
+                    // Nested frame to update arrows *after* scroll is applied
+                    requestAnimationFrame(() => {
+                        updateScrollGilders();
+                    });
+                });
+            // NEW: Only run centering logic if we are NOT restoring scroll AND we haven't scrolled yet.
+            } else if (!hasScrolledToActiveTab) { 
+                // If it's the first load, center the active tab.
+                const activeTab = document.querySelector('.nav-tab.active');
+                if (activeTab && tabContainer) {
+                    
+                    const centerOffset = (tabContainer.offsetWidth - activeTab.offsetWidth) / 2;
+                    const idealCenterScroll = activeTab.offsetLeft - centerOffset;
+                    
+                    const maxScroll = tabContainer.scrollWidth - tabContainer.offsetWidth;
+                    const extraRoomOnRight = maxScroll - idealCenterScroll;
+                    
+                    let scrollTarget;
+
+                    // =================================================================
+                    // ========= MODIFICATION 1 of 3 (Aggressive Set) ========
+                    // =================================================================
+                    if (idealCenterScroll > 0 && extraRoomOnRight < centerOffset) {
+                        // Snap all the way to the right by setting a value
+                        // *larger* than the max, forcing the browser to clamp.
+                        scrollTarget = maxScroll + 50;
+                    } else {
+                        scrollTarget = Math.max(0, idealCenterScroll);
+                    }
+                    // =================================================================
+                    // ====================== END MODIFICATION =========================
+                    // =================================================================
+
+                    // Set scroll and update gilders in the next frame to ensure
+                    // the scrollLeft value is processed by the browser first.
+                    requestAnimationFrame(() => {
+                        tabContainer.scrollLeft = scrollTarget;
+                        // Nested frame to update arrows *after* scroll is applied
+                        requestAnimationFrame(() => {
+                            updateScrollGilders();
+                        });
+                    });
+                    
+                    // IMPORTANT: Set flag to prevent future automatic centering
+                    hasScrolledToActiveTab = true; 
+                } else if (tabContainer) {
+                    // If no active tab (or no tabContainer), still need to update gilders
+                    // to ensure they are hidden correctly on a blank page.
+                    requestAnimationFrame(() => {
+                        updateScrollGilders();
+                    });
+                }
+            }
+        };
+
+
+        // =================================================================
+        // ========= MODIFICATION 2 of 3 (Tolerant Check) ========
+        // =================================================================
+        const updateScrollGilders = () => {
+            const container = document.querySelector('.tab-scroll-container');
+            const leftButton = document.getElementById('glide-left');
+            const rightButton = document.getElementById('glide-right');
+
+            if (!container || !leftButton || !rightButton) return;
+            
+            const hasHorizontalOverflow = container.scrollWidth > container.offsetWidth + 2; // Add 2px tolerance
+
+            if (hasHorizontalOverflow) {
+                // Use a small tolerance
+                const isScrolledToLeft = container.scrollLeft <= 5;
+                
+                // Calculate max scroll and check against it with tolerance
+                const maxScrollLeft = container.scrollWidth - container.offsetWidth;
+
+                // NEW TOLERANCE LOGIC:
+                // Check if the current scroll position, *plus a 5px tolerance*,
+                // is greater than or equal to the max scroll. This handles
+                // browser sub-pixel rounding errors.
+                const isScrolledToRight = (container.scrollLeft + 5) >= maxScrollLeft;
+
+                // Explicitly add or remove the class
+                if (isScrolledToLeft) {
+                    leftButton.classList.add('hidden');
+                } else {
+                    leftButton.classList.remove('hidden');
+                }
+
+                if (isScrolledToRight) {
+                    rightButton.classList.add('hidden');
+                } else {
+                    rightButton.classList.remove('hidden');
+                }
+            } else {
+                // If there is no overflow, hide both buttons
+                leftButton.classList.add('hidden');
+                rightButton.classList.add('hidden');
+            }
+        };
+        // =================================================================
+        // ====================== END MODIFICATION =========================
+        // =================================================================
+
+
+        // =================================================================
+        // ========= MODIFICATION 3 of 3 (Aggressive Set) ========
+        // =================================================================
+        /**
+         * NEW: Forcefully scrolls the tab container all the way to the right
+         * and ensures the right arrow is hidden.
+         */
+        const forceScrollToRight = () => {
+            const tabContainer = document.querySelector('.tab-scroll-container');
+            if (!tabContainer) return;
+
+            // Calculate the maximum possible scroll position
+            const maxScroll = tabContainer.scrollWidth - tabContainer.offsetWidth;
+
+            // Use requestAnimationFrame to guarantee the scroll happens,
+            // and *then* the arrow visibility is updated.
+            requestAnimationFrame(() => {
+                // Set scrollLeft to a value *larger* than the max.
+                // The browser will automatically clamp this to the
+                // highest possible value, which is more reliable.
+                tabContainer.scrollLeft = maxScroll + 50;
+                
+                // Use a nested frame to update arrows *after* scroll is applied
+                requestAnimationFrame(() => {
+                    updateScrollGilders();
+                });
+            });
+        };
+        // =================================================================
+        // ====================== END MODIFICATION =========================
+        // =================================================================
+        
+        // Split setupEventListeners into main and pin-specific, 
+        // as pin listeners need to be re-attached on partial update.
+        const setupPinEventListeners = () => {
+            const pinButton = document.getElementById('pin-button');
+            const pinContextMenu = document.getElementById('pin-context-menu');
+            const repinButton = document.getElementById('repin-button');
+            const removePinButton = document.getElementById('remove-pin-button');
+            const hidePinButton = document.getElementById('hide-pin-button');
+
+            if (pinButton && pinContextMenu) {
+                // Left-click: Navigate or Pin
+                pinButton.addEventListener('click', (e) => {
+                    if (pinButton.getAttribute('href') === '#') {
+                        e.preventDefault(); // Stop navigation
+                        
+                        // --- NEW HINT LOGIC ---
+                        const hintShown = localStorage.getItem(PIN_HINT_SHOWN_KEY) === 'true';
+                        if (!hintShown) {
+                            const hintEl = document.getElementById('pin-hint');
+                            if (hintEl) {
+                                hintEl.classList.add('show');
+                                localStorage.setItem(PIN_HINT_SHOWN_KEY, 'true');
+                                setTimeout(() => {
+                                    hintEl.classList.remove('show');
+                                }, 6000); // 6 seconds
+                            }
+                        }
+                        // --- END HINT LOGIC ---
+
+                        const currentPageKey = getCurrentPageKey();
+                        if (currentPageKey) {
+                            localStorage.setItem(PINNED_PAGE_KEY, currentPageKey);
+                            updatePinButtonArea(); // Use partial update!
+                        } else {
+                            // Optional: Add feedback that page can't be pinned
+                            console.warn("This page cannot be pinned as it's not in page-identification.json");
+                        }
+                    }
+                });
+
+                // Right-click: Open Context Menu
+                pinButton.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    pinContextMenu.classList.toggle('closed');
+                    pinContextMenu.classList.toggle('open');
+                    // Close auth menu if open
+                    document.getElementById('auth-menu-container')?.classList.add('closed');
+                    document.getElementById('auth-menu-container')?.classList.remove('open');
+                });
+            }
+
+            // Context Menu Actions
+            if (repinButton) {
+                repinButton.addEventListener('click', () => {
+                    const currentPageKey = getCurrentPageKey();
+                    if (currentPageKey) {
+                        localStorage.setItem(PINNED_PAGE_KEY, currentPageKey);
+                        updatePinButtonArea(); // This only affects the pin button, so partial update is fine
+                    }
+                    // Regardless of success, close the menu
+                    pinContextMenu.classList.add('closed');
+                    pinContextMenu.classList.remove('open');
+                });
+            }
+            if (removePinButton) {
+                removePinButton.addEventListener('click', () => {
+                    localStorage.removeItem(PINNED_PAGE_KEY);
+                    updatePinButtonArea(); // This only affects the pin button, so partial update is fine
+                });
+            }
+            if (hidePinButton) {
+                hidePinButton.addEventListener('click', () => {
+                    localStorage.setItem(PIN_BUTTON_HIDDEN_KEY, 'true');
+                    // **UPDATED**: Call the full auth controls update,
+                    // as this action needs to update the auth menu too.
+                    updateAuthControlsArea();
+                });
+            }
+        }
+
+        const setupEventListeners = (user) => {
+            // Scroll Glide Button setup
+            const tabContainer = document.querySelector('.tab-scroll-container');
+            const leftButton = document.getElementById('glide-left');
+            const rightButton = document.getElementById('glide-right');
+
+            // Debounce resize, but NOT scroll
+            const debouncedUpdateGilders = debounce(updateScrollGilders, 50);
+
+            if (tabContainer) {
+                const scrollAmount = tabContainer.offsetWidth * 0.8; 
+                // UPDATED: Scroll listener is no longer debounced
+                tabContainer.addEventListener('scroll', updateScrollGilders);
+                window.addEventListener('resize', debouncedUpdateGilders);
+                
+                if (leftButton) {
+                    leftButton.addEventListener('click', () => {
+                        tabContainer.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+                    });
+                }
+                if (rightButton) {
+                    rightButton.addEventListener('click', () => {
+                        tabContainer.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+                    });
+                }
+            }
+
+            // --- NEW: Auth Toggle Listeners (Called on full render) ---
+            // This function now contains the auth toggle, logout, and "show pin" listeners
+            setupAuthToggleListeners(user);
+
+            // --- NEW: Pin Button Event Listeners (Called on full render) ---
+            setupPinEventListeners();
+
+            // Global click listener to close *both* menus
+            // NEW: Only add this listener ONCE
+            if (!globalClickListenerAdded) {
+                document.addEventListener('click', (e) => {
+                    // --- FIX START: Bug 1 ---
+                    // Fetched elements *inside* the listener to avoid stale references
+                    // after a re-render. Used .contains() to handle clicks on child icons.
+                    const menu = document.getElementById('auth-menu-container');
+                    const toggleButton = document.getElementById('auth-toggle');
+                    
+                    if (menu && menu.classList.contains('open')) {
+                        // Check if the click was outside the menu AND outside the toggle button
+                        if (!menu.contains(e.target) && (toggleButton && !toggleButton.contains(e.target))) {
+                            menu.classList.add('closed');
+                            menu.classList.remove('open');
+                        }
+                    }
+                    
+                    const pinButton = document.getElementById('pin-button');
+                    const pinContextMenu = document.getElementById('pin-context-menu');
+
+                    if (pinContextMenu && pinContextMenu.classList.contains('open')) {
+                         // Check if the click was outside the pin menu AND outside the pin button
+                        if (!pinContextMenu.contains(e.target) && (pinButton && !pinButton.contains(e.target))) {
+                            pinContextMenu.classList.add('closed');
+                            pinContextMenu.classList.remove('open');
+                        }
+                    }
+                    // --- FIX END: Bug 1 ---
+                });
+                globalClickListenerAdded = true;
+            }
+        };
+
+        // --- 6. AUTH STATE LISTENER ---
+        auth.onAuthStateChanged(async (user) => {
+            let isPrivilegedUser = false;
+            let userData = null;
+            
+            if (user) {
+                // Check for the privileged user email
+                isPrivilegedUser = user.email === PRIVILEGED_EMAIL;
+
+                // User is signed in. Fetch their data from Firestore.
+                try {
+                    const userDoc = await db.collection('users').doc(user.uid).get();
+                    userData = userDoc.exists ? userDoc.data() : null;
                 } catch (error) {
                     console.error("Error fetching user data:", error);
-                    userData = { displayName: user.displayName || 'User', theme: 'Dark' };
+                    // Continue rendering even if Firestore fails
                 }
             }
             
-            // Ensure userData has a fallback if Firestore fetch failed or doc didn't exist
-            if (!userData && user) {
-                 userData = { displayName: user.displayName || 'User', theme: 'Dark' };
-            }
-
             // Update global state
             currentUser = user;
             currentUserData = userData;
             currentIsPrivileged = isPrivilegedUser;
             
-            // Apply the user's saved theme before rendering
-            if (userData && userData.theme) {
-                loadTheme(userData.theme);
-            } else {
-                 loadTheme(DEFAULT_THEME.name || 'Dark'); // Apply default theme if no user/data
-            }
-
-
             // Render the navbar with the new state. 
             // Full re-render on auth change, don't preserve scroll unless explicitly requested.
             renderNavbar(currentUser, currentUserData, allPages, currentIsPrivileged);
@@ -588,509 +1142,8 @@ let currentPinnedPageId = localStorage.getItem('pinned-page-id');
         });
 
         // --- FINAL SETUP ---
-        document.addEventListener('DOMContentLoaded', run);
+        // (MOVED to start of initializeApp)
     };
-
-    // --- 5. THEME UTILITIES ---
-    /**
-     * Loads the initial theme from Local Storage or uses the default.
-     * This runs before the auth listener fires, for immediate styling.
-     */
-    const loadInitialTheme = () => {
-        const savedThemeName = localStorage.getItem(THEME_STORAGE_KEY);
-        if (savedThemeName) {
-            // Load the full theme object from themes.json and apply it
-            loadTheme(savedThemeName);
-        } else {
-            // Apply default theme immediately
-            window.applyTheme(DEFAULT_THEME);
-        }
-    };
-
-    /**
-     * Loads a theme by name from themes.json and applies it.
-     * @param {string} themeName - The name of the theme to load.
-     */
-    const loadTheme = async (themeName) => {
-        try {
-            const response = await fetch('../themes.json');
-            const themes = await response.json();
-            const themeToApply = themes.find(t => t.name === themeName) || DEFAULT_THEME;
-            window.applyTheme(themeToApply);
-            // Save the applied theme name for next load, even if from auth data
-            localStorage.setItem(THEME_STORAGE_KEY, themeToApply.name);
-        } catch (error) {
-            console.error("Failed to load themes.json or apply theme:", error);
-            window.applyTheme(DEFAULT_THEME);
-        }
-    };
-
-    // --- 6. PIN UTILITIES ---
-
-    const setPinnedPage = (pageId, preserveScroll = true) => {
-        const oldPinId = currentPinnedPageId;
-        if (oldPinId === pageId) {
-            // Unpin if the same page is clicked
-            currentPinnedPageId = null;
-            localStorage.removeItem('pinned-page-id');
-        } else {
-            currentPinnedPageId = pageId;
-            localStorage.setItem('pinned-page-id', pageId);
-            // Show the one-time hint on first pin action
-            if (!isPinHintShown) {
-                showPinHint();
-                isPinHintShown = true; 
-            }
-        }
-        
-        // Only update the controls (pin button and menu) for a smooth, no-jump experience
-        renderAuthAndPinControls(currentUser, currentUserData, currentIsPrivileged, currentPinnedPageId, pagesData, preserveScroll);
-    };
-
-    const showPinHint = () => {
-        const hint = document.getElementById('pin-hint-popover');
-        if (!hint) return;
-
-        hint.classList.remove('closed');
-        setTimeout(() => {
-            hint.classList.add('closed');
-        }, 5000); // Hint remains for 5 seconds
-    };
-    
-    // --- 7. RENDERING LOGIC ---
-
-    /**
-     * Generates the HTML for the main tab menu.
-     * @param {object} allPages - The page configuration object.
-     */
-    const createTabMenuHTML = (allPages) => {
-        const tabs = Object.entries(allPages).map(([id, page]) => {
-            // Check if the current window location matches the tab's URL
-            const isActive = isTabActive(page.url);
-            const activeClass = isActive ? 'active border-b-2' : 'border-b-2 border-transparent';
-            const iconClass = getIconClass(page.icon);
-
-            return `
-                <a href="${page.url}" 
-                   id="tab-${id}"
-                   class="tab-link flex-shrink-0 flex items-center h-full px-4 text-sm font-medium ${activeClass} transition-colors duration-200"
-                   data-tab-id="${id}"
-                   title="${page.name}">
-                    ${iconClass ? `<i class="${iconClass} mr-2"></i>` : ''}
-                    ${page.name}
-                </a>
-            `;
-        }).join('');
-
-        return `
-            <div id="tab-menu-container" class="relative flex flex-grow-0 flex-shrink-0 items-center h-full mr-4">
-                <div id="glide-fade-left" class="glide-fade-left absolute left-0 top-0 h-full w-12 hidden transition-opacity duration-200 pointer-events-none"></div>
-                <div id="tab-menu" class="flex items-center h-full overflow-x-scroll scrollbar-hide" style="scroll-behavior: auto;">
-                    ${tabs}
-                </div>
-                <div id="glide-fade-right" class="glide-fade-right absolute right-0 top-0 h-full w-12 transition-opacity duration-200 pointer-events-none"></div>
-                
-                <button id="scroll-left-btn" class="glide-btn absolute left-0 top-0 h-full w-12 flex items-center justify-start p-1.5 transition-opacity duration-200 z-10 hidden" style="background: transparent;">
-                    <i class="fa-solid fa-chevron-left text-xl"></i>
-                </button>
-                <button id="scroll-right-btn" class="glide-btn absolute right-0 top-0 h-full w-12 flex items-center justify-end p-1.5 transition-opacity duration-200 z-10" style="background: transparent;">
-                    <i class="fa-solid fa-chevron-right text-xl"></i>
-                </button>
-            </div>
-        `;
-    };
-
-    /**
-     * Generates the HTML for the user's dropdown menu.
-     * @param {object} user - The Firebase user object.
-     * @param {object} userData - The Firestore user data.
-     * @param {boolean} isPrivileged - True if the user is the admin.
-     */
-    const createAuthMenuHTML = (user, userData, isPrivileged) => {
-        const name = (userData && userData.displayName) ? userData.displayName : 'Loading...';
-        const email = user ? user.email : 'user@example.com';
-        const initial = name.charAt(0).toUpperCase();
-
-        return `
-            <div id="auth-controls" class="relative flex flex-shrink-0 items-center gap-2">
-                
-                ${createPinButtonAndMenuHTML(currentPinnedPageId, pagesData)}
-                
-                <button id="auth-toggle" class="relative w-10 h-10 rounded-full border-2 border-solid border-gray-400 overflow-hidden cursor-pointer flex-shrink-0" title="Account Settings">
-                    <div class="initial-avatar w-full h-full text-lg font-bold">${initial}</div>
-                </button>
-
-                <div id="auth-menu" class="auth-menu-container closed">
-                    <div class="flex flex-col items-center py-2 px-3 mb-2 border-b border-gray-700">
-                        <div class="w-10 h-10 rounded-full border-2 border-solid border-gray-400 overflow-hidden mb-2">
-                            <div class="initial-avatar w-full h-full text-lg font-bold">${initial}</div>
-                        </div>
-                        <p class="auth-menu-username text-sm font-semibold whitespace-nowrap overflow-hidden text-ellipsis max-w-full">${name}</p>
-                        <p class="text-xs text-gray-400 whitespace-nowrap overflow-hidden text-ellipsis max-w-full">${email}</p>
-                    </div>
-                    
-                    <a href="/settings.html" class="auth-menu-link">
-                        <i class="fa-solid fa-gear w-5 h-5"></i>
-                        Settings
-                    </a>
-                    
-                    ${isPrivileged ? `
-                        <a href="/beta/settings.html" class="auth-menu-link">
-                            <i class="fa-solid fa-screwdriver-wrench w-5 h-5"></i>
-                            Beta Settings
-                        </a>
-                    ` : ''}
-
-                    <button id="logout-button" class="auth-menu-button mt-2">
-                        <i class="fa-solid fa-arrow-right-from-bracket w-5 h-5"></i>
-                        Sign out
-                    </button>
-                </div>
-            </div>
-        `;
-    };
-    
-    /**
-     * Generates the HTML for the Pin Button and its context menu.
-     * @param {string | null} pinnedId - The ID of the currently pinned page.
-     * @param {object} allPages - The page configuration object.
-     */
-    const createPinButtonAndMenuHTML = (pinnedId, allPages) => {
-        // --- Pin Button ---
-        const isCurrentPagePinned = isTabActive(pinnedId ? allPages[pinnedId].url : 'NO_MATCH');
-        const pinButtonClass = pinnedId ? 'pinned' : '';
-        const pinIcon = pinnedId ? 'fa-solid fa-thumbtack' : 'fa-solid fa-thumbtack'; // Icon is solid regardless
-
-        let pinTitle = 'Pin a page for quick access';
-        if (pinnedId) {
-            pinTitle = `Pinned: ${allPages[pinnedId].name} (Click to manage)`;
-        }
-
-        // --- Context Menu Content ---
-        let contextMenuContent = '';
-        
-        if (pinnedId) {
-            const pinnedPage = allPages[pinnedId];
-            contextMenuContent += `
-                <div class="px-3 py-2 text-sm font-semibold text-gray-400 border-b border-gray-700">
-                    <i class="fa-solid fa-thumbtack mr-2"></i>
-                    Pinned: ${pinnedPage.name}
-                </div>
-                <a href="${pinnedPage.url}" class="auth-menu-link block">
-                    <i class="fa-solid fa-arrow-up-right-from-square w-5 h-5"></i>
-                    Go to Pinned Page
-                </a>
-                <button data-action="unpin" class="auth-menu-button block">
-                    <i class="fa-solid fa-trash-can w-5 h-5"></i>
-                    Unpin Current Page
-                </button>
-            `;
-            
-            // Only show 'Repin Current' if a page is pinned, but it's *not* the current page
-            if (!isCurrentPagePinned) {
-                 contextMenuContent += `
-                    <button data-action="repin-current" class="auth-menu-button block mt-1">
-                        <i class="fa-solid fa-location-arrow w-5 h-5"></i>
-                        Repin to Current Page
-                    </button>
-                `;
-            }
-
-        } else {
-            // No page is pinned. Offer to pin the current page.
-            const currentPageId = getCurrentPageId(allPages);
-            const currentPage = currentPageId ? allPages[currentPageId] : null;
-
-            if (currentPage) {
-                 contextMenuContent += `
-                    <div class="px-3 py-2 text-sm font-semibold text-gray-400 border-b border-gray-700">
-                        <i class="fa-solid fa-thumbtack mr-2"></i>
-                        No Page Pinned
-                    </div>
-                    <button data-action="pin-current" class="auth-menu-button block">
-                        <i class="fa-solid fa-location-dot w-5 h-5"></i>
-                        Pin Current Page (${currentPage.name})
-                    </button>
-                `;
-            } else {
-                contextMenuContent += `
-                    <div class="px-3 py-2 text-sm font-semibold text-gray-400">
-                        <i class="fa-solid fa-thumbtack mr-2"></i>
-                        No Page Pinned. Browse to a page to pin it!
-                    </div>
-                `;
-            }
-        }
-        
-        // --- Pin Hint (One-time popover) ---
-        const pinHintHTML = isPinHintShown ? '' : `
-            <div id="pin-hint-popover" class="absolute bottom-full right-0 mb-3 w-48 p-2 rounded-lg text-xs font-medium border glass-menu closed z-20 transition-all duration-300 transform-origin-bottom-right">
-                <div class="absolute w-3 h-3 bg-red-500 transform rotate-45 -right-0.5 bottom-0 border-r border-b"></div>
-                Click this button to pin a page for instant access, regardless of your current location!
-            </div>
-        `;
-
-
-        return `
-            <div class="relative flex flex-shrink-0 items-center">
-                <button id="pin-button" class="pin-btn relative w-10 h-10 rounded-full border-2 border-solid overflow-hidden cursor-pointer flex items-center justify-center flex-shrink-0 ${pinButtonClass}" title="${pinTitle}">
-                    <i class="${pinIcon} text-lg"></i>
-                </button>
-                
-                <div id="pin-context-menu" class="auth-menu-container glass-menu closed" style="width: 15rem;">
-                    ${contextMenuContent}
-                </div>
-                
-                ${pinHintHTML}
-            </div>
-        `;
-    };
-
-
-    /**
-     * Generates the HTML for the logged out state.
-     */
-    const createLoggedOutHTML = () => {
-        return `
-            <div id="auth-controls" class="relative flex flex-shrink-0 items-center gap-2">
-                <a href="/authentication.html" id="logged-out-auth-link" class="logged-out-auth-toggle w-10 h-10 rounded-full border-2 border-solid border-gray-400 overflow-hidden cursor-pointer flex items-center justify-center flex-shrink-0 transition-colors duration-200" title="Sign In / Register">
-                    <i class="fa-solid fa-right-to-bracket text-lg text-gray-300"></i>
-                </a>
-            </div>
-        `;
-    };
-
-    /**
-     * Utility to get the ID of the current page from the config.
-     * @param {object} allPages - The page configuration object.
-     * @returns {string | null} The ID of the current page, or null.
-     */
-    const getCurrentPageId = (allPages) => {
-        const url = window.location.pathname;
-        const currentId = Object.keys(allPages).find(id => {
-            const pageUrl = allPages[id].url;
-            return isTabActive(pageUrl);
-        });
-        return currentId || null;
-    };
-    
-    /**
-     * Binds all necessary event listeners to the rendered elements.
-     */
-    const bindEventListeners = () => {
-        const tabMenu = document.getElementById('tab-menu');
-        const scrollLeftBtn = document.getElementById('scroll-left-btn');
-        const scrollRightBtn = document.getElementById('scroll-right-btn');
-        const glideFadeLeft = document.getElementById('glide-fade-left');
-        const glideFadeRight = document.getElementById('glide-fade-right');
-        const logoutButton = document.getElementById('logout-button');
-        const pinMenu = document.getElementById('pin-context-menu');
-        const authControls = document.getElementById('auth-controls');
-        const pinBtn = document.getElementById('pin-button');
-        
-        // --- Pin Menu Actions ---
-        if (pinMenu) {
-            pinMenu.querySelectorAll('[data-action]').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const action = e.currentTarget.getAttribute('data-action');
-                    const currentPageId = getCurrentPageId(pagesData);
-                    
-                    if (action === 'unpin') {
-                        setPinnedPage(currentPinnedPageId); // Calling setPinnedPage with current ID unpins it
-                    } else if (action === 'pin-current' || action === 'repin-current') {
-                        // For 'pin-current' (when nothing is pinned) or 'repin-current' (when something else is pinned)
-                        if (currentPageId) {
-                            setPinnedPage(currentPageId);
-                        } else {
-                            console.warn("Cannot pin: Current page is not in the configuration.");
-                        }
-                    }
-                    pinMenu.classList.add('closed');
-                });
-            });
-        }
-        
-        // --- Logout ---
-        if (logoutButton) {
-            logoutButton.addEventListener('click', async () => {
-                try {
-                    await auth.signOut();
-                    // Auth state listener handles the redirect
-                    console.log("User signed out.");
-                } catch (error) {
-                    console.error("Error signing out:", error);
-                }
-            });
-        }
-
-        // --- Tab Scrolling Logic ---
-        const SCROLL_DISTANCE = 150; // Pixels to scroll per click
-
-        const updateScrollUI = () => {
-            if (!tabMenu) return;
-
-            const maxScroll = tabMenu.scrollWidth - tabMenu.clientWidth;
-            const current = tabMenu.scrollLeft;
-
-            // Update Scroll Buttons
-            scrollLeftBtn.classList.toggle('hidden', current <= 5);
-            scrollRightBtn.classList.toggle('hidden', current >= maxScroll - 5);
-
-            // Update Glide Fades
-            glideFadeLeft.classList.toggle('hidden', current <= 5);
-            glideFadeRight.classList.toggle('hidden', current >= maxScroll - 5);
-        };
-        
-        // Scroll function using requestAnimationFrame for smoothness
-        const performScroll = (amount) => {
-            if (!tabMenu) return;
-            // Prevent immediate re-render updates from scrolling the preserved position
-            scrollPositionRestored = false; 
-            tabMenu.scrollBy({ left: amount, behavior: 'smooth' });
-            // Update UI instantly on scroll button click
-            // Use setTimeout to allow the smooth scroll to start before updating the state
-            setTimeout(updateScrollUI, 10); 
-        };
-
-        if (tabMenu) {
-            tabMenu.addEventListener('scroll', updateScrollUI);
-            
-            // Initial UI setup
-            requestAnimationFrame(updateScrollUI);
-            
-            // Attach scroll button listeners
-            if (scrollLeftBtn) scrollLeftBtn.addEventListener('click', () => performScroll(-SCROLL_DISTANCE));
-            if (scrollRightBtn) scrollRightBtn.addEventListener('click', () => performScroll(SCROLL_DISTANCE));
-            
-            // Save scroll position on scroll
-            tabMenu.addEventListener('scroll', () => {
-                currentScrollPosition = tabMenu.scrollLeft;
-            });
-            
-            // Center the active tab only on the FIRST full render
-            if (authControls && !authControls.dataset.initialRenderDone) {
-                 centerActiveTab();
-                 authControls.dataset.initialRenderDone = 'true';
-            }
-        }
-        
-        // --- Window Resize Listener (Debounced) ---
-        window.addEventListener('resize', debounce(() => {
-            if (tabMenu) {
-                updateScrollUI();
-            }
-        }, 100));
-        
-        // --- Restore Scroll Position after Partial Updates ---
-        // This runs after re-renderAuthAndPinControls()
-        if (tabMenu && !scrollPositionRestored) {
-            // Use requestAnimationFrame to ensure the scroll position is set
-            // after the browser has painted the new DOM content
-            requestAnimationFrame(() => {
-                tabMenu.scrollLeft = currentScrollPosition;
-                updateScrollUI();
-                scrollPositionRestored = true;
-            });
-        }
-    };
-    
-    /**
-     * Centers the active tab within the scroll container.
-     */
-    const centerActiveTab = () => {
-        const tabMenu = document.getElementById('tab-menu');
-        if (!tabMenu) return;
-        
-        const activeTab = tabMenu.querySelector('.tab-link.active');
-        if (activeTab) {
-            const scrollContainerWidth = tabMenu.clientWidth;
-            const tabWidth = activeTab.offsetWidth;
-            const tabOffset = activeTab.offsetLeft;
-            
-            // Calculate the position to scroll to:
-            // tabOffset (start of tab) - (half of container width) + (half of tab width)
-            const scrollTarget = tabOffset - (scrollContainerWidth / 2) + (tabWidth / 2);
-            
-            tabMenu.scrollLeft = scrollTarget;
-            currentScrollPosition = scrollTarget; // Update global position
-            
-            // The scroll listener will call updateScrollUI
-        }
-    };
-    
-
-    /**
-     * Renders or re-renders the entire navbar.
-     * @param {object} user - The Firebase user object.
-     * @param {object} userData - The Firestore user data.
-     * @param {object} allPages - The page configuration object.
-     * @param {boolean} isPrivileged - True if the user is the admin.
-     */
-    const renderNavbar = (user, userData, allPages, isPrivileged) => {
-        const navbar = document.getElementById('auth-navbar');
-        if (!navbar) {
-            // Create the main navbar container if it doesn't exist
-            const navbarHTML = `
-                <header id="auth-navbar" class="auth-navbar">
-                    <nav class="container mx-auto">
-                        <div class="flex-shrink-0 mr-4">
-                            <a href="/index.html" class="flex items-center">
-                                <img id="navbar-logo" src="${DEFAULT_THEME['logo-src']}" alt="Logo" class="h-8 w-auto">
-                            </a>
-                        </div>
-                        
-                        ${createTabMenuHTML(allPages)}
-
-                        ${user ? createAuthMenuHTML(user, userData, isPrivileged) : createLoggedOutHTML()}
-                    </nav>
-                </header>
-            `;
-            document.body.insertAdjacentHTML('afterbegin', navbarHTML);
-            bindEventListeners();
-        } else {
-            // Only update the Tab Menu and Auth/Pin controls on re-render
-            const tabMenuContainer = navbar.querySelector('#tab-menu-container');
-            if (tabMenuContainer) {
-                // To preserve scroll position, we only replace the inner HTML of the AUTH/PIN controls
-            }
-
-            // Update Auth/Pin Controls
-            renderAuthAndPinControls(user, userData, isPrivileged, currentPinnedPageId, allPages, true);
-        }
-    };
-    
-    /**
-     * Partially re-renders only the Auth and Pin control area.
-     * This is used when the pin state changes to avoid re-rendering the whole scroll menu.
-     * @param {object} user - The Firebase user object.
-     * @param {object} userData - The Firestore user data.
-     * @param {boolean} isPrivileged - True if the user is the admin.
-     * @param {string | null} pinnedId - The ID of the currently pinned page.
-     * @param {object} allPages - The page configuration object.
-     * @param {boolean} preserveScroll - Whether to attempt to restore the scroll position.
-     */
-    const renderAuthAndPinControls = (user, userData, isPrivileged, pinnedId, allPages, preserveScroll) => {
-        const navbar = document.getElementById('auth-navbar');
-        if (!navbar) return;
-
-        let existingControls = navbar.querySelector('#auth-controls');
-        const newControlsHTML = user ? createAuthMenuHTML(user, userData, isPrivileged) : createLoggedOutHTML();
-
-        if (existingControls) {
-            // Replace the old controls with the new HTML to update state/icons
-            existingControls.outerHTML = newControlsHTML;
-        } else {
-            // Fallback: If controls are missing, insert them
-            const navElement = navbar.querySelector('nav');
-            if (navElement) {
-                navElement.insertAdjacentHTML('beforeend', newControlsHTML);
-            }
-        }
-        
-        // Re-bind all listeners, ensuring pin actions and logout work on the new DOM elements
-        bindEventListeners();
-    };
-
 
     // --- START THE PROCESS ---
     document.addEventListener('DOMContentLoaded', run);
