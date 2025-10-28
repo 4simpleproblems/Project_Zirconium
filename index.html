@@ -49,6 +49,12 @@
                         Get Started Instantly <i class="fas fa-arrow-right ml-2"></i>
                     </a>
                 </div>
+                <div id="beta-cta-container" class="mt-4" style="display: none;">
+                    <p class="text-base text-yellow-300 font-semibold">
+                        Beta testing is now open. 
+                        <a id="beta-apply-link" href="#" target="_blank" class="underline font-bold text-yellow-300 hover:text-yellow-400 transition">Apply Here.</a>
+                    </p>
+                </div>
                 </div>
         </section>
 
@@ -143,6 +149,10 @@
         // Constants for button content
         const DASHBOARD_HTML = 'Go to Dashboard <i class="fas fa-arrow-right ml-2"></i>';
         const GET_STARTED_HTML = 'Get Started Instantly <i class="fas fa-arrow-right ml-2"></i>';
+        
+        // NEW: Beta Tester Form URL
+        const BETA_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdWdL4RTE8p7t7gMGYpIHYiYcV__sNa8vOlwOCQyoolKuQimQ/viewform?usp=publish-editor";
+
 
         // Import the required functions and the config object
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
@@ -157,25 +167,38 @@
         // 2. Get the Firebase Auth instance
         const auth = getAuth(app);
 
-        // 3. Reference to the button element
+        // 3. Reference to the button and new elements
         const authButton = document.getElementById('auth-button');
+        const betaCtaContainer = document.getElementById('beta-cta-container');
+        const betaApplyLink = document.getElementById('beta-apply-link'); // NEW
+
+        // Set the form URL for the beta link
+        if (betaApplyLink) {
+            betaApplyLink.href = BETA_FORM_URL;
+        }
 
         /**
          * Listens for changes in the user's sign-in state.
-         * If a user is logged in, it updates the button to "Go to dashboard".
+         * If a user is logged in, it updates the button to "Go to dashboard" and hides the beta CTA.
          */
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // User is signed in. Change the button to "Go to dashboard"
+                // User is signed in. Change the button to "Go to dashboard" and HIDE the beta CTA.
                 if (authButton) {
                     authButton.href = '../logged-in/dashboard.html';
                     authButton.innerHTML = DASHBOARD_HTML; // Use Font Awesome content
                 }
+                if (betaCtaContainer) {
+                    betaCtaContainer.style.display = 'none';
+                }
             } else {
-                // User is signed out. Ensure the button is set to "Get Started Instantly"
+                // User is signed out. Ensure the button is set to "Get Started Instantly" and SHOW the beta CTA.
                 if (authButton) {
                     authButton.href = '../authentication.html';
                     authButton.innerHTML = GET_STARTED_HTML; // Use Font Awesome content
+                }
+                if (betaCtaContainer) {
+                    betaCtaContainer.style.display = 'block'; // Show the beta CTA
                 }
             }
         });
