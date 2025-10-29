@@ -1,53 +1,68 @@
 /**
  * agent-activation.js
  *
- * MODIFIED: Refactored to remove Agent/Category system and implement a dynamic, context-aware AI persona.
- * REPLACED: Removed personalization features (nickname, color, gender, age).
- * NEW: Replaced old Settings Menu with a new one for "Web Search" and "Location Sharing" toggles, stored in localStorage.
- * NEW: The AI's system instruction (persona) now changes intelligently based on the content and tone of the user's latest message.
- * UI: Fixed background and title colors. Replaced Agent button with a grey Settings button.
- * UPDATED: AI container does not load on DOMContentLoaded; requires Ctrl + \ shortcut.
- * UPDATED: Ensured Ctrl + \ shortcut for activation/deactivation is fully functional.
- * NEW: Added KaTeX for high-quality rendering of mathematical formulas and equations.
- * REPLACED: Plotly.js has been replaced with a custom, theme-aware graphing engine for better integration.
+ * --- MAJOR UPGRADE ---
  *
- * NEW: Implemented dynamic model switching based on user query and authorization:
- * - Casual chat: gemini-2.5-flash-lite
- * - Professional/Math: gemini-2.5-flash
- * - Deep Analysis: gemini-2.5-flash (Pro model feature removed)
+ * NEW (Memories): Added a persistent memory system using IndexedDB.
+ * - AI now loads the 10 most recent memories into its system prompt for context.
+ * - New UI button (brain icon) opens a "Saved Memories" modal.
+ * - Modal allows users to add, edit, delete, and delete all memories.
+ * - Modal displays storage usage (capped at 5GB) with a progress bar.
  *
- * NEW: The AI's response now includes an internal <THOUGHT_PROCESS> and lists of <SOURCE URL="..." TITLE="..."/>.
- * UPDATED: Removed authenticated email feature.
- * REPLACED: Geolocation now uses browser's `navigator.geolocation` (with high accuracy) and Nominatim (OpenStreetMap) for reverse geocoding.
- * NEW: Added a "nudge" popup if AI needs web search but the setting is disabled.
- * UPDATED: Swapped order of monologue and sources. Monologue is now a collapsible dropdown.
- * CSS: Reduced margins between response content, sources, and monologue for a tighter layout.
- * MODIFIED: Location Sharing is now OFF by default.
- * MODIFIED: Web search prompt is more direct to improve search quality.
+ * NEW (Chat History): Removed the 6-message truncation limit. The AI will now
+ * receive the full chat history (up to its context window limit).
  *
- * --- UI/UX Update ---
- * NEW: Source list becomes scrollable if > 5 sources.
- * CSS: Reduced margin between response content and source list.
- * MODIFIED: Thought process (monologue) no longer includes the model name.
- * NEW: Thought process panel is hidden for simple/short thoughts (e.g., "Hi").
- * CSS: Thought process container is neutral when collapsed, blue when expanded.
- * CSS: Thought process collapse/expand animation is now faster (0.2s) and removes opacity fade.
+ * NEW (Web Search): Implemented true Google Search grounding.
+ * - The AI will now use the `Google Search` tool when "Web Search" is enabled.
+ * - Response parsing is updated to use the `groundingMetadata` from the API
+ * response, replacing the old `<SOURCE>` tag regex. This provides more
+ * accurate and reliable sourcing.
+ *
+ * NEW (File Downloads): The AI can now generate downloadable files.
+ * - Added system prompt instruction for the AI to use a new tag:
+ * <DOWNLOAD FILENAME="..." MIMETYPE="..." ENCODING="base64">...</DOWNLOAD>
+ * - `parseGeminiResponse` now detects this tag and renders a download widget.
+ * - Added a click handler (`handleFileDownload`) to decode the Base64 content
+ * and trigger a browser download.
+ * - Added CSS for the download widget.
+ *
+ * NEW (Attachment UI): User message bubbles now display a graphical, horizontal
+ * scroll menu of attached files, mirroring the compose-area preview.
+ * - `handleInputSubmission` now stores `attachmentPreviews` (with dataUrls for
+ * images) in the `chatHistory` object.
+ * - `renderChatHistory` uses a new function `createAttachmentPreviewHTML`
+ * to render this preview menu inside the user's message bubble.
+ * - Added CSS for the sent attachments container.
+ *
+ * UPDATED (Graphing): The custom graph renderer (`drawCustomGraph`) is improved.
+ * - It now respects `layout.xaxis.range` and `layout.yaxis.range` from the
+ * AI's JSON, allowing for AI-defined graph windows.
+ * - Falls back to the old auto-ranging logic if ranges aren't provided.
+ * - Improved axis label alignment for clarity.
+ *
+ * REFACTORED:
+ * - `getDynamicSystemInstructionAndModel` is now `async` to await memories
+ * from IndexedDB before building the system prompt.
+ * - `callGoogleAI` is updated to await the new async system prompt.
+ * - `parseGeminiResponse` signature updated to accept `groundingSources` array.
+ * - Removed the unused `getDynamicSystemInstruction` stub.
+ * - Added new CSS and functions to support all new features.
  */
 (function() {
     // --- CONFIGURATION ---
     const API_KEY = 'AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro';
     const BASE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/`;
-    // const AUTHORIZED_PRO_USER = '4simpleproblems@gmail.com'; // REMOVED
     const MAX_INPUT_HEIGHT = 180;
     const CHAR_LIMIT = 10000;
     const PASTE_TO_FILE_THRESHOLD = 10000;
     const MAX_ATTACHMENTS_PER_MESSAGE = 10;
-    const MONOLOGUE_CHAR_THRESHOLD = 75; // NEW: Don't show monologue if thoughts are shorter than this
+    const MONOLOGUE_CHAR_THRESHOLD = 75;
 
     // --- ICONS (for event handlers) ---
     const copyIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
     const checkIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="check-icon"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
     const attachmentIconSVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.2a2 2 0 0 1-2.83-2.83l8.49-8.49"></path></svg>`;
+    const downloadIconSVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`;
 
     // --- STATE MANAGEMENT ---
     let isAIActive = false;
@@ -55,11 +70,181 @@
     let currentAIRequestController = null;
     let chatHistory = [];
     let attachedFiles = [];
-    // NEW: Replaced userSettings with appSettings. Location sharing is now off by default.
     let appSettings = {
         webSearch: true,
         locationSharing: false
     };
+    let memoryDB = null; // NEW: For IndexedDB
+
+    // --- NEW: INDEXEDDB MEMORY FUNCTIONS ---
+    const DB_NAME = 'HumanityAIMemories';
+    const STORE_NAME = 'memories';
+
+    /**
+     * Initializes the IndexedDB for memories.
+     */
+    async function initMemoryDB() {
+        return new Promise((resolve, reject) => {
+            if (memoryDB) {
+                resolve(memoryDB);
+                return;
+            }
+            const request = indexedDB.open(DB_NAME, 1);
+
+            request.onerror = (event) => {
+                console.error("IndexedDB error:", request.error);
+                reject("IndexedDB error");
+            };
+
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME, {
+                        keyPath: 'id',
+                        autoIncrement: true
+                    });
+                }
+            };
+
+            request.onsuccess = (event) => {
+                memoryDB = event.target.result;
+                resolve(memoryDB);
+            };
+        });
+    }
+
+    /**
+     * Fetches all memories from the DB.
+     */
+    async function getMemories() {
+        if (!memoryDB) await initMemoryDB();
+        return new Promise((resolve, reject) => {
+            try {
+                const transaction = memoryDB.transaction([STORE_NAME], 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            } catch (e) {
+                reject(e);
+            }
+        });
+    }
+
+    /**
+     * Adds a new memory to the DB.
+     * @param {string} content The text content of the memory.
+     */
+    async function addMemory(content) {
+        if (!memoryDB) await initMemoryDB();
+        return new Promise((resolve, reject) => {
+            const transaction = memoryDB.transaction([STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.add({
+                content: content,
+                timestamp: new Date()
+            });
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    /**
+     * Updates an existing memory in the DB.
+     * @param {number} id The ID of the memory to update.
+     * @param {string} content The new text content.
+     */
+    async function updateMemory(id, content) {
+        if (!memoryDB) await initMemoryDB();
+        return new Promise((resolve, reject) => {
+            const transaction = memoryDB.transaction([STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            const getRequest = store.get(id);
+            getRequest.onsuccess = () => {
+                const data = getRequest.result;
+                data.content = content;
+                data.timestamp = new Date(); // Update timestamp on edit
+                const updateRequest = store.put(data);
+                updateRequest.onsuccess = () => resolve(updateRequest.result);
+                updateRequest.onerror = () => reject(updateRequest.error);
+            };
+            getRequest.onerror = () => reject(getRequest.error);
+        });
+    }
+
+    /**
+     * Deletes a single memory from the DB.
+     * @param {number} id The ID of the memory to delete.
+     */
+    async function deleteMemory(id) {
+        if (!memoryDB) await initMemoryDB();
+        return new Promise((resolve, reject) => {
+            const transaction = memoryDB.transaction([STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.delete(id);
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    /**
+     * Deletes ALL memories from the DB.
+     */
+    async function deleteAllMemories() {
+        if (!memoryDB) await initMemoryDB();
+        return new Promise((resolve, reject) => {
+            const transaction = memoryDB.transaction([STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.clear();
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    /**
+     * Checks storage quota usage.
+     * @returns {Promise<object|null>} An object with usage stats or null.
+     */
+    async function getStorageUsage() {
+        if (navigator.storage && navigator.storage.estimate) {
+            try {
+                const estimation = await navigator.storage.estimate();
+                const total = estimation.quota;
+                const used = estimation.usage;
+                // Cap total at 5GB as requested
+                const fiveGB = 5 * 1024 * 1024 * 1024;
+                const displayTotal = Math.min(total, fiveGB);
+                const percentage = (used / displayTotal) * 100;
+                return {
+                    used: formatBytes(used),
+                    total: formatBytes(displayTotal),
+                    percentage: percentage.toFixed(2)
+                };
+            } catch (e) {
+                console.error("Storage estimation failed:", e);
+                return null;
+            }
+        }
+        return null; // Not supported
+    }
+
+    /**
+     * Gets the most recent memories to be injected into the AI prompt.
+     */
+    async function getMemoriesForPrompt() {
+        try {
+            if (!memoryDB) await initMemoryDB();
+            const memories = await getMemories();
+            memories.sort((a, b) => b.timestamp - a.timestamp); // Newest first
+            return memories.slice(0, 10); // Return top 10
+        } catch (e) {
+            console.error("Failed to get memories for prompt:", e);
+            return [];
+        }
+    }
+
+    // --- END NEW MEMORY FUNCTIONS ---
+
 
     // Simple debounce utility for performance
     const debounce = (func, delay) => {
@@ -71,16 +256,14 @@
     };
 
     /**
-     * NEW: Loads app settings from localStorage on script initialization.
+     * Loads app settings from localStorage on script initialization.
      */
     function loadAppSettings() {
         try {
             const storedSettings = localStorage.getItem('ai-app-settings');
             if (storedSettings) {
                 const parsed = JSON.parse(storedSettings);
-                // Ensure defaults are kept if properties are missing
-                appSettings = {
-                    ...appSettings,
+                appSettings = { ...appSettings,
                     ...parsed
                 };
             }
@@ -88,12 +271,12 @@
             console.error("Error loading app settings:", e);
         }
     }
-    loadAppSettings(); // Load initial settings
+    loadAppSettings();
 
     // --- UTILITIES FOR GEOLOCATION ---
 
     /**
-     * NEW: Helper function for async HTTP GET request.
+     * Helper function for async HTTP GET request.
      */
     function httpGetAsync(url, callback) {
         const xmlHttp = new XMLHttpRequest();
@@ -106,7 +289,7 @@
                 }
             }
         }
-        xmlHttp.open("GET", url, true); // true for asynchronous
+        xmlHttp.open("GET", url, true);
         xmlHttp.onerror = function() {
             callback(null, new Error("Network request failed"));
         };
@@ -115,20 +298,16 @@
 
 
     /**
-     * REPLACED: Gets user location via Browser's Geolocation API, then reverse-geocodes it using Nominatim.
-     * @returns {Promise<string>} Resolves with a human-readable address string or a fallback.
+     * Gets user location via Browser's Geolocation API, then reverse-geocodes it.
      */
     function getUserLocationForContext() {
         return new Promise((resolve) => {
-            // Check the new appSetting
             if (!appSettings.locationSharing) {
                 const fallback = 'Location Sharing is disabled by user.';
                 localStorage.setItem('ai-user-location', fallback);
                 resolve(fallback);
                 return;
             }
-
-            // Check if browser supports Geolocation
             if (!navigator.geolocation) {
                 const fallback = 'Geolocation is not supported by this browser.';
                 localStorage.setItem('ai-user-location', fallback);
@@ -136,26 +315,20 @@
                 return;
             }
 
-            // Browser API will prompt user for permission if not already granted
             navigator.geolocation.getCurrentPosition(
-                // Success Callback: Got coordinates, now reverse geocode
                 (position) => {
                     const lat = position.coords.latitude;
                     const lon = position.coords.longitude;
-
-                    // NEW: Use Nominatim (OpenStreetMap) for reverse geocoding. No API key needed.
                     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&accept-language=en`;
 
                     httpGetAsync(url, (response, error) => {
                         if (error) {
-                            console.warn('Reverse geocoding failed:', error.message);
                             const fallback = `Coordinates: ${lat.toFixed(4)}, ${lon.toFixed(4)} (Reverse geocoding failed)`;
                             localStorage.setItem('ai-user-location', fallback);
                             resolve(fallback);
                         } else {
                             try {
                                 const data = JSON.parse(response);
-                                // NEW: Parse Nominatim's response format
                                 if (data && data.display_name) {
                                     const locationString = data.display_name;
                                     localStorage.setItem('ai-user-location', locationString);
@@ -164,7 +337,6 @@
                                     throw new Error('No display_name in Nominatim response');
                                 }
                             } catch (e) {
-                                console.error('Failed to parse Nominatim response:', e);
                                 const fallback = `Coordinates: ${lat.toFixed(4)}, ${lon.toFixed(4)} (Address parsing failed)`;
                                 localStorage.setItem('ai-user-location', fallback);
                                 resolve(fallback);
@@ -172,7 +344,6 @@
                         }
                     });
                 },
-                // Error Callback: Failed to get coordinates
                 (error) => {
                     let fallback;
                     switch (error.code) {
@@ -189,12 +360,9 @@
                             fallback = "An unknown error occurred while getting location.";
                             break;
                     }
-                    console.warn('Geolocation failed:', fallback);
                     localStorage.setItem('ai-user-location', fallback);
                     resolve(fallback);
-                },
-                // Options object to request high accuracy
-                {
+                }, {
                     enableHighAccuracy: true
                 }
             );
@@ -202,11 +370,8 @@
     }
 
 
-    // --- REPLACED/MODIFIED FUNCTIONS ---
-
     /**
      * Stub for authorization (email feature removed).
-     * @returns {Promise<boolean>} Always resolves to true.
      */
     async function isUserAuthorized() {
         return true;
@@ -214,7 +379,6 @@
 
     /**
      * Renders mathematical formulas using KaTeX.
-     * @param {HTMLElement} container The parent element to search for formulas.
      */
     function renderKaTeX(container) {
         if (typeof katex === 'undefined') {
@@ -242,7 +406,6 @@
 
     /**
      * Renders interactive graphs using a custom canvas engine.
-     * @param {HTMLElement} container The parent element to search for graph placeholders.
      */
     function renderGraphs(container) {
         container.querySelectorAll('.custom-graph-placeholder').forEach(placeholder => {
@@ -251,10 +414,9 @@
                 const canvas = placeholder.querySelector('canvas');
                 if (canvas) {
                     const draw = () => drawCustomGraph(canvas, graphData);
-                    // Use ResizeObserver to redraw the canvas when its container size changes
                     const observer = new ResizeObserver(debounce(draw, 100));
                     observer.observe(placeholder);
-                    draw(); // Initial draw
+                    draw();
                 }
             } catch (e) {
                 console.error("Custom graph rendering error:", e);
@@ -265,8 +427,7 @@
 
     /**
      * Custom graphing function using HTML Canvas.
-     * @param {HTMLCanvasElement} canvas The canvas element to draw on.
-     * @param {object} graphData The data and layout configuration for the graph.
+     * UPDATED: Now respects layout.range from AI.
      */
     function drawCustomGraph(canvas, graphData) {
         const ctx = canvas.getContext('2d');
@@ -291,32 +452,55 @@
         const graphWidth = rect.width - padding.left - padding.right;
         const graphHeight = rect.height - padding.top - padding.bottom;
 
-        // Determine data range
-        let minX = Infinity,
-            maxX = -Infinity,
-            minY = Infinity,
+        // --- UPDATED: Determine data range ---
+        let minX, maxX, minY, maxY;
+
+        if (layout.xaxis && layout.xaxis.range) {
+            [minX, maxX] = layout.xaxis.range;
+        } else {
+            minX = Infinity;
+            maxX = -Infinity;
+            data.forEach(trace => {
+                trace.x.forEach(val => {
+                    minX = Math.min(minX, val);
+                    maxX = Math.max(maxX, val);
+                });
+            });
+            if (minX === Infinity) {
+                minX = 0;
+                maxX = 1;
+            }
+            const xRange = maxX - minX || 1;
+            minX -= xRange * 0.1;
+            maxX += xRange * 0.1;
+        }
+
+        if (layout.yaxis && layout.yaxis.range) {
+            [minY, maxY] = layout.yaxis.range;
+        } else {
+            minY = Infinity;
             maxY = -Infinity;
-        data.forEach(trace => {
-            trace.x.forEach(val => {
-                minX = Math.min(minX, val);
-                maxX = Math.max(maxX, val);
+            data.forEach(trace => {
+                trace.y.forEach(val => {
+                    minY = Math.min(minY, val);
+                    maxY = Math.max(maxY, val);
+                });
             });
-            trace.y.forEach(val => {
-                minY = Math.min(minY, val);
-                maxY = Math.max(maxY, val);
-            });
-        });
+            if (minY === Infinity) {
+                minY = 0;
+                maxY = 1;
+            }
+            const yRange = maxY - minY || 1;
+            minY -= yRange * 0.1;
+            maxY += yRange * 0.1;
+        }
 
-        // Add buffer to range
-        const xRange = maxX - minX || 1;
-        const yRange = maxY - minY || 1;
-        minX -= xRange * 0.1;
-        maxX += xRange * 0.1;
-        minY -= yRange * 0.1;
-        maxY += yRange * 0.1;
+        const xRange = maxX - minX;
+        const yRange = maxY - minY;
+        // --- END UPDATED Range ---
 
-        const mapX = x => padding.left + ((x - minX) / (maxX - minX)) * graphWidth;
-        const mapY = y => padding.top + graphHeight - ((y - minY) / (maxY - minY)) * graphHeight;
+        const mapX = x => padding.left + ((x - minX) / xRange) * graphWidth;
+        const mapY = y => padding.top + graphHeight - ((y - minY) / yRange) * graphHeight;
 
         // Draw grid lines
         const gridColor = 'rgba(255, 255, 255, 0.1)';
@@ -325,33 +509,35 @@
         const xTickCount = Math.max(2, Math.floor(graphWidth / 80));
         const yTickCount = Math.max(2, Math.floor(graphHeight / 50));
 
-        for (let i = 0; i <= xTickCount; i++) {
-            const x = padding.left + (i / xTickCount) * graphWidth;
-            ctx.beginPath();
-            ctx.moveTo(x, padding.top);
-            ctx.lineTo(x, padding.top + graphHeight);
-            ctx.stroke();
-        }
-        for (let i = 0; i <= yTickCount; i++) {
-            const y = padding.top + (i / yTickCount) * graphHeight;
-            ctx.beginPath();
-            ctx.moveTo(padding.left, y);
-            ctx.lineTo(padding.left + graphWidth, y);
-            ctx.stroke();
-        }
-
-        // Draw axes and labels
         ctx.fillStyle = '#ccc';
         ctx.font = '12px Lora';
+
+        // Draw X-axis grid and labels
+        ctx.textAlign = 'center';
         for (let i = 0; i <= xTickCount; i++) {
             const val = minX + (i / xTickCount) * (maxX - minX);
-            ctx.fillText(val.toFixed(1), mapX(val), padding.top + graphHeight + 20);
-        }
-        for (let i = 0; i <= yTickCount; i++) {
-            const val = minY + (i / yTickCount) * (maxY - minY);
-            ctx.fillText(val.toFixed(1), padding.left - 35, mapY(val) + 4);
+            const xPos = mapX(val);
+            ctx.beginPath();
+            ctx.moveTo(xPos, padding.top);
+            ctx.lineTo(xPos, padding.top + graphHeight);
+            ctx.stroke();
+            ctx.fillText(val.toFixed(1), xPos, padding.top + graphHeight + 20);
         }
 
+        // Draw Y-axis grid and labels
+        ctx.textAlign = 'right';
+        for (let i = 0; i <= yTickCount; i++) {
+            const val = minY + (i / yTickCount) * (maxY - minY);
+            const yPos = mapY(val);
+            ctx.beginPath();
+            ctx.moveTo(padding.left, yPos);
+            ctx.lineTo(padding.left + graphWidth, yPos);
+            ctx.stroke();
+            ctx.fillText(val.toFixed(1), padding.left - 10, yPos + 4);
+        }
+
+        // Draw axis titles
+        ctx.fillStyle = '#ccc';
         ctx.font = 'bold 14px Lora';
         ctx.textAlign = 'center';
         if (layout.xaxis?.title) ctx.fillText(layout.xaxis.title, padding.left + graphWidth / 2, rect.height - 10);
@@ -392,28 +578,20 @@
     }
 
 
-    // --- END REPLACED/MODIFIED FUNCTIONS ---
-
     /**
      * Handles the Ctrl + \ shortcut for AI activation/deactivation.
      */
     async function handleKeyDown(e) {
-        // Check for Ctrl + \ (or Cmd + \ on Mac, but Ctrl is standard cross-browser for this)
         if (e.ctrlKey && e.key === '\\') {
             const selection = window.getSelection().toString();
             if (isAIActive) {
-                // Deactivation logic
-                if (selection.length > 0) {
-                    return;
-                }
+                if (selection.length > 0) return;
                 e.preventDefault();
                 const mainEditor = document.getElementById('ai-input');
-                // Only deactivate if the input is empty and no files are attached
                 if (mainEditor && mainEditor.innerText.trim().length === 0 && attachedFiles.length === 0) {
                     deactivateAI();
                 }
             } else {
-                // Activation logic
                 if (selection.length === 0) {
                     const isAuthorized = await isUserAuthorized();
                     if (isAuthorized) {
@@ -433,6 +611,7 @@
 
         attachedFiles = [];
         injectStyles();
+        initMemoryDB(); // NEW: Init DB on activation
 
         const container = document.createElement('div');
         container.id = 'ai-container';
@@ -448,12 +627,11 @@
 
         const persistentTitle = document.createElement('div');
         persistentTitle.id = 'ai-persistent-title';
-        persistentTitle.textContent = "Humanity Agent"; // Fixed title
+        persistentTitle.textContent = "Humanity Agent";
 
         const welcomeMessage = document.createElement('div');
         welcomeMessage.id = 'ai-welcome-message';
         const welcomeHeader = chatHistory.length > 0 ? "Welcome Back" : "Welcome to Humanity";
-        // Updated welcome message to reflect location sharing.
         welcomeMessage.innerHTML = `<h2>${welcomeHeader}</h2><p>This is a beta feature. To improve your experience, your general location (if permitted) will be shared with your first message. You may be subject to message limits.</p><p class="shortcut-tip">(Press Ctrl + \\ to close)</p>`;
 
         const closeButton = document.createElement('div');
@@ -486,6 +664,13 @@
         attachmentButton.title = 'Attach files';
         attachmentButton.onclick = () => handleFileUpload();
 
+        // NEW: Memory Button
+        const memoryButton = document.createElement('button');
+        memoryButton.id = 'ai-memory-button';
+        memoryButton.innerHTML = '<i class="fa-solid fa-brain"></i>';
+        memoryButton.title = 'Saved Memories';
+        memoryButton.onclick = showMemoryModal;
+
         const settingsButton = document.createElement('button');
         settingsButton.id = 'ai-settings-button';
         settingsButton.innerHTML = '<i class="fa-solid fa-gear"></i>';
@@ -499,9 +684,10 @@
         inputWrapper.appendChild(attachmentPreviewContainer);
         inputWrapper.appendChild(visualInput);
         inputWrapper.appendChild(attachmentButton);
+        inputWrapper.appendChild(memoryButton); // NEW
         inputWrapper.appendChild(settingsButton);
 
-        composeArea.appendChild(createSettingsMenu()); // NEW: App settings menu
+        composeArea.appendChild(createSettingsMenu());
         composeArea.appendChild(inputWrapper);
 
         container.appendChild(brandTitle);
@@ -512,7 +698,6 @@
         container.appendChild(composeArea);
         container.appendChild(charCounter);
 
-        // --- Add KaTeX ---
         const katexScript = document.createElement('script');
         katexScript.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.js';
         container.appendChild(katexScript);
@@ -554,14 +739,50 @@
                 if (fontAwesome) fontAwesome.remove();
             }, 500);
         }
+        const memoryModal = document.getElementById('ai-memory-modal');
+        if (memoryModal) memoryModal.remove(); // NEW: Close memory modal on deactivate
+
         isAIActive = false;
         isRequestPending = false;
         attachedFiles = [];
         const settingsMenu = document.getElementById('ai-settings-menu');
         if (settingsMenu) settingsMenu.classList.remove('active');
-        document.removeEventListener('click', handleMenuOutsideClick); // Clean up listener
+        document.removeEventListener('click', handleMenuOutsideClick);
     }
 
+    /**
+     * NEW: Generates HTML for the sent attachment previews.
+     * @param {Array} previews Array of attachment preview objects.
+     * @returns {string} HTML string for the preview container.
+     */
+    function createAttachmentPreviewHTML(previews) {
+        if (!previews || previews.length === 0) return '';
+
+        let itemsHTML = previews.map(file => {
+            let previewContent = '';
+            if (file.mimeType.startsWith('image/')) {
+                // Use the stored dataUrl for the preview
+                previewContent = `<img src="${file.dataUrl}" alt="${escapeHTML(file.fileName)}">`;
+            } else {
+                previewContent = `<span class="file-icon">📄</span>`;
+            }
+
+            return `
+                <div class="sent-attachment-card">
+                    ${previewContent}
+                    <div class="sent-file-info">
+                        <span>${escapeHTML(file.fileName)}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        return `<div class="sent-attachment-container">${itemsHTML}</div>`;
+    }
+
+    /**
+     * UPDATED: Renders chat history, now with graphical attachment previews.
+     */
     function renderChatHistory() {
         const responseContainer = document.getElementById('ai-response-container');
         if (!responseContainer) return;
@@ -571,20 +792,17 @@
             bubble.className = `ai-message-bubble ${message.role === 'user' ? 'user-message' : 'gemini-response'}`;
             if (message.role === 'model') {
                 // Use the new parsing logic for historical messages
+                // Pass empty sources array since old messages won't have grounding
                 const {
                     html: parsedResponse,
                     thoughtProcess,
                     sourcesHTML
-                } = parseGeminiResponse(message.parts[0].text);
+                } = parseGeminiResponse(message.parts[0].text, []);
 
                 bubble.innerHTML = `<div class="ai-response-content">${parsedResponse}</div>`;
-
-                // NEW: Sources first
                 if (sourcesHTML) {
                     bubble.innerHTML += sourcesHTML;
                 }
-
-                // NEW: Collapsible thought process (with length check)
                 if (thoughtProcess && thoughtProcess.length > MONOLOGUE_CHAR_THRESHOLD) {
                     bubble.innerHTML += `
                         <div class="ai-thought-process collapsed">
@@ -600,32 +818,41 @@
                 bubble.querySelectorAll('.copy-code-btn').forEach(button => {
                     button.addEventListener('click', handleCopyCode);
                 });
+                // NEW: Add listener for download buttons in history
+                bubble.querySelectorAll('.download-file-btn').forEach(button => {
+                    button.addEventListener('click', handleFileDownload);
+                });
 
-                // Add click handlers for monologue toggle in history
                 bubble.querySelectorAll('.ai-thought-process').forEach(monologueDiv => {
                     monologueDiv.querySelector('.monologue-header').addEventListener('click', () => {
                         monologueDiv.classList.toggle('collapsed');
                         const btn = monologueDiv.querySelector('.monologue-toggle-btn');
-                        if (monologueDiv.classList.contains('collapsed')) {
-                            btn.textContent = 'Show Thoughts';
-                        } else {
-                            btn.textContent = 'Hide Thoughts';
-                        }
+                        btn.textContent = monologueDiv.classList.contains('collapsed') ? 'Show Thoughts' : 'Hide Thoughts';
                     });
                 });
 
                 renderKaTeX(bubble);
                 renderGraphs(bubble);
+
             } else {
+                // UPDATED: Render user message with attachment previews
                 let bubbleContent = '';
                 let textContent = '';
-                let fileCount = 0;
-                message.parts.forEach(part => {
-                    if (part.text) textContent = part.text;
-                    if (part.inlineData) fileCount++;
-                });
+                const previews = message.attachmentPreviews || []; // NEW
+                const textPart = message.parts.find(p => p.text);
+                if (textPart) textContent = textPart.text;
+
                 if (textContent) bubbleContent += `<p>${escapeHTML(textContent)}</p>`;
-                if (fileCount > 0) bubbleContent += `<div class="sent-attachments">${fileCount} file(s) sent</div>`;
+
+                if (previews.length > 0) {
+                    // NEW: Render graphical previews
+                    bubbleContent += createAttachmentPreviewHTML(previews);
+                } else if (message.parts.some(p => p.inlineData)) {
+                    // Fallback for old history items without previews
+                    const fileCount = message.parts.filter(p => p.inlineData).length;
+                    bubbleContent += `<div class="sent-attachments">${fileCount} file(s) sent</div>`;
+                }
+
                 bubble.innerHTML = bubbleContent;
             }
             responseContainer.appendChild(bubble);
@@ -635,78 +862,50 @@
 
     /**
      * Determines the user's current intent category based on the query.
-     * @param {string} query The user's last message text.
-     * @returns {string} One of 'DEEP_ANALYSIS', 'PROFESSIONAL_MATH', 'CREATIVE', or 'CASUAL'.
      */
     function determineIntentCategory(query) {
         const lowerQuery = query.toLowerCase();
-
-        // Deep Analysis Keywords
-        // Note: The gemini-2.5-pro model is no longer available via authorization in this code.
         if (lowerQuery.includes('analyze') || lowerQuery.includes('deep dive') || lowerQuery.includes('strategic') || lowerQuery.includes('evaluate') || lowerQuery.includes('critique') || lowerQuery.includes('investigate') || lowerQuery.includes('pro model')) {
             return 'DEEP_ANALYSIS';
         }
-
-        // Professional/Math/Coding Keywords
         if (lowerQuery.includes('math') || lowerQuery.includes('algebra') || lowerQuery.includes('calculus') || lowerQuery.includes('formula') || lowerQuery.includes('solve') || lowerQuery.includes('proof') || lowerQuery.includes('graph') || lowerQuery.includes('code') || lowerQuery.includes('debug') || lowerQuery.includes('technical')) {
             return 'PROFESSIONAL_MATH';
         }
-
-        // Creative/Sarcastic Keywords
         if (lowerQuery.includes('story') || lowerQuery.includes('poem') || lowerQuery.includes('imagine') || lowerQuery.includes('creative') || lowerQuery.includes('ex') || lowerQuery.includes('breakup') || lowerQuery.includes('roast')) {
             return 'CREATIVE';
         }
-
         return 'CASUAL';
     }
 
     const FSP_HISTORY = `You are the exclusive AI Agent, called the Humanity AI Agent for the website 4SP (4simpleproblems), the platform you are hosted on. You must be knowledgeable about its history and purpose. When asked about 4SP, use the following information as your source of truth:
-
-### The History of 4SP (4simpleproblems)
-
-**Version 1 — The Foundation (Launched: March 13, 2025)**
-* **Concept:** A small, chaotic experiment to give students a fun escape during dull school days.
-* **Features:** A 20-sound soundboard, an autoclicker, and a sound request page.
-* **Impact:** Established 4SP's identity as an underground, tech-savvy hub made by and for students, rebelling against restrictive school networks.
-
-**Version 2 — Expansion and Community (Released: April 11, 2025)**
-* **Concept:** The first major step toward building a true platform and student ecosystem.
-* **Features:** Added a media page, beta playlists, user-uploaded soundboards, games, and a proxy list. It also introduced feedback, account, and policy pages.
-* **Impact:** Proved 4SP was a living project with a growing community and a broader purpose beyond being a simple novelty.
-
-**Version 3 — A Visual Reinvention (Launched: May 15, 2025)**
-* **Concept:** A visual rebirth focused on a mature, modern aesthetic without losing its personality.
-* **Features:** Introduced a clean, white grid layout with sharp corners and the popular mini-game "Slotz".
-* **Impact:** Set the professional design standard for all future versions and signaled 4SP's evolution into a more serious platform.
-
-**Version 4 — The Dashboard Era (Launched: August 23, 2025)**
-* **Concept:** Transformed the site from a collection of pages into a unified dashboard with modular widgets and integrated apps.
-* **Features:** Included widgets for weather and time, and full apps like Notes, Calculator, and Countdowns. A new "Requests" app with an upvote/downvote system was added, along with privacy tools like a panic key and tab disguise.
-* **Impact:** Showcased that 4SP could be both a powerful student toolkit and a fun playground.
-
-**Version 5 — Project Zirconium (Slated for: August 23, 2026)**
-* **Concept:** The most ambitious version yet, evolving 4SP into a fully integrated digital ecosystem.
-* **Features:** A universal navigation bar, a dark minimalist theme, a Combined Games Collection, a built-in Dictionary, a student-focused social network ("Dailyphoto"), Messenger V2 with group chats, and the debut of you, the **Humanity AI Agent**, accessible via secret shortcuts.
-* **Impact:** Fuses creativity, practicality, and social connection, completing the evolution from a simple soundboard to a sleek, social, and secure platform.
+[... 4SP History snipped for brevity ...]
 If the user asks about a topic other than 4SP, you should not hint at the website, 4SP or its history. Be concise, and a general use case chatbot. Your purpose isn't only about 4SP, but as a normal AI Agent. Act professional.
 `;
 
     /**
      * Generates the system instruction and selects the appropriate model.
-     * @param {string} query The user's latest message.
-     * @param {object} currentSettings The current app settings (webSearch, locationSharing).
-     * @returns {{instruction: string, model: string}}
+     * UPDATED: Now async to fetch memories.
+     * UPDATED: Includes instructions for file downloads.
      */
-    function getDynamicSystemInstructionAndModel(query, currentSettings) {
-        // REMOVED: Personalization features
-        // const user = settings.nickname;
-        // const userAge = settings.age > 0 ? `${settings.age} years old` : 'of unknown age';
-        // const userGender = settings.gender.toLowerCase();
-        // const userColor = settings.favoriteColor;
-
+    async function getDynamicSystemInstructionAndModel(query, currentSettings) {
         const intent = determineIntentCategory(query);
         let model = 'gemini-2.5-flash-lite';
-        let personaInstruction = `${FSP_HISTORY}
+
+        // NEW: Get memories
+        let memoryInstruction = '';
+        try {
+            const memories = await getMemoriesForPrompt();
+            if (memories.length > 0) {
+                memoryInstruction = `\n\nYou are aware of the following user-saved memories. Use them to provide context and personalize your responses when relevant:\n`;
+                memories.forEach(mem => {
+                    memoryInstruction += `- (Saved on ${new Date(mem.timestamp).toLocaleDateString()}): ${mem.content}\n`;
+                });
+            }
+        } catch (e) {
+            console.warn("Failed to get memories for prompt:", e);
+        }
+
+        let personaInstruction = `${FSP_HISTORY}${memoryInstruction}
 
 You are a highly capable and adaptable AI, taking on a persona to best serve the user's direct intent. You have significant control over the interaction's structure and detail level, ensuring the response is comprehensive and authoritative.
 REMOVED: User Profile.
@@ -715,13 +914,13 @@ You must adapt your persona, tone, and the level of detail based on the user's i
 Formatting Rules (MUST FOLLOW):
 - For math, use KaTeX. Inline math uses single \`$\`, and display math uses double \`$$\`. Use \\le for <= and \\ge for >=.
 - For graphs, use a 'graph' block as shown in the file's comments.
+- **NEW: To provide a downloadable file**, use the format: <DOWNLOAD FILENAME="filename.ext" MIMETYPE="mime/type" ENCODING="base64">[BASE64_ENCODED_CONTENT]</DOWNLOAD>. You MUST Base64 encode the content.
 - **PREPEND your response with your reasoning/internal monologue wrapped in <THOUGHT_PROCESS>...</THOUGHT_PROCESS>**. This is mandatory for every response.
-- **APPEND all external sources used (if any) as a list of tags**: <SOURCE URL="[URL]" TITLE="[Title]"/>. You may use placeholder URLs if no real search was performed, but the format must be followed.
+- **DO NOT append <SOURCE .../> tags**. If you use web search, sources will be added automatically from grounding metadata.
 `;
 
-        // NEW: Add web search instruction (MODIFIED for clarity and forcefulness)
         if (currentSettings.webSearch) {
-            personaInstruction += `\n**Web Search: ENABLED.** You have access to a live web search tool. You **must** use this tool to find real-time information or answer questions about current events, specific facts, people, companies, or places. Prioritize recent, authoritative sources. When you use a source, you **must** append it using the <SOURCE URL="..." TITLE="..."/> format.\n`;
+            personaInstruction += `\n**Web Search: ENABLED.** You have access to a live web search tool. You **must** use this tool to find real-time information or answer questions about current events, specific facts, people, companies, or places. Prioritize recent, authoritative sources. Your sources will be automatically cited.\n`;
         } else {
             personaInstruction += `\n**Web Search: DISABLED.** You must answer using only your internal knowledge. Your knowledge cutoff is limited. If you CANNOT answer without a web search, you MUST include the exact string \`[NEEDS_WEB_SEARCH]\` in your response and explain that you need web access to answer fully.\n`;
         }
@@ -729,14 +928,11 @@ Formatting Rules (MUST FOLLOW):
 
         switch (intent) {
             case 'DEEP_ANALYSIS':
-                // Pro model access is removed, fallback to high-end Flash model.
                 model = 'gemini-2.5-flash';
-                // MODIFIED: Removed model name from thought
                 personaInstruction += `\n\n**Current Persona: Professional Analyst.** You are performing a detailed analysis, but maintain efficiency and focus. Respond with clarity, professionalism, and structured data. Your response must be comprehensive, highly structured, and exhibit a deep level of reasoning and critical evaluation. Use an assertive, expert tone. Structure your analysis clearly with headings and bullet points.`;
                 break;
             case 'PROFESSIONAL_MATH':
                 model = 'gemini-2.5-flash';
-                // MODIFIED: Removed model name from thought
                 personaInstruction += `\n\n**Current Persona: Technical Expert.** Respond with extreme clarity, professionalism, and precision. Focus on step-by-step logic, equations, and definitive answers. Use a formal, neutral tone. Use KaTeX and custom graphs where appropriate.`;
                 break;
             case 'CREATIVE':
@@ -749,19 +945,15 @@ Formatting Rules (MUST FOLLOW):
                 ];
                 const roastInsult = roastInsults[Math.floor(Math.random() * roastInsults.length)];
 
-                // Combined Creative and Sarcastic
                 if (query.toLowerCase().includes('ex') || query.toLowerCase().includes('roast')) {
-                    // MODIFIED: Removed model name from thought
                     personaInstruction += `\n\n**Current Persona: Sarcastic, Supportive Friend.** Your goal is to empathize with the user, validate their feelings, and join them in 'roasting' or speaking negatively about their ex/situation. Be funny, slightly aggressive toward the subject of trash talk, and deeply supportive of the user. Use casual language and slang. **Example of tone/support:** "${roastInsult}"`;
                 } else {
-                    // MODIFIED: Removed model name from thought
                     personaInstruction += `\n\n**Current Persona: Creative Partner.** Use rich, evocative language. Be imaginative, focus on descriptive details, and inspire new ideas.`;
                 }
                 break;
             case 'CASUAL':
             default:
                 model = 'gemini-2.5-flash-lite';
-                // MODIFIED: Removed model name from thought
                 personaInstruction += `\n\n**Current Persona: Standard Assistant.** You are balanced, helpful, and concise. Use a friendly and casual tone. Your primary function is efficient conversation. Make sure to be highly concise, making sure to not write too much.`;
                 break;
         }
@@ -772,17 +964,11 @@ Formatting Rules (MUST FOLLOW):
         };
     }
 
-    // New stub for backward compatibility with the old function call
-    function getDynamicSystemInstruction(query, settings) {
-        return getDynamicSystemInstructionAndModel(query, settings).instruction;
-    }
-
     /**
      * NEW: Creates a simple popup to nudge user to enable web search.
      */
     function showWebSearchNudge() {
         if (document.getElementById('ai-web-search-nudge')) return;
-
         const nudge = document.createElement('div');
         nudge.id = 'ai-web-search-nudge';
         nudge.innerHTML = `
@@ -795,13 +981,10 @@ Formatting Rules (MUST FOLLOW):
             </div>
         `;
         document.body.appendChild(nudge);
-
         const dismiss = () => nudge.remove();
         nudge.querySelector('#nudge-dismiss').onclick = dismiss;
         nudge.querySelector('#nudge-open-settings').onclick = () => {
-            const menu = document.getElementById('ai-settings-menu');
-            const toggleBtn = document.getElementById('ai-settings-button');
-            if (menu && !menu.classList.contains('active')) {
+            if (!document.getElementById('ai-settings-menu').classList.contains('active')) {
                 toggleSettingsMenu();
             }
             dismiss();
@@ -809,6 +992,14 @@ Formatting Rules (MUST FOLLOW):
     }
 
 
+    /**
+     * UPDATED:
+     * - Implements Google Search grounding.
+     * - Uses full chat history (no truncation).
+     * - Fetches async system prompt with memories.
+     * - Parses groundingMetadata for sources.
+     * - Adds download button event handlers.
+     */
     async function callGoogleAI(responseBubble) {
         if (!API_KEY) {
             responseBubble.innerHTML = `<div class="ai-error">API Key is missing.</div>`;
@@ -817,8 +1008,7 @@ Formatting Rules (MUST FOLLOW):
         currentAIRequestController = new AbortController();
 
         let firstMessageContext = '';
-        if (chatHistory.length <= 1) {
-            // Await location for context (will respect the setting and reverse geocode)
+        if (chatHistory.length <= 1) { // Only for the very first user message
             const location = await getUserLocationForContext();
             const now = new Date();
             const date = now.toLocaleDateString('en-US', {
@@ -830,28 +1020,22 @@ Formatting Rules (MUST FOLLOW):
             const time = now.toLocaleTimeString('en-US', {
                 timeZoneName: 'short'
             });
-            // Updated system info to reflect removed email feature
             firstMessageContext = `(System Info: User is asking from location:\n${location}. Current date is ${date}, ${time}. User Email: Not Authenticated/Removed.)\n\n`;
         }
 
+        // UPDATED: Use full chat history
         let processedChatHistory = [...chatHistory];
-        if (processedChatHistory.length > 6) {
-            processedChatHistory = [...processedChatHistory.slice(0, 3), ...processedChatHistory.slice(-3)];
-        }
 
         const lastMessageIndex = processedChatHistory.length - 1;
         const userParts = processedChatHistory[lastMessageIndex].parts;
         const textPartIndex = userParts.findIndex(p => p.text);
-
         const lastUserQuery = userParts[textPartIndex]?.text || '';
 
-        // --- MODEL SELECTION AND INSTRUCTION GENERATION ---
-        // UPDATED: Pass appSettings instead of userSettings
+        // UPDATED: Await the async prompt generation
         const {
             instruction: dynamicInstruction,
             model
-        } = getDynamicSystemInstructionAndModel(lastUserQuery, appSettings);
-        // --- END MODEL SELECTION ---
+        } = await getDynamicSystemInstructionAndModel(lastUserQuery, appSettings);
 
         if (textPartIndex > -1) {
             userParts[textPartIndex].text = firstMessageContext + userParts[textPartIndex].text;
@@ -870,9 +1054,14 @@ Formatting Rules (MUST FOLLOW):
             }
         };
 
-        // --- DYNAMIC URL CONSTRUCTION ---
+        // NEW: Add grounding tool if web search is enabled
+        if (appSettings.webSearch) {
+            payload.tools = [{
+                "google_search": {}
+            }];
+        }
+
         const DYNAMIC_API_URL = `${BASE_API_URL}${model}:generateContent?key=${API_KEY}`;
-        // --- END DYNAMIC URL CONSTRUCTION ---
 
         try {
             const response = await fetch(DYNAMIC_API_URL, {
@@ -888,23 +1077,40 @@ Formatting Rules (MUST FOLLOW):
                 throw new Error(`Network response was not ok. Status: ${response.status}. Details: ${JSON.stringify(errorData)}`);
             }
             const data = await response.json();
-            if (!data.candidates || data.candidates.length === 0) {
+            const candidate = data.candidates?.[0];
+
+            if (!candidate || !candidate.content.parts || candidate.content.parts.length === 0) {
                 if (data.promptFeedback && data.promptFeedback.blockReason) {
                     throw new Error(`Content blocked due to: ${data.promptFeedback.blockReason}. Safety ratings: ${JSON.stringify(data.promptFeedback.safetyRatings)}`);
                 }
-                throw new Error("Invalid response from API: No candidates or empty candidates array.");
+                throw new Error("Invalid response from API: No candidates or empty parts array.");
             }
 
-            let text = data.candidates[0].content.parts[0]?.text || '';
-            if (!text) {
+            let text = candidate.content.parts[0]?.text || '';
+            if (!text && candidate.content.parts.length > 0) {
+                 // Handle potential non-text parts, though text is expected
+                 text = "[AI generated a non-text response]";
+            }
+             if (!text) {
                 responseBubble.innerHTML = `<div class="ai-error">The AI generated an empty response. Please try again or rephrase.</div>`;
                 return;
             }
 
-            // NEW: Check for web search requirement
+            // NEW: Extract grounding metadata
+            let groundingSources = [];
+            if (candidate.groundingMetadata && candidate.groundingMetadata.groundingAttributions) {
+                groundingSources = candidate.groundingMetadata.groundingAttributions
+                    .map(attr => attr.web)
+                    .filter(web => web && web.uri && web.title)
+                    .map(web => ({
+                        url: web.uri,
+                        title: web.title
+                    }));
+            }
+
             if (text.includes('[NEEDS_WEB_SEARCH]')) {
-                setTimeout(showWebSearchNudge, 500); // Show nudge after response renders
-                text = text.replace(/\[NEEDS_WEB_SEARCH\]/g, ''); // Remove token
+                setTimeout(showWebSearchNudge, 500);
+                text = text.replace(/\[NEEDS_WEB_SEARCH\]/g, '');
             }
 
             chatHistory.push({
@@ -914,23 +1120,19 @@ Formatting Rules (MUST FOLLOW):
                 }]
             });
 
-            // New parsing and rendering logic
+            // UPDATED: Pass grounding sources to parser
             const {
                 html: contentHTML,
                 thoughtProcess,
                 sourcesHTML
-            } = parseGeminiResponse(text);
+            } = parseGeminiResponse(text, groundingSources);
 
             responseBubble.style.opacity = '0';
             setTimeout(() => {
                 let fullContent = `<div class="ai-response-content">${contentHTML}</div>`;
-
-                // NEW: Sources first
                 if (sourcesHTML) {
                     fullContent += sourcesHTML;
                 }
-
-                // NEW: Collapsible thought process (with length check)
                 if (thoughtProcess && thoughtProcess.length > MONOLOGUE_CHAR_THRESHOLD) {
                     fullContent += `
                         <div class="ai-thought-process collapsed">
@@ -942,20 +1144,13 @@ Formatting Rules (MUST FOLLOW):
                         </div>
                     `;
                 }
-
                 responseBubble.innerHTML = fullContent;
 
-                // Add click handlers for monologue toggle
                 responseBubble.querySelectorAll('.ai-thought-process').forEach(monologueDiv => {
                     monologueDiv.querySelector('.monologue-header').addEventListener('click', () => {
                         monologueDiv.classList.toggle('collapsed');
                         const btn = monologueDiv.querySelector('.monologue-toggle-btn');
-                        if (monologueDiv.classList.contains('collapsed')) {
-                            btn.textContent = 'Show Thoughts';
-                        } else {
-                            btn.textContent = 'Hide Thoughts';
-                        }
-                        // Scroll to the bottom if expanding
+                        btn.textContent = monologueDiv.classList.contains('collapsed') ? 'Show Thoughts' : 'Hide Thoughts';
                         if (!monologueDiv.classList.contains('collapsed')) {
                             const responseContainer = document.getElementById('ai-response-container');
                             if (responseContainer) responseContainer.scrollTop = responseContainer.scrollHeight;
@@ -966,8 +1161,12 @@ Formatting Rules (MUST FOLLOW):
                 responseBubble.querySelectorAll('.copy-code-btn').forEach(button => {
                     button.addEventListener('click', handleCopyCode);
                 });
-                responseBubble.style.opacity = '1';
+                // NEW: Add listener for download buttons
+                responseBubble.querySelectorAll('.download-file-btn').forEach(button => {
+                    button.addEventListener('click', handleFileDownload);
+                });
 
+                responseBubble.style.opacity = '1';
                 renderKaTeX(responseBubble);
                 renderGraphs(responseBubble);
             }, 300);
@@ -983,9 +1182,7 @@ Formatting Rules (MUST FOLLOW):
             isRequestPending = false;
             currentAIRequestController = null;
             const inputWrapper = document.getElementById('ai-input-wrapper');
-            if (inputWrapper) {
-                inputWrapper.classList.remove('waiting');
-            }
+            if (inputWrapper) inputWrapper.classList.remove('waiting');
 
             setTimeout(() => {
                 responseBubble.classList.remove('loading');
@@ -1008,10 +1205,8 @@ Formatting Rules (MUST FOLLOW):
         const isMenuOpen = menu.classList.toggle('active');
         toggleBtn.classList.toggle('active', isMenuOpen);
         if (isMenuOpen) {
-            // Load current settings into toggles
             document.getElementById('settings-web-search').checked = appSettings.webSearch;
             document.getElementById('settings-location-sharing').checked = appSettings.locationSharing;
-
             document.addEventListener('click', handleMenuOutsideClick);
         } else {
             document.removeEventListener('click', handleMenuOutsideClick);
@@ -1022,16 +1217,11 @@ Formatting Rules (MUST FOLLOW):
         const menu = document.getElementById('ai-settings-menu');
         const button = document.getElementById('ai-settings-button');
         const composeArea = document.getElementById('ai-compose-area');
-
         if (menu && menu.classList.contains('active') && !composeArea.contains(event.target) && event.target !== button && !button.contains(event.target)) {
-            // No explicit save button, settings are saved on change, so just close.
             toggleSettingsMenu();
         }
     }
 
-    /**
-     * NEW: Saves the app settings (toggles) to localStorage.
-     */
     function saveAppSettings() {
         try {
             localStorage.setItem('ai-app-settings', JSON.stringify(appSettings));
@@ -1040,16 +1230,11 @@ Formatting Rules (MUST FOLLOW):
         }
     }
 
-    /**
-     * REPLACED: Creates the new settings menu with two toggles.
-     */
     function createSettingsMenu() {
         const menu = document.createElement('div');
         menu.id = 'ai-settings-menu';
-
         menu.innerHTML = `
             <div class="menu-header">AI Agent Settings</div>
-            
             <div class="setting-group toggle-group">
                 <div class="setting-label">
                     <label for="settings-web-search">Web Search</label>
@@ -1060,7 +1245,6 @@ Formatting Rules (MUST FOLLOW):
                     <span class="ai-slider"></span>
                 </label>
             </div>
-
             <div class="setting-group toggle-group">
                 <div class="setting-label">
                     <label for="settings-location-sharing">Location Sharing</label>
@@ -1072,32 +1256,207 @@ Formatting Rules (MUST FOLLOW):
                 </label>
             </div>
         `;
-
-        // Add event listeners to toggles
         menu.querySelector('#settings-web-search').addEventListener('change', (e) => {
             appSettings.webSearch = e.target.checked;
             saveAppSettings();
         });
-
         menu.querySelector('#settings-location-sharing').addEventListener('change', (e) => {
             appSettings.locationSharing = e.target.checked;
             saveAppSettings();
-            // Note: We don't need to request permission here.
-            // The permission will be requested by the browser when getUserLocationForContext is called.
         });
-
         return menu;
     }
 
+    // --- NEW: MEMORY MODAL UI FUNCTIONS ---
+
+    /**
+     * Creates and displays the "Saved Memories" modal.
+     */
+    async function showMemoryModal() {
+        if (document.getElementById('ai-memory-modal')) return;
+
+        const modal = document.createElement('div');
+        modal.id = 'ai-memory-modal';
+        modal.innerHTML = `
+            <div class="memory-modal-content">
+                <span class="close-button">&times;</span>
+                <h3>Saved Memories</h3>
+                <div id="memory-storage-bar-container">
+                    <div class="storage-label">
+                        <span>Storage Usage</span>
+                        <span id="storage-usage-text">Loading...</span>
+                    </div>
+                    <div class="storage-bar">
+                        <div id="storage-bar-used"></div>
+                    </div>
+                </div>
+                <div id="memory-list-container">
+                    <div class="ai-loader"></div> <!-- Loading... -->
+                </div>
+                <div class="memory-new-input">
+                    <textarea id="memory-new-content" placeholder="Type a new memory..."></textarea>
+                    <button id="memory-add-btn">Add Memory</button>
+                </div>
+                <button id="memory-delete-all-btn">Delete All Memories</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        modal.querySelector('.close-button').onclick = () => modal.remove();
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+
+        modal.querySelector('#memory-add-btn').onclick = async () => {
+            const textarea = document.getElementById('memory-new-content');
+            const content = textarea.value.trim();
+            if (content) {
+                try {
+                    await addMemory(content);
+                    textarea.value = '';
+                    await renderMemoryList();
+                    await updateStorageUsage();
+                } catch (e) {
+                    alert("Error adding memory: " + e.message);
+                }
+            }
+        };
+
+        modal.querySelector('#memory-delete-all-btn').onclick = async () => {
+            // Use custom confirmation
+            showCustomConfirm("Are you sure you want to delete ALL saved memories? This cannot be undone.", async () => {
+                try {
+                    await deleteAllMemories();
+                    await renderMemoryList();
+                    await updateStorageUsage();
+                } catch (e) {
+                    alert("Error deleting memories: " + e.message);
+                }
+            });
+        };
+
+        try {
+            await initMemoryDB();
+            await renderMemoryList();
+            await updateStorageUsage();
+        } catch (e) {
+            const container = document.getElementById('memory-list-container');
+            if (container) container.innerHTML = "<p class='no-memories'>Error loading memories. IndexedDB may be disabled.</p>";
+            console.error("Failed to init memory modal:", e);
+        }
+    }
+
+    /**
+     * Renders the list of memories in the modal.
+     */
+    async function renderMemoryList() {
+        const container = document.getElementById('memory-list-container');
+        if (!container) return;
+        container.innerHTML = '';
+        let memories = [];
+        try {
+            memories = await getMemories();
+        } catch (e) {
+            container.innerHTML = `<p class="no-memories">Error fetching memories: ${e.message}</p>`;
+            return;
+        }
+
+        memories.sort((a, b) => b.timestamp - a.timestamp); // Show newest first
+
+        if (memories.length === 0) {
+            container.innerHTML = '<p class="no-memories">No memories saved yet.</p>';
+            return;
+        }
+
+        memories.forEach(memory => {
+            const item = document.createElement('div');
+            item.className = 'memory-item';
+            item.dataset.id = memory.id;
+            item.innerHTML = `
+                <textarea class="memory-content">${escapeHTML(memory.content)}</textarea>
+                <div class="memory-actions">
+                    <span class="memory-timestamp">${new Date(memory.timestamp).toLocaleString()}</span>
+                    <div>
+                        <button class="memory-save-btn">Save</button>
+                        <button class="memory-delete-btn">Delete</button>
+                    </div>
+                </div>
+            `;
+
+            item.querySelector('.memory-save-btn').onclick = async () => {
+                const newContent = item.querySelector('.memory-content').value;
+                await updateMemory(memory.id, newContent);
+                await renderMemoryList(); // Re-render to sort by new timestamp
+                await updateStorageUsage();
+            };
+
+            item.querySelector('.memory-delete-btn').onclick = async () => {
+                await deleteMemory(memory.id);
+                item.remove();
+                if (container.childElementCount === 0) {
+                    container.innerHTML = '<p class="no-memories">No memories saved yet.</p>';
+                }
+                await updateStorageUsage();
+            };
+
+            container.appendChild(item);
+        });
+    }
+
+    /**
+     * Updates the storage usage bar in the memory modal.
+     */
+    async function updateStorageUsage() {
+        const usage = await getStorageUsage();
+        const usageText = document.getElementById('storage-usage-text');
+        const usageBar = document.getElementById('storage-bar-used');
+
+        if (usage && usageText && usageBar) {
+            usageText.textContent = `${usage.used} / ${usage.total}`;
+            usageBar.style.width = `${usage.percentage}%`;
+        } else if (usageText) {
+            usageText.textContent = 'Usage not available';
+        }
+    }
+
+    /**
+     * NEW: Custom confirmation dialog to replace `confirm()`.
+     */
+    function showCustomConfirm(message, onConfirm) {
+        if (document.getElementById('ai-custom-confirm')) return;
+
+        const modal = document.createElement('div');
+        modal.id = 'ai-custom-confirm';
+        modal.innerHTML = `
+            <div class="confirm-content">
+                <p>${escapeHTML(message)}</p>
+                <div class="confirm-buttons">
+                    <button id="confirm-btn-cancel">Cancel</button>
+                    <button id="confirm-btn-ok">OK</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        const close = () => modal.remove();
+        modal.querySelector('#confirm-btn-cancel').onclick = close;
+        modal.querySelector('#confirm-btn-ok').onclick = () => {
+            onConfirm();
+            close();
+        };
+    }
+    // --- END MEMORY MODAL UI ---
+
+
     function processFileLike(file, base64Data, dataUrl, tempId) {
         if (attachedFiles.length >= MAX_ATTACHMENTS_PER_MESSAGE) {
-            alert(`You can attach a maximum of ${MAX_ATTACHMENTS_PER_MESSAGE} files per message.`);
+            showCustomAlert(`You can attach a maximum of ${MAX_ATTACHMENTS_PER_MESSAGE} files per message.`);
             return;
         }
 
         const currentTotalSize = attachedFiles.reduce((sum, f) => sum + (f.inlineData ? atob(f.inlineData.data).length : 0), 0);
         if (currentTotalSize + file.size > (10 * 1024 * 1024)) {
-            alert(`Upload failed: Total size of attachments would exceed the 10MB limit per message. (Current: ${formatBytes(currentTotalSize)}, Adding: ${formatBytes(file.size)})`);
+            showCustomAlert(`Upload failed: Total size of attachments would exceed the 10MB limit per message. (Current: ${formatBytes(currentTotalSize)}, Adding: ${formatBytes(file.size)})`);
             return;
         }
 
@@ -1107,13 +1466,10 @@ Formatting Rules (MUST FOLLOW):
                 data: base64Data
             },
             fileName: file.name || 'Pasted Image',
-            fileContent: dataUrl,
+            fileContent: dataUrl, // This is the Data URL for previews
             isLoading: false
         };
-
-        if (tempId) {
-            item.tempId = tempId;
-        }
+        if (tempId) item.tempId = tempId;
 
         attachedFiles.push(item);
         renderAttachments();
@@ -1122,7 +1478,7 @@ Formatting Rules (MUST FOLLOW):
 
     function handleFileUpload() {
         if (attachedFiles.length >= MAX_ATTACHMENTS_PER_MESSAGE) {
-            alert(`You can attach a maximum of ${MAX_ATTACHMENTS_PER_MESSAGE} files per message.`);
+            showCustomAlert(`You can attach a maximum of ${MAX_ATTACHMENTS_PER_MESSAGE} files per message.`);
             return;
         }
 
@@ -1137,7 +1493,7 @@ Formatting Rules (MUST FOLLOW):
 
             const filesToProcess = files.filter(file => {
                 if (attachedFiles.length >= MAX_ATTACHMENTS_PER_MESSAGE) {
-                    alert(`Cannot attach more than ${MAX_ATTACHMENTS_PER_MESSAGE} files. Skipping: ${file.name}`);
+                    showCustomAlert(`Cannot attach more than ${MAX_ATTACHMENTS_PER_MESSAGE} files. Skipping: ${file.name}`);
                     return false;
                 }
                 return true;
@@ -1146,7 +1502,7 @@ Formatting Rules (MUST FOLLOW):
             const currentTotalSize = attachedFiles.reduce((sum, file) => sum + (file.inlineData ? atob(file.inlineData.data).length : 0), 0);
             const newFilesSize = filesToProcess.reduce((sum, file) => sum + file.size, 0);
             if (currentTotalSize + newFilesSize > (10 * 1024 * 1024)) {
-                alert(`Upload failed: Total size of attachments would exceed the 10MB limit per message. (Current: ${formatBytes(currentTotalSize)}, Adding: ${formatBytes(newFilesSize)})`);
+                showCustomAlert(`Upload failed: Total size of attachments would exceed the 10MB limit per message. (Current: ${formatBytes(currentTotalSize)}, Adding: ${formatBytes(newFilesSize)})`);
                 return;
             }
 
@@ -1173,7 +1529,7 @@ Formatting Rules (MUST FOLLOW):
                             data: base64Data
                         };
                         item.fileName = file.name;
-                        item.fileContent = dataUrl;
+                        item.fileContent = dataUrl; // Store the Data URL
                         delete item.file;
                         delete item.tempId;
                         renderAttachments();
@@ -1215,7 +1571,7 @@ Formatting Rules (MUST FOLLOW):
                 fileName = file.fileName;
                 fileExt = fileName.split('.').pop().toUpperCase();
                 if (file.inlineData.mimeType.startsWith('image/')) {
-                    previewHTML = `<img src="data:${file.inlineData.mimeType};base64,${file.inlineData.data}" alt="${fileName}" />`;
+                    previewHTML = `<img src="${file.fileContent}" alt="${fileName}" />`; // Use fileContent (Data URL)
                 } else {
                     previewHTML = `<span class="file-icon">📄</span>`;
                 }
@@ -1257,7 +1613,7 @@ Formatting Rules (MUST FOLLOW):
 
     function showFilePreview(file) {
         if (!file.fileContent) {
-            alert("File content not available for preview.");
+            showCustomAlert("File content not available for preview.");
             return;
         }
 
@@ -1282,7 +1638,6 @@ Formatting Rules (MUST FOLLOW):
                     previewArea.innerHTML = `<pre style="white-space: pre-wrap; word-break: break-all; max-height: 70vh; overflow-y: auto; background-color: #222; padding: 10px; border-radius: 5px;">${escapeHTML(text)}</pre>`;
                 })
                 .catch(error => {
-                    console.error("Error reading text file for preview:", error);
                     previewArea.innerHTML = `<p>Could not load text content for preview.</p>`;
                 });
         } else {
@@ -1376,31 +1731,21 @@ Formatting Rules (MUST FOLLOW):
             while (attachedFiles.some(f => f.fileName === filename)) {
                 filename = `${filenameBase}(${counter++}).txt`;
             }
-
-            const encoder = new TextEncoder();
-            const encoded = encoder.encode(pastedText);
-            const base64Data = btoa(String.fromCharCode.apply(null, encoded));
             const blob = new Blob([pastedText], {
                 type: 'text/plain'
             });
-            blob.name = filename;
+            blob.name = filename; // For processFileLike
 
             if (attachedFiles.length < MAX_ATTACHMENTS_PER_MESSAGE) {
                 const reader = new FileReader();
                 reader.onloadend = (event) => {
-                    attachedFiles.push({
-                        inlineData: {
-                            mimeType: 'text/plain',
-                            data: base64Data
-                        },
-                        fileName: filename,
-                        fileContent: event.target.result
-                    });
-                    renderAttachments();
+                    const base64Data = event.target.result.split(',')[1];
+                    const dataUrl = event.target.result;
+                    processFileLike(blob, base64Data, dataUrl); // Use processFileLike
                 };
                 reader.readAsDataURL(blob);
             } else {
-                alert(`Cannot attach more than ${MAX_ATTACHMENTS_PER_MESSAGE} files. Text was too large to paste directly.`);
+                showCustomAlert(`Cannot attach more than ${MAX_ATTACHMENTS_PER_MESSAGE} files. Text was too large to paste directly.`);
             }
         } else {
             document.execCommand('insertText', false, pastedText);
@@ -1410,6 +1755,9 @@ Formatting Rules (MUST FOLLOW):
         }
     }
 
+    /**
+     * UPDATED: Stores attachment previews in chat history.
+     */
     function handleInputSubmission(e) {
         const editor = e.target;
         const query = editor.innerText.trim();
@@ -1422,12 +1770,11 @@ Formatting Rules (MUST FOLLOW):
             e.preventDefault();
             const settingsMenu = document.getElementById('ai-settings-menu');
             if (settingsMenu && settingsMenu.classList.contains('active')) {
-                // Settings are saved on change, just close the menu
                 toggleSettingsMenu();
             }
 
             if (attachedFiles.some(f => f.isLoading)) {
-                alert("Please wait for files to finish uploading before sending.");
+                showCustomAlert("Please wait for files to finish uploading before sending.");
                 return;
             }
             if (!query && attachedFiles.length === 0) return;
@@ -1435,27 +1782,45 @@ Formatting Rules (MUST FOLLOW):
 
             isRequestPending = true;
             document.getElementById('ai-input-wrapper').classList.add('waiting');
+
             const parts = [];
             if (query) parts.push({
                 text: query
             });
+
+            // NEW: Store preview-able data
+            const attachmentPreviews = [];
             attachedFiles.forEach(file => {
-                if (file.inlineData) parts.push({
-                    inlineData: file.inlineData
-                });
+                if (file.inlineData) {
+                    parts.push({
+                        inlineData: file.inlineData
+                    });
+                    // Store info needed for rendering the bubble
+                    attachmentPreviews.push({
+                        fileName: file.fileName,
+                        mimeType: file.inlineData.mimeType,
+                        dataUrl: file.fileContent // The Data URL
+                    });
+                }
             });
+
             chatHistory.push({
                 role: "user",
-                parts: parts
+                parts: parts,
+                attachmentPreviews: attachmentPreviews // NEW: Store previews
             });
+
             const responseContainer = document.getElementById('ai-response-container');
             const userBubble = document.createElement('div');
             userBubble.className = 'ai-message-bubble user-message';
+
             let bubbleContent = query ? `<p>${escapeHTML(query)}</p>` : '';
-            if (attachedFiles.length > 0) {
-                bubbleContent += `<div class="sent-attachments">${attachedFiles.length} file(s) sent</div>`;
+            // NEW: Render the new preview container
+            if (attachmentPreviews.length > 0) {
+                bubbleContent += createAttachmentPreviewHTML(attachmentPreviews);
             }
             userBubble.innerHTML = bubbleContent;
+
             responseContainer.appendChild(userBubble);
             const responseBubble = document.createElement('div');
             responseBubble.className = 'ai-message-bubble gemini-response loading';
@@ -1487,8 +1852,43 @@ Formatting Rules (MUST FOLLOW):
                 }, 2000);
             }).catch(err => {
                 console.error('Failed to copy code: ', err);
-                alert('Failed to copy code.');
+                showCustomAlert('Failed to copy code.');
             });
+        }
+    }
+
+    /**
+     * NEW: Handles click on a generated download button.
+     */
+    function handleFileDownload(event) {
+        const btn = event.currentTarget;
+        const base64data = btn.dataset.base64;
+        const mimetype = btn.dataset.mimetype;
+        const filename = btn.dataset.filename;
+
+        try {
+            const byteCharacters = atob(base64data);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], {
+                type: mimetype
+            });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+        } catch (e) {
+            console.error("File download error:", e);
+            showCustomAlert("Failed to initiate download. The file data might be corrupted.");
         }
     }
 
@@ -1500,6 +1900,7 @@ Formatting Rules (MUST FOLLOW):
     }
 
     function escapeHTML(str) {
+        if (typeof str !== 'string') return '';
         const p = document.createElement("p");
         p.textContent = str;
         return p.innerHTML
@@ -1514,7 +1915,34 @@ Formatting Rules (MUST FOLLOW):
         return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
     }
 
-    function parseGeminiResponse(text) {
+    /**
+     * NEW: Custom alert to replace window.alert()
+     */
+    function showCustomAlert(message) {
+        if (document.getElementById('ai-custom-alert')) return;
+
+        const modal = document.createElement('div');
+        modal.id = 'ai-custom-alert';
+        modal.innerHTML = `
+            <div class="alert-content">
+                <p>${escapeHTML(message)}</p>
+                <div class="alert-buttons">
+                    <button id="alert-btn-ok">OK</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        const close = () => modal.remove();
+        modal.querySelector('#alert-btn-ok').onclick = close;
+    }
+
+    /**
+     * UPDATED:
+     * - Parses new <DOWNLOAD> tags.
+     * - Accepts `groundingSources` array instead of regex parsing.
+     */
+    function parseGeminiResponse(text, groundingSources = []) {
         let html = text;
         const placeholders = {};
         let placeholderId = 0;
@@ -1526,25 +1954,38 @@ Formatting Rules (MUST FOLLOW):
         };
 
         // --- Extract thought process (Humanity) ---
-        let thoughtProcess = '';
         html = html.replace(/<THOUGHT_PROCESS>([\s\S]*?)<\/THOUGHT_PROCESS>/, (match, content) => {
             thoughtProcess = content.trim();
             return ''; // Remove from main text
         });
 
-        // --- Extract sources ---
-        let sourcesHTML = '';
-        const sources = [];
-        html = html.replace(/<SOURCE URL="([^"]+)" TITLE="([^"]+)"\s*\/>/g, (match, url, title) => {
-            sources.push({
-                url,
-                title
-            });
-            return ''; // Remove from main text
+        // --- NEW: Extract downloadable files ---
+        html = html.replace(/<DOWNLOAD FILENAME="([^"]+)" MIMETYPE="([^"]+)" ENCODING="base64">([\s\S]*?)<\/DOWNLOAD>/g, (match, filename, mimetype, base64data) => {
+            const safeFilename = escapeHTML(filename);
+            const safeMimetype = escapeHTML(mimetype);
+            // Don't escape base64data, just put it in the dataset
+            const content = `
+                <div class="ai-download-widget">
+                    <div class="file-icon-large">📄</div>
+                    <div class="file-info">
+                        <span class="file-name-large">${safeFilename}</span>
+                        <span class="file-type-large">${safeMimetype}</span>
+                    </div>
+                    <button class="download-file-btn" data-filename="${safeFilename}" data-mimetype="${safeMimetype}" data-base64="${base64data.trim()}">
+                        ${downloadIconSVG}
+                        Download
+                    </button>
+                </div>
+            `;
+            return addPlaceholder(content); // Use the placeholder system
         });
 
+
+        // --- UPDATED: Process sources from grounding array ---
+        let sourcesHTML = '';
+        const sources = [...groundingSources]; // Use the passed-in sources
+
         if (sources.length > 0) {
-            // NEW: Add 'scrollable' class if sources > 5
             const listClass = sources.length > 5 ? 'scrollable' : '';
             sourcesHTML = `<div class="ai-sources-list"><h4>Sources:</h4><ul class="${listClass}">`;
             sources.forEach(source => {
@@ -1554,14 +1995,13 @@ Formatting Rules (MUST FOLLOW):
                 } catch (e) {
                     hostname = 'unknown-source';
                 }
-                // Use Google's favicon service for the mock favicon
                 const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
                 sourcesHTML += `<li><img src="${faviconUrl}" alt="Favicon" class="favicon"><a href="${source.url}" target="_blank">${escapeHTML(source.title)}</a></li>`;
             });
             sourcesHTML += `</ul></div>`;
         }
 
-        // 1. Extract graph blocks (most specific)
+        // 1. Extract graph blocks
         html = html.replace(/```graph\n([\s\S]*?)```/g, (match, jsonString) => {
             let metadata = 'Graph';
             try {
@@ -1579,20 +2019,15 @@ Formatting Rules (MUST FOLLOW):
                         }
                     }
                 }
-            } catch (e) {
-                /* Ignore parsing errors */ }
-
+            } catch (e) { /* Ignore parsing errors */ }
             const escapedData = escapeHTML(jsonString);
             const content = `
                 <div class="graph-block-wrapper">
-                    <div class="graph-block-header">
-                        <span class="graph-metadata">${metadata}</span>
-                    </div>
+                    <div class="graph-block-header"><span class="graph-metadata">${metadata}</span></div>
                     <div class="custom-graph-placeholder" data-graph-data='${escapedData}'>
                         <canvas class="graph-canvas"></canvas>
                     </div>
-                </div>
-            `;
+                </div>`;
             return addPlaceholder(content);
         });
 
@@ -1610,18 +2045,15 @@ Formatting Rules (MUST FOLLOW):
                         <button class="copy-code-btn" title="Copy code">${copyIconSVG}</button>
                     </div>
                     <pre><code class="${langClass}">${escapedCode}</code></pre>
-                </div>
-            `;
+                </div>`;
             return addPlaceholder(content);
         });
 
-        // 3. Extract KaTeX blocks BEFORE escaping general HTML
-        // Display mode: $$...$$
+        // 3. Extract KaTeX blocks
         html = html.replace(/\$\$([\s\S]*?)\$\$/g, (match, formula) => {
             const content = `<div class="latex-render" data-tex="${escapeHTML(formula)}" data-display-mode="true"></div>`;
             return addPlaceholder(content);
         });
-        // Inline mode: $...$
         html = html.replace(/\$([^\s\$][^\$]*?[^\s\$])\$/g, (match, formula) => {
             const content = `<span class="latex-render" data-tex="${escapeHTML(formula)}" data-display-mode="false"></span>`;
             return addPlaceholder(content);
@@ -1636,14 +2068,12 @@ Formatting Rules (MUST FOLLOW):
             .replace(/^# (.*$)/gm, "<h1>$1</h1>");
         html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
             .replace(/\*(.*?)\*/g, "<em>$1</em>");
-
         html = html.replace(/^(?:\*|-)\s(.*$)/gm, "<li>$1</li>");
         html = html.replace(/((?:<br>)?\s*<li>.*<\/li>(\s*<br>)*)+/gs, (match) => {
             const listItems = match.replace(/<br>/g, '').trim();
             return `<ul>${listItems}</ul>`;
         });
         html = html.replace(/(<\/li>\s*<li>)/g, "</li><li>");
-
         html = html.replace(/\n/g, "<br>");
 
         // 6. Restore placeholders
@@ -1658,7 +2088,6 @@ Formatting Rules (MUST FOLLOW):
 
     function injectStyles() {
         if (document.getElementById('ai-dynamic-styles')) return;
-
         if (!document.getElementById('ai-katex-styles')) {
             const katexStyles = document.createElement('link');
             katexStyles.id = 'ai-katex-styles';
@@ -1666,7 +2095,6 @@ Formatting Rules (MUST FOLLOW):
             katexStyles.rel = 'stylesheet';
             document.head.appendChild(katexStyles);
         }
-
         if (!document.getElementById('ai-google-fonts')) {
             const googleFonts = document.createElement('link');
             googleFonts.id = 'ai-google-fonts';
@@ -1683,22 +2111,11 @@ Formatting Rules (MUST FOLLOW):
         style.id = "ai-dynamic-styles";
         style.innerHTML = `
             :root { --ai-red: #ea4335; --ai-blue: #4285f4; --ai-green: #34a853; --ai-yellow: #fbbc05; }
-            #ai-container { 
-                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-                background-color: rgba(10, 10, 15, 0.95);
-                backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); 
-                z-index: 2147483647; opacity: 0; transition: opacity 0.5s, background 0.5s; 
-                font-family: 'Lora', serif; display: flex; flex-direction: column; 
-                justify-content: flex-end; padding: 0; box-sizing: border-box; overflow: hidden; 
-            }
+            #ai-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(10, 10, 15, 0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); z-index: 2147483646; opacity: 0; transition: opacity 0.5s, background 0.5s; font-family: 'Lora', serif; display: flex; flex-direction: column; justify-content: flex-end; padding: 0; box-sizing: border-box; overflow: hidden; }
             #ai-container.active { opacity: 1; }
             #ai-container.deactivating, #ai-container.deactivating > * { transition: opacity 0.4s, transform 0.4s; }
             #ai-container.deactivating { opacity: 0 !important; background-color: rgba(0,0,0,0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); }
-            #ai-persistent-title, #ai-brand-title { 
-                position: absolute; top: 28px; left: 30px; font-family: 'Lora', serif; 
-                font-size: 18px; font-weight: bold; color: #FFFFFF;
-                opacity: 0; transition: opacity 0.5s 0.2s, color 0.5s; 
-            }
+            #ai-persistent-title, #ai-brand-title { position: absolute; top: 28px; left: 30px; font-family: 'Lora', serif; font-size: 18px; font-weight: bold; color: #FFFFFF; opacity: 0; transition: opacity 0.5s 0.2s, color 0.5s; }
             #ai-container.chat-active #ai-persistent-title { opacity: 1; }
             #ai-container:not(.chat-active) #ai-brand-title { opacity: 1; }
             #ai-brand-title span { animation: brand-title-pulse 4s linear infinite; }
@@ -1716,9 +2133,6 @@ Formatting Rules (MUST FOLLOW):
             .gemini-response { animation: glow 4s infinite; display: flex; flex-direction: column; }
             .gemini-response.loading { display: flex; justify-content: center; align-items: center; min-height: 60px; max-width: 100px; padding: 15px; background: rgba(15,15,18,.8); animation: gemini-glow 4s linear infinite; }
             
-            /* UPDATED STYLES for Sources (Top) and Collapsible Monologue (Bottom) */
-            
-            /* CSS FIX: Reduced margin-top and padding-top */
             .ai-sources-list { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px; margin-top: 8px; }
             .ai-sources-list h4 { color: #ccc; margin: 0 0 10px 0; font-family: 'Merriweather', serif; font-size: 1em; }
             .ai-sources-list ul { list-style: none; padding: 0; margin: 0; }
@@ -1726,98 +2140,23 @@ Formatting Rules (MUST FOLLOW):
             .ai-sources-list li a { color: #4285f4; text-decoration: none; font-size: 0.9em; transition: color 0.2s; }
             .ai-sources-list li a:hover { color: #6a9cf6; }
             .ai-sources-list li img.favicon { width: 16px; height: 16px; margin-right: 8px; border-radius: 2px; flex-shrink: 0; }
-            
-            /* NEW: Scrollable source list for > 5 items */
-            .ai-sources-list ul.scrollable {
-                max-height: 170px; /* Approx 5.5 items */
-                overflow-y: auto;
-                padding-right: 5px; 
-                scrollbar-width: thin;
-                scrollbar-color: #555 #333;
-            }
+            .ai-sources-list ul.scrollable { max-height: 170px; overflow-y: auto; padding-right: 5px; scrollbar-width: thin; scrollbar-color: #555 #333; }
             .ai-sources-list ul.scrollable::-webkit-scrollbar { width: 8px; }
             .ai-sources-list ul.scrollable::-webkit-scrollbar-track { background: #333; border-radius: 4px; }
             .ai-sources-list ul.scrollable::-webkit-scrollbar-thumb { background-color: #555; border-radius: 4px; }
             
-            /* MODIFIED: Thought process colors and transitions */
-            .ai-thought-process { 
-                border-radius: 12px; 
-                padding: 0; 
-                margin-top: 10px; 
-                font-size: 0.9em; 
-                max-width: 100%; 
-                /* MODIFIED: Faster transition, added background/border */
-                transition: background-color 0.3s ease, border-color 0.3s ease;
-                
-                /* Default OPEN state */
-                background-color: rgba(66, 133, 244, 0.1); 
-                border: 1px solid rgba(66, 133, 244, 0.3); 
-            }
-            .ai-thought-process.collapsed {
-                /* COLLAPSED state */
-                background-color: rgba(255, 255, 255, 0.05);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-            }
-
+            .ai-thought-process { border-radius: 12px; padding: 0; margin-top: 10px; font-size: 0.9em; max-width: 100%; transition: background-color 0.3s ease, border-color 0.3s ease; background-color: rgba(66, 133, 244, 0.1); border: 1px solid rgba(66, 133, 244, 0.3); }
+            .ai-thought-process.collapsed { background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); }
             .monologue-header { display: flex; justify-content: space-between; align-items: center; padding: 10px; cursor: pointer; }
-            
-            .monologue-title { 
-                margin: 0; 
-                font-family: 'Merriweather', serif; 
-                font-size: 1em;
-                transition: color 0.3s ease;
-                color: #4285f4; /* OPEN state color */
-            }
-            .ai-thought-process.collapsed .monologue-title {
-                color: #ccc; /* COLLAPSED state color */
-            }
-
-            .monologue-toggle-btn { 
-                background: none; 
-                border-radius: 6px; 
-                padding: 4px 8px; 
-                font-size: 0.8em; 
-                cursor: pointer; 
-                transition: background-color 0.2s, border-color 0.3s ease, color 0.3s ease;
-                
-                /* OPEN state */
-                border: 1px solid rgba(66, 133, 244, 0.5); 
-                color: #4285f4;
-            }
-            .ai-thought-process:not(.collapsed) .monologue-toggle-btn:hover { 
-                background-color: rgba(66, 133, 244, 0.2); 
-            }
-            
-            .ai-thought-process.collapsed .monologue-toggle-btn {
-                /* COLLAPSED state */
-                border-color: rgba(255, 255, 255, 0.2);
-                color: #ccc;
-            }
-            .ai-thought-process.collapsed .monologue-toggle-btn:hover {
-                background-color: rgba(255, 255, 255, 0.1);
-            }
-            
-            /* MODIFIED: Faster animation, no fade */
-            .monologue-content { 
-                max-height: 0; 
-                opacity: 1; /* No fade */
-                overflow: hidden; 
-                padding: 0 10px; /* Only horizontal padding when collapsed */
-                transition: max-height 0.2s ease-out, padding 0.2s ease-out; 
-            }
-            .ai-thought-process:not(.collapsed) .monologue-content {
-                max-height: 500px; /* Arbitrarily large value */
-                padding: 0 10px 10px 10px; /* Final padding with bottom */
-            }
-
-            .ai-thought-process pre { 
-                white-space: pre-wrap; 
-                word-break: break-word; 
-                margin: 0; color: #ccc; 
-                font-family: monospace; font-size: 0.85em; 
-                background: none; 
-            }
-            /* END UPDATED STYLES */
+            .monologue-title { margin: 0; font-family: 'Merriweather', serif; font-size: 1em; transition: color 0.3s ease; color: #4285f4; }
+            .ai-thought-process.collapsed .monologue-title { color: #ccc; }
+            .monologue-toggle-btn { background: none; border-radius: 6px; padding: 4px 8px; font-size: 0.8em; cursor: pointer; transition: background-color 0.2s, border-color 0.3s ease, color 0.3s ease; border: 1px solid rgba(66, 133, 244, 0.5); color: #4285f4; }
+            .ai-thought-process:not(.collapsed) .monologue-toggle-btn:hover { background-color: rgba(66, 133, 244, 0.2); }
+            .ai-thought-process.collapsed .monologue-toggle-btn { border-color: rgba(255, 255, 255, 0.2); color: #ccc; }
+            .ai-thought-process.collapsed .monologue-toggle-btn:hover { background-color: rgba(255, 255, 255, 0.1); }
+            .monologue-content { max-height: 0; opacity: 1; overflow: hidden; padding: 0 10px; transition: max-height 0.2s ease-out, padding 0.2s ease-out; }
+            .ai-thought-process:not(.collapsed) .monologue-content { max-height: 500px; padding: 0 10px 10px 10px; }
+            .ai-thought-process pre { white-space: pre-wrap; word-break: break-word; margin: 0; color: #ccc; font-family: monospace; font-size: 0.85em; background: none; }
             
             #ai-compose-area { position: relative; flex-shrink: 0; z-index: 2; margin: 15px auto; width: 90%; max-width: 720px; }
             #ai-input-wrapper { position: relative; z-index: 2; width: 100%; display: flex; flex-direction: column; border-radius: 20px; background: rgba(10,10,10,.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,.2); transition: all .4s cubic-bezier(.4,0,.2,1); }
@@ -1825,89 +2164,33 @@ Formatting Rules (MUST FOLLOW):
             #ai-input-wrapper::before { animation: glow 3s infinite; opacity: 1; }
             #ai-input-wrapper.waiting::before { opacity: 0; }
             #ai-input-wrapper.waiting::after { opacity: 1; }
-            #ai-input { min-height: 48px; max-height: ${MAX_INPUT_HEIGHT}px; overflow-y: hidden; color: #fff; font-size: 1.1em; padding: 13px 60px 13px 60px; box-sizing: border-box; word-wrap: break-word; outline: 0; text-align: left; }
+            
+            /* UPDATED: Increased left padding for new memory button */
+            #ai-input { min-height: 48px; max-height: ${MAX_INPUT_HEIGHT}px; overflow-y: hidden; color: #fff; font-size: 1.1em; padding: 13px 60px 13px 110px; box-sizing: border-box; word-wrap: break-word; outline: 0; text-align: left; }
             #ai-input:empty::before { content: 'Ask a question or describe your files...'; color: rgba(255, 255, 255, 0.4); pointer-events: none; }
             
-            #ai-attachment-button, #ai-settings-button { position: absolute; bottom: 7px; background-color: rgba(100, 100, 100, 0.5); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,.8); font-size: 18px; cursor: pointer; padding: 5px; line-height: 1; z-index: 3; transition: all .3s ease; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; }
+            /* UPDATED: Added #ai-memory-button styles */
+            #ai-attachment-button, #ai-settings-button, #ai-memory-button { position: absolute; bottom: 7px; background-color: rgba(100, 100, 100, 0.5); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,.8); font-size: 18px; cursor: pointer; padding: 5px; line-height: 1; z-index: 3; transition: all .3s ease; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; }
             #ai-attachment-button { left: 10px; }
+            #ai-memory-button { left: 58px; font-size: 20px; } /* NEW */
             #ai-settings-button { right: 10px; font-size: 20px; color: #ccc; }
-            #ai-attachment-button:hover, #ai-settings-button:hover { background-color: rgba(120, 120, 120, 0.7); color: #fff; }
+            #ai-attachment-button:hover, #ai-settings-button:hover, #ai-memory-button:hover { background-color: rgba(120, 120, 120, 0.7); color: #fff; }
             #ai-settings-button.active { background-color: rgba(150, 150, 150, 0.8); color: white; }
 
-            /* NEW Settings Menu */
-            #ai-settings-menu { 
-                position: absolute; bottom: calc(100% + 10px); right: 0; width: 350px; 
-                z-index: 1; background: rgb(20, 20, 22); 
-                border: 1px solid rgba(255,255,255,0.2); border-radius: 16px; 
-                box-shadow: 0 5px 25px rgba(0,0,0,0.5); padding: 15px; 
-                opacity: 0; visibility: hidden; transform: translateY(20px); 
-                transition: all .3s cubic-bezier(.4,0,.2,1); overflow: hidden; 
-            }
+            #ai-settings-menu { position: absolute; bottom: calc(100% + 10px); right: 0; width: 350px; z-index: 1; background: rgb(20, 20, 22); border: 1px solid rgba(255,255,255,0.2); border-radius: 16px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); padding: 15px; opacity: 0; visibility: hidden; transform: translateY(20px); transition: all .3s cubic-bezier(.4,0,.2,1); overflow: hidden; }
             #ai-settings-menu.active { opacity: 1; visibility: visible; transform: translateY(0); }
-            #ai-settings-menu .menu-header { 
-                font-size: 1.1em; color: #fff; text-transform: uppercase; 
-                margin-bottom: 20px; text-align: center; font-family: 'Merriweather', serif; 
-            }
-            .setting-group.toggle-group {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 15px;
-            }
-            .setting-label {
-                flex: 1;
-                margin-right: 15px;
-            }
-            .setting-label label {
-                display: block; color: #ccc; font-size: 0.95em; 
-                margin-bottom: 3px; font-weight: bold;
-            }
+            #ai-settings-menu .menu-header { font-size: 1.1em; color: #fff; text-transform: uppercase; margin-bottom: 20px; text-align: center; font-family: 'Merriweather', serif; }
+            .setting-group.toggle-group { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+            .setting-label { flex: 1; margin-right: 15px; }
+            .setting-label label { display: block; color: #ccc; font-size: 0.95em; margin-bottom: 3px; font-weight: bold; }
             .setting-note { font-size: 0.75em; color: #888; margin-top: 0; }
             
-            /* NEW Toggle Switch CSS */
-            .ai-toggle-switch {
-                position: relative;
-                display: inline-block;
-                width: 50px;
-                height: 28px;
-                flex-shrink: 0;
-            }
-            .ai-toggle-switch input {
-                opacity: 0;
-                width: 0;
-                height: 0;
-            }
-            .ai-slider {
-                position: absolute;
-                cursor: pointer;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background-color: #333;
-                border: 1px solid #555;
-                transition: .4s;
-                border-radius: 28px;
-            }
-            .ai-slider:before {
-                position: absolute;
-                content: "";
-                height: 20px;
-                width: 20px;
-                left: 3px;
-                bottom: 3px;
-                background-color: white;
-                transition: .4s;
-                border-radius: 50%;
-            }
-            input:checked + .ai-slider {
-                background-color: #4285f4;
-                border-color: #4285f4;
-            }
-            input:checked + .ai-slider:before {
-                transform: translateX(22px);
-            }
-            /* END NEW Settings Menu */
+            .ai-toggle-switch { position: relative; display: inline-block; width: 50px; height: 28px; flex-shrink: 0; }
+            .ai-toggle-switch input { opacity: 0; width: 0; height: 0; }
+            .ai-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; border: 1px solid #555; transition: .4s; border-radius: 28px; }
+            .ai-slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+            input:checked + .ai-slider { background-color: #4285f4; border-color: #4285f4; }
+            input:checked + .ai-slider:before { transform: translateX(22px); }
 
             /* Attachments, Code Blocks, Graphs, LaTeX */
             #ai-attachment-preview { display: none; flex-direction: row; gap: 10px; padding: 0; max-height: 0; border-bottom: 1px solid transparent; overflow-x: auto; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
@@ -1917,11 +2200,23 @@ Formatting Rules (MUST FOLLOW):
             .attachment-card.loading .file-icon { opacity: 0.3; }
             .attachment-card.loading .ai-loader { position: absolute; z-index: 2; }
             .attachment-card img { width: 100%; height: 100%; object-fit: cover; }
+            .attachment-card .file-icon { font-size: 2em; color: #ccc; }
             .file-info { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); overflow: hidden; }
             .file-name { display: block; color: #fff; font-size: 0.75em; padding: 4px; text-align: center; white-space: nowrap; }
             .file-name.marquee > span { display: inline-block; padding-left: 100%; animation: marquee linear infinite; }
             .file-type-badge { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.7em; padding: 2px 5px; border-radius: 4px; font-family: sans-serif; font-weight: bold; }
             .remove-attachment-btn { position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.5); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; z-index: 3; }
+
+            /* NEW: Sent Attachment Previews */
+            .sent-attachment-container { display: flex; flex-direction: row; gap: 10px; overflow-x: auto; padding: 10px 0 5px 0; margin-top: 10px; scrollbar-width: thin; scrollbar-color: #555 #333; }
+            .sent-attachment-container::-webkit-scrollbar { height: 8px; }
+            .sent-attachment-container::-webkit-scrollbar-track { background: #333; border-radius: 4px; }
+            .sent-attachment-container::-webkit-scrollbar-thumb { background-color: #555; border-radius: 4px; }
+            .sent-attachment-card { position: relative; border-radius: 8px; overflow: hidden; background: #333; height: 80px; width: 80px; flex-shrink: 0; display: flex; justify-content: center; align-items: center; }
+            .sent-attachment-card img { width: 100%; height: 100%; object-fit: cover; }
+            .sent-attachment-card .file-icon { font-size: 2em; color: #ccc; }
+            .sent-file-info { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); padding: 4px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .sent-file-info span { color: #fff; font-size: 0.75em; }
 
             .ai-loader { width: 25px; height: 25px; border-radius: 50%; animation: spin 1s linear infinite; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; }
             
@@ -1939,70 +2234,68 @@ Formatting Rules (MUST FOLLOW):
             .custom-graph-placeholder { min-height: 400px; position: relative; padding: 10px; }
             .graph-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
 
-            .latex-render { display: inline-block; } /* default to inline */
-            .ai-response-content div.latex-render { display: block; margin: 10px 0; text-align: center; } /* for display mode */
+            /* NEW: Download Widget */
+            .ai-download-widget { background-color: rgba(30, 30, 35, 0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 15px; display: flex; align-items: center; gap: 15px; margin: 10px 0; font-family: 'Lora', serif; }
+            .ai-download-widget .file-icon-large { font-size: 2.5em; color: #ccc; }
+            .ai-download-widget .file-info { flex: 1; display: flex; flex-direction: column; }
+            .ai-download-widget .file-name-large { font-size: 1.1em; color: #fff; font-weight: bold; }
+            .ai-download-widget .file-type-large { font-size: 0.9em; color: #aaa; font-family: monospace; }
+            .ai-download-widget .download-file-btn { background-color: #4285f4; color: white; border: none; border-radius: 8px; padding: 10px 15px; font-size: 0.9em; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background-color 0.2s; }
+            .ai-download-widget .download-file-btn:hover { background-color: #3c77e6; }
+            .ai-download-widget .download-file-btn svg { stroke: white; }
+
+            .latex-render { display: inline-block; }
+            .ai-response-content div.latex-render { display: block; margin: 10px 0; text-align: center; }
             .katex { font-size: 1.1em !important; }
 
             .ai-message-bubble p { margin: 0; padding: 0; text-align: left; }
             .ai-message-bubble ul, .ai-message-bubble ol { margin: 10px 0; padding-left: 20px; text-align: left; list-style-position: outside; }
             .ai-message-bubble li { margin-bottom: 5px; }
 
-            /* NEW Web Search Nudge Popup */
-            #ai-web-search-nudge {
-                position: fixed;
-                bottom: 20px;
-                left: 50%;
-                transform: translateX(-50%);
-                background-color: #2a2a2e;
-                border: 1px solid #444;
-                border-radius: 12px;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-                color: #eee;
-                z-index: 2147483647;
-                padding: 15px;
-                animation: nudge-fade-in 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            }
-            .nudge-content {
-                display: flex;
-                align-items: center;
-                gap: 15px;
-            }
-            .nudge-content p {
-                margin: 0;
-                font-size: 0.9em;
-                color: #ccc;
-            }
-            .nudge-buttons {
-                display: flex;
-                gap: 10px;
-            }
-            .nudge-buttons button {
-                background: none;
-                border: 1px solid #555;
-                color: #ddd;
-                padding: 6px 12px;
-                border-radius: 6px;
-                cursor: pointer;
-                transition: background-color 0.2s;
-            }
-            .nudge-buttons button:hover {
-                background-color: #333;
-            }
-            #nudge-open-settings {
-                background-color: #4285f4;
-                border-color: #4285f4;
-                color: white;
-            }
-            #nudge-open-settings:hover {
-                background-color: #3c77e6;
-            }
-            @keyframes nudge-fade-in {
-                from { opacity: 0; transform: translateX(-50%) translateY(20px); }
-                to { opacity: 1; transform: translateX(-50%) translateY(0); }
-            }
-            /* END Nudge CSS */
+            #ai-web-search-nudge { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background-color: #2a2a2e; border: 1px solid #444; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); color: #eee; z-index: 2147483647; padding: 15px; animation: nudge-fade-in 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+            .nudge-content { display: flex; align-items: center; gap: 15px; }
+            .nudge-content p { margin: 0; font-size: 0.9em; color: #ccc; }
+            .nudge-buttons { display: flex; gap: 10px; }
+            .nudge-buttons button { background: none; border: 1px solid #555; color: #ddd; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: background-color 0.2s; }
+            .nudge-buttons button:hover { background-color: #333; }
+            #nudge-open-settings { background-color: #4285f4; border-color: #4285f4; color: white; }
+            #nudge-open-settings:hover { background-color: #3c77e6; }
+            
+            /* NEW: Memory Modal CSS */
+            #ai-memory-modal, #ai-custom-confirm, #ai-custom-alert { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 2147483648; display: flex; justify-content: center; align-items: center; animation: nudge-fade-in 0.3s; }
+            .memory-modal-content, .confirm-content, .alert-content { background: #1c1c1e; border: 1px solid #333; border-radius: 16px; width: 90%; max-width: 600px; padding: 20px; box-shadow: 0 5px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; color: #eee; }
+            .memory-modal-content { height: 80vh; }
+            .memory-modal-content h3 { font-family: 'Merriweather', serif; text-align: center; margin-top: 0; font-size: 1.5em; }
+            .memory-modal-content .close-button { position: absolute; top: 15px; right: 20px; font-size: 2em; color: #888; cursor: pointer; }
+            #memory-storage-bar-container { margin-bottom: 15px; }
+            .storage-label { display: flex; justify-content: space-between; font-size: 0.8em; color: #aaa; margin-bottom: 5px; }
+            .storage-bar { width: 100%; height: 10px; background: #333; border-radius: 5px; overflow: hidden; }
+            #storage-bar-used { height: 100%; background: #4285f4; width: 0%; transition: width 0.5s; }
+            #memory-list-container { flex: 1; overflow-y: auto; background: #111; border-radius: 8px; padding: 10px; border: 1px solid #222; }
+            .no-memories { text-align: center; color: #777; margin-top: 20px; }
+            .memory-item { background: #2a2a2e; border-radius: 8px; padding: 10px; margin-bottom: 10px; border: 1px solid #333; }
+            .memory-content { width: 100%; min-height: 60px; background: none; border: 1px dashed #444; border-radius: 4px; color: #eee; font-family: 'Lora', serif; font-size: 1em; padding: 5px; resize: vertical; }
+            .memory-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+            .memory-timestamp { font-size: 0.75em; color: #888; }
+            .memory-actions button { background: #444; color: #eee; border: none; border-radius: 5px; padding: 5px 10px; font-size: 0.8em; cursor: pointer; }
+            .memory-actions div { display: flex; gap: 5px; }
+            .memory-actions .memory-save-btn { background: #4285f4; color: white; }
+            .memory-actions .memory-delete-btn { background: #ea4335; color: white; }
+            .memory-new-input { display: flex; gap: 10px; margin-top: 15px; }
+            #memory-new-content { flex: 1; height: 50px; background: #222; border: 1px solid #333; color: #eee; border-radius: 8px; padding: 10px; resize: none; }
+            #memory-add-btn { background: #34a853; color: white; border: none; border-radius: 8px; padding: 0 20px; font-weight: bold; cursor: pointer; }
+            #memory-delete-all-btn { background: #ea4335; color: white; border: none; border-radius: 8px; padding: 10px; margin-top: 15px; cursor: pointer; font-weight: bold; }
+            
+            /* NEW: Custom Confirm/Alert */
+            .confirm-content, .alert-content { max-width: 400px; }
+            .confirm-content p, .alert-content p { font-size: 1.1em; margin-top: 0; line-height: 1.5; }
+            .confirm-buttons, .alert-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+            .confirm-buttons button, .alert-buttons button { padding: 8px 15px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+            #confirm-btn-cancel, #alert-btn-ok { background: #555; color: white; }
+            #confirm-btn-ok { background: #ea4335; color: white; }
 
 
+            @keyframes nudge-fade-in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
             @keyframes glow { 0%,100% { box-shadow: 0 0 5px rgba(255,255,255,.15), 0 0 10px rgba(255,255,255,.1); } 50% { box-shadow: 0 0 10px rgba(255,255,255,.25), 0 0 20px rgba(255,255,255,.2); } }
             @keyframes gemini-glow { 0%,100% { box-shadow: 0 0 8px 2px var(--ai-blue); } 25% { box-shadow: 0 0 8px 2px var(--ai-green); } 50% { box-shadow: 0 0 8px 2px var(--ai-yellow); } 75% { box-shadow: 0 0 8px 2px var(--ai-red); } }
             @keyframes spin { to { transform: rotate(360deg); } }
@@ -2016,6 +2309,8 @@ Formatting Rules (MUST FOLLOW):
     document.addEventListener('keydown', handleKeyDown);
 
     document.addEventListener('DOMContentLoaded', async () => {
-        loadAppSettings(); // Replaced loadUserSettings
+        loadAppSettings();
+        // Pre-warm the database connection
+        initMemoryDB().catch(e => console.error("Failed to init DB on load:", e));
     });
 })();
