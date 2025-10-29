@@ -326,7 +326,7 @@ let db;
                 height: 4rem; 
                 transition: background-color 0.3s ease, border-color 0.3s ease;
             }
-            .auth-navbar nav { padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
+            .auth-navbar nav { padding: 0 1rem 0 0; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
             
             /* --- NEW: Logo Div Styling --- */
             #navbar-logo {
@@ -401,7 +401,7 @@ let db;
             .auth-menu-link i.w-4, .auth-menu-button i.w-4 { width: 1rem; text-align: center; } 
 
             /* Tab Wrapper and Glide Buttons */
-            .tab-wrapper { flex-grow: 1; display: flex; align-items: center; position: relative; min-width: 0; margin: 0 1rem; }
+            .tab-wrapper { flex-grow: 1; display: flex; align-items: center; position: relative; min-width: 0; }
             .tab-scroll-container { flex-grow: 1; display: flex; align-items: center; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; -ms-overflow-style: none; padding-bottom: 5px; margin-bottom: -5px; scroll-behavior: smooth; }
             .tab-scroll-container::-webkit-scrollbar { display: none; }
             .scroll-glide-button {
