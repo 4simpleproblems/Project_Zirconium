@@ -328,6 +328,12 @@ let db;
             }
             .auth-navbar nav { padding: 0 1rem 0 0; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
             
+            /* NEW: Ensure logo container has zero horizontal spacing */
+            .auth-navbar nav a:first-child {
+                padding-left: 0 !important;
+                margin-left: 0 !important;
+            }
+            
             /* --- NEW: Logo Div Styling --- */
             #navbar-logo {
                 background-color: var(--logo-tint-color); /* Color is set by applyTheme logic */
@@ -1191,4 +1197,3 @@ let db;
     document.addEventListener('DOMContentLoaded', run);
 
 })();
-//hi
