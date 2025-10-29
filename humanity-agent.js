@@ -1,71 +1,53 @@
 /**
  * agent-activation.js
  *
- * --- MAJOR UPGRADE ---
+ * MODIFIED: Refactored to remove Agent/Category system and implement a dynamic, context-aware AI persona.
+ * REPLACED: Removed personalization features (nickname, color, gender, age).
+ * NEW: Replaced old Settings Menu with a new one for "Web Search" and "Location Sharing" toggles, stored in localStorage.
+ * NEW: The AI's system instruction (persona) now changes intelligently based on the content and tone of the user's latest message.
+ * UI: Fixed background and title colors. Replaced Agent button with a grey Settings button.
+ * UPDATED: AI container does not load on DOMContentLoaded; requires Ctrl + \ shortcut.
+ * UPDATED: Ensured Ctrl + \ shortcut for activation/deactivation is fully functional.
+ * NEW: Added KaTeX for high-quality rendering of mathematical formulas and equations.
+ * REPLACED: Plotly.js has been replaced with a custom, theme-aware graphing engine for better integration.
  *
- * NEW (Memories): Added a persistent memory system using IndexedDB.
- * - AI now loads the 10 most recent memories into its system prompt for context.
- * - New UI button (brain icon) opens a "Saved Memories" modal.
- * - Modal allows users to add, edit, delete, and delete all memories.
- * - Modal displays storage usage (capped at 5GB) with a progress bar.
+ * NEW: Implemented dynamic model switching based on user query and authorization:
+ * - Casual chat: gemini-2.5-flash-lite
+ * - Professional/Math: gemini-2.5-flash
+ * - Deep Analysis: gemini-2.5-flash (Pro model feature removed)
  *
- * NEW (Chat History): Removed the 6-message truncation limit. The AI will now
- * receive the full chat history (up to its context window limit).
+ * NEW: The AI's response now includes an internal <THOUGHT_PROCESS> and lists of <SOURCE URL="..." TITLE="..."/>.
+ * UPDATED: Removed authenticated email feature.
+ * REPLACED: Geolocation now uses browser's `navigator.geolocation` (with high accuracy) and Nominatim (OpenStreetMap) for reverse geocoding.
+ * NEW: Added a "nudge" popup if AI needs web search but the setting is disabled.
+ * UPDATED: Swapped order of monologue and sources. Monologue is now a collapsible dropdown.
+ * CSS: Reduced margins between response content, sources, and monologue for a tighter layout.
+ * MODIFIED: Location Sharing is now OFF by default.
+ * MODIFIED: Web search prompt is more direct to improve search quality.
  *
- * NEW (Web Search): Implemented true Google Search grounding.
- * - The AI will now use the `Google Search` tool when "Web Search" is enabled.
- * - Response parsing is updated to use the `groundingMetadata` from the API
- * response, replacing the old `<SOURCE>` tag regex. This provides more
- * accurate and reliable sourcing.
- *
- * NEW (File Downloads): The AI can now generate downloadable files.
- * - Added system prompt instruction for the AI to use a new tag:
- * <DOWNLOAD FILENAME="..." MIMETYPE="..." ENCODING="base64">...</DOWNLOAD>
- * - `parseGeminiResponse` now detects this tag and renders a download widget.
- * - Added a click handler (`handleFileDownload`) to decode the Base64 content
- * and trigger a browser download.
- * - Added CSS for the download widget.
- *
- * NEW (Attachment UI): User message bubbles now display a graphical, horizontal
- * scroll menu of attached files, mirroring the compose-area preview.
- * - `handleInputSubmission` now stores `attachmentPreviews` (with dataUrls for
- * images) in the `chatHistory` object.
- * - `renderChatHistory` uses a new function `createAttachmentPreviewHTML`
- * to render this preview menu inside the user's message bubble.
- * - Added CSS for the sent attachments container.
- *
- * UPDATED (Graphing): The custom graph renderer (`drawCustomGraph`) is improved.
- * - It now respects `layout.xaxis.range` and `layout.yaxis.range` from the
- * AI's JSON, allowing for AI-defined graph windows.
- * - Falls back to the old auto-ranging logic if ranges aren't provided.
- * - Improved axis label alignment for clarity.
- *
- * REFACTORED:
- * - `getDynamicSystemInstructionAndModel` is now `async` to await memories
- * from IndexedDB before building the system prompt.
- * - `callGoogleAI` is updated to await the new async system prompt.
- * - `parseGeminiResponse` signature updated to accept `groundingSources` array.
- * - Removed the unused `getDynamicSystemInstruction` stub.
- * - Added new CSS and functions to support all new features.
- * * FIX & UI CHANGE:
- * - FIXED: API error "Unknown name "attachmentPreviews"" by sanitizing chat history before sending.
- * - NEW: Combined attachment, memory, and settings buttons into a single 'More Options' menu.
+ * --- UI/UX Update ---
+ * NEW: Source list becomes scrollable if > 5 sources.
+ * CSS: Reduced margin between response content and source list.
+ * MODIFIED: Thought process (monologue) no longer includes the model name.
+ * NEW: Thought process panel is hidden for simple/short thoughts (e.g., "Hi").
+ * CSS: Thought process container is neutral when collapsed, blue when expanded.
+ * CSS: Thought process collapse/expand animation is now faster (0.2s) and removes opacity fade.
  */
 (function() {
     // --- CONFIGURATION ---
     const API_KEY = 'AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro';
     const BASE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/`;
+    // const AUTHORIZED_PRO_USER = '4simpleproblems@gmail.com'; // REMOVED
     const MAX_INPUT_HEIGHT = 180;
     const CHAR_LIMIT = 10000;
     const PASTE_TO_FILE_THRESHOLD = 10000;
     const MAX_ATTACHMENTS_PER_MESSAGE = 10;
-    const MONOLOGUE_CHAR_THRESHOLD = 75;
+    const MONOLOGUE_CHAR_THRESHOLD = 75; // NEW: Don't show monologue if thoughts are shorter than this
 
     // --- ICONS (for event handlers) ---
     const copyIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
     const checkIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="check-icon"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
     const attachmentIconSVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.2a2 2 0 0 1-2.83-2.83l8.49-8.49"></path></svg>`;
-    const downloadIconSVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`;
 
     // --- STATE MANAGEMENT ---
     let isAIActive = false;
@@ -73,181 +55,11 @@
     let currentAIRequestController = null;
     let chatHistory = [];
     let attachedFiles = [];
+    // NEW: Replaced userSettings with appSettings. Location sharing is now off by default.
     let appSettings = {
         webSearch: true,
         locationSharing: false
     };
-    let memoryDB = null; // NEW: For IndexedDB
-
-    // --- NEW: INDEXEDDB MEMORY FUNCTIONS ---
-    const DB_NAME = 'HumanityAIMemories';
-    const STORE_NAME = 'memories';
-
-    /**
-     * Initializes the IndexedDB for memories.
-     */
-    async function initMemoryDB() {
-        return new Promise((resolve, reject) => {
-            if (memoryDB) {
-                resolve(memoryDB);
-                return;
-            }
-            const request = indexedDB.open(DB_NAME, 1);
-
-            request.onerror = (event) => {
-                console.error("IndexedDB error:", request.error);
-                reject("IndexedDB error");
-            };
-
-            request.onupgradeneeded = (event) => {
-                const db = event.target.result;
-                if (!db.objectStoreNames.contains(STORE_NAME)) {
-                    db.createObjectStore(STORE_NAME, {
-                        keyPath: 'id',
-                        autoIncrement: true
-                    });
-                }
-            };
-
-            request.onsuccess = (event) => {
-                memoryDB = event.target.result;
-                resolve(memoryDB);
-            };
-        });
-    }
-
-    /**
-     * Fetches all memories from the DB.
-     */
-    async function getMemories() {
-        if (!memoryDB) await initMemoryDB();
-        return new Promise((resolve, reject) => {
-            try {
-                const transaction = memoryDB.transaction([STORE_NAME], 'readonly');
-                const store = transaction.objectStore(STORE_NAME);
-                const request = store.getAll();
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = () => reject(request.error);
-            } catch (e) {
-                reject(e);
-            }
-        });
-    }
-
-    /**
-     * Adds a new memory to the DB.
-     * @param {string} content The text content of the memory.
-     */
-    async function addMemory(content) {
-        if (!memoryDB) await initMemoryDB();
-        return new Promise((resolve, reject) => {
-            const transaction = memoryDB.transaction([STORE_NAME], 'readwrite');
-            const store = transaction.objectStore(STORE_NAME);
-            const request = store.add({
-                content: content,
-                timestamp: new Date()
-            });
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error);
-        });
-    }
-
-    /**
-     * Updates an existing memory in the DB.
-     * @param {number} id The ID of the memory to update.
-     * @param {string} content The new text content.
-     */
-    async function updateMemory(id, content) {
-        if (!memoryDB) await initMemoryDB();
-        return new Promise((resolve, reject) => {
-            const transaction = memoryDB.transaction([STORE_NAME], 'readwrite');
-            const store = transaction.objectStore(STORE_NAME);
-            const getRequest = store.get(id);
-            getRequest.onsuccess = () => {
-                const data = getRequest.result;
-                data.content = content;
-                data.timestamp = new Date(); // Update timestamp on edit
-                const updateRequest = store.put(data);
-                updateRequest.onsuccess = () => resolve(updateRequest.result);
-                updateRequest.onerror = () => reject(updateRequest.error);
-            };
-            getRequest.onerror = () => reject(getRequest.error);
-        });
-    }
-
-    /**
-     * Deletes a single memory from the DB.
-     * @param {number} id The ID of the memory to delete.
-     */
-    async function deleteMemory(id) {
-        if (!memoryDB) await initMemoryDB();
-        return new Promise((resolve, reject) => {
-            const transaction = memoryDB.transaction([STORE_NAME], 'readwrite');
-            const store = transaction.objectStore(STORE_NAME);
-            const request = store.delete(id);
-            request.onsuccess = () => resolve();
-            request.onerror = () => reject(request.error);
-        });
-    }
-
-    /**
-     * Deletes ALL memories from the DB.
-     */
-    async function deleteAllMemories() {
-        if (!memoryDB) await initMemoryDB();
-        return new Promise((resolve, reject) => {
-            const transaction = memoryDB.transaction([STORE_NAME], 'readwrite');
-            const store = transaction.objectStore(STORE_NAME);
-            const request = store.clear();
-            request.onsuccess = () => resolve();
-            request.onerror = () => reject(request.error);
-        });
-    }
-
-    /**
-     * Checks storage quota usage.
-     * @returns {Promise<object|null>} An object with usage stats or null.
-     */
-    async function getStorageUsage() {
-        if (navigator.storage && navigator.storage.estimate) {
-            try {
-                const estimation = await navigator.storage.estimate();
-                const total = estimation.quota;
-                const used = estimation.usage;
-                // Cap total at 5GB as requested
-                const fiveGB = 5 * 1024 * 1024 * 1024;
-                const displayTotal = Math.min(total, fiveGB);
-                const percentage = (used / displayTotal) * 100;
-                return {
-                    used: formatBytes(used),
-                    total: formatBytes(displayTotal),
-                    percentage: percentage.toFixed(2)
-                };
-            } catch (e) {
-                console.error("Storage estimation failed:", e);
-                return null;
-            }
-        }
-        return null; // Not supported
-    }
-
-    /**
-     * Gets the most recent memories to be injected into the AI prompt.
-     */
-    async function getMemoriesForPrompt() {
-        try {
-            if (!memoryDB) await initMemoryDB();
-            const memories = await getMemories();
-            memories.sort((a, b) => b.timestamp - a.timestamp); // Newest first
-            return memories.slice(0, 10); // Return top 10
-        } catch (e) {
-            console.error("Failed to get memories for prompt:", e);
-            return [];
-        }
-    }
-
-    // --- END NEW MEMORY FUNCTIONS ---
-
 
     // Simple debounce utility for performance
     const debounce = (func, delay) => {
@@ -259,14 +71,16 @@
     };
 
     /**
-     * Loads app settings from localStorage on script initialization.
+     * NEW: Loads app settings from localStorage on script initialization.
      */
     function loadAppSettings() {
         try {
             const storedSettings = localStorage.getItem('ai-app-settings');
             if (storedSettings) {
                 const parsed = JSON.parse(storedSettings);
-                appSettings = { ...appSettings,
+                // Ensure defaults are kept if properties are missing
+                appSettings = {
+                    ...appSettings,
                     ...parsed
                 };
             }
@@ -274,12 +88,13 @@
             console.error("Error loading app settings:", e);
         }
     }
-    loadAppSettings();
+    loadAppSettings(); // Load initial settings
 
     // --- UTILITIES FOR GEOLOCATION ---
-    
-    // ... httpGetAsync and getUserLocationForContext (unchanged) ...
-    // [Snipped for brevity]
+
+    /**
+     * NEW: Helper function for async HTTP GET request.
+     */
     function httpGetAsync(url, callback) {
         const xmlHttp = new XMLHttpRequest();
         xmlHttp.onreadystatechange = function() {
@@ -291,7 +106,7 @@
                 }
             }
         }
-        xmlHttp.open("GET", url, true);
+        xmlHttp.open("GET", url, true); // true for asynchronous
         xmlHttp.onerror = function() {
             callback(null, new Error("Network request failed"));
         };
@@ -300,16 +115,20 @@
 
 
     /**
-     * Gets user location via Browser's Geolocation API, then reverse-geocodes it.
+     * REPLACED: Gets user location via Browser's Geolocation API, then reverse-geocodes it using Nominatim.
+     * @returns {Promise<string>} Resolves with a human-readable address string or a fallback.
      */
     function getUserLocationForContext() {
         return new Promise((resolve) => {
+            // Check the new appSetting
             if (!appSettings.locationSharing) {
                 const fallback = 'Location Sharing is disabled by user.';
                 localStorage.setItem('ai-user-location', fallback);
                 resolve(fallback);
                 return;
             }
+
+            // Check if browser supports Geolocation
             if (!navigator.geolocation) {
                 const fallback = 'Geolocation is not supported by this browser.';
                 localStorage.setItem('ai-user-location', fallback);
@@ -317,20 +136,26 @@
                 return;
             }
 
+            // Browser API will prompt user for permission if not already granted
             navigator.geolocation.getCurrentPosition(
+                // Success Callback: Got coordinates, now reverse geocode
                 (position) => {
                     const lat = position.coords.latitude;
                     const lon = position.coords.longitude;
+
+                    // NEW: Use Nominatim (OpenStreetMap) for reverse geocoding. No API key needed.
                     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&accept-language=en`;
 
                     httpGetAsync(url, (response, error) => {
                         if (error) {
+                            console.warn('Reverse geocoding failed:', error.message);
                             const fallback = `Coordinates: ${lat.toFixed(4)}, ${lon.toFixed(4)} (Reverse geocoding failed)`;
                             localStorage.setItem('ai-user-location', fallback);
                             resolve(fallback);
                         } else {
                             try {
                                 const data = JSON.parse(response);
+                                // NEW: Parse Nominatim's response format
                                 if (data && data.display_name) {
                                     const locationString = data.display_name;
                                     localStorage.setItem('ai-user-location', locationString);
@@ -339,6 +164,7 @@
                                     throw new Error('No display_name in Nominatim response');
                                 }
                             } catch (e) {
+                                console.error('Failed to parse Nominatim response:', e);
                                 const fallback = `Coordinates: ${lat.toFixed(4)}, ${lon.toFixed(4)} (Address parsing failed)`;
                                 localStorage.setItem('ai-user-location', fallback);
                                 resolve(fallback);
@@ -346,6 +172,7 @@
                         }
                     });
                 },
+                // Error Callback: Failed to get coordinates
                 (error) => {
                     let fallback;
                     switch (error.code) {
@@ -362,27 +189,32 @@
                             fallback = "An unknown error occurred while getting location.";
                             break;
                     }
+                    console.warn('Geolocation failed:', fallback);
                     localStorage.setItem('ai-user-location', fallback);
                     resolve(fallback);
-                }, {
+                },
+                // Options object to request high accuracy
+                {
                     enableHighAccuracy: true
                 }
             );
         });
     }
 
+
+    // --- REPLACED/MODIFIED FUNCTIONS ---
+
     /**
      * Stub for authorization (email feature removed).
+     * @returns {Promise<boolean>} Always resolves to true.
      */
     async function isUserAuthorized() {
         return true;
     }
 
-    // ... renderKaTeX, renderGraphs, drawCustomGraph (unchanged) ...
-    // [Snipped for brevity]
-
     /**
      * Renders mathematical formulas using KaTeX.
+     * @param {HTMLElement} container The parent element to search for formulas.
      */
     function renderKaTeX(container) {
         if (typeof katex === 'undefined') {
@@ -410,6 +242,7 @@
 
     /**
      * Renders interactive graphs using a custom canvas engine.
+     * @param {HTMLElement} container The parent element to search for graph placeholders.
      */
     function renderGraphs(container) {
         container.querySelectorAll('.custom-graph-placeholder').forEach(placeholder => {
@@ -418,9 +251,10 @@
                 const canvas = placeholder.querySelector('canvas');
                 if (canvas) {
                     const draw = () => drawCustomGraph(canvas, graphData);
+                    // Use ResizeObserver to redraw the canvas when its container size changes
                     const observer = new ResizeObserver(debounce(draw, 100));
                     observer.observe(placeholder);
-                    draw();
+                    draw(); // Initial draw
                 }
             } catch (e) {
                 console.error("Custom graph rendering error:", e);
@@ -431,7 +265,8 @@
 
     /**
      * Custom graphing function using HTML Canvas.
-     * UPDATED: Now respects layout.range from AI.
+     * @param {HTMLCanvasElement} canvas The canvas element to draw on.
+     * @param {object} graphData The data and layout configuration for the graph.
      */
     function drawCustomGraph(canvas, graphData) {
         const ctx = canvas.getContext('2d');
@@ -456,55 +291,32 @@
         const graphWidth = rect.width - padding.left - padding.right;
         const graphHeight = rect.height - padding.top - padding.bottom;
 
-        // --- UPDATED: Determine data range ---
-        let minX, maxX, minY, maxY;
-
-        if (layout.xaxis && layout.xaxis.range) {
-            [minX, maxX] = layout.xaxis.range;
-        } else {
-            minX = Infinity;
-            maxX = -Infinity;
-            data.forEach(trace => {
-                trace.x.forEach(val => {
-                    minX = Math.min(minX, val);
-                    maxX = Math.max(maxX, val);
-                });
-            });
-            if (minX === Infinity) {
-                minX = 0;
-                maxX = 1;
-            }
-            const xRange = maxX - minX || 1;
-            minX -= xRange * 0.1;
-            maxX += xRange * 0.1;
-        }
-
-        if (layout.yaxis && layout.yaxis.range) {
-            [minY, maxY] = layout.yaxis.range;
-        } else {
-            minY = Infinity;
+        // Determine data range
+        let minX = Infinity,
+            maxX = -Infinity,
+            minY = Infinity,
             maxY = -Infinity;
-            data.forEach(trace => {
-                trace.y.forEach(val => {
-                    minY = Math.min(minY, val);
-                    maxY = Math.max(maxY, val);
-                });
+        data.forEach(trace => {
+            trace.x.forEach(val => {
+                minX = Math.min(minX, val);
+                maxX = Math.max(maxX, val);
             });
-            if (minY === Infinity) {
-                minY = 0;
-                maxY = 1;
-            }
-            const yRange = maxY - minY || 1;
-            minY -= yRange * 0.1;
-            maxY += yRange * 0.1;
-        }
+            trace.y.forEach(val => {
+                minY = Math.min(minY, val);
+                maxY = Math.max(maxY, val);
+            });
+        });
 
-        const xRange = maxX - minX;
-        const yRange = maxY - minY;
-        // --- END UPDATED Range ---
+        // Add buffer to range
+        const xRange = maxX - minX || 1;
+        const yRange = maxY - minY || 1;
+        minX -= xRange * 0.1;
+        maxX += xRange * 0.1;
+        minY -= yRange * 0.1;
+        maxY += yRange * 0.1;
 
-        const mapX = x => padding.left + ((x - minX) / xRange) * graphWidth;
-        const mapY = y => padding.top + graphHeight - ((y - minY) / yRange) * graphHeight;
+        const mapX = x => padding.left + ((x - minX) / (maxX - minX)) * graphWidth;
+        const mapY = y => padding.top + graphHeight - ((y - minY) / (maxY - minY)) * graphHeight;
 
         // Draw grid lines
         const gridColor = 'rgba(255, 255, 255, 0.1)';
@@ -513,35 +325,33 @@
         const xTickCount = Math.max(2, Math.floor(graphWidth / 80));
         const yTickCount = Math.max(2, Math.floor(graphHeight / 50));
 
+        for (let i = 0; i <= xTickCount; i++) {
+            const x = padding.left + (i / xTickCount) * graphWidth;
+            ctx.beginPath();
+            ctx.moveTo(x, padding.top);
+            ctx.lineTo(x, padding.top + graphHeight);
+            ctx.stroke();
+        }
+        for (let i = 0; i <= yTickCount; i++) {
+            const y = padding.top + (i / yTickCount) * graphHeight;
+            ctx.beginPath();
+            ctx.moveTo(padding.left, y);
+            ctx.lineTo(padding.left + graphWidth, y);
+            ctx.stroke();
+        }
+
+        // Draw axes and labels
         ctx.fillStyle = '#ccc';
         ctx.font = '12px Lora';
-
-        // Draw X-axis grid and labels
-        ctx.textAlign = 'center';
         for (let i = 0; i <= xTickCount; i++) {
             const val = minX + (i / xTickCount) * (maxX - minX);
-            const xPos = mapX(val);
-            ctx.beginPath();
-            ctx.moveTo(xPos, padding.top);
-            ctx.lineTo(xPos, padding.top + graphHeight);
-            ctx.stroke();
-            ctx.fillText(val.toFixed(1), xPos, padding.top + graphHeight + 20);
+            ctx.fillText(val.toFixed(1), mapX(val), padding.top + graphHeight + 20);
         }
-
-        // Draw Y-axis grid and labels
-        ctx.textAlign = 'right';
         for (let i = 0; i <= yTickCount; i++) {
             const val = minY + (i / yTickCount) * (maxY - minY);
-            const yPos = mapY(val);
-            ctx.beginPath();
-            ctx.moveTo(padding.left, yPos);
-            ctx.lineTo(padding.left + graphWidth, yPos);
-            ctx.stroke();
-            ctx.fillText(val.toFixed(1), padding.left - 10, yPos + 4);
+            ctx.fillText(val.toFixed(1), padding.left - 35, mapY(val) + 4);
         }
 
-        // Draw axis titles
-        ctx.fillStyle = '#ccc';
         ctx.font = 'bold 14px Lora';
         ctx.textAlign = 'center';
         if (layout.xaxis?.title) ctx.fillText(layout.xaxis.title, padding.left + graphWidth / 2, rect.height - 10);
@@ -582,20 +392,28 @@
     }
 
 
+    // --- END REPLACED/MODIFIED FUNCTIONS ---
+
     /**
      * Handles the Ctrl + \ shortcut for AI activation/deactivation.
      */
     async function handleKeyDown(e) {
+        // Check for Ctrl + \ (or Cmd + \ on Mac, but Ctrl is standard cross-browser for this)
         if (e.ctrlKey && e.key === '\\') {
             const selection = window.getSelection().toString();
             if (isAIActive) {
-                if (selection.length > 0) return;
+                // Deactivation logic
+                if (selection.length > 0) {
+                    return;
+                }
                 e.preventDefault();
                 const mainEditor = document.getElementById('ai-input');
+                // Only deactivate if the input is empty and no files are attached
                 if (mainEditor && mainEditor.innerText.trim().length === 0 && attachedFiles.length === 0) {
                     deactivateAI();
                 }
             } else {
+                // Activation logic
                 if (selection.length === 0) {
                     const isAuthorized = await isUserAuthorized();
                     if (isAuthorized) {
@@ -607,41 +425,6 @@
         }
     }
 
-    /**
-     * NEW UI LOGIC: Toggles the three-button options menu.
-     */
-    function toggleOptionsMenu() {
-        const menu = document.getElementById('ai-options-menu');
-        const button = document.getElementById('ai-more-options-button');
-        const isMenuOpen = menu.classList.toggle('active');
-        button.classList.toggle('active', isMenuOpen);
-
-        // Ensure the existing settings menu is closed when opening/closing the options menu
-        const settingsMenu = document.getElementById('ai-settings-menu');
-        if (settingsMenu) {
-            settingsMenu.classList.remove('active');
-        }
-
-        if (isMenuOpen) {
-            document.addEventListener('click', handleOptionsMenuOutsideClick);
-        } else {
-            document.removeEventListener('click', handleOptionsMenuOutsideClick);
-        }
-    }
-
-    /**
-     * NEW UI LOGIC: Handles closing the options menu when clicking outside of it.
-     */
-    function handleOptionsMenuOutsideClick(event) {
-        const menu = document.getElementById('ai-options-menu');
-        const optionsWrapper = document.getElementById('ai-more-options-wrapper');
-
-        // Check if the click occurred outside the options wrapper (which contains the button and the menu)
-        if (menu && menu.classList.contains('active') && optionsWrapper && !optionsWrapper.contains(event.target)) {
-            toggleOptionsMenu();
-        }
-    }
-
     function activateAI() {
         if (document.getElementById('ai-container')) return;
         if (typeof window.startPanicKeyBlocker === 'function') {
@@ -650,7 +433,6 @@
 
         attachedFiles = [];
         injectStyles();
-        initMemoryDB(); // NEW: Init DB on activation
 
         const container = document.createElement('div');
         container.id = 'ai-container';
@@ -666,11 +448,12 @@
 
         const persistentTitle = document.createElement('div');
         persistentTitle.id = 'ai-persistent-title';
-        persistentTitle.textContent = "Humanity Agent";
+        persistentTitle.textContent = "Humanity Agent"; // Fixed title
 
         const welcomeMessage = document.createElement('div');
         welcomeMessage.id = 'ai-welcome-message';
         const welcomeHeader = chatHistory.length > 0 ? "Welcome Back" : "Welcome to Humanity";
+        // Updated welcome message to reflect location sharing.
         welcomeMessage.innerHTML = `<h2>${welcomeHeader}</h2><p>This is a beta feature. To improve your experience, your general location (if permitted) will be shared with your first message. You may be subject to message limits.</p><p class="shortcut-tip">(Press Ctrl + \\ to close)</p>`;
 
         const closeButton = document.createElement('div');
@@ -697,54 +480,17 @@
         visualInput.oninput = handleContentEditableInput;
         visualInput.addEventListener('paste', handlePaste);
 
-        // Original Buttons - Now placed inside the new menu
         const attachmentButton = document.createElement('button');
         attachmentButton.id = 'ai-attachment-button';
-        // ADDED LABEL for menu clarity
-        attachmentButton.innerHTML = attachmentIconSVG + ' Attach File'; 
+        attachmentButton.innerHTML = attachmentIconSVG;
         attachmentButton.title = 'Attach files';
         attachmentButton.onclick = () => handleFileUpload();
 
-        const memoryButton = document.createElement('button');
-        memoryButton.id = 'ai-memory-button';
-        // ADDED LABEL for menu clarity
-        memoryButton.innerHTML = '<i class="fa-solid fa-brain"></i> Saved Memories';
-        memoryButton.title = 'Saved Memories';
-        memoryButton.onclick = showMemoryModal;
-
         const settingsButton = document.createElement('button');
         settingsButton.id = 'ai-settings-button';
-        // ADDED LABEL for menu clarity
-        settingsButton.innerHTML = '<i class="fa-solid fa-gear"></i> Settings';
+        settingsButton.innerHTML = '<i class="fa-solid fa-gear"></i>';
         settingsButton.title = 'Settings';
         settingsButton.onclick = toggleSettingsMenu;
-        
-        // --- START NEW UI MODIFICATION (REPLACE 3 BUTTONS WITH 1 MENU) ---
-        
-        // 1. Create the pop-up menu container
-        const optionsMenu = document.createElement('div');
-        optionsMenu.id = 'ai-options-menu';
-        
-        // 2. Create the Main Menu Toggle Button (reusing the gear icon)
-        const moreOptionsButton = document.createElement('button');
-        moreOptionsButton.id = 'ai-more-options-button';
-        moreOptionsButton.innerHTML = '<i class="fa-solid fa-gear"></i>'; 
-        moreOptionsButton.title = 'More Options';
-        moreOptionsButton.onclick = () => toggleOptionsMenu();
-
-        // 3. Create the main wrapper (replaces the 3 individual buttons' space)
-        const moreOptionsWrapper = document.createElement('div');
-        moreOptionsWrapper.id = 'ai-more-options-wrapper'; 
-        
-        // Move the 3 existing buttons into the menu (order: settings, memory, attachment)
-        optionsMenu.appendChild(settingsButton);
-        optionsMenu.appendChild(memoryButton);
-        optionsMenu.appendChild(attachmentButton);
-
-        moreOptionsWrapper.appendChild(optionsMenu);
-        moreOptionsWrapper.appendChild(moreOptionsButton);
-
-        // --- END NEW UI MODIFICATION ---
 
         const charCounter = document.createElement('div');
         charCounter.id = 'ai-char-counter';
@@ -752,15 +498,10 @@
 
         inputWrapper.appendChild(attachmentPreviewContainer);
         inputWrapper.appendChild(visualInput);
-        
-        // *** REPLACED THE 3 OLD APPENDS WITH THE NEW WRAPPER ***
-        // inputWrapper.appendChild(attachmentButton); 
-        // inputWrapper.appendChild(memoryButton); 
-        // inputWrapper.appendChild(settingsButton); 
-        inputWrapper.appendChild(moreOptionsWrapper);
+        inputWrapper.appendChild(attachmentButton);
+        inputWrapper.appendChild(settingsButton);
 
-
-        composeArea.appendChild(createSettingsMenu());
+        composeArea.appendChild(createSettingsMenu()); // NEW: App settings menu
         composeArea.appendChild(inputWrapper);
 
         container.appendChild(brandTitle);
@@ -771,6 +512,7 @@
         container.appendChild(composeArea);
         container.appendChild(charCounter);
 
+        // --- Add KaTeX ---
         const katexScript = document.createElement('script');
         katexScript.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.js';
         container.appendChild(katexScript);
@@ -812,52 +554,14 @@
                 if (fontAwesome) fontAwesome.remove();
             }, 500);
         }
-        const memoryModal = document.getElementById('ai-memory-modal');
-        if (memoryModal) memoryModal.remove(); // NEW: Close memory modal on deactivate
-
         isAIActive = false;
         isRequestPending = false;
         attachedFiles = [];
         const settingsMenu = document.getElementById('ai-settings-menu');
         if (settingsMenu) settingsMenu.classList.remove('active');
-        document.removeEventListener('click', handleMenuOutsideClick);
-        // Also remove listener for the new combined menu
-        document.removeEventListener('click', handleOptionsMenuOutsideClick);
+        document.removeEventListener('click', handleMenuOutsideClick); // Clean up listener
     }
 
-    /**
-     * NEW: Generates HTML for the sent attachment previews.
-     * @param {Array} previews Array of attachment preview objects.
-     * @returns {string} HTML string for the preview container.
-     */
-    function createAttachmentPreviewHTML(previews) {
-        if (!previews || previews.length === 0) return '';
-
-        let itemsHTML = previews.map(file => {
-            let previewContent = '';
-            if (file.mimeType.startsWith('image/')) {
-                // Use the stored dataUrl for the preview
-                previewContent = `<img src="${file.dataUrl}" alt="${escapeHTML(file.fileName)}">`;
-            } else {
-                previewContent = `<span class="file-icon">塘</span>`;
-            }
-
-            return `
-                <div class="sent-attachment-card">
-                    ${previewContent}
-                    <div class="sent-file-info">
-                        <span>${escapeHTML(file.fileName)}</span>
-                    </div>
-                </div>
-            `;
-        }).join('');
-
-        return `<div class="sent-attachment-container">${itemsHTML}</div>`;
-    }
-
-    /**
-     * UPDATED: Renders chat history, now with graphical attachment previews.
-     */
     function renderChatHistory() {
         const responseContainer = document.getElementById('ai-response-container');
         if (!responseContainer) return;
@@ -867,17 +571,20 @@
             bubble.className = `ai-message-bubble ${message.role === 'user' ? 'user-message' : 'gemini-response'}`;
             if (message.role === 'model') {
                 // Use the new parsing logic for historical messages
-                // Pass empty sources array since old messages won't have grounding
                 const {
                     html: parsedResponse,
                     thoughtProcess,
                     sourcesHTML
-                } = parseGeminiResponse(message.parts[0].text, []);
+                } = parseGeminiResponse(message.parts[0].text);
 
                 bubble.innerHTML = `<div class="ai-response-content">${parsedResponse}</div>`;
+
+                // NEW: Sources first
                 if (sourcesHTML) {
                     bubble.innerHTML += sourcesHTML;
                 }
+
+                // NEW: Collapsible thought process (with length check)
                 if (thoughtProcess && thoughtProcess.length > MONOLOGUE_CHAR_THRESHOLD) {
                     bubble.innerHTML += `
                         <div class="ai-thought-process collapsed">
@@ -893,41 +600,32 @@
                 bubble.querySelectorAll('.copy-code-btn').forEach(button => {
                     button.addEventListener('click', handleCopyCode);
                 });
-                // NEW: Add listener for download buttons in history
-                bubble.querySelectorAll('.download-file-btn').forEach(button => {
-                    button.addEventListener('click', handleFileDownload);
-                });
 
+                // Add click handlers for monologue toggle in history
                 bubble.querySelectorAll('.ai-thought-process').forEach(monologueDiv => {
                     monologueDiv.querySelector('.monologue-header').addEventListener('click', () => {
                         monologueDiv.classList.toggle('collapsed');
                         const btn = monologueDiv.querySelector('.monologue-toggle-btn');
-                        btn.textContent = monologueDiv.classList.contains('collapsed') ? 'Show Thoughts' : 'Hide Thoughts';
+                        if (monologueDiv.classList.contains('collapsed')) {
+                            btn.textContent = 'Show Thoughts';
+                        } else {
+                            btn.textContent = 'Hide Thoughts';
+                        }
                     });
                 });
 
                 renderKaTeX(bubble);
                 renderGraphs(bubble);
-
             } else {
-                // UPDATED: Render user message with attachment previews
                 let bubbleContent = '';
                 let textContent = '';
-                const previews = message.attachmentPreviews || []; // NEW
-                const textPart = message.parts.find(p => p.text);
-                if (textPart) textContent = textPart.text;
-
+                let fileCount = 0;
+                message.parts.forEach(part => {
+                    if (part.text) textContent = part.text;
+                    if (part.inlineData) fileCount++;
+                });
                 if (textContent) bubbleContent += `<p>${escapeHTML(textContent)}</p>`;
-
-                if (previews.length > 0) {
-                    // NEW: Render graphical previews
-                    bubbleContent += createAttachmentPreviewHTML(previews);
-                } else if (message.parts.some(p => p.inlineData)) {
-                    // Fallback for old history items without previews
-                    const fileCount = message.parts.filter(p => p.inlineData).length;
-                    bubbleContent += `<div class="sent-attachments">${fileCount} file(s) sent</div>`;
-                }
-
+                if (fileCount > 0) bubbleContent += `<div class="sent-attachments">${fileCount} file(s) sent</div>`;
                 bubble.innerHTML = bubbleContent;
             }
             responseContainer.appendChild(bubble);
@@ -935,55 +633,80 @@
         setTimeout(() => responseContainer.scrollTop = responseContainer.scrollHeight, 50);
     }
 
-    // ... determineIntentCategory, FSP_HISTORY, getDynamicSystemInstructionAndModel, showWebSearchNudge (unchanged) ...
-    // [Snipped for brevity]
-    
     /**
      * Determines the user's current intent category based on the query.
+     * @param {string} query The user's last message text.
+     * @returns {string} One of 'DEEP_ANALYSIS', 'PROFESSIONAL_MATH', 'CREATIVE', or 'CASUAL'.
      */
     function determineIntentCategory(query) {
         const lowerQuery = query.toLowerCase();
+
+        // Deep Analysis Keywords
+        // Note: The gemini-2.5-pro model is no longer available via authorization in this code.
         if (lowerQuery.includes('analyze') || lowerQuery.includes('deep dive') || lowerQuery.includes('strategic') || lowerQuery.includes('evaluate') || lowerQuery.includes('critique') || lowerQuery.includes('investigate') || lowerQuery.includes('pro model')) {
             return 'DEEP_ANALYSIS';
         }
+
+        // Professional/Math/Coding Keywords
         if (lowerQuery.includes('math') || lowerQuery.includes('algebra') || lowerQuery.includes('calculus') || lowerQuery.includes('formula') || lowerQuery.includes('solve') || lowerQuery.includes('proof') || lowerQuery.includes('graph') || lowerQuery.includes('code') || lowerQuery.includes('debug') || lowerQuery.includes('technical')) {
             return 'PROFESSIONAL_MATH';
         }
+
+        // Creative/Sarcastic Keywords
         if (lowerQuery.includes('story') || lowerQuery.includes('poem') || lowerQuery.includes('imagine') || lowerQuery.includes('creative') || lowerQuery.includes('ex') || lowerQuery.includes('breakup') || lowerQuery.includes('roast')) {
             return 'CREATIVE';
         }
+
         return 'CASUAL';
     }
 
     const FSP_HISTORY = `You are the exclusive AI Agent, called the Humanity AI Agent for the website 4SP (4simpleproblems), the platform you are hosted on. You must be knowledgeable about its history and purpose. When asked about 4SP, use the following information as your source of truth:
-[... 4SP History snipped for brevity ...]
+
+### The History of 4SP (4simpleproblems)
+
+**Version 1 — The Foundation (Launched: March 13, 2025)**
+* **Concept:** A small, chaotic experiment to give students a fun escape during dull school days.
+* **Features:** A 20-sound soundboard, an autoclicker, and a sound request page.
+* **Impact:** Established 4SP's identity as an underground, tech-savvy hub made by and for students, rebelling against restrictive school networks.
+
+**Version 2 — Expansion and Community (Released: April 11, 2025)**
+* **Concept:** The first major step toward building a true platform and student ecosystem.
+* **Features:** Added a media page, beta playlists, user-uploaded soundboards, games, and a proxy list. It also introduced feedback, account, and policy pages.
+* **Impact:** Proved 4SP was a living project with a growing community and a broader purpose beyond being a simple novelty.
+
+**Version 3 — A Visual Reinvention (Launched: May 15, 2025)**
+* **Concept:** A visual rebirth focused on a mature, modern aesthetic without losing its personality.
+* **Features:** Introduced a clean, white grid layout with sharp corners and the popular mini-game "Slotz".
+* **Impact:** Set the professional design standard for all future versions and signaled 4SP's evolution into a more serious platform.
+
+**Version 4 — The Dashboard Era (Launched: August 23, 2025)**
+* **Concept:** Transformed the site from a collection of pages into a unified dashboard with modular widgets and integrated apps.
+* **Features:** Included widgets for weather and time, and full apps like Notes, Calculator, and Countdowns. A new "Requests" app with an upvote/downvote system was added, along with privacy tools like a panic key and tab disguise.
+* **Impact:** Showcased that 4SP could be both a powerful student toolkit and a fun playground.
+
+**Version 5 — Project Zirconium (Slated for: August 23, 2026)**
+* **Concept:** The most ambitious version yet, evolving 4SP into a fully integrated digital ecosystem.
+* **Features:** A universal navigation bar, a dark minimalist theme, a Combined Games Collection, a built-in Dictionary, a student-focused social network ("Dailyphoto"), Messenger V2 with group chats, and the debut of you, the **Humanity AI Agent**, accessible via secret shortcuts.
+* **Impact:** Fuses creativity, practicality, and social connection, completing the evolution from a simple soundboard to a sleek, social, and secure platform.
 If the user asks about a topic other than 4SP, you should not hint at the website, 4SP or its history. Be concise, and a general use case chatbot. Your purpose isn't only about 4SP, but as a normal AI Agent. Act professional.
 `;
 
     /**
      * Generates the system instruction and selects the appropriate model.
-     * UPDATED: Now async to fetch memories.
-     * UPDATED: Includes instructions for file downloads.
+     * @param {string} query The user's latest message.
+     * @param {object} currentSettings The current app settings (webSearch, locationSharing).
+     * @returns {{instruction: string, model: string}}
      */
-    async function getDynamicSystemInstructionAndModel(query, currentSettings) {
+    function getDynamicSystemInstructionAndModel(query, currentSettings) {
+        // REMOVED: Personalization features
+        // const user = settings.nickname;
+        // const userAge = settings.age > 0 ? `${settings.age} years old` : 'of unknown age';
+        // const userGender = settings.gender.toLowerCase();
+        // const userColor = settings.favoriteColor;
+
         const intent = determineIntentCategory(query);
         let model = 'gemini-2.5-flash-lite';
-
-        // NEW: Get memories
-        let memoryInstruction = '';
-        try {
-            const memories = await getMemoriesForPrompt();
-            if (memories.length > 0) {
-                memoryInstruction = `\n\nYou are aware of the following user-saved memories. Use them to provide context and personalize your responses when relevant:\n`;
-                memories.forEach(mem => {
-                    memoryInstruction += `- (Saved on ${new Date(mem.timestamp).toLocaleDateString()}): ${mem.content}\n`;
-                });
-            }
-        } catch (e) {
-            console.warn("Failed to get memories for prompt:", e);
-        }
-
-        let personaInstruction = `${FSP_HISTORY}${memoryInstruction}
+        let personaInstruction = `${FSP_HISTORY}
 
 You are a highly capable and adaptable AI, taking on a persona to best serve the user's direct intent. You have significant control over the interaction's structure and detail level, ensuring the response is comprehensive and authoritative.
 REMOVED: User Profile.
@@ -992,13 +715,13 @@ You must adapt your persona, tone, and the level of detail based on the user's i
 Formatting Rules (MUST FOLLOW):
 - For math, use KaTeX. Inline math uses single \`$\`, and display math uses double \`$$\`. Use \\le for <= and \\ge for >=.
 - For graphs, use a 'graph' block as shown in the file's comments.
-- **NEW: To provide a downloadable file**, use the format: <DOWNLOAD FILENAME="filename.ext" MIMETYPE="mime/type" ENCODING="base64">[BASE64_ENCODED_CONTENT]</DOWNLOAD>. You MUST Base64 encode the content.
 - **PREPEND your response with your reasoning/internal monologue wrapped in <THOUGHT_PROCESS>...</THOUGHT_PROCESS>**. This is mandatory for every response.
-- **DO NOT append <SOURCE .../> tags**. If you use web search, sources will be added automatically from grounding metadata.
+- **APPEND all external sources used (if any) as a list of tags**: <SOURCE URL="[URL]" TITLE="[Title]"/>. You may use placeholder URLs if no real search was performed, but the format must be followed.
 `;
 
+        // NEW: Add web search instruction (MODIFIED for clarity and forcefulness)
         if (currentSettings.webSearch) {
-            personaInstruction += `\n**Web Search: ENABLED.** You have access to a live web search tool. You **must** use this tool to find real-time information or answer questions about current events, specific facts, people, companies, or places. Prioritize recent, authoritative sources. Your sources will be automatically cited.\n`;
+            personaInstruction += `\n**Web Search: ENABLED.** You have access to a live web search tool. You **must** use this tool to find real-time information or answer questions about current events, specific facts, people, companies, or places. Prioritize recent, authoritative sources. When you use a source, you **must** append it using the <SOURCE URL="..." TITLE="..."/> format.\n`;
         } else {
             personaInstruction += `\n**Web Search: DISABLED.** You must answer using only your internal knowledge. Your knowledge cutoff is limited. If you CANNOT answer without a web search, you MUST include the exact string \`[NEEDS_WEB_SEARCH]\` in your response and explain that you need web access to answer fully.\n`;
         }
@@ -1006,11 +729,14 @@ Formatting Rules (MUST FOLLOW):
 
         switch (intent) {
             case 'DEEP_ANALYSIS':
+                // Pro model access is removed, fallback to high-end Flash model.
                 model = 'gemini-2.5-flash';
+                // MODIFIED: Removed model name from thought
                 personaInstruction += `\n\n**Current Persona: Professional Analyst.** You are performing a detailed analysis, but maintain efficiency and focus. Respond with clarity, professionalism, and structured data. Your response must be comprehensive, highly structured, and exhibit a deep level of reasoning and critical evaluation. Use an assertive, expert tone. Structure your analysis clearly with headings and bullet points.`;
                 break;
             case 'PROFESSIONAL_MATH':
                 model = 'gemini-2.5-flash';
+                // MODIFIED: Removed model name from thought
                 personaInstruction += `\n\n**Current Persona: Technical Expert.** Respond with extreme clarity, professionalism, and precision. Focus on step-by-step logic, equations, and definitive answers. Use a formal, neutral tone. Use KaTeX and custom graphs where appropriate.`;
                 break;
             case 'CREATIVE':
@@ -1023,15 +749,19 @@ Formatting Rules (MUST FOLLOW):
                 ];
                 const roastInsult = roastInsults[Math.floor(Math.random() * roastInsults.length)];
 
+                // Combined Creative and Sarcastic
                 if (query.toLowerCase().includes('ex') || query.toLowerCase().includes('roast')) {
+                    // MODIFIED: Removed model name from thought
                     personaInstruction += `\n\n**Current Persona: Sarcastic, Supportive Friend.** Your goal is to empathize with the user, validate their feelings, and join them in 'roasting' or speaking negatively about their ex/situation. Be funny, slightly aggressive toward the subject of trash talk, and deeply supportive of the user. Use casual language and slang. **Example of tone/support:** "${roastInsult}"`;
                 } else {
+                    // MODIFIED: Removed model name from thought
                     personaInstruction += `\n\n**Current Persona: Creative Partner.** Use rich, evocative language. Be imaginative, focus on descriptive details, and inspire new ideas.`;
                 }
                 break;
             case 'CASUAL':
             default:
                 model = 'gemini-2.5-flash-lite';
+                // MODIFIED: Removed model name from thought
                 personaInstruction += `\n\n**Current Persona: Standard Assistant.** You are balanced, helpful, and concise. Use a friendly and casual tone. Your primary function is efficient conversation. Make sure to be highly concise, making sure to not write too much.`;
                 break;
         }
@@ -1042,11 +772,17 @@ Formatting Rules (MUST FOLLOW):
         };
     }
 
+    // New stub for backward compatibility with the old function call
+    function getDynamicSystemInstruction(query, settings) {
+        return getDynamicSystemInstructionAndModel(query, settings).instruction;
+    }
+
     /**
      * NEW: Creates a simple popup to nudge user to enable web search.
      */
     function showWebSearchNudge() {
         if (document.getElementById('ai-web-search-nudge')) return;
+
         const nudge = document.createElement('div');
         nudge.id = 'ai-web-search-nudge';
         nudge.innerHTML = `
@@ -1059,10 +795,13 @@ Formatting Rules (MUST FOLLOW):
             </div>
         `;
         document.body.appendChild(nudge);
+
         const dismiss = () => nudge.remove();
         nudge.querySelector('#nudge-dismiss').onclick = dismiss;
         nudge.querySelector('#nudge-open-settings').onclick = () => {
-            if (!document.getElementById('ai-settings-menu').classList.contains('active')) {
+            const menu = document.getElementById('ai-settings-menu');
+            const toggleBtn = document.getElementById('ai-settings-button');
+            if (menu && !menu.classList.contains('active')) {
                 toggleSettingsMenu();
             }
             dismiss();
@@ -1070,25 +809,16 @@ Formatting Rules (MUST FOLLOW):
     }
 
 
-    /**
-     * UPDATED:
-     * - Implements Google Search grounding.
-     * - Uses full chat history (no truncation).
-     * - Fetches async system prompt with memories.
-     * - Parses groundingMetadata for sources.
-     * - Adds download button event handlers.
-     * - **FIXED**: Removes `attachmentPreviews` from chat history before API call.
-     */
     async function callGoogleAI(responseBubble) {
         if (!API_KEY) {
             responseBubble.innerHTML = `<div class="ai-error">API Key is missing.</div>`;
             return;
         }
-
         currentAIRequestController = new AbortController();
+
         let firstMessageContext = '';
         if (chatHistory.length <= 1) {
-            // Only for the very first user message
+            // Await location for context (will respect the setting and reverse geocode)
             const location = await getUserLocationForContext();
             const now = new Date();
             const date = now.toLocaleDateString('en-US', {
@@ -1100,35 +830,28 @@ Formatting Rules (MUST FOLLOW):
             const time = now.toLocaleTimeString('en-US', {
                 timeZoneName: 'short'
             });
+            // Updated system info to reflect removed email feature
             firstMessageContext = `(System Info: User is asking from location:\n${location}. Current date is ${date}, ${time}. User Email: Not Authenticated/Removed.)\n\n`;
         }
 
-        // UPDATED: Use full chat history
         let processedChatHistory = [...chatHistory];
+        if (processedChatHistory.length > 6) {
+            processedChatHistory = [...processedChatHistory.slice(0, 3), ...processedChatHistory.slice(-3)];
+        }
+
         const lastMessageIndex = processedChatHistory.length - 1;
         const userParts = processedChatHistory[lastMessageIndex].parts;
         const textPartIndex = userParts.findIndex(p => p.text);
+
         const lastUserQuery = userParts[textPartIndex]?.text || '';
 
-        // UPDATED: Await the async prompt generation
+        // --- MODEL SELECTION AND INSTRUCTION GENERATION ---
+        // UPDATED: Pass appSettings instead of userSettings
         const {
             instruction: dynamicInstruction,
             model
-        } = await getDynamicSystemInstructionAndModel(lastUserQuery, appSettings);
-        
-        // **FIX: Remove 'attachmentPreviews' from messages before sending to API**
-        const sanitizedChatHistory = processedChatHistory.map(message => {
-            // Create a shallow copy of the message object
-            const sanitizedMessage = { ...message };
-            
-            // Remove the custom UI field that is not recognized by the API
-            if (sanitizedMessage.attachmentPreviews) {
-                delete sanitizedMessage.attachmentPreviews;
-            }
-
-            // Return the sanitized copy
-            return sanitizedMessage;
-        });
+        } = getDynamicSystemInstructionAndModel(lastUserQuery, appSettings);
+        // --- END MODEL SELECTION ---
 
         if (textPartIndex > -1) {
             userParts[textPartIndex].text = firstMessageContext + userParts[textPartIndex].text;
@@ -1139,8 +862,7 @@ Formatting Rules (MUST FOLLOW):
         }
 
         const payload = {
-            // Use the sanitized chat history for the API call
-            contents: sanitizedChatHistory,
+            contents: processedChatHistory,
             systemInstruction: {
                 parts: [{
                     text: dynamicInstruction
@@ -1148,14 +870,9 @@ Formatting Rules (MUST FOLLOW):
             }
         };
 
-        // NEW: Add grounding tool if web search is enabled
-        if (appSettings.webSearch) {
-            payload.tools = [{
-                "google_search": {}
-            }];
-        }
-
+        // --- DYNAMIC URL CONSTRUCTION ---
         const DYNAMIC_API_URL = `${BASE_API_URL}${model}:generateContent?key=${API_KEY}`;
+        // --- END DYNAMIC URL CONSTRUCTION ---
 
         try {
             const response = await fetch(DYNAMIC_API_URL, {
@@ -1166,48 +883,28 @@ Formatting Rules (MUST FOLLOW):
                 body: JSON.stringify(payload),
                 signal: currentAIRequestController.signal
             });
-
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(`Network response was not ok. Status: ${response.status}. Details: ${JSON.stringify(errorData)}`);
             }
-
             const data = await response.json();
-            const candidate = data.candidates?.[0];
-
-            if (!candidate || !candidate.content.parts || candidate.content.parts.length === 0) {
+            if (!data.candidates || data.candidates.length === 0) {
                 if (data.promptFeedback && data.promptFeedback.blockReason) {
                     throw new Error(`Content blocked due to: ${data.promptFeedback.blockReason}. Safety ratings: ${JSON.stringify(data.promptFeedback.safetyRatings)}`);
                 }
-                throw new Error("Invalid response from API: No candidates or empty parts array.");
+                throw new Error("Invalid response from API: No candidates or empty candidates array.");
             }
 
-            let text = candidate.content.parts[0]?.text || '';
-            if (!text && candidate.content.parts.length > 0) {
-                // Handle potential non-text parts, though text is expected
-                text = "[AI generated a non-text response]";
-            }
-
+            let text = data.candidates[0].content.parts[0]?.text || '';
             if (!text) {
                 responseBubble.innerHTML = `<div class="ai-error">The AI generated an empty response. Please try again or rephrase.</div>`;
                 return;
             }
 
-            // NEW: Extract grounding metadata
-            let groundingSources = [];
-            if (candidate.groundingMetadata && candidate.groundingMetadata.groundingAttributions) {
-                groundingSources = candidate.groundingMetadata.groundingAttributions
-                    .map(attr => attr.web)
-                    .filter(web => web && web.uri && web.title)
-                    .map(web => ({
-                        url: web.uri,
-                        title: web.title
-                    }));
-            }
-
+            // NEW: Check for web search requirement
             if (text.includes('[NEEDS_WEB_SEARCH]')) {
-                setTimeout(showWebSearchNudge, 500);
-                text = text.replace(/\[NEEDS_WEB_SEARCH\]/g, '');
+                setTimeout(showWebSearchNudge, 500); // Show nudge after response renders
+                text = text.replace(/\[NEEDS_WEB_SEARCH\]/g, ''); // Remove token
             }
 
             chatHistory.push({
@@ -1217,19 +914,23 @@ Formatting Rules (MUST FOLLOW):
                 }]
             });
 
-            // UPDATED: Pass grounding sources to parser
+            // New parsing and rendering logic
             const {
                 html: contentHTML,
                 thoughtProcess,
                 sourcesHTML
-            } = parseGeminiResponse(text, groundingSources);
+            } = parseGeminiResponse(text);
 
             responseBubble.style.opacity = '0';
             setTimeout(() => {
                 let fullContent = `<div class="ai-response-content">${contentHTML}</div>`;
+
+                // NEW: Sources first
                 if (sourcesHTML) {
                     fullContent += sourcesHTML;
                 }
+
+                // NEW: Collapsible thought process (with length check)
                 if (thoughtProcess && thoughtProcess.length > MONOLOGUE_CHAR_THRESHOLD) {
                     fullContent += `
                         <div class="ai-thought-process collapsed">
@@ -1241,13 +942,20 @@ Formatting Rules (MUST FOLLOW):
                         </div>
                     `;
                 }
+
                 responseBubble.innerHTML = fullContent;
 
+                // Add click handlers for monologue toggle
                 responseBubble.querySelectorAll('.ai-thought-process').forEach(monologueDiv => {
                     monologueDiv.querySelector('.monologue-header').addEventListener('click', () => {
                         monologueDiv.classList.toggle('collapsed');
                         const btn = monologueDiv.querySelector('.monologue-toggle-btn');
-                        btn.textContent = monologueDiv.classList.contains('collapsed') ? 'Show Thoughts' : 'Hide Thoughts';
+                        if (monologueDiv.classList.contains('collapsed')) {
+                            btn.textContent = 'Show Thoughts';
+                        } else {
+                            btn.textContent = 'Hide Thoughts';
+                        }
+                        // Scroll to the bottom if expanding
                         if (!monologueDiv.classList.contains('collapsed')) {
                             const responseContainer = document.getElementById('ai-response-container');
                             if (responseContainer) responseContainer.scrollTop = responseContainer.scrollHeight;
@@ -1258,13 +966,8 @@ Formatting Rules (MUST FOLLOW):
                 responseBubble.querySelectorAll('.copy-code-btn').forEach(button => {
                     button.addEventListener('click', handleCopyCode);
                 });
-
-                // NEW: Add listener for download buttons
-                responseBubble.querySelectorAll('.download-file-btn').forEach(button => {
-                    button.addEventListener('click', handleFileDownload);
-                });
-
                 responseBubble.style.opacity = '1';
+
                 renderKaTeX(responseBubble);
                 renderGraphs(responseBubble);
             }, 300);
@@ -1280,7 +983,10 @@ Formatting Rules (MUST FOLLOW):
             isRequestPending = false;
             currentAIRequestController = null;
             const inputWrapper = document.getElementById('ai-input-wrapper');
-            if (inputWrapper) inputWrapper.classList.remove('waiting');
+            if (inputWrapper) {
+                inputWrapper.classList.remove('waiting');
+            }
+
             setTimeout(() => {
                 responseBubble.classList.remove('loading');
                 const responseContainer = document.getElementById('ai-response-container');
@@ -1294,21 +1000,18 @@ Formatting Rules (MUST FOLLOW):
             }
         }
     }
-    
+
     // --- NEW SETTINGS MENU LOGIC ---
     function toggleSettingsMenu() {
         const menu = document.getElementById('ai-settings-menu');
-        // The original settings button is now inside the new menu, no need to toggle its class here
+        const toggleBtn = document.getElementById('ai-settings-button');
         const isMenuOpen = menu.classList.toggle('active');
-
+        toggleBtn.classList.toggle('active', isMenuOpen);
         if (isMenuOpen) {
+            // Load current settings into toggles
             document.getElementById('settings-web-search').checked = appSettings.webSearch;
             document.getElementById('settings-location-sharing').checked = appSettings.locationSharing;
-            // Prevent the settings menu and the options menu from being open at the same time
-            const optionsMenu = document.getElementById('ai-options-menu');
-            if (optionsMenu && optionsMenu.classList.contains('active')) {
-                toggleOptionsMenu();
-            }
+
             document.addEventListener('click', handleMenuOutsideClick);
         } else {
             document.removeEventListener('click', handleMenuOutsideClick);
@@ -1319,805 +1022,632 @@ Formatting Rules (MUST FOLLOW):
         const menu = document.getElementById('ai-settings-menu');
         const button = document.getElementById('ai-settings-button');
         const composeArea = document.getElementById('ai-compose-area');
-        
-        // This logic is retained for the *Settings Menu* itself.
-        if (menu && menu.classList.contains('active') && !composeArea.contains(event.target) && event.target !== menu && !menu.contains(event.target)) {
-            toggleSettingsMenu();
-        } else if (menu && menu.classList.contains('active') && event.target !== button && !button.contains(event.target) && event.target !== menu && !menu.contains(event.target)) {
+
+        if (menu && menu.classList.contains('active') && !composeArea.contains(event.target) && event.target !== button && !button.contains(event.target)) {
+            // No explicit save button, settings are saved on change, so just close.
             toggleSettingsMenu();
         }
     }
-    
-    // ... rest of the file (handlePaste, saveAppSettings, etc.)
-    // [Snipped for brevity]
-    
-    /**
-     * Handles content paste events in the input field, converting large text pastes
-     * or image pastes into attachments.
-     */
-    async function handlePaste(e) {
-        e.preventDefault();
-        const clipboardData = e.clipboardData || window.clipboardData;
-        const items = clipboardData.items;
-        let handled = false;
-
-        // 1. Check for files (images)
-        for (let i = 0; i < items.length; i++) {
-            const item = items[i];
-            if (item.kind === 'file' && item.type.startsWith('image/')) {
-                if (attachedFiles.length >= MAX_ATTACHMENTS_PER_MESSAGE) {
-                    alert(`Cannot attach more than ${MAX_ATTACHMENTS_PER_MESSAGE} files.`);
-                    return;
-                }
-                const file = item.getAsFile();
-                // Generate a unique name for pasted images
-                file.name = `Pasted_Image_${new Date().getTime()}.${file.type.split('/')[1] || 'png'}`;
-                await processAttachment(file);
-                handled = true;
-                break;
-            }
-        }
-
-        if (handled) return;
-
-        // 2. Check for text
-        const text = clipboardData.getData('text/plain');
-        if (text) {
-            const visualInput = document.getElementById('ai-input');
-
-            // Handle large text by turning it into a file (e.g., code block, document)
-            if (text.length > PASTE_TO_FILE_THRESHOLD) {
-                if (attachedFiles.length >= MAX_ATTACHMENTS_PER_MESSAGE) {
-                    alert(`Cannot attach more than ${MAX_ATTACHMENTS_PER_MESSAGE} files.`);
-                    return;
-                }
-                const blob = new Blob([text], {
-                    type: 'text/plain'
-                });
-                const file = new File([blob], `Pasted_Code_${new Date().getTime()}.txt`, {
-                    type: 'text/plain'
-                });
-                await processAttachment(file);
-            } else {
-                // Insert smaller text normally
-                document.execCommand('insertText', false, text);
-            }
-        }
-        handleContentEditableInput();
-    }
 
     /**
-     * Saves application settings to localStorage.
+     * NEW: Saves the app settings (toggles) to localStorage.
      */
     function saveAppSettings() {
-        localStorage.setItem('ai-app-settings', JSON.stringify(appSettings));
+        try {
+            localStorage.setItem('ai-app-settings', JSON.stringify(appSettings));
+        } catch (e) {
+            console.error("Error saving app settings:", e);
+        }
     }
 
     /**
-     * Creates the hidden settings menu element.
+     * REPLACED: Creates the new settings menu with two toggles.
      */
     function createSettingsMenu() {
         const menu = document.createElement('div');
         menu.id = 'ai-settings-menu';
-        menu.className = 'ai-menu';
+
         menu.innerHTML = `
-            <h3>Agent Settings</h3>
-            <div class="setting-group">
-                <label for="settings-web-search" class="setting-label">
-                    <i class="fa-solid fa-globe"></i>
-                    Web Search (Google Grounding)
+            <div class="menu-header">AI Agent Settings</div>
+            
+            <div class="setting-group toggle-group">
+                <div class="setting-label">
+                    <label for="settings-web-search">Web Search</label>
+                    <p class="setting-note">Allow AI to search the internet for current events and facts.</p>
+                </div>
+                <label class="ai-toggle-switch">
+                    <input type="checkbox" id="settings-web-search" ${appSettings.webSearch ? 'checked' : ''}>
+                    <span class="ai-slider"></span>
                 </label>
-                <input type="checkbox" id="settings-web-search" class="setting-toggle">
-                <p class="setting-description">Allows the AI to search the web for real-time information and cite sources.</p>
             </div>
-            <div class="setting-group">
-                <label for="settings-location-sharing" class="setting-label">
-                    <i class="fa-solid fa-location-dot"></i>
-                    Share General Location
+
+            <div class="setting-group toggle-group">
+                <div class="setting-label">
+                    <label for="settings-location-sharing">Location Sharing</label>
+                    <p class="setting-note">Share precise location for context-aware responses (e.g., weather).</p>
+                </div>
+                <label class="ai-toggle-switch">
+                    <input type="checkbox" id="settings-location-sharing" ${appSettings.locationSharing ? 'checked' : ''}>
+                    <span class="ai-slider"></span>
                 </label>
-                <input type="checkbox" id="settings-location-sharing" class="setting-toggle">
-                <p class="setting-description">Allows the AI to fetch your current city/general area for relevant context (e.g., weather, local news).</p>
             </div>
         `;
 
-        // Add event listeners after creation
-        setTimeout(() => {
-            const webSearchToggle = document.getElementById('settings-web-search');
-            const locationToggle = document.getElementById('settings-location-sharing');
+        // Add event listeners to toggles
+        menu.querySelector('#settings-web-search').addEventListener('change', (e) => {
+            appSettings.webSearch = e.target.checked;
+            saveAppSettings();
+        });
 
-            webSearchToggle.checked = appSettings.webSearch;
-            locationToggle.checked = appSettings.locationSharing;
-
-            webSearchToggle.onchange = () => {
-                appSettings.webSearch = webSearchToggle.checked;
-                saveAppSettings();
-            };
-            locationToggle.onchange = () => {
-                appSettings.locationSharing = locationToggle.checked;
-                saveAppSettings();
-            };
-        }, 0);
+        menu.querySelector('#settings-location-sharing').addEventListener('change', (e) => {
+            appSettings.locationSharing = e.target.checked;
+            saveAppSettings();
+            // Note: We don't need to request permission here.
+            // The permission will be requested by the browser when getUserLocationForContext is called.
+        });
 
         return menu;
     }
 
-    /**
-     * Handles input events on the content editable div, updating character count and resizing.
-     */
-    const handleContentEditableInput = debounce(() => {
-        const visualInput = document.getElementById('ai-input');
-        const charCounter = document.getElementById('ai-char-counter');
-        if (!visualInput || !charCounter) return;
-
-        const charCount = visualInput.innerText.length;
-        updateCharCounter(charCount);
-
-        // Auto-resize logic
-        visualInput.style.height = 'auto'; // Reset height
-        let newHeight = visualInput.scrollHeight;
-
-        if (newHeight > MAX_INPUT_HEIGHT) {
-            newHeight = MAX_INPUT_HEIGHT;
-            visualInput.style.overflowY = 'auto';
-        } else {
-            visualInput.style.overflowY = 'hidden';
-        }
-
-        visualInput.style.height = `${newHeight}px`;
-    }, 50);
-
-    /**
-     * Updates the character count display and highlights on overflow.
-     */
-    function updateCharCounter(count) {
-        const charCounter = document.getElementById('ai-char-counter');
-        if (!charCounter) return;
-
-        charCounter.textContent = `${count} / ${formatCharLimit(CHAR_LIMIT)}`;
-        if (count > CHAR_LIMIT) {
-            charCounter.classList.add('over-limit');
-        } else {
-            charCounter.classList.remove('over-limit');
-        }
-    }
-
-    /**
-     * Formats a number with commas for display.
-     */
-    function formatCharLimit(limit) {
-        return limit.toLocaleString();
-    }
-
-    /**
-     * Handles form submission on Enter key press.
-     */
-    async function handleInputSubmission(e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            const visualInput = document.getElementById('ai-input');
-            const userQuery = visualInput.innerText.trim();
-            const charCount = userQuery.length;
-
-            if (isRequestPending || (charCount === 0 && attachedFiles.length === 0)) {
-                return;
-            }
-
-            if (charCount > CHAR_LIMIT) {
-                alert(`The message exceeds the ${formatCharLimit(CHAR_LIMIT)} character limit.`);
-                return;
-            }
-
-            // 1. Prepare chat message parts
-            const userMessageParts = [];
-
-            if (userQuery) {
-                userMessageParts.push({
-                    text: userQuery
-                });
-            }
-
-            // Add files as inlineData
-            const attachmentPreviews = [];
-            for (const fileObj of attachedFiles) {
-                // Text files go as simple text part if short enough
-                if (fileObj.mimeType.startsWith('text/') && fileObj.textData && fileObj.textData.length < PASTE_TO_FILE_THRESHOLD) {
-                    userMessageParts.push({
-                        text: `\n--- START ATTACHED TEXT FILE: ${fileObj.fileName} ---\n${fileObj.textData}\n--- END ATTACHED TEXT FILE ---\n`
-                    });
-                } else {
-                    userMessageParts.push({
-                        inlineData: {
-                            data: fileObj.data,
-                            mimeType: fileObj.mimeType
-                        }
-                    });
-                }
-                
-                // Store simplified preview data for rendering in chat history
-                attachmentPreviews.push({
-                    fileName: fileObj.fileName,
-                    mimeType: fileObj.mimeType,
-                    dataUrl: fileObj.dataUrl || null // Only images will have this
-                });
-            }
-
-            // 2. Add to chat history
-            const userMessage = {
-                role: "user",
-                parts: userMessageParts,
-                attachmentPreviews: attachmentPreviews // NEW: Store for UI rendering
-            };
-            chatHistory.push(userMessage);
-
-            // 3. Render and reset
-            const responseContainer = document.getElementById('ai-response-container');
-            const userBubble = document.createElement('div');
-            userBubble.className = 'ai-message-bubble user-message';
-            // UPDATED: Use the new rendering function for the submitted message
-            let bubbleContent = '';
-            if (userQuery) bubbleContent += `<p>${escapeHTML(userQuery)}</p>`;
-            if (attachmentPreviews.length > 0) {
-                bubbleContent += createAttachmentPreviewHTML(attachmentPreviews);
-            }
-            userBubble.innerHTML = bubbleContent;
-            responseContainer.appendChild(userBubble);
-
-            visualInput.innerText = '';
-            visualInput.style.height = '40px';
-            document.getElementById('ai-attachment-preview').innerHTML = '';
-            attachedFiles = [];
-            updateCharCounter(0);
-
-            // 4. Show loading state
-            const loadingBubble = document.createElement('div');
-            loadingBubble.className = 'ai-message-bubble gemini-response loading';
-            loadingBubble.innerHTML = `<div class="ai-loading-spinner"></div><div class="ai-loading-text">Gemini is thinking...</div>`;
-            responseContainer.appendChild(loadingBubble);
-            responseContainer.scrollTop = responseContainer.scrollHeight;
-
-            const inputWrapper = document.getElementById('ai-input-wrapper');
-            if (inputWrapper) inputWrapper.classList.add('waiting');
-
-            isRequestPending = true;
-            await callGoogleAI(loadingBubble);
-
-            document.getElementById('ai-container').classList.add('chat-active');
-        }
-    }
-
-    /**
-     * Prompts the user to select files.
-     */
-    function handleFileUpload() {
-        const fileInput = document.createElement('input');
-        fileInput.type = 'file';
-        fileInput.multiple = true;
-        fileInput.accept = 'image/*, text/*, application/pdf, application/json, application/xml, .csv, .md, .js, .py, .html, .css';
-        fileInput.onchange = handleFileSelection;
-        fileInput.click();
-    }
-
-    /**
-     * Processes selected files and adds them to the attachment list.
-     */
-    function handleFileSelection(event) {
-        const files = Array.from(event.target.files);
-        let count = 0;
-        for (const file of files) {
-            if (attachedFiles.length + count < MAX_ATTACHMENTS_PER_MESSAGE) {
-                processAttachment(file);
-                count++;
-            } else {
-                alert(`Maximum of ${MAX_ATTACHMENTS_PER_MESSAGE} files reached.`);
-                break;
-            }
-        }
-    }
-
-    /**
-     * Handles file drop events.
-     */
-    function handleFileDrop(event) {
-        event.preventDefault();
-        event.stopPropagation();
-        document.getElementById('ai-input-wrapper').classList.remove('drag-over');
-
-        const files = Array.from(event.dataTransfer.files);
-        let count = 0;
-        for (const file of files) {
-            if (attachedFiles.length + count < MAX_ATTACHMENTS_PER_MESSAGE) {
-                processAttachment(file);
-                count++;
-            } else {
-                alert(`Maximum of ${MAX_ATTACHMENTS_PER_MESSAGE} files reached.`);
-                break;
-            }
-        }
-    }
-
-    /**
-     * Processes a single file: reads it as a Data URL (for images) or text (for text files),
-     * converts to Base64, and updates the UI.
-     */
-    async function processAttachment(file) {
-        if (!file.type) {
-            alert(`File type not recognized for ${file.name}.`);
+    function processFileLike(file, base64Data, dataUrl, tempId) {
+        if (attachedFiles.length >= MAX_ATTACHMENTS_PER_MESSAGE) {
+            alert(`You can attach a maximum of ${MAX_ATTACHMENTS_PER_MESSAGE} files per message.`);
             return;
         }
 
-        const reader = new FileReader();
-        const isImage = file.type.startsWith('image/');
-        const isText = file.type.startsWith('text/') || file.type.endsWith('/json') || file.type.endsWith('/xml') || file.type.endsWith('/csv') || file.type.endsWith('/javascript') || file.type.endsWith('/python') || file.type.endsWith('/html') || file.type.endsWith('/css');
-
-        let data = null;
-        let dataUrl = null;
-        let textData = null;
-
-        await new Promise(resolve => {
-            reader.onload = (e) => {
-                if (isText) {
-                    textData = e.target.result;
-                    // For API, encode to base64 only if we need to send it as a part.
-                    // For text files, we prefer to send it as a text part, so we skip base64 here.
-                    data = null;
-                } else {
-                    dataUrl = e.target.result;
-                    // Extract the Base64 data part
-                    data = dataUrl.split(',')[1];
-                }
-                resolve();
-            };
-
-            reader.onerror = () => {
-                console.error("Error reading file:", file.name);
-                resolve();
-            };
-
-            if (isText) {
-                reader.readAsText(file);
-            } else {
-                reader.readAsDataURL(file);
-            }
-        });
-
-        if (data || isText) {
-            attachedFiles.push({
-                fileName: file.name,
-                mimeType: file.type,
-                data: data, // Base64 string for images/PDFs
-                dataUrl: dataUrl, // DataURL for image previews
-                textData: textData // Raw text content for text files
-            });
-            renderAttachmentPreview();
+        const currentTotalSize = attachedFiles.reduce((sum, f) => sum + (f.inlineData ? atob(f.inlineData.data).length : 0), 0);
+        if (currentTotalSize + file.size > (10 * 1024 * 1024)) {
+            alert(`Upload failed: Total size of attachments would exceed the 10MB limit per message. (Current: ${formatBytes(currentTotalSize)}, Adding: ${formatBytes(file.size)})`);
+            return;
         }
+
+        const item = {
+            inlineData: {
+                mimeType: file.type,
+                data: base64Data
+            },
+            fileName: file.name || 'Pasted Image',
+            fileContent: dataUrl,
+            isLoading: false
+        };
+
+        if (tempId) {
+            item.tempId = tempId;
+        }
+
+        attachedFiles.push(item);
+        renderAttachments();
     }
 
-    /**
-     * Renders the horizontal scrollable attachment preview list.
-     */
-    function renderAttachmentPreview() {
+
+    function handleFileUpload() {
+        if (attachedFiles.length >= MAX_ATTACHMENTS_PER_MESSAGE) {
+            alert(`You can attach a maximum of ${MAX_ATTACHMENTS_PER_MESSAGE} files per message.`);
+            return;
+        }
+
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.multiple = true;
+        input.accept = 'image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain';
+
+        input.onchange = (event) => {
+            const files = Array.from(event.target.files);
+            if (!files || files.length === 0) return;
+
+            const filesToProcess = files.filter(file => {
+                if (attachedFiles.length >= MAX_ATTACHMENTS_PER_MESSAGE) {
+                    alert(`Cannot attach more than ${MAX_ATTACHMENTS_PER_MESSAGE} files. Skipping: ${file.name}`);
+                    return false;
+                }
+                return true;
+            });
+
+            const currentTotalSize = attachedFiles.reduce((sum, file) => sum + (file.inlineData ? atob(file.inlineData.data).length : 0), 0);
+            const newFilesSize = filesToProcess.reduce((sum, file) => sum + file.size, 0);
+            if (currentTotalSize + newFilesSize > (10 * 1024 * 1024)) {
+                alert(`Upload failed: Total size of attachments would exceed the 10MB limit per message. (Current: ${formatBytes(currentTotalSize)}, Adding: ${formatBytes(newFilesSize)})`);
+                return;
+            }
+
+            filesToProcess.forEach(file => {
+                const tempId = `file-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+                attachedFiles.push({
+                    tempId,
+                    file,
+                    isLoading: true
+                });
+                renderAttachments();
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const base64Data = e.target.result.split(',')[1];
+                    const dataUrl = e.target.result;
+
+                    const itemIndex = attachedFiles.findIndex(f => f.tempId === tempId);
+                    if (itemIndex > -1) {
+                        const item = attachedFiles[itemIndex];
+                        item.isLoading = false;
+                        item.inlineData = {
+                            mimeType: file.type,
+                            data: base64Data
+                        };
+                        item.fileName = file.name;
+                        item.fileContent = dataUrl;
+                        delete item.file;
+                        delete item.tempId;
+                        renderAttachments();
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+        };
+        input.click();
+    }
+
+    function renderAttachments() {
         const previewContainer = document.getElementById('ai-attachment-preview');
-        if (!previewContainer) return;
-        previewContainer.innerHTML = '';
+        const inputWrapper = document.getElementById('ai-input-wrapper');
 
         if (attachedFiles.length === 0) {
-            previewContainer.style.display = 'none';
+            inputWrapper.classList.remove('has-attachments');
+            previewContainer.innerHTML = '';
             return;
         }
 
         previewContainer.style.display = 'flex';
+        inputWrapper.classList.add('has-attachments');
+        previewContainer.innerHTML = '';
 
         attachedFiles.forEach((file, index) => {
-            const card = document.createElement('div');
-            card.className = 'attachment-card';
-            card.dataset.index = index;
+            const fileCard = document.createElement('div');
+            fileCard.className = 'attachment-card';
+            let previewHTML = '';
+            let fileExt = 'FILE';
+            let fileName = '';
 
-            let previewContent;
-            if (file.mimeType.startsWith('image/') && file.dataUrl) {
-                previewContent = `<img src="${file.dataUrl}" alt="${escapeHTML(file.fileName)}">`;
+            if (file.isLoading) {
+                fileCard.classList.add('loading');
+                fileName = file.file.name;
+                fileExt = fileName.split('.').pop().toUpperCase();
+                previewHTML = `<div class="ai-loader"></div><span class="file-icon">📄</span>`;
             } else {
-                previewContent = `<span class="file-icon">📁</span>`; // Simple icon for non-image files
+                fileName = file.fileName;
+                fileExt = fileName.split('.').pop().toUpperCase();
+                if (file.inlineData.mimeType.startsWith('image/')) {
+                    previewHTML = `<img src="data:${file.inlineData.mimeType};base64,${file.inlineData.data}" alt="${fileName}" />`;
+                } else {
+                    previewHTML = `<span class="file-icon">📄</span>`;
+                }
+                fileCard.onclick = () => showFilePreview(file);
             }
 
-            card.innerHTML = `
-                ${previewContent}
-                <div class="file-info">
-                    <span>${escapeHTML(file.fileName)}</span>
-                </div>
-                <button class="remove-attachment-btn">&times;</button>
-            `;
+            if (fileExt.length > 5) fileExt = 'FILE';
+            let fileTypeBadge = `<div class="file-type-badge">${fileExt}</div>`;
+            if (file.inlineData && file.inlineData.mimeType.startsWith('image/')) {
+                fileTypeBadge = '';
+            }
 
-            card.querySelector('.remove-attachment-btn').onclick = () => removeAttachment(index);
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = fileName;
+            const marqueeWrapper = document.createElement('div');
+            marqueeWrapper.className = 'file-name';
+            marqueeWrapper.appendChild(nameSpan);
 
-            previewContainer.appendChild(card);
+            fileCard.innerHTML = `${previewHTML}<div class="file-info"></div>${fileTypeBadge}<button class="remove-attachment-btn" data-index="${index}">&times;</button>`;
+            fileCard.querySelector('.file-info').appendChild(marqueeWrapper);
+
+            setTimeout(() => {
+                if (nameSpan.scrollWidth > marqueeWrapper.clientWidth) {
+                    const marqueeDuration = fileName.length / 4;
+                    nameSpan.style.animationDuration = `${marqueeDuration}s`;
+                    marqueeWrapper.classList.add('marquee');
+                    nameSpan.innerHTML += `<span aria-hidden="true">${fileName}</span>`;
+                }
+            }, 0);
+
+            fileCard.querySelector('.remove-attachment-btn').onclick = (e) => {
+                e.stopPropagation();
+                attachedFiles.splice(index, 1);
+                renderAttachments();
+            };
+            previewContainer.appendChild(fileCard);
         });
-
-        // Update the drag-over handling for the preview area
-        const inputWrapper = document.getElementById('ai-input-wrapper');
-        inputWrapper.ondragover = (e) => {
-            e.preventDefault();
-            inputWrapper.classList.add('drag-over');
-        };
-        inputWrapper.ondragleave = () => {
-            inputWrapper.classList.remove('drag-over');
-        };
-        inputWrapper.ondrop = handleFileDrop;
     }
 
-    /**
-     * Removes an attachment by index.
-     */
-    function removeAttachment(index) {
-        if (index >= 0 && index < attachedFiles.length) {
-            attachedFiles.splice(index, 1);
-            renderAttachmentPreview();
-            handleContentEditableInput(); // Re-check sizing
-        }
-    }
-
-    // --- NEW: MEMORY MODAL AND RENDER FUNCTIONS ---
-    
-    /**
-     * Creates and attaches the memory management modal.
-     */
-    function createMemoryModal() {
-        if (document.getElementById('ai-memory-modal')) return;
-
-        const modal = document.createElement('div');
-        modal.id = 'ai-memory-modal';
-        modal.className = 'ai-modal';
-        modal.innerHTML = `
-            <div class="ai-modal-content">
-                <div class="ai-modal-header">
-                    <h2><i class="fa-solid fa-brain"></i> Saved Memories</h2>
-                    <span class="ai-close-modal">&times;</span>
-                </div>
-                <div class="ai-modal-body">
-                    <div class="memory-input-section">
-                        <textarea id="ai-memory-editor" placeholder="Enter a new memory (e.g., My dog's name is Rex. I prefer professional analyses.)"></textarea>
-                        <div class="memory-actions">
-                            <button id="ai-add-memory-btn" class="primary-btn"><i class="fa-solid fa-plus"></i> Add New Memory</button>
-                            <button id="ai-clear-editor-btn" class="secondary-btn">Clear Editor</button>
-                        </div>
-                    </div>
-                    <div class="memory-list-header">
-                        <h3>Memory List (Top 10 used for context)</h3>
-                        <button id="ai-delete-all-memories-btn" class="danger-btn"><i class="fa-solid fa-trash"></i> Delete All</button>
-                    </div>
-                    <div id="ai-memory-list">
-                        <div class="ai-loading-spinner small"></div>
-                    </div>
-                </div>
-                <div class="ai-modal-footer">
-                    <div id="ai-storage-status">
-                        </div>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-
-        // Setup handlers
-        modal.querySelector('.ai-close-modal').onclick = () => modal.remove();
-        modal.querySelector('#ai-add-memory-btn').onclick = () => handleAddEditMemory(false);
-        modal.querySelector('#ai-clear-editor-btn').onclick = () => document.getElementById('ai-memory-editor').value = '';
-        modal.querySelector('#ai-delete-all-memories-btn').onclick = handleDeleteAllMemories;
-
-        // Make modal draggable
-        makeDraggable(modal.querySelector('.ai-modal-content'), modal.querySelector('.ai-modal-header'));
-    }
-
-    /**
-     * Makes an element draggable using its header as the handle.
-     * @param {HTMLElement} element The element to make draggable.
-     * @param {HTMLElement} handle The element to use as the drag handle.
-     */
-    function makeDraggable(element, handle) {
-        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-
-        handle.onmousedown = dragMouseDown;
-
-        function dragMouseDown(e) {
-            e = e || window.event;
-            e.preventDefault();
-            // get the mouse cursor position at startup:
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-            document.onmouseup = closeDragElement;
-            // call a function whenever the cursor moves:
-            document.onmousemove = elementDrag;
-            element.style.cursor = 'grabbing';
-            handle.style.cursor = 'grabbing';
-        }
-
-        function elementDrag(e) {
-            e = e || window.event;
-            e.preventDefault();
-            // calculate the new cursor position:
-            pos1 = pos3 - e.clientX;
-            pos2 = pos4 - e.clientY;
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-            // set the element's new position:
-            element.style.top = (element.offsetTop - pos2) + "px";
-            element.style.left = (element.offsetLeft - pos1) + "px";
-        }
-
-        function closeDragElement() {
-            /* stop moving when mouse button is released:*/
-            document.onmouseup = null;
-            document.onmousemove = null;
-            element.style.cursor = 'default';
-            handle.style.cursor = 'grab';
-        }
-        element.style.position = 'absolute';
-        handle.style.cursor = 'grab';
-    }
-
-    /**
-     * Shows the memory modal and loads the list.
-     */
-    function showMemoryModal() {
-        createMemoryModal();
-        const modal = document.getElementById('ai-memory-modal');
-        modal.style.display = 'flex';
-        renderMemoryList();
-    }
-
-    /**
-     * Renders the list of memories and storage status.
-     */
-    async function renderMemoryList() {
-        const memoryListDiv = document.getElementById('ai-memory-list');
-        const storageStatusDiv = document.getElementById('ai-storage-status');
-        if (!memoryListDiv || !storageStatusDiv) return;
-
-        memoryListDiv.innerHTML = '<div class="ai-loading-spinner small"></div>';
-        
-        try {
-            const memories = await getMemories();
-            memories.sort((a, b) => b.timestamp - a.timestamp); // Newest first
-
-            if (memories.length === 0) {
-                memoryListDiv.innerHTML = '<p class="no-memories-text">No saved memories yet.</p>';
-            } else {
-                memoryListDiv.innerHTML = memories.map((mem, index) => {
-                    const formattedDate = new Date(mem.timestamp).toLocaleString();
-                    const isTopTen = index < 10 ? 'top-ten' : '';
-                    
-                    return `
-                        <div class="memory-item ${isTopTen}" data-id="${mem.id}" data-content="${escapeHTML(mem.content)}">
-                            <span class="memory-content">${escapeHTML(mem.content)}</span>
-                            <div class="memory-meta">
-                                <span class="memory-date">${formattedDate}</span>
-                                ${index < 10 ? '<span class="memory-rank">Context Slot ' + (index + 1) + '</span>' : ''}
-                            </div>
-                            <div class="memory-item-actions">
-                                <button class="edit-memory-btn"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
-                                <button class="delete-memory-btn danger-btn-small"><i class="fa-solid fa-trash"></i> Delete</button>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-
-                // Add event listeners for edit/delete buttons
-                memoryListDiv.querySelectorAll('.edit-memory-btn').forEach(btn => {
-                    btn.onclick = (e) => {
-                        const item = e.target.closest('.memory-item');
-                        const id = parseInt(item.dataset.id);
-                        const content = item.querySelector('.memory-content').textContent;
-                        
-                        document.getElementById('ai-memory-editor').value = content;
-                        document.getElementById('ai-memory-editor').dataset.editId = id;
-                        
-                        const addButton = document.getElementById('ai-add-memory-btn');
-                        addButton.textContent = 'Save Changes';
-                        addButton.onclick = () => handleAddEditMemory(true, id);
-                        
-                        // Scroll to the editor
-                        document.getElementById('ai-memory-editor').focus();
-                    };
-                });
-                
-                memoryListDiv.querySelectorAll('.delete-memory-btn').forEach(btn => {
-                    btn.onclick = (e) => {
-                        const id = parseInt(e.target.closest('.memory-item').dataset.id);
-                        handleDeleteMemory(id);
-                    };
-                });
-            }
-        } catch (e) {
-            memoryListDiv.innerHTML = `<p class="error-text">Failed to load memories: ${e.message}</p>`;
-        }
-
-        // Update Storage Status
-        const usage = await getStorageUsage();
-        if (usage) {
-            const progress = Math.min(100, parseFloat(usage.percentage));
-            storageStatusDiv.innerHTML = `
-                Storage Used: ${usage.used} of ${usage.total}
-                <div class="storage-progress-bar-container">
-                    <div class="storage-progress-bar" style="width: ${progress}%;"></div>
-                </div>
-            `;
-        } else {
-            storageStatusDiv.innerHTML = '<p>Storage usage statistics not available.</p>';
-        }
-    }
-
-    /**
-     * Handles adding a new memory or saving an edited one.
-     */
-    async function handleAddEditMemory(isEdit, id) {
-        const editor = document.getElementById('ai-memory-editor');
-        const content = editor.value.trim();
-
-        if (!content) {
-            alert("Memory content cannot be empty.");
+    function showFilePreview(file) {
+        if (!file.fileContent) {
+            alert("File content not available for preview.");
             return;
         }
 
-        try {
-            if (isEdit) {
-                await updateMemory(id, content);
-            } else {
-                await addMemory(content);
+        const previewModal = document.createElement('div');
+        previewModal.id = 'ai-preview-modal';
+        previewModal.innerHTML = `
+            <div class="modal-content">
+                <span class="close-button">&times;</span>
+                <h3>${escapeHTML(file.fileName)}</h3>
+                <div class="preview-area"></div>
+            </div>
+        `;
+        document.body.appendChild(previewModal);
+
+        const previewArea = previewModal.querySelector('.preview-area');
+        if (file.inlineData.mimeType.startsWith('image/')) {
+            previewArea.innerHTML = `<img src="${file.fileContent}" alt="${file.fileName}" style="max-width: 100%; max-height: 80vh; object-fit: contain;">`;
+        } else if (file.inlineData.mimeType.startsWith('text/')) {
+            fetch(file.fileContent)
+                .then(response => response.text())
+                .then(text => {
+                    previewArea.innerHTML = `<pre style="white-space: pre-wrap; word-break: break-all; max-height: 70vh; overflow-y: auto; background-color: #222; padding: 10px; border-radius: 5px;">${escapeHTML(text)}</pre>`;
+                })
+                .catch(error => {
+                    console.error("Error reading text file for preview:", error);
+                    previewArea.innerHTML = `<p>Could not load text content for preview.</p>`;
+                });
+        } else {
+            previewArea.innerHTML = `<p>Preview not available for this file type. You can download it to view.</p>
+                                     <a href="${file.fileContent}" download="${file.fileName}" class="download-button">Download File</a>`;
+        }
+
+        previewModal.querySelector('.close-button').onclick = () => {
+            previewModal.remove();
+        };
+        previewModal.addEventListener('click', (e) => {
+            if (e.target === previewModal) {
+                previewModal.remove();
             }
-            editor.value = '';
-            
-            // Reset editor button state
-            const addButton = document.getElementById('ai-add-memory-btn');
-            addButton.textContent = 'Add New Memory';
-            addButton.onclick = () => handleAddEditMemory(false);
-            delete editor.dataset.editId; // Clean up edit ID
+        });
+    }
 
-            renderMemoryList();
-        } catch (e) {
-            alert(`Failed to save memory: ${e.message}`);
+
+    function formatCharCount(count) {
+        if (count >= 1000) {
+            return (count / 1000).toFixed(count % 1000 === 0 ? 0 : 1) + 'K';
+        }
+        return count.toString();
+    }
+
+    function formatCharLimit(limit) {
+        return (limit / 1000).toFixed(0) + 'K';
+    }
+
+    function handleContentEditableInput(e) {
+        const editor = e.target;
+        const charCount = editor.innerText.length;
+
+        const counter = document.getElementById('ai-char-counter');
+        if (counter) {
+            counter.textContent = `${formatCharCount(charCount)} / ${formatCharLimit(CHAR_LIMIT)}`;
+            counter.classList.toggle('limit-exceeded', charCount > CHAR_LIMIT);
+        }
+
+        if (charCount > CHAR_LIMIT) {
+            editor.innerText = editor.innerText.substring(0, CHAR_LIMIT);
+            const selection = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(editor);
+            range.collapse(false);
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
+
+        if (editor.scrollHeight > MAX_INPUT_HEIGHT) {
+            editor.style.height = `${MAX_INPUT_HEIGHT}px`;
+            editor.style.overflowY = 'auto';
+        } else {
+            editor.style.height = 'auto';
+            editor.style.height = `${editor.scrollHeight}px`;
+            editor.style.overflowY = 'hidden';
+        }
+        fadeOutWelcomeMessage();
+    }
+
+    function handlePaste(e) {
+        e.preventDefault();
+        const clipboardData = e.clipboardData || window.clipboardData;
+        const pastedText = clipboardData.getData('text/plain');
+
+        const items = clipboardData.items;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf("image") !== -1) {
+                const file = items[i].getAsFile();
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const base64Data = event.target.result.split(',')[1];
+                        const dataUrl = event.target.result;
+                        file.name = `pasted-image-${Date.now()}.${file.type.split('/')[1] || 'png'}`;
+                        processFileLike(file, base64Data, dataUrl);
+                    };
+                    reader.readAsDataURL(file);
+                    return;
+                }
+            }
+        }
+
+        const currentText = e.target.innerText;
+        const totalLengthIfPasted = currentText.length + pastedText.length;
+
+        if (pastedText.length > PASTE_TO_FILE_THRESHOLD || totalLengthIfPasted > CHAR_LIMIT) {
+            let filenameBase = 'paste';
+            let filename = `${filenameBase}.txt`;
+            let counter = 1;
+            while (attachedFiles.some(f => f.fileName === filename)) {
+                filename = `${filenameBase}(${counter++}).txt`;
+            }
+
+            const encoder = new TextEncoder();
+            const encoded = encoder.encode(pastedText);
+            const base64Data = btoa(String.fromCharCode.apply(null, encoded));
+            const blob = new Blob([pastedText], {
+                type: 'text/plain'
+            });
+            blob.name = filename;
+
+            if (attachedFiles.length < MAX_ATTACHMENTS_PER_MESSAGE) {
+                const reader = new FileReader();
+                reader.onloadend = (event) => {
+                    attachedFiles.push({
+                        inlineData: {
+                            mimeType: 'text/plain',
+                            data: base64Data
+                        },
+                        fileName: filename,
+                        fileContent: event.target.result
+                    });
+                    renderAttachments();
+                };
+                reader.readAsDataURL(blob);
+            } else {
+                alert(`Cannot attach more than ${MAX_ATTACHMENTS_PER_MESSAGE} files. Text was too large to paste directly.`);
+            }
+        } else {
+            document.execCommand('insertText', false, pastedText);
+            handleContentEditableInput({
+                target: e.target
+            });
         }
     }
 
-    /**
-     * Handles deleting a single memory.
-     */
-    async function handleDeleteMemory(id) {
-        if (!confirm("Are you sure you want to delete this memory?")) return;
-        try {
-            await deleteMemory(id);
-            renderMemoryList();
-        } catch (e) {
-            alert(`Failed to delete memory: ${e.message}`);
+    function handleInputSubmission(e) {
+        const editor = e.target;
+        const query = editor.innerText.trim();
+        if (editor.innerText.length > CHAR_LIMIT) {
+            e.preventDefault();
+            return;
+        }
+
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            const settingsMenu = document.getElementById('ai-settings-menu');
+            if (settingsMenu && settingsMenu.classList.contains('active')) {
+                // Settings are saved on change, just close the menu
+                toggleSettingsMenu();
+            }
+
+            if (attachedFiles.some(f => f.isLoading)) {
+                alert("Please wait for files to finish uploading before sending.");
+                return;
+            }
+            if (!query && attachedFiles.length === 0) return;
+            if (isRequestPending) return;
+
+            isRequestPending = true;
+            document.getElementById('ai-input-wrapper').classList.add('waiting');
+            const parts = [];
+            if (query) parts.push({
+                text: query
+            });
+            attachedFiles.forEach(file => {
+                if (file.inlineData) parts.push({
+                    inlineData: file.inlineData
+                });
+            });
+            chatHistory.push({
+                role: "user",
+                parts: parts
+            });
+            const responseContainer = document.getElementById('ai-response-container');
+            const userBubble = document.createElement('div');
+            userBubble.className = 'ai-message-bubble user-message';
+            let bubbleContent = query ? `<p>${escapeHTML(query)}</p>` : '';
+            if (attachedFiles.length > 0) {
+                bubbleContent += `<div class="sent-attachments">${attachedFiles.length} file(s) sent</div>`;
+            }
+            userBubble.innerHTML = bubbleContent;
+            responseContainer.appendChild(userBubble);
+            const responseBubble = document.createElement('div');
+            responseBubble.className = 'ai-message-bubble gemini-response loading';
+            responseBubble.innerHTML = '<div class="ai-loader"></div>';
+            responseContainer.appendChild(responseBubble);
+            responseContainer.scrollTop = responseContainer.scrollHeight;
+            editor.innerHTML = '';
+            handleContentEditableInput({
+                target: editor
+            });
+            attachedFiles = [];
+            renderAttachments();
+
+            callGoogleAI(responseBubble);
         }
     }
 
-    /**
-     * Handles deleting all memories.
-     */
-    async function handleDeleteAllMemories() {
-        if (!confirm("Are you absolutely sure you want to delete ALL saved memories? This action cannot be undone.")) return;
-        try {
-            await deleteAllMemories();
-            renderMemoryList();
-        } catch (e) {
-            alert(`Failed to delete all memories: ${e.message}`);
+    function handleCopyCode(event) {
+        const btn = event.currentTarget;
+        const wrapper = btn.closest('.code-block-wrapper');
+        const code = wrapper.querySelector('pre > code');
+        if (code) {
+            navigator.clipboard.writeText(code.innerText).then(() => {
+                btn.innerHTML = checkIconSVG;
+                btn.disabled = true;
+                setTimeout(() => {
+                    btn.innerHTML = copyIconSVG;
+                    btn.disabled = false;
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy code: ', err);
+                alert('Failed to copy code.');
+            });
         }
     }
 
-    // --- END MEMORY FUNCTIONS ---
-    
-    /**
-     * Parses the Gemini response text, extracting thought process,
-     * converting markdown to HTML (including code blocks and KaTeX),
-     * and handling custom tags (graphs, downloads).
-     * UPDATED: Now uses `groundingSources` array for citations.
-     */
-    function parseGeminiResponse(text, groundingSources) {
+    function fadeOutWelcomeMessage() {
+        const container = document.getElementById("ai-container");
+        if (container && !container.classList.contains("chat-active")) {
+            container.classList.add("chat-active")
+        }
+    }
+
+    function escapeHTML(str) {
+        const p = document.createElement("p");
+        p.textContent = str;
+        return p.innerHTML
+    }
+
+    function formatBytes(bytes, decimals = 2) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    }
+
+    function parseGeminiResponse(text) {
+        let html = text;
+        const placeholders = {};
+        let placeholderId = 0;
+
+        const addPlaceholder = (content) => {
+            const key = `%%PLACEHOLDER_${placeholderId++}%%`;
+            placeholders[key] = content;
+            return key;
+        };
+
+        // --- Extract thought process (Humanity) ---
         let thoughtProcess = '';
+        html = html.replace(/<THOUGHT_PROCESS>([\s\S]*?)<\/THOUGHT_PROCESS>/, (match, content) => {
+            thoughtProcess = content.trim();
+            return ''; // Remove from main text
+        });
+
+        // --- Extract sources ---
         let sourcesHTML = '';
+        const sources = [];
+        html = html.replace(/<SOURCE URL="([^"]+)" TITLE="([^"]+)"\s*\/>/g, (match, url, title) => {
+            sources.push({
+                url,
+                title
+            });
+            return ''; // Remove from main text
+        });
 
-        // 1. Extract Thought Process (Internal Monologue)
-        const thoughtRegex = /<THOUGHT_PROCESS>([\s\S]*?)<\/THOUGHT_PROCESS>/;
-        const thoughtMatch = text.match(thoughtRegex);
-        if (thoughtMatch) {
-            thoughtProcess = thoughtMatch[1].trim();
-            text = text.replace(thoughtRegex, '').trim();
+        if (sources.length > 0) {
+            // NEW: Add 'scrollable' class if sources > 5
+            const listClass = sources.length > 5 ? 'scrollable' : '';
+            sourcesHTML = `<div class="ai-sources-list"><h4>Sources:</h4><ul class="${listClass}">`;
+            sources.forEach(source => {
+                let hostname = '';
+                try {
+                    hostname = new URL(source.url).hostname;
+                } catch (e) {
+                    hostname = 'unknown-source';
+                }
+                // Use Google's favicon service for the mock favicon
+                const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+                sourcesHTML += `<li><img src="${faviconUrl}" alt="Favicon" class="favicon"><a href="${source.url}" target="_blank">${escapeHTML(source.title)}</a></li>`;
+            });
+            sourcesHTML += `</ul></div>`;
         }
 
-        // 2. Extract and Handle Custom Download Tag
-        const downloadRegex = /<DOWNLOAD FILENAME="(.*?)" MIMETYPE="(.*?)" ENCODING="base64">([\s\S]*?)<\/DOWNLOAD>/g;
-        text = text.replace(downloadRegex, (match, filename, mimetype, base64Content) => {
-            const encodedFilename = encodeURIComponent(filename);
-            const encodedMimeType = encodeURIComponent(mimetype);
-            const truncatedName = filename.length > 30 ? filename.substring(0, 27) + '...' : filename;
-            
-            return `
-                <div class="download-widget">
-                    ${downloadIconSVG}
-                    <div class="download-info">
-                        <span class="download-filename" title="${escapeHTML(filename)}">${escapeHTML(truncatedName)}</span>
-                        <span class="download-mimetype">(${escapeHTML(mimetype)})</span>
+        // 1. Extract graph blocks (most specific)
+        html = html.replace(/```graph\n([\s\S]*?)```/g, (match, jsonString) => {
+            let metadata = 'Graph';
+            try {
+                const graphData = JSON.parse(jsonString);
+                const trace = graphData.data && graphData.data[0];
+                if (trace && trace.x && trace.y && trace.x.length >= 2 && trace.y.length >= 2) {
+                    const [x1, x2] = trace.x.slice(0, 2);
+                    const [y1, y2] = trace.y.slice(0, 2);
+                    if (x2 - x1 !== 0) {
+                        const slope = (y2 - y1) / (x2 - x1);
+                        if (isFinite(slope)) {
+                            const yIntercept = y1 - slope * x1;
+                            const xIntercept = slope !== 0 ? -yIntercept / slope : Infinity;
+                            metadata = `Slope: ${slope.toFixed(2)} &middot; Y-Int: (0, ${yIntercept.toFixed(2)}) &middot; X-Int: (${isFinite(xIntercept) ? xIntercept.toFixed(2) : 'N/A'}, 0)`;
+                        }
+                    }
+                }
+            } catch (e) {
+                /* Ignore parsing errors */ }
+
+            const escapedData = escapeHTML(jsonString);
+            const content = `
+                <div class="graph-block-wrapper">
+                    <div class="graph-block-header">
+                        <span class="graph-metadata">${metadata}</span>
                     </div>
-                    <button class="download-file-btn primary-btn" 
-                            data-filename="${encodedFilename}" 
-                            data-mimetype="${encodedMimeType}" 
-                            data-base64="${base64Content.trim()}">
-                        Download
-                    </button>
+                    <div class="custom-graph-placeholder" data-graph-data='${escapedData}'>
+                        <canvas class="graph-canvas"></canvas>
+                    </div>
                 </div>
             `;
-        });
-        
-        // 3. Extract and Handle Custom Graph Tag
-        const graphRegex = /<GRAPH JSON="([\s\S]*?)" \/>/g;
-        text = text.replace(graphRegex, (match, jsonString) => {
-            const decodedJson = decodeURIComponent(jsonString).replace(/\n/g, ''); // Decode and strip newlines
-            return `<div class="custom-graph-placeholder" data-graph-data="${escapeHTML(decodedJson)}"><canvas></canvas></div>`;
+            return addPlaceholder(content);
         });
 
-        // 4. Convert KaTeX to placeholder tags
-        // Block math: $$ ... $$
-        const blockMathRegex = /\$\$([\s\S]*?)\$\$/g;
-        text = text.replace(blockMathRegex, (match, tex) => {
-            return `<div class="latex-render" data-tex="${escapeHTML(tex.trim())}" data-display-mode="true"></div>`;
-        });
-        // Inline math: $ ... $
-        const inlineMathRegex = /(?<!\\)\$(?!\$)([\s\S]*?)(?<!\\)\$(?!\$)/g;
-        text = text.replace(inlineMathRegex, (match, tex) => {
-            // Only capture matches that aren't inside backticks (code)
-            if (tex.match(/`/)) return match;
-            return `<span class="latex-render" data-tex="${escapeHTML(tex.trim())}" data-display-mode="false"></span>`;
-        });
-
-        // 5. Convert Markdown code blocks to custom HTML with copy buttons
-        const codeBlockRegex = /```(\w*)\n([\s\S]*?)```/g;
-        text = text.replace(codeBlockRegex, (match, lang, code) => {
-            const language = lang || 'plaintext';
-            const escapedCode = escapeHTML(code.trim());
-
-            return `
-                <div class="code-block-container">
+        // 2. Extract general code blocks
+        html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
+            const trimmedCode = code.trim();
+            const lines = trimmedCode.split('\n').length;
+            const words = trimmedCode.split(/\s+/).filter(Boolean).length;
+            const escapedCode = escapeHTML(trimmedCode);
+            const langClass = lang ? `language-${lang.toLowerCase()}` : '';
+            const content = `
+                <div class="code-block-wrapper">
                     <div class="code-block-header">
-                        <span class="code-language">${escapeHTML(language)}</span>
-                        <button class="copy-code-btn">
-                            ${copyIconSVG}
-                            <span class="copy-text">Copy</span>
-                        </button>
+                        <span class="code-metadata">${lines} lines &middot; ${words} words</span>
+                        <button class="copy-code-btn" title="Copy code">${copyIconSVG}</button>
                     </div>
-                    <pre><code class="language-${escapeHTML(language)}">${escapedCode}</code></pre>
+                    <pre><code class="${langClass}">${escapedCode}</code></pre>
                 </div>
             `;
+            return addPlaceholder(content);
         });
 
-        // 6. Basic Markdown processing (bold, italics, newlines to paragraphs)
-        let html = text
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
-            .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italics
-            .replace(/^(- .*)/gm, '<p class="list-item-bullet">$1</p>') // Simple bullet list
-            .replace(/(?:\r\n|\r|\n){2,}/g, '</p><p>') // Double newlines to paragraph
-            .replace(/(?:\r\n|\r|\n)/g, '<br>'); // Single newlines to line break
+        // 3. Extract KaTeX blocks BEFORE escaping general HTML
+        // Display mode: $$...$$
+        html = html.replace(/\$\$([\s\S]*?)\$\$/g, (match, formula) => {
+            const content = `<div class="latex-render" data-tex="${escapeHTML(formula)}" data-display-mode="true"></div>`;
+            return addPlaceholder(content);
+        });
+        // Inline mode: $...$
+        html = html.replace(/\$([^\s\$][^\$]*?[^\s\$])\$/g, (match, formula) => {
+            const content = `<span class="latex-render" data-tex="${escapeHTML(formula)}" data-display-mode="false"></span>`;
+            return addPlaceholder(content);
+        });
 
-        html = `<p>${html}</p>`; // Wrap in final paragraph
+        // 4. Escape the rest of the HTML
+        html = escapeHTML(html);
 
-        // 7. Generate Sources HTML (Grounding)
-        if (groundingSources.length > 0) {
-            const listItems = groundingSources.map((source, index) => {
-                // Ensure a valid URL
-                const url = source.url.startsWith('http') ? source.url : `https://${source.url}`;
-                return `
-                    <li>
-                        <a href="${url}" target="_blank" rel="noopener noreferrer">
-                            ${escapeHTML(source.title || `Source ${index + 1}`)}
-                        </a>
-                    </li>
-                `;
-            }).join('');
+        // 5. Apply markdown styling
+        html = html.replace(/^### (.*$)/gm, "<h3>$1</h3>")
+            .replace(/^## (.*$)/gm, "<h2>$1</h2>")
+            .replace(/^# (.*$)/gm, "<h1>$1</h1>");
+        html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+            .replace(/\*(.*?)\*/g, "<em>$1</em>");
 
-            sourcesHTML = `
-                <div class="ai-sources">
-                    <h4>Sources Cited:</h4>
-                    <ul class="sources-list">${listItems}</ul>
-                </div>
-            `;
-        }
+        html = html.replace(/^(?:\*|-)\s(.*$)/gm, "<li>$1</li>");
+        html = html.replace(/((?:<br>)?\s*<li>.*<\/li>(\s*<br>)*)+/gs, (match) => {
+            const listItems = match.replace(/<br>/g, '').trim();
+            return `<ul>${listItems}</ul>`;
+        });
+        html = html.replace(/(<\/li>\s*<li>)/g, "</li><li>");
+
+        html = html.replace(/\n/g, "<br>");
+
+        // 6. Restore placeholders
+        html = html.replace(/%%PLACEHOLDER_\d+%%/g, (match) => placeholders[match] || '');
 
         return {
             html: html,
@@ -2126,1174 +1656,366 @@ Formatting Rules (MUST FOLLOW):
         };
     }
 
-    /**
-     * Escapes HTML entities in a string.
-     */
-    function escapeHTML(str) {
-        if (!str) return '';
-        return str.replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
-    }
-
-    /**
-     * Handles copying code content from a code block.
-     */
-    function handleCopyCode(event) {
-        const button = event.currentTarget;
-        const container = button.closest('.code-block-container');
-        const codeElement = container ? container.querySelector('code') : null;
-
-        if (codeElement) {
-            // Create a temporary textarea to hold the text to copy
-            const tempTextArea = document.createElement('textarea');
-            tempTextArea.value = codeElement.textContent;
-            document.body.appendChild(tempTextArea);
-
-            // Select and copy the text
-            tempTextArea.select();
-            document.execCommand('copy');
-
-            // Clean up
-            document.body.removeChild(tempTextArea);
-
-            // Give feedback
-            const copyText = button.querySelector('.copy-text');
-            const originalText = copyText.textContent;
-            const originalIcon = button.querySelector('svg').outerHTML;
-            
-            button.innerHTML = checkIconSVG + '<span class="copy-text success-copy">Copied!</span>';
-            setTimeout(() => {
-                button.innerHTML = originalIcon + `<span class="copy-text">${originalText}</span>`;
-            }, 2000);
-        }
-    }
-
-    /**
-     * Converts a Base64 string to a Blob object.
-     */
-    function base64ToBlob(base64, mimeType) {
-        const byteCharacters = atob(base64);
-        const byteArrays = [];
-        for (let offset = 0; offset < byteCharacters.length; offset += 512) {
-            const slice = byteCharacters.slice(offset, offset + 512);
-            const byteNumbers = new Array(slice.length);
-            for (let i = 0; i < slice.length; i++) {
-                byteNumbers[i] = slice.charCodeAt(i);
-            }
-            const byteArray = new Uint8Array(byteNumbers);
-            byteArrays.push(byteArray);
-        }
-        return new Blob(byteArrays, {
-            type: mimeType
-        });
-    }
-
-    /**
-     * Handles the click event for the custom file download button.
-     */
-    function handleFileDownload(event) {
-        const button = event.currentTarget;
-        const filename = decodeURIComponent(button.dataset.filename);
-        const mimeType = decodeURIComponent(button.dataset.mimetype);
-        const base64Content = button.dataset.base64;
-
-        try {
-            const blob = base64ToBlob(base64Content, mimeType);
-            const url = URL.createObjectURL(blob);
-
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-
-            // Clean up the object URL after the download starts
-            setTimeout(() => URL.revokeObjectURL(url), 100);
-            
-        } catch (error) {
-            console.error("Download failed:", error);
-            alert(`Error creating file: ${error.message}`);
-        }
-    }
-
-    /**
-     * Injects the necessary CSS styles into the document head.
-     * UPDATED: Includes styles for the new combined options menu.
-     */
     function injectStyles() {
         if (document.getElementById('ai-dynamic-styles')) return;
 
-        const fontLink = document.createElement('link');
-        fontLink.id = 'ai-google-fonts';
-        fontLink.rel = 'stylesheet';
-        fontLink.href = 'https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Lora:wght@400;700&display=swap';
-        document.head.appendChild(fontLink);
+        if (!document.getElementById('ai-katex-styles')) {
+            const katexStyles = document.createElement('link');
+            katexStyles.id = 'ai-katex-styles';
+            katexStyles.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css';
+            katexStyles.rel = 'stylesheet';
+            document.head.appendChild(katexStyles);
+        }
 
-        const fontAwesomeLink = document.createElement('link');
-        fontAwesomeLink.rel = 'stylesheet';
-        fontAwesomeLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css';
-        document.head.appendChild(fontAwesomeLink);
+        if (!document.getElementById('ai-google-fonts')) {
+            const googleFonts = document.createElement('link');
+            googleFonts.id = 'ai-google-fonts';
+            googleFonts.href = 'https://fonts.googleapis.com/css2?family=Lora:wght@400;700&family=Merriweather:wght@400;700&display=swap';
+            googleFonts.rel = 'stylesheet';
+            document.head.appendChild(googleFonts);
+        }
+        const fontAwesome = document.createElement('link');
+        fontAwesome.rel = 'stylesheet';
+        fontAwesome.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css';
+        document.head.appendChild(fontAwesome);
 
-        const katexCSSLink = document.createElement('link');
-        katexCSSLink.id = 'ai-katex-styles';
-        katexCSSLink.rel = 'stylesheet';
-        katexCSSLink.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css';
-        document.head.appendChild(katexCSSLink);
-
-
-        const style = document.createElement('style');
-        style.id = 'ai-dynamic-styles';
-        style.textContent = `
-            /* --- VARIABLES --- */
-            :root {
-                --ai-main-bg: #1c1c1c;
-                --ai-dark-bg: #111111;
-                --ai-light-hover: rgba(255, 255, 255, 0.05);
-                --ai-border-color: #333333;
-                --ai-primary-color: #4285f4;
-                --ai-accent-color: #db4437;
-                --ai-white: #eeeeee;
-                --ai-text-color: #cccccc;
-                --ai-code-bg: #2a2a2a;
-                --ai-code-color: #a9b7c6;
-                --ai-user-color: #8ab4f8;
-                --ai-gemini-color: #8c8c8c;
-                --ai-blue: #4285f4;
-                --ai-green: #0f9d58;
-                --ai-yellow: #f4b400;
-                --ai-red: #db4437;
+        const style = document.createElement("style");
+        style.id = "ai-dynamic-styles";
+        style.innerHTML = `
+            :root { --ai-red: #ea4335; --ai-blue: #4285f4; --ai-green: #34a853; --ai-yellow: #fbbc05; }
+            #ai-container { 
+                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+                background-color: rgba(10, 10, 15, 0.95);
+                backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); 
+                z-index: 2147483647; opacity: 0; transition: opacity 0.5s, background 0.5s; 
+                font-family: 'Lora', serif; display: flex; flex-direction: column; 
+                justify-content: flex-end; padding: 0; box-sizing: border-box; overflow: hidden; 
             }
-
-            /* --- GLOBAL CONTAINER --- */
-            #ai-container {
-                position: fixed;
-                bottom: -100%; /* Start off-screen */
-                right: 0;
-                width: 100%;
-                max-width: 550px;
-                height: 100%;
-                max-height: 800px;
-                background-color: var(--ai-main-bg);
-                color: var(--ai-text-color);
-                font-family: 'Lora', Georgia, serif;
-                border-top-left-radius: 20px;
-                border-top-right-radius: 20px;
-                box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
-                z-index: 2147483647; /* Max z-index */
-                display: flex;
-                flex-direction: column;
-                transition: bottom 0.5s ease-out, box-shadow 0.5s ease-out;
-                overflow: hidden;
+            #ai-container.active { opacity: 1; }
+            #ai-container.deactivating, #ai-container.deactivating > * { transition: opacity 0.4s, transform 0.4s; }
+            #ai-container.deactivating { opacity: 0 !important; background-color: rgba(0,0,0,0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); }
+            #ai-persistent-title, #ai-brand-title { 
+                position: absolute; top: 28px; left: 30px; font-family: 'Lora', serif; 
+                font-size: 18px; font-weight: bold; color: #FFFFFF;
+                opacity: 0; transition: opacity 0.5s 0.2s, color 0.5s; 
             }
-
-            #ai-container.active {
-                bottom: 0;
-            }
-
-            #ai-container.deactivating {
-                bottom: -100%;
-            }
-
-            /* --- HEADER AND BRANDING --- */
-            #ai-brand-title {
-                position: absolute;
-                top: 0;
-                left: 50%;
-                transform: translateX(-50%);
-                font-family: 'Merriweather', serif;
-                font-weight: 700;
-                font-size: 1.2rem;
-                color: var(--ai-text-color);
-                padding: 15px;
-                opacity: 0;
-                pointer-events: none;
-                transition: opacity 0.3s;
-            }
-
-            #ai-container.chat-active #ai-brand-title {
-                opacity: 0;
-            }
-
-            #ai-persistent-title {
-                position: absolute;
-                top: 0;
-                left: 50%;
-                transform: translateX(-50%);
-                font-family: 'Merriweather', serif;
-                font-weight: 700;
-                font-size: 1.2rem;
-                color: var(--ai-primary-color);
-                padding: 15px;
-                opacity: 0;
-                transition: opacity 0.3s;
-            }
-
-            #ai-container.chat-active #ai-persistent-title {
-                opacity: 1;
-            }
-
-            #ai-brand-title span {
-                opacity: 0;
-                animation: brand-title-pulse 3s infinite alternate;
-            }
-
-            #ai-brand-title span:nth-child(even) {
-                animation-delay: 0.2s;
-            }
-            #ai-brand-title span:nth-child(3n) {
-                animation-delay: 0.4s;
-            }
-
-
-            #ai-close-button {
-                position: absolute;
-                top: 10px;
-                right: 15px;
-                font-size: 2rem;
-                cursor: pointer;
-                color: var(--ai-text-color);
-                opacity: 0.6;
-                transition: opacity 0.2s;
-                z-index: 10;
-            }
-
-            #ai-close-button:hover {
-                opacity: 1;
-            }
-
-            #ai-welcome-message {
-                padding: 50px 30px 20px;
-                text-align: center;
-                background-color: var(--ai-dark-bg);
-                border-bottom: 1px solid var(--ai-border-color);
-                transition: height 0.3s ease-out, padding 0.3s ease-out, opacity 0.3s;
-                flex-shrink: 0;
-            }
-
-            #ai-welcome-message h2 {
-                font-family: 'Merriweather', serif;
-                color: var(--ai-white);
-                font-size: 1.8rem;
-                margin-bottom: 10px;
-            }
-
-            #ai-welcome-message p {
-                font-size: 0.9rem;
-                color: var(--ai-gemini-color);
-                margin: 5px 0;
-            }
-
-            #ai-welcome-message .shortcut-tip {
-                font-style: italic;
-                font-size: 0.8rem;
-                margin-top: 15px;
-            }
-
-            #ai-container.chat-active #ai-welcome-message {
-                height: 0;
-                padding: 0 30px;
-                opacity: 0;
-                pointer-events: none;
-            }
-
-            /* --- RESPONSE AREA --- */
-            #ai-response-container {
-                flex-grow: 1;
+            #ai-container.chat-active #ai-persistent-title { opacity: 1; }
+            #ai-container:not(.chat-active) #ai-brand-title { opacity: 1; }
+            #ai-brand-title span { animation: brand-title-pulse 4s linear infinite; }
+            #ai-welcome-message { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; color: rgba(255,255,255,.5); opacity: 1; transition: opacity .5s, transform .5s; width: 100%; }
+            #ai-container.chat-active #ai-welcome-message { opacity: 0; pointer-events: none; transform: translate(-50%,-50%) scale(0.95); }
+            #ai-welcome-message h2 { font-family: 'Merriweather', serif; font-size: 2.2em; margin: 0; color: #fff; }
+            #ai-welcome-message p { font-size: .9em; margin-top: 10px; max-width: 400px; line-height: 1.5; margin-left: auto; margin-right: auto; }
+            .shortcut-tip { font-size: 0.8em; color: rgba(255,255,255,.7); margin-top: 20px; }
+            #ai-close-button { position: absolute; top: 20px; right: 30px; color: rgba(255,255,255,.7); font-size: 40px; cursor: pointer; transition: color .2s ease,transform .3s ease, opacity 0.4s; }
+            #ai-char-counter { position: fixed; bottom: 15px; right: 30px; font-size: 0.9em; font-family: monospace; color: #aaa; transition: color 0.2s; z-index: 2147483647; }
+            #ai-char-counter.limit-exceeded { color: #e57373; font-weight: bold; }
+            #ai-response-container { flex: 1 1 auto; overflow-y: auto; width: 100%; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; padding: 60px 20px 20px 20px; -webkit-mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%); mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%);}
+            .ai-message-bubble { background: rgba(15,15,18,.8); border: 1px solid rgba(255,255,255,.1); border-radius: 16px; padding: 12px 18px; color: #e0e0e0; backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); animation: message-pop-in .5s cubic-bezier(.4,0,.2,1) forwards; max-width: 90%; line-height: 1.6; overflow-wrap: break-word; transition: opacity 0.3s ease-in-out; align-self: flex-start; text-align: left; }
+            .user-message { background: rgba(40,45,50,.8); align-self: flex-end; }
+            .gemini-response { animation: glow 4s infinite; display: flex; flex-direction: column; }
+            .gemini-response.loading { display: flex; justify-content: center; align-items: center; min-height: 60px; max-width: 100px; padding: 15px; background: rgba(15,15,18,.8); animation: gemini-glow 4s linear infinite; }
+            
+            /* UPDATED STYLES for Sources (Top) and Collapsible Monologue (Bottom) */
+            
+            /* CSS FIX: Reduced margin-top and padding-top */
+            .ai-sources-list { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px; margin-top: 8px; }
+            .ai-sources-list h4 { color: #ccc; margin: 0 0 10px 0; font-family: 'Merriweather', serif; font-size: 1em; }
+            .ai-sources-list ul { list-style: none; padding: 0; margin: 0; }
+            .ai-sources-list li { display: flex; align-items: center; margin-bottom: 5px; }
+            .ai-sources-list li a { color: #4285f4; text-decoration: none; font-size: 0.9em; transition: color 0.2s; }
+            .ai-sources-list li a:hover { color: #6a9cf6; }
+            .ai-sources-list li img.favicon { width: 16px; height: 16px; margin-right: 8px; border-radius: 2px; flex-shrink: 0; }
+            
+            /* NEW: Scrollable source list for > 5 items */
+            .ai-sources-list ul.scrollable {
+                max-height: 170px; /* Approx 5.5 items */
                 overflow-y: auto;
-                padding: 20px 20px 0;
-                display: flex;
-                flex-direction: column;
-                gap: 15px;
-                scroll-behavior: smooth;
+                padding-right: 5px; 
+                scrollbar-width: thin;
+                scrollbar-color: #555 #333;
+            }
+            .ai-sources-list ul.scrollable::-webkit-scrollbar { width: 8px; }
+            .ai-sources-list ul.scrollable::-webkit-scrollbar-track { background: #333; border-radius: 4px; }
+            .ai-sources-list ul.scrollable::-webkit-scrollbar-thumb { background-color: #555; border-radius: 4px; }
+            
+            /* MODIFIED: Thought process colors and transitions */
+            .ai-thought-process { 
+                border-radius: 12px; 
+                padding: 0; 
+                margin-top: 10px; 
+                font-size: 0.9em; 
+                max-width: 100%; 
+                /* MODIFIED: Faster transition, added background/border */
+                transition: background-color 0.3s ease, border-color 0.3s ease;
+                
+                /* Default OPEN state */
+                background-color: rgba(66, 133, 244, 0.1); 
+                border: 1px solid rgba(66, 133, 244, 0.3); 
+            }
+            .ai-thought-process.collapsed {
+                /* COLLAPSED state */
+                background-color: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
             }
 
-            /* --- MESSAGE BUBBLES --- */
-            .ai-message-bubble {
-                padding: 15px;
-                border-radius: 12px;
-                line-height: 1.6;
-                max-width: 90%;
-                opacity: 0;
-                animation: message-pop-in 0.3s ease-out forwards;
-                transform-origin: bottom;
+            .monologue-header { display: flex; justify-content: space-between; align-items: center; padding: 10px; cursor: pointer; }
+            
+            .monologue-title { 
+                margin: 0; 
+                font-family: 'Merriweather', serif; 
+                font-size: 1em;
+                transition: color 0.3s ease;
+                color: #4285f4; /* OPEN state color */
+            }
+            .ai-thought-process.collapsed .monologue-title {
+                color: #ccc; /* COLLAPSED state color */
             }
 
-            .user-message {
-                align-self: flex-end;
-                background-color: var(--ai-user-color);
-                color: var(--ai-dark-bg);
-                border-bottom-right-radius: 4px;
-                font-size: 0.95rem;
+            .monologue-toggle-btn { 
+                background: none; 
+                border-radius: 6px; 
+                padding: 4px 8px; 
+                font-size: 0.8em; 
+                cursor: pointer; 
+                transition: background-color 0.2s, border-color 0.3s ease, color 0.3s ease;
+                
+                /* OPEN state */
+                border: 1px solid rgba(66, 133, 244, 0.5); 
+                color: #4285f4;
             }
-            .user-message p { margin: 0; }
-            .user-message em { font-style: normal; }
-
-
-            .gemini-response {
-                align-self: flex-start;
-                background-color: var(--ai-dark-bg);
-                color: var(--ai-text-color);
-                border: 1px solid var(--ai-border-color);
-                border-bottom-left-radius: 4px;
-                font-size: 0.9rem;
-                white-space: pre-wrap;
-            }
-            .gemini-response p:first-child { margin-top: 0; }
-            .gemini-response p:last-child { margin-bottom: 0; }
-            .gemini-response p { margin: 10px 0; }
-
-            /* --- ATTACHMENT PREVIEWS IN USER MESSAGE --- */
-            .sent-attachment-container {
-                display: flex;
-                gap: 8px;
-                overflow-x: auto;
-                padding: 8px 0;
-                margin-top: 10px;
-                border-top: 1px solid rgba(0, 0, 0, 0.1);
-            }
-            .sent-attachment-card {
-                flex-shrink: 0;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                background-color: rgba(0, 0, 0, 0.1);
-                border-radius: 6px;
-                overflow: hidden;
-                width: 80px;
-                max-height: 100px;
-            }
-            .sent-attachment-card img {
-                width: 100%;
-                height: 60px;
-                object-fit: cover;
-                border-bottom: 1px solid rgba(0, 0, 0, 0.2);
-            }
-            .sent-attachment-card .sent-file-info {
-                padding: 3px;
-                font-size: 0.7rem;
-                text-align: center;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                width: 100%;
-            }
-            .sent-attachment-card .file-icon {
-                font-size: 2rem;
-                padding: 10px;
-                line-height: 1;
-                color: var(--ai-dark-bg);
+            .ai-thought-process:not(.collapsed) .monologue-toggle-btn:hover { 
+                background-color: rgba(66, 133, 244, 0.2); 
             }
             
-            /* --- LOADING STATE --- */
-            .ai-loading-spinner {
-                border: 3px solid var(--ai-border-color);
-                border-top: 3px solid var(--ai-primary-color);
-                border-radius: 50%;
-                width: 20px;
-                height: 20px;
-                animation: spin 1s linear infinite;
-                margin-right: 10px;
-                display: inline-block;
+            .ai-thought-process.collapsed .monologue-toggle-btn {
+                /* COLLAPSED state */
+                border-color: rgba(255, 255, 255, 0.2);
+                color: #ccc;
             }
-            .ai-loading-spinner.small {
-                width: 15px;
-                height: 15px;
-                border-width: 2px;
+            .ai-thought-process.collapsed .monologue-toggle-btn:hover {
+                background-color: rgba(255, 255, 255, 0.1);
             }
-            .loading {
-                display: flex;
-                align-items: center;
-                animation: none;
+            
+            /* MODIFIED: Faster animation, no fade */
+            .monologue-content { 
+                max-height: 0; 
+                opacity: 1; /* No fade */
+                overflow: hidden; 
+                padding: 0 10px; /* Only horizontal padding when collapsed */
+                transition: max-height 0.2s ease-out, padding 0.2s ease-out; 
             }
-            .loading .ai-loading-text {
-                font-style: italic;
-                color: var(--ai-gemini-color);
+            .ai-thought-process:not(.collapsed) .monologue-content {
+                max-height: 500px; /* Arbitrarily large value */
+                padding: 0 10px 10px 10px; /* Final padding with bottom */
             }
 
-            /* --- INLINE MATH (KaTeX) --- */
-            .latex-render {
-                /* Inline KaTeX */
-                padding: 0 2px;
+            .ai-thought-process pre { 
+                white-space: pre-wrap; 
+                word-break: break-word; 
+                margin: 0; color: #ccc; 
+                font-family: monospace; font-size: 0.85em; 
+                background: none; 
             }
-            .katex-display {
-                /* Block KaTeX */
-                margin: 10px 0;
-                padding: 10px 0;
-                overflow-x: auto; /* Allow horizontal scroll for wide equations */
-                background-color: var(--ai-code-bg);
-                border-radius: 6px;
-            }
-            .katex-html {
-                font-size: 1.1em;
-            }
+            /* END UPDATED STYLES */
+            
+            #ai-compose-area { position: relative; flex-shrink: 0; z-index: 2; margin: 15px auto; width: 90%; max-width: 720px; }
+            #ai-input-wrapper { position: relative; z-index: 2; width: 100%; display: flex; flex-direction: column; border-radius: 20px; background: rgba(10,10,10,.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,.2); transition: all .4s cubic-bezier(.4,0,.2,1); }
+            #ai-input-wrapper::before, #ai-input-wrapper::after { content: ''; position: absolute; top: -1px; left: -1px; right: -1px; bottom: -1px; border-radius: 21px; z-index: -1; transition: opacity 0.5s ease-in-out; }
+            #ai-input-wrapper::before { animation: glow 3s infinite; opacity: 1; }
+            #ai-input-wrapper.waiting::before { opacity: 0; }
+            #ai-input-wrapper.waiting::after { opacity: 1; }
+            #ai-input { min-height: 48px; max-height: ${MAX_INPUT_HEIGHT}px; overflow-y: hidden; color: #fff; font-size: 1.1em; padding: 13px 60px 13px 60px; box-sizing: border-box; word-wrap: break-word; outline: 0; text-align: left; }
+            #ai-input:empty::before { content: 'Ask a question or describe your files...'; color: rgba(255, 255, 255, 0.4); pointer-events: none; }
+            
+            #ai-attachment-button, #ai-settings-button { position: absolute; bottom: 7px; background-color: rgba(100, 100, 100, 0.5); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,.8); font-size: 18px; cursor: pointer; padding: 5px; line-height: 1; z-index: 3; transition: all .3s ease; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; }
+            #ai-attachment-button { left: 10px; }
+            #ai-settings-button { right: 10px; font-size: 20px; color: #ccc; }
+            #ai-attachment-button:hover, #ai-settings-button:hover { background-color: rgba(120, 120, 120, 0.7); color: #fff; }
+            #ai-settings-button.active { background-color: rgba(150, 150, 150, 0.8); color: white; }
 
-            /* --- CODE BLOCKS --- */
-            .code-block-container {
-                position: relative;
-                margin: 15px 0;
-                border-radius: 8px;
-                border: 1px solid var(--ai-border-color);
-                overflow: hidden;
+            /* NEW Settings Menu */
+            #ai-settings-menu { 
+                position: absolute; bottom: calc(100% + 10px); right: 0; width: 350px; 
+                z-index: 1; background: rgb(20, 20, 22); 
+                border: 1px solid rgba(255,255,255,0.2); border-radius: 16px; 
+                box-shadow: 0 5px 25px rgba(0,0,0,0.5); padding: 15px; 
+                opacity: 0; visibility: hidden; transform: translateY(20px); 
+                transition: all .3s cubic-bezier(.4,0,.2,1); overflow: hidden; 
             }
-            .code-block-header {
+            #ai-settings-menu.active { opacity: 1; visibility: visible; transform: translateY(0); }
+            #ai-settings-menu .menu-header { 
+                font-size: 1.1em; color: #fff; text-transform: uppercase; 
+                margin-bottom: 20px; text-align: center; font-family: 'Merriweather', serif; 
+            }
+            .setting-group.toggle-group {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                background-color: var(--ai-border-color);
-                padding: 8px 10px;
-                font-size: 0.8rem;
-                color: var(--ai-white);
-            }
-            .code-block-header .code-language {
-                font-weight: bold;
-            }
-            .code-block-container pre {
-                margin: 0;
-                padding: 15px;
-                background-color: var(--ai-code-bg);
-                overflow-x: auto;
-                font-family: monospace;
-                font-size: 0.9rem;
-            }
-            .copy-code-btn {
-                background: none;
-                border: none;
-                color: var(--ai-white);
-                cursor: pointer;
-                padding: 5px 10px;
-                border-radius: 4px;
-                transition: background-color 0.2s;
-                display: flex;
-                align-items: center;
-            }
-            .copy-code-btn:hover {
-                background-color: var(--ai-light-hover);
-            }
-            .copy-code-btn svg {
-                margin-right: 5px;
-            }
-            .success-copy {
-                color: var(--ai-green);
-            }
-
-            /* --- SOURCES (GROUNDING) --- */
-            .ai-sources {
-                padding: 10px 0;
-                margin-top: 15px;
-                border-top: 1px dashed var(--ai-border-color);
-            }
-            .ai-sources h4 {
-                font-size: 0.8rem;
-                color: var(--ai-gemini-color);
-                margin: 5px 0;
-            }
-            .ai-sources .sources-list {
-                list-style: none;
-                padding-left: 0;
-                margin: 0;
-            }
-            .ai-sources .sources-list li {
-                font-size: 0.85rem;
-                margin-bottom: 5px;
-            }
-            .ai-sources .sources-list a {
-                color: var(--ai-primary-color);
-                text-decoration: none;
-            }
-            .ai-sources .sources-list a:hover {
-                text-decoration: underline;
-            }
-
-            /* --- DOWNLOAD WIDGET --- */
-            .download-widget {
-                display: flex;
-                align-items: center;
-                background-color: var(--ai-code-bg);
-                border: 1px solid var(--ai-border-color);
-                border-radius: 8px;
-                padding: 10px 15px;
-                margin: 15px 0;
-            }
-            .download-widget svg {
-                color: var(--ai-green);
-                margin-right: 15px;
-                flex-shrink: 0;
-            }
-            .download-info {
-                flex-grow: 1;
-                margin-right: 15px;
-                min-width: 0;
-            }
-            .download-filename {
-                display: block;
-                font-weight: bold;
-                font-size: 0.95rem;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                color: var(--ai-white);
-            }
-            .download-mimetype {
-                display: block;
-                font-size: 0.75rem;
-                color: var(--ai-gemini-color);
-            }
-            .download-file-btn {
-                padding: 8px 12px;
-                font-size: 0.9rem;
-                flex-shrink: 0;
-            }
-
-
-            /* --- THOUGHT PROCESS MONOLOGUE --- */
-            .ai-thought-process {
-                border-top: 1px dashed var(--ai-border-color);
-                margin-top: 15px;
-                padding-top: 5px;
-            }
-            .monologue-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                cursor: pointer;
-                padding: 5px 0;
-            }
-            .monologue-title {
-                font-size: 0.8rem;
-                color: var(--ai-gemini-color);
-                margin: 0;
-            }
-            .monologue-toggle-btn {
-                background: none;
-                border: none;
-                color: var(--ai-primary-color);
-                font-size: 0.8rem;
-                cursor: pointer;
-                padding: 5px 10px;
-                border-radius: 4px;
-                transition: background-color 0.2s;
-            }
-            .monologue-toggle-btn:hover {
-                background-color: var(--ai-light-hover);
-            }
-            .ai-thought-process .monologue-content {
-                background-color: var(--ai-code-bg);
-                color: var(--ai-code-color);
-                border-radius: 6px;
-                padding: 10px;
-                white-space: pre-wrap;
-                max-height: 300px;
-                overflow-y: auto;
-                transition: max-height 0.3s ease-out, padding 0.3s ease-out;
-                font-size: 0.8rem;
-                line-height: 1.4;
-            }
-
-            .ai-thought-process.collapsed .monologue-content {
-                max-height: 0;
-                padding: 0 10px;
-                opacity: 0;
-                overflow-y: hidden;
-            }
-
-            /* --- CUSTOM GRAPH --- */
-            .custom-graph-placeholder {
-                margin: 15px 0;
-                background-color: var(--ai-dark-bg);
-                border: 1px solid var(--ai-border-color);
-                border-radius: 8px;
-                padding: 0;
-                height: 300px;
-                min-width: 100%;
-                overflow: hidden;
-            }
-            .custom-graph-placeholder canvas {
-                width: 100%;
-                height: 100%;
-            }
-
-            /* --- INPUT AND COMPOSE AREA --- */
-            #ai-compose-area {
-                padding: 10px 20px;
-                border-top: 1px solid var(--ai-border-color);
-                flex-shrink: 0;
-                position: relative;
-            }
-
-            #ai-input-wrapper {
-                display: grid;
-                grid-template-columns: 1fr max-content; /* Simplified layout */
-                grid-template-areas: 
-                    "preview preview options"
-                    "input input options";
-                align-items: flex-end;
-                padding: 5px;
-                background-color: var(--ai-dark-bg);
-                border-radius: 15px;
-                border: 1px solid var(--ai-border-color);
-                transition: border-color 0.2s, background-color 0.2s;
-            }
-            
-            #ai-input-wrapper.drag-over {
-                border-color: var(--ai-primary-color);
-                background-color: rgba(66, 133, 244, 0.1);
-            }
-            
-            #ai-input-wrapper.waiting {
-                border-color: var(--ai-primary-color);
-                animation: gemini-glow 4s infinite;
-                pointer-events: none;
-            }
-
-
-            #ai-input {
-                grid-area: input;
-                min-height: 30px;
-                max-height: ${MAX_INPUT_HEIGHT}px;
-                overflow-y: hidden;
-                padding: 5px 10px;
-                outline: none;
-                line-height: 1.4;
-                color: var(--ai-white);
-                white-space: pre-wrap;
-                word-wrap: break-word;
-                transition: height 0.2s;
-                font-size: 1rem;
-            }
-            
-            #ai-attachment-preview {
-                grid-area: preview;
-                display: none; /* Controlled by JS */
-                flex-wrap: nowrap;
-                overflow-x: auto;
-                gap: 8px;
-                padding: 5px 5px 8px 5px;
-                border-bottom: 1px dashed var(--ai-border-color);
-                margin-bottom: 5px;
-            }
-
-            .attachment-card {
-                flex-shrink: 0;
-                display: flex;
-                align-items: center;
-                background-color: var(--ai-code-bg);
-                border-radius: 6px;
-                overflow: hidden;
-                height: 35px;
-                border: 1px solid var(--ai-border-color);
-                position: relative;
-            }
-            .attachment-card .file-icon {
-                font-size: 1.2rem;
-                padding: 0 5px;
-                color: var(--ai-yellow);
-            }
-            .attachment-card img {
-                height: 100%;
-                width: 35px;
-                object-fit: cover;
-            }
-            .attachment-card .file-info {
-                padding: 0 8px;
-                font-size: 0.8rem;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                max-width: 120px;
-            }
-            .remove-attachment-btn {
-                background-color: var(--ai-accent-color);
-                color: var(--ai-white);
-                border: none;
-                cursor: pointer;
-                font-size: 0.9rem;
-                padding: 0 6px;
-                line-height: 1;
-                height: 100%;
-                transition: opacity 0.2s;
-            }
-            .remove-attachment-btn:hover {
-                background-color: #c9302c;
-            }
-
-            /* --- NEW UI: MORE OPTIONS MENU STYLES --- */
-            #ai-more-options-wrapper {
-                grid-area: options;
-                position: relative; 
-                display: flex;
-                align-items: flex-end; /* Align the button to the bottom */
-                justify-content: flex-end;
-                padding-right: 10px;
-                padding-bottom: 5px;
-                min-height: 40px; /* Ensure space for the button */
-            }
-
-            #ai-more-options-button {
-                background: none;
-                border: none;
-                color: var(--ai-text-color);
-                font-size: 1.3rem;
-                cursor: pointer;
-                transition: color 0.2s, transform 0.2s;
-                height: 30px;
-                width: 30px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border-radius: 50%;
-            }
-            
-            #ai-more-options-button:hover,
-            #ai-more-options-button.active {
-                color: var(--ai-primary-color);
-                background-color: var(--ai-light-hover);
-            }
-            
-            #ai-options-menu {
-                position: absolute;
-                bottom: calc(100% + 10px); /* Position 10px above the wrapper */
-                right: 0;
-                width: max-content;
-                background: var(--ai-dark-bg);
-                border: 1px solid var(--ai-border-color);
-                border-radius: 8px;
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-                padding: 5px;
-                display: flex;
-                flex-direction: column;
-                z-index: 1000;
-                opacity: 0;
-                visibility: hidden;
-                transform: translateY(10px);
-                transition: opacity 0.2s ease-out, transform 0.2s ease-out, visibility 0.2s;
-            }
-
-            #ai-options-menu.active {
-                opacity: 1;
-                visibility: visible;
-                transform: translateY(0);
-            }
-
-            /* Style for the individual buttons inside the new menu */
-            #ai-options-menu button {
-                background: none;
-                border: none;
-                color: var(--ai-text-color);
-                padding: 8px 12px;
-                margin: 2px 0;
-                text-align: left;
-                display: flex;
-                align-items: center;
-                justify-content: flex-start;
-                cursor: pointer;
-                font-size: 0.95rem;
-                white-space: nowrap;
-                transition: background-color 0.15s;
-                border-radius: 4px;
-            }
-
-            #ai-options-menu button:hover {
-                background-color: var(--ai-light-hover);
-                color: var(--ai-white);
-            }
-
-            #ai-options-menu button i,
-            #ai-options-menu button svg {
-                margin-right: 10px;
-                font-size: 1.1em;
-                width: 20px; /* Fix for SVG size consistency */
-                height: 20px;
-            }
-
-            /* --- SETTINGS MENU (positioned relative to compose area, above) --- */
-            #ai-settings-menu {
-                position: absolute;
-                bottom: 100%; /* Position above the compose area */
-                right: 10px;
-                width: 300px;
-                background-color: var(--ai-dark-bg);
-                border: 1px solid var(--ai-border-color);
-                border-radius: 8px;
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-                padding: 15px;
-                opacity: 0;
-                visibility: hidden;
-                transform: translateY(10px);
-                transition: opacity 0.2s ease-out, transform 0.2s ease-out, visibility 0.2s;
-                z-index: 999;
-            }
-
-            #ai-settings-menu.active {
-                opacity: 1;
-                visibility: visible;
-                transform: translateY(0);
-            }
-
-            #ai-settings-menu h3 {
-                font-family: 'Merriweather', serif;
-                font-size: 1.1rem;
-                margin-top: 0;
                 margin-bottom: 15px;
-                color: var(--ai-white);
-            }
-
-            .setting-group {
-                display: flex;
-                flex-wrap: wrap;
-                align-items: center;
-                justify-content: space-between;
-                padding: 10px 0;
-                border-bottom: 1px dashed var(--ai-border-color);
-            }
-            .setting-group:last-child {
-                border-bottom: none;
             }
             .setting-label {
-                display: flex;
-                align-items: center;
-                font-weight: bold;
-                font-size: 0.9rem;
-                cursor: pointer;
-                width: calc(100% - 40px);
+                flex: 1;
+                margin-right: 15px;
             }
-            .setting-label i {
-                margin-right: 8px;
-                color: var(--ai-primary-color);
+            .setting-label label {
+                display: block; color: #ccc; font-size: 0.95em; 
+                margin-bottom: 3px; font-weight: bold;
             }
-            .setting-toggle {
-                cursor: pointer;
-                width: 20px;
-                height: 20px;
-                margin: 0;
+            .setting-note { font-size: 0.75em; color: #888; margin-top: 0; }
+            
+            /* NEW Toggle Switch CSS */
+            .ai-toggle-switch {
+                position: relative;
+                display: inline-block;
+                width: 50px;
+                height: 28px;
                 flex-shrink: 0;
             }
-            .setting-description {
-                font-size: 0.75rem;
-                color: var(--ai-gemini-color);
-                margin-top: 5px;
-                margin-bottom: 0;
-                width: 100%;
+            .ai-toggle-switch input {
+                opacity: 0;
+                width: 0;
+                height: 0;
             }
-
-            /* --- CHARACTER COUNTER --- */
-            #ai-char-counter {
+            .ai-slider {
                 position: absolute;
-                right: 20px;
-                bottom: 5px;
-                font-size: 0.75rem;
-                color: var(--ai-gemini-color);
-                transition: color 0.2s;
-                z-index: 10;
+                cursor: pointer;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: #333;
+                border: 1px solid #555;
+                transition: .4s;
+                border-radius: 28px;
             }
+            .ai-slider:before {
+                position: absolute;
+                content: "";
+                height: 20px;
+                width: 20px;
+                left: 3px;
+                bottom: 3px;
+                background-color: white;
+                transition: .4s;
+                border-radius: 50%;
+            }
+            input:checked + .ai-slider {
+                background-color: #4285f4;
+                border-color: #4285f4;
+            }
+            input:checked + .ai-slider:before {
+                transform: translateX(22px);
+            }
+            /* END NEW Settings Menu */
 
-            #ai-char-counter.over-limit {
-                color: var(--ai-accent-color);
-                font-weight: bold;
-                animation: glow 1.5s infinite alternate;
-            }
+            /* Attachments, Code Blocks, Graphs, LaTeX */
+            #ai-attachment-preview { display: none; flex-direction: row; gap: 10px; padding: 0; max-height: 0; border-bottom: 1px solid transparent; overflow-x: auto; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+            #ai-input-wrapper.has-attachments #ai-attachment-preview { max-height: 100px; padding: 10px 15px; }
+            .attachment-card { position: relative; border-radius: 8px; overflow: hidden; background: #333; height: 80px; width: 80px; flex-shrink: 0; display: flex; justify-content: center; align-items: center; transition: filter 0.3s; cursor: pointer; }
+            .attachment-card.loading { filter: grayscale(80%) brightness(0.7); }
+            .attachment-card.loading .file-icon { opacity: 0.3; }
+            .attachment-card.loading .ai-loader { position: absolute; z-index: 2; }
+            .attachment-card img { width: 100%; height: 100%; object-fit: cover; }
+            .file-info { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); overflow: hidden; }
+            .file-name { display: block; color: #fff; font-size: 0.75em; padding: 4px; text-align: center; white-space: nowrap; }
+            .file-name.marquee > span { display: inline-block; padding-left: 100%; animation: marquee linear infinite; }
+            .file-type-badge { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.7em; padding: 2px 5px; border-radius: 4px; font-family: sans-serif; font-weight: bold; }
+            .remove-attachment-btn { position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.5); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; z-index: 3; }
+
+            .ai-loader { width: 25px; height: 25px; border-radius: 50%; animation: spin 1s linear infinite; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; }
             
-            /* --- NUDGE POPUP (Web Search Nudge) --- */
+            .code-block-wrapper, .graph-block-wrapper { background-color: rgba(42, 42, 48, 0.8); border-radius: 8px; margin: 10px 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+            .code-block-header, .graph-block-header { display: flex; justify-content: flex-end; align-items: center; padding: 6px 12px; background-color: rgba(0,0,0,0.2); }
+            .code-metadata, .graph-metadata { font-size: 0.8em; color: #aaa; margin-right: auto; font-family: monospace; }
+            .copy-code-btn { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; border-radius: 6px; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s; }
+            .copy-code-btn:hover { background: rgba(255, 255, 255, 0.2); }
+            .copy-code-btn:disabled { cursor: default; background: rgba(25, 103, 55, 0.5); }
+            .copy-code-btn svg { stroke: #e0e0e0; }
+            .code-block-wrapper pre { margin: 0; padding: 15px; overflow: auto; background-color: transparent; }
+            .code-block-wrapper pre::-webkit-scrollbar { height: 8px; }
+            .code-block-wrapper pre::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+            .code-block-wrapper code { font-family: 'Menlo', 'Consolas', monospace; font-size: 0.9em; color: #f0f0f0; }
+            .custom-graph-placeholder { min-height: 400px; position: relative; padding: 10px; }
+            .graph-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+            .latex-render { display: inline-block; } /* default to inline */
+            .ai-response-content div.latex-render { display: block; margin: 10px 0; text-align: center; } /* for display mode */
+            .katex { font-size: 1.1em !important; }
+
+            .ai-message-bubble p { margin: 0; padding: 0; text-align: left; }
+            .ai-message-bubble ul, .ai-message-bubble ol { margin: 10px 0; padding-left: 20px; text-align: left; list-style-position: outside; }
+            .ai-message-bubble li { margin-bottom: 5px; }
+
+            /* NEW Web Search Nudge Popup */
             #ai-web-search-nudge {
                 position: fixed;
                 bottom: 20px;
-                right: 580px; /* Position next to the main chat window */
-                max-width: 280px;
-                background-color: var(--ai-dark-bg);
-                border: 1px solid var(--ai-border-color);
-                border-radius: 8px;
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+                left: 50%;
+                transform: translateX(-50%);
+                background-color: #2a2a2e;
+                border: 1px solid #444;
+                border-radius: 12px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+                color: #eee;
+                z-index: 2147483647;
                 padding: 15px;
-                z-index: 2147483646; /* Just below main container */
-                animation: nudge-fade-in 0.3s ease-out forwards;
+                animation: nudge-fade-in 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .nudge-content {
+                display: flex;
+                align-items: center;
+                gap: 15px;
             }
             .nudge-content p {
-                font-size: 0.9rem;
-                margin-top: 0;
+                margin: 0;
+                font-size: 0.9em;
+                color: #ccc;
             }
             .nudge-buttons {
                 display: flex;
-                justify-content: flex-end;
                 gap: 10px;
-                margin-top: 10px;
             }
-            #nudge-dismiss, #nudge-open-settings {
-                padding: 5px 10px;
-                border-radius: 4px;
-                font-size: 0.85rem;
-                cursor: pointer;
-            }
-            #nudge-dismiss {
+            .nudge-buttons button {
                 background: none;
-                border: 1px solid var(--ai-border-color);
-                color: var(--ai-text-color);
+                border: 1px solid #555;
+                color: #ddd;
+                padding: 6px 12px;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: background-color 0.2s;
+            }
+            .nudge-buttons button:hover {
+                background-color: #333;
             }
             #nudge-open-settings {
-                background-color: var(--ai-primary-color);
+                background-color: #4285f4;
+                border-color: #4285f4;
                 color: white;
-                border: none;
             }
             #nudge-open-settings:hover {
-                background-color: #357ae8;
+                background-color: #3c77e6;
             }
-            
-            /* --- GENERAL BUTTONS --- */
-            .primary-btn {
-                background-color: var(--ai-primary-color);
-                color: white;
-                border: none;
-                border-radius: 5px;
-                padding: 10px 15px;
-                cursor: pointer;
-                font-size: 0.9rem;
-                transition: background-color 0.2s;
+            @keyframes nudge-fade-in {
+                from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+                to { opacity: 1; transform: translateX(-50%) translateY(0); }
             }
-            .primary-btn:hover {
-                background-color: #357ae8;
-            }
-            .secondary-btn {
-                background: none;
-                border: 1px solid var(--ai-border-color);
-                color: var(--ai-text-color);
-                border-radius: 5px;
-                padding: 10px 15px;
-                cursor: pointer;
-                font-size: 0.9rem;
-                transition: background-color 0.2s;
-            }
-            .secondary-btn:hover {
-                background-color: var(--ai-light-hover);
-            }
-            .danger-btn {
-                background-color: var(--ai-accent-color);
-                color: white;
-                border: none;
-                border-radius: 5px;
-                padding: 10px 15px;
-                cursor: pointer;
-                font-size: 0.9rem;
-                transition: background-color 0.2s;
-            }
-            .danger-btn:hover {
-                background-color: #c9302c;
-            }
-            .danger-btn-small {
-                padding: 5px 10px;
-                font-size: 0.8rem;
-                border-radius: 4px;
-                background-color: var(--ai-accent-color);
-                color: white;
-                border: none;
-                cursor: pointer;
-                transition: background-color 0.2s;
-            }
-            .danger-btn-small:hover {
-                background-color: #c9302c;
-            }
-
-            /* --- MEMORY MODAL --- */
-            .ai-modal {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background-color: rgba(0, 0, 0, 0.6);
-                display: none; /* Hidden by default */
-                justify-content: center;
-                align-items: center;
-                z-index: 2147483648; /* Above everything */
-            }
-
-            .ai-modal-content {
-                background-color: var(--ai-main-bg);
-                border-radius: 12px;
-                width: 90%;
-                max-width: 600px;
-                box-shadow: 0 5px 20px rgba(0, 0, 0, 0.8);
-                display: flex;
-                flex-direction: column;
-                max-height: 80%;
-                transform: scale(0.9);
-                animation: message-pop-in 0.3s ease-out forwards;
-            }
-
-            .ai-modal-header {
-                padding: 15px 20px;
-                border-bottom: 1px solid var(--ai-border-color);
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                cursor: grab;
-            }
-
-            .ai-modal-header h2 {
-                margin: 0;
-                font-family: 'Merriweather', serif;
-                font-size: 1.3rem;
-                color: var(--ai-white);
-            }
-
-            .ai-close-modal {
-                font-size: 2rem;
-                cursor: pointer;
-                opacity: 0.7;
-                transition: opacity 0.2s;
-            }
-
-            .ai-close-modal:hover {
-                opacity: 1;
-            }
-
-            .ai-modal-body {
-                padding: 20px;
-                overflow-y: auto;
-            }
-
-            .memory-input-section {
-                border: 1px solid var(--ai-border-color);
-                border-radius: 8px;
-                padding: 10px;
-                margin-bottom: 20px;
-                background-color: var(--ai-dark-bg);
-            }
-            #ai-memory-editor {
-                width: 100%;
-                min-height: 100px;
-                padding: 10px;
-                background: none;
-                border: none;
-                outline: none;
-                color: var(--ai-text-color);
-                resize: vertical;
-                box-sizing: border-box;
-                font-family: 'Lora', Georgia, serif;
-                font-size: 0.95rem;
-            }
-            .memory-actions {
-                display: flex;
-                justify-content: flex-end;
-                gap: 10px;
-                margin-top: 10px;
-            }
-            .memory-actions button {
-                padding: 8px 12px;
-                font-size: 0.85rem;
-            }
-
-            .memory-list-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 15px;
-                padding-bottom: 10px;
-                border-bottom: 1px solid var(--ai-border-color);
-            }
-
-            .memory-list-header h3 {
-                margin: 0;
-                font-size: 1rem;
-                color: var(--ai-white);
-            }
-
-            .memory-item {
-                display: flex;
-                flex-wrap: wrap;
-                justify-content: space-between;
-                align-items: center;
-                padding: 10px;
-                margin-bottom: 8px;
-                border-radius: 6px;
-                background-color: var(--ai-dark-bg);
-                border: 1px solid var(--ai-border-color);
-                transition: border-color 0.2s;
-            }
-            .memory-item:hover {
-                border-color: var(--ai-primary-color);
-            }
-            .memory-item.top-ten {
-                border-left: 5px solid var(--ai-green);
-                background-color: rgba(15, 157, 88, 0.05); /* Slight green tint */
-            }
-
-            .memory-content {
-                flex-grow: 1;
-                width: 100%;
-                font-size: 0.9rem;
-                line-height: 1.4;
-                margin-bottom: 5px;
-            }
-            .memory-meta {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                width: 100%;
-            }
-
-            .memory-date {
-                font-size: 0.7rem;
-                color: var(--ai-gemini-color);
-            }
-
-            .memory-rank {
-                font-size: 0.7rem;
-                font-weight: bold;
-                color: var(--ai-green);
-            }
-
-            .memory-item-actions {
-                margin-top: 10px;
-                width: 100%;
-                display: flex;
-                justify-content: flex-end;
-                gap: 10px;
-            }
-            .memory-item-actions button {
-                font-size: 0.8rem;
-                padding: 5px 8px;
-            }
-
-            .no-memories-text {
-                text-align: center;
-                color: var(--ai-gemini-color);
-                padding: 20px;
-            }
-
-            .ai-modal-footer {
-                padding: 10px 20px;
-                border-top: 1px solid var(--ai-border-color);
-                font-size: 0.8rem;
-                color: var(--ai-gemini-color);
-            }
-            #ai-storage-status {
-                margin: 5px 0;
-            }
-            .storage-progress-bar-container {
-                width: 100%;
-                background-color: var(--ai-code-bg);
-                border-radius: 5px;
-                height: 8px;
-                overflow: hidden;
-                margin-top: 5px;
-            }
-            .storage-progress-bar {
-                height: 100%;
-                background-color: var(--ai-primary-color);
-                transition: width 0.3s;
-            }
+            /* END Nudge CSS */
 
 
-            /* --- KEYFRAMES --- */
-            @keyframes nudge-fade-in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
             @keyframes glow { 0%,100% { box-shadow: 0 0 5px rgba(255,255,255,.15), 0 0 10px rgba(255,255,255,.1); } 50% { box-shadow: 0 0 10px rgba(255,255,255,.25), 0 0 20px rgba(255,255,255,.2); } }
             @keyframes gemini-glow { 0%,100% { box-shadow: 0 0 8px 2px var(--ai-blue); } 25% { box-shadow: 0 0 8px 2px var(--ai-green); } 50% { box-shadow: 0 0 8px 2px var(--ai-yellow); } 75% { box-shadow: 0 0 8px 2px var(--ai-red); } }
             @keyframes spin { to { transform: rotate(360deg); } }
             @keyframes message-pop-in { 0% { opacity: 0; transform: translateY(10px) scale(.98); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
-            @keyframes brand-title-pulse { 0% { opacity: 0.5; } 100% { opacity: 1; } }
+            @keyframes brand-title-pulse { 0%, 100% { text-shadow: 0 0 7px var(--ai-blue); } 25% { text-shadow: 0 0 7px var(--ai-green); } 50% { text-shadow: 0 0 7px var(--ai-yellow); } 75% { text-shadow: 0 0 7px var(--ai-red); } }
+            @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
         `;
         document.head.appendChild(style);
     }
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        loadAppSettings(); // Replaced loadUserSettings
+    });
 })();
