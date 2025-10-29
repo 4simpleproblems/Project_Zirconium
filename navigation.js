@@ -29,7 +29,7 @@
  * 21. (FIXED) USERNAME COLOR: Replaced hardcoded `text-white` on username with a CSS variable (`--menu-username-text`) and updated `window.applyTheme` to set this to black for specific light themes.
  * 22. (NEW) LOGO TINTING: Replaced logo `<img>` tag with a `<div>` using `mask-image`. `window.applyTheme` now supports `logo-tint-color` from themes.json to dynamically color the logo, with smart defaults for themes without a tint color.
  * 23. (NEW) LOGO ALIGNMENT: Pushed logo all the way to the left edge of the viewport.
- * 24. **(UPDATED)** SCROLL LOGIC: Completely remade the scroll-to-active-tab logic to be more robust, ensure full visibility, and respect the new `1rem` padding for the tabs list.
+ * 24. **(FIXED)** SCROLL LOGIC: Remade to prioritize showing the full active tab, especially the right edge, and fixed the spacing issues on the left and right sides of the tabs list.
  */
 
 // =========================================================================
@@ -41,7 +41,7 @@ const FIREBASE_CONFIG = {
     projectId: "project-zirconium",
     storageBucket: "project-zirconium.firebaseapp.com",
     messagingSenderId: "1096564243475",
-    appId: "1:1096564243475:web:6d0956a70125eeea1ad3e6",
+    appId: "1:1096564243445:web:6d0956a70125eeea1ad3e6",
     measurementId: "G-1D4F692C1Q"
 };
 // =========================================================================
@@ -328,19 +328,30 @@ let db;
                 height: 4rem; 
                 transition: background-color 0.3s ease, border-color 0.3s ease;
             }
-            /* FIX 1: Remove horizontal padding from nav and apply to wrappers */
-            .auth-navbar nav { padding: 0; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
             
-            /* NEW: Logo and Auth Wrappers get the padding */
+            /* UPDATED: Nav now uses flex and space-between, but no internal gap. */
+            .auth-navbar nav { 
+                padding: 0; 
+                height: 100%; 
+                display: flex; 
+                align-items: center; 
+                justify-content: space-between; 
+                gap: 0; /* REMOVED GAP: Rely on wrapper margins */
+                position: relative; 
+            }
+            
+            /* NEW: Logo and Auth Wrappers get the padding AND spacing margins */
             #logo-wrapper { 
-                padding: 0 1rem; /* Apply padding to the logo wrapper */
+                padding: 0 1rem; /* Edge padding */
+                margin-right: 1rem; /* Spacing between logo and tabs */
                 height: 100%;
                 display: flex;
                 align-items: center;
                 flex-shrink: 0;
             }
             #auth-controls-wrapper { 
-                padding: 0 1rem; /* Apply padding to the auth wrapper */
+                padding: 0 1rem; /* Edge padding */
+                margin-left: 1rem; /* Spacing between tabs and auth controls */
                 display: flex; 
                 align-items: center; 
                 gap: 0.75rem; 
@@ -420,9 +431,14 @@ let db;
             .auth-menu-link i.w-4, .auth-menu-button i.w-4 { width: 1rem; text-align: center; } 
 
             /* Tab Wrapper and Glide Buttons */
-            .tab-wrapper { flex-grow: 1; display: flex; align-items: center; position: relative; min-width: 0; margin: 0 1rem; }
-            
-            /* === START NEW TAB PADDING/SCROLL LOGIC CSS === */
+            .tab-wrapper { 
+                flex-grow: 1; 
+                display: flex; 
+                align-items: center; 
+                position: relative; 
+                min-width: 0; 
+                margin: 0; /* REMOVED MARGIN: Relied on #logo-wrapper/auth-controls-wrapper margins */
+            }
             .tab-scroll-container { 
                 flex-grow: 1; 
                 display: flex; 
@@ -431,24 +447,13 @@ let db;
                 -webkit-overflow-scrolling: touch; 
                 scrollbar-width: none; 
                 -ms-overflow-style: none; 
-                padding: 0 1rem; /* NEW: Add 1rem padding to the start and end of the scrollable list */
-                gap: 0.5rem; /* NEW: Use gap for clean spacing between tabs */
-                padding-bottom: 5px; /* Keep this to fix scrollbar issue */ 
-                margin-bottom: -5px; /* Keep this to fix scrollbar issue */ 
+                padding: 0; /* REMOVED PADDING: Tabs now butt up to gliders */
+                gap: 0.5rem; 
+                padding-bottom: 5px; 
+                margin-bottom: -5px; 
                 scroll-behavior: smooth; 
             }
             .tab-scroll-container::-webkit-scrollbar { display: none; }
-            
-            .nav-tab { 
-                flex-shrink: 0; padding: 0.5rem 1rem; color: var(--tab-text); 
-                font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; 
-                transition: all 0.2s, color 0.3s ease, border-color 0.3s ease, background-color 0.3s ease; 
-                text-decoration: none; line-height: 1.5; display: flex; align-items: center; 
-                /* Removed margin-right: 0.5rem as gap is now used */
-                border: 1px solid transparent; 
-            }
-            /* === END NEW TAB PADDING/SCROLL LOGIC CSS === */
-
             .scroll-glide-button {
                 position: absolute; top: 0; height: 100%; width: 4rem; display: flex; align-items: center; justify-content: center; 
                 color: var(--glide-icon-color); font-size: 1.2rem; cursor: pointer; 
@@ -468,7 +473,13 @@ let db;
             }
             .scroll-glide-button.hidden { opacity: 0 !important; pointer-events: none !important; }
             
-            
+            .nav-tab { 
+                flex-shrink: 0; padding: 0.5rem 1rem; color: var(--tab-text); 
+                font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; 
+                transition: all 0.2s, color 0.3s ease, border-color 0.3s ease, background-color 0.3s ease; 
+                text-decoration: none; line-height: 1.5; display: flex; align-items: center; 
+                border: 1px solid transparent; 
+            }
             .nav-tab:not(.active):hover { 
                 color: var(--tab-hover-text); 
                 border-color: var(--tab-hover-border); 
@@ -818,15 +829,15 @@ let db;
         
         // --- NEW/REPLACED SCROLL LOGIC ---
         /**
-         * **REPLACEMENT for the active tab centering logic**
-         * Scrolls the active tab into the padded view of the scroll container, 
-         * or restores a saved scroll position, in a fully idempotent way.
+         * **FIXED SCROLL LOGIC**
+         * Scrolls the active tab into full view within the container's visible area
+         * (the area not covered by the glide buttons). Prioritizes showing the right edge.
          * @param {boolean} restoreOnly - If true, only restore `currentScrollLeft`, do not adjust view.
          */
         const scrollToActiveTab = (restoreOnly = false) => {
             const tabContainer = document.querySelector('.tab-scroll-container');
             if (!tabContainer) {
-                currentScrollLeft = 0; // Clear any saved scroll if container isn't there
+                currentScrollLeft = 0; 
                 return;
             }
             
@@ -847,8 +858,8 @@ let db;
             if (!restoreOnly) {
                 const activeTab = document.querySelector('.nav-tab.active');
                 if (activeTab) {
-                    // Define the horizontal padding used in CSS (1rem = 16px)
-                    const INNER_PADDING_PX = 16; 
+                    // Glide button width is 4rem (4 * 16px/rem = 64px)
+                    const GLIDER_WIDTH = 64; 
                     
                     const containerScrollLeft = tabContainer.scrollLeft;
                     const containerWidth = tabContainer.offsetWidth;
@@ -857,24 +868,23 @@ let db;
                     
                     let newScrollPosition = containerScrollLeft;
 
-                    // --- 1. Check if the tab's LEFT edge is outside the padded view (scroll right) ---
-                    // If the tab's left edge is to the left of the container's scroll position + left padding
-                    if (tabOffsetLeft < containerScrollLeft + INNER_PADDING_PX) {
-                        // New scroll target: align the tab's left edge with the INNER_PADDING_PX offset
-                        newScrollPosition = tabOffsetLeft - INNER_PADDING_PX;
+                    // Define the edges of the *currently visible* content area (not obscured by gliders)
+                    const leftEdgeOfVisibleContent = containerScrollLeft + GLIDER_WIDTH;
+                    const rightEdgeOfVisibleContent = containerScrollLeft + containerWidth - GLIDER_WIDTH;
+
+                    // Case 1: Tab is out-of-view to the RIGHT (or partially obscured by the right glider)
+                    const rightEdgeOfTab = tabOffsetLeft + tabWidth;
+                    if (rightEdgeOfTab > rightEdgeOfVisibleContent) {
+                        // Scroll left: align the tab's right edge with the right visible edge
+                        // This fixes the issue where only the start was shown at the end of the scroll list.
+                        newScrollPosition = rightEdgeOfTab - containerWidth + GLIDER_WIDTH;
                     }
                     
-                    // --- 2. Check if the tab's RIGHT edge is outside the padded view (scroll left) ---
-                    // If the tab's right edge is to the right of the container's visible area - right padding
-                    const rightEdgeOfTab = tabOffsetLeft + tabWidth;
-                    const rightEdgeOfView = containerScrollLeft + containerWidth - INNER_PADDING_PX;
-
-                    // Note: We check this *after* the left-side check, but it should only run if the left check didn't already bring it fully into view.
-                    // If the tab is out on the right, we calculate the scroll needed to bring its right edge to the view's right edge.
-                    if (rightEdgeOfTab > rightEdgeOfView) {
-                        // New scroll target: align the tab's right edge with the right edge of the view (minus padding)
-                        // This calculation is guaranteed to be greater than the current scrollLeft, so it moves right.
-                        newScrollPosition = rightEdgeOfTab - containerWidth + INNER_PADDING_PX;
+                    // Case 2: Tab is out-of-view to the LEFT (or partially obscured by the left glider)
+                    // Use else if to ensure Case 1 (the user's required fix) takes priority
+                    else if (tabOffsetLeft < leftEdgeOfVisibleContent) {
+                        // Scroll right: align the tab's left edge with the left visible edge
+                        newScrollPosition = tabOffsetLeft - GLIDER_WIDTH;
                     }
                     
                     // Only apply scroll if the calculated position is different from the current position
@@ -890,7 +900,7 @@ let db;
                             });
                         });
                     } else {
-                        // If no scroll change, still update gilders
+                        // If no scroll change, still update gilders just in case
                         requestAnimationFrame(() => {
                             updateScrollGilders();
                         });
