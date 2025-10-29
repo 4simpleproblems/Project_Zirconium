@@ -28,6 +28,8 @@
  * 20. (FIXED) SCROLL GLIDER LOGIC: Updated scroll arrow logic to be explicit, ensuring arrows hide/show correctly at scroll edges.
  * 21. (FIXED) USERNAME COLOR: Replaced hardcoded `text-white` on username with a CSS variable (`--menu-username-text`) and updated `window.applyTheme` to set this to black for specific light themes.
  * 22. **(NEW)** LOGO TINTING: Replaced logo `<img>` tag with a `<div>` using `mask-image`. `window.applyTheme` now supports `logo-tint-color` from themes.json to dynamically color the logo, with smart defaults for themes without a tint color.
+ * 23. **(NEW)** LOGO ALIGNMENT: Pushed logo all the way to the left edge of the viewport.
+ * 24. **(UPDATED)** SCROLL LOGIC: Completely remade the scroll-to-active-tab logic to be more robust and less buggy.
  */
 
 // =========================================================================
@@ -326,8 +328,25 @@ let db;
                 height: 4rem; 
                 transition: background-color 0.3s ease, border-color 0.3s ease;
             }
-            .auth-navbar nav { padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
+            /* FIX 1: Remove horizontal padding from nav and apply to wrappers */
+            .auth-navbar nav { padding: 0; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
             
+            /* NEW: Logo and Auth Wrappers get the padding */
+            #logo-wrapper { 
+                padding: 0 1rem; /* Apply padding to the logo wrapper */
+                height: 100%;
+                display: flex;
+                align-items: center;
+                flex-shrink: 0;
+            }
+            #auth-controls-wrapper { 
+                padding: 0 1rem; /* Apply padding to the auth wrapper */
+                display: flex; 
+                align-items: center; 
+                gap: 0.75rem; 
+                flex-shrink: 0; 
+            }
+
             /* --- NEW: Logo Div Styling --- */
             #navbar-logo {
                 background-color: var(--logo-tint-color); /* Color is set by applyTheme logic */
@@ -524,9 +543,7 @@ let db;
         let currentIsPrivileged = false;
         // State for current scroll position
         let currentScrollLeft = 0; 
-        // Flag to ensure active tab centering only happens once per page load
-        let hasScrolledToActiveTab = false; 
-        // NEW: Flag to ensure global click listener is only added once
+        // Flag to ensure global click listener is only added once
         let globalClickListenerAdded = false;
 
         // --- LocalStorage Keys ---
@@ -615,7 +632,7 @@ let db;
             } else {
                 // If wrapper was not found, it might be the initial render of the pin button 
                 // after it was hidden, so we need to find the parent and append.
-                const authButtonContainer = document.getElementById('auth-controls-wrapper');
+                const authButtonContainer = document.getElementById('auth-controls-inner-wrapper'); // TARGET INNER WRAPPER
                 if (authButtonContainer) {
                     authButtonContainer.insertAdjacentHTML('afterbegin', newPinHtml);
                     setupPinEventListeners();
@@ -750,11 +767,11 @@ let db;
          * Used for all pin/auth-menu interactions that do not require a full navbar re-render.
          */
         const updateAuthControlsArea = () => {
-            const authWrapper = document.getElementById('auth-controls-wrapper');
-            if (!authWrapper) return;
+            const authInnerWrapper = document.getElementById('auth-controls-inner-wrapper');
+            if (!authInnerWrapper) return;
 
             // Get new HTML using the *current* global state
-            authWrapper.innerHTML = getAuthControlsHtml();
+            authInnerWrapper.innerHTML = getAuthControlsHtml();
 
             // Re-attach listeners for the new DOM elements
             setupPinEventListeners();
@@ -778,15 +795,79 @@ let db;
             }
             renderNavbar(currentUser, currentUserData, allPages, currentIsPrivileged);
         };
+        
+        // --- NEW/REPLACED SCROLL LOGIC ---
+        /**
+         * **REPLACEMENT for the active tab centering logic**
+         * Scrolls the active tab into the center of the viewport, 
+         * or restores a saved scroll position, in a fully idempotent way.
+         * @param {boolean} restoreOnly - If true, only restore `currentScrollLeft`, do not center active tab.
+         */
+        const scrollToActiveTab = (restoreOnly = false) => {
+            const tabContainer = document.querySelector('.tab-scroll-container');
+            if (!tabContainer) {
+                currentScrollLeft = 0; // Clear any saved scroll if container isn't there
+                return;
+            }
+            
+            // 1. Restore Scroll Position (Takes precedence if scroll was saved)
+            if (currentScrollLeft > 0) {
+                const savedScroll = currentScrollLeft;
+                requestAnimationFrame(() => {
+                    tabContainer.scrollLeft = savedScroll;
+                    currentScrollLeft = 0; // Reset state after restoration
+                    requestAnimationFrame(() => {
+                        updateScrollGilders();
+                    });
+                });
+                return; // Stop here if we restored
+            }
+            
+            // 2. Center Active Tab (Only if not restoring and not restoreOnly)
+            if (!restoreOnly) {
+                const activeTab = document.querySelector('.nav-tab.active');
+                if (activeTab) {
+                    // Calculate center position
+                    const containerWidth = tabContainer.offsetWidth;
+                    const tabWidth = activeTab.offsetWidth;
+                    const tabOffsetLeft = activeTab.offsetLeft;
+
+                    // Ideal scroll position to center the tab
+                    let idealScroll = tabOffsetLeft - (containerWidth / 2) + (tabWidth / 2);
+                    
+                    // Clamp the scroll position between 0 and maxScrollLeft
+                    const maxScrollLeft = tabContainer.scrollWidth - containerWidth;
+                    
+                    // Apply clamping (robustly ensuring a valid scroll target)
+                    const scrollTarget = Math.max(0, Math.min(maxScrollLeft, idealScroll));
+                    
+                    requestAnimationFrame(() => {
+                        // Use scrollIntoView if it's simpler and you don't need *exact* center, 
+                        // but sticking with scrollLeft for control:
+                        tabContainer.scrollLeft = scrollTarget;
+                        
+                        // Nested frame to update arrows *after* scroll is applied
+                        requestAnimationFrame(() => {
+                            updateScrollGilders();
+                        });
+                    });
+                    
+                } else {
+                    // If no active tab, still update gilders just in case
+                    requestAnimationFrame(() => {
+                        updateScrollGilders();
+                    });
+                }
+            }
+        };
+        // --- END NEW/REPLACED SCROLL LOGIC ---
+
 
         // --- 4. RENDER THE NAVBAR HTML ---
         const renderNavbar = (user, userData, pages, isPrivilegedUser) => {
             const container = document.getElementById('navbar-container');
             if (!container) return; 
 
-            // --- UPDATED: logoPath variable is no longer needed as logo is a styled div
-            // const logoPath = "/images/logo.png"; 
-            
             // Filter and map pages for tabs, applying adminOnly filter
             const tabsHtml = Object.values(pages || {})
                 .filter(page => !(page.adminOnly && !isPrivilegedUser)) // Filter out adminOnly tabs for non-privileged users
@@ -809,9 +890,10 @@ let db;
             container.innerHTML = `
                 <header class="auth-navbar">
                     <nav>
-                        <a href="/" class="flex items-center space-x-2 flex-shrink-0" title="4SP Logo">
+                        <a id="logo-wrapper" href="/" class="space-x-2" title="4SP Logo">
                             <div id="navbar-logo" class="h-8 w-24"></div> 
                         </a>
+                        
                         <div class="tab-wrapper">
                             <button id="glide-left" class="scroll-glide-button"><i class="fa-solid fa-chevron-left"></i></button>
 
@@ -822,8 +904,10 @@ let db;
                             <button id="glide-right" class="scroll-glide-button"><i class="fa-solid fa-chevron-right"></i></button>
                         </div>
 
-                        <div id="auth-controls-wrapper" class="flex items-center gap-3 flex-shrink-0">
-                            ${authControlsHtml}
+                        <div id="auth-controls-wrapper">
+                            <div id="auth-controls-inner-wrapper" class="flex items-center gap-3 flex-shrink-0">
+                                ${authControlsHtml}
+                            </div>
                         </div>
                     </nav>
                 </header>
@@ -841,71 +925,13 @@ let db;
             window.applyTheme(savedTheme || DEFAULT_THEME); 
             // --- End theme apply ---
 
-            const tabContainer = document.querySelector('.tab-scroll-container');
+            // --- UPDATED: Use the new scrollToActiveTab function ---
+            // A full re-render always runs the scroll logic
+            scrollToActiveTab(false);
             
-            // Check if we need to restore scroll position (from a full re-render)
-            if (currentScrollLeft > 0) {
-                const savedScroll = currentScrollLeft;
-                // Use requestAnimationFrame to ensure the DOM has painted the new content
-                // before setting the scroll, preventing the jump.
-                requestAnimationFrame(() => {
-                    if (tabContainer) {
-                        tabContainer.scrollLeft = savedScroll;
-                    }
-                    currentScrollLeft = 0; // Reset state after restoration
-                    // Nested frame to update arrows *after* scroll is applied
-                    requestAnimationFrame(() => {
-                        updateScrollGilders();
-                    });
-                });
-            // NEW: Only run centering logic if we are NOT restoring scroll AND we haven't scrolled yet.
-            } else if (!hasScrolledToActiveTab) { 
-                // If it's the first load, center the active tab.
-                const activeTab = document.querySelector('.nav-tab.active');
-                if (activeTab && tabContainer) {
-                    
-                    const centerOffset = (tabContainer.offsetWidth - activeTab.offsetWidth) / 2;
-                    const idealCenterScroll = activeTab.offsetLeft - centerOffset;
-                    
-                    const maxScroll = tabContainer.scrollWidth - tabContainer.offsetWidth;
-                    const extraRoomOnRight = maxScroll - idealCenterScroll;
-                    
-                    let scrollTarget;
-
-                    // =================================================================
-                    // ========= MODIFICATION 1 of 3 (Aggressive Set) ========
-                    // =================================================================
-                    if (idealCenterScroll > 0 && extraRoomOnRight < centerOffset) {
-                        // Snap all the way to the right by setting a value
-                        // *larger* than the max, forcing the browser to clamp.
-                        scrollTarget = maxScroll + 50;
-                    } else {
-                        scrollTarget = Math.max(0, idealCenterScroll);
-                    }
-                    // =================================================================
-                    // ====================== END MODIFICATION =========================
-                    // =================================================================
-
-                    // Set scroll and update gilders in the next frame to ensure
-                    // the scrollLeft value is processed by the browser first.
-                    requestAnimationFrame(() => {
-                        tabContainer.scrollLeft = scrollTarget;
-                        // Nested frame to update arrows *after* scroll is applied
-                        requestAnimationFrame(() => {
-                            updateScrollGilders();
-                        });
-                    });
-                    
-                    // IMPORTANT: Set flag to prevent future automatic centering
-                    hasScrolledToActiveTab = true; 
-                } else if (tabContainer) {
-                    // If no active tab (or no tabContainer), still need to update gilders
-                    // to ensure they are hidden correctly on a blank page.
-                    requestAnimationFrame(() => {
-                        updateScrollGilders();
-                    });
-                }
-            }
+            // NOTE: The original code's initial centering logic (with hasScrolledToActiveTab) 
+            // is now entirely replaced by the idempotent `scrollToActiveTab(false)` call above.
+            
         };
 
 
