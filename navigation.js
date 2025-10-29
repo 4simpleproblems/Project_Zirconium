@@ -810,7 +810,7 @@ let db;
                 <header class="auth-navbar">
                     <nav>
                         <a href="/" class="flex items-center space-x-2 flex-shrink-0" title="4SP Logo">
-                            <div id="navbar-logo" class="h-8 w-20"></div> 
+                            <div id="navbar-logo" class="h-8 w-16"></div> 
                         </a>
                         <div class="tab-wrapper">
                             <button id="glide-left" class="scroll-glide-button"><i class="fa-solid fa-chevron-left"></i></button>
@@ -868,14 +868,17 @@ let db;
                     const idealCenterScroll = activeTab.offsetLeft - centerOffset;
                     
                     const maxScroll = tabContainer.scrollWidth - tabContainer.offsetWidth;
-                    const extraRoomOnRight = maxScroll - idealCenterScroll;
+                    // const extraRoomOnRight = maxScroll - idealCenterScroll; // Old variable, no longer needed
                     
                     let scrollTarget;
 
                     // =================================================================
                     // ========= MODIFICATION 1 of 3 (Aggressive Set) ========
                     // =================================================================
-                    if (idealCenterScroll > 0 && extraRoomOnRight < centerOffset) {
+                    // NEW ROBUST LOGIC: Check if the ideal scroll position is close to the max scroll position.
+                    const scrollRangeThreshold = maxScroll - 5; // If ideal scroll is within 5px of the end, snap all the way right.
+
+                    if (idealCenterScroll >= scrollRangeThreshold) {
                         // Snap all the way to the right by setting a value
                         // *larger* than the max, forcing the browser to clamp.
                         scrollTarget = maxScroll + 50;
@@ -883,7 +886,7 @@ let db;
                         scrollTarget = Math.max(0, idealCenterScroll);
                     }
                     // =================================================================
-                    // ====================== END MODIFICATION =========================
+                    // ====================== END MODIFICATION (ROBUST) =================
                     // =================================================================
 
                     // Set scroll and update gilders in the next frame to ensure
