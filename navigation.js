@@ -326,7 +326,7 @@ let db;
                 height: 4rem; 
                 transition: background-color 0.3s ease, border-color 0.3s ease;
             }
-            .auth-navbar nav { padding: 0 0.5rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
+            .auth-navbar nav { padding: 0 1rem 0 0; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
             
             /* --- NEW: Logo Div Styling --- */
             #navbar-logo {
@@ -1191,3 +1191,4 @@ let db;
     document.addEventListener('DOMContentLoaded', run);
 
 })();
+//hi
