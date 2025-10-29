@@ -353,6 +353,7 @@
         const BASE_TITLE = "Settings";
         // Key for Local Storage - MUST MATCH THEME_STORAGE_KEY in navigation.js
         const NAVBAR_SETTINGS_KEY = 'user-navbar-theme'; 
+        const GAME_SAVE_FILENAME = 'strongdog_saves.json'; // New constant for the save file name
         
         // --- FULL THEME PALETTES array removed. ---
         
@@ -361,6 +362,7 @@
             { id: 'privacy', title: 'Privacy & Security', icon: 'fa-shield-alt', content: 'Manage your data permissions, account security, and two-factor authentication. Strong security is a priority!', color: 'text-red-400' },
             { id: 'personalization', title: 'Personalization', icon: 'fa-palette', content: 'Customize the look and feel of the application, including colors and layout. Make it truly yours!', color: 'text-pink-400' },
             { id: 'notifications', title: 'Notifications', icon: 'fa-bell', content: 'Set your preferences for alerts and communication methods. Never miss an important update.', color: 'text-green-400' },
+            // ADDED: Updated content for Data Management
             { id: 'data', title: 'Data Management', icon: 'fa-database', content: 'View, export, or request deletion of your stored data.', color: 'text-blue-400' },
             { id: 'about', title: 'About 4SP', icon: 'fa-info-circle', content: 'Application version, legal notices, and credits.', color: 'text-gray-400' }
         ];
@@ -510,7 +512,6 @@
             if (sectionId === 'general') {
                 renderGeneralSettings();
             } 
-            // --- MODIFICATION: Await themesPromise if 'personalization' is clicked ---
             else if (sectionId === 'personalization') { 
                 // Show loading message while themes are fetched
                 panelContent.innerHTML = '<p>Loading themes...</p>';
@@ -532,6 +533,10 @@
                     console.error("Failed to render personalization settings:", error);
                     panelContent.innerHTML = '<p class="message-area message-error">Could not load theme data. Please try refreshing the page.</p>';
                 }
+            }
+            // ADDED: Data Management section rendering
+            else if (sectionId === 'data') {
+                renderDataManagement();
             }
             // --- END MODIFICATION ---
             else { 
@@ -558,9 +563,8 @@
             document.getElementById(`sidebar-${sectionId}`).classList.add('active');
         }
         
-        // --- NEW: General Settings Implementation ---
-        // ... (ALL AUTHENTICATION FUNCTIONS - handleUsernameChange, handlePasswordChange, handleAccountDelete, etc. 
-        // are all still here and unchanged) ...
+        // --- NEW: General Settings Implementation (omitted for brevity, remains unchanged) ---
+        // ... (General Settings functions are here) ...
         
         /**
          * Renders the content for the "General" tab
@@ -615,16 +619,17 @@
                     <div id="password-message" class="message-area"></div>
                 </div>
                 ` : ''}
-                
+
                 <div class="settings-section">
-                    <h3 class="text-xl font-semibold text-white mb-4">Account Linking</h3>
+                    <h3 class="text-xl font-semibold text-white mb-4">Link Providers</h3>
                     <p class="settings-description mb-4">
-                        Connect or disconnect social accounts to use them for sign-in. You must maintain at least one active login method.
+                        Link multiple social accounts to sign in.
                     </p>
                     <div id="linking-container" class="space-y-3">
                         </div>
                     <div id="linking-message" class="message-area"></div>
                 </div>
+
                 <div class="settings-section">
                     <h3 class="text-xl font-semibold text-red-400 mb-4">Danger Zone</h3>
                     <p class="settings-description mb-4">
@@ -640,10 +645,10 @@
             // Now that HTML is in the DOM, attach listeners and update UI states
             attachGeneralSettingsListeners(isEmailUser);
             updateUsernameUI();
-            
-            // Update linking UI unconditionally (CHANGED FROM CONDITIONAL)
-            updateAccountLinkingUI();
+            updateAccountLinkingUI(); // Update linking UI unconditionally
         }
+
+        // --- Helper functions for General (attachGeneralSettingsListeners, updateUsernameUI, updateAccountLinkingUI, handleAccountLink, handleAccountUnlink, checkProfanity, isUsernameTaken, handleUsernameChange, handlePasswordChange, handleAccountDelete) are omitted for brevity, they remain unchanged from the previous version. ---
 
         /**
          * Attaches all event listeners for the General Settings panel
@@ -751,8 +756,6 @@
             });
             container.innerHTML = html;
         }
-
-        // --- NEW: Helper Functions for "General" Settings ---
 
         // Make link/unlink functions globally accessible to inline 'onclick'
         window.handleAccountLink = async (providerId) => {
@@ -1036,10 +1039,8 @@
                 message.className = 'message-area message-error';
             }
         }
-        
-        // --- END: General Settings Implementation ---
-        
-        /* --- ADDED renderPersonalizationSettings function --- */
+
+        /* --- START PERSONALIZATION FUNCTIONS (EXACTLY AS REQUESTED) --- */
         
         /**
          * Renders the content for the "Personalization" tab
@@ -1117,7 +1118,6 @@
                     selectedSwatch.classList.add('selected');
                     
                     // 2. Get theme data
-                    // --- FIX: Changed dataset.theme-index to dataset.themeIndex ---
                     const themeIndex = selectedSwatch.dataset.themeIndex;
                     const theme = themePalettes[themeIndex];
                     
@@ -1150,9 +1150,212 @@
         
         /* --- END PERSONALIZATION FUNCTIONS --- */
         
+        /* --- START DATA MANAGEMENT FUNCTIONS --- */
+        
+        /**
+         * Renders the content for the "Data Management" tab
+         */
+        function renderDataManagement() {
+            panelContent.innerHTML = `
+                <div class="settings-section">
+                    <h3 class="text-xl font-semibold text-white mb-4">Export Game Data (strongdogxp)</h3>
+                    <p class="settings-description mb-4">
+                        Download a local JSON file containing your game's data stored in this browser's Local Storage. This file can be used to restore your progress on another device or browser.
+                    </p>
+                    <button id="export-data-btn" class="settings-button settings-button-secondary">
+                        <i class="fas fa-download mr-2"></i> Download ${GAME_SAVE_FILENAME}
+                    </button>
+                    <div id="export-message" class="message-area"></div>
+                </div>
+
+                <div class="settings-section">
+                    <h3 class="text-xl font-semibold text-white mb-4">Import Game Data (strongdogxp)</h3>
+                    <p class="settings-description mb-4">
+                        Upload a previously downloaded <code>${GAME_SAVE_FILENAME}</code> file to restore your game progress. <strong>Warning: This will overwrite your current local save for the game.</strong>
+                    </p>
+                    <div class="flex items-center gap-4">
+                        <input type="file" id="import-file-input" accept="application/json" class="settings-input flex-grow">
+                        <button id="import-data-btn" class="settings-button" disabled>
+                            <i class="fas fa-upload mr-2"></i> Import
+                        </button>
+                    </div>
+                    <div id="import-message" class="message-area"></div>
+                </div>
+            `;
+            attachDataManagementListeners();
+        }
+
+        /**
+         * Attaches event listeners for the Data Management panel
+         */
+        function attachDataManagementListeners() {
+            const exportBtn = document.getElementById('export-data-btn');
+            const importInput = document.getElementById('import-file-input');
+            const importBtn = document.getElementById('import-data-btn');
+
+            if (exportBtn) {
+                exportBtn.addEventListener('click', downloadSaveFile);
+            }
+
+            if (importInput && importBtn) {
+                // Enable/disable import button based on file selection
+                importInput.addEventListener('change', () => {
+                    importBtn.disabled = !importInput.files.length;
+                });
+                // Attach file upload handler
+                importBtn.addEventListener('click', handleUploadFile);
+            }
+        }
+        
+        /**
+         * Collects all keys and values from localStorage to prepare the export file.
+         */
+        function getAllLocalStorageData() {
+            const data = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                // Exclude settings keys that should not be part of a game save file
+                if (key !== NAVBAR_SETTINGS_KEY) { 
+                    try {
+                        // Attempt to parse to see if it's JSON, otherwise keep as string
+                        data[key] = JSON.parse(localStorage.getItem(key));
+                    } catch {
+                        data[key] = localStorage.getItem(key);
+                    }
+                }
+            }
+            return {
+                localStorageBackup: data,
+                exportedAt: new Date().toISOString()
+            };
+        }
+        
+        /**
+         * Initiates the download of the game save file.
+         */
+        function downloadSaveFile() {
+            const message = document.getElementById('export-message');
+            message.textContent = 'Preparing download...';
+            message.className = 'message-area message-warning';
+
+            try {
+                const dataToDownload = getAllLocalStorageData();
+                const blob = new Blob([JSON.stringify(dataToDownload, null, 2)], {
+                    type: "application/json",
+                });
+                
+                // Create a hidden link to trigger the download
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = GAME_SAVE_FILENAME;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url); // Clean up the URL object
+
+                message.textContent = 'Game data successfully downloaded!';
+                message.className = 'message-area message-success';
+
+            } catch (error) {
+                console.error("Error during download:", error);
+                message.textContent = 'Error: Failed to create or download file.';
+                message.className = 'message-area message-error';
+            }
+        }
+        
+        /**
+         * Handles the file selection and parsing for import.
+         */
+        function handleUploadFile() {
+            const input = document.getElementById('import-file-input');
+            const button = document.getElementById('import-data-btn');
+            const message = document.getElementById('import-message');
+
+            if (!input.files.length) {
+                message.textContent = 'Please select a file to import.';
+                message.className = 'message-area message-error';
+                return;
+            }
+
+            if (!confirm("Are you sure you want to import this save file? Your current local game progress will be overwritten.")) {
+                return;
+            }
+
+            const file = input.files[0];
+            const reader = new FileReader();
+
+            message.textContent = `Reading ${file.name}...`;
+            message.className = 'message-area message-warning';
+            button.disabled = true;
+
+            reader.onload = (e) => {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+
+                    if (!importedData.localStorageBackup) {
+                         throw new Error('Invalid save file format. Missing "localStorageBackup" field.');
+                    }
+                    
+                    applyImportedData(importedData.localStorageBackup);
+                    
+                    message.textContent = 'Game data successfully imported! Please reload the game page to see changes.';
+                    message.className = 'message-area message-success';
+                    // Optional: force a reload or redirect
+                    // setTimeout(() => window.location.href = '../index.html', 1500);
+
+                } catch (error) {
+                    console.error("Import error:", error);
+                    message.textContent = `Error importing file: ${error.message}`;
+                    message.className = 'message-area message-error';
+                } finally {
+                    button.disabled = false;
+                    input.value = ''; // Reset file input
+                }
+            };
+
+            reader.onerror = () => {
+                message.textContent = 'Error reading file.';
+                message.className = 'message-area message-error';
+                button.disabled = false;
+            };
+
+            reader.readAsText(file);
+        }
+
+        /**
+         * Clears all game-related localStorage keys and applies imported data.
+         * NOTE: This is a destructive operation.
+         */
+        function applyImportedData(data) {
+            // OPTIONAL: Clear specific keys only if needed, but for a full save replace, a more direct approach is:
+            // This implementation assumes a full overwrite of game-related keys.
+            
+            // 1. (Optional but safer) Clear only game-related keys
+            // You would need a list of all game keys here. For simplicity, we'll
+            // assume that any key NOT the NAVBAR_SETTINGS_KEY is a game key.
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const key = localStorage.key(i);
+                if (key !== NAVBAR_SETTINGS_KEY) {
+                    localStorage.removeItem(key);
+                }
+            }
+            
+            // 2. Apply new data
+            for (const key in data) {
+                const value = data[key];
+                // localStorage only stores strings, so convert objects back to JSON strings
+                if (typeof value === 'object' && value !== null) {
+                    localStorage.setItem(key, JSON.stringify(value));
+                } else {
+                    localStorage.setItem(key, value);
+                }
+            }
+        }
+
+        /* --- END DATA MANAGEMENT FUNCTIONS --- */
+        
         // --- START APPLICATION ---
-        // --- MODIFICATION: Reverted to original start ---
-        // This will start the Firebase Auth listener immediately
         document.addEventListener('DOMContentLoaded', startAuthFlow);
     </script>
 </body>
