@@ -809,8 +809,8 @@ let db;
             container.innerHTML = `
                 <header class="auth-navbar">
                     <nav>
-                        <a href="/" class="flex items-center space-x-2 flex-shrink-0" title="4SP Logo">
-                            <div id="navbar-logo" class="h-8 w-24"></div> 
+                        <a href="/" class="flex items-center space-x-2" title="4SP Logo">
+                            <div id="navbar-logo" class="h-8 w-auto"></div> 
                         </a>
                         <div class="tab-wrapper">
                             <button id="glide-left" class="scroll-glide-button"><i class="fa-solid fa-chevron-left"></i></button>
