@@ -28,8 +28,6 @@
  * 20. (FIXED) SCROLL GLIDER LOGIC: Updated scroll arrow logic to be explicit, ensuring arrows hide/show correctly at scroll edges.
  * 21. (FIXED) USERNAME COLOR: Replaced hardcoded `text-white` on username with a CSS variable (`--menu-username-text`) and updated `window.applyTheme` to set this to black for specific light themes.
  * 22. **(NEW)** LOGO TINTING: Replaced logo `<img>` tag with a `<div>` using `mask-image`. `window.applyTheme` now supports `logo-tint-color` from themes.json to dynamically color the logo, with smart defaults for themes without a tint color.
- * 23. **(FIX)** SCROLL-TO-END: Added right padding to the tab container to fix the issue where the last tab's margin prevents full visibility.
- * 24. **(UPDATED)** CONTROL/LOGO SIZE: Control buttons reverted to w-8/h-8. Logo width changed to w-10.
  */
 
 // =========================================================================
@@ -343,7 +341,6 @@ let db;
             }
             /* --- END NEW LOGO STYLE --- */
             
-            /* --- REVERTED: w-8 h-8 for controls and avatar --- */
             .initial-avatar { 
                 background: var(--avatar-gradient); 
                 font-family: sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; 
@@ -352,7 +349,6 @@ let db;
                 border-color: var(--avatar-border);
                 transition: border-color 0.3s ease;
             }
-            /* --- END REVERTED --- */
             
             /* Auth Dropdown Menu Styles */
             .auth-menu-container { 
@@ -406,10 +402,7 @@ let db;
 
             /* Tab Wrapper and Glide Buttons */
             .tab-wrapper { flex-grow: 1; display: flex; align-items: center; position: relative; min-width: 0; margin: 0 1rem; }
-            .tab-scroll-container { 
-                flex-grow: 1; display: flex; align-items: center; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; -ms-overflow-style: none; padding-bottom: 5px; margin-bottom: -5px; scroll-behavior: smooth; 
-                padding-right: 0.5rem; /* ADDED to fix scroll-to-end issue by accounting for last tab's margin-right */
-            }
+            .tab-scroll-container { flex-grow: 1; display: flex; align-items: center; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; -ms-overflow-style: none; padding-bottom: 5px; margin-bottom: -5px; scroll-behavior: smooth; }
             .tab-scroll-container::-webkit-scrollbar { display: none; }
             .scroll-glide-button {
                 position: absolute; top: 0; height: 100%; width: 4rem; display: flex; align-items: center; justify-content: center; 
@@ -667,10 +660,9 @@ let db;
                 const email = user.email || 'No email';
                 const initial = username.charAt(0).toUpperCase();
 
-                // REVERTED: w-10 h-10 to w-8 h-8
                 const avatar = photoURL ?
                     `<img src="${photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">` :
-                    `<div class="initial-avatar w-8 h-8 rounded-full text-lg font-semibold">${initial}</div>`;
+                    `<div class="initial-avatar w-8 h-8 rounded-full text-sm font-semibold">${initial}</div>`;
                 
                 const isPinHidden = localStorage.getItem(PIN_BUTTON_HIDDEN_KEY) === 'true';
                 const showPinOption = isPinHidden 
@@ -818,7 +810,7 @@ let db;
                 <header class="auth-navbar">
                     <nav>
                         <a href="/" class="flex items-center space-x-2 flex-shrink-0" title="4SP Logo">
-                            <div id="navbar-logo" class="h-10 w-10"></div> 
+                            <div id="navbar-logo" class="h-8 w-24"></div> 
                         </a>
                         <div class="tab-wrapper">
                             <button id="glide-left" class="scroll-glide-button"><i class="fa-solid fa-chevron-left"></i></button>
@@ -876,22 +868,23 @@ let db;
                     const idealCenterScroll = activeTab.offsetLeft - centerOffset;
                     
                     const maxScroll = tabContainer.scrollWidth - tabContainer.offsetWidth;
-                    const extraRoomOnRight = maxScroll - idealCenterScroll;
+                    // Removed old logic: const extraRoomOnRight = maxScroll - idealCenterScroll; 
                     
                     let scrollTarget;
 
                     // =================================================================
-                    // ========= MODIFICATION 1 of 3 (Aggressive Set) ========
+                    // ========= FIX: Scroll all the way to the end for last tabs ========
                     // =================================================================
-                    if (idealCenterScroll > 0 && extraRoomOnRight < centerOffset) {
-                        // Snap all the way to the right by setting a value
-                        // *larger* than the max, forcing the browser to clamp.
-                        scrollTarget = maxScroll + 50;
+                    // FIX: If centering the tab would position it near the end (within 100px of max scroll), 
+                    // snap all the way to the right to prevent the last tab from being obscured 
+                    // by the glide button's fading texture.
+                    if (idealCenterScroll >= (maxScroll - 100)) {
+                        scrollTarget = maxScroll; 
                     } else {
                         scrollTarget = Math.max(0, idealCenterScroll);
                     }
                     // =================================================================
-                    // ====================== END MODIFICATION =========================
+                    // ====================== END FIX =========================
                     // =================================================================
 
                     // Set scroll and update gilders in the next frame to ensure
@@ -918,7 +911,7 @@ let db;
 
 
         // =================================================================
-        // ========= MODIFICATION 2 of 3 (Tolerant Check) ========
+        // ========= FIX: Ensure right glide arrow hides at end ========
         // =================================================================
         const updateScrollGilders = () => {
             const container = document.querySelector('.tab-scroll-container');
@@ -961,12 +954,12 @@ let db;
             }
         };
         // =================================================================
-        // ====================== END MODIFICATION =========================
+        // ====================== END FIX =========================
         // =================================================================
 
 
         // =================================================================
-        // ========= MODIFICATION 3 of 3 (Aggressive Set) ========
+        // ========= HELPER: Force scroll to absolute end ========
         // =================================================================
         /**
          * NEW: Forcefully scrolls the tab container all the way to the right
@@ -994,7 +987,7 @@ let db;
             });
         };
         // =================================================================
-        // ====================== END MODIFICATION =========================
+        // ====================== END HELPER =========================
         // =================================================================
         
         // Split setupEventListeners into main and pin-specific, 
