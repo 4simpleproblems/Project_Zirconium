@@ -27,9 +27,7 @@
  * 19. (FIXED) GLOBAL CLICK LISTENER: The global click listener now fetches button references on every click, preventing stale references after a navbar re-render.
  * 20. (FIXED) SCROLL GLIDER LOGIC: Updated scroll arrow logic to be explicit, ensuring arrows hide/show correctly at scroll edges.
  * 21. (FIXED) USERNAME COLOR: Replaced hardcoded `text-white` on username with a CSS variable (`--menu-username-text`) and updated `window.applyTheme` to set this to black for specific light themes.
- * 22. (NEW) LOGO TINTING: Replaced logo `<img>` tag with a `<div>` using `mask-image`. `window.applyTheme` now supports `logo-tint-color` from themes.json to dynamically color the logo, with smart defaults for themes without a tint color.
- * 23. (NEW) LOGO ALIGNMENT: Pushed logo all the way to the left edge of the viewport.
- * 24. **(FIXED)** SCROLL LOGIC: Remade to prioritize showing the full active tab, especially the right edge, and fixed the spacing issues on the left and right sides of the tabs list.
+ * 22. **(NEW)** LOGO TINTING: Replaced logo `<img>` tag with a `<div>` using `mask-image`. `window.applyTheme` now supports `logo-tint-color` from themes.json to dynamically color the logo, with smart defaults for themes without a tint color.
  */
 
 // =========================================================================
@@ -41,7 +39,7 @@ const FIREBASE_CONFIG = {
     projectId: "project-zirconium",
     storageBucket: "project-zirconium.firebaseapp.com",
     messagingSenderId: "1096564243475",
-    appId: "1:1096564243445:web:6d0956a70125eeea1ad3e6",
+    appId: "1:1096564243475:web:6d0956a70125eeea1ad3e6",
     measurementId: "G-1D4F692C1Q"
 };
 // =========================================================================
@@ -328,36 +326,8 @@ let db;
                 height: 4rem; 
                 transition: background-color 0.3s ease, border-color 0.3s ease;
             }
+            .auth-navbar nav { padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
             
-            /* UPDATED: Nav now uses flex and space-between, but no internal gap. */
-            .auth-navbar nav { 
-                padding: 0; 
-                height: 100%; 
-                display: flex; 
-                align-items: center; 
-                justify-content: space-between; 
-                gap: 0; /* REMOVED GAP: Rely on wrapper margins */
-                position: relative; 
-            }
-            
-            /* NEW: Logo and Auth Wrappers get the padding AND spacing margins */
-            #logo-wrapper { 
-                padding: 0 1rem; /* Edge padding */
-                margin-right: 1rem; /* Spacing between logo and tabs */
-                height: 100%;
-                display: flex;
-                align-items: center;
-                flex-shrink: 0;
-            }
-            #auth-controls-wrapper { 
-                padding: 0 1rem; /* Edge padding */
-                margin-left: 1rem; /* Spacing between tabs and auth controls */
-                display: flex; 
-                align-items: center; 
-                gap: 0.75rem; 
-                flex-shrink: 0; 
-            }
-
             /* --- NEW: Logo Div Styling --- */
             #navbar-logo {
                 background-color: var(--logo-tint-color); /* Color is set by applyTheme logic */
@@ -431,28 +401,8 @@ let db;
             .auth-menu-link i.w-4, .auth-menu-button i.w-4 { width: 1rem; text-align: center; } 
 
             /* Tab Wrapper and Glide Buttons */
-            .tab-wrapper { 
-                flex-grow: 1; 
-                display: flex; 
-                align-items: center; 
-                position: relative; 
-                min-width: 0; 
-                margin: 0; /* REMOVED MARGIN: Relied on #logo-wrapper/auth-controls-wrapper margins */
-            }
-            .tab-scroll-container { 
-                flex-grow: 1; 
-                display: flex; 
-                align-items: center; 
-                overflow-x: auto; 
-                -webkit-overflow-scrolling: touch; 
-                scrollbar-width: none; 
-                -ms-overflow-style: none; 
-                padding: 0; /* REMOVED PADDING: Tabs now butt up to gliders */
-                gap: 0.5rem; 
-                padding-bottom: 5px; 
-                margin-bottom: -5px; 
-                scroll-behavior: smooth; 
-            }
+            .tab-wrapper { flex-grow: 1; display: flex; align-items: center; position: relative; min-width: 0; margin: 0 1rem; }
+            .tab-scroll-container { flex-grow: 1; display: flex; align-items: center; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; -ms-overflow-style: none; padding-bottom: 5px; margin-bottom: -5px; scroll-behavior: smooth; }
             .tab-scroll-container::-webkit-scrollbar { display: none; }
             .scroll-glide-button {
                 position: absolute; top: 0; height: 100%; width: 4rem; display: flex; align-items: center; justify-content: center; 
@@ -477,7 +427,7 @@ let db;
                 flex-shrink: 0; padding: 0.5rem 1rem; color: var(--tab-text); 
                 font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; 
                 transition: all 0.2s, color 0.3s ease, border-color 0.3s ease, background-color 0.3s ease; 
-                text-decoration: none; line-height: 1.5; display: flex; align-items: center; 
+                text-decoration: none; line-height: 1.5; display: flex; align-items: center; margin-right: 0.5rem; 
                 border: 1px solid transparent; 
             }
             .nav-tab:not(.active):hover { 
@@ -574,7 +524,9 @@ let db;
         let currentIsPrivileged = false;
         // State for current scroll position
         let currentScrollLeft = 0; 
-        // Flag to ensure global click listener is only added once
+        // Flag to ensure active tab centering only happens once per page load
+        let hasScrolledToActiveTab = false; 
+        // NEW: Flag to ensure global click listener is only added once
         let globalClickListenerAdded = false;
 
         // --- LocalStorage Keys ---
@@ -663,7 +615,7 @@ let db;
             } else {
                 // If wrapper was not found, it might be the initial render of the pin button 
                 // after it was hidden, so we need to find the parent and append.
-                const authButtonContainer = document.getElementById('auth-controls-inner-wrapper'); // TARGET INNER WRAPPER
+                const authButtonContainer = document.getElementById('auth-controls-wrapper');
                 if (authButtonContainer) {
                     authButtonContainer.insertAdjacentHTML('afterbegin', newPinHtml);
                     setupPinEventListeners();
@@ -798,11 +750,11 @@ let db;
          * Used for all pin/auth-menu interactions that do not require a full navbar re-render.
          */
         const updateAuthControlsArea = () => {
-            const authInnerWrapper = document.getElementById('auth-controls-inner-wrapper');
-            if (!authInnerWrapper) return;
+            const authWrapper = document.getElementById('auth-controls-wrapper');
+            if (!authWrapper) return;
 
             // Get new HTML using the *current* global state
-            authInnerWrapper.innerHTML = getAuthControlsHtml();
+            authWrapper.innerHTML = getAuthControlsHtml();
 
             // Re-attach listeners for the new DOM elements
             setupPinEventListeners();
@@ -826,102 +778,15 @@ let db;
             }
             renderNavbar(currentUser, currentUserData, allPages, currentIsPrivileged);
         };
-        
-        // --- NEW/REPLACED SCROLL LOGIC ---
-        /**
-         * **FIXED SCROLL LOGIC**
-         * Scrolls the active tab into full view within the container's visible area
-         * (the area not covered by the glide buttons). Prioritizes showing the right edge.
-         * @param {boolean} restoreOnly - If true, only restore `currentScrollLeft`, do not adjust view.
-         */
-        const scrollToActiveTab = (restoreOnly = false) => {
-            const tabContainer = document.querySelector('.tab-scroll-container');
-            if (!tabContainer) {
-                currentScrollLeft = 0; 
-                return;
-            }
-            
-            // 1. Restore Scroll Position (Takes precedence if scroll was saved)
-            if (currentScrollLeft > 0) {
-                const savedScroll = currentScrollLeft;
-                requestAnimationFrame(() => {
-                    tabContainer.scrollLeft = savedScroll;
-                    currentScrollLeft = 0; // Reset state after restoration
-                    requestAnimationFrame(() => {
-                        updateScrollGilders();
-                    });
-                });
-                return; // Stop here if we restored
-            }
-            
-            // 2. Adjust View to Ensure Active Tab is Fully Visible (New Logic)
-            if (!restoreOnly) {
-                const activeTab = document.querySelector('.nav-tab.active');
-                if (activeTab) {
-                    // Glide button width is 4rem (4 * 16px/rem = 64px)
-                    const GLIDER_WIDTH = 64; 
-                    
-                    const containerScrollLeft = tabContainer.scrollLeft;
-                    const containerWidth = tabContainer.offsetWidth;
-                    const tabOffsetLeft = activeTab.offsetLeft;
-                    const tabWidth = activeTab.offsetWidth;
-                    
-                    let newScrollPosition = containerScrollLeft;
-
-                    // Define the edges of the *currently visible* content area (not obscured by gliders)
-                    const leftEdgeOfVisibleContent = containerScrollLeft + GLIDER_WIDTH;
-                    const rightEdgeOfVisibleContent = containerScrollLeft + containerWidth - GLIDER_WIDTH;
-
-                    // Case 1: Tab is out-of-view to the RIGHT (or partially obscured by the right glider)
-                    const rightEdgeOfTab = tabOffsetLeft + tabWidth;
-                    if (rightEdgeOfTab > rightEdgeOfVisibleContent) {
-                        // Scroll left: align the tab's right edge with the right visible edge
-                        // This fixes the issue where only the start was shown at the end of the scroll list.
-                        newScrollPosition = rightEdgeOfTab - containerWidth + GLIDER_WIDTH;
-                    }
-                    
-                    // Case 2: Tab is out-of-view to the LEFT (or partially obscured by the left glider)
-                    // Use else if to ensure Case 1 (the user's required fix) takes priority
-                    else if (tabOffsetLeft < leftEdgeOfVisibleContent) {
-                        // Scroll right: align the tab's left edge with the left visible edge
-                        newScrollPosition = tabOffsetLeft - GLIDER_WIDTH;
-                    }
-                    
-                    // Only apply scroll if the calculated position is different from the current position
-                    if (newScrollPosition !== containerScrollLeft) {
-                        // Clamp the scroll position between 0 and maxScrollLeft
-                        const maxScrollLeft = tabContainer.scrollWidth - containerWidth;
-                        const scrollTarget = Math.max(0, Math.min(maxScrollLeft, newScrollPosition));
-
-                        requestAnimationFrame(() => {
-                            tabContainer.scrollLeft = scrollTarget;
-                            requestAnimationFrame(() => {
-                                updateScrollGilders();
-                            });
-                        });
-                    } else {
-                        // If no scroll change, still update gilders just in case
-                        requestAnimationFrame(() => {
-                            updateScrollGilders();
-                        });
-                    }
-                    
-                } else {
-                    // If no active tab, still update gilders just in case
-                    requestAnimationFrame(() => {
-                        updateScrollGilders();
-                    });
-                }
-            }
-        };
-        // --- END NEW/REPLACED SCROLL LOGIC ---
-
 
         // --- 4. RENDER THE NAVBAR HTML ---
         const renderNavbar = (user, userData, pages, isPrivilegedUser) => {
             const container = document.getElementById('navbar-container');
             if (!container) return; 
 
+            // --- UPDATED: logoPath variable is no longer needed as logo is a styled div
+            // const logoPath = "/images/logo.png"; 
+            
             // Filter and map pages for tabs, applying adminOnly filter
             const tabsHtml = Object.values(pages || {})
                 .filter(page => !(page.adminOnly && !isPrivilegedUser)) // Filter out adminOnly tabs for non-privileged users
@@ -944,10 +809,9 @@ let db;
             container.innerHTML = `
                 <header class="auth-navbar">
                     <nav>
-                        <a id="logo-wrapper" href="/" class="space-x-2" title="4SP Logo">
-                            <div id="navbar-logo" class="h-8 w-24"></div> 
+                        <a href="/" class="flex items-center space-x-2 flex-shrink-0" title="4SP Logo">
+                            <div id="navbar-logo" class="h-8 w-20"></div> 
                         </a>
-                        
                         <div class="tab-wrapper">
                             <button id="glide-left" class="scroll-glide-button"><i class="fa-solid fa-chevron-left"></i></button>
 
@@ -958,10 +822,8 @@ let db;
                             <button id="glide-right" class="scroll-glide-button"><i class="fa-solid fa-chevron-right"></i></button>
                         </div>
 
-                        <div id="auth-controls-wrapper">
-                            <div id="auth-controls-inner-wrapper" class="flex items-center gap-3 flex-shrink-0">
-                                ${authControlsHtml}
-                            </div>
+                        <div id="auth-controls-wrapper" class="flex items-center gap-3 flex-shrink-0">
+                            ${authControlsHtml}
                         </div>
                     </nav>
                 </header>
@@ -979,10 +841,71 @@ let db;
             window.applyTheme(savedTheme || DEFAULT_THEME); 
             // --- End theme apply ---
 
-            // --- UPDATED: Use the new scrollToActiveTab function ---
-            // A full re-render always runs the scroll logic
-            scrollToActiveTab(false);
+            const tabContainer = document.querySelector('.tab-scroll-container');
             
+            // Check if we need to restore scroll position (from a full re-render)
+            if (currentScrollLeft > 0) {
+                const savedScroll = currentScrollLeft;
+                // Use requestAnimationFrame to ensure the DOM has painted the new content
+                // before setting the scroll, preventing the jump.
+                requestAnimationFrame(() => {
+                    if (tabContainer) {
+                        tabContainer.scrollLeft = savedScroll;
+                    }
+                    currentScrollLeft = 0; // Reset state after restoration
+                    // Nested frame to update arrows *after* scroll is applied
+                    requestAnimationFrame(() => {
+                        updateScrollGilders();
+                    });
+                });
+            // NEW: Only run centering logic if we are NOT restoring scroll AND we haven't scrolled yet.
+            } else if (!hasScrolledToActiveTab) { 
+                // If it's the first load, center the active tab.
+                const activeTab = document.querySelector('.nav-tab.active');
+                if (activeTab && tabContainer) {
+                    
+                    const centerOffset = (tabContainer.offsetWidth - activeTab.offsetWidth) / 2;
+                    const idealCenterScroll = activeTab.offsetLeft - centerOffset;
+                    
+                    const maxScroll = tabContainer.scrollWidth - tabContainer.offsetWidth;
+                    const extraRoomOnRight = maxScroll - idealCenterScroll;
+                    
+                    let scrollTarget;
+
+                    // =================================================================
+                    // ========= MODIFICATION 1 of 3 (Aggressive Set) ========
+                    // =================================================================
+                    if (idealCenterScroll > 0 && extraRoomOnRight < centerOffset) {
+                        // Snap all the way to the right by setting a value
+                        // *larger* than the max, forcing the browser to clamp.
+                        scrollTarget = maxScroll + 50;
+                    } else {
+                        scrollTarget = Math.max(0, idealCenterScroll);
+                    }
+                    // =================================================================
+                    // ====================== END MODIFICATION =========================
+                    // =================================================================
+
+                    // Set scroll and update gilders in the next frame to ensure
+                    // the scrollLeft value is processed by the browser first.
+                    requestAnimationFrame(() => {
+                        tabContainer.scrollLeft = scrollTarget;
+                        // Nested frame to update arrows *after* scroll is applied
+                        requestAnimationFrame(() => {
+                            updateScrollGilders();
+                        });
+                    });
+                    
+                    // IMPORTANT: Set flag to prevent future automatic centering
+                    hasScrolledToActiveTab = true; 
+                } else if (tabContainer) {
+                    // If no active tab (or no tabContainer), still need to update gilders
+                    // to ensure they are hidden correctly on a blank page.
+                    requestAnimationFrame(() => {
+                        updateScrollGilders();
+                    });
+                }
+            }
         };
 
 
