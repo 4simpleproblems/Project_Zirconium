@@ -27,6 +27,7 @@
  * 19. (FIXED) GLOBAL CLICK LISTENER: The global click listener now fetches button references on every click, preventing stale references after a navbar re-render.
  * 20. (FIXED) SCROLL GLIDER LOGIC: Updated scroll arrow logic to be explicit, ensuring arrows hide/show correctly at scroll edges.
  * 21. **(FIXED)** USERNAME COLOR: Replaced hardcoded `text-white` on username with a CSS variable (`--menu-username-text`) and updated `window.applyTheme` to set this to black for specific light themes.
+ * 22. **(NEW)** LOGO THEME CHANGING: Added support for logo color tinting based on the `logo-tint-color` property in themes.json. The logo can now be dynamically colored to match the theme using CSS filters.
  */
 
 // =========================================================================
@@ -54,8 +55,10 @@ const THEME_STORAGE_KEY = 'user-navbar-theme';
 
 // This object defines the default "Dark" theme.
 // It must contain ALL CSS variables used in injectStyles.
+// Optional: 'logo-tint-color' can be added to tint the logo to a specific color
 const DEFAULT_THEME = {
     'logo-src': '/images/logo.png',
+    // 'logo-tint-color': '#ffffff', // Optional: hex color to tint the logo
     'navbar-bg': '#000000',
     'navbar-border': 'rgb(31 41 55)',
     'avatar-gradient': 'linear-gradient(135deg, #374151 0%, #111827 100%)',
@@ -109,34 +112,108 @@ window.applyTheme = (theme) => {
 
     // Set all CSS variables
     for (const [key, value] of Object.entries(themeToApply)) {
-        // Don't try to set 'name' or 'logo-src' as a CSS variable
-        if (key !== 'logo-src' && key !== 'name') {
+        // Don't try to set 'name', 'logo-src', or 'logo-tint-color' as CSS variables
+        if (key !== 'logo-src' && key !== 'name' && key !== 'logo-tint-color') {
             root.style.setProperty(`--${key}`, value);
         }
     }
 
     // --- FIX: Handle username color for light themes ---
     // Get the default from the theme object, or the hardcoded default
-    let usernameColor = themeToApply['menu-username-text'] || DEFAULT_THEME['menu-username-text']; 
-    
+    let usernameColor = themeToApply['menu-username-text'] || DEFAULT_THEME['menu-username-text'];
+
     // Check if the theme name matches one of the light themes
     const lightThemeNames = ['Light', 'Lavender', 'Rose Gold', 'Mint'];
     if (themeToApply.name && lightThemeNames.includes(themeToApply.name)) {
         usernameColor = '#000000'; // Force black
     }
-    
+
     root.style.setProperty('--menu-username-text', usernameColor);
     // --- END FIX ---
 
-    // Handle logo swap
+    // Handle logo swap and color tinting
     const logoImg = document.getElementById('navbar-logo');
     if (logoImg) {
         const newLogoSrc = themeToApply['logo-src'] || DEFAULT_THEME['logo-src'];
         if (logoImg.src !== newLogoSrc) {
             logoImg.src = newLogoSrc;
         }
+
+        // Handle logo color tinting
+        const logoTintColor = themeToApply['logo-tint-color'];
+        if (logoTintColor) {
+            // Apply color tint using CSS filter
+            logoImg.style.filter = `brightness(0) saturate(100%) ${hexToFilter(logoTintColor)}`;
+        } else {
+            // Remove any existing filter if no tint color is specified
+            logoImg.style.filter = '';
+        }
     }
 };
+
+/**
+ * Helper function to convert hex color to CSS filter
+ * This creates a filter that tints the logo to the specified color
+ * @param {string} hex - Hex color code (e.g., "#ff0000")
+ * @returns {string} CSS filter string
+ */
+function hexToFilter(hex) {
+    // Remove # if present
+    hex = hex.replace('#', '');
+
+    // Convert hex to RGB
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+
+    // Convert RGB to HSL for better filter control
+    const hsl = rgbToHsl(r, g, b);
+
+    // Create filter string
+    // brightness(0) saturate(100%) makes the image black
+    // Then we apply hue-rotate and other filters to achieve the target color
+    const hue = Math.round(hsl[0] * 360);
+    const saturation = Math.round(hsl[1] * 100);
+    const lightness = Math.round(hsl[2] * 100);
+
+    // Adjust brightness based on lightness
+    const brightness = Math.max(50, lightness);
+
+    return `hue-rotate(${hue}deg) saturate(${saturation * 2}%) brightness(${brightness}%)`;
+}
+
+/**
+ * Helper function to convert RGB to HSL
+ * @param {number} r - Red value (0-255)
+ * @param {number} g - Green value (0-255)
+ * @param {number} b - Blue value (0-255)
+ * @returns {Array} [h, s, l] values where h is 0-1, s is 0-1, l is 0-1
+ */
+function rgbToHsl(r, g, b) {
+    r /= 255;
+    g /= 255;
+    b /= 255;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h, s, l = (max + min) / 2;
+
+    if (max === min) {
+        h = s = 0; // achromatic
+    } else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+
+        switch (max) {
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+    }
+
+    return [h, s, l];
+}
 // --- End Theming Configuration ---
 
 
