@@ -2676,7 +2676,7 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
             #ai-input-wrapper::before { animation: glow 3s infinite; opacity: 1; }
             #ai-input-wrapper.waiting::before { opacity: 0; }
             #ai-input-wrapper.waiting::after { opacity: 1; }
-            #ai-input { min-height: 48px; max-height: ${MAX_INPUT_HEIGHT}px; overflow-y: hidden; color: #fff; font-size: 1.1em; padding: 13px 60px 13px 60px; box-sizing: border-box; word-wrap: break-word; outline: 0; text-align: left; }
+            #ai-input { min-height: 48px; max-height: ${MAX_INPUT_HEIGHT}px; overflow-y: hidden; color: #fff; font-size: 1.1em; padding: 13px 60px 13px 15px; box-sizing: border-box; word-wrap: break-word; outline: 0; text-align: left; }
             #ai-input:empty::before { content: 'Ask a question or describe your files...'; color: rgba(255, 255, 255, 0.4); pointer-events: none; }
             
             /* NEW: Single menu button replacing attachment and settings buttons */
@@ -3238,6 +3238,7 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
                 font-family: 'Courier New', monospace;
                 font-weight: bold;
                 flex-shrink: 0;
+                order: -1;
             }
             .file-size-badge {
                 background: rgba(255,255,255,0.1);
