@@ -11,10 +11,15 @@
  * NEW: Added KaTeX for high-quality rendering of mathematical formulas and equations.
  * REPLACED: Plotly.js has been replaced with a custom, theme-aware graphing engine for better integration.
  *
- * NEW: Implemented dynamic model switching based on user query and authorization:
- * - Casual chat: gemini-2.5-flash-lite
+ * MODIFIED (USER REQUEST): Updated model selection for efficiency.
+ * - Casual/Creative: gemini-2.5-flash-lite
  * - Professional/Math: gemini-2.5-flash
- * - Deep Analysis: gemini-2.5-flash (Pro model feature removed)
+ * - Deep Analysis/Complex Graphing: gemini-2.5-pro (NEW)
+ *
+ * NEW (USER REQUEST): Implemented Humanity File Creation.
+ * - AI can generate text-based files using a <CREATE_FILE> tag.
+ * - The response bubble renders a downloadable file card, showing file size.
+ * - Includes a warning tooltip: "File Creation may not be accurate".
  *
  * NEW: The AI's response now includes an internal <THOUGHT_PROCESS> and lists of <SOURCE URL="..." TITLE="..."/>.
  * UPDATED: Removed authenticated email feature.
@@ -32,6 +37,7 @@
  * NEW: Thought process panel is hidden for simple/short thoughts (e.g., "Hi").
  * CSS: Thought process container is neutral when collapsed, blue when expanded.
  * CSS: Thought process collapse/expand animation is now faster (0.2s) and removes opacity fade.
+ * CSS (USER REQUEST): Fixed "orange glow" bug on the loading bubble. The glow is now consistently blue.
  */
 (function() {
     // --- CONFIGURATION ---
@@ -48,6 +54,8 @@
     const copyIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
     const checkIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="check-icon"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
     const attachmentIconSVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.2a2 2 0 0 1-2.83-2.83l8.49-8.49"></path></svg>`;
+    // NEW: Download icon for File Creation
+    const downloadIconSVG = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`;
 
     // --- STATE MANAGEMENT ---
     let isAIActive = false;
@@ -614,6 +622,30 @@
                     });
                 });
 
+                // Add event listeners for file download cards in history (if any)
+                bubble.querySelectorAll('.gemini-file-creation-card').forEach(card => {
+                    const downloadLink = card.querySelector('.file-creation-download-btn');
+                    // Re-create blob URL as they are temporary
+                    const content = card.dataset.fileContent;
+                    const mimetype = card.dataset.fileMime;
+                    if (content && mimetype) {
+                        try {
+                            const blob = new Blob([content], {
+                                type: mimetype
+                            });
+                            const dataUrl = URL.createObjectURL(blob);
+                            downloadLink.href = dataUrl;
+                        } catch (e) {
+                            console.error("Error recreating blob URL for history:", e);
+                            downloadLink.href = "#";
+                            downloadLink.onclick = (e) => {
+                                e.preventDefault();
+                                alert("Failed to reload file from history.");
+                            };
+                        }
+                    }
+                });
+
                 renderKaTeX(bubble);
                 renderGraphs(bubble);
             } else {
@@ -642,8 +674,8 @@
         const lowerQuery = query.toLowerCase();
 
         // Deep Analysis Keywords
-        // Note: The gemini-2.5-pro model is no longer available via authorization in this code.
-        if (lowerQuery.includes('analyze') || lowerQuery.includes('deep dive') || lowerQuery.includes('strategic') || lowerQuery.includes('evaluate') || lowerQuery.includes('critique') || lowerQuery.includes('investigate') || lowerQuery.includes('pro model')) {
+        // MODIFIED: Added "complex" triggers for Pro model.
+        if (lowerQuery.includes('analyze') || lowerQuery.includes('deep dive') || lowerQuery.includes('strategic') || lowerQuery.includes('evaluate') || lowerQuery.includes('critique') || lowerQuery.includes('investigate') || lowerQuery.includes('pro model') || lowerQuery.includes('complex graph') || lowerQuery.includes('advanced equation') || lowerQuery.includes('advanced functioning')) {
             return 'DEEP_ANALYSIS';
         }
 
@@ -705,17 +737,26 @@ If the user asks about a topic other than 4SP, you should not hint at the websit
         // const userColor = settings.favoriteColor;
 
         const intent = determineIntentCategory(query);
-        let model = 'gemini-2.5-flash-lite';
+        let model = 'gemini-2.5-flash-lite'; // Default model
         let personaInstruction = `${FSP_HISTORY}
 
 You are a highly capable and adaptable AI, taking on a persona to best serve the user's direct intent. You have significant control over the interaction's structure and detail level, ensuring the response is comprehensive and authoritative.
-You must adapt your persona, tone, and the level of detail based on the user's intent. If the user is asking for an answer, or sends an image that asks a question or multiple questions, you will label the answers, and concise;y and straight-forwardly give the answer to them, not giving an explanation unless asked for.
+You must adapt your persona, tone, and the level of detail based on the user's intent. If the user is asking for an answer, or sends an image that asks a question or multiple questions, you will label the answers, and concisely and straight-forwardly give the answer to them, not giving an explanation unless asked for.
 
-Formatting Rules (MUST FOLLOW):
-- For math, use KaTeX. Inline math uses single \`$\`, and display math uses double \`$$\`. Use \\le for <= and \\ge for >=.
-- For graphs, use a 'graph' block as shown in the file's comments.
-- **PREPEND your response with your reasoning/internal monologue wrapped in <THOUGHT_PROCESS>...</THOUGHT_PROCESS>**. This is mandatory for every response.
-- **APPEND all external sources used (if any) as a list of tags**: <SOURCE URL="[URL]" TITLE="[Title]"/>. You may use placeholder URLs if no real search was performed, but the format must be followed.
+Formatting Rules (MUST FOLLOW AT ALL TIMES):
+- **ALWAYS** prepend your response with your reasoning/internal monologue wrapped in <THOUGHT_PROCESS>...</THOUGHT_PROCESS>. This is mandatory for every response.
+- **ALWAYS** append all external sources used (if any) as a list of tags: <SOURCE URL="[URL]" TITLE="[Title]"/>.
+- **Math**: You **MUST** use KaTeX. Inline math **MUST** use single \`$\`. Display math **MUST** use double \`$$\`. Use \\le for <= and \\ge for >=.
+- **Graphs**: You **MUST** use a 'graph' block (e.g., \`\`\`graph\n{...}\n\`\`\`) for plotting.
+- **Lists**: You **MUST** use proper markdown for bulleted (\`* \`) or numbered (\`1. \`) lists. Do not use plain text hyphens.
+- **Bold/Italic**: You **MUST** use \`**bold**\` and \`*italic*\` for emphasis.
+- **File Creation (NEW)**: To generate a downloadable file, you **MUST** use this exact format:
+<CREATE_FILE FILENAME="example.py" MIMETYPE="text/plain">
+# All file content goes here, exactly as it should be in the file.
+# Do not add any other text or formatting inside this block.
+print("Hello, world!")
+</CREATE_FILE>
+You **MUST** also provide a brief summary of the file's purpose in your main response, *outside* of the CREATE_FILE block.
 `;
 
         // NEW: Add web search instruction (MODIFIED for clarity and forcefulness)
@@ -728,18 +769,18 @@ Formatting Rules (MUST FOLLOW):
 
         switch (intent) {
             case 'DEEP_ANALYSIS':
-                // Pro model access is removed, fallback to high-end Flash model.
-                model = 'gemini-2.5-flash';
-                // MODIFIED: Removed model name from thought
-                personaInstruction += `\n\n**Current Persona: Professional Analyst.** You are performing a detailed analysis, but maintain efficiency and focus. Respond with clarity, professionalism, and structured data. Your response must be comprehensive, highly structured, and exhibit a deep level of reasoning and critical evaluation. Use an assertive, expert tone. Structure your analysis clearly with headings and bullet points.`;
+                // NEW (USER REQUEST): Use Pro model for deep analysis and complex tasks.
+                model = 'gemini-2.5-pro';
+                personaInstruction += `\n\n**Current Persona: Professional Analyst (Using gemini-2.5-pro).** You are performing a detailed analysis. Respond with clarity, professionalism, and structured data. Your response must be comprehensive, highly structured, and exhibit a deep level of reasoning and critical evaluation. Use an assertive, expert tone. Structure your analysis clearly with headings and bullet points.`;
                 break;
             case 'PROFESSIONAL_MATH':
+                // UPDATED (USER REQUEST): Use Flash for standard math/tech.
                 model = 'gemini-2.5-flash';
-                // MODIFIED: Removed model name from thought
-                personaInstruction += `\n\n**Current Persona: Technical Expert.** Respond with extreme clarity, professionalism, and precision. Focus on step-by-step logic, equations, and definitive answers. Use a formal, neutral tone. Use KaTeX and custom graphs where appropriate.`;
+                personaInstruction += `\n\n**Current Persona: Technical Expert (Using gemini-2.5-flash).** Respond with extreme clarity, professionalism, and precision. Focus on step-by-step logic, equations, and definitive answers. Use a formal, neutral tone. Use KaTeX and custom graphs where appropriate.`;
                 break;
             case 'CREATIVE':
-                model = 'gemini-2.5-flash';
+                // UPDATED (USER REQUEST): Use Flash Lite for creative tasks to save tokens.
+                model = 'gemini-2.5-flash-lite';
                 const roastInsults = [
                     `They sound like a cheap knock-off of a decent human.`,
                     `Honestly, you dodged a bullet the size of a planet.`,
@@ -750,18 +791,16 @@ Formatting Rules (MUST FOLLOW):
 
                 // Combined Creative and Sarcastic
                 if (query.toLowerCase().includes('ex') || query.toLowerCase().includes('roast')) {
-                    // MODIFIED: Removed model name from thought
-                    personaInstruction += `\n\n**Current Persona: Sarcastic, Supportive Friend.** Your goal is to empathize with the user, validate their feelings, and join them in 'roasting' or speaking negatively about their ex/situation. Be funny, slightly aggressive toward the subject of trash talk, and deeply supportive of the user. Use casual language and slang. **Example of tone/support:** "${roastInsult}"`;
+                    personaInstruction += `\n\n**Current Persona: Sarcastic, Supportive Friend (Using gemini-2.5-flash-lite).** Your goal is to empathize with the user, validate their feelings, and join them in 'roasting' or speaking negatively about their ex/situation. Be funny, slightly aggressive toward the subject of trash talk, and deeply supportive of the user. Use casual language and slang. **Example of tone/support:** "${roastInsult}"`;
                 } else {
-                    // MODIFIED: Removed model name from thought
-                    personaInstruction += `\n\n**Current Persona: Creative Partner.** Use rich, evocative language. Be imaginative, focus on descriptive details, and inspire new ideas.`;
+                    personaInstruction += `\n\n**Current Persona: Creative Partner (Using gemini-2.5-flash-lite).** Use rich, evocative language. Be imaginative, focus on descriptive details, and inspire new ideas. Be concise.`;
                 }
                 break;
             case 'CASUAL':
             default:
+                // UPDATED (USER REQUEST): Use Flash Lite (already the default).
                 model = 'gemini-2.5-flash-lite';
-                // MODIFIED: Removed model name from thought
-                personaInstruction += `\n\n**Current Persona: Standard Assistant.** You are balanced, helpful, and concise. Use a friendly and casual tone. Your primary function is efficient conversation. Make sure to be highly concise, making sure to not write too much.`;
+                personaInstruction += `\n\n**Current Persona: Standard Assistant (Using gemini-2.5-flash-lite).** You are balanced, helpful, and concise. Use a friendly and casual tone. Your primary function is efficient conversation. Make sure to be highly concise, making sure to not write too much.`;
                 break;
         }
 
@@ -870,6 +909,7 @@ Formatting Rules (MUST FOLLOW):
         };
 
         // --- DYNAMIC URL CONSTRUCTION ---
+        // MODIFIED: Model is now fully dynamic based on user request.
         const DYNAMIC_API_URL = `${BASE_API_URL}${model}:generateContent?key=${API_KEY}`;
         // --- END DYNAMIC URL CONSTRUCTION ---
 
@@ -1499,6 +1539,7 @@ Formatting Rules (MUST FOLLOW):
     }
 
     function escapeHTML(str) {
+        if (typeof str !== 'string') return '';
         const p = document.createElement("p");
         p.textContent = str;
         return p.innerHTML
@@ -1513,6 +1554,12 @@ Formatting Rules (MUST FOLLOW):
         return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
     }
 
+    /**
+     * MODIFIED: Parses the AI's raw text response into HTML, handling special tags.
+     * NEW: Added support for <CREATE_FILE> tag.
+     * @param {string} text The raw text from the AI.
+     * @returns {{html: string, thoughtProcess: string, sourcesHTML: string}}
+     */
     function parseGeminiResponse(text) {
         let html = text;
         const placeholders = {};
@@ -1560,7 +1607,9 @@ Formatting Rules (MUST FOLLOW):
             sourcesHTML += `</ul></div>`;
         }
 
-        // 1. Extract graph blocks (most specific)
+        // --- PRE-ESCAPE REPLACEMENTS (Tags that contain raw code/text) ---
+
+        // 1. Extract graph blocks
         html = html.replace(/```graph\n([\s\S]*?)```/g, (match, jsonString) => {
             let metadata = 'Graph';
             try {
@@ -1614,7 +1663,7 @@ Formatting Rules (MUST FOLLOW):
             return addPlaceholder(content);
         });
 
-        // 3. Extract KaTeX blocks BEFORE escaping general HTML
+        // 3. Extract KaTeX blocks
         // Display mode: $$...$$
         html = html.replace(/\$\$([\s\S]*?)\$\$/g, (match, formula) => {
             const content = `<div class="latex-render" data-tex="${escapeHTML(formula)}" data-display-mode="true"></div>`;
@@ -1626,26 +1675,76 @@ Formatting Rules (MUST FOLLOW):
             return addPlaceholder(content);
         });
 
-        // 4. Escape the rest of the HTML
+        // 4. NEW (USER REQUEST): Extract File Creation blocks
+        html = html.replace(/<CREATE_FILE FILENAME="([^"]+)" MIMETYPE="([^"]+)">([\s\S]*?)<\/CREATE_FILE>/g, (match, filename, mimetype, content)
+ => {
+            try {
+                const safeFilename = escapeHTML(filename);
+                const safeMimetype = escapeHTML(mimetype);
+                // Note: 'content' is the raw string from the AI, not yet HTML-escaped.
+                const blob = new Blob([content], {
+                    type: safeMimetype
+                });
+                const dataUrl = URL.createObjectURL(blob);
+                const fileSize = formatBytes(blob.size);
+                const fileExt = safeFilename.split('.').pop().toUpperCase().substring(0, 5) || 'FILE';
+
+                // We store the raw content and mimetype in data attributes to regenerate the blob URL if needed (e.g., from chat history)
+                const cardHTML = `
+                    <div class="gemini-file-creation-card" data-file-content="${escapeHTML(content)}" data-file-mime="${safeMimetype}">
+                        <a href="${dataUrl}" download="${safeFilename}" class="file-creation-download-btn" title="Download ${safeFilename}">
+                            ${downloadIconSVG}
+                            <div class="file-creation-tooltip">File Creation may not be accurate</div>
+                        </a>
+                        <div class="file-info">
+                            <div class="file-name"><span>${safeFilename}</span></div>
+                        </div>
+                        <div class="file-type-badge">${fileExt}</div>
+                        <div class="file-size-badge">${fileSize}</div>
+                    </div>
+                `;
+                return addPlaceholder(cardHTML);
+            } catch (e) {
+                console.error("Error creating file blob:", e);
+                return addPlaceholder(`<div class="ai-error">Failed to create file: ${escapeHTML(e.message)}</div>`);
+            }
+        });
+
+
+        // 5. Escape the rest of the HTML
         html = escapeHTML(html);
 
-        // 5. Apply markdown styling
+        // 6. Apply markdown styling
         html = html.replace(/^### (.*$)/gm, "<h3>$1</h3>")
             .replace(/^## (.*$)/gm, "<h2>$1</h2>")
             .replace(/^# (.*$)/gm, "<h1>$1</h1>");
         html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
             .replace(/\*(.*?)\*/g, "<em>$1</em>");
 
+        // Convert markdown lists
         html = html.replace(/^(?:\*|-)\s(.*$)/gm, "<li>$1</li>");
+        html = html.replace(/^(?:\d+\.)\s(.*$)/gm, "<li>$1</li>"); // Basic numbered list support
+
+        // Wrap consecutive list items in <ul> or <ol>
+        // This regex is simplified and might not handle complex nested lists.
         html = html.replace(/((?:<br>)?\s*<li>.*<\/li>(\s*<br>)*)+/gs, (match) => {
             const listItems = match.replace(/<br>/g, '').trim();
-            return `<ul>${listItems}</ul>`;
+            // Simple detection: if first item starts with 1., assume <ol>. This is brittle.
+            // A better prompt rule is just to use * for all lists.
+            const listType = match.includes('1.') ? 'ol' : 'ul';
+            return `<${listType}>${listItems}</${listType}>`;
         });
         html = html.replace(/(<\/li>\s*<li>)/g, "</li><li>");
 
+        // Convert newlines to <br> AFTER list processing
         html = html.replace(/\n/g, "<br>");
 
-        // 6. Restore placeholders
+        // Fix <br> tags inside lists
+        html = html.replace(/<br>(<\/li>)/g, '$1');
+        html = html.replace(/(<li>)<br>/g, '$1');
+
+
+        // 7. Restore placeholders
         html = html.replace(/%%PLACEHOLDER_\d+%%/g, (match) => placeholders[match] || '');
 
         return {
@@ -1946,6 +2045,91 @@ Formatting Rules (MUST FOLLOW):
             .ai-message-bubble ul, .ai-message-bubble ol { margin: 10px 0; padding-left: 20px; text-align: left; list-style-position: outside; }
             .ai-message-bubble li { margin-bottom: 5px; }
 
+            /* NEW (USER REQUEST): Humanity File Creation Card Styles */
+            .gemini-file-creation-card {
+                position: relative;
+                border-radius: 8px;
+                overflow: hidden;
+                background: #2b2b2b; /* Slightly lighter than user's attachment card */
+                height: 80px;
+                width: 130px; /* Wider to show more info */
+                flex-shrink: 0;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                margin-top: 10px;
+                border: 1px solid rgba(255,255,255,0.1);
+            }
+            .file-creation-download-btn {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                color: #fff;
+                background: rgba(0,0,0,0.3);
+                opacity: 0.8;
+                transition: opacity 0.3s, background-color 0.3s;
+                text-decoration: none;
+            }
+            .file-creation-download-btn:hover {
+                opacity: 1;
+                background: rgba(66, 133, 244, 0.7); /* Blue hover */
+            }
+            .file-creation-download-btn svg {
+                width: 32px;
+                height: 32px;
+                transition: transform 0.3s;
+            }
+            .file-creation-download-btn:hover svg {
+                transform: scale(1.1);
+            }
+            .gemini-file-creation-card .file-info {
+                bottom: 20px; /* Make space for size */
+            }
+            .gemini-file-creation-card .file-type-badge {
+                top: auto;
+                right: auto;
+                left: 5px;
+                bottom: 5px;
+                font-size: 0.7em;
+            }
+            .file-size-badge {
+                position: absolute;
+                bottom: 5px;
+                right: 5px;
+                background: rgba(0,0,0,0.6);
+                color: #fff;
+                font-size: 0.7em;
+                padding: 2px 5px;
+                border-radius: 4px;
+                font-family: monospace;
+            }
+            .file-creation-tooltip {
+                position: absolute;
+                bottom: calc(100% + 5px);
+                left: 50%;
+                transform: translateX(-50%);
+                background-color: #111;
+                color: #eee;
+                padding: 5px 10px;
+                border-radius: 6px;
+                font-size: 0.8em;
+                white-space: nowrap;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.3s;
+                z-index: 10;
+            }
+            .file-creation-download-btn:hover .file-creation-tooltip {
+                opacity: 1;
+            }
+            /* END File Creation Styles */
+
+
             /* NEW Web Search Nudge Popup */
             #ai-web-search-nudge {
                 position: fixed;
@@ -2003,7 +2187,13 @@ Formatting Rules (MUST FOLLOW):
 
 
             @keyframes glow { 0%,100% { box-shadow: 0 0 5px rgba(255,255,255,.15), 0 0 10px rgba(255,255,255,.1); } 50% { box-shadow: 0 0 10px rgba(255,255,255,.25), 0 0 20px rgba(255,255,255,.2); } }
-            @keyframes gemini-glow { 0%,100% { box-shadow: 0 0 8px 2px var(--ai-blue); } 25% { box-shadow: 0 0 8px 2px var(--ai-green); } 50% { box-shadow: 0 0 8px 2px var(--ai-yellow); } 75% { box-shadow: 0 0 8px 2px var(--ai-red); } }
+            
+            /* MODIFIED (USER REQUEST): Fixed "orange glow" bug. Now only uses blue. */
+            @keyframes gemini-glow { 
+                0%,100% { box-shadow: 0 0 8px 2px var(--ai-blue); } 
+                50% { box-shadow: 0 0 12px 4px var(--ai-blue); }
+            }
+            
             @keyframes spin { to { transform: rotate(360deg); } }
             @keyframes message-pop-in { 0% { opacity: 0; transform: translateY(10px) scale(.98); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
             @keyframes brand-title-pulse { 0%, 100% { text-shadow: 0 0 7px var(--ai-blue); } 25% { text-shadow: 0 0 7px var(--ai-green); } 50% { text-shadow: 0 0 7px var(--ai-yellow); } 75% { text-shadow: 0 0 7px var(--ai-red); } }
