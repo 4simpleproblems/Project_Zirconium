@@ -2418,7 +2418,6 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
                 const cardHTML = `
                     <div class="gemini-file-creation-card" data-file-content="${escapeHTML(content)}" data-file-mime="${safeMimetype}">
                         <div class="file-header">
-                            <div class="file-type-badge">${fileExt}</div>
                             <div class="file-name-container">
                                 <div class="file-name" title="${safeFilename}">
                                     <span>${safeFilename}</span>
@@ -2428,6 +2427,7 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
                                 ${downloadIconSVG}
                                 <div class="file-creation-tooltip">File Creation may not be accurate</div>
                             </a>
+                            <div class="file-type-badge">${fileExt}</div>
                         </div>
                         <div class="file-body">
                             <div class="file-icon">📄</div>
@@ -2544,6 +2544,7 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
             #ai-char-counter.limit-exceeded { color: #e57373; font-weight: bold; }
             #ai-response-container { flex: 1 1 auto; overflow-y: auto; width: 100%; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; padding: 20px; -webkit-mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%); mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%);}
             .ai-message-bubble { background: rgba(15,15,18,.8); border: 1px solid rgba(255,255,255,.1); border-radius: 16px; padding: 12px 18px; color: #e0e0e0; backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); animation: message-pop-in .5s cubic-bezier(.4,0,.2,1) forwards; max-width: 90%; line-height: 1.6; overflow-wrap: break-word; transition: opacity 0.3s ease-in-out; align-self: flex-start; text-align: left; }
+            .gemini-response .ai-message-bubble { padding-top: 0; }
             .user-message { background: rgba(40,45,50,.8); align-self: flex-end; }
             .gemini-response { animation: glow 4s infinite; display: flex; flex-direction: column; }
             .gemini-response.loading { display: flex; justify-content: center; align-items: center; min-height: 60px; max-width: 100px; padding: 15px; background: rgba(15,15,18,.8); animation: gemini-glow 4s linear infinite; }
@@ -3202,7 +3203,7 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
                 width: 24px;
                 height: 24px;
                 position: relative;
-                margin-left: auto;
+                flex-shrink: 0;
             }
             .file-creation-download-btn:hover {
                 background: rgba(66, 133, 244, 1);
@@ -3238,7 +3239,6 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
                 font-family: 'Courier New', monospace;
                 font-weight: bold;
                 flex-shrink: 0;
-                order: -1;
             }
             .file-size-badge {
                 background: rgba(255,255,255,0.1);
