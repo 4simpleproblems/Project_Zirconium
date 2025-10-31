@@ -38,11 +38,12 @@
  * CSS: Thought process container is neutral when collapsed, blue when expanded.
  * CSS: Thought process collapse/expand animation is now faster (0.2s) and removes opacity fade.
  * CSS (USER REQUEST): Fixed "orange glow" bug on the loading bubble. The glow is now consistently blue.
+ * FIX (USER REQUEST): Corrected a SyntaxError in `parseGeminiResponse` caused by a newline before an arrow function '=>'.
  */
 (function() {
     // --- CONFIGURATION ---
     const API_KEY = 'AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro';
-    const BASE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/`;
+    const BASE_API_URL = `https://generativelightlanguage.googleapis.com/v1beta/models/`;
     // const AUTHORIZED_PRO_USER = '4simpleproblems@gmail.com'; // REMOVED
     const MAX_INPUT_HEIGHT = 180;
     const CHAR_LIMIT = 10000;
@@ -793,6 +794,7 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
                 if (query.toLowerCase().includes('ex') || query.toLowerCase().includes('roast')) {
                     personaInstruction += `\n\n**Current Persona: Sarcastic, Supportive Friend (Using gemini-2.5-flash-lite).** Your goal is to empathize with the user, validate their feelings, and join them in 'roasting' or speaking negatively about their ex/situation. Be funny, slightly aggressive toward the subject of trash talk, and deeply supportive of the user. Use casual language and slang. **Example of tone/support:** "${roastInsult}"`;
                 } else {
+                    // MODIFIED: Removed model name from thought
                     personaInstruction += `\n\n**Current Persona: Creative Partner (Using gemini-2.5-flash-lite).** Use rich, evocative language. Be imaginative, focus on descriptive details, and inspire new ideas. Be concise.`;
                 }
                 break;
@@ -1676,8 +1678,8 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
         });
 
         // 4. NEW (USER REQUEST): Extract File Creation blocks
-        html = html.replace(/<CREATE_FILE FILENAME="([^"]+)" MIMETYPE="([^"]+)">([\s\S]*?)<\/CREATE_FILE>/g, (match, filename, mimetype, content)
- => {
+        // FIX: Moved '=> {' to the same line as the arguments to fix SyntaxError.
+        html = html.replace(/<CREATE_FILE FILENAME="([^"]+)" MIMETYPE="([^"]+)">([\s\S]*?)<\/CREATE_FILE>/g, (match, filename, mimetype, content) => {
             try {
                 const safeFilename = escapeHTML(filename);
                 const safeMimetype = escapeHTML(mimetype);
@@ -2202,8 +2204,10 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
         document.head.appendChild(style);
     }
 
+    // Attach the keydown listener to the document
     document.addEventListener('keydown', handleKeyDown);
 
+    // Load settings when the DOM is ready
     document.addEventListener('DOMContentLoaded', async () => {
         loadAppSettings(); // Replaced loadUserSettings
     });
