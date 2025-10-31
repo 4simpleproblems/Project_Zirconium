@@ -2418,6 +2418,7 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
                 const cardHTML = `
                     <div class="gemini-file-creation-card" data-file-content="${escapeHTML(content)}" data-file-mime="${safeMimetype}">
                         <div class="file-header">
+                            <div class="file-type-badge">${fileExt}</div>
                             <div class="file-name-container">
                                 <div class="file-name" title="${safeFilename}">
                                     <span>${safeFilename}</span>
@@ -2431,7 +2432,6 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
                         <div class="file-body">
                             <div class="file-icon">📄</div>
                             <div class="file-meta">
-                                <div class="file-type-badge">${fileExt}</div>
                                 <div class="file-size-badge">${fileSize}</div>
                             </div>
                         </div>
@@ -2542,7 +2542,7 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
             #ai-close-button { position: absolute; top: 20px; right: 30px; color: rgba(255,255,255,.7); font-size: 40px; cursor: pointer; transition: color .2s ease,transform .3s ease, opacity 0.4s; }
             #ai-char-counter { position: fixed; bottom: 15px; right: 30px; font-size: 0.9em; font-family: monospace; color: #aaa; transition: color 0.2s; z-index: 2147483647; }
             #ai-char-counter.limit-exceeded { color: #e57373; font-weight: bold; }
-            #ai-response-container { flex: 1 1 auto; overflow-y: auto; width: 100%; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; padding: 20px 20px 20px 20px; -webkit-mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%); mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%);}
+            #ai-response-container { flex: 1 1 auto; overflow-y: auto; width: 100%; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; padding: 20px; -webkit-mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%); mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%);}
             .ai-message-bubble { background: rgba(15,15,18,.8); border: 1px solid rgba(255,255,255,.1); border-radius: 16px; padding: 12px 18px; color: #e0e0e0; backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); animation: message-pop-in .5s cubic-bezier(.4,0,.2,1) forwards; max-width: 90%; line-height: 1.6; overflow-wrap: break-word; transition: opacity 0.3s ease-in-out; align-self: flex-start; text-align: left; }
             .user-message { background: rgba(40,45,50,.8); align-self: flex-end; }
             .gemini-response { animation: glow 4s infinite; display: flex; flex-direction: column; }
@@ -3112,7 +3112,8 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
                 min-height: 350px; position: relative; padding: 15px;
             }
             .chart-canvas, .advanced-graph-canvas {
-                position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+                position: absolute; top: 15px; left: 15px;
+                width: calc(100% - 30px); height: calc(100% - 30px);
             }
             .code-block-header, .graph-block-header { display: flex; justify-content: flex-end; align-items: center; padding: 6px 12px; background-color: rgba(0,0,0,0.2); }
             .code-metadata, .graph-metadata { font-size: 0.8em; color: #aaa; margin-right: auto; font-family: monospace; }
@@ -3125,7 +3126,8 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
             .code-block-wrapper pre::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
             .code-block-wrapper code { font-family: 'Menlo', 'Consolas', monospace; font-size: 0.9em; color: #f0f0f0; }
             .custom-graph-placeholder { min-height: 400px; position: relative; padding: 10px; }
-            .graph-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+            .graph-canvas { position: absolute; top: 10px; left: 10px;
+                width: calc(100% - 20px); height: calc(100% - 20px); }
 
             .latex-render { display: inline-block; } /* default to inline */
             .ai-response-content div.latex-render { display: block; margin: 10px 0; text-align: center; } /* for display mode */
@@ -3159,16 +3161,15 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
             .file-header {
                 display: flex;
                 align-items: center;
-                justify-content: space-between;
                 padding: 8px 12px;
                 background: rgba(0,0,0,0.2);
                 border-bottom: 1px solid rgba(255,255,255,0.1);
                 min-height: 32px;
+                gap: 8px;
             }
             .file-name-container {
                 flex: 1;
                 overflow: hidden;
-                margin-right: 8px;
             }
             .file-name {
                 color: #fff;
@@ -3201,6 +3202,7 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
                 width: 24px;
                 height: 24px;
                 position: relative;
+                margin-left: auto;
             }
             .file-creation-download-btn:hover {
                 background: rgba(66, 133, 244, 1);
@@ -3235,6 +3237,7 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
                 border-radius: 4px;
                 font-family: 'Courier New', monospace;
                 font-weight: bold;
+                flex-shrink: 0;
             }
             .file-size-badge {
                 background: rgba(255,255,255,0.1);
