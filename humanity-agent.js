@@ -1568,8 +1568,10 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
                         </button>
                         <p class="memories-info">Memories help the AI remember important information about you across conversations.</p>
                     </div>
-                    <div id="memories-list" class="memories-list">
-                        ${renderMemoriesList()}
+                    <div class="memories-scroll-container">
+                        <div id="memories-list" class="memories-list">
+                            ${renderMemoriesList()}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1601,13 +1603,16 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
 
         return savedMemories.map((memory, index) => `
             <div class="memory-item">
-                <div class="memory-content">${escapeHTML(memory.content)}</div>
-                <div class="memory-meta">
-                    <span class="memory-date">${new Date(memory.timestamp).toLocaleDateString()}</span>
-                    <button class="delete-memory-btn" data-index="${index}">
+                <div class="memory-header">
+                    <div class="memory-icon">
+                        <i class="fa-solid fa-brain"></i>
+                    </div>
+                    <div class="memory-date">${new Date(memory.timestamp).toLocaleDateString()}</div>
+                    <button class="delete-memory-btn" data-index="${index}" title="Delete memory">
                         <i class="fa-solid fa-trash"></i>
                     </button>
                 </div>
+                <div class="memory-content">${escapeHTML(memory.content)}</div>
             </div>
         `).join('');
     }
@@ -2281,20 +2286,33 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
             }
         });
 
-        // 2. Extract general code blocks
+        // 2. Extract general code blocks (including JSON)
         html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
             const trimmedCode = code.trim();
             const lines = trimmedCode.split('\n').length;
             const words = trimmedCode.split(/\s+/).filter(Boolean).length;
             const escapedCode = escapeHTML(trimmedCode);
             const langClass = lang ? `language-${lang.toLowerCase()}` : '';
+
+            // Special handling for JSON to format it nicely
+            let displayCode = escapedCode;
+            if (lang && lang.toLowerCase() === 'json') {
+                try {
+                    const parsed = JSON.parse(trimmedCode);
+                    displayCode = escapeHTML(JSON.stringify(parsed, null, 2));
+                } catch (e) {
+                    // If JSON is invalid, just use the original
+                    displayCode = escapedCode;
+                }
+            }
+
             const content = `
                 <div class="code-block-wrapper">
                     <div class="code-block-header">
-                        <span class="code-metadata">${lines} lines &middot; ${words} words</span>
+                        <span class="code-metadata">${lang ? lang.toUpperCase() : 'CODE'} &middot; ${lines} lines &middot; ${words} words</span>
                         <button class="copy-code-btn" title="Copy code">${copyIconSVG}</button>
                     </div>
-                    <pre><code class="${langClass}">${escapedCode}</code></pre>
+                    <pre><code class="${langClass}">${displayCode}</code></pre>
                 </div>
             `;
             return addPlaceholder(content);
@@ -2716,51 +2734,95 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
                 padding: 20px 24px; overflow-y: auto; flex: 1;
             }
 
-            /* Memories Modal Specific Styles */
+            /* Enhanced Memories Modal Styles */
             .memories-controls {
                 margin-bottom: 20px; text-align: center;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+                padding-bottom: 20px;
             }
             .memories-info {
                 color: rgba(255,255,255,0.6); font-size: 0.9em;
                 margin: 10px 0 0; line-height: 1.4;
             }
             .primary-btn {
-                background: #4285f4; color: white; border: none;
-                padding: 10px 20px; border-radius: 8px; cursor: pointer;
-                font-size: 0.9em; transition: all 0.2s;
-                display: inline-flex; align-items: center; gap: 8px;
+                background: linear-gradient(135deg, #4285f4, #34a853);
+                color: white; border: none; padding: 12px 24px;
+                border-radius: 10px; cursor: pointer; font-size: 0.9em;
+                transition: all 0.3s; display: inline-flex;
+                align-items: center; gap: 8px; font-weight: 500;
+                box-shadow: 0 2px 8px rgba(66, 133, 244, 0.2);
             }
             .primary-btn:hover {
-                background: #3367d6; transform: translateY(-1px);
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(66, 133, 244, 0.4);
+                background: linear-gradient(135deg, #5a95f5, #4caf50);
+            }
+            .memories-scroll-container {
+                max-height: 350px; overflow-y: auto; padding-right: 8px;
+                margin-right: -8px;
+            }
+            .memories-scroll-container::-webkit-scrollbar {
+                width: 6px;
+            }
+            .memories-scroll-container::-webkit-scrollbar-track {
+                background: rgba(255,255,255,0.1); border-radius: 3px;
+            }
+            .memories-scroll-container::-webkit-scrollbar-thumb {
+                background: rgba(66, 133, 244, 0.6); border-radius: 3px;
+                transition: background 0.2s;
+            }
+            .memories-scroll-container::-webkit-scrollbar-thumb:hover {
+                background: rgba(66, 133, 244, 0.8);
             }
             .memories-list {
-                max-height: 300px; overflow-y: auto;
+                display: flex; flex-direction: column; gap: 12px;
             }
             .no-memories {
                 text-align: center; color: rgba(255,255,255,0.5);
-                padding: 40px 20px; font-style: italic;
+                padding: 60px 20px; font-style: italic; font-size: 1.1em;
             }
             .memory-item {
-                background: rgba(255,255,255,0.05); border-radius: 8px;
-                padding: 12px 16px; margin-bottom: 8px;
-                border: 1px solid rgba(255,255,255,0.1);
+                background: linear-gradient(135deg, rgba(66, 133, 244, 0.1), rgba(52, 168, 83, 0.05));
+                border-radius: 12px; padding: 16px; border: 1px solid rgba(66, 133, 244, 0.2);
+                transition: all 0.3s ease; position: relative; overflow: hidden;
             }
-            .memory-content {
-                color: white; line-height: 1.4; margin-bottom: 8px;
+            .memory-item:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 25px rgba(66, 133, 244, 0.15);
+                border-color: rgba(66, 133, 244, 0.4);
             }
-            .memory-meta {
-                display: flex; justify-content: space-between; align-items: center;
+            .memory-item::before {
+                content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+                background: linear-gradient(90deg, #4285f4, #34a853);
+                opacity: 0; transition: opacity 0.3s;
+            }
+            .memory-item:hover::before {
+                opacity: 1;
+            }
+            .memory-header {
+                display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+            }
+            .memory-icon {
+                color: #4285f4; font-size: 1.1em; width: 20px; text-align: center;
             }
             .memory-date {
-                color: rgba(255,255,255,0.5); font-size: 0.8em;
+                color: rgba(255,255,255,0.5); font-size: 0.8em; font-family: monospace;
+                margin-left: auto;
+            }
+            .memory-content {
+                color: rgba(255,255,255,0.9); line-height: 1.5; font-size: 0.95em;
+                padding-left: 32px;
             }
             .delete-memory-btn {
-                background: none; border: none; color: rgba(255,100,100,0.7);
-                cursor: pointer; padding: 4px; border-radius: 4px;
-                transition: all 0.2s;
+                background: rgba(255,100,100,0.1); border: none;
+                color: rgba(255,100,100,0.7); cursor: pointer;
+                padding: 6px; border-radius: 6px; transition: all 0.2s;
+                width: 28px; height: 28px; display: flex;
+                align-items: center; justify-content: center;
             }
             .delete-memory-btn:hover {
-                background: rgba(255,100,100,0.1); color: #ff6b6b;
+                background: rgba(255,100,100,0.2); color: #ff6b6b;
+                transform: scale(1.1);
             }
             /* END Modal Styles */
 
