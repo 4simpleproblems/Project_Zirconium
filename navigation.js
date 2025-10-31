@@ -8,12 +8,12 @@
  * --- UPDATES & FEATURES ---
  * 1. ADMIN EMAIL SET: The privileged email is set to 4simpleproblems@gmail.com.
  * 2. AI FEATURES REMOVED: All AI-related code has been removed.
- * 3. GOLD ADMIN TAB: The 'Beta Settings' tab now has a premium gold-textured look and uses the path: ../logged-in/beta-settings.html.
+ * 3. GOLD ADMIN TAB: The 'Beta Settings' tab now has a premium gold-textured look and uses the path: ../logged-in/beta-settings.html. (PRESERVED)
  * 4. SETTINGS LINK: Includes the 'Settings' link in the authenticated user's dropdown menu.
- * 5. ACTIVE TAB SCROLL: Auto-scrolls the active tab to the center of the viewport for visibility.
- * 6. LOGOUT REDIRECT: Redirects logged-out users away from logged-in pages.
- * 7. (NEW) FULL THEMING SYSTEM: Replaced all hardcoded colors with CSS variables. Added a global `window.applyTheme` function to set themes. Navbar now loads the user's saved theme from Local Storage on startup. Added CSS transitions for smooth theme fading. (MERGED FROM navigation-new.js)
- * 8. (NEW) LOGO TINTING: Replaced logo `<img>` tag with a `<div>` using `mask-image`. `window.applyTheme` now supports `logo-tint-color` from themes.json to dynamically color the logo. (MERGED FROM navigation-new.js)
+ * 5. ACTIVE TAB SCROLL: Auto-scrolls the active tab to the center of the viewport for visibility. (PRESERVED)
+ * 6. LOGOUT REDIRECT: Redirects logged-out users away from logged-in pages. (PRESERVED)
+ * 7. (NEW) FULL THEMING SYSTEM: Merged theme configuration, CSS variables, and theme application logic from navigation-new.js.
+ * 8. (NEW) LOGO TINTING: Merged logo tinting logic from navigation-new.js.
  */
 
 // =========================================================================
@@ -42,9 +42,9 @@ const THEME_STORAGE_KEY = 'user-navbar-theme';
 // This object defines the default "Dark" theme.
 // It must contain ALL CSS variables used in injectStyles.
 const DEFAULT_THEME = {
-    'name': 'Dark', // --- NEW: Added name to default theme
+    'name': 'Dark',
     'logo-src': '/images/logo.png',
-    'logo-tint-color': null, // --- NEW: Added logo-tint-color key
+    'logo-tint-color': null, // null means use the default tint logic
     'navbar-bg': '#000000',
     'navbar-border': 'rgb(31 41 55)',
     'avatar-gradient': 'linear-gradient(135deg, #374151 0%, #111827 100%)',
@@ -53,7 +53,7 @@ const DEFAULT_THEME = {
     'menu-border': 'rgb(55 65 81)',
     'menu-divider': '#374151',
     'menu-text': '#d1d5db',
-    'menu-username-text': '#ffffff', // --- USERNAME COLOR FIX --- (1/3) Added new variable
+    'menu-username-text': '#ffffff',
     'menu-item-hover-bg': 'rgb(55 65 81)',
     'menu-item-hover-text': '#ffffff',
     'glass-menu-bg': 'rgba(10, 10, 10, 0.8)',
@@ -285,7 +285,7 @@ let db;
 
         // --- 3. INJECT CSS STYLES (MOVED BEFORE INITIALIZEAPP) ---
         // This now uses CSS variables for all colors and adds transitions.
-        injectStyles(); // <--- MOVED HERE
+        injectStyles();
         
         // --- NEW: Load and apply theme *before* first render.
         let savedTheme;
@@ -355,7 +355,7 @@ let db;
                     border-color: var(--menu-divider) !important;
                     transition: border-color 0.3s ease;
                 }
-                /* --- USERNAME COLOR FIX --- (3/3) Added new style rule */
+                /* --- USERNAME COLOR FIX --- Added new style rule */
                 .auth-menu-username {
                     color: var(--menu-username-text);
                     transition: color 0.3s ease;
@@ -570,8 +570,6 @@ let db;
         const renderNavbar = (user, userData, pages, isPrivilegedUser) => {
             const container = document.getElementById('navbar-container');
             if (!container) return; 
-
-            // REMOVED: const logoPath = "/images/logo.png"; (no longer needed)
             
             // Filter and map pages for tabs, applying adminOnly filter
             const tabsHtml = Object.values(pages || {})
@@ -787,14 +785,6 @@ let db;
                 }
             }
         });
-
-        // --- FINAL SETUP ---
-        // PRESERVED: Original setup
-        // Create a div for the navbar to live in if it doesn't exist.
-        // (This was moved to the top of initializeApp)
-        
-        // Inject styles before anything else is rendered for best stability
-        // (This was moved to the top of initializeApp)
     };
 
     // --- START THE PROCESS ---
