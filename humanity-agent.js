@@ -293,24 +293,72 @@
     }
 
     /**
-     * Renders interactive graphs using a custom canvas engine.
-     * @param {HTMLElement} container The parent element to search for graph placeholders.
+     * Renders interactive graphs, tables, charts, and advanced visualizations.
+     * @param {HTMLElement} container The parent element to search for visualization placeholders.
      */
     function renderGraphs(container) {
+        // Render standard graphs
         container.querySelectorAll('.custom-graph-placeholder').forEach(placeholder => {
             try {
                 const graphData = JSON.parse(placeholder.dataset.graphData);
                 const canvas = placeholder.querySelector('canvas');
                 if (canvas) {
                     const draw = () => drawCustomGraph(canvas, graphData);
-                    // Use ResizeObserver to redraw the canvas when its container size changes
                     const observer = new ResizeObserver(debounce(draw, 100));
                     observer.observe(placeholder);
-                    draw(); // Initial draw
+                    draw();
                 }
             } catch (e) {
                 console.error("Custom graph rendering error:", e);
                 placeholder.textContent = `[Graph Error] Invalid graph data provided.`;
+            }
+        });
+
+        // Render tables
+        container.querySelectorAll('.custom-table-placeholder').forEach(placeholder => {
+            try {
+                const tableData = JSON.parse(placeholder.dataset.tableData);
+                const tableContainer = placeholder.querySelector('.table-container');
+                if (tableContainer) {
+                    drawCustomTable(tableContainer, tableData);
+                }
+            } catch (e) {
+                console.error("Custom table rendering error:", e);
+                placeholder.textContent = `[Table Error] Invalid table data provided.`;
+            }
+        });
+
+        // Render charts
+        container.querySelectorAll('.custom-chart-placeholder').forEach(placeholder => {
+            try {
+                const chartData = JSON.parse(placeholder.dataset.chartData);
+                const canvas = placeholder.querySelector('canvas');
+                if (canvas) {
+                    const draw = () => drawCustomChart(canvas, chartData);
+                    const observer = new ResizeObserver(debounce(draw, 100));
+                    observer.observe(placeholder);
+                    draw();
+                }
+            } catch (e) {
+                console.error("Custom chart rendering error:", e);
+                placeholder.textContent = `[Chart Error] Invalid chart data provided.`;
+            }
+        });
+
+        // Render advanced graphs
+        container.querySelectorAll('.custom-advanced-graph-placeholder').forEach(placeholder => {
+            try {
+                const graphData = JSON.parse(placeholder.dataset.advancedGraphData);
+                const canvas = placeholder.querySelector('canvas');
+                if (canvas) {
+                    const draw = () => drawAdvancedGraph(canvas, graphData);
+                    const observer = new ResizeObserver(debounce(draw, 100));
+                    observer.observe(placeholder);
+                    draw();
+                }
+            } catch (e) {
+                console.error("Advanced graph rendering error:", e);
+                placeholder.textContent = `[Advanced Graph Error] Invalid graph data provided.`;
             }
         });
     }
@@ -443,6 +491,277 @@
         }
     }
 
+    /**
+     * Custom table rendering function.
+     * @param {HTMLElement} container The container element to render the table in.
+     * @param {object} tableData The table data configuration.
+     */
+    function drawCustomTable(container, tableData) {
+        const { headers, rows, title } = tableData;
+
+        let html = '';
+        if (title) {
+            html += `<h4 class="table-title">${escapeHTML(title)}</h4>`;
+        }
+
+        html += '<table class="custom-data-table">';
+
+        // Headers
+        if (headers && headers.length > 0) {
+            html += '<thead><tr>';
+            headers.forEach(header => {
+                html += `<th>${escapeHTML(header)}</th>`;
+            });
+            html += '</tr></thead>';
+        }
+
+        // Rows
+        if (rows && rows.length > 0) {
+            html += '<tbody>';
+            rows.forEach(row => {
+                html += '<tr>';
+                row.forEach(cell => {
+                    html += `<td>${escapeHTML(String(cell))}</td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</tbody>';
+        }
+
+        html += '</table>';
+        container.innerHTML = html;
+    }
+
+    /**
+     * Custom chart rendering function using HTML Canvas.
+     * @param {HTMLCanvasElement} canvas The canvas element to draw on.
+     * @param {object} chartData The chart data and configuration.
+     */
+    function drawCustomChart(canvas, chartData) {
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const { type, data, title } = chartData;
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        const radius = Math.min(rect.width, rect.height) / 3;
+
+        // Draw title
+        if (title) {
+            ctx.fillStyle = '#fff';
+            ctx.font = '16px Merriweather';
+            ctx.textAlign = 'center';
+            ctx.fillText(title, centerX, 30);
+        }
+
+        if (type === 'pie' && data && data.length > 0) {
+            drawPieChart(ctx, data, centerX, centerY, radius);
+        } else if (type === 'bar' && data && data.length > 0) {
+            drawBarChart(ctx, data, rect);
+        } else if (type === 'doughnut' && data && data.length > 0) {
+            drawDoughnutChart(ctx, data, centerX, centerY, radius);
+        }
+    }
+
+    /**
+     * Draws a pie chart.
+     */
+    function drawPieChart(ctx, data, centerX, centerY, radius) {
+        const total = data.reduce((sum, item) => sum + item.value, 0);
+        const colors = ['#4285f4', '#ea4335', '#34a853', '#fbbc05', '#9c27b0', '#ff9800', '#795548', '#607d8b'];
+
+        let currentAngle = -Math.PI / 2;
+
+        data.forEach((item, index) => {
+            const sliceAngle = (item.value / total) * 2 * Math.PI;
+
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.arc(centerX, centerY, radius, currentAngle, currentAngle + sliceAngle);
+            ctx.closePath();
+            ctx.fillStyle = colors[index % colors.length];
+            ctx.fill();
+
+            // Draw label
+            const labelAngle = currentAngle + sliceAngle / 2;
+            const labelX = centerX + Math.cos(labelAngle) * (radius * 0.7);
+            const labelY = centerY + Math.sin(labelAngle) * (radius * 0.7);
+
+            ctx.fillStyle = '#fff';
+            ctx.font = '12px Lora';
+            ctx.textAlign = 'center';
+            ctx.fillText(item.label, labelX, labelY);
+
+            currentAngle += sliceAngle;
+        });
+    }
+
+    /**
+     * Draws a bar chart.
+     */
+    function drawBarChart(ctx, data, rect) {
+        const padding = { top: 60, right: 30, bottom: 60, left: 60 };
+        const chartWidth = rect.width - padding.left - padding.right;
+        const chartHeight = rect.height - padding.top - padding.bottom;
+
+        const maxValue = Math.max(...data.map(item => item.value));
+        const barWidth = chartWidth / data.length * 0.8;
+        const barSpacing = chartWidth / data.length * 0.2;
+
+        const colors = ['#4285f4', '#ea4335', '#34a853', '#fbbc05', '#9c27b0'];
+
+        data.forEach((item, index) => {
+            const barHeight = (item.value / maxValue) * chartHeight;
+            const x = padding.left + index * (barWidth + barSpacing) + barSpacing / 2;
+            const y = padding.top + chartHeight - barHeight;
+
+            ctx.fillStyle = colors[index % colors.length];
+            ctx.fillRect(x, y, barWidth, barHeight);
+
+            // Draw label
+            ctx.fillStyle = '#fff';
+            ctx.font = '12px Lora';
+            ctx.textAlign = 'center';
+            ctx.fillText(item.label, x + barWidth / 2, rect.height - padding.bottom + 20);
+
+            // Draw value
+            ctx.fillText(item.value.toString(), x + barWidth / 2, y - 10);
+        });
+    }
+
+    /**
+     * Draws a doughnut chart.
+     */
+    function drawDoughnutChart(ctx, data, centerX, centerY, radius) {
+        const innerRadius = radius * 0.6;
+        const total = data.reduce((sum, item) => sum + item.value, 0);
+        const colors = ['#4285f4', '#ea4335', '#34a853', '#fbbc05', '#9c27b0', '#ff9800'];
+
+        let currentAngle = -Math.PI / 2;
+
+        data.forEach((item, index) => {
+            const sliceAngle = (item.value / total) * 2 * Math.PI;
+
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, currentAngle, currentAngle + sliceAngle);
+            ctx.arc(centerX, centerY, innerRadius, currentAngle + sliceAngle, currentAngle, true);
+            ctx.closePath();
+            ctx.fillStyle = colors[index % colors.length];
+            ctx.fill();
+
+            currentAngle += sliceAngle;
+        });
+    }
+
+    /**
+     * Advanced graph rendering with multiple datasets and complex visualizations.
+     */
+    function drawAdvancedGraph(canvas, graphData) {
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const layout = graphData.layout || {};
+        const datasets = graphData.datasets || [];
+
+        const padding = { top: 60, right: 40, bottom: 60, left: 70 };
+        const graphWidth = rect.width - padding.left - padding.right;
+        const graphHeight = rect.height - padding.top - padding.bottom;
+
+        // Find data ranges across all datasets
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        datasets.forEach(dataset => {
+            if (dataset.x && dataset.y) {
+                dataset.x.forEach(val => {
+                    minX = Math.min(minX, val);
+                    maxX = Math.max(maxX, val);
+                });
+                dataset.y.forEach(val => {
+                    minY = Math.min(minY, val);
+                    maxY = Math.max(maxY, val);
+                });
+            }
+        });
+
+        // Add buffer
+        const xRange = maxX - minX || 1;
+        const yRange = maxY - minY || 1;
+        minX -= xRange * 0.1;
+        maxX += xRange * 0.1;
+        minY -= yRange * 0.1;
+        maxY += yRange * 0.1;
+
+        const mapX = x => padding.left + ((x - minX) / (maxX - minX)) * graphWidth;
+        const mapY = y => padding.top + graphHeight - ((y - minY) / (maxY - minY)) * graphHeight;
+
+        // Draw grid and axes (similar to basic graph)
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.lineWidth = 1;
+
+        // Grid lines
+        for (let i = 0; i <= 10; i++) {
+            const x = padding.left + (i / 10) * graphWidth;
+            const y = padding.top + (i / 10) * graphHeight;
+
+            ctx.beginPath();
+            ctx.moveTo(x, padding.top);
+            ctx.lineTo(x, padding.top + graphHeight);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(padding.left, y);
+            ctx.lineTo(padding.left + graphWidth, y);
+            ctx.stroke();
+        }
+
+        // Draw datasets with different colors and styles
+        const colors = ['#4285f4', '#ea4335', '#34a853', '#fbbc05', '#9c27b0', '#ff9800'];
+
+        datasets.forEach((dataset, index) => {
+            if (!dataset.x || !dataset.y) return;
+
+            const color = dataset.color || colors[index % colors.length];
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = dataset.lineWidth || 2;
+
+            // Draw line
+            ctx.beginPath();
+            ctx.moveTo(mapX(dataset.x[0]), mapY(dataset.y[0]));
+            for (let i = 1; i < dataset.x.length; i++) {
+                ctx.lineTo(mapX(dataset.x[i]), mapY(dataset.y[i]));
+            }
+            ctx.stroke();
+
+            // Draw markers if specified
+            if (dataset.showMarkers !== false) {
+                for (let i = 0; i < dataset.x.length; i++) {
+                    ctx.beginPath();
+                    ctx.arc(mapX(dataset.x[i]), mapY(dataset.y[i]), 4, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            }
+        });
+
+        // Draw title and legend
+        if (layout.title) {
+            ctx.fillStyle = '#fff';
+            ctx.font = '18px Merriweather';
+            ctx.textAlign = 'center';
+            ctx.fillText(layout.title, rect.width / 2, 30);
+        }
+    }
 
     // --- END REPLACED/MODIFIED FUNCTIONS ---
 
@@ -792,15 +1111,19 @@ Formatting Rules (MUST FOLLOW AT ALL TIMES):
 - **ALWAYS** append all external sources used (if any) as a list of tags: <SOURCE URL="[URL]" TITLE="[Title]"/>.
 - **Math**: You **MUST** use KaTeX. Inline math **MUST** use single \`$\`. Display math **MUST** use double \`$$\`. Use \\le for <= and \\ge for >=.
 - **Graphs**: You **MUST** use a 'graph' block (e.g., \`\`\`graph\n{...}\n\`\`\`) for plotting.
+- **Tables**: You **MUST** use a 'table' block (e.g., \`\`\`table\n{...}\n\`\`\`) for data tables.
+- **Charts**: You **MUST** use a 'chart' block (e.g., \`\`\`chart\n{...}\n\`\`\`) for pie charts, bar charts, etc.
+- **Advanced Graphs**: You **MUST** use a 'advanced-graph' block for complex visualizations with multiple datasets.
 - **Lists**: You **MUST** use proper markdown for bulleted (\`* \`) or numbered (\`1. \`) lists. Do not use plain text hyphens.
 - **Bold/Italic**: You **MUST** use \`**bold**\` and \`*italic*\` for emphasis.
-- **File Creation (NEW)**: To generate a downloadable file, you **MUST** use this exact format:
+- **File Creation**: To generate a downloadable file, you **MUST** use this exact format:
 <CREATE_FILE FILENAME="example.py" MIMETYPE="text/plain">
 # All file content goes here, exactly as it should be in the file.
 # Do not add any other text or formatting inside this block.
 print("Hello, world!")
 </CREATE_FILE>
 You **MUST** also provide a brief summary of the file's purpose in your main response, *outside* of the CREATE_FILE block.
+- **CRITICAL**: You must ALWAYS provide a complete, properly formatted response. Never send only the thought process without the actual answer. The response structure must be: <THOUGHT_PROCESS>...</THOUGHT_PROCESS> followed by your complete answer with proper formatting.
 `;
 
         // NEW: Add web search instruction (MODIFIED for clarity and forcefulness)
@@ -815,12 +1138,12 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
             case 'DEEP_ANALYSIS':
                 // NEW (USER REQUEST): Use Pro model for deep analysis and complex tasks.
                 model = 'gemini-2.5-pro';
-                personaInstruction += `\n\n**Current Persona: Professional Analyst (Using gemini-2.5-pro).** You are performing a detailed analysis. Respond with clarity, professionalism, and structured data. Your response must be comprehensive, highly structured, and exhibit a deep level of reasoning and critical evaluation. Use an assertive, expert tone. Structure your analysis clearly with headings and bullet points.`;
+                personaInstruction += `\n\n**Current Persona: Professional Analyst (Using gemini-2.5-pro).** You are performing a detailed analysis. Respond with clarity, professionalism, and structured data. Your response must be comprehensive, highly structured, and exhibit a deep level of reasoning and critical evaluation. Use an assertive, expert tone. Structure your analysis clearly with headings and bullet points. REMEMBER: You must ALWAYS provide both <THOUGHT_PROCESS> and your complete formatted answer.`;
                 break;
             case 'PROFESSIONAL_MATH':
                 // UPDATED (USER REQUEST): Use Flash for standard math/tech.
                 model = 'gemini-2.5-flash';
-                personaInstruction += `\n\n**Current Persona: Technical Expert (Using gemini-2.5-flash).** Respond with extreme clarity, professionalism, and precision. Focus on step-by-step logic, equations, and definitive answers. Use a formal, neutral tone. Use KaTeX and custom graphs where appropriate.`;
+                personaInstruction += `\n\n**Current Persona: Technical Expert (Using gemini-2.5-flash).** Respond with extreme clarity, professionalism, and precision. Focus on step-by-step logic, equations, and definitive answers. Use a formal, neutral tone. Use KaTeX and custom graphs where appropriate. REMEMBER: You must ALWAYS provide both <THOUGHT_PROCESS> and your complete formatted answer.`;
                 break;
             case 'CREATIVE':
                 // UPDATED (USER REQUEST): Use Flash Lite for creative tasks to save tokens.
@@ -835,17 +1158,17 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
 
                 // Combined Creative and Sarcastic
                 if (query.toLowerCase().includes('ex') || query.toLowerCase().includes('roast')) {
-                    personaInstruction += `\n\n**Current Persona: Sarcastic, Supportive Friend (Using gemini-2.5-flash-lite).** Your goal is to empathize with the user, validate their feelings, and join them in 'roasting' or speaking negatively about their ex/situation. Be funny, slightly aggressive toward the subject of trash talk, and deeply supportive of the user. Use casual language and slang. **Example of tone/support:** "${roastInsult}"`;
+                    personaInstruction += `\n\n**Current Persona: Sarcastic, Supportive Friend (Using gemini-2.5-flash-lite).** Your goal is to empathize with the user, validate their feelings, and join them in 'roasting' or speaking negatively about their ex/situation. Be funny, slightly aggressive toward the subject of trash talk, and deeply supportive of the user. Use casual language and slang. **Example of tone/support:** "${roastInsult}" REMEMBER: You must ALWAYS provide both <THOUGHT_PROCESS> and your complete formatted answer.`;
                 } else {
                     // MODIFIED: Removed model name from thought
-                    personaInstruction += `\n\n**Current Persona: Creative Partner (Using gemini-2.5-flash-lite).** Use rich, evocative language. Be imaginative, focus on descriptive details, and inspire new ideas. Be concise.`;
+                    personaInstruction += `\n\n**Current Persona: Creative Partner (Using gemini-2.5-flash-lite).** Use rich, evocative language. Be imaginative, focus on descriptive details, and inspire new ideas. Be concise. REMEMBER: You must ALWAYS provide both <THOUGHT_PROCESS> and your complete formatted answer.`;
                 }
                 break;
             case 'CASUAL':
             default:
                 // UPDATED (USER REQUEST): Use Flash Lite (already the default).
                 model = 'gemini-2.5-flash-lite';
-                personaInstruction += `\n\n**Current Persona: Standard Assistant (Using gemini-2.5-flash-lite).** You are balanced, helpful, and concise. Use a friendly and casual tone. Your primary function is efficient conversation. Make sure to be highly concise, making sure to not write too much.`;
+                personaInstruction += `\n\n**Current Persona: Standard Assistant (Using gemini-2.5-flash-lite).** You are balanced, helpful, and concise. Use a friendly and casual tone. Your primary function is efficient conversation. Make sure to be highly concise, making sure to not write too much. REMEMBER: You must ALWAYS provide both <THOUGHT_PROCESS> and your complete formatted answer.`;
                 break;
         }
 
@@ -1003,7 +1326,7 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
 
             responseBubble.style.opacity = '0';
             setTimeout(() => {
-                let fullContent = `<div class="ai-response-content">${contentHTML}</div>`;
+                let fullContent = `<div class="ai-response-content typing-animation">${contentHTML}</div>`;
 
                 // NEW: Sources first
                 if (sourcesHTML) {
@@ -1024,6 +1347,15 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
                 }
 
                 responseBubble.innerHTML = fullContent;
+
+                // Add terminal-style typing animation to the response content
+                const responseContent = responseBubble.querySelector('.ai-response-content');
+                if (responseContent) {
+                    responseContent.classList.add('terminal-typing');
+                    setTimeout(() => {
+                        responseContent.classList.remove('terminal-typing');
+                    }, 1500);
+                }
 
                 // Add click handlers for monologue toggle
                 responseBubble.querySelectorAll('.ai-thought-process').forEach(monologueDiv => {
@@ -1459,41 +1791,67 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
 
         attachedFiles.forEach((file, index) => {
             const fileCard = document.createElement('div');
-            fileCard.className = 'attachment-card';
+            fileCard.className = 'attachment-card enhanced-attachment';
             let previewHTML = '';
             let fileExt = 'FILE';
             let fileName = '';
+            let fileSize = '';
 
             if (file.isLoading) {
                 fileCard.classList.add('loading');
                 fileName = file.file.name;
                 fileExt = fileName.split('.').pop().toUpperCase();
-                previewHTML = `<div class="ai-loader"></div><span class="file-icon">📄</span>`;
+                fileSize = formatBytes(file.file.size);
+                previewHTML = `
+                    <div class="attachment-loading-overlay">
+                        <div class="terminal-loader">
+                            <div class="terminal-text">Uploading...</div>
+                            <div class="terminal-cursor">_</div>
+                        </div>
+                    </div>
+                    <span class="file-icon">📄</span>
+                `;
             } else {
                 fileName = file.fileName;
                 fileExt = fileName.split('.').pop().toUpperCase();
+                if (file.inlineData) {
+                    fileSize = formatBytes(atob(file.inlineData.data).length);
+                }
+
                 if (file.inlineData.mimeType.startsWith('image/')) {
-                    previewHTML = `<img src="data:${file.inlineData.mimeType};base64,${file.inlineData.data}" alt="${fileName}" />`;
+                    previewHTML = `
+                        <img src="data:${file.inlineData.mimeType};base64,${file.inlineData.data}" alt="${fileName}" />
+                        <div class="attachment-overlay">
+                            <div class="attachment-info">
+                                <div class="attachment-name">${escapeHTML(fileName)}</div>
+                                <div class="attachment-size">${fileSize}</div>
+                            </div>
+                        </div>
+                    `;
                 } else {
-                    previewHTML = `<span class="file-icon">📄</span>`;
+                    previewHTML = `
+                        <div class="file-icon-large">📄</div>
+                        <div class="attachment-overlay">
+                            <div class="attachment-info">
+                                <div class="attachment-name">${escapeHTML(fileName)}</div>
+                                <div class="attachment-size">${fileSize}</div>
+                            </div>
+                        </div>
+                    `;
                 }
                 fileCard.onclick = () => showFilePreview(file);
             }
 
             if (fileExt.length > 5) fileExt = 'FILE';
-            let fileTypeBadge = `<div class="file-type-badge">${fileExt}</div>`;
-            if (file.inlineData && file.inlineData.mimeType.startsWith('image/')) {
-                fileTypeBadge = '';
-            }
+            let fileTypeBadge = `<div class="file-type-badge enhanced-badge">${fileExt}</div>`;
 
-            const nameSpan = document.createElement('span');
-            nameSpan.textContent = fileName;
-            const marqueeWrapper = document.createElement('div');
-            marqueeWrapper.className = 'file-name';
-            marqueeWrapper.appendChild(nameSpan);
-
-            fileCard.innerHTML = `${previewHTML}<div class="file-info"></div>${fileTypeBadge}<button class="remove-attachment-btn" data-index="${index}">&times;</button>`;
-            fileCard.querySelector('.file-info').appendChild(marqueeWrapper);
+            fileCard.innerHTML = `
+                ${previewHTML}
+                ${fileTypeBadge}
+                <button class="remove-attachment-btn enhanced-remove" data-index="${index}" title="Remove ${fileName}">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            `;
 
             setTimeout(() => {
                 if (nameSpan.scrollWidth > marqueeWrapper.clientWidth) {
@@ -1716,7 +2074,21 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
             responseContainer.appendChild(userBubble);
             const responseBubble = document.createElement('div');
             responseBubble.className = 'ai-message-bubble gemini-response loading';
-            responseBubble.innerHTML = '<div class="ai-loader"></div>';
+            responseBubble.innerHTML = `
+                <div class="enhanced-ai-loader">
+                    <div class="terminal-loading">
+                        <div class="loading-text">Processing</div>
+                        <div class="loading-dots">
+                            <span>.</span><span>.</span><span>.</span>
+                        </div>
+                    </div>
+                    <div class="circuit-lines">
+                        <div class="circuit-line"></div>
+                        <div class="circuit-line"></div>
+                        <div class="circuit-line"></div>
+                    </div>
+                </div>
+            `;
             responseContainer.appendChild(responseBubble);
             responseContainer.scrollTop = responseContainer.scrollHeight;
             editor.innerHTML = '';
@@ -1860,6 +2232,67 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
                 </div>
             `;
             return addPlaceholder(content);
+        });
+
+        // 1a. Extract table blocks
+        html = html.replace(/```table\n([\s\S]*?)```/g, (match, jsonString) => {
+            try {
+                const tableData = JSON.parse(jsonString);
+                const content = `
+                    <div class="table-block-wrapper">
+                        <div class="table-block-header">
+                            <span class="table-metadata">Data Table</span>
+                        </div>
+                        <div class="custom-table-placeholder" data-table-data='${escapeHTML(jsonString)}'>
+                            <div class="table-container"></div>
+                        </div>
+                    </div>
+                `;
+                return addPlaceholder(content);
+            } catch (e) {
+                return addPlaceholder(`<div class="ai-error">Invalid table data: ${escapeHTML(e.message)}</div>`);
+            }
+        });
+
+        // 1b. Extract chart blocks
+        html = html.replace(/```chart\n([\s\S]*?)```/g, (match, jsonString) => {
+            try {
+                const chartData = JSON.parse(jsonString);
+                const chartType = chartData.type || 'pie';
+                const content = `
+                    <div class="chart-block-wrapper">
+                        <div class="chart-block-header">
+                            <span class="chart-metadata">${chartType.charAt(0).toUpperCase() + chartType.slice(1)} Chart</span>
+                        </div>
+                        <div class="custom-chart-placeholder" data-chart-data='${escapeHTML(jsonString)}'>
+                            <canvas class="chart-canvas"></canvas>
+                        </div>
+                    </div>
+                `;
+                return addPlaceholder(content);
+            } catch (e) {
+                return addPlaceholder(`<div class="ai-error">Invalid chart data: ${escapeHTML(e.message)}</div>`);
+            }
+        });
+
+        // 1c. Extract advanced graph blocks
+        html = html.replace(/```advanced-graph\n([\s\S]*?)```/g, (match, jsonString) => {
+            try {
+                const graphData = JSON.parse(jsonString);
+                const content = `
+                    <div class="advanced-graph-block-wrapper">
+                        <div class="advanced-graph-block-header">
+                            <span class="advanced-graph-metadata">Advanced Visualization</span>
+                        </div>
+                        <div class="custom-advanced-graph-placeholder" data-advanced-graph-data='${escapeHTML(jsonString)}'>
+                            <canvas class="advanced-graph-canvas"></canvas>
+                        </div>
+                    </div>
+                `;
+                return addPlaceholder(content);
+            } catch (e) {
+                return addPlaceholder(`<div class="ai-error">Invalid advanced graph data: ${escapeHTML(e.message)}</div>`);
+            }
         });
 
         // 2. Extract general code blocks
@@ -2031,6 +2464,25 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
             .user-message { background: rgba(40,45,50,.8); align-self: flex-end; }
             .gemini-response { animation: glow 4s infinite; display: flex; flex-direction: column; }
             .gemini-response.loading { display: flex; justify-content: center; align-items: center; min-height: 60px; max-width: 100px; padding: 15px; background: rgba(15,15,18,.8); animation: gemini-glow 4s linear infinite; }
+
+            /* Terminal-Style Typing Animation */
+            .ai-response-content.terminal-typing {
+                position: relative;
+                overflow: hidden;
+            }
+            .ai-response-content.terminal-typing::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                right: 0;
+                bottom: 0;
+                left: 0;
+                background: linear-gradient(90deg, transparent 0%, rgba(15,15,18,.8) 50%, transparent 100%);
+                animation: terminal-reveal 1.5s ease-out forwards;
+            }
+            .typing-animation {
+                animation: terminal-type-in 1.5s steps(40, end) forwards;
+            }
             
             /* UPDATED STYLES for Sources (Top) and Collapsible Monologue (Bottom) */
             
@@ -2247,7 +2699,7 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
             /* NEW Modal Styles */
             .ai-modal {
                 position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                background: rgba(0, 0, 0, 0.8); z-index: 10000;
+                background: rgba(0, 0, 0, 0.8); z-index: 2147483648;
                 display: flex; align-items: center; justify-content: center;
                 backdrop-filter: blur(5px);
             }
@@ -2326,23 +2778,215 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
             }
             /* END Modal Styles */
 
-            /* Attachments, Code Blocks, Graphs, LaTeX */
-            #ai-attachment-preview { display: none; flex-direction: row; gap: 10px; padding: 0; max-height: 0; border-bottom: 1px solid transparent; overflow-x: auto; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-            #ai-input-wrapper.has-attachments #ai-attachment-preview { max-height: 100px; padding: 10px 15px; }
-            .attachment-card { position: relative; border-radius: 8px; overflow: hidden; background: #333; height: 80px; width: 80px; flex-shrink: 0; display: flex; justify-content: center; align-items: center; transition: filter 0.3s; cursor: pointer; }
-            .attachment-card.loading { filter: grayscale(80%) brightness(0.7); }
-            .attachment-card.loading .file-icon { opacity: 0.3; }
-            .attachment-card.loading .ai-loader { position: absolute; z-index: 2; }
-            .attachment-card img { width: 100%; height: 100%; object-fit: cover; }
+            /* Enhanced Attachments, Code Blocks, Graphs, LaTeX */
+            #ai-attachment-preview { display: none; flex-direction: row; gap: 12px; padding: 0; max-height: 0; border-bottom: 1px solid transparent; overflow-x: auto; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+            #ai-input-wrapper.has-attachments #ai-attachment-preview { max-height: 120px; padding: 12px 15px; }
+
+            /* Enhanced Attachment Cards */
+            .attachment-card.enhanced-attachment {
+                position: relative; border-radius: 12px; overflow: hidden;
+                background: linear-gradient(135deg, #2a2a2e 0%, #1e1e22 100%);
+                height: 100px; width: 120px; flex-shrink: 0;
+                display: flex; justify-content: center; align-items: center;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                cursor: pointer; border: 1px solid rgba(255,255,255,0.1);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            }
+            .attachment-card.enhanced-attachment:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 25px rgba(66, 133, 244, 0.3);
+                border-color: rgba(66, 133, 244, 0.5);
+            }
+            .attachment-card.enhanced-attachment.loading {
+                filter: none;
+                background: linear-gradient(135deg, #1a1a1e 0%, #0f0f12 100%);
+                animation: loading-pulse 2s ease-in-out infinite;
+            }
+
+            /* Enhanced Loading Animation */
+            .attachment-loading-overlay {
+                position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.8); display: flex;
+                justify-content: center; align-items: center; z-index: 3;
+            }
+            .terminal-loader {
+                display: flex; align-items: center; gap: 4px;
+                font-family: 'Courier New', monospace; color: #4285f4;
+                font-size: 0.8em;
+            }
+            .terminal-cursor {
+                animation: terminal-blink 1s infinite;
+            }
+
+            /* Enhanced Attachment Info */
+            .attachment-overlay {
+                position: absolute; bottom: 0; left: 0; right: 0;
+                background: linear-gradient(transparent, rgba(0,0,0,0.8));
+                padding: 8px; opacity: 0; transition: opacity 0.3s;
+            }
+            .attachment-card.enhanced-attachment:hover .attachment-overlay {
+                opacity: 1;
+            }
+            .attachment-info {
+                text-align: center;
+            }
+            .attachment-name {
+                color: #fff; font-size: 0.75em; font-weight: 500;
+                white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+                margin-bottom: 2px;
+            }
+            .attachment-size {
+                color: #aaa; font-size: 0.65em; font-family: monospace;
+            }
+
+            /* Enhanced File Icons */
+            .file-icon-large {
+                font-size: 2.5em; opacity: 0.7;
+                filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+            }
+
+            /* Enhanced Badges and Buttons */
+            .file-type-badge.enhanced-badge {
+                position: absolute; top: 8px; right: 8px;
+                background: rgba(66, 133, 244, 0.9); color: #fff;
+                font-size: 0.65em; padding: 3px 6px; border-radius: 6px;
+                font-family: 'Courier New', monospace; font-weight: bold;
+                text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            }
+            .remove-attachment-btn.enhanced-remove {
+                position: absolute; top: 8px; left: 8px;
+                background: rgba(234, 67, 53, 0.9); color: #fff;
+                border: none; border-radius: 8px; width: 24px; height: 24px;
+                cursor: pointer; display: flex; align-items: center;
+                justify-content: center; z-index: 4;
+                transition: all 0.2s; font-size: 0.8em;
+            }
+            .remove-attachment-btn.enhanced-remove:hover {
+                background: rgba(234, 67, 53, 1);
+                transform: scale(1.1);
+            }
+
+            /* Legacy attachment styles for compatibility */
+            .attachment-card:not(.enhanced-attachment) { position: relative; border-radius: 8px; overflow: hidden; background: #333; height: 80px; width: 80px; flex-shrink: 0; display: flex; justify-content: center; align-items: center; transition: filter 0.3s; cursor: pointer; }
+            .attachment-card:not(.enhanced-attachment).loading { filter: grayscale(80%) brightness(0.7); }
+            .attachment-card:not(.enhanced-attachment).loading .file-icon { opacity: 0.3; }
+            .attachment-card:not(.enhanced-attachment).loading .ai-loader { position: absolute; z-index: 2; }
+            .attachment-card:not(.enhanced-attachment) img { width: 100%; height: 100%; object-fit: cover; }
             .file-info { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); overflow: hidden; }
             .file-name { display: block; color: #fff; font-size: 0.75em; padding: 4px; text-align: center; white-space: nowrap; }
             .file-name.marquee > span { display: inline-block; padding-left: 100%; animation: marquee linear infinite; }
-            .file-type-badge { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.7em; padding: 2px 5px; border-radius: 4px; font-family: sans-serif; font-weight: bold; }
-            .remove-attachment-btn { position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.5); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; z-index: 3; }
+            .file-type-badge:not(.enhanced-badge) { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.7em; padding: 2px 5px; border-radius: 4px; font-family: sans-serif; font-weight: bold; }
+            .remove-attachment-btn:not(.enhanced-remove) { position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.5); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; z-index: 3; }
 
             .ai-loader { width: 25px; height: 25px; border-radius: 50%; animation: spin 1s linear infinite; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; }
-            
-            .code-block-wrapper, .graph-block-wrapper { background-color: rgba(42, 42, 48, 0.8); border-radius: 8px; margin: 10px 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+
+            /* Enhanced AI Loader */
+            .enhanced-ai-loader {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 15px;
+                padding: 20px;
+            }
+            .terminal-loading {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-family: 'Courier New', monospace;
+                color: #4285f4;
+                font-size: 0.9em;
+            }
+            .loading-text {
+                animation: hologram-flicker 2s infinite;
+            }
+            .loading-dots {
+                display: flex;
+                gap: 2px;
+            }
+            .loading-dots span {
+                animation: terminal-blink 1.5s infinite;
+                animation-delay: calc(var(--i) * 0.3s);
+            }
+            .loading-dots span:nth-child(1) { --i: 0; }
+            .loading-dots span:nth-child(2) { --i: 1; }
+            .loading-dots span:nth-child(3) { --i: 2; }
+
+            .circuit-lines {
+                display: flex;
+                gap: 8px;
+                width: 60px;
+                height: 20px;
+                position: relative;
+            }
+            .circuit-line {
+                width: 2px;
+                height: 100%;
+                background: linear-gradient(to bottom, transparent, #4285f4, transparent);
+                animation: data-flow 2s infinite;
+                animation-delay: calc(var(--i) * 0.4s);
+            }
+            .circuit-line:nth-child(1) { --i: 0; }
+            .circuit-line:nth-child(2) { --i: 1; }
+            .circuit-line:nth-child(3) { --i: 2; }
+
+            /* Enhanced Code Blocks, Graphs, Tables, Charts */
+            .code-block-wrapper, .graph-block-wrapper, .table-block-wrapper, .chart-block-wrapper, .advanced-graph-block-wrapper {
+                background-color: rgba(42, 42, 48, 0.8); border-radius: 12px; margin: 15px 0;
+                overflow: hidden; border: 1px solid rgba(255,255,255,0.1);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                transition: all 0.3s ease;
+            }
+            .code-block-wrapper:hover, .graph-block-wrapper:hover, .table-block-wrapper:hover, .chart-block-wrapper:hover, .advanced-graph-block-wrapper:hover {
+                border-color: rgba(66, 133, 244, 0.3);
+                box-shadow: 0 6px 20px rgba(66, 133, 244, 0.1);
+            }
+
+            /* Enhanced Tables */
+            .table-block-header, .chart-block-header, .advanced-graph-block-header {
+                display: flex; justify-content: flex-end; align-items: center;
+                padding: 8px 16px; background-color: rgba(0,0,0,0.3);
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+            }
+            .table-metadata, .chart-metadata, .advanced-graph-metadata {
+                font-size: 0.8em; color: #aaa; margin-right: auto;
+                font-family: 'Courier New', monospace; font-weight: 500;
+            }
+            .custom-data-table {
+                width: 100%; border-collapse: collapse; margin: 0;
+                font-family: 'Courier New', monospace; font-size: 0.9em;
+            }
+            .custom-data-table th, .custom-data-table td {
+                padding: 12px 16px; text-align: left;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+            }
+            .custom-data-table th {
+                background-color: rgba(66, 133, 244, 0.2);
+                color: #4285f4; font-weight: bold;
+                text-transform: uppercase; font-size: 0.8em;
+                letter-spacing: 0.5px;
+            }
+            .custom-data-table td {
+                color: #e0e0e0;
+                transition: background-color 0.2s;
+            }
+            .custom-data-table tr:hover td {
+                background-color: rgba(255,255,255,0.05);
+            }
+            .table-title {
+                color: #fff; margin: 0 0 15px 0; padding: 0 16px;
+                font-family: 'Merriweather', serif; font-size: 1.1em;
+            }
+            .table-container {
+                padding: 16px; max-height: 400px; overflow-y: auto;
+            }
+
+            /* Chart and Advanced Graph Containers */
+            .custom-chart-placeholder, .custom-advanced-graph-placeholder {
+                min-height: 350px; position: relative; padding: 15px;
+            }
+            .chart-canvas, .advanced-graph-canvas {
+                position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            }
             .code-block-header, .graph-block-header { display: flex; justify-content: flex-end; align-items: center; padding: 6px 12px; background-color: rgba(0,0,0,0.2); }
             .code-metadata, .graph-metadata { font-size: 0.8em; color: #aaa; margin-right: auto; font-family: monospace; }
             .copy-code-btn { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; border-radius: 6px; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s; }
@@ -2505,18 +3149,90 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
             /* END Nudge CSS */
 
 
+            /* Enhanced Coding-Themed Animations */
             @keyframes glow { 0%,100% { box-shadow: 0 0 5px rgba(255,255,255,.15), 0 0 10px rgba(255,255,255,.1); } 50% { box-shadow: 0 0 10px rgba(255,255,255,.25), 0 0 20px rgba(255,255,255,.2); } }
-            
+
             /* MODIFIED (USER REQUEST): Fixed "orange glow" bug. Now only uses blue. */
-            @keyframes gemini-glow { 
-                0%,100% { box-shadow: 0 0 8px 2px var(--ai-blue); } 
+            @keyframes gemini-glow {
+                0%,100% { box-shadow: 0 0 8px 2px var(--ai-blue); }
                 50% { box-shadow: 0 0 12px 4px var(--ai-blue); }
             }
-            
+
             @keyframes spin { to { transform: rotate(360deg); } }
             @keyframes message-pop-in { 0% { opacity: 0; transform: translateY(10px) scale(.98); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
             @keyframes brand-title-pulse { 0%, 100% { text-shadow: 0 0 7px var(--ai-blue); } 25% { text-shadow: 0 0 7px var(--ai-green); } 50% { text-shadow: 0 0 7px var(--ai-yellow); } 75% { text-shadow: 0 0 7px var(--ai-red); } }
             @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+
+            /* New Coding-Themed Animations */
+            @keyframes terminal-blink {
+                0%, 50% { opacity: 1; }
+                51%, 100% { opacity: 0; }
+            }
+            @keyframes loading-pulse {
+                0%, 100% { background: linear-gradient(135deg, #1a1a1e 0%, #0f0f12 100%); }
+                50% { background: linear-gradient(135deg, #2a2a2e 0%, #1e1e22 100%); }
+            }
+            @keyframes code-typing {
+                0% { width: 0; }
+                100% { width: 100%; }
+            }
+            @keyframes matrix-rain {
+                0% { transform: translateY(-100%); opacity: 0; }
+                10% { opacity: 1; }
+                90% { opacity: 1; }
+                100% { transform: translateY(100vh); opacity: 0; }
+            }
+            @keyframes data-flow {
+                0% { transform: translateX(-100%); }
+                100% { transform: translateX(100%); }
+            }
+            @keyframes circuit-pulse {
+                0%, 100% {
+                    box-shadow: 0 0 5px rgba(66, 133, 244, 0.3),
+                               inset 0 0 5px rgba(66, 133, 244, 0.1);
+                }
+                50% {
+                    box-shadow: 0 0 20px rgba(66, 133, 244, 0.6),
+                               inset 0 0 10px rgba(66, 133, 244, 0.3);
+                }
+            }
+            @keyframes hologram-flicker {
+                0%, 100% { opacity: 1; filter: hue-rotate(0deg); }
+                25% { opacity: 0.8; filter: hue-rotate(90deg); }
+                50% { opacity: 0.9; filter: hue-rotate(180deg); }
+                75% { opacity: 0.7; filter: hue-rotate(270deg); }
+            }
+            @keyframes digital-glitch {
+                0%, 100% { transform: translateX(0); }
+                10% { transform: translateX(-2px); }
+                20% { transform: translateX(2px); }
+                30% { transform: translateX(-1px); }
+                40% { transform: translateX(1px); }
+                50% { transform: translateX(-2px); }
+                60% { transform: translateX(2px); }
+                70% { transform: translateX(-1px); }
+                80% { transform: translateX(1px); }
+                90% { transform: translateX(-2px); }
+            }
+            @keyframes terminal-reveal {
+                0% { left: 0; right: 100%; }
+                50% { left: 0; right: 0; }
+                100% { left: 100%; right: 0; }
+            }
+            @keyframes terminal-type-in {
+                0% {
+                    max-height: 0;
+                    opacity: 0;
+                }
+                50% {
+                    max-height: 200px;
+                    opacity: 0.7;
+                }
+                100% {
+                    max-height: none;
+                    opacity: 1;
+                }
+            }
         `;
         document.head.appendChild(style);
     }
