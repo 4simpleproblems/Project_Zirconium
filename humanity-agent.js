@@ -1016,7 +1016,7 @@
                     sourcesHTML
                 } = parseGeminiResponse(message.parts[0].text);
 
-                bubble.innerHTML = `<div class="ai-response-content">${parsedResponse}</div>`;
+                bubble.innerHTML = parsedResponse;
 
                 // NEW: Sources first
                 if (sourcesHTML) {
@@ -1395,7 +1395,7 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
 
             responseBubble.style.opacity = '0';
             setTimeout(() => {
-                let fullContent = `<div class="ai-response-content typing-animation">${contentHTML}</div>`;
+                let fullContent = `<div class="typing-animation">${contentHTML}</div>`;
 
                 // NEW: Sources first
                 if (sourcesHTML) {
@@ -1418,7 +1418,7 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
                 responseBubble.innerHTML = fullContent;
 
                 // Add terminal-style typing animation to the response content
-                const responseContent = responseBubble.querySelector('.ai-response-content');
+                const responseContent = responseBubble.querySelector('.typing-animation');
                 if (responseContent) {
                     responseContent.classList.add('terminal-typing');
                     setTimeout(() => {
@@ -2550,11 +2550,11 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
             .gemini-response.loading { display: flex; justify-content: center; align-items: center; min-height: 60px; max-width: 100px; padding: 15px; background: rgba(15,15,18,.8); animation: gemini-glow 4s linear infinite; }
 
             /* Terminal-Style Typing Animation */
-            .ai-response-content.terminal-typing {
+            .typing-animation.terminal-typing {
                 position: relative;
                 overflow: hidden;
             }
-            .ai-response-content.terminal-typing::after {
+            .typing-animation.terminal-typing::after {
                 content: '';
                 position: absolute;
                 top: 0;
@@ -3131,7 +3131,7 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
                 width: calc(100% - 20px); height: calc(100% - 20px); }
 
             .latex-render { display: inline-block; } /* default to inline */
-            .ai-response-content div.latex-render { display: block; margin: 10px 0; text-align: center; } /* for display mode */
+            .typing-animation div.latex-render { display: block; margin: 10px 0; text-align: center; } /* for display mode */
             .katex { font-size: 1.1em !important; }
 
             .ai-message-bubble p { margin: 0; padding: 0; text-align: left; }
@@ -3239,6 +3239,7 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
                 font-family: 'Courier New', monospace;
                 font-weight: bold;
                 flex-shrink: 0;
+                margin-left: 12px;
             }
             .file-size-badge {
                 background: rgba(255,255,255,0.1);
