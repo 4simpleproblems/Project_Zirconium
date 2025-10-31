@@ -271,7 +271,178 @@
 .color-option.selected {
     border-color: #3b82f6; /* Blue-500 */
     box-shadow: 0 0 0 3px #3b82f680;
-    background-color: #18202d; 
+    background-color: #18202d;
+}
+
+/* NEW: Avatar and Personalization Styles */
+.avatar-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.avatar-options {
+    flex: 1;
+}
+
+.form-select, .form-input {
+    background-color: #374151;
+    border: 1px solid #4b5563;
+    border-radius: 6px;
+    color: white;
+    padding: 8px 12px;
+    font-size: 14px;
+}
+
+.form-select:focus, .form-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.emoji-btn {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.emoji-btn:hover {
+    background-color: #374151;
+}
+
+.btn-primary {
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+    background-color: #2563eb;
+}
+
+.btn-secondary {
+    background-color: #6b7280;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.btn-secondary:hover {
+    background-color: #4b5563;
+}
+
+.btn-danger {
+    background-color: #dc2626;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.btn-danger:hover {
+    background-color: #b91c1c;
+}
+
+.setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.setting-header {
+    flex: 1;
+}
+
+.setting-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 24px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #374151;
+    transition: 0.3s;
+    border-radius: 24px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+    background-color: #3b82f6;
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(24px);
+}
+
+/* Compact mode styles */
+body.compact-mode {
+    --spacing-scale: 0.8;
+}
+
+body.compact-mode .setting-item {
+    padding: 12px;
+}
+
+body.compact-mode .settings-section {
+    margin-bottom: 20px;
+}
+
+/* Crop canvas styles */
+#crop-canvas {
+    max-width: 200px;
+    max-height: 200px;
+}
+
+.hidden {
+    display: none !important;
 }
     </style>
 </head>
@@ -534,12 +705,16 @@
                     panelContent.innerHTML = '<p class="message-area message-error">Could not load theme data. Please try refreshing the page.</p>';
                 }
             }
+            // NEW: Privacy & Security section rendering
+            else if (sectionId === 'privacy') {
+                renderPrivacySettings();
+            }
             // ADDED: Data Management section rendering
             else if (sectionId === 'data') {
                 renderDataManagement();
             }
             // --- END MODIFICATION ---
-            else { 
+            else {
                 // Render placeholder for all other sections
                 panelContent.innerHTML = `
                     <div class="flex flex-col space-y-4">
@@ -1040,6 +1215,277 @@
             }
         }
 
+        /* --- START PRIVACY & SECURITY FUNCTIONS --- */
+
+        /**
+         * Renders the content for the "Privacy & Security" tab
+         */
+        function renderPrivacySettings() {
+            panelContent.innerHTML = `
+                <div class="settings-section">
+                    <h3 class="text-xl font-semibold text-white mb-4">Account Security</h3>
+                    <div class="space-y-4">
+                        <div class="setting-item">
+                            <div class="setting-header">
+                                <h4 class="text-lg font-medium text-white">Two-Factor Authentication</h4>
+                                <p class="text-sm text-gray-400">Add an extra layer of security to your account</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="two-factor-toggle" disabled>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                <span class="text-sm text-gray-500 ml-2">Coming Soon</span>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-header">
+                                <h4 class="text-lg font-medium text-white">Login Notifications</h4>
+                                <p class="text-sm text-gray-400">Get notified when someone logs into your account</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="login-notifications-toggle" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-header">
+                                <h4 class="text-lg font-medium text-white">Session Management</h4>
+                                <p class="text-sm text-gray-400">Manage your active sessions and devices</p>
+                            </div>
+                            <div class="setting-control">
+                                <button class="btn-secondary" onclick="showActiveSessions()">
+                                    <i class="fas fa-devices mr-2"></i>View Active Sessions
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3 class="text-xl font-semibold text-white mb-4">Data Privacy</h3>
+                    <div class="space-y-4">
+                        <div class="setting-item">
+                            <div class="setting-header">
+                                <h4 class="text-lg font-medium text-white">Analytics & Usage Data</h4>
+                                <p class="text-sm text-gray-400">Help improve 4SP by sharing anonymous usage statistics</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="analytics-toggle" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-header">
+                                <h4 class="text-lg font-medium text-white">Location Services</h4>
+                                <p class="text-sm text-gray-400">Allow location-based features and services</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="location-toggle">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-header">
+                                <h4 class="text-lg font-medium text-white">AI Data Processing</h4>
+                                <p class="text-sm text-gray-400">Allow AI features to process your data for personalization</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="ai-processing-toggle" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-header">
+                                <h4 class="text-lg font-medium text-white">Data Retention</h4>
+                                <p class="text-sm text-gray-400">Control how long your data is stored</p>
+                            </div>
+                            <div class="setting-control">
+                                <select id="data-retention-select" class="form-select">
+                                    <option value="1year">1 Year</option>
+                                    <option value="2years" selected>2 Years</option>
+                                    <option value="5years">5 Years</option>
+                                    <option value="indefinite">Indefinite</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3 class="text-xl font-semibold text-white mb-4">Communication Preferences</h3>
+                    <div class="space-y-4">
+                        <div class="setting-item">
+                            <div class="setting-header">
+                                <h4 class="text-lg font-medium text-white">Marketing Communications</h4>
+                                <p class="text-sm text-gray-400">Receive updates about new features and improvements</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="marketing-toggle">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-header">
+                                <h4 class="text-lg font-medium text-white">Research Participation</h4>
+                                <p class="text-sm text-gray-400">Participate in user research and feedback programs</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="research-toggle">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3 class="text-xl font-semibold text-white mb-4">Account Actions</h3>
+                    <div class="space-y-4">
+                        <div class="setting-item">
+                            <div class="setting-header">
+                                <h4 class="text-lg font-medium text-white">Download Your Data</h4>
+                                <p class="text-sm text-gray-400">Get a copy of all your data stored in 4SP</p>
+                            </div>
+                            <div class="setting-control">
+                                <button class="btn-secondary" onclick="requestDataDownload()">
+                                    <i class="fas fa-download mr-2"></i>Request Download
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-header">
+                                <h4 class="text-lg font-medium text-red-400">Delete Account</h4>
+                                <p class="text-sm text-gray-400">Permanently delete your account and all associated data</p>
+                            </div>
+                            <div class="setting-control">
+                                <button class="btn-danger" onclick="initiateAccountDeletion()">
+                                    <i class="fas fa-trash mr-2"></i>Delete Account
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add event listeners for privacy settings
+            setupPrivacyEventListeners();
+        }
+
+        function setupPrivacyEventListeners() {
+            // Load saved privacy settings
+            loadPrivacySettings();
+
+            // Add change listeners
+            document.getElementById('login-notifications-toggle').addEventListener('change', savePrivacySettings);
+            document.getElementById('analytics-toggle').addEventListener('change', savePrivacySettings);
+            document.getElementById('location-toggle').addEventListener('change', savePrivacySettings);
+            document.getElementById('ai-processing-toggle').addEventListener('change', savePrivacySettings);
+            document.getElementById('marketing-toggle').addEventListener('change', savePrivacySettings);
+            document.getElementById('research-toggle').addEventListener('change', savePrivacySettings);
+            document.getElementById('data-retention-select').addEventListener('change', savePrivacySettings);
+        }
+
+        function loadPrivacySettings() {
+            try {
+                const settings = JSON.parse(localStorage.getItem('privacy-settings') || '{}');
+
+                // Set toggle states
+                document.getElementById('login-notifications-toggle').checked = settings.loginNotifications !== false;
+                document.getElementById('analytics-toggle').checked = settings.analytics !== false;
+                document.getElementById('location-toggle').checked = settings.location === true;
+                document.getElementById('ai-processing-toggle').checked = settings.aiProcessing !== false;
+                document.getElementById('marketing-toggle').checked = settings.marketing === true;
+                document.getElementById('research-toggle').checked = settings.research === true;
+
+                // Set data retention
+                if (settings.dataRetention) {
+                    document.getElementById('data-retention-select').value = settings.dataRetention;
+                }
+            } catch (error) {
+                console.error('Error loading privacy settings:', error);
+            }
+        }
+
+        function savePrivacySettings() {
+            try {
+                const settings = {
+                    loginNotifications: document.getElementById('login-notifications-toggle').checked,
+                    analytics: document.getElementById('analytics-toggle').checked,
+                    location: document.getElementById('location-toggle').checked,
+                    aiProcessing: document.getElementById('ai-processing-toggle').checked,
+                    marketing: document.getElementById('marketing-toggle').checked,
+                    research: document.getElementById('research-toggle').checked,
+                    dataRetention: document.getElementById('data-retention-select').value
+                };
+
+                localStorage.setItem('privacy-settings', JSON.stringify(settings));
+
+                // Show success message briefly
+                showPrivacyMessage('Privacy settings saved successfully', 'success');
+            } catch (error) {
+                console.error('Error saving privacy settings:', error);
+                showPrivacyMessage('Error saving privacy settings', 'error');
+            }
+        }
+
+        function showPrivacyMessage(message, type) {
+            // Create or update message element
+            let messageEl = document.getElementById('privacy-message');
+            if (!messageEl) {
+                messageEl = document.createElement('div');
+                messageEl.id = 'privacy-message';
+                messageEl.className = 'fixed top-4 right-4 px-4 py-2 rounded-lg z-50 transition-all duration-300';
+                document.body.appendChild(messageEl);
+            }
+
+            messageEl.textContent = message;
+            messageEl.className = `fixed top-4 right-4 px-4 py-2 rounded-lg z-50 transition-all duration-300 ${
+                type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+            }`;
+
+            // Auto-hide after 3 seconds
+            setTimeout(() => {
+                if (messageEl) {
+                    messageEl.remove();
+                }
+            }, 3000);
+        }
+
+        function showActiveSessions() {
+            alert('Active Sessions feature coming soon! This will show all devices and locations where your account is currently logged in.');
+        }
+
+        function requestDataDownload() {
+            alert('Data download feature coming soon! You will be able to download all your data in a portable format.');
+        }
+
+        function initiateAccountDeletion() {
+            if (confirm('Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently lost.')) {
+                if (confirm('This is your final warning. Are you absolutely sure you want to delete your account?')) {
+                    alert('Account deletion feature coming soon! This will permanently delete your account and all associated data.');
+                }
+            }
+        }
+
         /* --- START PERSONALIZATION FUNCTIONS (EXACTLY AS REQUESTED) --- */
         
         /**
@@ -1087,8 +1533,79 @@
                 `;
             });
             
-            // REMOVED 'Save Theme' and 'Reset to Default' buttons and the message-area div
+            // Enhanced personalization with user profile customization
             panelContent.innerHTML = `
+                <div class="settings-section">
+                    <h3 class="text-xl font-semibold text-white mb-4">User Profile</h3>
+                    <div class="space-y-6">
+                        <div class="profile-avatar-section">
+                            <h4 class="text-lg font-medium text-white mb-3">Profile Avatar</h4>
+                            <div class="flex items-center space-x-6">
+                                <div class="avatar-preview">
+                                    <div id="current-avatar" class="w-20 h-20 rounded-full bg-gray-600 flex items-center justify-center text-2xl font-bold text-white">
+                                        ${getCurrentAvatar()}
+                                    </div>
+                                </div>
+                                <div class="avatar-options space-y-3">
+                                    <div class="avatar-type-selector">
+                                        <label class="text-sm text-gray-300 mb-2 block">Avatar Type:</label>
+                                        <select id="avatar-type-select" class="form-select">
+                                            <option value="letter">Letter</option>
+                                            <option value="number">Number</option>
+                                            <option value="emoji">Emoji</option>
+                                            <option value="image">Custom Image</option>
+                                        </select>
+                                    </div>
+                                    <div id="avatar-input-container" class="avatar-input">
+                                        <!-- Dynamic content based on avatar type -->
+                                    </div>
+                                    <div id="image-upload-container" class="hidden">
+                                        <input type="file" id="avatar-image-input" accept="image/*" class="hidden">
+                                        <button class="btn-secondary" onclick="document.getElementById('avatar-image-input').click()">
+                                            <i class="fas fa-upload mr-2"></i>Upload Image
+                                        </button>
+                                        <div id="image-crop-container" class="hidden mt-4">
+                                            <canvas id="crop-canvas" class="border border-gray-600 rounded"></canvas>
+                                            <div class="mt-2 space-x-2">
+                                                <button class="btn-primary" onclick="applyCroppedImage()">Apply</button>
+                                                <button class="btn-secondary" onclick="cancelImageCrop()">Cancel</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="profile-display-section">
+                            <h4 class="text-lg font-medium text-white mb-3">Display Preferences</h4>
+                            <div class="space-y-4">
+                                <div class="setting-item">
+                                    <div class="setting-header">
+                                        <h5 class="text-md font-medium text-white">Show Avatar in Navigation</h5>
+                                        <p class="text-sm text-gray-400">Display your avatar in the top navigation bar</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="show-avatar-nav-toggle" checked>
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="setting-item">
+                                    <div class="setting-header">
+                                        <h5 class="text-md font-medium text-white">Avatar Background Color</h5>
+                                        <p class="text-sm text-gray-400">Choose a background color for letter/number avatars</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <input type="color" id="avatar-bg-color" value="#6b7280" class="w-12 h-8 rounded border-0">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="settings-section">
                     <h3 class="text-xl font-semibold text-white mb-4">Navigation Bar Theme</h3>
                     <p class="settings-description mb-4">
@@ -1098,6 +1615,52 @@
                         ${swatchesHtml}
                     </div>
                 </div>
+
+                <div class="settings-section">
+                    <h3 class="text-xl font-semibold text-white mb-4">Interface Preferences</h3>
+                    <div class="space-y-4">
+                        <div class="setting-item">
+                            <div class="setting-header">
+                                <h4 class="text-lg font-medium text-white">Animations</h4>
+                                <p class="text-sm text-gray-400">Enable smooth animations and transitions</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="animations-toggle" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-header">
+                                <h4 class="text-lg font-medium text-white">Compact Mode</h4>
+                                <p class="text-sm text-gray-400">Use a more compact layout to fit more content</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="compact-mode-toggle">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-header">
+                                <h4 class="text-lg font-medium text-white">Font Size</h4>
+                                <p class="text-sm text-gray-400">Adjust the base font size for better readability</p>
+                            </div>
+                            <div class="setting-control">
+                                <select id="font-size-select" class="form-select">
+                                    <option value="small">Small</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="large">Large</option>
+                                    <option value="extra-large">Extra Large</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             `;
             
             // Attach event listeners
@@ -1105,10 +1668,42 @@
         }
 
         /**
+         * Gets the current avatar display value
+         */
+        function getCurrentAvatar() {
+            try {
+                const avatarSettings = JSON.parse(localStorage.getItem('user-avatar-settings') || '{}');
+                return avatarSettings.display || currentUserData?.username?.charAt(0)?.toUpperCase() || 'U';
+            } catch (error) {
+                return currentUserData?.username?.charAt(0)?.toUpperCase() || 'U';
+            }
+        }
+
+        /**
          * Attaches event listeners for the Personalization panel
          */
         function attachPersonalizationListeners() {
-            
+            // Load saved personalization settings
+            loadPersonalizationSettings();
+
+            // Avatar type selector
+            document.getElementById('avatar-type-select').addEventListener('change', updateAvatarInput);
+
+            // Avatar input changes
+            document.getElementById('avatar-bg-color').addEventListener('change', updateAvatarPreview);
+
+            // Interface preference toggles
+            document.getElementById('show-avatar-nav-toggle').addEventListener('change', savePersonalizationSettings);
+            document.getElementById('animations-toggle').addEventListener('change', savePersonalizationSettings);
+            document.getElementById('compact-mode-toggle').addEventListener('change', savePersonalizationSettings);
+            document.getElementById('font-size-select').addEventListener('change', savePersonalizationSettings);
+
+            // Image upload
+            document.getElementById('avatar-image-input').addEventListener('change', handleImageUpload);
+
+            // Initialize avatar input
+            updateAvatarInput();
+
             // Swatch click listener (for live preview AND immediate save)
             document.querySelectorAll('#theme-palette .color-option').forEach(swatch => {
                 swatch.addEventListener('click', (e) => {
@@ -1147,7 +1742,302 @@
             
             // REMOVED event listeners for 'theme-save-btn' and 'theme-reset-btn'
         }
-        
+
+        /**
+         * Updates the avatar input based on selected type
+         */
+        function updateAvatarInput() {
+            const avatarType = document.getElementById('avatar-type-select').value;
+            const container = document.getElementById('avatar-input-container');
+            const imageContainer = document.getElementById('image-upload-container');
+
+            // Hide image upload by default
+            imageContainer.classList.add('hidden');
+
+            switch (avatarType) {
+                case 'letter':
+                    container.innerHTML = `
+                        <label class="text-sm text-gray-300 mb-1 block">Letter:</label>
+                        <input type="text" id="avatar-letter-input" maxlength="1"
+                               class="form-input w-16 text-center uppercase"
+                               placeholder="A" value="${getCurrentAvatar()}">
+                    `;
+                    document.getElementById('avatar-letter-input').addEventListener('input', updateAvatarPreview);
+                    break;
+                case 'number':
+                    container.innerHTML = `
+                        <label class="text-sm text-gray-300 mb-1 block">Number:</label>
+                        <input type="number" id="avatar-number-input" min="0" max="99"
+                               class="form-input w-16 text-center"
+                               placeholder="1" value="${getCurrentAvatar()}">
+                    `;
+                    document.getElementById('avatar-number-input').addEventListener('input', updateAvatarPreview);
+                    break;
+                case 'emoji':
+                    container.innerHTML = `
+                        <label class="text-sm text-gray-300 mb-1 block">Emoji:</label>
+                        <div class="emoji-picker">
+                            <input type="text" id="avatar-emoji-input" maxlength="2"
+                                   class="form-input w-16 text-center"
+                                   placeholder="😀" value="${getCurrentAvatar()}">
+                            <div class="emoji-suggestions mt-2 grid grid-cols-6 gap-1">
+                                ${['😀', '😎', '🤖', '🎯', '🚀', '⭐', '🔥', '💎', '🎨', '🎵', '⚡', '🌟'].map(emoji =>
+                                    `<button class="emoji-btn p-1 hover:bg-gray-700 rounded" onclick="selectEmoji('${emoji}')">${emoji}</button>`
+                                ).join('')}
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('avatar-emoji-input').addEventListener('input', updateAvatarPreview);
+                    break;
+                case 'image':
+                    container.innerHTML = `<p class="text-sm text-gray-400">Upload a custom image below:</p>`;
+                    imageContainer.classList.remove('hidden');
+                    break;
+            }
+
+            updateAvatarPreview();
+        }
+
+        /**
+         * Updates the avatar preview
+         */
+        function updateAvatarPreview() {
+            const avatarType = document.getElementById('avatar-type-select').value;
+            const preview = document.getElementById('current-avatar');
+            const bgColor = document.getElementById('avatar-bg-color').value;
+
+            let displayValue = '';
+
+            switch (avatarType) {
+                case 'letter':
+                    const letterInput = document.getElementById('avatar-letter-input');
+                    displayValue = letterInput ? letterInput.value.toUpperCase() : 'A';
+                    break;
+                case 'number':
+                    const numberInput = document.getElementById('avatar-number-input');
+                    displayValue = numberInput ? numberInput.value : '1';
+                    break;
+                case 'emoji':
+                    const emojiInput = document.getElementById('avatar-emoji-input');
+                    displayValue = emojiInput ? emojiInput.value : '😀';
+                    break;
+                case 'image':
+                    // Handle image preview separately
+                    return;
+            }
+
+            preview.textContent = displayValue;
+            preview.style.backgroundColor = bgColor;
+
+            // Save avatar settings
+            saveAvatarSettings(avatarType, displayValue, bgColor);
+        }
+
+        /**
+         * Selects an emoji for the avatar
+         */
+        function selectEmoji(emoji) {
+            document.getElementById('avatar-emoji-input').value = emoji;
+            updateAvatarPreview();
+        }
+
+        /**
+         * Handles image upload for avatar
+         */
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                alert('Please select a valid image file.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                showImageCropper(e.target.result);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        /**
+         * Shows the image cropper
+         */
+        function showImageCropper(imageSrc) {
+            const container = document.getElementById('image-crop-container');
+            const canvas = document.getElementById('crop-canvas');
+            const ctx = canvas.getContext('2d');
+
+            const img = new Image();
+            img.onload = function() {
+                // Set canvas size
+                const size = 200;
+                canvas.width = size;
+                canvas.height = size;
+
+                // Calculate crop dimensions (center square)
+                const minDim = Math.min(img.width, img.height);
+                const x = (img.width - minDim) / 2;
+                const y = (img.height - minDim) / 2;
+
+                // Draw cropped image
+                ctx.drawImage(img, x, y, minDim, minDim, 0, 0, size, size);
+
+                container.classList.remove('hidden');
+            };
+            img.src = imageSrc;
+        }
+
+        /**
+         * Applies the cropped image as avatar
+         */
+        function applyCroppedImage() {
+            const canvas = document.getElementById('crop-canvas');
+            const dataURL = canvas.toDataURL('image/png');
+
+            // Update preview
+            const preview = document.getElementById('current-avatar');
+            preview.innerHTML = `<img src="${dataURL}" class="w-full h-full rounded-full object-cover">`;
+
+            // Save avatar settings
+            saveAvatarSettings('image', dataURL, null);
+
+            // Hide cropper
+            cancelImageCrop();
+        }
+
+        /**
+         * Cancels image cropping
+         */
+        function cancelImageCrop() {
+            document.getElementById('image-crop-container').classList.add('hidden');
+            document.getElementById('avatar-image-input').value = '';
+        }
+
+        /**
+         * Saves avatar settings to localStorage
+         */
+        function saveAvatarSettings(type, display, bgColor) {
+            try {
+                const settings = {
+                    type: type,
+                    display: display,
+                    bgColor: bgColor,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem('user-avatar-settings', JSON.stringify(settings));
+            } catch (error) {
+                console.error('Error saving avatar settings:', error);
+            }
+        }
+
+        /**
+         * Loads personalization settings
+         */
+        function loadPersonalizationSettings() {
+            try {
+                // Load avatar settings
+                const avatarSettings = JSON.parse(localStorage.getItem('user-avatar-settings') || '{}');
+                if (avatarSettings.type) {
+                    document.getElementById('avatar-type-select').value = avatarSettings.type;
+                }
+                if (avatarSettings.bgColor) {
+                    document.getElementById('avatar-bg-color').value = avatarSettings.bgColor;
+                }
+
+                // Load interface settings
+                const interfaceSettings = JSON.parse(localStorage.getItem('interface-settings') || '{}');
+                document.getElementById('show-avatar-nav-toggle').checked = interfaceSettings.showAvatarNav !== false;
+                document.getElementById('animations-toggle').checked = interfaceSettings.animations !== false;
+                document.getElementById('compact-mode-toggle').checked = interfaceSettings.compactMode === true;
+
+                if (interfaceSettings.fontSize) {
+                    document.getElementById('font-size-select').value = interfaceSettings.fontSize;
+                }
+            } catch (error) {
+                console.error('Error loading personalization settings:', error);
+            }
+        }
+
+        /**
+         * Saves personalization settings
+         */
+        function savePersonalizationSettings() {
+            try {
+                const settings = {
+                    showAvatarNav: document.getElementById('show-avatar-nav-toggle').checked,
+                    animations: document.getElementById('animations-toggle').checked,
+                    compactMode: document.getElementById('compact-mode-toggle').checked,
+                    fontSize: document.getElementById('font-size-select').value
+                };
+
+                localStorage.setItem('interface-settings', JSON.stringify(settings));
+
+                // Apply settings immediately
+                applyInterfaceSettings(settings);
+
+                // Show success message
+                showPersonalizationMessage('Interface settings saved successfully', 'success');
+            } catch (error) {
+                console.error('Error saving interface settings:', error);
+                showPersonalizationMessage('Error saving interface settings', 'error');
+            }
+        }
+
+        /**
+         * Applies interface settings to the page
+         */
+        function applyInterfaceSettings(settings) {
+            const body = document.body;
+
+            // Apply animations
+            if (!settings.animations) {
+                body.style.setProperty('--transition-duration', '0s');
+            } else {
+                body.style.removeProperty('--transition-duration');
+            }
+
+            // Apply compact mode
+            if (settings.compactMode) {
+                body.classList.add('compact-mode');
+            } else {
+                body.classList.remove('compact-mode');
+            }
+
+            // Apply font size
+            const fontSizeMap = {
+                'small': '14px',
+                'medium': '16px',
+                'large': '18px',
+                'extra-large': '20px'
+            };
+            body.style.fontSize = fontSizeMap[settings.fontSize] || '16px';
+        }
+
+        /**
+         * Shows a personalization message
+         */
+        function showPersonalizationMessage(message, type) {
+            let messageEl = document.getElementById('personalization-message');
+            if (!messageEl) {
+                messageEl = document.createElement('div');
+                messageEl.id = 'personalization-message';
+                messageEl.className = 'fixed top-4 right-4 px-4 py-2 rounded-lg z-50 transition-all duration-300';
+                document.body.appendChild(messageEl);
+            }
+
+            messageEl.textContent = message;
+            messageEl.className = `fixed top-4 right-4 px-4 py-2 rounded-lg z-50 transition-all duration-300 ${
+                type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+            }`;
+
+            setTimeout(() => {
+                if (messageEl) {
+                    messageEl.remove();
+                }
+            }, 3000);
+        }
+
         /* --- END PERSONALIZATION FUNCTIONS --- */
         
         /* --- START DATA MANAGEMENT FUNCTIONS --- */

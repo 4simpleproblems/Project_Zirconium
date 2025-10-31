@@ -52,7 +52,7 @@
 (function() {
     // --- CONFIGURATION ---
     const API_KEY = 'AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro';
-    const BASE_API_URL = `https://generativelightlanguage.googleapis.com/v1beta/models/`;
+    const BASE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/`;
     // const AUTHORIZED_PRO_USER = '4simpleproblems@gmail.com'; // REMOVED
     const MAX_INPUT_HEIGHT = 180;
     const CHAR_LIMIT = 10000;
@@ -606,6 +606,12 @@
         const mainMenu = document.getElementById('ai-main-menu');
         if (mainMenu) mainMenu.classList.remove('active');
         document.removeEventListener('click', handleMenuOutsideClick); // Clean up listener
+
+        // NEW: Clean up any open modals
+        const settingsModal = document.getElementById('ai-settings-modal');
+        if (settingsModal) settingsModal.remove();
+        const memoriesModal = document.getElementById('ai-memories-modal');
+        if (memoriesModal) memoriesModal.remove();
     }
 
     function renderChatHistory() {
@@ -2155,7 +2161,7 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
             /* NEW Main Menu */
             #ai-main-menu {
                 position: absolute; bottom: calc(100% + 10px); right: 0; width: 200px;
-                z-index: 1; background: rgb(20, 20, 22);
+                z-index: 1001; background: rgb(20, 20, 22);
                 border: 1px solid rgba(255,255,255,0.2); border-radius: 12px;
                 box-shadow: 0 5px 25px rgba(0,0,0,0.5); padding: 8px;
                 opacity: 0; visibility: hidden; transform: translateY(20px);
