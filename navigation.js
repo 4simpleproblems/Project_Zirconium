@@ -135,7 +135,11 @@ window.applyTheme = (theme) => {
     const logoImg = document.getElementById('navbar-logo');
     if (logoImg) {
         const newLogoSrc = themeToApply['logo-src'] || DEFAULT_THEME['logo-src'];
-        if (logoImg.src !== newLogoSrc) {
+
+        // Update logo source if different
+        const currentSrc = logoImg.src;
+        const expectedSrc = new URL(newLogoSrc, window.location.origin).href;
+        if (currentSrc !== expectedSrc) {
             logoImg.src = newLogoSrc;
         }
 
@@ -143,10 +147,15 @@ window.applyTheme = (theme) => {
         const logoTintColor = themeToApply['logo-tint-color'];
         if (logoTintColor) {
             // Apply color tint using CSS filter
-            logoImg.style.filter = `brightness(0) saturate(100%) ${hexToFilter(logoTintColor)}`;
+            const filterValue = hexToFilter(logoTintColor);
+            if (filterValue) {
+                logoImg.style.filter = `brightness(0) saturate(100%) ${filterValue}`;
+                console.log(`Applied logo tint: ${logoTintColor} -> ${filterValue}`);
+            }
         } else {
             // Remove any existing filter if no tint color is specified
             logoImg.style.filter = '';
+            console.log('Removed logo tint filter');
         }
     }
 };
@@ -158,13 +167,21 @@ window.applyTheme = (theme) => {
  * @returns {string} CSS filter string
  */
 function hexToFilter(hex) {
+    if (!hex) return '';
+
     // Remove # if present
     hex = hex.replace('#', '');
 
-    // Convert hex to RGB
-    const r = parseInt(hex.substr(0, 2), 16);
-    const g = parseInt(hex.substr(2, 2), 16);
-    const b = parseInt(hex.substr(4, 2), 16);
+    // Ensure we have a valid 6-character hex string
+    if (hex.length !== 6) {
+        console.warn('Invalid hex color:', hex);
+        return '';
+    }
+
+    // Convert hex to RGB using substring instead of deprecated substr
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
 
     // Convert RGB to HSL for better filter control
     const hsl = rgbToHsl(r, g, b);
@@ -176,10 +193,10 @@ function hexToFilter(hex) {
     const saturation = Math.round(hsl[1] * 100);
     const lightness = Math.round(hsl[2] * 100);
 
-    // Adjust brightness based on lightness
-    const brightness = Math.max(50, lightness);
+    // Improved brightness calculation for better visibility
+    const brightness = Math.max(80, Math.min(150, lightness + 30));
 
-    return `hue-rotate(${hue}deg) saturate(${saturation * 2}%) brightness(${brightness}%)`;
+    return `hue-rotate(${hue}deg) saturate(${Math.max(150, saturation * 1.5)}%) brightness(${brightness}%)`;
 }
 
 /**

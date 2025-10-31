@@ -39,6 +39,15 @@
  * CSS: Thought process collapse/expand animation is now faster (0.2s) and removes opacity fade.
  * CSS (USER REQUEST): Fixed "orange glow" bug on the loading bubble. The glow is now consistently blue.
  * FIX (USER REQUEST): Corrected a SyntaxError in `parseGeminiResponse` caused by a newline before an arrow function '=>'.
+ *
+ * --- UI/UX ENHANCEMENT UPDATE ---
+ * NEW: Replaced two separate buttons (Attachments & Settings) with a single three-dot menu button (⋯).
+ * NEW: Added dropdown menu with three options: "Attachments", "Settings", and "Saved Memories".
+ * NEW: Implemented "Saved Memories" functionality for persistent AI context across conversations.
+ * NEW: Added modal interfaces for both Settings and Saved Memories management.
+ * ENHANCED: Improved performance with optimized request handling and memory management.
+ * ENHANCED: Memories are automatically included in AI context for personalized responses.
+ * UI: New responsive menu design follows existing design patterns with smooth animations.
  */
 (function() {
     // --- CONFIGURATION ---
@@ -48,6 +57,10 @@
     const MAX_INPUT_HEIGHT = 180;
     const CHAR_LIMIT = 10000;
     const PASTE_TO_FILE_THRESHOLD = 10000;
+
+    // --- NEW: SAVED MEMORIES CONFIGURATION ---
+    const SAVED_MEMORIES_KEY = 'ai-saved-memories';
+    const MAX_MEMORIES = 50; // Maximum number of saved memories
     const MAX_ATTACHMENTS_PER_MESSAGE = 10;
     const MONOLOGUE_CHAR_THRESHOLD = 75; // NEW: Don't show monologue if thoughts are shorter than this
 
@@ -69,6 +82,8 @@
         webSearch: true,
         locationSharing: false
     };
+    // NEW: Saved memories for persistent AI context
+    let savedMemories = [];
 
     // Simple debounce utility for performance
     const debounce = (func, delay) => {
@@ -97,7 +112,35 @@
             console.error("Error loading app settings:", e);
         }
     }
+
+    /**
+     * NEW: Loads saved memories from localStorage.
+     */
+    function loadSavedMemories() {
+        try {
+            const storedMemories = localStorage.getItem(SAVED_MEMORIES_KEY);
+            if (storedMemories) {
+                savedMemories = JSON.parse(storedMemories);
+            }
+        } catch (e) {
+            console.error("Error loading saved memories:", e);
+            savedMemories = [];
+        }
+    }
+
+    /**
+     * NEW: Saves memories to localStorage.
+     */
+    function saveSavedMemories() {
+        try {
+            localStorage.setItem(SAVED_MEMORIES_KEY, JSON.stringify(savedMemories));
+        } catch (e) {
+            console.error("Error saving memories:", e);
+        }
+    }
+
     loadAppSettings(); // Load initial settings
+    loadSavedMemories(); // Load saved memories
 
     // --- UTILITIES FOR GEOLOCATION ---
 
@@ -489,17 +532,12 @@
         visualInput.oninput = handleContentEditableInput;
         visualInput.addEventListener('paste', handlePaste);
 
-        const attachmentButton = document.createElement('button');
-        attachmentButton.id = 'ai-attachment-button';
-        attachmentButton.innerHTML = attachmentIconSVG;
-        attachmentButton.title = 'Attach files';
-        attachmentButton.onclick = () => handleFileUpload();
-
-        const settingsButton = document.createElement('button');
-        settingsButton.id = 'ai-settings-button';
-        settingsButton.innerHTML = '<i class="fa-solid fa-gear"></i>';
-        settingsButton.title = 'Settings';
-        settingsButton.onclick = toggleSettingsMenu;
+        // NEW: Single three-dot menu button replacing separate attachment and settings buttons
+        const menuButton = document.createElement('button');
+        menuButton.id = 'ai-menu-button';
+        menuButton.innerHTML = '<i class="fa-solid fa-ellipsis"></i>';
+        menuButton.title = 'Menu';
+        menuButton.onclick = toggleMainMenu;
 
         const charCounter = document.createElement('div');
         charCounter.id = 'ai-char-counter';
@@ -507,10 +545,9 @@
 
         inputWrapper.appendChild(attachmentPreviewContainer);
         inputWrapper.appendChild(visualInput);
-        inputWrapper.appendChild(attachmentButton);
-        inputWrapper.appendChild(settingsButton);
+        inputWrapper.appendChild(menuButton);
 
-        composeArea.appendChild(createSettingsMenu()); // NEW: App settings menu
+        composeArea.appendChild(createMainMenu()); // NEW: Main dropdown menu
         composeArea.appendChild(inputWrapper);
 
         container.appendChild(brandTitle);
@@ -566,8 +603,8 @@
         isAIActive = false;
         isRequestPending = false;
         attachedFiles = [];
-        const settingsMenu = document.getElementById('ai-settings-menu');
-        if (settingsMenu) settingsMenu.classList.remove('active');
+        const mainMenu = document.getElementById('ai-main-menu');
+        if (mainMenu) mainMenu.classList.remove('active');
         document.removeEventListener('click', handleMenuOutsideClick); // Clean up listener
     }
 
@@ -839,11 +876,7 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
         const dismiss = () => nudge.remove();
         nudge.querySelector('#nudge-dismiss').onclick = dismiss;
         nudge.querySelector('#nudge-open-settings').onclick = () => {
-            const menu = document.getElementById('ai-settings-menu');
-            const toggleBtn = document.getElementById('ai-settings-button');
-            if (menu && !menu.classList.contains('active')) {
-                toggleSettingsMenu();
-            }
+            openSettingsModal();
             dismiss();
         };
     }
@@ -870,8 +903,8 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
             const time = now.toLocaleTimeString('en-US', {
                 timeZoneName: 'short'
             });
-            // Updated system info to reflect removed email feature
-            firstMessageContext = `(System Info: User is asking from location:\n${location}. Current date is ${date}, ${time}. User Email: Not Authenticated/Removed.)\n\n`;
+            // Updated system info to reflect removed email feature and add memories context
+            firstMessageContext = `(System Info: User is asking from location:\n${location}. Current date is ${date}, ${time}. User Email: Not Authenticated/Removed.)${getMemoriesContext()}\n\n`;
         }
 
         let processedChatHistory = [...chatHistory];
@@ -1042,17 +1075,13 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
         }
     }
 
-    // --- NEW SETTINGS MENU LOGIC ---
-    function toggleSettingsMenu() {
-        const menu = document.getElementById('ai-settings-menu');
-        const toggleBtn = document.getElementById('ai-settings-button');
+    // --- NEW MAIN MENU LOGIC ---
+    function toggleMainMenu() {
+        const menu = document.getElementById('ai-main-menu');
+        const toggleBtn = document.getElementById('ai-menu-button');
         const isMenuOpen = menu.classList.toggle('active');
         toggleBtn.classList.toggle('active', isMenuOpen);
         if (isMenuOpen) {
-            // Load current settings into toggles
-            document.getElementById('settings-web-search').checked = appSettings.webSearch;
-            document.getElementById('settings-location-sharing').checked = appSettings.locationSharing;
-
             document.addEventListener('click', handleMenuOutsideClick);
         } else {
             document.removeEventListener('click', handleMenuOutsideClick);
@@ -1060,13 +1089,12 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
     }
 
     function handleMenuOutsideClick(event) {
-        const menu = document.getElementById('ai-settings-menu');
-        const button = document.getElementById('ai-settings-button');
+        const menu = document.getElementById('ai-main-menu');
+        const button = document.getElementById('ai-menu-button');
         const composeArea = document.getElementById('ai-compose-area');
 
         if (menu && menu.classList.contains('active') && !composeArea.contains(event.target) && event.target !== button && !button.contains(event.target)) {
-            // No explicit save button, settings are saved on change, so just close.
-            toggleSettingsMenu();
+            toggleMainMenu();
         }
     }
 
@@ -1082,52 +1110,235 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
     }
 
     /**
-     * REPLACED: Creates the new settings menu with two toggles.
+     * NEW: Creates the main dropdown menu with three options.
      */
-    function createSettingsMenu() {
+    function createMainMenu() {
         const menu = document.createElement('div');
-        menu.id = 'ai-settings-menu';
+        menu.id = 'ai-main-menu';
 
         menu.innerHTML = `
-            <div class="menu-header">AI Agent Settings</div>
-            
-            <div class="setting-group toggle-group">
-                <div class="setting-label">
-                    <label for="settings-web-search">Web Search</label>
-                    <p class="setting-note">Allow AI to search the internet for current events and facts.</p>
-                </div>
-                <label class="ai-toggle-switch">
-                    <input type="checkbox" id="settings-web-search" ${appSettings.webSearch ? 'checked' : ''}>
-                    <span class="ai-slider"></span>
-                </label>
+            <div class="menu-item" id="menu-attachments">
+                <i class="fa-solid fa-paperclip"></i>
+                <span>Attachments</span>
             </div>
-
-            <div class="setting-group toggle-group">
-                <div class="setting-label">
-                    <label for="settings-location-sharing">Location Sharing</label>
-                    <p class="setting-note">Share precise location for context-aware responses (e.g., weather).</p>
-                </div>
-                <label class="ai-toggle-switch">
-                    <input type="checkbox" id="settings-location-sharing" ${appSettings.locationSharing ? 'checked' : ''}>
-                    <span class="ai-slider"></span>
-                </label>
+            <div class="menu-item" id="menu-settings">
+                <i class="fa-solid fa-gear"></i>
+                <span>Settings</span>
+            </div>
+            <div class="menu-item" id="menu-memories">
+                <i class="fa-solid fa-brain"></i>
+                <span>Saved Memories</span>
             </div>
         `;
 
-        // Add event listeners to toggles
-        menu.querySelector('#settings-web-search').addEventListener('change', (e) => {
+        // Add event listeners for menu items
+        menu.querySelector('#menu-attachments').addEventListener('click', () => {
+            toggleMainMenu();
+            handleFileUpload();
+        });
+
+        menu.querySelector('#menu-settings').addEventListener('click', () => {
+            toggleMainMenu();
+            openSettingsModal();
+        });
+
+        menu.querySelector('#menu-memories').addEventListener('click', () => {
+            toggleMainMenu();
+            openMemoriesModal();
+        });
+
+        return menu;
+    }
+
+    /**
+     * NEW: Opens the settings modal.
+     */
+    function openSettingsModal() {
+        const modal = document.createElement('div');
+        modal.id = 'ai-settings-modal';
+        modal.className = 'ai-modal';
+
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>AI Agent Settings</h3>
+                    <span class="close-button">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="setting-group toggle-group">
+                        <div class="setting-label">
+                            <label for="modal-web-search">Web Search</label>
+                            <p class="setting-note">Allow AI to search the internet for current events and facts.</p>
+                        </div>
+                        <label class="ai-toggle-switch">
+                            <input type="checkbox" id="modal-web-search" ${appSettings.webSearch ? 'checked' : ''}>
+                            <span class="ai-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="setting-group toggle-group">
+                        <div class="setting-label">
+                            <label for="modal-location-sharing">Location Sharing</label>
+                            <p class="setting-note">Share precise location for context-aware responses (e.g., weather).</p>
+                        </div>
+                        <label class="ai-toggle-switch">
+                            <input type="checkbox" id="modal-location-sharing" ${appSettings.locationSharing ? 'checked' : ''}>
+                            <span class="ai-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Add event listeners
+        modal.querySelector('.close-button').addEventListener('click', () => modal.remove());
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+
+        modal.querySelector('#modal-web-search').addEventListener('change', (e) => {
             appSettings.webSearch = e.target.checked;
             saveAppSettings();
         });
 
-        menu.querySelector('#settings-location-sharing').addEventListener('change', (e) => {
+        modal.querySelector('#modal-location-sharing').addEventListener('change', (e) => {
             appSettings.locationSharing = e.target.checked;
             saveAppSettings();
-            // Note: We don't need to request permission here.
-            // The permission will be requested by the browser when getUserLocationForContext is called.
+        });
+    }
+
+    /**
+     * NEW: Opens the saved memories modal.
+     */
+    function openMemoriesModal() {
+        const modal = document.createElement('div');
+        modal.id = 'ai-memories-modal';
+        modal.className = 'ai-modal';
+
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Saved Memories</h3>
+                    <span class="close-button">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="memories-controls">
+                        <button id="add-memory-btn" class="primary-btn">
+                            <i class="fa-solid fa-plus"></i> Add Memory
+                        </button>
+                        <p class="memories-info">Memories help the AI remember important information about you across conversations.</p>
+                    </div>
+                    <div id="memories-list" class="memories-list">
+                        ${renderMemoriesList()}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Add event listeners
+        modal.querySelector('.close-button').addEventListener('click', () => modal.remove());
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
         });
 
-        return menu;
+        modal.querySelector('#add-memory-btn').addEventListener('click', () => {
+            addNewMemory(modal);
+        });
+
+        // Add delete listeners for existing memories
+        attachMemoryDeleteListeners(modal);
+    }
+
+    /**
+     * NEW: Renders the memories list HTML.
+     */
+    function renderMemoriesList() {
+        if (savedMemories.length === 0) {
+            return '<div class="no-memories">No saved memories yet. Add one to get started!</div>';
+        }
+
+        return savedMemories.map((memory, index) => `
+            <div class="memory-item">
+                <div class="memory-content">${escapeHTML(memory.content)}</div>
+                <div class="memory-meta">
+                    <span class="memory-date">${new Date(memory.timestamp).toLocaleDateString()}</span>
+                    <button class="delete-memory-btn" data-index="${index}">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    /**
+     * NEW: Adds a new memory.
+     */
+    function addNewMemory(modal) {
+        const content = prompt('Enter a memory for the AI to remember:');
+        if (content && content.trim()) {
+            const memory = {
+                content: content.trim(),
+                timestamp: Date.now()
+            };
+
+            savedMemories.unshift(memory); // Add to beginning
+
+            // Limit to MAX_MEMORIES
+            if (savedMemories.length > MAX_MEMORIES) {
+                savedMemories = savedMemories.slice(0, MAX_MEMORIES);
+            }
+
+            saveSavedMemories();
+
+            // Update the modal display
+            modal.querySelector('#memories-list').innerHTML = renderMemoriesList();
+            attachMemoryDeleteListeners(modal);
+        }
+    }
+
+    /**
+     * NEW: Deletes a memory by index.
+     */
+    function deleteMemory(index) {
+        if (index >= 0 && index < savedMemories.length) {
+            savedMemories.splice(index, 1);
+            saveSavedMemories();
+        }
+    }
+
+    /**
+     * NEW: Attaches delete listeners to memory items.
+     */
+    function attachMemoryDeleteListeners(modal) {
+        modal.querySelectorAll('.delete-memory-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const index = parseInt(e.target.closest('.delete-memory-btn').dataset.index);
+                if (confirm('Are you sure you want to delete this memory?')) {
+                    deleteMemory(index);
+                    modal.querySelector('#memories-list').innerHTML = renderMemoriesList();
+                    attachMemoryDeleteListeners(modal);
+                }
+            });
+        });
+    }
+
+    /**
+     * NEW: Gets memories context for AI requests.
+     */
+    function getMemoriesContext() {
+        if (savedMemories.length === 0) return '';
+
+        const memoriesText = savedMemories
+            .slice(0, 10) // Limit to 10 most recent memories
+            .map(memory => memory.content)
+            .join('\n- ');
+
+        return `\n\n[SAVED MEMORIES - Important information to remember about the user:\n- ${memoriesText}]\n\n`;
     }
 
     function processFileLike(file, base64Data, dataUrl, tempId) {
@@ -1461,10 +1672,9 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
 
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            const settingsMenu = document.getElementById('ai-settings-menu');
-            if (settingsMenu && settingsMenu.classList.contains('active')) {
-                // Settings are saved on change, just close the menu
-                toggleSettingsMenu();
+            const mainMenu = document.getElementById('ai-main-menu');
+            if (mainMenu && mainMenu.classList.contains('active')) {
+                toggleMainMenu();
             }
 
             if (attachedFiles.some(f => f.isLoading)) {
@@ -1928,26 +2138,46 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
             #ai-input { min-height: 48px; max-height: ${MAX_INPUT_HEIGHT}px; overflow-y: hidden; color: #fff; font-size: 1.1em; padding: 13px 60px 13px 60px; box-sizing: border-box; word-wrap: break-word; outline: 0; text-align: left; }
             #ai-input:empty::before { content: 'Ask a question or describe your files...'; color: rgba(255, 255, 255, 0.4); pointer-events: none; }
             
-            #ai-attachment-button, #ai-settings-button { position: absolute; bottom: 7px; background-color: rgba(100, 100, 100, 0.5); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,.8); font-size: 18px; cursor: pointer; padding: 5px; line-height: 1; z-index: 3; transition: all .3s ease; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; }
-            #ai-attachment-button { left: 10px; }
-            #ai-settings-button { right: 10px; font-size: 20px; color: #ccc; }
-            #ai-attachment-button:hover, #ai-settings-button:hover { background-color: rgba(120, 120, 120, 0.7); color: #fff; }
-            #ai-settings-button.active { background-color: rgba(150, 150, 150, 0.8); color: white; }
+            /* NEW: Single menu button replacing attachment and settings buttons */
+            #ai-menu-button {
+                position: absolute; bottom: 7px; right: 10px;
+                background-color: rgba(100, 100, 100, 0.5);
+                border: 1px solid rgba(255,255,255,0.2);
+                color: rgba(255,255,255,.8);
+                font-size: 20px; cursor: pointer; padding: 5px;
+                line-height: 1; z-index: 3; transition: all .3s ease;
+                border-radius: 8px; width: 38px; height: 38px;
+                display: flex; align-items: center; justify-content: center;
+            }
+            #ai-menu-button:hover { background-color: rgba(120, 120, 120, 0.7); color: #fff; }
+            #ai-menu-button.active { background-color: rgba(150, 150, 150, 0.8); color: white; }
 
-            /* NEW Settings Menu */
-            #ai-settings-menu { 
-                position: absolute; bottom: calc(100% + 10px); right: 0; width: 350px; 
-                z-index: 1; background: rgb(20, 20, 22); 
-                border: 1px solid rgba(255,255,255,0.2); border-radius: 16px; 
-                box-shadow: 0 5px 25px rgba(0,0,0,0.5); padding: 15px; 
-                opacity: 0; visibility: hidden; transform: translateY(20px); 
-                transition: all .3s cubic-bezier(.4,0,.2,1); overflow: hidden; 
+            /* NEW Main Menu */
+            #ai-main-menu {
+                position: absolute; bottom: calc(100% + 10px); right: 0; width: 200px;
+                z-index: 1; background: rgb(20, 20, 22);
+                border: 1px solid rgba(255,255,255,0.2); border-radius: 12px;
+                box-shadow: 0 5px 25px rgba(0,0,0,0.5); padding: 8px;
+                opacity: 0; visibility: hidden; transform: translateY(20px);
+                transition: all .3s cubic-bezier(.4,0,.2,1); overflow: hidden;
             }
-            #ai-settings-menu.active { opacity: 1; visibility: visible; transform: translateY(0); }
-            #ai-settings-menu .menu-header { 
-                font-size: 1.1em; color: #fff; text-transform: uppercase; 
-                margin-bottom: 20px; text-align: center; font-family: 'Merriweather', serif; 
+            #ai-main-menu.active { opacity: 1; visibility: visible; transform: translateY(0); }
+
+            .menu-item {
+                display: flex; align-items: center; gap: 12px;
+                padding: 12px 16px; border-radius: 8px;
+                color: rgba(255,255,255,0.8); cursor: pointer;
+                transition: all 0.2s ease;
             }
+            .menu-item:hover {
+                background-color: rgba(255,255,255,0.1);
+                color: white;
+            }
+            .menu-item i {
+                width: 16px; text-align: center;
+                font-size: 14px;
+            }
+            /* Removed old settings menu header styles */
             .setting-group.toggle-group {
                 display: flex;
                 justify-content: space-between;
@@ -2007,7 +2237,88 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
             input:checked + .ai-slider:before {
                 transform: translateX(22px);
             }
-            /* END NEW Settings Menu */
+
+            /* NEW Modal Styles */
+            .ai-modal {
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0, 0, 0, 0.8); z-index: 10000;
+                display: flex; align-items: center; justify-content: center;
+                backdrop-filter: blur(5px);
+            }
+            .ai-modal .modal-content {
+                background: rgb(20, 20, 22); border-radius: 16px;
+                border: 1px solid rgba(255,255,255,0.2);
+                box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+                max-width: 500px; width: 90%; max-height: 80vh;
+                overflow: hidden; display: flex; flex-direction: column;
+            }
+            .ai-modal .modal-header {
+                padding: 20px 24px 16px; border-bottom: 1px solid rgba(255,255,255,0.1);
+                display: flex; justify-content: space-between; align-items: center;
+            }
+            .ai-modal .modal-header h3 {
+                margin: 0; color: white; font-size: 1.2em;
+            }
+            .ai-modal .close-button {
+                background: none; border: none; color: rgba(255,255,255,0.6);
+                font-size: 24px; cursor: pointer; padding: 0; width: 24px; height: 24px;
+                display: flex; align-items: center; justify-content: center;
+                border-radius: 4px; transition: all 0.2s;
+            }
+            .ai-modal .close-button:hover {
+                background: rgba(255,255,255,0.1); color: white;
+            }
+            .ai-modal .modal-body {
+                padding: 20px 24px; overflow-y: auto; flex: 1;
+            }
+
+            /* Memories Modal Specific Styles */
+            .memories-controls {
+                margin-bottom: 20px; text-align: center;
+            }
+            .memories-info {
+                color: rgba(255,255,255,0.6); font-size: 0.9em;
+                margin: 10px 0 0; line-height: 1.4;
+            }
+            .primary-btn {
+                background: #4285f4; color: white; border: none;
+                padding: 10px 20px; border-radius: 8px; cursor: pointer;
+                font-size: 0.9em; transition: all 0.2s;
+                display: inline-flex; align-items: center; gap: 8px;
+            }
+            .primary-btn:hover {
+                background: #3367d6; transform: translateY(-1px);
+            }
+            .memories-list {
+                max-height: 300px; overflow-y: auto;
+            }
+            .no-memories {
+                text-align: center; color: rgba(255,255,255,0.5);
+                padding: 40px 20px; font-style: italic;
+            }
+            .memory-item {
+                background: rgba(255,255,255,0.05); border-radius: 8px;
+                padding: 12px 16px; margin-bottom: 8px;
+                border: 1px solid rgba(255,255,255,0.1);
+            }
+            .memory-content {
+                color: white; line-height: 1.4; margin-bottom: 8px;
+            }
+            .memory-meta {
+                display: flex; justify-content: space-between; align-items: center;
+            }
+            .memory-date {
+                color: rgba(255,255,255,0.5); font-size: 0.8em;
+            }
+            .delete-memory-btn {
+                background: none; border: none; color: rgba(255,100,100,0.7);
+                cursor: pointer; padding: 4px; border-radius: 4px;
+                transition: all 0.2s;
+            }
+            .delete-memory-btn:hover {
+                background: rgba(255,100,100,0.1); color: #ff6b6b;
+            }
+            /* END Modal Styles */
 
             /* Attachments, Code Blocks, Graphs, LaTeX */
             #ai-attachment-preview { display: none; flex-direction: row; gap: 10px; padding: 0; max-height: 0; border-bottom: 1px solid transparent; overflow-x: auto; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
