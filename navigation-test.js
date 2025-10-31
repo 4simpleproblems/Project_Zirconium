@@ -102,7 +102,6 @@ const DEFAULT_THEME = {
  * This is exposed on `window` so settings.html can call it for live preview.
  * @param {object} theme - A theme object (like DEFAULT_THEME)
  */
-// --- USERNAME COLOR FIX --- (2/3) Modified this function
 window.applyTheme = (theme) => {
     const root = document.documentElement;
     if (!root) return;
@@ -265,6 +264,12 @@ let pagesConfig = {};
 
 
     const run = async () => {
+        // --- CRITICAL FIX: Ensure CSS is injected first and listeners are set up
+        injectStyles();
+        document.addEventListener('click', handleGlobalClick);
+        window.addEventListener('resize', debounce(updateGlideVisibility, 150));
+        // --- END CRITICAL FIX
+
         let pages = {};
 
         // Load Icons CSS first
@@ -459,10 +464,6 @@ let pagesConfig = {};
         // Load the stored theme immediately before we start listening to auth
         loadAndApplySavedTheme();
         
-        // Add event listeners for dynamic elements
-        window.addEventListener('resize', debounce(updateGlideVisibility, 150));
-        document.addEventListener('click', handleGlobalClick);
-
         // --- 5. AUTH LISTENER & REDIRECT LOGIC ---
         let initialLoad = true;
         
@@ -510,9 +511,6 @@ let pagesConfig = {};
                 }
             }
         });
-
-        // --- FINAL SETUP ---
-        // (MOVED to start of initializeApp)
     };
 
     // --- 6. CORE RENDERING FUNCTION ---
@@ -619,8 +617,12 @@ let pagesConfig = {};
 
     // The main rendering function
     const renderNavbar = (user, userData, pages, isPrivilegedUser, initialLoad = false) => {
+        // **The outer <div> for the navbar MUST be present in your HTML as <div id="auth-navbar"></div>**
         const navbar = document.getElementById('auth-navbar');
-        if (!navbar) return;
+        if (!navbar) {
+            console.error("Critical Error: The <div id='auth-navbar'> element is missing from the HTML page.");
+            return;
+        }
 
         // 1. Get pinned page key
         const pinnedPageKey = localStorage.getItem('pinned-page-key');
@@ -970,7 +972,7 @@ let pagesConfig = {};
 
 
     // --- START THE PROCESS ---
-    injectStyles();
+    // Execute the 'run' function once the entire HTML document is loaded.
     document.addEventListener('DOMContentLoaded', run);
 
 })();
