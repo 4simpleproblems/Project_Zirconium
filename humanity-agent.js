@@ -293,6 +293,30 @@
     }
 
     /**
+     * Handles marquee animation for long file names in file creation cards.
+     * @param {HTMLElement} container The parent element to search for file cards.
+     */
+    function renderFileCardMarquees(container) {
+        container.querySelectorAll('.gemini-file-creation-card').forEach(card => {
+            const fileNameElement = card.querySelector('.file-name');
+            const fileNameSpan = fileNameElement?.querySelector('span');
+
+            if (fileNameElement && fileNameSpan) {
+                // Reset any existing marquee
+                fileNameElement.classList.remove('marquee');
+                fileNameSpan.style.animation = '';
+
+                // Check if text overflows
+                setTimeout(() => {
+                    if (fileNameSpan.scrollWidth > fileNameElement.clientWidth) {
+                        fileNameElement.classList.add('marquee');
+                    }
+                }, 100);
+            }
+        });
+    }
+
+    /**
      * Renders interactive graphs, tables, charts, and advanced visualizations.
      * @param {HTMLElement} container The parent element to search for visualization placeholders.
      */
@@ -461,23 +485,67 @@
         ctx.restore();
 
 
-        // Draw data lines and markers
-        data.forEach(trace => {
-            ctx.strokeStyle = trace.line?.color || '#4285f4';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(mapX(trace.x[0]), mapY(trace.y[0]));
-            for (let i = 1; i < trace.x.length; i++) {
-                ctx.lineTo(mapX(trace.x[i]), mapY(trace.y[i]));
-            }
-            ctx.stroke();
+        // Draw data based on trace type and mode
+        data.forEach((trace, traceIndex) => {
+            const color = trace.line?.color || trace.marker?.color || ['#4285f4', '#ea4335', '#34a853', '#fbbc05', '#9c27b0'][traceIndex % 5];
+            const traceType = trace.type || 'scatter';
+            const mode = trace.mode || 'lines+markers';
 
-            if (trace.mode && trace.mode.includes('markers')) {
-                ctx.fillStyle = trace.line?.color || '#4285f4';
-                for (let i = 0; i < trace.x.length; i++) {
+            if (traceType === 'bar') {
+                // Bar chart
+                const barWidth = graphWidth / trace.x.length * 0.6;
+                const barSpacing = graphWidth / trace.x.length * 0.4;
+
+                ctx.fillStyle = color;
+                trace.x.forEach((xVal, i) => {
+                    const yVal = trace.y[i];
+                    const barHeight = Math.abs(mapY(yVal) - mapY(0));
+                    const x = mapX(xVal) - barWidth / 2;
+                    const y = Math.min(mapY(yVal), mapY(0));
+
+                    ctx.fillRect(x, y, barWidth, barHeight);
+                });
+            } else {
+                // Line/scatter plot
+                ctx.strokeStyle = color;
+                ctx.fillStyle = color;
+                ctx.lineWidth = trace.line?.width || 2;
+
+                // Draw lines
+                if (mode.includes('lines') && trace.x.length > 1) {
                     ctx.beginPath();
-                    ctx.arc(mapX(trace.x[i]), mapY(trace.y[i]), 4, 0, 2 * Math.PI);
-                    ctx.fill();
+                    ctx.moveTo(mapX(trace.x[0]), mapY(trace.y[0]));
+                    for (let i = 1; i < trace.x.length; i++) {
+                        ctx.lineTo(mapX(trace.x[i]), mapY(trace.y[i]));
+                    }
+                    ctx.stroke();
+                }
+
+                // Draw markers/points
+                if (mode.includes('markers') || traceType === 'scatter') {
+                    const markerSize = trace.marker?.size || 6;
+                    const markerSymbol = trace.marker?.symbol || 'circle';
+
+                    for (let i = 0; i < trace.x.length; i++) {
+                        const x = mapX(trace.x[i]);
+                        const y = mapY(trace.y[i]);
+
+                        ctx.beginPath();
+                        if (markerSymbol === 'square') {
+                            ctx.fillRect(x - markerSize/2, y - markerSize/2, markerSize, markerSize);
+                        } else if (markerSymbol === 'diamond') {
+                            ctx.moveTo(x, y - markerSize/2);
+                            ctx.lineTo(x + markerSize/2, y);
+                            ctx.lineTo(x, y + markerSize/2);
+                            ctx.lineTo(x - markerSize/2, y);
+                            ctx.closePath();
+                            ctx.fill();
+                        } else {
+                            // Default circle
+                            ctx.arc(x, y, markerSize/2, 0, 2 * Math.PI);
+                            ctx.fill();
+                        }
+                    }
                 }
             }
         });
@@ -1011,6 +1079,7 @@
 
                 renderKaTeX(bubble);
                 renderGraphs(bubble);
+                renderFileCardMarquees(bubble);
             } else {
                 let bubbleContent = '';
                 let textContent = '';
@@ -1382,6 +1451,7 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
 
                 renderKaTeX(responseBubble);
                 renderGraphs(responseBubble);
+                renderFileCardMarquees(responseBubble);
             }, 300);
 
         } catch (error) {
@@ -2347,15 +2417,24 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
                 // We store the raw content and mimetype in data attributes to regenerate the blob URL if needed (e.g., from chat history)
                 const cardHTML = `
                     <div class="gemini-file-creation-card" data-file-content="${escapeHTML(content)}" data-file-mime="${safeMimetype}">
-                        <a href="${dataUrl}" download="${safeFilename}" class="file-creation-download-btn" title="Download ${safeFilename}">
-                            ${downloadIconSVG}
-                            <div class="file-creation-tooltip">File Creation may not be accurate</div>
-                        </a>
-                        <div class="file-info">
-                            <div class="file-name"><span>${safeFilename}</span></div>
+                        <div class="file-header">
+                            <div class="file-name-container">
+                                <div class="file-name" title="${safeFilename}">
+                                    <span>${safeFilename}</span>
+                                </div>
+                            </div>
+                            <a href="${dataUrl}" download="${safeFilename}" class="file-creation-download-btn" title="Download ${safeFilename}">
+                                ${downloadIconSVG}
+                                <div class="file-creation-tooltip">File Creation may not be accurate</div>
+                            </a>
                         </div>
-                        <div class="file-type-badge">${fileExt}</div>
-                        <div class="file-size-badge">${fileSize}</div>
+                        <div class="file-body">
+                            <div class="file-icon">📄</div>
+                            <div class="file-meta">
+                                <div class="file-type-badge">${fileExt}</div>
+                                <div class="file-size-badge">${fileSize}</div>
+                            </div>
+                        </div>
                     </div>
                 `;
                 return addPlaceholder(cardHTML);
@@ -3056,68 +3135,114 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
             .ai-message-bubble ul, .ai-message-bubble ol { margin: 10px 0; padding-left: 20px; text-align: left; list-style-position: outside; }
             .ai-message-bubble li { margin-bottom: 5px; }
 
-            /* NEW (USER REQUEST): Humanity File Creation Card Styles */
+            /* Enhanced File Creation Card Styles */
             .gemini-file-creation-card {
                 position: relative;
-                border-radius: 8px;
+                border-radius: 12px;
                 overflow: hidden;
-                background: #2b2b2b; /* Slightly lighter than user's attachment card */
-                height: 80px;
-                width: 130px; /* Wider to show more info */
+                background: linear-gradient(135deg, rgba(66, 133, 244, 0.1), rgba(52, 168, 83, 0.05));
+                border: 1px solid rgba(66, 133, 244, 0.2);
+                width: 200px;
+                height: 100px;
                 flex-shrink: 0;
                 display: flex;
-                justify-content: center;
-                align-items: center;
+                flex-direction: column;
                 margin-top: 10px;
-                border: 1px solid rgba(255,255,255,0.1);
+                transition: all 0.3s ease;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            }
+            .gemini-file-creation-card:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 25px rgba(66, 133, 244, 0.15);
+                border-color: rgba(66, 133, 244, 0.4);
+            }
+            .file-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 8px 12px;
+                background: rgba(0,0,0,0.2);
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+                min-height: 32px;
+            }
+            .file-name-container {
+                flex: 1;
+                overflow: hidden;
+                margin-right: 8px;
+            }
+            .file-name {
+                color: #fff;
+                font-size: 0.85em;
+                font-weight: 500;
+                white-space: nowrap;
+                overflow: hidden;
+                position: relative;
+            }
+            .file-name span {
+                display: inline-block;
+                transition: transform 0.3s ease;
+            }
+            .file-name.marquee span {
+                animation: file-marquee 8s linear infinite;
+                padding-right: 20px;
             }
             .file-creation-download-btn {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                display: flex;
-                justify-content: center;
-                align-items: center;
+                background: rgba(66, 133, 244, 0.8);
                 color: #fff;
-                background: rgba(0,0,0,0.3);
-                opacity: 0.8;
-                transition: opacity 0.3s, background-color 0.3s;
+                border: none;
+                border-radius: 6px;
+                padding: 4px;
+                cursor: pointer;
+                transition: all 0.2s;
                 text-decoration: none;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 24px;
+                height: 24px;
+                position: relative;
             }
             .file-creation-download-btn:hover {
-                opacity: 1;
-                background: rgba(66, 133, 244, 0.7); /* Blue hover */
-            }
-            .file-creation-download-btn svg {
-                width: 32px;
-                height: 32px;
-                transition: transform 0.3s;
-            }
-            .file-creation-download-btn:hover svg {
+                background: rgba(66, 133, 244, 1);
                 transform: scale(1.1);
             }
-            .gemini-file-creation-card .file-info {
-                bottom: 20px; /* Make space for size */
+            .file-creation-download-btn svg {
+                width: 14px;
+                height: 14px;
             }
-            .gemini-file-creation-card .file-type-badge {
-                top: auto;
-                right: auto;
-                left: 5px;
-                bottom: 5px;
-                font-size: 0.7em;
+            .file-body {
+                flex: 1;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 8px 12px;
             }
-            .file-size-badge {
-                position: absolute;
-                bottom: 5px;
-                right: 5px;
-                background: rgba(0,0,0,0.6);
+            .file-icon {
+                font-size: 2em;
+                opacity: 0.7;
+            }
+            .file-meta {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                align-items: flex-end;
+            }
+            .file-type-badge {
+                background: rgba(66, 133, 244, 0.8);
                 color: #fff;
                 font-size: 0.7em;
-                padding: 2px 5px;
+                padding: 2px 6px;
                 border-radius: 4px;
-                font-family: monospace;
+                font-family: 'Courier New', monospace;
+                font-weight: bold;
+            }
+            .file-size-badge {
+                background: rgba(255,255,255,0.1);
+                color: #ccc;
+                font-size: 0.7em;
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-family: 'Courier New', monospace;
             }
             .file-creation-tooltip {
                 position: absolute;
@@ -3210,6 +3335,7 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
             @keyframes message-pop-in { 0% { opacity: 0; transform: translateY(10px) scale(.98); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
             @keyframes brand-title-pulse { 0%, 100% { text-shadow: 0 0 7px var(--ai-blue); } 25% { text-shadow: 0 0 7px var(--ai-green); } 50% { text-shadow: 0 0 7px var(--ai-yellow); } 75% { text-shadow: 0 0 7px var(--ai-red); } }
             @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+            @keyframes file-marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
 
             /* New Coding-Themed Animations */
             @keyframes terminal-blink {
