@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>4SP - 404 Error</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <link rel="icon" type="image/x-icon" href="img/favicon.ico" id="faviconLink" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'deep-black': '#070707',
+                        'card-dark': '#111111',
+                        'accent-indigo': '#4f46e5', // Unified accent color
+                        'brand-border': '#252525',
+                    },
+                    fontFamily: {
+                        sans: ['Geist', 'sans-serif'],
+                    },
+                    borderRadius: {
+                        'xl': '1rem',
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            font-family: 'Geist', 'sans-serif';
+            font-weight: 300;
+            background-color: #070707;
+        }
+        /* Ensure specific font weights for headings/semibold elements are maintained */
+        h1, h2, h3, .font-bold, .font-semibold, strong {
+            font-weight: 400 !important;
+        }
+    </style>
+</head>
+
+<body class="bg-deep-black text-white min-h-screen">
+    <header class="w-full p-4 flex justify-end items-center">
+        <!-- Assuming the 404 is at the same level as index.html -->
+        <a href="index.html" class="text-white font-semibold text-lg" style="font-weight: 400;">4SP</a>
+    </header>
+
+    <main class="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] p-4">
+        <div class="bg-card-dark rounded-xl border border-brand-border p-8 sm:p-12 text-center max-w-2xl w-full shadow-2xl">
+            
+            <!-- Restored text-accent-indigo color for the 404 number -->
+            <p class="text-8xl sm:text-9xl font-normal text-accent-indigo mb-4">
+                404
+            </p>
+            
+            <!-- Empty H1 for the JavaScript Typewriter effect -->
+            <!-- Adjusted height to prevent layout shift during typing/deleting -->
+            <h1 class="text-3xl sm:text-4xl font-semibold text-white mb-4 h-12 flex justify-center items-center">
+                <!-- Text container and Blinking Cursor -->
+                <!-- Cursor is now explicitly text-white -->
+                <span id="typewriter-text"></span><span id="cursor" class="text-white">|</span>
+            </h1>
+            
+            <p class="text-gray-400 mb-8 text-lg">
+                It looks like the link you followed has led you to an uncharted part of the server. The requested resource could not be located.
+            </p>
+            
+            <a href="index.html" class="inline-flex items-center justify-center px-8 py-3 border text-base font-normal rounded-xl text-white transition duration-200 transform hover:scale-[1.02] border-accent-indigo bg-accent-indigo/20 hover:bg-accent-indigo/40">
+                <i class="fas fa-home mr-2"></i> Return to 4SP
+            </a>
+            
+        </div>
+    </main>
+
+    <script>
+        // --- Typewriter effect logic ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const textElement = document.getElementById('typewriter-text');
+            const cursorElement = document.getElementById('cursor');
+
+            const sentences = [
+                "You got lost in the void!",
+                "Error: Path not found. Try again.",
+                "The page is currently unplugged.",
+                "Your gravity well collapsed here.",
+                "Lost signal. Check connection.",
+                "This server took a coffee break.",
+                "Beyond the digital horizon.",
+                "Access denied by cosmic rays.",
+                "404: The page is in another castle.",
+                "We missed that jump point.",
+                "Rerouting... just kidding.",
+                "This link has expired, sorry.",
+                "The server is playing hide-and-seek.",
+                "Did you type that right?",
+                "Out of bounds error detected.",
+                "Warp drive failed to engage.",
+                "Just an empty room here.",
+                "A glitch in the matrix.",
+                "The page went on vacation.",
+                "This is not the page you seek.",
+            ];
+            
+            // Base speed constants
+            const BASE_TYPING_SPEED = 100; // Slower base typing speed
+            const DELETING_SPEED = 30; // Deleting remains fast
+            const DELAY_AFTER_TYPE = 2500; // ms (Wait longer after full sentence)
+            const DELAY_AFTER_DELETE = 700; // ms
+
+            let sentenceIndex = 0;
+            let charIndex = 0;
+            let isTyping = true;
+            
+            // Function to get a human-like typing delay with random pauses
+            const getRandomTypingDelay = (char) => {
+                // Base delay is between BASE_TYPING_SPEED and BASE_TYPING_SPEED + 50ms
+                let delay = BASE_TYPING_SPEED + Math.random() * 50;
+
+                // Longer pause after punctuation or capitalization (simulating thinking/finger shift)
+                if (char === ' ' && Math.random() < 0.2) { // 20% chance of a short pause after a space
+                    delay += 50;
+                } else if (/[.,?!:]/.test(char)) { // Longer pause after punctuation
+                    delay += 150 + Math.random() * 150;
+                } else if (/[A-Z]/.test(char)) { // Slight pause after capital letters
+                    delay += 20;
+                } else if (Math.random() < 0.05) { // 5% chance of a noticeable "finger fumble" pause
+                    delay += 300; 
+                }
+                
+                return delay;
+            };
+
+            // Simple blinking cursor animation
+            const BLANK_CURSOR = '\u200B'; // Zero Width Space to prevent jumpiness
+            
+            const blinkCursor = () => {
+                // Cycle between '|' and the invisible character
+                cursorElement.textContent = cursorElement.textContent === '|' ? BLANK_CURSOR : '|';
+            };
+            setInterval(blinkCursor, 400);
+
+            const typeSentence = () => {
+                const currentSentence = sentences[sentenceIndex % sentences.length];
+
+                if (isTyping) {
+                    // Typing phase
+                    if (charIndex < currentSentence.length) {
+                        const currentChar = currentSentence.charAt(charIndex);
+                        textElement.textContent += currentChar;
+                        charIndex++;
+                        // Use the dynamic delay for human typing
+                        setTimeout(typeSentence, getRandomTypingDelay(currentChar));
+                    } else {
+                        // Done typing, wait for the longer delay
+                        isTyping = false;
+                        setTimeout(typeSentence, DELAY_AFTER_TYPE);
+                    }
+                } else {
+                    // Deleting phase (fast and consistent)
+                    if (charIndex > 0) {
+                        textElement.textContent = currentSentence.substring(0, charIndex - 1);
+                        charIndex--;
+                        setTimeout(typeSentence, DELETING_SPEED);
+                    } else {
+                        // Done deleting, move to next sentence
+                        isTyping = true;
+                        sentenceIndex++;
+                        setTimeout(typeSentence, DELAY_AFTER_DELETE);
+                    }
+                }
+            };
+            
+            // Start the loop
+            typeSentence();
+        });
+    </script>
+</body>
+</html>
