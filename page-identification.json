@@ -24,11 +24,6 @@
         "icon": "fa-solid fa-clock", 
         "url": "../logged-in/countdowns.html"
     },
-    "soundboard-playlists": {
-        "name": "Playlists",
-        "icon": "fa-solid fa-list-ul", 
-        "url": "../logged-in/soundboard-playlists.html"
-    },
     "weather": {
         "name": "Weather",
         "icon": "fa-solid fa-cloud-sun", 
@@ -48,10 +43,5 @@
         "name": "Games",
         "icon": "fa-solid fa-gamepad", 
         "url": "../GAMES/index.html"
-    },
-    "test": {
-        "name": "Settings",
-        "icon": "fa-solid fa-gear", 
-        "url": "../logged-in/settings.html"
     }
 }
