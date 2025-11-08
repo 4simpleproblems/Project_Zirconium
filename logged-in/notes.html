@@ -35,7 +35,6 @@
 
         /* --- THEME-AWARE STYLES (from navigation.js) --- */
         
-        /* Base style for buttons in header, matching toolbar */
         .btn-toolbar-style {
             background: var(--menu-bg, #1a1a1a);
             border: 1px solid var(--menu-border, #333);
@@ -54,7 +53,6 @@
             border-color: var(--avatar-border, #4b5563);
         }
         
-        /* Specific override for the "Files" button to keep it primary */
         .btn-toolbar-style.btn-primary-override {
             background-color: var(--tab-active-text, #4f46e5);
             border: 1px solid var(--tab-active-border, #4f46e5);
@@ -63,25 +61,6 @@
         .btn-toolbar-style.btn-primary-override:hover {
             background-color: var(--tab-active-hover-text, #6366f1);
             border-color: var(--tab-active-hover-border, #6366f1);
-        }
-        
-        .btn-secondary {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-            background-color: var(--menu-item-hover-bg, #374151);
-            border: 1px solid var(--menu-border, #374151);
-            color: var(--menu-text, #d1d5db);
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .btn-secondary:hover {
-            background-color: var(--avatar-border, #4b5563);
-            border-color: var(--avatar-border, #4b5563);
-            color: white;
         }
 
         .btn-icon {
@@ -102,7 +81,6 @@
             color: var(--tab-active-text, #4f46e5);
             border-color: var(--tab-active-border, #4f46e5);
         }
-        /* NEW: Active state for toolbar buttons */
         .btn-icon.active {
              background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
             color: var(--tab-active-text, #4f46e5);
@@ -116,14 +94,28 @@
             right: 0;
             background: var(--menu-bg, #1a1a1a);
             border: 1px solid var(--menu-border, #333);
-            border-radius: 0.75rem; /* Match nav dropdown */
+            border-radius: 0.75rem;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
             z-index: 1010;
             min-width: 200px;
-            padding: 0.5rem; /* Match nav dropdown */
+            padding: 0.5rem;
+        }
+        /* NEW: Custom selector dropdowns (open to side) */
+        .selector-dropdown {
+            position: absolute;
+            top: 0;
+            left: 100%;
+            margin-left: 10px;
+            background: var(--menu-bg, #1a1a1a);
+            border: 1px solid var(--menu-border, #333);
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            z-index: 1010;
+            min-width: 200px;
+            padding: 0.5rem;
         }
         .dropdown-item {
-            padding: 0.5rem 0.75rem; /* Match nav links */
+            padding: 0.5rem 0.75rem;
             font-size: 0.875rem;
             color: var(--menu-text, #d1d5db);
             border-radius: 0.375rem;
@@ -150,23 +142,22 @@
 
         /* --- NEW: Page Content Layout --- */
         #page-content {
-            height: calc(100vh - 4rem);
+            min-height: calc(100vh - 4rem);
             display: flex;
             flex-direction: column;
         }
         
         #editor-wrapper {
             position: relative;
-            flex-grow: 1;
             display: flex;
+            flex-grow: 1;
         }
 
-        /* --- NEW: Formatting Toolbar (Left) --- */
+        /* --- NEW: Formatting Toolbar (Sticky) --- */
         #formatting-toolbar {
-            position: absolute;
-            top: 1.25rem; /* 20px */
-            left: 20px;
-            width: 52px; /* Slightly wider for centering */
+            position: sticky;
+            top: 5.25rem; /* 4rem navbar + 1.25rem margin */
+            width: 52px;
             background: var(--menu-bg, #1a1a1a);
             border: 1px solid var(--menu-border, #333);
             border-radius: 0.75rem;
@@ -176,30 +167,10 @@
             gap: 0.25rem;
             z-index: 100;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            align-items: center; /* Center buttons horizontally */
-        }
-        #formatting-toolbar select {
-            background-color: var(--menu-item-hover-bg, #374151);
-            color: var(--menu-text, #d1d5db);
-            border: 1px solid var(--menu-border, #333);
-            border-radius: 0.375rem;
-            font-size: 0.875rem;
-            padding: 0.25rem;
-            margin-top: 0.25rem;
-            outline: none;
-            width: 90%; /* Center controls */
-            margin-left: auto;
-            margin-right: auto;
-        }
-        #formatting-toolbar input[type="color"] {
-            width: 90%; /* Center controls */
-            height: 24px;
-            padding: 0;
-            border: 1px solid var(--menu-border, #333);
-            border-radius: 0.25rem;
-            cursor: pointer;
-            margin-left: auto;
-            margin-right: auto;
+            align-items: center;
+            align-self: flex-start; /* Stick to top */
+            margin-top: 1.25rem;
+            margin-left: 20px;
         }
         #formatting-toolbar .toolbar-divider {
             height: 1px;
@@ -207,39 +178,48 @@
             margin: 0.5rem 0;
             width: 100%;
         }
+        /* Wrapper for custom select buttons */
+        .selector-wrapper {
+            position: relative;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
 
-        /* --- NEW: Rich Text Editor --- */
+        /* --- NEW: Rich Text Editor (Page Scroll) --- */
         #note-editor {
             flex-grow: 1;
-            height: 100%;
+            min-height: calc(100vh - 12rem); /* Fill screen */
             padding: 20px;
-            padding-left: 92px; /* Make space for toolbar (52px + 20px margin + 20px padding) */
+            margin-left: 20px;
+            margin-right: 20px; /* Right margin */
             box-sizing: border-box;
             background-color: #0d0d0d;
             border: 1px solid #1a1a1a;
             color: #c0c0c0;
             resize: none; 
             outline: none;
-            line-height: 1.6; /* Default line height */
+            line-height: 1.6;
             font-size: 1rem;
-            overflow-y: auto;
-            padding-bottom: 50px; 
+            padding-bottom: 50vh; /* Add lots of space at bottom */
+            margin-top: 1.25rem;
         }
-        /* NEW: Placeholder text using ::before */
+        /* Placeholder text */
         #note-editor:empty::before {
             content: 'Start typing your notes here...';
             color: #707070;
-            pointer-events: none; /* Allows click-through */
+            pointer-events: none;
             font-style: italic;
         }
         #note-editor div,
         #note-editor p,
         #note-editor li {
-            min-height: 1em; /* Allow empty lines */
+            min-height: 1em;
         }
         #note-editor:focus {
-            border-color: var(--tab-active-border, #4f46e5);
-            box-shadow: 0 0 0 1px var(--tab-active-border, #4f46e5);
+            /* Removed purple outline */
+            border-color: #1a1a1a;
+            box-shadow: none;
         }
 
         /* --- NEW: Notebook Mode Styles --- */
@@ -247,28 +227,65 @@
             line-height: 1.7rem; /* ~27px */
             background-image: repeating-linear-gradient(to bottom, 
                 transparent, 
-                transparent 1.6rem, /* Line starts just under the text */
+                transparent 1.6rem, 
                 #1f1f1f 1.6rem, 
-                #1f1f1f 1.65rem /* A thin line */
+                #1f1f1f 1.65rem
             );
-            background-size: 100% 1.7rem; /* Repeat every line-height */
+            background-size: 100% 1.7rem;
             background-attachment: local;
-            background-position: 0 0.5rem; /* Offset lines from top */
+            background-position: 0 0.8rem; /* Pushed line down */
         }
         
         #page-navigation-bar {
-            display: none; /* Hidden by default */
+            display: none;
             justify-content: space-between;
             align-items: center;
             padding: 0.5rem 1rem;
             border-bottom: 1px solid #1a1a1a;
         }
         body.mode-notebook #page-navigation-bar {
-            display: flex; /* Shown only in notebook mode */
+            display: flex;
         }
         #page-date {
             font-size: 0.875rem;
             color: var(--tab-text, #9ca3af);
+        }
+
+        /* --- NEW: Top Sticky Stats Bar --- */
+        #top-stats-bar {
+            position: sticky;
+            top: 4rem; /* Stick below 4rem fixed navbar */
+            z-index: 999;
+            padding: 0.5rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(to bottom, #070707 80%, transparent);
+            color: var(--tab-text, #9ca3af);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            font-size: 0.85rem;
+        }
+        #top-stats-bar.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #top-stats-group {
+            display: flex;
+            gap: 15px;
+        }
+        #scroll-to-top-btn {
+            background: var(--menu-item-hover-bg, #374151);
+            color: var(--menu-text, #d1d5db);
+            border: none;
+            border-radius: 0.375rem;
+            padding: 0.25rem 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        #scroll-to-top-btn:hover {
+            background-color: var(--avatar-border, #4b5563);
         }
 
 
@@ -287,15 +304,30 @@
             display: flex;
             gap: 15px;
             user-select: none;
+            transition: opacity 0.3s ease;
         }
         .stat-group { display: flex; align-items: center; }
         .stat-label { color: #707070; margin-right: 4px; }
         .stat-value { color: #ffffff; font-weight: 500; }
         .separator { color: #333; margin: 0 5px; }
 
+        /* --- NEW: Autosave Indicator --- */
+        #autosave-status {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 1000;
+            font-size: 0.9rem;
+            color: #707070;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            user-select: none;
+        }
+
     </style>
 </head>
-<body class="min-h-screen mode-notes"> <div id="loading-screen" class="fixed inset-0 bg-[#070707] flex items-center justify-center z-50">
+<body class="min-h-screen mode-notes">
+    <div id="loading-screen" class="fixed inset-0 bg-[#070707] flex items-center justify-center z-50">
         <i class="fa-solid fa-spinner fa-spin fa-2x"></i>
     </div>
 
@@ -325,10 +357,15 @@
                             <i class="fa-solid fa-lock w-5"></i> Save Encrypted (.4spnote)
                         </div>
                         
-                        <div id="export-divider" class="dropdown-divider"></div>
+                        <div id="import-divider" class="dropdown-divider"></div>
                         <div class="dropdown-header">Import</div>
                         <div id="load-file-btn" class="dropdown-item">
                             <i class="fa-solid fa-file-import w-5"></i> Load File
+                        </div>
+
+                        <div id="notebook-divider" class="dropdown-divider hidden"></div>
+                        <div id="delete-page-btn" class="dropdown-item hidden text-red-500 hover:bg-red-900/50">
+                            <i class="fa-solid fa-trash-can w-5"></i> Delete Current Page
                         </div>
                     </div>
                 </div>
@@ -342,6 +379,28 @@
             <span id="page-date">Page 1 | Nov 7, 2025</span>
             <button id="next-page-btn" class="btn-icon" title="Next Page">
                 <i class="fa-solid fa-chevron-right"></i>
+            </button>
+        </div>
+
+        <div id="top-stats-bar">
+            <div id="top-stats-group">
+                <div class="stat-group">
+                    <span class="stat-label">L:</span>
+                    <span id="top-line-count" class="stat-value">1</span>
+                </div>
+                <span class="separator">|</span>
+                <div class="stat-group">
+                    <span class="stat-label">W:</span>
+                    <span id="top-word-count" class="stat-value">0</span>
+                </div>
+                <span class="separator">|</span>
+                <div class="stat-group">
+                    <span class="stat-label">C:</span>
+                    <span id="top-char-count" class="stat-value">0</span>
+                </div>
+            </div>
+            <button id="scroll-to-top-btn" title="Scroll to Top">
+                <i class="fa-solid fa-arrow-up"></i>
             </button>
         </div>
 
@@ -364,25 +423,33 @@
                 
                 <div class="toolbar-divider"></div>
 
-                <label for="font-size" class="text-xs text-gray-400 text-center">Size</label>
-                <select id="font-size">
-                    <option value="3">Normal (16px)</option>
-                    <option value="1">Small (10px)</option>
-                    <option value="2">Medium (13px)</option>
-                    <option value="4">Large (18px)</option>
-                    <option value="5">XL (24px)</option>
-                    <option value="6">XXL (32px)</option>
-                </select>
+                <div class="selector-wrapper">
+                    <button id="font-size-btn" class="btn-icon" title="Font Size">
+                        <i class="fa-solid fa-text-height"></i>
+                    </button>
+                    <div id="font-size-dropdown" class="selector-dropdown hidden">
+                        <div class="dropdown-item" data-value="1">Small (10px)</div>
+                        <div class="dropdown-item" data-value="2">Medium (13px)</div>
+                        <div class="dropdown-item" data-value="3">Normal (16px)</div>
+                        <div class="dropdown-item" data-value="4">Large (18px)</div>
+                        <div class="dropdown-item" data-value="5">XL (24px)</div>
+                        <div class="dropdown-item" data-value="6">XXL (32px)</div>
+                    </div>
+                </div>
 
-                <label for="font-family" class="text-xs text-gray-400 text-center mt-2">Font</label>
-                <select id="font-family">
-                    <option value="Geist">Geist (Default)</option>
-                    <option value="Roboto">Roboto</option>
-                    <option value="Lato">Lato</option>
-                    <option value="Montserrat">Montserrat</option>
-                    <option value="Open Sans">Open Sans</option>
-                    <option value="Slabo 27px">Slabo (Serif)</option>
-                </select>
+                <div class="selector-wrapper mt-1">
+                    <button id="font-family-btn" class="btn-icon" title="Font Family">
+                        <i class="fa-solid fa-font"></i>
+                    </button>
+                    <div id="font-family-dropdown" class="selector-dropdown hidden">
+                        <div class="dropdown-item" data-value="Geist" style="font-family: 'Geist'">Geist (Default)</div>
+                        <div class="dropdown-item" data-value="Roboto" style="font-family: 'Roboto'">Roboto</div>
+                        <div class="dropdown-item" data-value="Lato" style="font-family: 'Lato'">Lato</div>
+                        <div class="dropdown-item" data-value="Montserrat" style="font-family: 'Montserrat'">Montserrat</div>
+                        <div class="dropdown-item" data-value="Open Sans" style="font-family: 'Open Sans'">Open Sans</div>
+                        <div class="dropdown-item" data-value="Slabo 27px" style="font-family: 'Slabo 27px'">Slabo (Serif)</div>
+                    </div>
+                </div>
             </div>
 
             <div id="note-editor" contenteditable="true" spellcheck="false"></div>
@@ -408,6 +475,8 @@
             <span id="char-count" class="stat-value">0</span>
         </div>
     </div>
+
+    <div id="autosave-status"></div>
     
     <script type="text/javascript">
         // --- Global State and Element References ---
@@ -422,6 +491,8 @@
         const saveEncryptedBtn = document.getElementById('save-encrypted-btn');
         const loadFileBtn = document.getElementById('load-file-btn');
         const fileInput = document.getElementById('file-input');
+        const deletePageBtn = document.getElementById('delete-page-btn');
+        const notebookDivider = document.getElementById('notebook-divider');
 
         const modeToggleBtn = document.getElementById('mode-toggle-btn');
         const modeToggleIcon = document.getElementById('mode-toggle-icon');
@@ -432,15 +503,21 @@
         const nextPageBtn = document.getElementById('next-page-btn');
         const pageDateDisplay = document.getElementById('page-date');
         
+        const bottomStatCounter = document.getElementById('stat-counter');
+        const topStatsBar = document.getElementById('top-stats-bar');
+        const topLineCount = document.getElementById('top-line-count');
+        const topWordCount = document.getElementById('top-word-count');
+        const topCharCount = document.getElementById('top-char-count');
+        const scrollToTopBtn = document.getElementById('scroll-to-top-btn');
+        
+        const autosaveStatus = document.getElementById('autosave-status');
         let autosaveTimer = null;
-        const AUTOSAVE_KEY = '4sp_note_data_v2'; 
+        let autosaveCooldown = false;
 
-        // NEW: Placeholder text constant
         const PLACEHOLDER_TEXT = '<div>Start typing your notes here...</div>';
 
-        // NEW: Application State
         let appState = {
-            mode: 'notes', // 'notes' or 'notebook'
+            mode: 'notes',
             notesContent: PLACEHOLDER_TEXT,
             notebookPages: [
                 { createdAt: new Date().toISOString(), content: '<div>Page 1</div>' }
@@ -448,33 +525,110 @@
             currentPageIndex: 0
         };
 
+        // --- NEW: IndexedDB Helper ---
+        const idbNotes = {
+            db: null,
+            initDB: function() {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open('4spNotesDB', 1);
+                    
+                    request.onupgradeneeded = (event) => {
+                        this.db = event.target.result;
+                        if (!this.db.objectStoreNames.contains('appState')) {
+                            this.db.createObjectStore('appState', { keyPath: 'id' });
+                        }
+                    };
+                    
+                    request.onsuccess = (event) => {
+                        this.db = event.target.result;
+                        resolve();
+                    };
+                    
+                    request.onerror = (event) => {
+                        console.error("IndexedDB error:", event.target.error);
+                        reject(event.target.error);
+                    };
+                });
+            },
+            saveState: function(state) {
+                return new Promise((resolve, reject) => {
+                    if (!this.db) {
+                        reject("DB not initialized");
+                        return;
+                    }
+                    const transaction = this.db.transaction(['appState'], 'readwrite');
+                    const store = transaction.objectStore('appState');
+                    const request = store.put({ id: 'main', ...state });
+                    
+                    request.onsuccess = () => resolve();
+                    request.onerror = (event) => reject(event.target.error);
+                });
+            },
+            loadState: function() {
+                return new Promise((resolve, reject) => {
+                    if (!this.db) {
+                        reject("DB not initialized");
+                        return;
+                    }
+                    const transaction = this.db.transaction(['appState'], 'readonly');
+                    const store = transaction.objectStore('appState');
+                    const request = store.get('main');
+                    
+                    request.onsuccess = (event) => {
+                        resolve(event.target.result);
+                    };
+                    request.onerror = (event) => reject(event.target.error);
+                });
+            }
+        };
+
+
         // --- Utility Functions ---
 
         /**
-         * Real-time function to update the line, word, and character counts.
+         * Updates all stat counters (top and bottom).
          */
         function updateCounts() {
             const content = editor.innerText; 
+            const charCount = content.length;
+            const lineCount = (content.length === 0) ? 1 : content.split('\n').length;
+            const wordCount = (content.length === 0) ? 0 : content.trim().split(/\s+/).filter(word => word.length > 0).length;
 
-            // 1. Character Count
-            charDisplay.textContent = content.length;
+            // Bottom Counter
+            charDisplay.textContent = charCount;
+            lineDisplay.textContent = lineCount;
+            wordDisplay.textContent = wordCount;
+            
+            // Top Counter
+            topCharCount.textContent = charCount;
+            topLineCount.textContent = lineCount;
+            topWordCount.textContent = wordCount;
+        }
 
-            // 2. Line Count
-            const lineCount = content.split('\n').length;
-            lineDisplay.textContent = (content.length === 0) ? 1 : lineCount;
+        /**
+         * NEW: Triggers the visual save indicator animation.
+         */
+        function triggerSaveAnimation() {
+            if (autosaveCooldown) return;
 
-            // 3. Word Count
-            const words = content.trim().split(/\s+/).filter(word => word.length > 0);
-            wordDisplay.textContent = (content.length === 0) ? 0 : words.length;
+            autosaveCooldown = true;
+            autosaveStatus.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i>';
+            autosaveStatus.style.opacity = 1;
+
+            setTimeout(() => {
+                autosaveStatus.style.opacity = 0;
+            }, 1000); // Fade out after 1 sec
+
+            setTimeout(() => {
+                autosaveCooldown = false;
+            }, 2000); // Cooldown for 2 sec total
         }
         
         /**
-         * Saves the current editor content to appState, then to localStorage.
+         * NEW: Saves the current editor content to appState, then to IndexedDB.
          */
-        function autosave() {
+        async function autosave() {
             const currentContent = editor.innerHTML;
-            
-            // If the editor is empty, save the placeholder so it reloads correctly
             const contentToSave = currentContent === '' ? PLACEHOLDER_TEXT : currentContent;
 
             if (appState.mode === 'notes') {
@@ -485,11 +639,16 @@
                 }
             }
             
-            localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(appState));
+            try {
+                await idbNotes.saveState(appState);
+                triggerSaveAnimation(); // Show checkmark on success
+            } catch (e) {
+                console.error("Autosave to IDB failed:", e);
+            }
         }
 
         /**
-         * Loads content from appState into the editor based on the current mode.
+         * Loads content from appState into the editor.
          */
         function loadContentIntoEditor() {
             let content = '';
@@ -500,22 +659,15 @@
                     appState.currentPageIndex = appState.notebookPages.length - 1;
                 }
                 content = appState.notebookPages[appState.currentPageIndex].content;
-                updatePageNavUI(); // Update page nav text
+                updatePageNavUI();
             }
             
-            // NEW: Handle placeholder text
-            // If content is the placeholder, set editor to empty to trigger CSS placeholder
-            if (content === PLACEHOLDER_TEXT) {
-                editor.innerHTML = '';
-            } else {
-                editor.innerHTML = content;
-            }
-
-            updateCounts(); // Update counts for new content
+            editor.innerHTML = (content === PLACEHOLDER_TEXT) ? '' : content;
+            updateCounts();
         }
 
         /**
-         * Updates the page navigation bar (date, page number, button states).
+         * Updates the page navigation bar UI.
          */
         function updatePageNavUI() {
             if (appState.mode !== 'notebook') return;
@@ -551,55 +703,79 @@
         }
 
         /**
-         * NEW: Checks selection state and updates toolbar button 'active' class
+         * Updates toolbar button 'active' class
          */
         function updateToolbarState() {
             try {
-                const isBold = document.queryCommandState('bold');
-                const isItalic = document.queryCommandState('italic');
-                const isUnderline = document.queryCommandState('underline');
-                const isOL = document.queryCommandState('insertOrderedList');
-                const isUL = document.queryCommandState('insertUnorderedList');
-
-                document.getElementById('format-bold').classList.toggle('active', isBold);
-                document.getElementById('format-italic').classList.toggle('active', isItalic);
-                document.getElementById('format-underline').classList.toggle('active', isUnderline);
-                document.getElementById('format-ol').classList.toggle('active', isOL);
-                document.getElementById('format-ul').classList.toggle('active', isUL);
-            } catch (e) {
-                console.warn("Could not query command state.", e);
-            }
+                document.getElementById('format-bold').classList.toggle('active', document.queryCommandState('bold'));
+                document.getElementById('format-italic').classList.toggle('active', document.queryCommandState('italic'));
+                document.getElementById('format-underline').classList.toggle('active', document.queryCommandState('underline'));
+                document.getElementById('format-ol').classList.toggle('active', document.queryCommandState('insertOrderedList'));
+                document.getElementById('format-ul').classList.toggle('active', document.queryCommandState('insertUnorderedList'));
+            } catch (e) {}
         }
 
         /**
-         * NEW: Sets up all listeners for the formatting toolbar.
+         * Sets up all listeners for the formatting toolbar.
          */
         function setupFormattingToolbar() {
-            // Helper to apply simple execCommands
             const applyFormat = (command, value = null) => {
                 document.execCommand(command, false, value);
-                editor.focus(); // Re-focus the editor
-                updateToolbarState(); // Update UI immediately
+                editor.focus();
+                updateToolbarState();
             };
 
             document.getElementById('format-bold').addEventListener('click', () => applyFormat('bold'));
             document.getElementById('format-italic').addEventListener('click', () => applyFormat('italic'));
             document.getElementById('format-underline').addEventListener('click', () => applyFormat('underline'));
-
-            // Format block commands (lists)
             document.getElementById('format-ol').addEventListener('click', () => applyFormat('insertOrderedList'));
             document.getElementById('format-ul').addEventListener('click', () => applyFormat('insertUnorderedList'));
-
-            // Color pickers
             document.getElementById('font-color').addEventListener('input', (e) => applyFormat('foreColor', e.target.value));
             
-            // Selects
-            document.getElementById('font-size').addEventListener('change', (e) => applyFormat('fontSize', e.target.value));
-            document.getElementById('font-family').addEventListener('change', (e) => applyFormat('fontName', e.target.value));
-        
-            // Listen for selection changes to update toolbar
+            // --- NEW: Custom Selectors ---
+            const fontSizeBtn = document.getElementById('font-size-btn');
+            const fontSizeDropdown = document.getElementById('font-size-dropdown');
+            const fontFamilyBtn = document.getElementById('font-family-btn');
+            const fontFamilyDropdown = document.getElementById('font-family-dropdown');
+
+            const closeAllToolDropdowns = () => {
+                fontSizeDropdown.classList.add('hidden');
+                fontFamilyDropdown.classList.add('hidden');
+            };
+
+            fontSizeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const wasHidden = fontSizeDropdown.classList.contains('hidden');
+                closeAllToolDropdowns();
+                if (wasHidden) fontSizeDropdown.classList.remove('hidden');
+            });
+
+            fontFamilyBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const wasHidden = fontFamilyDropdown.classList.contains('hidden');
+                closeAllToolDropdowns();
+                if (wasHidden) fontFamilyDropdown.classList.remove('hidden');
+            });
+
+            document.querySelectorAll('#font-size-dropdown .dropdown-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    applyFormat('fontSize', item.dataset.value);
+                    closeAllToolDropdowns();
+                });
+            });
+
+            document.querySelectorAll('#font-family-dropdown .dropdown-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    applyFormat('fontName', item.dataset.value);
+                    closeAllToolDropdowns();
+                });
+            });
+
             document.addEventListener('selectionchange', updateToolbarState);
-            editor.addEventListener('click', updateToolbarState);
+            editor.addEventListener('click', () => {
+                updateToolbarState();
+                closeAllToolDropdowns(); // Close on editor click
+            });
             editor.addEventListener('keyup', updateToolbarState);
         }
 
@@ -609,35 +785,52 @@
         fileMenuBtn.addEventListener('click', (event) => {
             event.stopPropagation();
             
-            // NEW: Hide export buttons if in notebook mode
             const inNotebookMode = appState.mode === 'notebook';
             document.getElementById('export-header').style.display = inNotebookMode ? 'none' : 'block';
             document.getElementById('save-text-btn').style.display = inNotebookMode ? 'none' : 'flex';
             document.getElementById('save-encrypted-btn').style.display = inNotebookMode ? 'none' : 'flex';
-            document.getElementById('export-divider').style.display = inNotebookMode ? 'none' : 'block';
+            document.getElementById('import-divider').style.display = inNotebookMode ? 'none' : 'block';
+            
+            // Show notebook-specific buttons
+            notebookDivider.style.display = inNotebookMode ? 'block' : 'none';
+            deletePageBtn.style.display = inNotebookMode ? 'flex' : 'none';
 
             fileDropdown.classList.toggle('hidden');
         });
 
-        // Close the dropdown when clicking outside
+        // Close ALL dropdowns when clicking outside
         document.addEventListener('click', (event) => {
+            // Close file dropdown
             if (!fileDropdown.classList.contains('hidden') && 
                 !fileMenuBtn.contains(event.target) && 
                 !fileDropdown.contains(event.target)) {
                 fileDropdown.classList.add('hidden');
+            }
+            // Close tool dropdowns
+            const toolDropdowns = [
+                document.getElementById('font-size-dropdown'),
+                document.getElementById('font-family-dropdown')
+            ];
+            const toolButtons = [
+                document.getElementById('font-size-btn'),
+                document.getElementById('font-family-btn')
+            ];
+            
+            let clickedInsideTool = false;
+            if (toolButtons.some(btn => btn.contains(event.target)) || 
+                toolDropdowns.some(dd => dd.contains(event.target))) {
+                clickedInsideTool = true;
+            }
+
+            if (!clickedInsideTool) {
+                toolDropdowns.forEach(dd => dd.classList.add('hidden'));
             }
         });
 
         // 1. Save Standard Text
         saveTextBtn.addEventListener('click', () => {
             fileDropdown.classList.add('hidden');
-            const content = editor.innerText;
-            let filename = prompt("Enter filename (e.g., 'my-note.txt'):", 'my-note.txt');
-
-            if (filename) {
-                downloadFile(content, filename);
-                alert(`Note saved as '${filename}'!`);
-            }
+            downloadFile(editor.innerText, 'my-note.txt');
         });
 
         // 2. Save Encrypted .4spnote File
@@ -645,25 +838,13 @@
             fileDropdown.classList.add('hidden');
             const content = editor.innerHTML;
             const password = prompt("Enter a password to encrypt your note:");
-
             if (password) {
                 try {
                     const encrypted = CryptoJS.AES.encrypt(content, password).toString();
-                    let filename = prompt("Enter a filename for your encrypted note:", 'my-secret-note.4spnote');
-                    
-                    if (filename) {
-                        if (!filename.endsWith('.4spnote')) {
-                             filename += '.4spnote';
-                        }
-                        downloadFile(encrypted, filename, 'application/octet-stream');
-                        alert(`Note encrypted and saved as '${filename}'!`);
-                    }
-                } catch (e) {
-                    alert("Encryption failed. Check the console for details.");
-                    console.error("Encryption error:", e);
-                }
-            } else {
-                alert("Save cancelled. Encryption requires a password.");
+                    let filename = 'my-secret-note.4spnote';
+                    if (!filename.endsWith('.4spnote')) filename += '.4spnote';
+                    downloadFile(encrypted, filename, 'application/octet-stream');
+                } catch (e) { alert("Encryption failed."); }
             }
         });
 
@@ -676,93 +857,91 @@
         fileInput.addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
-
             reader.onload = (e) => {
                 const fileContent = e.target.result;
                 const filename = file.name;
                 
                 if (filename.endsWith('.4spnote')) {
-                    // Handle Decryption
-                    const password = prompt(`Enter the password to decrypt '${filename}':`);
+                    const password = prompt(`Enter password to decrypt '${filename}':`);
                     if (password) {
                         try {
                             const decryptedBytes = CryptoJS.AES.decrypt(fileContent, password);
                             const decryptedText = decryptedBytes.toString(CryptoJS.enc.Utf8);
-                            
                             if (decryptedText) {
                                 editor.innerHTML = decryptedText;
-                                alert(`'${filename}' loaded and decrypted successfully!`);
                                 autosave();
                             } else {
-                                alert("Decryption failed. Incorrect password or corrupted file.");
+                                alert("Decryption failed. Incorrect password.");
                             }
-                        } catch (err) {
-                            alert("Decryption error: File content could be corrupted or an incorrect password was used.");
-                            console.error("Decryption error:", err);
-                        }
-                    } else {
-                        alert("File loading cancelled. Password required for decryption.");
+                        } catch (err) { alert("Decryption error."); }
                     }
                 } else {
-                    // Handle Standard Text Load
                     editor.innerText = fileContent; // Load as plain text
-                    alert(`'${filename}' loaded successfully!`);
                     autosave();
                 }
                 updateCounts();
             };
-
-            reader.onerror = () => { alert('Error reading file.'); };
             reader.readAsText(file);
-            event.target.value = null; // Reset file input
+            event.target.value = null;
+        });
+
+        // 4. NEW: Delete Page
+        deletePageBtn.addEventListener('click', () => {
+            fileDropdown.classList.add('hidden');
+            if (appState.notebookPages.length <= 1) {
+                alert("You cannot delete the last page.");
+                return;
+            }
+            if (confirm("Are you sure you want to delete this page?")) {
+                appState.notebookPages.splice(appState.currentPageIndex, 1);
+                // Go to previous page
+                if (appState.currentPageIndex >= appState.notebookPages.length) {
+                    appState.currentPageIndex = appState.notebookPages.length - 1;
+                }
+                loadContentIntoEditor();
+                autosave();
+            }
         });
 
         // Listen for editor input
         editor.addEventListener('input', () => {
             updateCounts();
             
-            // NEW: Auto-list feature
+            // Auto-list feature
             try {
                 const selection = window.getSelection();
                 const range = selection.getRangeAt(0);
                 const node = range.startContainer;
                 
-                // Check for '1. ' auto-list
                 if (node.nodeType === 3 && node.textContent.endsWith('1. ')) {
                     const parent = node.parentNode;
-                    // Only trigger if at the start of a new block
                     if (parent === editor || parent.tagName === 'DIV' || parent.tagName === 'P') {
-                        node.textContent = node.textContent.slice(0, -3); // Remove '1. '
+                        node.textContent = node.textContent.slice(0, -3);
                         range.setStart(node, node.textContent.length);
                         range.collapse(true);
                         document.execCommand('insertOrderedList', false, null);
                     }
                 }
                 
-                // Check for '* ' auto-list (bulleted)
                 if (node.nodeType === 3 && node.textContent.endsWith('* ')) {
                     const parent = node.parentNode;
                     if (parent === editor || parent.tagName === 'DIV' || parent.tagName === 'P') {
-                        node.textContent = node.textContent.slice(0, -2); // Remove '* '
+                        node.textContent = node.textContent.slice(0, -2);
                         range.setStart(node, node.textContent.length);
                         range.collapse(true);
                         document.execCommand('insertUnorderedList', false, null);
                     }
                 }
-            } catch (e) {
-                // This can fail if selection is weird, just ignore it
-            }
+            } catch (e) {}
 
             // Trigger autosave
             clearTimeout(autosaveTimer);
-            autosaveTimer = setTimeout(autosave, 1000);
+            autosaveTimer = setTimeout(autosave, 1000); // 1 sec delay
         });
 
         // --- NEW: Mode and Page Navigation Listeners ---
         
-        // Mode Toggle
         modeToggleBtn.addEventListener('click', () => {
             if (appState.mode === 'notes') {
                 appState.mode = 'notebook';
@@ -781,7 +960,6 @@
             autosave();
         });
 
-        // Previous Page
         prevPageBtn.addEventListener('click', () => {
             if (appState.currentPageIndex > 0) {
                 appState.currentPageIndex--;
@@ -790,10 +968,8 @@
             }
         });
 
-        // Next Page (or create new)
         nextPageBtn.addEventListener('click', () => {
             if (appState.currentPageIndex === appState.notebookPages.length - 1) {
-                // On last page, create a new one
                 appState.notebookPages.push({
                     createdAt: new Date().toISOString(),
                     content: `<div>Page ${appState.notebookPages.length + 1}</div>`
@@ -804,19 +980,36 @@
             autosave();
         });
 
+        // --- NEW: Scroll Listener for Top Stats Bar ---
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 100) {
+                topStatsBar.classList.add('visible');
+                bottomStatCounter.style.opacity = 0;
+            } else {
+                topStatsBar.classList.remove('visible');
+                bottomStatCounter.style.opacity = 1;
+            }
+        });
 
-        // --- Initialization on Load ---
-        window.addEventListener('load', () => {
-            const savedState = localStorage.getItem(AUTOSAVE_KEY);
-            if (savedState) {
-                try {
-                    const parsedState = JSON.parse(savedState);
-                    if (parsedState.mode && parsedState.notesContent && parsedState.notebookPages) {
-                        appState = parsedState;
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+
+        // --- Initialization on Load (async for IDB) ---
+        window.addEventListener('load', async () => {
+            try {
+                await idbNotes.initDB();
+                const savedState = await idbNotes.loadState();
+                
+                if (savedState) {
+                    // Basic validation
+                    if (savedState.mode && savedState.notesContent && savedState.notebookPages) {
+                        appState = savedState;
                     }
-                } catch (e) {
-                    console.error("Failed to parse saved state, using default.", e);
                 }
+            } catch (e) {
+                console.error("Failed to load state from IDB, using default.", e);
             }
 
             // Apply the loaded mode to the UI
@@ -849,7 +1042,7 @@
                 } else {
                     loadingScreen.style.display = 'none';
                     pageContent.classList.remove('hidden');
-                    pageContent.style.display = 'flex'; // Use flex for layout
+                    pageContent.style.display = 'flex';
                 }
             });
         }
