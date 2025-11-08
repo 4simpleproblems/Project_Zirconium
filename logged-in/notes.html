@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - Notes</title>
+    <title>4SP - NOTES</title>
     <meta name="description" content="A simple, password-encrypted note-taking application for the 4SP website.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -24,6 +24,11 @@
 
     <style>
         /* --- FONT & BASE STYLING (MATCHING template) --- */
+        :root {
+            /* Notebook Line Offset: Set to 1.3rem as determined by the user */
+            --notebook-line-offset: 1.3rem;
+        }
+
         body { 
             font-family: 'Geist', sans-serif; 
             background-color: #070707; 
@@ -38,7 +43,7 @@
         .btn-toolbar-style {
             background: var(--menu-bg, #1a1a1a);
             border: 1px solid var(--menu-border, #333);
-            border-radius: 0.75rem; /* Match toolbar */
+            border-radius: 0.75rem;
             color: var(--menu-text, #d1d5db);
             padding: 0.5rem 1rem;
             font-weight: 500;
@@ -100,7 +105,7 @@
             min-width: 200px;
             padding: 0.5rem;
         }
-        /* NEW: Custom selector dropdowns (open to side) */
+        /* Custom selector dropdowns (open to side) */
         .selector-dropdown {
             position: absolute;
             top: 0;
@@ -140,7 +145,7 @@
             text-transform: uppercase;
         }
 
-        /* --- NEW: Page Content Layout --- */
+        /* --- Page Content Layout --- */
         #page-content {
             min-height: calc(100vh - 4rem);
             display: flex;
@@ -153,7 +158,7 @@
             flex-grow: 1;
         }
 
-        /* --- NEW: Formatting Toolbar (Sticky) --- */
+        /* --- Formatting Toolbar (Sticky) --- */
         #formatting-toolbar {
             position: sticky;
             top: 5.25rem; /* 4rem navbar + 1.25rem margin */
@@ -168,7 +173,7 @@
             z-index: 100;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
             align-items: center;
-            align-self: flex-start; /* Stick to top */
+            align-self: flex-start;
             margin-top: 1.25rem;
             margin-left: 20px;
         }
@@ -178,7 +183,6 @@
             margin: 0.5rem 0;
             width: 100%;
         }
-        /* Wrapper for custom select buttons */
         .selector-wrapper {
             position: relative;
             width: 100%;
@@ -186,13 +190,13 @@
             justify-content: center;
         }
 
-        /* --- NEW: Rich Text Editor (Page Scroll) --- */
+        /* --- Rich Text Editor (Page Scroll) --- */
         #note-editor {
             flex-grow: 1;
-            min-height: calc(100vh - 12rem); /* Fill screen */
+            min-height: calc(100vh - 12rem);
             padding: 20px;
             margin-left: 20px;
-            margin-right: 20px; /* Right margin */
+            margin-right: 20px;
             box-sizing: border-box;
             background-color: #0d0d0d;
             border: 1px solid #1a1a1a;
@@ -201,10 +205,11 @@
             outline: none;
             line-height: 1.6;
             font-size: 1rem;
-            padding-bottom: 50vh; /* Add lots of space at bottom */
+            padding-bottom: 50vh;
             margin-top: 1.25rem;
+            /* Fix for fontName persistence issue: ensure default style is not applied on new lines */
+            font-family: inherit;
         }
-        /* Placeholder text */
         #note-editor:empty::before {
             content: 'Start typing your notes here...';
             color: #707070;
@@ -217,12 +222,12 @@
             min-height: 1em;
         }
         #note-editor:focus {
-            /* Removed purple outline */
+            /* No purple outline */
             border-color: #1a1a1a;
             box-shadow: none;
         }
 
-        /* --- NEW: Notebook Mode Styles --- */
+        /* --- Notebook Mode Styles --- */
         body.mode-notebook #note-editor {
             line-height: 1.7rem; /* ~27px */
             background-image: repeating-linear-gradient(to bottom, 
@@ -233,7 +238,8 @@
             );
             background-size: 100% 1.7rem;
             background-attachment: local;
-            background-position: 0 0.8rem; /* Pushed line down */
+            /* Use CSS variable for positioning (1.3rem) */
+            background-position: 0 var(--notebook-line-offset);
         }
         
         #page-navigation-bar {
@@ -251,10 +257,10 @@
             color: var(--tab-text, #9ca3af);
         }
 
-        /* --- NEW: Top Sticky Stats Bar --- */
+        /* --- Top Sticky Stats Bar --- */
         #top-stats-bar {
             position: sticky;
-            top: 4rem; /* Stick below 4rem fixed navbar */
+            top: 4rem;
             z-index: 999;
             padding: 0.5rem 1.5rem;
             display: flex;
@@ -311,7 +317,7 @@
         .stat-value { color: #ffffff; font-weight: 500; }
         .separator { color: #333; margin: 0 5px; }
 
-        /* --- NEW: Autosave Indicator --- */
+        /* --- Autosave Indicator (Bottom Left) --- */
         #autosave-status {
             position: fixed;
             bottom: 20px;
@@ -413,9 +419,36 @@
                 
                 <div class="toolbar-divider"></div>
 
-                <button id="format-ol" class="btn-icon" title="Numbered List"><i class="fa-solid fa-list-ol"></i></button>
-                <button id="format-ul" class="btn-icon" title="Bulleted List"><i class="fa-solid fa-list-ul"></i></button>
+                <div id="simple-mode-controls">
+                    <div class="selector-wrapper">
+                        <button id="line-spacing-btn" class="btn-icon" title="Line Spacing">
+                            <i class="fa-solid fa-lines-leaning"></i>
+                        </button>
+                        <div id="line-spacing-dropdown" class="selector-dropdown hidden">
+                            <div class="dropdown-item" data-value="0.5">0.5 (Compressed)</div>
+                            <div class="dropdown-item" data-value="1.0">1.0 (Normal)</div>
+                            <div class="dropdown-item" data-value="1.5">1.5 (Relaxed)</div>
+                            <div class="dropdown-item" data-value="2.0">2.0 (Double)</div>
+                        </div>
+                    </div>
 
+                    <div class="selector-wrapper mt-1">
+                        <button id="text-align-btn" class="btn-icon" title="Text Alignment">
+                            <i id="text-align-icon" class="fa-solid fa-align-left"></i>
+                        </button>
+                        <div id="text-align-dropdown" class="selector-dropdown hidden">
+                            <div class="dropdown-item" data-command="justifyLeft"><i class="fa-solid fa-align-left w-5"></i> Left</div>
+                            <div class="dropdown-item" data-command="justifyCenter"><i class="fa-solid fa-align-center w-5"></i> Center</div>
+                            <div class="dropdown-item" data-command="justifyRight"><i class="fa-solid fa-align-right w-5"></i> Right</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="notebook-mode-controls" class="hidden">
+                    <button id="format-ol" class="btn-icon" title="Numbered List"><i class="fa-solid fa-list-ol"></i></button>
+                    <button id="format-ul" class="btn-icon" title="Bulleted List"><i class="fa-solid fa-list-ul"></i></button>
+                </div>
+                
                 <div class="toolbar-divider"></div>
                 
                 <label for="font-color" class="text-xs text-gray-400 text-center" title="Font Color">Color</label>
@@ -498,6 +531,9 @@
         const modeToggleIcon = document.getElementById('mode-toggle-icon');
         const modeToggleText = document.getElementById('mode-toggle-text');
 
+        const simpleModeControls = document.getElementById('simple-mode-controls');
+        const notebookModeControls = document.getElementById('notebook-mode-controls');
+
         const pageNavBar = document.getElementById('page-navigation-bar');
         const prevPageBtn = document.getElementById('prev-page-btn');
         const nextPageBtn = document.getElementById('next-page-btn');
@@ -525,7 +561,7 @@
             currentPageIndex: 0
         };
 
-        // --- NEW: IndexedDB Helper ---
+        // --- IndexedDB Helper ---
         const idbNotes = {
             db: null,
             initDB: function() {
@@ -591,7 +627,8 @@
         function updateCounts() {
             const content = editor.innerText; 
             const charCount = content.length;
-            const lineCount = (content.length === 0) ? 1 : content.split('\n').length;
+            // Counts lines based on '\n' characters. If empty, count is 1.
+            const lineCount = (content.length === 0) ? 1 : content.split('\n').length; 
             const wordCount = (content.length === 0) ? 0 : content.trim().split(/\s+/).filter(word => word.length > 0).length;
 
             // Bottom Counter
@@ -606,13 +643,13 @@
         }
 
         /**
-         * NEW: Triggers the visual save indicator animation.
+         * Triggers the visual save indicator animation.
          */
         function triggerSaveAnimation() {
             if (autosaveCooldown) return;
 
             autosaveCooldown = true;
-            autosaveStatus.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i>';
+            autosaveStatus.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Saved';
             autosaveStatus.style.opacity = 1;
 
             setTimeout(() => {
@@ -625,7 +662,7 @@
         }
         
         /**
-         * NEW: Saves the current editor content to appState, then to IndexedDB.
+         * Saves the current editor content to appState, then to IndexedDB.
          */
         async function autosave() {
             const currentContent = editor.innerHTML;
@@ -654,12 +691,17 @@
             let content = '';
             if (appState.mode === 'notes') {
                 content = appState.notesContent;
+                simpleModeControls.classList.remove('hidden');
+                notebookModeControls.classList.add('hidden');
             } else {
                 if (!appState.notebookPages[appState.currentPageIndex]) {
                     appState.currentPageIndex = appState.notebookPages.length - 1;
                 }
                 content = appState.notebookPages[appState.currentPageIndex].content;
                 updatePageNavUI();
+
+                simpleModeControls.classList.add('hidden');
+                notebookModeControls.classList.remove('hidden');
             }
             
             editor.innerHTML = (content === PLACEHOLDER_TEXT) ? '' : content;
@@ -703,15 +745,32 @@
         }
 
         /**
-         * Updates toolbar button 'active' class
+         * Updates toolbar button 'active' class and alignment icon.
          */
         function updateToolbarState() {
             try {
+                // Common Formats
                 document.getElementById('format-bold').classList.toggle('active', document.queryCommandState('bold'));
                 document.getElementById('format-italic').classList.toggle('active', document.queryCommandState('italic'));
                 document.getElementById('format-underline').classList.toggle('active', document.queryCommandState('underline'));
-                document.getElementById('format-ol').classList.toggle('active', document.queryCommandState('insertOrderedList'));
-                document.getElementById('format-ul').classList.toggle('active', document.queryCommandState('insertUnorderedList'));
+                
+                // Notebook Mode Lists
+                if (appState.mode === 'notebook') {
+                    document.getElementById('format-ol').classList.toggle('active', document.queryCommandState('insertOrderedList'));
+                    document.getElementById('format-ul').classList.toggle('active', document.queryCommandState('insertUnorderedList'));
+                }
+
+                // Simple Mode Alignment
+                if (appState.mode === 'notes') {
+                    const alignIcon = document.getElementById('text-align-icon');
+                    if (document.queryCommandState('justifyCenter')) {
+                        alignIcon.className = 'fa-solid fa-align-center';
+                    } else if (document.queryCommandState('justifyRight')) {
+                        alignIcon.className = 'fa-solid fa-align-right';
+                    } else {
+                        alignIcon.className = 'fa-solid fa-align-left';
+                    }
+                }
             } catch (e) {}
         }
 
@@ -719,42 +778,84 @@
          * Sets up all listeners for the formatting toolbar.
          */
         function setupFormattingToolbar() {
+            // Explicitly enable styleWithCSS
+            document.execCommand('styleWithCSS', false, true);
+
             const applyFormat = (command, value = null) => {
                 document.execCommand(command, false, value);
                 editor.focus();
                 updateToolbarState();
             };
 
+            // Common Controls
             document.getElementById('format-bold').addEventListener('click', () => applyFormat('bold'));
             document.getElementById('format-italic').addEventListener('click', () => applyFormat('italic'));
             document.getElementById('format-underline').addEventListener('click', () => applyFormat('underline'));
+            document.getElementById('font-color').addEventListener('input', (e) => applyFormat('foreColor', e.target.value));
+
+            // Notebook Controls (Lists)
             document.getElementById('format-ol').addEventListener('click', () => applyFormat('insertOrderedList'));
             document.getElementById('format-ul').addEventListener('click', () => applyFormat('insertUnorderedList'));
-            document.getElementById('font-color').addEventListener('input', (e) => applyFormat('foreColor', e.target.value));
             
-            // --- NEW: Custom Selectors ---
+            // Simple Mode Controls
+            
+            // Line Spacing
+            const lineSpacingBtn = document.getElementById('line-spacing-btn');
+            const lineSpacingDropdown = document.getElementById('line-spacing-dropdown');
+            lineSpacingBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                closeAllToolDropdowns(lineSpacingDropdown);
+                lineSpacingDropdown.classList.toggle('hidden');
+            });
+            document.querySelectorAll('#line-spacing-dropdown .dropdown-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    // Note: lineHeight command is non-standard but is the common implementation.
+                    // It expects a numeric string value (e.g., '1.5'), not a CSS value.
+                    applyFormat('lineHeight', item.dataset.value); 
+                    lineSpacingDropdown.classList.add('hidden');
+                });
+            });
+
+            // Text Alignment
+            const textAlignBtn = document.getElementById('text-align-btn');
+            const textAlignDropdown = document.getElementById('text-align-dropdown');
+            textAlignBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                closeAllToolDropdowns(textAlignDropdown);
+                textAlignDropdown.classList.toggle('hidden');
+            });
+            document.querySelectorAll('#text-align-dropdown .dropdown-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const command = item.dataset.command;
+                    applyFormat(command);
+                    textAlignDropdown.classList.add('hidden');
+                });
+            });
+
+
+            // --- Custom Selectors (Font Size/Family) ---
             const fontSizeBtn = document.getElementById('font-size-btn');
             const fontSizeDropdown = document.getElementById('font-size-dropdown');
             const fontFamilyBtn = document.getElementById('font-family-btn');
             const fontFamilyDropdown = document.getElementById('font-family-dropdown');
 
-            const closeAllToolDropdowns = () => {
-                fontSizeDropdown.classList.add('hidden');
-                fontFamilyDropdown.classList.add('hidden');
+            const closeAllToolDropdowns = (excludeDropdown = null) => {
+                const allDropdowns = [fontSizeDropdown, fontFamilyDropdown, lineSpacingDropdown, textAlignDropdown];
+                allDropdowns.forEach(dd => {
+                    if (dd !== excludeDropdown) dd.classList.add('hidden');
+                });
             };
 
             fontSizeBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const wasHidden = fontSizeDropdown.classList.contains('hidden');
-                closeAllToolDropdowns();
-                if (wasHidden) fontSizeDropdown.classList.remove('hidden');
+                closeAllToolDropdowns(fontSizeDropdown);
+                fontSizeDropdown.classList.toggle('hidden');
             });
 
             fontFamilyBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const wasHidden = fontFamilyDropdown.classList.contains('hidden');
-                closeAllToolDropdowns();
-                if (wasHidden) fontFamilyDropdown.classList.remove('hidden');
+                closeAllToolDropdowns(fontFamilyDropdown);
+                fontFamilyDropdown.classList.toggle('hidden');
             });
 
             document.querySelectorAll('#font-size-dropdown .dropdown-item').forEach(item => {
@@ -774,7 +875,7 @@
             document.addEventListener('selectionchange', updateToolbarState);
             editor.addEventListener('click', () => {
                 updateToolbarState();
-                closeAllToolDropdowns(); // Close on editor click
+                closeAllToolDropdowns(); 
             });
             editor.addEventListener('keyup', updateToolbarState);
         }
@@ -806,24 +907,19 @@
                 !fileDropdown.contains(event.target)) {
                 fileDropdown.classList.add('hidden');
             }
-            // Close tool dropdowns
-            const toolDropdowns = [
-                document.getElementById('font-size-dropdown'),
-                document.getElementById('font-family-dropdown')
-            ];
-            const toolButtons = [
-                document.getElementById('font-size-btn'),
-                document.getElementById('font-family-btn')
-            ];
+            
+            // Close tool dropdowns (all selectors)
+            const allDropdowns = document.querySelectorAll('.selector-dropdown');
+            const allButtons = document.querySelectorAll('.selector-wrapper button');
             
             let clickedInsideTool = false;
-            if (toolButtons.some(btn => btn.contains(event.target)) || 
-                toolDropdowns.some(dd => dd.contains(event.target))) {
+            if (Array.from(allButtons).some(btn => btn.contains(event.target)) || 
+                Array.from(allDropdowns).some(dd => dd.contains(event.target))) {
                 clickedInsideTool = true;
             }
 
             if (!clickedInsideTool) {
-                toolDropdowns.forEach(dd => dd.classList.add('hidden'));
+                allDropdowns.forEach(dd => dd.classList.add('hidden'));
             }
         });
 
@@ -877,7 +973,7 @@
                         } catch (err) { alert("Decryption error."); }
                     }
                 } else {
-                    editor.innerText = fileContent; // Load as plain text
+                    editor.innerText = fileContent; 
                     autosave();
                 }
                 updateCounts();
@@ -886,7 +982,7 @@
             event.target.value = null;
         });
 
-        // 4. NEW: Delete Page
+        // 4. Delete Page
         deletePageBtn.addEventListener('click', () => {
             fileDropdown.classList.add('hidden');
             if (appState.notebookPages.length <= 1) {
@@ -895,7 +991,7 @@
             }
             if (confirm("Are you sure you want to delete this page?")) {
                 appState.notebookPages.splice(appState.currentPageIndex, 1);
-                // Go to previous page
+                
                 if (appState.currentPageIndex >= appState.notebookPages.length) {
                     appState.currentPageIndex = appState.notebookPages.length - 1;
                 }
@@ -908,29 +1004,31 @@
         editor.addEventListener('input', () => {
             updateCounts();
             
-            // Auto-list feature
+            // Auto-list feature for notebook mode (kept for functionality, hidden in simple mode)
             try {
-                const selection = window.getSelection();
-                const range = selection.getRangeAt(0);
-                const node = range.startContainer;
-                
-                if (node.nodeType === 3 && node.textContent.endsWith('1. ')) {
-                    const parent = node.parentNode;
-                    if (parent === editor || parent.tagName === 'DIV' || parent.tagName === 'P') {
-                        node.textContent = node.textContent.slice(0, -3);
-                        range.setStart(node, node.textContent.length);
-                        range.collapse(true);
-                        document.execCommand('insertOrderedList', false, null);
+                if (appState.mode === 'notebook') {
+                    const selection = window.getSelection();
+                    const range = selection.getRangeAt(0);
+                    const node = range.startContainer;
+                    
+                    if (node.nodeType === 3 && node.textContent.endsWith('1. ')) {
+                        const parent = node.parentNode;
+                        if (parent === editor || parent.tagName === 'DIV' || parent.tagName === 'P') {
+                            node.textContent = node.textContent.slice(0, -3);
+                            range.setStart(node, node.textContent.length);
+                            range.collapse(true);
+                            document.execCommand('insertOrderedList', false, null);
+                        }
                     }
-                }
-                
-                if (node.nodeType === 3 && node.textContent.endsWith('* ')) {
-                    const parent = node.parentNode;
-                    if (parent === editor || parent.tagName === 'DIV' || parent.tagName === 'P') {
-                        node.textContent = node.textContent.slice(0, -2);
-                        range.setStart(node, node.textContent.length);
-                        range.collapse(true);
-                        document.execCommand('insertUnorderedList', false, null);
+                    
+                    if (node.nodeType === 3 && node.textContent.endsWith('* ')) {
+                        const parent = node.parentNode;
+                        if (parent === editor || parent.tagName === 'DIV' || parent.tagName === 'P') {
+                            node.textContent = node.textContent.slice(0, -2);
+                            range.setStart(node, node.textContent.length);
+                            range.collapse(true);
+                            document.execCommand('insertUnorderedList', false, null);
+                        }
                     }
                 }
             } catch (e) {}
@@ -940,7 +1038,7 @@
             autosaveTimer = setTimeout(autosave, 1000); // 1 sec delay
         });
 
-        // --- NEW: Mode and Page Navigation Listeners ---
+        // --- Mode and Page Navigation Listeners ---
         
         modeToggleBtn.addEventListener('click', () => {
             if (appState.mode === 'notes') {
@@ -980,7 +1078,7 @@
             autosave();
         });
 
-        // --- NEW: Scroll Listener for Top Stats Bar ---
+        // --- Scroll Listener for Top Stats Bar ---
         window.addEventListener('scroll', () => {
             if (window.scrollY > 100) {
                 topStatsBar.classList.add('visible');
@@ -1003,7 +1101,6 @@
                 const savedState = await idbNotes.loadState();
                 
                 if (savedState) {
-                    // Basic validation
                     if (savedState.mode && savedState.notesContent && savedState.notebookPages) {
                         appState = savedState;
                     }
