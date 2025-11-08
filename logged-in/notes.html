@@ -21,6 +21,7 @@
     <script src="../injector.js"></script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+    <script src="../dino-color-picker.js"></script>
 
     <style>
         /* --- FONT & BASE STYLING (MATCHING template) --- */
@@ -143,6 +144,14 @@
             color: var(--tab-text, #9ca3af);
             font-size: 0.75rem;
             text-transform: uppercase;
+        }
+        
+        /* Dino Color Picker Styling for Toolbar */
+        dino-color-picker {
+            width: 40px;
+            height: 40px;
+            /* Ensure it is centered in the 52px wide toolbar */
+            align-self: center; 
         }
 
         /* --- Page Content Layout --- */
@@ -431,58 +440,13 @@
                             <div class="dropdown-item" data-value="2.0">2.0 (Double)</div>
                         </div>
                     </div>
-
-                    <div class="selector-wrapper mt-1">
-                        <button id="text-align-btn" class="btn-icon" title="Text Alignment">
-                            <i id="text-align-icon" class="fa-solid fa-align-left"></i>
-                        </button>
-                        <div id="text-align-dropdown" class="selector-dropdown hidden">
-                            <div class="dropdown-item" data-command="justifyLeft"><i class="fa-solid fa-align-left w-5"></i> Left</div>
-                            <div class="dropdown-item" data-command="justifyCenter"><i class="fa-solid fa-align-center w-5"></i> Center</div>
-                            <div class="dropdown-item" data-command="justifyRight"><i class="fa-solid fa-align-right w-5"></i> Right</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="notebook-mode-controls" class="hidden">
-                    <button id="format-ol" class="btn-icon" title="Numbered List"><i class="fa-solid fa-list-ol"></i></button>
-                    <button id="format-ul" class="btn-icon" title="Bulleted List"><i class="fa-solid fa-list-ul"></i></button>
                 </div>
                 
                 <div class="toolbar-divider"></div>
                 
-                <label for="font-color" class="text-xs text-gray-400 text-center" title="Font Color">Color</label>
-                <input type="color" id="font-color" value="#c0c0c0">
+                <label for="font-color-picker" class="text-xs text-gray-400 text-center" title="Font Color">Color</label>
+                <dino-color-picker id="font-color-picker" value="#c0c0c0"></dino-color-picker>
                 
-                <div class="toolbar-divider"></div>
-
-                <div class="selector-wrapper">
-                    <button id="font-size-btn" class="btn-icon" title="Font Size">
-                        <i class="fa-solid fa-text-height"></i>
-                    </button>
-                    <div id="font-size-dropdown" class="selector-dropdown hidden">
-                        <div class="dropdown-item" data-value="1">Small (10px)</div>
-                        <div class="dropdown-item" data-value="2">Medium (13px)</div>
-                        <div class="dropdown-item" data-value="3">Normal (16px)</div>
-                        <div class="dropdown-item" data-value="4">Large (18px)</div>
-                        <div class="dropdown-item" data-value="5">XL (24px)</div>
-                        <div class="dropdown-item" data-value="6">XXL (32px)</div>
-                    </div>
-                </div>
-
-                <div class="selector-wrapper mt-1">
-                    <button id="font-family-btn" class="btn-icon" title="Font Family">
-                        <i class="fa-solid fa-font"></i>
-                    </button>
-                    <div id="font-family-dropdown" class="selector-dropdown hidden">
-                        <div class="dropdown-item" data-value="Geist" style="font-family: 'Geist'">Geist (Default)</div>
-                        <div class="dropdown-item" data-value="Roboto" style="font-family: 'Roboto'">Roboto</div>
-                        <div class="dropdown-item" data-value="Lato" style="font-family: 'Lato'">Lato</div>
-                        <div class="dropdown-item" data-value="Montserrat" style="font-family: 'Montserrat'">Montserrat</div>
-                        <div class="dropdown-item" data-value="Open Sans" style="font-family: 'Open Sans'">Open Sans</div>
-                        <div class="dropdown-item" data-value="Slabo 27px" style="font-family: 'Slabo 27px'">Slabo (Serif)</div>
-                    </div>
-                </div>
             </div>
 
             <div id="note-editor" contenteditable="true" spellcheck="false"></div>
@@ -531,8 +495,11 @@
         const modeToggleIcon = document.getElementById('mode-toggle-icon');
         const modeToggleText = document.getElementById('mode-toggle-text');
 
+        // simpleModeControls is kept to manage the line spacing selector's visibility
         const simpleModeControls = document.getElementById('simple-mode-controls');
-        const notebookModeControls = document.getElementById('notebook-mode-controls');
+        // notebookModeControls and associated elements are now removed
+        
+        const fontColorPicker = document.getElementById('font-color-picker');
 
         const pageNavBar = document.getElementById('page-navigation-bar');
         const prevPageBtn = document.getElementById('prev-page-btn');
@@ -691,8 +658,8 @@
             let content = '';
             if (appState.mode === 'notes') {
                 content = appState.notesContent;
+                // Show simple mode controls (Line Spacing)
                 simpleModeControls.classList.remove('hidden');
-                notebookModeControls.classList.add('hidden');
             } else {
                 if (!appState.notebookPages[appState.currentPageIndex]) {
                     appState.currentPageIndex = appState.notebookPages.length - 1;
@@ -700,8 +667,8 @@
                 content = appState.notebookPages[appState.currentPageIndex].content;
                 updatePageNavUI();
 
+                // Hide simple mode controls (Line Spacing)
                 simpleModeControls.classList.add('hidden');
-                notebookModeControls.classList.remove('hidden');
             }
             
             editor.innerHTML = (content === PLACEHOLDER_TEXT) ? '' : content;
@@ -745,7 +712,8 @@
         }
 
         /**
-         * Updates toolbar button 'active' class and alignment icon.
+         * Updates toolbar button 'active' class.
+         * Alignment and List updates removed as those features were removed.
          */
         function updateToolbarState() {
             try {
@@ -754,23 +722,7 @@
                 document.getElementById('format-italic').classList.toggle('active', document.queryCommandState('italic'));
                 document.getElementById('format-underline').classList.toggle('active', document.queryCommandState('underline'));
                 
-                // Notebook Mode Lists
-                if (appState.mode === 'notebook') {
-                    document.getElementById('format-ol').classList.toggle('active', document.queryCommandState('insertOrderedList'));
-                    document.getElementById('format-ul').classList.toggle('active', document.queryCommandState('insertUnorderedList'));
-                }
-
-                // Simple Mode Alignment
-                if (appState.mode === 'notes') {
-                    const alignIcon = document.getElementById('text-align-icon');
-                    if (document.queryCommandState('justifyCenter')) {
-                        alignIcon.className = 'fa-solid fa-align-center';
-                    } else if (document.queryCommandState('justifyRight')) {
-                        alignIcon.className = 'fa-solid fa-align-right';
-                    } else {
-                        alignIcon.className = 'fa-solid fa-align-left';
-                    }
-                }
+                // Lists and Alignment controls have been removed.
             } catch (e) {}
         }
 
@@ -786,22 +738,31 @@
                 editor.focus();
                 updateToolbarState();
             };
+            
+            // Get the line spacing dropdown for the close function
+            const lineSpacingDropdown = document.getElementById('line-spacing-dropdown');
+            
+            const closeAllToolDropdowns = (excludeDropdown = null) => {
+                const allDropdowns = [lineSpacingDropdown];
+                allDropdowns.forEach(dd => {
+                    if (dd !== excludeDropdown) dd.classList.add('hidden');
+                });
+            };
 
             // Common Controls
             document.getElementById('format-bold').addEventListener('click', () => applyFormat('bold'));
             document.getElementById('format-italic').addEventListener('click', () => applyFormat('italic'));
             document.getElementById('format-underline').addEventListener('click', () => applyFormat('underline'));
-            document.getElementById('font-color').addEventListener('input', (e) => applyFormat('foreColor', e.target.value));
-
-            // Notebook Controls (Lists)
-            document.getElementById('format-ol').addEventListener('click', () => applyFormat('insertOrderedList'));
-            document.getElementById('format-ul').addEventListener('click', () => applyFormat('insertUnorderedList'));
             
+            // Color Picker (Custom Component)
+            fontColorPicker.addEventListener('change', (e) => applyFormat('foreColor', e.target.value));
+
+            // Notebook Controls (Lists) - REMOVED
+
             // Simple Mode Controls
             
             // Line Spacing
             const lineSpacingBtn = document.getElementById('line-spacing-btn');
-            const lineSpacingDropdown = document.getElementById('line-spacing-dropdown');
             lineSpacingBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 closeAllToolDropdowns(lineSpacingDropdown);
@@ -816,61 +777,8 @@
                 });
             });
 
-            // Text Alignment
-            const textAlignBtn = document.getElementById('text-align-btn');
-            const textAlignDropdown = document.getElementById('text-align-dropdown');
-            textAlignBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                closeAllToolDropdowns(textAlignDropdown);
-                textAlignDropdown.classList.toggle('hidden');
-            });
-            document.querySelectorAll('#text-align-dropdown .dropdown-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    const command = item.dataset.command;
-                    applyFormat(command);
-                    textAlignDropdown.classList.add('hidden');
-                });
-            });
-
-
-            // --- Custom Selectors (Font Size/Family) ---
-            const fontSizeBtn = document.getElementById('font-size-btn');
-            const fontSizeDropdown = document.getElementById('font-size-dropdown');
-            const fontFamilyBtn = document.getElementById('font-family-btn');
-            const fontFamilyDropdown = document.getElementById('font-family-dropdown');
-
-            const closeAllToolDropdowns = (excludeDropdown = null) => {
-                const allDropdowns = [fontSizeDropdown, fontFamilyDropdown, lineSpacingDropdown, textAlignDropdown];
-                allDropdowns.forEach(dd => {
-                    if (dd !== excludeDropdown) dd.classList.add('hidden');
-                });
-            };
-
-            fontSizeBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                closeAllToolDropdowns(fontSizeDropdown);
-                fontSizeDropdown.classList.toggle('hidden');
-            });
-
-            fontFamilyBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                closeAllToolDropdowns(fontFamilyDropdown);
-                fontFamilyDropdown.classList.toggle('hidden');
-            });
-
-            document.querySelectorAll('#font-size-dropdown .dropdown-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    applyFormat('fontSize', item.dataset.value);
-                    closeAllToolDropdowns();
-                });
-            });
-
-            document.querySelectorAll('#font-family-dropdown .dropdown-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    applyFormat('fontName', item.dataset.value);
-                    closeAllToolDropdowns();
-                });
-            });
+            // Text Alignment - REMOVED
+            // Font Size/Family - REMOVED
 
             document.addEventListener('selectionchange', updateToolbarState);
             editor.addEventListener('click', () => {
@@ -908,18 +816,18 @@
                 fileDropdown.classList.add('hidden');
             }
             
-            // Close tool dropdowns (all selectors)
-            const allDropdowns = document.querySelectorAll('.selector-dropdown');
-            const allButtons = document.querySelectorAll('.selector-wrapper button');
+            // Close tool dropdowns (only line spacing selector remains)
+            const lineSpacingDropdown = document.getElementById('line-spacing-dropdown');
+            const lineSpacingBtn = document.getElementById('line-spacing-btn');
             
             let clickedInsideTool = false;
-            if (Array.from(allButtons).some(btn => btn.contains(event.target)) || 
-                Array.from(allDropdowns).some(dd => dd.contains(event.target))) {
+            if (lineSpacingBtn.contains(event.target) || 
+                lineSpacingDropdown.contains(event.target)) {
                 clickedInsideTool = true;
             }
 
             if (!clickedInsideTool) {
-                allDropdowns.forEach(dd => dd.classList.add('hidden'));
+                lineSpacingDropdown.classList.add('hidden');
             }
         });
 
@@ -1004,35 +912,8 @@
         editor.addEventListener('input', () => {
             updateCounts();
             
-            // Auto-list feature for notebook mode (kept for functionality, hidden in simple mode)
-            try {
-                if (appState.mode === 'notebook') {
-                    const selection = window.getSelection();
-                    const range = selection.getRangeAt(0);
-                    const node = range.startContainer;
-                    
-                    if (node.nodeType === 3 && node.textContent.endsWith('1. ')) {
-                        const parent = node.parentNode;
-                        if (parent === editor || parent.tagName === 'DIV' || parent.tagName === 'P') {
-                            node.textContent = node.textContent.slice(0, -3);
-                            range.setStart(node, node.textContent.length);
-                            range.collapse(true);
-                            document.execCommand('insertOrderedList', false, null);
-                        }
-                    }
-                    
-                    if (node.nodeType === 3 && node.textContent.endsWith('* ')) {
-                        const parent = node.parentNode;
-                        if (parent === editor || parent.tagName === 'DIV' || parent.tagName === 'P') {
-                            node.textContent = node.textContent.slice(0, -2);
-                            range.setStart(node, node.textContent.length);
-                            range.collapse(true);
-                            document.execCommand('insertUnorderedList', false, null);
-                        }
-                    }
-                }
-            } catch (e) {}
-
+            // Auto-list feature for notebook mode - REMOVED since list controls are removed
+            
             // Trigger autosave
             clearTimeout(autosaveTimer);
             autosaveTimer = setTimeout(autosave, 1000); // 1 sec delay
