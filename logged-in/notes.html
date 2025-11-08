@@ -15,7 +15,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Slabo+27px&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.5/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLMD5G4Wf8JISr2fQ2bY/vSgQ0a99wE1j9c/s8gD1bO/p+00h2j3j6T96B9bXb+A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://kit-pro.fontawesome.com/releases/v7.0.1/css/pro.min.css" media="all">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="../navigation.js"></script>
     <script src="../injector.js"></script>
@@ -362,7 +362,7 @@
 </head>
 <body class="min-h-screen mode-notes">
     <div id="loading-screen" class="fixed inset-0 bg-[#070707] flex items-center justify-center z-50">
-        <i class="fa-solid fa-spinner fa-spin fa-2x"></i>
+        <i class="fa-duotone fa-spinner fa-spin fa-2x"></i>
     </div>
 
     <div id="page-content" classm="hidden">
@@ -378,14 +378,13 @@
 
                 <div id="file-menu-container" class="relative">
                     <button id="file-menu-btn" class="btn-toolbar-style btn-primary-override">
-                        <i class="fa-solid fa-file"></i>
-                        <span>Files</span>
+                        <i class="fa-solid fa-file-lines"></i> <span>Files</span>
                     </button>
 
                     <div id="file-dropdown" class="dropdown-menu hidden">
                         <div id="export-header" class="dropdown-header">Export</div>
                         <div id="save-text-btn" class="dropdown-item">
-                            <i class="fa-solid fa-file-export w-5"></i> Save Standard Text
+                            <i class="fa-solid fa-file-arrow-right w-5"></i> Save Standard Text
                         </div>
                         <div id="save-encrypted-btn" class="dropdown-item">
                             <i class="fa-solid fa-lock w-5"></i> Save Encrypted (.4spnote)
@@ -394,7 +393,7 @@
                         <div id="import-divider" class="dropdown-divider"></div>
                         <div class="dropdown-header">Import</div>
                         <div id="load-file-btn" class="dropdown-item">
-                            <i class="fa-solid fa-file-import w-5"></i> Load File
+                            <i class="fa-solid fa-file-arrow-left w-5"></i> Load File
                         </div>
 
                         <div id="notebook-divider" class="dropdown-divider hidden"></div>
@@ -445,18 +444,6 @@
                 <button id="format-italic" class="btn-icon" title="Italic (Ctrl+I)"><i class="fa-solid fa-italic"></i></button>
                 <button id="format-underline" class="btn-icon" title="Underline (Ctrl+U)"><i class="fa-solid fa-underline"></i></button>
                 
-                <div class="selector-wrapper">
-                    <button id="line-spacing-btn" class="btn-icon" title="Line Spacing">
-                        <i class="fa-solid fa-lines-leaning"></i>
-                    </button>
-                    <div id="line-spacing-dropdown" class="selector-dropdown hidden">
-                        <div class="dropdown-item" data-value="0.5">0.5 (Compressed)</div>
-                        <div class="dropdown-item" data-value="1.0">1.0 (Normal)</div>
-                        <div class="dropdown-item" data-value="1.5">1.5 (Relaxed)</div>
-                        <div class="dropdown-item" data-value="2.0">2.0 (Double)</div>
-                    </div>
-                </div>
-
                 <label for="font-color-picker" class="text-xs text-gray-400 text-center" title="Font Color">Color</label>
                 <input type="color" id="font-color-picker" value="#c0c0c0">
                 
@@ -509,7 +496,7 @@
         const modeToggleText = document.getElementById('mode-toggle-text');
 
         // simpleModeControls is kept to manage the line spacing selector's visibility
-        const simpleModeControls = document.getElementById('simple-mode-controls');
+        // REMOVED: const simpleModeControls = document.getElementById('simple-mode-controls');
         
         const fontColorPicker = document.getElementById('font-color-picker');
 
@@ -540,7 +527,7 @@
             currentPageIndex: 0
         };
 
-        // --- IndexedDB Helper ---
+        // --- IndexedDB Helper (Unmodified) ---
         const idbNotes = {
             db: null,
             initDB: function() {
@@ -598,7 +585,7 @@
         };
 
 
-        // --- Utility Functions ---
+        // --- Utility Functions (Unmodified: updateCounts, triggerSaveAnimation, autosave, loadContentIntoEditor) ---
 
         /**
          * Updates all stat counters (top and bottom).
@@ -743,14 +730,12 @@
                 updateToolbarState();
             };
             
-            // Get the line spacing dropdown for the close function
-            const lineSpacingDropdown = document.getElementById('line-spacing-dropdown');
+            // REMOVED: Line Spacing Dropdown references and functions
             
             const closeAllToolDropdowns = (excludeDropdown = null) => {
-                const allDropdowns = [lineSpacingDropdown];
-                allDropdowns.forEach(dd => {
-                    if (dd !== excludeDropdown) dd.classList.add('hidden');
-                });
+                // With only one possible dropdown (the removed line-spacing), this function is simplified
+                // to just an empty placeholder or for future dropdowns.
+                // For now, no tool dropdowns exist, so nothing to close.
             };
 
             // Common Controls
@@ -759,27 +744,11 @@
             document.getElementById('format-underline').addEventListener('click', () => applyFormat('underline'));
             
             // Color Picker (Native Input)
-            // Use 'input' event for immediate change while dragging, or 'change' for final value.
-            // Using 'input' for a more responsive Google Docs feel.
             fontColorPicker.addEventListener('input', (e) => {
                 applyFormat('foreColor', e.target.value);
             });
 
-            // Line Spacing
-            const lineSpacingBtn = document.getElementById('line-spacing-btn');
-            lineSpacingBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                closeAllToolDropdowns(lineSpacingDropdown);
-                lineSpacingDropdown.classList.toggle('hidden');
-            });
-            document.querySelectorAll('#line-spacing-dropdown .dropdown-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    // Note: lineHeight command is non-standard but is the common implementation.
-                    applyFormat('lineHeight', item.dataset.value); 
-                    lineSpacingDropdown.classList.add('hidden');
-                });
-            });
-
+            // REMOVED: Line Spacing setup
 
             document.addEventListener('selectionchange', updateToolbarState);
             editor.addEventListener('click', () => {
@@ -791,7 +760,7 @@
 
         // --- Event Listeners and Handlers ---
 
-        // Toggle the File Menu Dropdown
+        // Toggle the File Menu Dropdown (Unmodified)
         fileMenuBtn.addEventListener('click', (event) => {
             event.stopPropagation();
             
@@ -817,28 +786,16 @@
                 fileDropdown.classList.add('hidden');
             }
             
-            // Close tool dropdowns (only line spacing selector remains)
-            const lineSpacingDropdown = document.getElementById('line-spacing-dropdown');
-            const lineSpacingBtn = document.getElementById('line-spacing-btn');
-            
-            let clickedInsideTool = false;
-            if (lineSpacingBtn.contains(event.target) || 
-                lineSpacingDropdown.contains(event.target)) {
-                clickedInsideTool = true;
-            }
-
-            if (!clickedInsideTool) {
-                lineSpacingDropdown.classList.add('hidden');
-            }
+            // REMOVED: Logic to close tool dropdowns
         });
 
-        // 1. Save Standard Text
+        // 1. Save Standard Text (Unmodified)
         saveTextBtn.addEventListener('click', () => {
             fileDropdown.classList.add('hidden');
             downloadFile(editor.innerText, 'my-note.txt');
         });
 
-        // 2. Save Encrypted .4spnote File
+        // 2. Save Encrypted .4spnote File (Unmodified)
         saveEncryptedBtn.addEventListener('click', () => {
             fileDropdown.classList.add('hidden');
             const content = editor.innerHTML;
@@ -853,7 +810,7 @@
             }
         });
 
-        // 3. Load File Handler
+        // 3. Load File Handler (Unmodified)
         loadFileBtn.addEventListener('click', () => {
             fileDropdown.classList.add('hidden');
             fileInput.click();
@@ -891,7 +848,7 @@
             event.target.value = null;
         });
 
-        // 4. Delete Page
+        // 4. Delete Page (Unmodified)
         deletePageBtn.addEventListener('click', () => {
             fileDropdown.classList.add('hidden');
             if (appState.notebookPages.length <= 1) {
@@ -909,7 +866,7 @@
             }
         });
 
-        // Listen for editor input
+        // Listen for editor input (Unmodified)
         editor.addEventListener('input', () => {
             updateCounts();
             
@@ -918,7 +875,7 @@
             autosaveTimer = setTimeout(autosave, 1000); // 1 sec delay
         });
 
-        // --- Mode and Page Navigation Listeners ---
+        // --- Mode and Page Navigation Listeners (Unmodified) ---
         
         modeToggleBtn.addEventListener('click', () => {
             if (appState.mode === 'notes') {
@@ -958,7 +915,7 @@
             autosave();
         });
 
-        // --- Scroll Listener for Top Stats Bar ---
+        // --- Scroll Listener for Top Stats Bar (Unmodified) ---
         window.addEventListener('scroll', () => {
             if (window.scrollY > 100) {
                 topStatsBar.classList.add('visible');
@@ -974,7 +931,7 @@
         });
 
 
-        // --- Initialization on Load (async for IDB) ---
+        // --- Initialization on Load (async for IDB - Unmodified) ---
         window.addEventListener('load', async () => {
             try {
                 await idbNotes.initDB();
@@ -1007,7 +964,7 @@
         });
 
 
-        // --- AUTHENTICATION/REDIRECT LOGIC ---
+        // --- AUTHENTICATION/REDIRECT LOGIC (Unmodified) ---
         const mockAuth = { onAuthStateChanged: (cb) => cb(true) }; 
         const loadingScreen = document.getElementById('loading-screen');
         const pageContent = document.getElementById('page-content');
