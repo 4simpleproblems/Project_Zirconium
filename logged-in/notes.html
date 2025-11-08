@@ -30,26 +30,37 @@
             color: #c0c0c0; 
             transition: all 0.3s ease;
             font-size: 16px;
-            /* Add overflow-x-hidden to prevent horizontal scrollbars from toolbars */
             overflow-x: hidden;
         }
 
         /* --- THEME-AWARE STYLES (from navigation.js) --- */
-        /* These styles will use the CSS variables set by navigation.js for a consistent theme */
-        .btn-primary {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
+        
+        /* Base style for buttons in header, matching toolbar */
+        .btn-toolbar-style {
+            background: var(--menu-bg, #1a1a1a);
+            border: 1px solid var(--menu-border, #333);
+            border-radius: 0.75rem; /* Match toolbar */
+            color: var(--menu-text, #d1d5db);
             padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-            background-color: var(--tab-active-text, #4f46e5);
-            border: 1px solid var(--tab-active-border, #4f46e5);
-            color: white;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
         }
-        .btn-primary:hover {
+        .btn-toolbar-style:hover {
+            background-color: var(--menu-item-hover-bg, #2a2a2a);
+            border-color: var(--avatar-border, #4b5563);
+        }
+        
+        /* Specific override for the "Files" button to keep it primary */
+        .btn-toolbar-style.btn-primary-override {
+            background-color: var(--tab-active-text, #4f46e5);
+            border: 1px solid var(--tab-active-border, #4f46e5);
+            color: white;
+        }
+        .btn-toolbar-style.btn-primary-override:hover {
             background-color: var(--tab-active-hover-text, #6366f1);
             border-color: var(--tab-active-hover-border, #6366f1);
         }
@@ -91,6 +102,7 @@
             color: var(--tab-active-text, #4f46e5);
             border-color: var(--tab-active-border, #4f46e5);
         }
+        /* NEW: Active state for toolbar buttons */
         .btn-icon.active {
              background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
             color: var(--tab-active-text, #4f46e5);
@@ -138,7 +150,6 @@
 
         /* --- NEW: Page Content Layout --- */
         #page-content {
-            /* Full height minus navbar (4rem) */
             height: calc(100vh - 4rem);
             display: flex;
             flex-direction: column;
@@ -146,7 +157,7 @@
         
         #editor-wrapper {
             position: relative;
-            flex-grow: 1; /* Take up remaining vertical space */
+            flex-grow: 1;
             display: flex;
         }
 
@@ -155,7 +166,7 @@
             position: absolute;
             top: 1.25rem; /* 20px */
             left: 20px;
-            width: 48px;
+            width: 52px; /* Slightly wider for centering */
             background: var(--menu-bg, #1a1a1a);
             border: 1px solid var(--menu-border, #333);
             border-radius: 0.75rem;
@@ -165,6 +176,7 @@
             gap: 0.25rem;
             z-index: 100;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            align-items: center; /* Center buttons horizontally */
         }
         #formatting-toolbar select {
             background-color: var(--menu-item-hover-bg, #374151);
@@ -175,44 +187,55 @@
             padding: 0.25rem;
             margin-top: 0.25rem;
             outline: none;
+            width: 90%; /* Center controls */
+            margin-left: auto;
+            margin-right: auto;
         }
         #formatting-toolbar input[type="color"] {
-            width: 100%;
+            width: 90%; /* Center controls */
             height: 24px;
             padding: 0;
             border: 1px solid var(--menu-border, #333);
             border-radius: 0.25rem;
             cursor: pointer;
+            margin-left: auto;
+            margin-right: auto;
         }
         #formatting-toolbar .toolbar-divider {
             height: 1px;
             background: var(--menu-divider, #374151);
             margin: 0.5rem 0;
+            width: 100%;
         }
 
         /* --- NEW: Rich Text Editor --- */
         #note-editor {
-            flex-grow: 1; /* Take up all space in wrapper */
+            flex-grow: 1;
             height: 100%;
             padding: 20px;
-            padding-left: 88px; /* Make space for toolbar (48px + 20px margin + 20px padding) */
+            padding-left: 92px; /* Make space for toolbar (52px + 20px margin + 20px padding) */
             box-sizing: border-box;
             background-color: #0d0d0d;
             border: 1px solid #1a1a1a;
             color: #c0c0c0;
             resize: none; 
             outline: none;
-            line-height: 1.5;
+            line-height: 1.6; /* Default line height */
             font-size: 1rem;
             overflow-y: auto;
-            /* Add padding to the bottom to prevent counter from obscuring text */
             padding-bottom: 50px; 
         }
-        /* Style for the editor content */
+        /* NEW: Placeholder text using ::before */
+        #note-editor:empty::before {
+            content: 'Start typing your notes here...';
+            color: #707070;
+            pointer-events: none; /* Allows click-through */
+            font-style: italic;
+        }
         #note-editor div,
         #note-editor p,
         #note-editor li {
-            min-height: 1.5em; /* Ensure empty lines are visible */
+            min-height: 1em; /* Allow empty lines */
         }
         #note-editor:focus {
             border-color: var(--tab-active-border, #4f46e5);
@@ -221,14 +244,16 @@
 
         /* --- NEW: Notebook Mode Styles --- */
         body.mode-notebook #note-editor {
-            line-height: 1.8em; /* Adjust line-height to match lines */
+            line-height: 1.7rem; /* ~27px */
             background-image: repeating-linear-gradient(to bottom, 
                 transparent, 
-                transparent 1.75em, 
-                #1f1f1f 1.75em, 
-                #1f1f1f 1.8em
+                transparent 1.6rem, /* Line starts just under the text */
+                #1f1f1f 1.6rem, 
+                #1f1f1f 1.65rem /* A thin line */
             );
-            background-attachment: local; /* Lines scroll with text */
+            background-size: 100% 1.7rem; /* Repeat every line-height */
+            background-attachment: local;
+            background-position: 0 0.5rem; /* Offset lines from top */
         }
         
         #page-navigation-bar {
@@ -280,19 +305,19 @@
             <h1 class="text-2xl font-bold text-white">4SP Notes</h1>
             
             <div class="flex items-center gap-2">
-                <button id="mode-toggle-btn" class="btn-secondary">
+                <button id="mode-toggle-btn" class="btn-toolbar-style">
                     <i id="mode-toggle-icon" class="fa-solid fa-book"></i>
                     <span id="mode-toggle-text">Notebook Mode</span>
                 </button>
 
                 <div id="file-menu-container" class="relative">
-                    <button id="file-menu-btn" class="btn-primary">
+                    <button id="file-menu-btn" class="btn-toolbar-style btn-primary-override">
                         <i class="fa-solid fa-file"></i>
                         <span>Files</span>
                     </button>
 
                     <div id="file-dropdown" class="dropdown-menu hidden">
-                        <div class="dropdown-header">Export</div>
+                        <div id="export-header" class="dropdown-header">Export</div>
                         <div id="save-text-btn" class="dropdown-item">
                             <i class="fa-solid fa-file-export w-5"></i> Save Standard Text
                         </div>
@@ -300,7 +325,7 @@
                             <i class="fa-solid fa-lock w-5"></i> Save Encrypted (.4spnote)
                         </div>
                         
-                        <div class="dropdown-divider"></div>
+                        <div id="export-divider" class="dropdown-divider"></div>
                         <div class="dropdown-header">Import</div>
                         <div id="load-file-btn" class="dropdown-item">
                             <i class="fa-solid fa-file-import w-5"></i> Load File
@@ -329,7 +354,6 @@
                 
                 <div class="toolbar-divider"></div>
 
-                <button id="format-h1" class="btn-icon" title="Title"><i class="fa-solid fa-heading"></i></button>
                 <button id="format-ol" class="btn-icon" title="Numbered List"><i class="fa-solid fa-list-ol"></i></button>
                 <button id="format-ul" class="btn-icon" title="Bulleted List"><i class="fa-solid fa-list-ul"></i></button>
 
@@ -338,9 +362,6 @@
                 <label for="font-color" class="text-xs text-gray-400 text-center" title="Font Color">Color</label>
                 <input type="color" id="font-color" value="#c0c0c0">
                 
-                <label for="highlight-color" class="text-xs text-gray-400 text-center mt-2" title="Highlight Color">Highlight</label>
-                <input type="color" id="highlight-color" value="#4f46e5">
-
                 <div class="toolbar-divider"></div>
 
                 <label for="font-size" class="text-xs text-gray-400 text-center">Size</label>
@@ -412,12 +433,15 @@
         const pageDateDisplay = document.getElementById('page-date');
         
         let autosaveTimer = null;
-        const AUTOSAVE_KEY = '4sp_note_data_v2'; // Renamed for new data structure
+        const AUTOSAVE_KEY = '4sp_note_data_v2'; 
+
+        // NEW: Placeholder text constant
+        const PLACEHOLDER_TEXT = '<div>Start typing your notes here...</div>';
 
         // NEW: Application State
         let appState = {
             mode: 'notes', // 'notes' or 'notebook'
-            notesContent: '<div>Start typing your notes here...</div>',
+            notesContent: PLACEHOLDER_TEXT,
             notebookPages: [
                 { createdAt: new Date().toISOString(), content: '<div>Page 1</div>' }
             ],
@@ -428,15 +452,14 @@
 
         /**
          * Real-time function to update the line, word, and character counts.
-         * Now uses editor.innerText to get clean text.
          */
         function updateCounts() {
-            const content = editor.innerText; // Use innerText to ignore HTML
+            const content = editor.innerText; 
 
             // 1. Character Count
             charDisplay.textContent = content.length;
 
-            // 2. Line Count (by actual newlines or 1 if empty)
+            // 2. Line Count
             const lineCount = content.split('\n').length;
             lineDisplay.textContent = (content.length === 0) ? 1 : lineCount;
 
@@ -446,41 +469,48 @@
         }
         
         /**
-         * Saves the current editor content to the correct spot in appState,
-         * then saves the entire appState to localStorage.
+         * Saves the current editor content to appState, then to localStorage.
          */
         function autosave() {
             const currentContent = editor.innerHTML;
             
+            // If the editor is empty, save the placeholder so it reloads correctly
+            const contentToSave = currentContent === '' ? PLACEHOLDER_TEXT : currentContent;
+
             if (appState.mode === 'notes') {
-                appState.notesContent = currentContent;
+                appState.notesContent = contentToSave;
             } else {
                 if (appState.notebookPages[appState.currentPageIndex]) {
-                    appState.notebookPages[appState.currentPageIndex].content = currentContent;
+                    appState.notebookPages[appState.currentPageIndex].content = contentToSave;
                 }
             }
             
             localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(appState));
-            // console.log("Autosaved state.");
         }
 
         /**
-         * Loads content from appState into the editor based on the current mode and page.
+         * Loads content from appState into the editor based on the current mode.
          */
         function loadContentIntoEditor() {
             let content = '';
             if (appState.mode === 'notes') {
                 content = appState.notesContent;
             } else {
-                // Ensure page exists
                 if (!appState.notebookPages[appState.currentPageIndex]) {
-                    // This case shouldn't happen, but as a fallback:
                     appState.currentPageIndex = appState.notebookPages.length - 1;
                 }
                 content = appState.notebookPages[appState.currentPageIndex].content;
                 updatePageNavUI(); // Update page nav text
             }
-            editor.innerHTML = content;
+            
+            // NEW: Handle placeholder text
+            // If content is the placeholder, set editor to empty to trigger CSS placeholder
+            if (content === PLACEHOLDER_TEXT) {
+                editor.innerHTML = '';
+            } else {
+                editor.innerHTML = content;
+            }
+
             updateCounts(); // Update counts for new content
         }
 
@@ -499,12 +529,9 @@
 
             pageDateDisplay.textContent = `Page ${pageNum} of ${totalPages} | ${date}`;
             
-            // Disable/enable prev button
             prevPageBtn.disabled = (appState.currentPageIndex === 0);
             prevPageBtn.style.opacity = prevPageBtn.disabled ? 0.4 : 1;
             prevPageBtn.style.cursor = prevPageBtn.disabled ? 'not-allowed' : 'pointer';
-
-            // Next button doesn't get disabled, it creates a new page
         }
 
         /**
@@ -524,6 +551,27 @@
         }
 
         /**
+         * NEW: Checks selection state and updates toolbar button 'active' class
+         */
+        function updateToolbarState() {
+            try {
+                const isBold = document.queryCommandState('bold');
+                const isItalic = document.queryCommandState('italic');
+                const isUnderline = document.queryCommandState('underline');
+                const isOL = document.queryCommandState('insertOrderedList');
+                const isUL = document.queryCommandState('insertUnorderedList');
+
+                document.getElementById('format-bold').classList.toggle('active', isBold);
+                document.getElementById('format-italic').classList.toggle('active', isItalic);
+                document.getElementById('format-underline').classList.toggle('active', isUnderline);
+                document.getElementById('format-ol').classList.toggle('active', isOL);
+                document.getElementById('format-ul').classList.toggle('active', isUL);
+            } catch (e) {
+                console.warn("Could not query command state.", e);
+            }
+        }
+
+        /**
          * NEW: Sets up all listeners for the formatting toolbar.
          */
         function setupFormattingToolbar() {
@@ -531,31 +579,43 @@
             const applyFormat = (command, value = null) => {
                 document.execCommand(command, false, value);
                 editor.focus(); // Re-focus the editor
+                updateToolbarState(); // Update UI immediately
             };
 
             document.getElementById('format-bold').addEventListener('click', () => applyFormat('bold'));
             document.getElementById('format-italic').addEventListener('click', () => applyFormat('italic'));
             document.getElementById('format-underline').addEventListener('click', () => applyFormat('underline'));
 
-            // Format block commands (H1, lists)
-            document.getElementById('format-h1').addEventListener('click', () => applyFormat('formatBlock', 'h1'));
+            // Format block commands (lists)
             document.getElementById('format-ol').addEventListener('click', () => applyFormat('insertOrderedList'));
             document.getElementById('format-ul').addEventListener('click', () => applyFormat('insertUnorderedList'));
 
             // Color pickers
             document.getElementById('font-color').addEventListener('input', (e) => applyFormat('foreColor', e.target.value));
-            document.getElementById('highlight-color').addEventListener('input', (e) => applyFormat('hiliteColor', e.target.value));
             
             // Selects
             document.getElementById('font-size').addEventListener('change', (e) => applyFormat('fontSize', e.target.value));
             document.getElementById('font-family').addEventListener('change', (e) => applyFormat('fontName', e.target.value));
+        
+            // Listen for selection changes to update toolbar
+            document.addEventListener('selectionchange', updateToolbarState);
+            editor.addEventListener('click', updateToolbarState);
+            editor.addEventListener('keyup', updateToolbarState);
         }
 
         // --- Event Listeners and Handlers ---
 
         // Toggle the File Menu Dropdown
         fileMenuBtn.addEventListener('click', (event) => {
-            event.stopPropagation(); 
+            event.stopPropagation();
+            
+            // NEW: Hide export buttons if in notebook mode
+            const inNotebookMode = appState.mode === 'notebook';
+            document.getElementById('export-header').style.display = inNotebookMode ? 'none' : 'block';
+            document.getElementById('save-text-btn').style.display = inNotebookMode ? 'none' : 'flex';
+            document.getElementById('save-encrypted-btn').style.display = inNotebookMode ? 'none' : 'flex';
+            document.getElementById('export-divider').style.display = inNotebookMode ? 'none' : 'block';
+
             fileDropdown.classList.toggle('hidden');
         });
 
@@ -568,10 +628,10 @@
             }
         });
 
-        // 1. Save Standard Text (from current view)
+        // 1. Save Standard Text
         saveTextBtn.addEventListener('click', () => {
             fileDropdown.classList.add('hidden');
-            const content = editor.innerText; // Export clean text
+            const content = editor.innerText;
             let filename = prompt("Enter filename (e.g., 'my-note.txt'):", 'my-note.txt');
 
             if (filename) {
@@ -580,10 +640,10 @@
             }
         });
 
-        // 2. Save Encrypted .4spnote File (from current view)
+        // 2. Save Encrypted .4spnote File
         saveEncryptedBtn.addEventListener('click', () => {
             fileDropdown.classList.add('hidden');
-            const content = editor.innerHTML; // Export with HTML formatting
+            const content = editor.innerHTML;
             const password = prompt("Enter a password to encrypt your note:");
 
             if (password) {
@@ -607,7 +667,7 @@
             }
         });
 
-        // 3. Load File Handler (loads into current view)
+        // 3. Load File Handler
         loadFileBtn.addEventListener('click', () => {
             fileDropdown.classList.add('hidden');
             fileInput.click();
@@ -632,7 +692,7 @@
                             const decryptedText = decryptedBytes.toString(CryptoJS.enc.Utf8);
                             
                             if (decryptedText) {
-                                editor.innerHTML = decryptedText; // Load HTML
+                                editor.innerHTML = decryptedText;
                                 alert(`'${filename}' loaded and decrypted successfully!`);
                                 autosave();
                             } else {
@@ -659,9 +719,43 @@
             event.target.value = null; // Reset file input
         });
 
-        // Listen for editor input to update counts and trigger autosave
+        // Listen for editor input
         editor.addEventListener('input', () => {
             updateCounts();
+            
+            // NEW: Auto-list feature
+            try {
+                const selection = window.getSelection();
+                const range = selection.getRangeAt(0);
+                const node = range.startContainer;
+                
+                // Check for '1. ' auto-list
+                if (node.nodeType === 3 && node.textContent.endsWith('1. ')) {
+                    const parent = node.parentNode;
+                    // Only trigger if at the start of a new block
+                    if (parent === editor || parent.tagName === 'DIV' || parent.tagName === 'P') {
+                        node.textContent = node.textContent.slice(0, -3); // Remove '1. '
+                        range.setStart(node, node.textContent.length);
+                        range.collapse(true);
+                        document.execCommand('insertOrderedList', false, null);
+                    }
+                }
+                
+                // Check for '* ' auto-list (bulleted)
+                if (node.nodeType === 3 && node.textContent.endsWith('* ')) {
+                    const parent = node.parentNode;
+                    if (parent === editor || parent.tagName === 'DIV' || parent.tagName === 'P') {
+                        node.textContent = node.textContent.slice(0, -2); // Remove '* '
+                        range.setStart(node, node.textContent.length);
+                        range.collapse(true);
+                        document.execCommand('insertUnorderedList', false, null);
+                    }
+                }
+            } catch (e) {
+                // This can fail if selection is weird, just ignore it
+            }
+
+            // Trigger autosave
             clearTimeout(autosaveTimer);
             autosaveTimer = setTimeout(autosave, 1000);
         });
@@ -671,22 +765,20 @@
         // Mode Toggle
         modeToggleBtn.addEventListener('click', () => {
             if (appState.mode === 'notes') {
-                // Switch to Notebook
                 appState.mode = 'notebook';
                 document.body.classList.remove('mode-notes');
                 document.body.classList.add('mode-notebook');
                 modeToggleIcon.className = 'fa-solid fa-note-sticky';
                 modeToggleText.textContent = 'Simple Mode';
             } else {
-                // Switch to Notes
                 appState.mode = 'notes';
                 document.body.classList.add('mode-notes');
                 document.body.classList.remove('mode-notebook');
                 modeToggleIcon.className = 'fa-solid fa-book';
                 modeToggleText.textContent = 'Notebook Mode';
             }
-            loadContentIntoEditor(); // Load content for the new mode
-            autosave(); // Save the new mode
+            loadContentIntoEditor();
+            autosave();
         });
 
         // Previous Page
@@ -715,18 +807,15 @@
 
         // --- Initialization on Load ---
         window.addEventListener('load', () => {
-            // Load state from localStorage if available
             const savedState = localStorage.getItem(AUTOSAVE_KEY);
             if (savedState) {
                 try {
                     const parsedState = JSON.parse(savedState);
-                    // Basic validation
                     if (parsedState.mode && parsedState.notesContent && parsedState.notebookPages) {
                         appState = parsedState;
                     }
                 } catch (e) {
                     console.error("Failed to parse saved state, using default.", e);
-                    // Stick with default appState
                 }
             }
 
