@@ -41,7 +41,7 @@
         /* --- THEME-AWARE STYLES (from navigation.js) --- */
         
         .btn-toolbar-style {
-            background: var(--menu-bg, #1a1a1a);
+            background: var(--menu-bg, #0000000);
             border: 1px solid var(--menu-border, #333);
             border-radius: 0.75rem;
             color: var(--menu-text, #d1d5db);
@@ -53,19 +53,24 @@
             align-items: center;
             gap: 0.5rem;
         }
+        /* MODIFIED: Mode Toggle Hover now keeps black background, but text highlights */
         .btn-toolbar-style:hover {
-            background-color: var(--menu-item-hover-bg, #2a2a2a);
-            border-color: var(--avatar-border, #4b5563);
+            background-color: var(--menu-bg, #000000); /* Force to Menu BG (black) */
+            border-color: var(--menu-border, #fff); /* Force to Menu Border */
+            color: var(--tab-hover-text, #ffffff); /* Keep the text highlight color */
         }
         
+        /* MODIFIED: Files Button now uses Active Tab Texture */
         .btn-toolbar-style.btn-primary-override {
-            background-color: var(--tab-active-text, #4f46e5);
+            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
             border: 1px solid var(--tab-active-border, #4f46e5);
-            color: white;
+            color: var(--tab-active-text, #4f46e5);
         }
+        /* Files Button Hover now uses Active Tab Hover Texture */
         .btn-toolbar-style.btn-primary-override:hover {
-            background-color: var(--tab-active-hover-text, #6366f1);
+            background-color: var(--tab-active-hover-bg, rgba(79, 70, 229, 0.15));
             border-color: var(--tab-active-hover-border, #6366f1);
+            color: var(--tab-active-hover-text, #6366f1);
         }
 
         .btn-icon {
@@ -92,14 +97,14 @@
             border-color: var(--tab-active-border, #4f46e5);
         }
         
-        /* Dropdown Menu Styling */
+        /* Dropdown Menu Styling (MODIFIED BORDER-RADIUS) */
         .dropdown-menu {
             position: absolute;
             top: 100%;
             right: 0;
-            background: var(--menu-bg, #1a1a1a);
+            background: var(--menu-bg, #000000);
             border: 1px solid var(--menu-border, #333);
-            border-radius: 0.75rem;
+            border-radius: 1rem; /* UPDATED from 0.75rem */
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
             z-index: 1010;
             min-width: 200px;
@@ -113,7 +118,7 @@
             margin-left: 10px;
             background: var(--menu-bg, #1a1a1a);
             border: 1px solid var(--menu-border, #333);
-            border-radius: 0.75rem;
+            border-radius: 1rem; /* UPDATED from 0.75rem */
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
             z-index: 1010;
             min-width: 200px;
@@ -190,7 +195,7 @@
             position: sticky;
             top: 5.25rem; /* 4rem navbar + 1.25rem margin */
             width: 52px;
-            background: var(--menu-bg, #1a1a1a);
+            background: var(--menu-bg, #000000);
             border: 1px solid var(--menu-border, #333);
             border-radius: 0.75rem;
             padding: 0.5rem;
@@ -730,12 +735,9 @@
                 updateToolbarState();
             };
             
-            // REMOVED: Line Spacing Dropdown references and functions
             
             const closeAllToolDropdowns = (excludeDropdown = null) => {
-                // With only one possible dropdown (the removed line-spacing), this function is simplified
-                // to just an empty placeholder or for future dropdowns.
-                // For now, no tool dropdowns exist, so nothing to close.
+                // No tool dropdowns currently exist in the modified toolbar.
             };
 
             // Common Controls
@@ -747,8 +749,6 @@
             fontColorPicker.addEventListener('input', (e) => {
                 applyFormat('foreColor', e.target.value);
             });
-
-            // REMOVED: Line Spacing setup
 
             document.addEventListener('selectionchange', updateToolbarState);
             editor.addEventListener('click', () => {
@@ -915,9 +915,10 @@
             autosave();
         });
 
-        // --- Scroll Listener for Top Stats Bar (Unmodified) ---
+        // --- Scroll Listener for Top Stats Bar (MODIFIED) ---
         window.addEventListener('scroll', () => {
-            if (window.scrollY > 100) {
+            // CHANGED: Threshold from 100 to 20 pixels
+            if (window.scrollY > 20) {
                 topStatsBar.classList.add('visible');
                 bottomStatCounter.style.opacity = 0;
             } else {
