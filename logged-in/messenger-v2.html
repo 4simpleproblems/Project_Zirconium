@@ -371,8 +371,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        // NOTE: Added setDoc and getDoc for profile creation/retrieval
-        import { getFirestore, doc, onSnapshot, collection, query, orderBy, setDoc, getDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // NOTE: Updated imports to include 'addDoc'
+        import { getFirestore, doc, onSnapshot, collection, query, orderBy, setDoc, getDoc, setLogLevel, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- MANDATORY GLOBALS & FIREBASE SETUP ---
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -787,18 +787,14 @@
                 dom.addFriendStatus.classList.add('text-red-400');
                 return;
             }
-            if (!db || !firestoreUserUid) {
-                 dom.addFriendStatus.textContent = "Error: Authentication is not complete. Please wait.";
+            if (!db || !firestoreUserUid || !userId) { // Added !userId check for robustness
+                 dom.addFriendStatus.textContent = "Error: Authentication is not complete. Please wait for Public ID to load.";
                  dom.addFriendStatus.classList.add('text-red-400');
+                 console.error("Authentication check failed. DB:", !!db, "UID:", !!firestoreUserUid, "Public ID:", !!userId);
                  return;
             }
             
             try {
-                // 1. Check if the recipient ID exists (Optional but good practice in a real app)
-                // Since we can't search for the publicId easily without creating an index, 
-                // we'll skip the recipient check for this demo and rely on the recipient
-                // side to filter requests by their public ID.
-
                 // Path: /artifacts/{appId}/public/data/friendRequests
                 const requestsCollection = collection(db, `artifacts/${appId}/public/data/friendRequests`);
 
@@ -810,9 +806,10 @@
                     timestamp: new Date(),
                 };
 
-                await setDoc(doc(requestsCollection), newRequest);
+                // FIX: Using addDoc for cleaner new document creation
+                await addDoc(requestsCollection, newRequest);
                 
-                console.log("Sent friend request to:", friendId);
+                console.log("Sent friend request to:", friendId, "from UID:", firestoreUserUid);
                 
                 // Show success message
                 dom.addFriendStatus.textContent = `Friend request successfully sent to ID: ${friendId}`;
@@ -826,8 +823,8 @@
                 }, 1500);
 
             } catch (error) {
-                console.error("Error sending friend request:", error);
-                dom.addFriendStatus.textContent = `Error sending request: ${error.message}`;
+                console.error("Critical Error sending friend request:", error);
+                dom.addFriendStatus.textContent = `Critical Error sending request: ${error.message}. Check console.`;
                 dom.addFriendStatus.classList.add('text-red-400');
             }
         }
