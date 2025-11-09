@@ -8,24 +8,19 @@
 const urlChanger = {
     // --- Configuration ---
     presets: [
-        { id: 'hac', name: 'HAC', title: 'Login', favicon: '../favicons/hac.png', category: 'websites' },
-        { id: 'gmm', name: 'GMM', title: 'Get More Math!', favicon: '../favicons/gmm.png', category: 'websites' },
-        { id: 'kahoot', name: 'Kahoot', title: 'Kahoot! | Learning games | Make learning awesome!', favicon: '../favicons/kahoot.png', category: 'websites' },
-        { id: 'g_classroom', name: 'Google Classroom', title: 'Home', favicon: '../favicons/google-classroom.png', category: 'websites' },
-        { id: 'g_docs', name: 'Google Docs', title: 'Google Docs', favicon: '../favicons/google-docs.png', category: 'websites' },
-        { id: 'g_slides', name: 'Google Slides', title: 'Google Slides', favicon: '../favicons/google-slides.png', category: 'websites' },
-        { id: 'g_drive', name: 'Google Drive', title: 'Home - Google Drive', favicon: '../favicons/google-drive.png', category: 'websites' },
+        { id: 'none', name: 'None', title: '', favicon: '', category: 'default' },
+        { id: 'google-classroom', name: 'Google Classroom', title: 'Classes', favicon: '../favicons/google-classroom.png', category: 'websites' },
+        { id: 'google-docs', name: 'Google Docs', title: 'Google Docs', favicon: '../favicons/google-docs.png', category: 'websites' },
+        { id: 'google-drive', name: 'Google Drive', title: 'My Drive - Google Drive', favicon: '../favicons/google-drive.png', category: 'websites' },
         { id: 'wikipedia', name: 'Wikipedia', title: 'Wikipedia', favicon: '../favicons/wikipedia.png', category: 'websites' },
-        { id: 'clever', name: 'Clever', title: 'Clever | Connect every student to a world of learning', favicon: '../favicons/clever.png', category: 'websites' },
-        { id: '_LIVE_CURRENT_TIME', name: 'Current Time', title: 'Live Time', favicon: '', category: 'live', live: true }
+        { id: 'hac', name: 'HAC', title: 'Home Access Center', favicon: '../favicons/hac.png', category: 'websites' },
+        { id: 'clever', name: 'Clever', title: 'Clever | Portal', favicon: '../favicons/clever.png', category: 'websites' },
     ],
 
     // --- Internal Properties ---
     originalTitle: '',
     originalFavicon: '../favicon.ico',
-    liveInterval: null,
-    customFavicons: [],
-    CUSTOM_FAVICONS_KEY: 'tabDisguiseCustomFavicons',
+    liveInterval: null, // Keep liveInterval for potential future live presets
 
     /**
      * Initializes the script. Captures original page state and applies any saved preset.
@@ -35,14 +30,61 @@ const urlChanger = {
         const faviconElement = document.querySelector("link[rel*='icon']");
         this.originalFavicon = faviconElement ? faviconElement.href : '';
         
-        this.loadCustomFavicons();
+        // Load and apply initial settings
+        this.loadAndApplySettings();
 
-        const savedSettingsJSON = localStorage.getItem('selectedUrlPreset');
-        let savedSettings = { type: 'none' };
+        // Listen for messages from settings page to update tab disguiser
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'UPDATE_TAB_DISGUISER') {
+                this.applyTabDisguiserSettings(event.data.settings);
+            }
+        });
+    },
+
+    /**
+     * Loads tab disguiser settings from localStorage and applies them.
+     */
+    loadAndApplySettings: function() {
+        const savedSettingsJSON = localStorage.getItem('tab-disguiser-settings');
+        let settings = { enabled: false, preset: 'none', customTitle: '', customFavicon: '' };
         if (savedSettingsJSON) {
-            try { savedSettings = JSON.parse(savedSettingsJSON); } catch (e) { console.error("Failed to parse saved tab settings, reverting to default.", e); }
+            try { settings = JSON.parse(savedSettingsJSON); } catch (e) { console.error("Failed to parse saved tab disguiser settings, reverting to default.", e); }
         }
-        this.applyPreset(savedSettings);
+        this.applyTabDisguiserSettings(settings);
+    },
+
+    /**
+     * Applies tab disguiser settings.
+     * @param {object} settings - The settings object from localStorage.
+     */
+    applyTabDisguiserSettings: function(settings) {
+        if (this.liveInterval) {
+            clearInterval(this.liveInterval);
+            this.liveInterval = null;
+        }
+
+        if (!settings.enabled) {
+            document.title = this.originalTitle;
+            this.applyCustomFavicon(this.originalFavicon);
+            return;
+        }
+
+        let titleToSet = this.originalTitle;
+        let iconToSet = this.originalFavicon;
+
+        if (settings.preset === 'custom') {
+            titleToSet = settings.customTitle || this.originalTitle;
+            iconToSet = settings.customFavicon || this.originalFavicon;
+        } else {
+            const preset = this.presets.find(p => p.id === settings.preset);
+            if (preset) {
+                titleToSet = preset.title;
+                iconToSet = preset.favicon;
+            }
+        }
+
+        document.title = titleToSet;
+        this.applyCustomFavicon(iconToSet);
     },
 
     /**
@@ -60,37 +102,10 @@ const urlChanger = {
      * @param {object} settings - The settings object to apply.
      */
     applyPreset: function(settings) {
-        if (this.liveInterval) {
-            clearInterval(this.liveInterval);
-            this.liveInterval = null;
-        }
-
-        let titleToSet = this.originalTitle;
-        let iconToSet = this.originalFavicon;
-
-        if (settings && settings.type) {
-            switch (settings.type) {
-                case 'preset':
-                    const preset = this.presets.find(p => p.id === settings.id);
-                    if (preset) {
-                        titleToSet = preset.title;
-                        iconToSet = preset.live ? this.originalFavicon : preset.favicon;
-                        if (preset.live) {
-                            this._updateLiveTime();
-                            this.liveInterval = setInterval(() => this._updateLiveTime(), 1000);
-                        }
-                    }
-                    break;
-                case 'custom':
-                    titleToSet = settings.title || this.originalTitle;
-                    iconToSet = settings.favicon || this.originalFavicon;
-                    break;
-                case 'none': default: break;
-            }
-        }
-
-        document.title = titleToSet;
-        this.applyCustomFavicon(iconToSet);
+        // This function is now deprecated and replaced by applyTabDisguiserSettings
+        // but kept for compatibility if needed elsewhere.
+        console.warn("applyPreset is deprecated. Use applyTabDisguiserSettings instead.");
+        this.applyTabDisguiserSettings(settings);
     },
 
     /**
@@ -133,73 +148,6 @@ const urlChanger = {
             img.src = targetIconUrl;
         }
     },
-    
-    // --- Robust Favicon Fetching Logic ---
-    _faviconServices: [
-        hostname => `https://www.google.com/s2/favicons?sz=64&domain_url=${hostname}`,
-        hostname => `https://icons.duckduckgo.com/ip3/${hostname}.ico`,
-    ],
-
-    _checkImage: function(url) {
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.onload = () => resolve(url);
-            img.onerror = () => reject(new Error(`Image failed to load: ${url}`));
-            // Add a cache-busting parameter to avoid loading a failed image from cache
-            img.src = url + (url.includes('?') ? '&' : '?') + '_=' + new Date().getTime();
-        });
-    },
-
-    fetchFavicon: async function(domain) {
-        let hostname;
-        try {
-            hostname = new URL(domain).hostname;
-        } catch (e) {
-            return Promise.reject(new Error("Invalid URL provided."));
-        }
-
-        for (const service of this._faviconServices) {
-            const url = service(hostname);
-            try {
-                const workingUrl = await this._checkImage(url);
-                // Return the clean URL without the cache-busting param
-                return service(hostname);
-            } catch (error) {
-                console.warn(error.message); // Log failure and try the next service
-            }
-        }
-        return Promise.reject(new Error(`Could not find a favicon for ${hostname}.`));
-    },
-    
-    // --- Settings Persistence ---
-    savePreset: function(settings) {
-        localStorage.setItem('selectedUrlPreset', JSON.stringify(settings));
-        this.applyPreset(settings);
-    },
-    
-    loadCustomFavicons: function() {
-        const stored = localStorage.getItem(this.CUSTOM_FAVICONS_KEY);
-        if (stored) {
-            try { this.customFavicons = JSON.parse(stored); } catch (e) { this.customFavicons = []; }
-        }
-    },
-    
-    _saveCustomFavicons: function() {
-        localStorage.setItem(this.CUSTOM_FAVICONS_KEY, JSON.stringify(this.customFavicons));
-    },
-
-    addCustomFavicon: function(url) {
-        if (url && !this.customFavicons.includes(url)) {
-            this.customFavicons.push(url);
-            this._saveCustomFavicons();
-        }
-    },
-
-    removeCustomFavicon: function(url) {
-        this.customFavicons = this.customFavicons.filter(iconUrl => iconUrl !== url);
-        this._saveCustomFavicons();
-    }
-};
 
 document.addEventListener('DOMContentLoaded', () => {
     urlChanger.init();

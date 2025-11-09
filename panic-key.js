@@ -12,117 +12,118 @@
 // This message helps confirm that the script file itself is being loaded by the browser.
 console.log("Debug: panic-key.js script has started.");
 
-// --- IndexedDB Configuration ---
-const DB_NAME = 'userLocalSettingsDB';
-const STORE_NAME = 'panicKeyStore';
-
-/**
- * Opens the IndexedDB and creates the object store if needed.
- * @returns {Promise<IDBDatabase>} A promise that resolves with the database object.
- */
-function openDB() {
-    return new Promise((resolve, reject) => {
-        // This will open the latest version of the database.
-        const request = indexedDB.open(DB_NAME);
-
-        // This event handles the creation and updating of the database schema.
-        request.onupgradeneeded = event => {
-            const db = event.target.result;
-            // Create the 'panicKeyStore' object store if it doesn't already exist.
-            // We use 'id' as the keyPath (e.g., 'panicKey1', 'panicKey2').
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-                db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-                console.log("Debug: IndexedDB object store 'panicKeyStore' created.");
-            }
-        };
-
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-    });
-}
-
-/**
- * Fetches all panic key settings from the IndexedDB.
- * @param {IDBDatabase} db - The database instance.
- * @returns {Promise<Array<object>>} A promise that resolves with an array of settings objects.
- */
-function getSettings(db) {
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction(STORE_NAME, 'readonly');
-        const store = transaction.objectStore(STORE_NAME);
-        // Request all objects from the store. This will return an array of all panic key configs.
-        const request = store.getAll();
-
-        request.onsuccess = () => resolve(request.result || []);
-        request.onerror = () => reject(request.error);
-    });
-}
+let currentPanicKeyListener = null; // To store the current keydown listener function
 
 /**
  * Attaches the 'keydown' event listener to the document with the user's specific settings.
- * @param {Array<object>} settingsArray - An array of panic key settings objects { id, key, type, value }.
+ * @param {object} settings - The panic key settings object from localStorage.
  */
-function addPanicKeyListener(settingsArray) {
-    if (!settingsArray || settingsArray.length === 0) {
-        console.log("Debug: No panic key settings found to attach listener.");
+function attachPanicKeyListener(settings) {
+    // Remove any previously attached listener to prevent duplicates
+    if (currentPanicKeyListener) {
+        document.removeEventListener('keydown', currentPanicKeyListener);
+        console.log("Debug: Removed previous panic keydown listener.");
+    }
+
+    if (!settings.enabled) {
+        console.log("Debug: Panic key feature is disabled.");
         return;
     }
 
-    console.log("Debug: Attaching keydown listener to the document with these settings:", settingsArray);
+    console.log("Debug: Attaching keydown listener to the document with these settings:", settings);
 
-    document.addEventListener('keydown', (event) => {
+    currentPanicKeyListener = (event) => {
         const activeElement = document.activeElement;
 
-        // --- MODIFICATION START ---
-        // This check prevents the panic key from firing while a user is typing in any form field or the AI chat box.
+        // Prevent panic key from firing while typing in form fields or AI chat box.
         if (activeElement) {
-            // Check for the custom AI Mode input box by its ID
             if (activeElement.id === 'ai-input') {
                 return;
             }
-            // Check for standard browser input elements by their tag name
             const tagName = activeElement.tagName.toLowerCase();
             if (['input', 'select', 'textarea'].includes(tagName)) {
                 return;
             }
         }
-        // --- MODIFICATION END ---
 
-        const noModifiersPressed = !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey;
+        for (let i = 1; i <= 3; i++) {
+            const combo = settings[`key${i}Combo`];
+            const target = settings[`key${i}Target`];
 
-        if (noModifiersPressed) {
-            // Find if the pressed key matches any of the configured panic keys.
-            const matchedSetting = settingsArray.find(setting => event.key.toLowerCase() === setting.key);
-            
-            // If a match is found, we execute the panic action.
-            if (matchedSetting) {
-                console.log("SUCCESS: Panic key detected!", matchedSetting);
-                
-                // This prevents the browser from performing the default action for the key press.
-                event.preventDefault();
-                
-                // The 'url' property holds the destination URL.
-                window.location.href = matchedSetting.url;
+            if (combo && target && combo !== 'none') {
+                const parts = combo.split('+');
+                const key = parts[parts.length - 1];
+                const ctrl = parts.includes('ctrl');
+                const shift = parts.includes('shift');
+                const alt = parts.includes('alt');
+
+                if (event.key.toLowerCase() === key &&
+                    event.ctrlKey === ctrl &&
+                    event.shiftKey === shift &&
+                    event.altKey === alt) {
+                    
+                    // Prevent default browser action for the key combination
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    // Check if target is the current URL
+                    const currentUrl = window.location.href;
+                    let redirectUrl = target;
+
+                    if (settings.mode === 'page') {
+                        // For 'page' mode, assume it's a relative path within the app
+                        // and construct a full URL.
+                        // This assumes the app is hosted at the root or a known base path.
+                        const baseUrl = window.location.origin;
+                        redirectUrl = `${baseUrl}/${target.startsWith('/') ? target.substring(1) : target}`;
+                    }
+
+                    if (redirectUrl === currentUrl) {
+                        console.warn("Panic key target is the current URL. Preventing redirection.");
+                        return;
+                    }
+
+                    console.log("SUCCESS: Panic key detected! Redirecting to:", redirectUrl);
+                    window.location.href = redirectUrl;
+                    return; // Only trigger one panic key
+                }
             }
         }
-    });
+    };
+
+    document.addEventListener('keydown', currentPanicKeyListener);
 }
 
 // --- Main Execution Logic ---
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
     console.log("Debug: DOMContentLoaded event fired. The page is ready.");
-    try {
-        const db = await openDB();
-        const settings = await getSettings(db);
 
-        if (settings && settings.length > 0) {
-            console.log(`Debug: ${settings.length} panic key settings FOUND in IndexedDB.`, settings);
-            addPanicKeyListener(settings);
-        } else {
-            console.log("Debug: No panic key settings found in IndexedDB.");
+    // Load initial settings and attach listener
+    loadAndAttachPanicKeyListener();
+
+    // Listen for messages from settings page to update panic key settings
+    window.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'UPDATE_PANIC_KEY') {
+            console.log("Debug: Received UPDATE_PANIC_KEY message. Re-attaching listener.");
+            attachPanicKeyListener(event.data.settings);
         }
-        db.close();
-    } catch (error) {
-        console.error("FATAL ERROR: Could not initialize panic key from IndexedDB:", error);
-    }
+    });
 });
+
+/**
+ * Loads panic key settings from localStorage and attaches the listener.
+ */
+function loadAndAttachPanicKeyListener() {
+    const savedSettingsJSON = localStorage.getItem('panic-key-settings');
+    let settings = {
+        enabled: false,
+        mode: 'url',
+        key1Combo: 'none', key1Target: '',
+        key2Combo: 'none', key2Target: '',
+        key3Combo: 'none', key3Target: ''
+    };
+    if (savedSettingsJSON) {
+        try { settings = JSON.parse(savedSettingsJSON); } catch (e) { console.error("Failed to parse saved panic key settings, reverting to default.", e); }
+    }
+    attachPanicKeyListener(settings);
+}
