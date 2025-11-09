@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - Messenger V3 (Full Feature)</title>
+    <title>4SP - Messenger V4 (Full Feature)</title>
     <meta name="description" content="A secure, peer-to-peer messenger with full feature set, group chat functionality, image sharing, and hybrid message storage.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,53 +12,72 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-SBGEJDRSBZ"></script>
     <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-
-      gtag('config', 'G-SBGEJDRSBZ');
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'bg-primary': 'var(--bg-primary)',
+                        'bg-secondary': 'var(--bg-secondary)',
+                        'bg-tertiary': 'var(--bg-tertiary)',
+                        'border-primary': 'var(--border-primary)',
+                        'text-primary': 'var(--text-primary)',
+                        'text-secondary': 'var(--text-secondary)',
+                        'highlight': 'var(--highlight-purple)',
+                    },
+                    fontFamily: {
+                        sans: ['Geist', 'sans-serif'],
+                    }
+                }
+            }
+        }
     </script>
 
     <style>
-        /* --- FONT & BASE STYLING (From new design) --- */
-        :root {
-            --padding-base: 1.25rem;
+        /* --- CSS Variables for Theme Switching --- */
+        :root { /* Dark Mode Defaults */
+            --bg-primary: #070707;
+            --bg-secondary: #0e0e0e;
+            --bg-tertiary: #1a1a1a;
+            --border-primary: #2d2d2d;
+            --text-primary: #c0c0c0;
+            --text-secondary: #9ca3af;
             --highlight-purple: #4f46e5;
-            --standard-roundness: 0.5rem; /* rounded-lg (8px) */
+            --standard-roundness: 0.5rem;
         }
+        .light { /* Light Mode Overrides */
+            --bg-primary: #f0f2f5;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #e9e9e9;
+            --border-primary: #cccccc;
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --highlight-purple: #8b5cf6; /* Lighter purple for better contrast */
+        }
+        
+        /* --- BASE STYLING (Uses Variables) --- */
         body { 
             font-family: 'Geist', sans-serif; 
-            background-color: #070707; 
-            color: #c0c0c0; 
+            background-color: var(--bg-primary); 
+            color: var(--text-primary); 
             transition: all 0.3s ease;
             font-weight: 300; 
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
-        /* SCROLLBAR STYLING - For a cleaner look */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #111111;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #333333;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #555555;
-        }
 
-        /* --- Custom Button & Menu Styling (Consistent Roundness: 0.5rem/rounded-lg) --- */
+        /* SCROLLBAR STYLING */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+        ::-webkit-scrollbar-thumb { background: var(--text-secondary); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--highlight-purple); }
+
+        /* Custom Button & Menu Styling */
         .custom-btn {
-            background-color: #1a1a1a; 
-            border: 1px solid #2d2d2d; 
-            color: #c0c0c0;
+            background-color: var(--bg-tertiary); 
+            border: 1px solid var(--border-primary); 
+            color: var(--text-primary);
             padding: 0.5rem 1rem;
             border-radius: var(--standard-roundness);
             transition: all 0.15s ease;
@@ -69,9 +88,9 @@
             font-weight: 400;
         }
         .custom-btn:hover {
-            background-color: #2a2a2a;
+            background-color: var(--border-primary);
             border-color: var(--highlight-purple);
-            color: white;
+            color: var(--text-primary);
         }
         .custom-btn.primary {
             background-color: var(--highlight-purple);
@@ -79,122 +98,43 @@
             color: white;
         }
         
-        .custom-menu {
-            background-color: #1a1a1a;
-            border: 1px solid #2d2d2d;
-            border-radius: var(--standard-roundness);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
-            padding: 0.25rem 0;
-            z-index: 50;
-        }
-        .custom-menu-item {
-            padding: 0.5rem 1rem;
-            cursor: pointer;
-            transition: background-color 0.1s;
-        }
-        .custom-menu-item:hover {
-            background-color: #2a2a2a;
-        }
-
-        /* --- Highlight/Active Tab Styling --- */
+        /* List Items & Tabs */
         .compact-list-item {
             background-color: transparent; 
             border-radius: var(--standard-roundness);
             margin-bottom: 0.25rem;
             padding: 0.75rem 0.75rem; 
             border-left: 3px solid transparent;
+            cursor: pointer;
         }
+        .compact-list-item:hover {
+            background-color: rgba(79, 70, 229, 0.1);
+        }
+        .light .compact-list-item:hover {
+            background-color: rgba(139, 92, 246, 0.1);
+        }
+
         .compact-list-item.active {
             background-color: rgba(79, 70, 229, 0.1);
             border-left: 3px solid var(--highlight-purple);
         }
-        .tab-btn {
-            padding: 0.5rem 1rem;
-            border: 1px solid transparent; 
-            border-radius: var(--standard-roundness);
-        }
-        .tab-btn.active {
-            background-color: rgba(79, 70, 229, 0.1);
-            color: var(--highlight-purple);
-            border: 1px solid var(--highlight-purple);
-        }
-
-        /* --- Input fields and containers with consistent roundness --- */
-        .rounded-container {
-             border-radius: var(--standard-roundness);
-        }
-        input[type="text"], textarea {
-            border-radius: var(--standard-roundness) !important;
-        }
-        input[type="text"], textarea, .custom-textarea {
-            border-radius: var(--standard-roundness) !important;
-            min-height: 40px; /* Ensure minimum height */
+        .light .compact-list-item.active {
+            background-color: rgba(139, 92, 246, 0.1);
         }
         
         /* Message Bubbles */
-        .message-bubble {
-            max-width: 80%;
-            padding: 0.75rem;
-            border-radius: var(--standard-roundness);
-            word-break: break-word;
-            overflow-wrap: break-word;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-            position: relative;
-        }
-
-        /* Outgoing (User's) messages */
-        .message-outgoing .message-bubble {
-            background-color: var(--highlight-purple); 
-            color: white;
-            border-bottom-right-radius: 0; 
-        }
-
-        /* Incoming (Other user's) messages */
         .message-incoming .message-bubble {
-            background-color: #1a1a1a; 
-            color: #c0c0c0;
+            background-color: var(--bg-tertiary); 
+            color: var(--text-primary);
             border-bottom-left-radius: 0;
-        }
-
-        /* --- Modal and Backdrop --- */
-        .custom-modal-backdrop {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        .custom-modal-backdrop.show {
-            opacity: 1;
-            display: flex; /* Ensure display flex when shown */
-        }
-        .custom-modal-content {
-            background-color: #070707;
-            border: 1px solid #2d2d2d;
-            border-radius: 0.75rem; /* Slightly larger roundness for the main container */
-            padding: 1.5rem;
-            transform: translateY(-20px);
-            transition: transform 0.3s ease;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-        .custom-modal-backdrop.show .custom-modal-content {
-            transform: translateY(0);
         }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
     <!-- Navigation Bar -->
     <div id="navbar-container" class="sticky top-0 z-10 w-full">
-        <nav class="bg-[#0e0e0e] border-b border-[#2d2d2d] p-4 flex items-center justify-between">
-            <h1 class="text-xl font-bold text-white">4SP Messenger</h1>
+        <nav class="bg-bg-secondary border-b border-border-primary p-4 flex items-center justify-between">
+            <h1 class="text-xl font-bold text-text-primary">4SP Messenger</h1>
             <button id="dark-mode-toggle" class="custom-btn !p-2 !rounded-lg" title="Toggle Dark/Light Mode"><i class="fas fa-moon"></i></button>
         </nav>
     </div>
@@ -203,65 +143,68 @@
     <main class="flex flex-1 overflow-hidden">
         
         <!-- Sidebar: Chat List -->
-        <div id="sidebar" class="w-full md:w-80 border-r border-[#2d2d2d] flex flex-col bg-[#0e0e0e] md:flex-shrink-0" data-view="chat-list">
+        <div id="sidebar" class="w-full md:w-80 border-r border-border-primary flex flex-col bg-bg-secondary md:flex-shrink-0" data-view="chat-list">
             
             <!-- User ID and Live Clock -->
-            <div class="p-4 border-b border-[#2d2d2d] bg-[#111111] space-y-2 rounded-container m-2">
+            <div class="p-4 border-b border-border-primary bg-bg-secondary space-y-2 rounded-container m-2 shadow-lg">
                 <div class="flex items-center justify-between">
-                    <span class="text-sm font-semibold text-white">Your Public ID:</span>
+                    <span class="text-sm font-semibold text-text-primary">Your Public ID:</span>
                     <div class="flex items-center space-x-2">
-                        <span id="user-id-display" class="bg-[#2d2d2d] text-xs px-2 py-1 rounded-lg text-purple-300 font-mono select-all">Loading...</span>
+                        <span id="user-id-display" class="bg-bg-tertiary text-xs px-2 py-1 rounded-lg text-highlight font-mono select-all">Loading...</span>
                         <button id="copy-id-btn" class="custom-btn !p-1 !text-xs !rounded-md" title="Copy ID"><i class="fas fa-copy"></i></button>
                     </div>
                 </div>
                 <div class="flex items-center justify-between">
-                    <span class="text-sm font-semibold text-white">Current Time:</span>
-                    <span id="current-time-display" class="text-lg font-mono text-gray-300">HH:MM:SS</span>
+                    <span class="text-sm font-semibold text-text-primary">Current Time:</span>
+                    <span id="current-time-display" class="text-lg font-mono text-text-secondary">HH:MM:SS</span>
                 </div>
             </div>
 
             <!-- Sidebar Controls -->
-            <div class="p-4 border-b border-[#2d2d2d] flex flex-col space-y-3">
+            <div class="p-4 border-b border-border-primary flex flex-col space-y-3">
                 
-                <!-- Search Box -->
+                <!-- Search Box (Placeholder) -->
                 <div class="relative">
-                    <input type="text" id="chat-search-input" placeholder="Search chats..." class="w-full bg-[#1a1a1a] border border-[#2d2d2d] text-sm p-2.5 text-white placeholder-gray-500 focus:ring-purple-500 focus:border-purple-500 transition duration-150">
-                    <i class="fas fa-search absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" id="chat-search-input" placeholder="Search chats..." class="w-full bg-bg-tertiary border border-border-primary text-sm p-2.5 text-text-primary placeholder-text-secondary focus:ring-highlight focus:border-highlight transition duration-150 rounded-lg">
+                    <i class="fas fa-search absolute right-3 top-1/2 transform -translate-y-1/2 text-text-secondary"></i>
                 </div>
 
                 <!-- Tabs (DM/Group) & Action Buttons -->
-                <div class="flex space-x-2 text-sm text-gray-400">
-                    <button id="dm-tab-btn" class="tab-btn active">Direct Messages</button>
-                    <button id="group-tab-btn" class="tab-btn">Group Chats</button>
+                <div class="flex space-x-2 text-sm text-text-secondary">
+                    <button id="dm-tab-btn" class="tab-btn active">Messages</button>
+                    <button id="requests-tab-btn" class="tab-btn relative">
+                        Requests
+                        <span id="requests-count-badge" class="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold px-1.5 rounded-full hidden">0</span>
+                    </button>
                     <!-- Add Friend Button -->
                     <button id="add-contact-btn" class="ml-auto custom-btn !p-2 !text-xs !rounded-lg" title="Add Contact">
                         <i class="fas fa-user-plus"></i>
                     </button>
                     <!-- Create Chat Button -->
-                    <button id="create-chat-btn" class="custom-btn !p-2 !text-xs !rounded-lg" title="New Chat/Group">
-                        <i class="fas fa-plus"></i>
+                    <button id="create-chat-btn" class="custom-btn !p-2 !text-xs !rounded-lg" title="New Group">
+                        <i class="fas fa-users"></i>
                     </button>
                 </div>
             </div>
 
             <!-- Chat List Container -->
             <div id="chat-list-container" class="flex-1 overflow-y-auto p-2 space-y-1">
-                <div class="text-center p-4 text-gray-500">Authenticating...</div>
+                <div class="text-center p-4 text-text-secondary">Authenticating...</div>
             </div>
             
         </div>
 
         <!-- Main Chat Container -->
-        <div id="chat-main" class="flex-1 flex flex-col bg-[#070707]">
+        <div id="chat-main" class="flex-1 flex flex-col bg-bg-primary">
             
             <!-- Chat Header -->
-            <div id="chat-header" class="w-full border-b border-[#2d2d2d] p-4 flex items-center justify-between bg-[#0e0e0e] hidden">
+            <div id="chat-header" class="w-full border-b border-border-primary p-4 flex items-center justify-between bg-bg-secondary hidden">
                 <div class="flex items-center space-x-3">
                     <button id="back-to-contacts-btn" class="md:hidden custom-btn !p-2 !rounded-lg" title="Back"><i class="fas fa-arrow-left"></i></button>
-                    <div id="chat-avatar" class="w-10 h-10 rounded-lg bg-gray-600 flex items-center justify-center text-white font-semibold">U</div>
+                    <div id="chat-avatar" class="w-10 h-10 rounded-lg bg-highlight flex items-center justify-center text-white font-semibold">U</div>
                     <div>
-                        <div id="chat-title" class="text-white font-semibold text-lg">Chat Title</div>
-                        <div id="chat-subtitle" class="text-gray-400 text-xs">Subtitle/Status</div>
+                        <div id="chat-title" class="text-text-primary font-semibold text-lg">Chat Title</div>
+                        <div id="chat-subtitle" class="text-text-secondary text-xs">Subtitle/Status</div>
                     </div>
                 </div>
                 <div class="flex items-center space-x-3">
@@ -273,7 +216,7 @@
             <div id="messages-container" class="flex-1 overflow-y-auto p-4 flex flex-col space-y-3">
                 <!-- Initial Placeholder -->
                 <div class="flex justify-center items-center h-full">
-                    <p class="text-gray-500">Select a chat to begin messaging.</p>
+                    <p class="text-text-secondary">Select a chat to begin messaging.</p>
                 </div>
             </div>
             
@@ -283,28 +226,24 @@
             </button>
 
             <!-- Message Input Area -->
-            <div id="message-input-area" class="w-full border-t border-[#2d2d2d] p-4 bg-[#0e0e0e] hidden">
+            <div id="message-input-area" class="w-full border-t border-border-primary p-4 bg-bg-secondary hidden">
                 <form id="message-form" class="flex items-end space-x-3">
                     
-                    <!-- File Attachment Button & Menu -->
+                    <!-- File Attachment Button & Menu (Simplified for demo) -->
                     <div class="relative">
-                        <button type="button" id="open-file-menu-btn" class="custom-btn !p-3 !rounded-lg !bg-transparent !border-none !text-gray-400 hover:!text-white" title="Attach File">
+                        <button type="button" id="open-file-menu-btn" class="custom-btn !p-3 !rounded-lg !bg-transparent !border-none !text-text-secondary hover:!text-text-primary" title="Attach File">
                             <i class="fas fa-paperclip"></i>
                         </button>
-                        <div id="file-menu" class="custom-menu absolute bottom-full left-0 mb-2 w-48 hidden">
-                            <label for="image-upload-input" class="custom-menu-item flex items-center space-x-2 rounded-lg">
-                                <i class="fas fa-image w-4"></i> <span>Send Image</span>
+                        <div id="file-menu" class="custom-menu absolute bottom-full left-0 mb-2 w-48 hidden bg-bg-secondary border-border-primary">
+                            <label for="image-upload-input" class="custom-menu-item flex items-center space-x-2 rounded-lg text-text-primary hover:bg-bg-tertiary">
+                                <i class="fas fa-image w-4"></i> <span>Send Image (Placeholder)</span>
                                 <input type="file" id="image-upload-input" accept="image/*" class="hidden">
-                            </label>
-                            <label for="file-upload-input" class="custom-menu-item flex items-center space-x-2 rounded-lg">
-                                <i class="fas fa-file w-4"></i> <span>Send File</span>
-                                <input type="file" id="file-upload-input" class="hidden">
                             </label>
                         </div>
                     </div>
 
                     <!-- Input Box -->
-                    <textarea id="message-input" rows="1" placeholder="Type a message..." class="flex-1 bg-[#1a1a1a] border border-[#2d2d2d] text-sm p-3 resize-none text-white placeholder-gray-500 focus:ring-purple-500 focus:border-purple-500 transition duration-150 custom-textarea"></textarea>
+                    <textarea id="message-input" rows="1" placeholder="Type a message..." class="flex-1 bg-bg-tertiary border border-border-primary text-sm p-3 resize-none text-text-primary placeholder-text-secondary focus:ring-highlight focus:border-highlight transition duration-150 custom-textarea rounded-lg"></textarea>
                     
                     <!-- Send Button -->
                     <button type="submit" id="send-btn" class="custom-btn primary !p-3 !rounded-lg" disabled title="Send Message">
@@ -312,7 +251,7 @@
                     </button>
                 </form>
                 <!-- Character/Attachment Status -->
-                <div class="flex justify-between items-center mt-2 px-2 text-xs text-gray-500">
+                <div class="flex justify-between items-center mt-2 px-2 text-xs text-text-secondary">
                     <span id="attached-file-status" class="truncate max-w-[70%] hidden"></span>
                     <span id="character-count-display" class="ml-auto">0/2000</span>
                 </div>
@@ -324,27 +263,27 @@
 
     <!-- Add Contact/Friend Modal -->
     <div id="add-contact-modal-backdrop" class="custom-modal-backdrop">
-        <div id="add-contact-modal-content" class="custom-modal-content w-[400px]">
-            <h2 class="text-xl font-bold mb-4 text-white">Add New Contact/Chat</h2>
+        <div id="add-contact-modal-content" class="custom-modal-content w-[400px] bg-bg-primary border-border-primary">
+            <h2 class="text-xl font-bold mb-4 text-text-primary">Send Friend Request</h2>
             <div class="space-y-4">
-                <input type="text" id="contact-id-input" placeholder="Enter contact's 8-character Public ID" maxlength="8" class="w-full bg-[#1a1a1a] border border-[#2d2d2d] text-sm p-2.5 text-white placeholder-gray-500">
-                <p id="add-contact-status" class="text-sm text-gray-400">Enter a public ID to initiate a new direct message thread. (Case-sensitive)</p>
+                <input type="text" id="contact-id-input" placeholder="Enter contact's 8-character Public ID" maxlength="8" class="w-full bg-bg-tertiary border border-border-primary text-sm p-2.5 text-text-primary placeholder-text-secondary rounded-lg">
+                <p id="add-contact-status" class="text-sm text-text-secondary">Enter a public ID to send a friend request.</p>
             </div>
             <div class="flex justify-end mt-6 space-x-3">
                 <button id="add-contact-cancel-btn" class="custom-btn">Cancel</button>
-                <button id="add-contact-confirm-btn" class="custom-btn primary">Start Chat</button>
+                <button id="add-contact-confirm-btn" class="custom-btn primary">Send Request</button>
             </div>
         </div>
     </div>
 
     <!-- Create Group Chat Modal -->
     <div id="create-chat-modal-backdrop" class="custom-modal-backdrop">
-        <div id="create-chat-modal-content" class="custom-modal-content w-[400px]">
-            <h2 class="text-xl font-bold mb-4 text-white">Create New Group Chat</h2>
+        <div id="create-chat-modal-content" class="custom-modal-content w-[400px] bg-bg-primary border-border-primary">
+            <h2 class="text-xl font-bold mb-4 text-text-primary">Create New Group Chat</h2>
             <div class="space-y-4">
-                <input type="text" id="new-chat-name" placeholder="Group Name (e.g., Study Group)" class="w-full bg-[#1a1a1a] border border-[#2d2d2d] text-sm p-2.5 text-white placeholder-gray-500">
-                <textarea id="group-members-input" rows="3" placeholder="Enter member IDs, separated by commas (e.g., ID1234AB, ID5678CD)" class="w-full bg-[#1a1a1a] border border-[#2d2d2d] text-sm p-2.5 resize-none text-white placeholder-gray-500"></textarea>
-                <p id="create-group-status" class="text-sm text-gray-400">Add members by their 8-character Public IDs.</p>
+                <input type="text" id="new-chat-name" placeholder="Group Name (e.g., Study Group)" class="w-full bg-bg-tertiary border border-border-primary text-sm p-2.5 text-text-primary placeholder-text-secondary rounded-lg">
+                <textarea id="group-members-input" rows="3" placeholder="Enter member IDs, separated by commas (e.g., ID1234AB, ID5678CD)" class="w-full bg-bg-tertiary border border-border-primary text-sm p-2.5 resize-none text-text-primary placeholder-text-secondary rounded-lg"></textarea>
+                <p id="create-group-status" class="text-sm text-text-secondary">Add members by their 8-character Public IDs.</p>
             </div>
             <div class="flex justify-end mt-6 space-x-3">
                 <button id="create-chat-cancel-btn" class="custom-btn">Cancel</button>
@@ -355,8 +294,8 @@
 
     <!-- Chat Settings Modal -->
     <div id="settings-modal-backdrop" class="custom-modal-backdrop">
-        <div id="settings-modal-content" class="custom-modal-content w-[400px]">
-            <h2 class="text-xl font-bold mb-4 text-white">Chat Settings</h2>
+        <div id="settings-modal-content" class="custom-modal-content w-[400px] bg-bg-primary border-border-primary">
+            <h2 class="text-xl font-bold mb-4 text-text-primary">Chat Settings</h2>
             <div id="settings-content">
                 <p>Chat settings will load here...</p>
             </div>
@@ -392,25 +331,16 @@
             where, 
             setDoc, 
             addDoc, 
-            getDoc, 
             updateDoc, 
-            arrayUnion,
             Timestamp,
-            setLogLevel 
+            setLogLevel,
+            orderBy,
+            limit
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- MANDATORY GLOBALS & FIREBASE SETUP ---
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = {
-          apiKey: "AIzaSyASqfiYUPf7xY4wgZ0hLl8_Z0ZkBiwFUO8",
-          authDomain: "theamericanmessenger-0.firebaseapp.com",
-          databaseURL: "https://theamericanmessenger-0-default-rtdb.firebaseio.com",
-          projectId: "theamericanmessenger-0",
-          storageBucket: "theamericanmessenger-0.firebasestorage.app",
-          messagingSenderId: "963196851685",
-          appId: "1:963196851685:web:9f709be8b2888ed4e28b0c",
-          measurementId: "G-SBGEJDRSBZ"
-        };
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
         
         // Set Firebase logging for debugging purposes
@@ -424,19 +354,29 @@
         // State variables
         let currentChat = { id: null, type: null, name: null, members: [] };
         let unsubscribeChats = () => {};
+        let unsubscribeRequests = () => {};
         let unsubscribeMessages = () => {};
-        let allContacts = {}; // Key: contactId, Value: {id: ..., name: ...}
+        let currentTab = 'messages'; // 'messages' or 'requests'
 
         // Constants
         const MESSAGE_CHARACTER_LIMIT = 2000;
         const DM_MESSAGE_LIMIT = 10;
         const GROUP_MESSAGE_LIMIT = 5;
 
-        // DOM Element Mapping
+        // IndexedDB Constants
+        const DB_NAME = '4SPMessengerDB';
+        const STORE_NAME = 'messages';
+        const DB_VERSION = 1;
+        let dbInstance;
+
+        // DOM Element Mapping (Expanded)
         const dom = {
+            // Main structure
             sidebar: document.getElementById('sidebar'),
             chatListContainer: document.getElementById('chat-list-container'),
             messagesContainer: document.getElementById('messages-container'),
+            
+            // Header/Input
             chatHeader: document.getElementById('chat-header'),
             chatTitle: document.getElementById('chat-title'),
             chatSubtitle: document.getElementById('chat-subtitle'),
@@ -444,16 +384,21 @@
             messageForm: document.getElementById('message-form'),
             messageInput: document.getElementById('message-input'),
             sendBtn: document.getElementById('send-btn'),
+
+            // Tabs/Controls
             dmTabBtn: document.getElementById('dm-tab-btn'),
-            groupTabBtn: document.getElementById('group-tab-btn'),
+            requestsTabBtn: document.getElementById('requests-tab-btn'),
+            requestsCountBadge: document.getElementById('requests-count-badge'),
             createChatBtn: document.getElementById('create-chat-btn'),
             addContactBtn: document.getElementById('add-contact-btn'),
-            createChatModalBackdrop: document.getElementById('create-chat-modal-backdrop'),
+            
+            // Modals/UI
             addContactModalBackdrop: document.getElementById('add-contact-modal-backdrop'),
             addContactCancelBtn: document.getElementById('add-contact-cancel-btn'),
             addContactConfirmBtn: document.getElementById('add-contact-confirm-btn'),
             contactIdInput: document.getElementById('contact-id-input'),
             addContactStatus: document.getElementById('add-contact-status'),
+            createChatModalBackdrop: document.getElementById('create-chat-modal-backdrop'),
             createChatCancelBtn: document.getElementById('create-chat-cancel-btn'),
             createChatConfirmBtn: document.getElementById('create-chat-confirm-btn'),
             newChatName: document.getElementById('new-chat-name'),
@@ -462,17 +407,15 @@
             openSettingsBtn: document.getElementById('open-settings-btn'),
             settingsModalBackdrop: document.getElementById('settings-modal-backdrop'),
             settingsModalCloseBtn: document.getElementById('settings-modal-close-btn'),
+            settingsContent: document.getElementById('settings-content'),
             imageLightbox: document.getElementById('image-lightbox'),
             lightboxImage: document.getElementById('lightbox-image'),
             scrollToBottomBtn: document.getElementById('scroll-to-bottom-btn'),
-            openFileMenuBtn: document.getElementById('open-file-menu-btn'),
-            fileMenu: document.getElementById('file-menu'),
             imageUploadInput: document.getElementById('image-upload-input'),
-            fileUploadInput: document.getElementById('file-upload-input'),
+            fileMenu: document.getElementById('file-menu'),
             attachedFileStatus: document.getElementById('attached-file-status'),
             characterCountDisplay: document.getElementById('character-count-display'),
             userIdDisplay: document.getElementById('user-id-display'),
-            currentTimeDisplay: document.getElementById('current-time-display'),
             copyIdBtn: document.getElementById('copy-id-btn'),
             backToContactsBtn: document.getElementById('back-to-contacts-btn'),
             darkModeToggle: document.getElementById('dark-mode-toggle')
@@ -484,12 +427,132 @@
         
         const getPublicPath = (collectionName, docId) => 
             `artifacts/${appId}/public/data/${collectionName}${docId ? `/${docId}` : ''}`;
-        
+            
+        const getFriendRequestPath = (docId) => 
+            getPublicPath('friendRequests', docId);
+
+        // --- INDEXEDDB FUNCTIONS ---
+        async function openIndexedDB() {
+            if (dbInstance) return dbInstance; // Return existing instance if available
+
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        const store = db.createObjectStore(STORE_NAME, { keyPath: 'uniqueId' });
+                        store.createIndex('chatId', 'chatId', { unique: false });
+                        store.createIndex('timestamp', 'timestamp', { unique: false });
+                    }
+                };
+
+                request.onsuccess = (event) => {
+                    dbInstance = event.target.result;
+                    console.log("IndexedDB opened successfully.");
+                    resolve(dbInstance);
+                };
+
+                request.onerror = (event) => {
+                    console.error("IndexedDB error:", event.target.error);
+                    reject(event.target.error);
+                };
+            });
+        }
+
+        /** Saves messages that have rotated out of the Firestore limit to IndexedDB. */
+        function saveHistoricalMessages(chatId, messagesToSave) {
+            if (!dbInstance || messagesToSave.length === 0) return;
+            const tx = dbInstance.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+
+            messagesToSave.forEach(msg => {
+                // Create a unique ID to prevent duplicates if fetching from both ends
+                const uniqueId = `${chatId}_${msg.id || msg.timestamp.toMillis()}_${msg.senderId}`;
+                const messageWithMeta = { 
+                    ...msg, 
+                    chatId: chatId, 
+                    uniqueId: uniqueId, 
+                    timestamp: msg.timestamp.toMillis() // Convert Timestamp to number for IDB
+                };
+                
+                // Add or overwrite the message
+                store.put(messageWithMeta);
+            });
+            tx.onerror = (event) => console.error("IDB Save Error:", event.target.error);
+        }
+
+        /** Loads all messages for a chatId from IndexedDB. */
+        function loadHistoricalMessages(chatId) {
+            return new Promise(async (resolve) => {
+                try {
+                    await openIndexedDB(); // Ensure DB is open
+                    if (!dbInstance) return resolve([]);
+                    
+                    const tx = dbInstance.transaction(STORE_NAME, 'readonly');
+                    const store = tx.objectStore(STORE_NAME);
+                    const index = store.index('chatId');
+                    
+                    const request = index.getAll(chatId);
+
+                    request.onsuccess = () => {
+                        const messages = request.result.map(msg => ({
+                            ...msg,
+                            timestamp: Timestamp.fromMillis(msg.timestamp) // Convert back to Firebase Timestamp
+                        }));
+                        // Sort by timestamp before resolving
+                        messages.sort((a, b) => a.timestamp.toMillis() - b.timestamp.toMillis());
+                        resolve(messages);
+                    };
+
+                    request.onerror = (event) => {
+                        console.error("IDB Load Error:", event.target.error);
+                        resolve([]);
+                    };
+                } catch (e) {
+                    console.error("IDB Load Setup Error:", e);
+                    resolve([]);
+                }
+            });
+        }
+
+        /** Deletes all messages for a given chatId from IndexedDB. */
+        async function clearLocalChatHistory(chatId) {
+            return new Promise(async (resolve, reject) => {
+                try {
+                    await openIndexedDB();
+                    if (!dbInstance) return resolve(0);
+                    
+                    const tx = dbInstance.transaction(STORE_NAME, 'readwrite');
+                    const store = tx.objectStore(STORE_NAME);
+                    const index = store.index('chatId');
+                    
+                    let cursorRequest = index.openCursor(IDBKeyRange.only(chatId));
+                    let deletedCount = 0;
+
+                    cursorRequest.onsuccess = (event) => {
+                        const cursor = event.target.result;
+                        if (cursor) {
+                            store.delete(cursor.primaryKey);
+                            deletedCount++;
+                            cursor.continue();
+                        } else {
+                            resolve(deletedCount);
+                        }
+                    };
+
+                    cursorRequest.onerror = (event) => {
+                        console.error("IDB Clear Error:", event.target.error);
+                        reject(event.target.error);
+                    };
+                } catch (e) {
+                    reject(e);
+                }
+            });
+        }
+
         // --- UTILITY FUNCTIONS ---
         
-        /**
-         * Generates a random 8-character ID.
-         */
         function generateRandomId() {
             const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
             let result = '';
@@ -505,7 +568,6 @@
         }
         function hideModal(backdrop) {
             backdrop.classList.remove('show');
-            // Give time for transition before hiding display
             setTimeout(() => { backdrop.style.display = 'none'; }, 300); 
         }
         
@@ -521,101 +583,141 @@
         
         function showAddContactModal() { 
             dom.contactIdInput.value = '';
-            dom.addContactStatus.textContent = "Enter a public ID to initiate a new direct message thread. (Case-sensitive)";
+            dom.addContactStatus.textContent = "Enter a public ID to send a friend request.";
             dom.addContactStatus.classList.remove('text-red-400', 'text-green-400');
             hideModal(dom.createChatModalBackdrop); 
             showModal(dom.addContactModalBackdrop); 
         }
         function closeAddContactModal() { hideModal(dom.addContactModalBackdrop); }
         
+        function closeChat() {
+            currentChat = { id: null, type: null, name: null, members: [] };
+            unsubscribeMessages();
+            dom.chatHeader.classList.add('hidden');
+            dom.messageInputArea.classList.add('hidden');
+            dom.messagesContainer.innerHTML = `
+                <div class="flex justify-center items-center h-full">
+                    <p class="text-text-secondary">Select a chat to begin messaging.</p>
+                </div>`;
+            dom.sidebar.dataset.view = 'chat-list';
+            document.querySelectorAll('.compact-list-item').forEach(el => el.classList.remove('active'));
+            if (window.innerWidth < 768) { dom.sidebar.style.display = 'flex'; }
+        }
+
         function showSettingsModal() { 
-            // Placeholder: Settings logic would go here
-            dom.settingsContent.innerHTML = `<p class="text-white font-semibold">Chat ID: ${currentChat.id}</p>`;
-            if (currentChat.type === 'group') {
-                dom.settingsContent.innerHTML += `<p class="mt-2 text-sm text-gray-400">Members: ${currentChat.members.join(', ')}</p>`;
-            } else {
-                 dom.settingsContent.innerHTML += `<p class="mt-2 text-sm text-gray-400">DM with: ${currentChat.members.find(id => id !== userId)}</p>`;
-            }
+            if (!currentChat.id) return;
+
+            const chatName = currentChat.type === 'dm' 
+                ? (currentChat.members.find(id => id !== userId) || 'Unknown User')
+                : currentChat.name;
+
+            let settingsHTML = `
+                <div class="space-y-4">
+                    <p class="text-text-primary font-semibold text-lg">${chatName} (${currentChat.type === 'group' ? 'Group' : 'DM'})</p>
+                    <p class="text-sm text-text-secondary">Chat ID: <span class="font-mono bg-bg-tertiary p-1 rounded">${currentChat.id}</span></p>
+                    <p class="text-sm text-text-secondary">Members: ${currentChat.members.join(', ')}</p>
+                    <hr class="border-border-primary my-4">
+                    <p class="text-sm text-text-secondary">Messages older than the last ${currentChat.type === 'dm' ? DM_MESSAGE_LIMIT : GROUP_MESSAGE_LIMIT} messages are saved securely on this device's local storage (IndexedDB).</p>
+                    <button id="clear-local-history-btn" class="custom-btn w-full mt-4 !bg-red-600 hover:!bg-red-700 !text-white">
+                        Clear Local Chat History (Clear ${currentChat.type === 'dm' ? 'DMs' : 'Groups'} on Device)
+                    </button>
+                    <div id="local-clear-status" class="text-sm text-center mt-2"></div>
+                </div>
+            `;
+            
+            dom.settingsContent.innerHTML = settingsHTML;
+            
+            document.getElementById('clear-local-history-btn').onclick = async () => {
+                const statusEl = document.getElementById('local-clear-status');
+                statusEl.textContent = 'Clearing...';
+                try {
+                    const count = await clearLocalChatHistory(currentChat.id);
+                    statusEl.textContent = `Successfully cleared ${count} historical messages from local storage.`;
+                    statusEl.classList.remove('text-red-400');
+                    statusEl.classList.add('text-green-400');
+                    // Force re-render of messages to only show Firestore data
+                    listenToMessages(currentChat.id, currentChat.type);
+                } catch (e) {
+                    statusEl.textContent = `Error clearing history: ${e.message}`;
+                    statusEl.classList.add('text-red-400');
+                }
+            };
+
             showModal(dom.settingsModalBackdrop); 
         }
         function closeSettingsModal() { hideModal(dom.settingsModalBackdrop); }
         
-        function scrollToBottom(smooth = false) {
-            const container = dom.messagesContainer;
-            if (container) {
-                container.scrollTo({ top: container.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
-            }
-        }
-        
-        function isAtBottom(threshold = 50) {
-            const container = dom.messagesContainer;
-            if (!container) return true;
-            return container.scrollHeight - container.scrollTop <= container.clientHeight + threshold;
+        function getDmChatId(id1, id2) {
+            return [id1, id2].sort().join('_');
         }
 
-        function updateScrollButtonVisibility() {
-            const container = dom.messagesContainer;
-            if (!container) return;
-            if (container.scrollHeight > container.clientHeight && !isAtBottom(100)) {
-                dom.scrollToBottomBtn.classList.remove('hidden');
-            } else {
-                dom.scrollToBottomBtn.classList.add('hidden');
-            }
-        }
-        
-        function updateCharacterLimitDisplay() {
-            const count = dom.messageInput.value.length;
-            dom.characterCountDisplay.textContent = `${count}/${MESSAGE_CHARACTER_LIMIT}`;
-            dom.characterCountDisplay.classList.toggle('text-red-500', count > MESSAGE_CHARACTER_LIMIT);
-            
-            const hasContent = count > 0 && count <= MESSAGE_CHARACTER_LIMIT;
-            const hasAttachment = dom.imageUploadInput.files.length > 0 || dom.fileUploadInput.files.length > 0;
-            
-            dom.sendBtn.disabled = !(hasContent || hasAttachment);
-
-            // Auto-resize textarea
-            dom.messageInput.style.height = 'auto';
-            dom.messageInput.style.height = dom.messageInput.scrollHeight + 'px';
-        }
-        
-        /**
-         * Updates the current time display in HH:MM:SS format.
-         */
-        function updateClock() {
-            const now = new Date();
-            const timeString = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            dom.currentTimeDisplay.textContent = timeString;
-        }
-        
         function toggleTheme() {
-            document.documentElement.classList.toggle('dark');
             const isDark = document.documentElement.classList.contains('dark');
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-            dom.darkModeToggle.innerHTML = `<i class="fas fa-${isDark ? 'moon' : 'sun'}"></i>`;
+            if (isDark) {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+                dom.darkModeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+                localStorage.setItem('theme', 'light');
+            } else {
+                document.documentElement.classList.remove('light');
+                document.documentElement.classList.add('dark');
+                dom.darkModeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+                localStorage.setItem('theme', 'dark');
+            }
         }
 
         // --- RENDERING & CHAT UI LOGIC ---
         
         function renderChatListItem(chat) {
             const listItem = document.createElement('div');
-            listItem.className = `compact-list-item flex items-center space-x-3 ${currentChat.id === chat.id ? 'active' : ''}`;
+            listItem.className = `compact-list-item flex items-center space-x-3 ${currentChat.id === chat.chatId ? 'active' : ''}`;
             listItem.dataset.chatId = chat.chatId;
             listItem.dataset.chatType = chat.isGroup ? 'group' : 'dm';
             
-            const displayName = chat.name || 'Untitled Chat';
+            const displayName = chat.name || (chat.isGroup ? 'Untitled Group' : 'Unknown DM');
             const avatarLetter = displayName[0]?.toUpperCase() || 'U';
 
             listItem.innerHTML = `
-                <div class="w-10 h-10 rounded-lg bg-gray-600 flex items-center justify-center text-white font-semibold flex-shrink-0">${avatarLetter}</div>
+                <div class="w-10 h-10 rounded-lg bg-highlight flex items-center justify-center text-white font-semibold flex-shrink-0">${avatarLetter}</div>
                 <div class="flex-1 min-w-0">
-                    <p class="text-white font-semibold truncate">${displayName}</p>
-                    <p class="text-gray-400 text-sm truncate">${chat.lastMessage || 'Start a conversation.'}</p>
+                    <p class="text-text-primary font-semibold truncate">${displayName}</p>
+                    <p class="text-text-secondary text-sm truncate">${chat.lastMessage || 'Start a conversation.'}</p>
                 </div>
-                ${chat.unreadCount > 0 ? `<span class="bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">${chat.unreadCount}</span>` : ''}
             `;
             
             listItem.onclick = () => openChat(chat.chatId, chat.isGroup ? 'group' : 'dm', chat.name, chat.members);
             return listItem;
+        }
+
+        function renderRequestItem(request) {
+            const listItem = document.createElement('div');
+            listItem.className = `compact-list-item flex items-center space-x-3`;
+            const requesterId = request.from;
+
+            listItem.innerHTML = `
+                <div class="flex-1 min-w-0">
+                    <p class="text-text-primary font-semibold">Request from ${requesterId}</p>
+                    <p class="text-text-secondary text-sm">Tap to accept.</p>
+                </div>
+                <button data-action="accept-request" data-id="${request.id}" data-sender="${requesterId}" class="custom-btn primary !p-2 !text-xs !rounded-lg"><i class="fas fa-check"></i> Accept</button>
+            `;
+
+            return listItem;
+        }
+
+        function renderAllMessages(messages) {
+            dom.messagesContainer.innerHTML = '';
+            if (messages.length === 0) {
+                dom.messagesContainer.innerHTML = `<div class="flex justify-center items-center h-full"><p class="text-text-secondary">Say something!</p></div>`;
+                return;
+            }
+            
+            messages.forEach(message => {
+                const messageEl = document.createElement('div');
+                messageEl.innerHTML = renderMessage(message);
+                dom.messagesContainer.appendChild(messageEl.firstChild);
+            });
+            updateScrollButtonVisibility();
         }
 
         function renderMessage(message) {
@@ -629,34 +731,24 @@
             let contentHTML = '';
 
             if (message.attachmentUrl) {
-                const fileName = message.attachmentName || 'Attachment';
-                const fileType = message.attachmentType || '';
-                
-                if (fileType.startsWith('image/')) {
-                    contentHTML += `<a href="#" data-action="lightbox" data-url="${message.attachmentUrl}" class="block mb-2 rounded-lg overflow-hidden cursor-pointer">
-                        <img src="${message.attachmentUrl}" alt="${fileName}" class="max-w-xs max-h-60 object-cover rounded-lg transition-transform hover:scale-[1.02] duration-300">
-                    </a>`;
-                } else {
-                    contentHTML += `<a href="${message.attachmentUrl}" target="_blank" class="flex items-center space-x-2 text-sm text-white hover:text-purple-300 transition duration-150 p-2 rounded-lg bg-[#2a2a2a]">
-                        <i class="fas fa-file w-4"></i>
-                        <span class="truncate">${fileName}</span>
-                    </a>`;
-                }
+                // Placeholder for attachment
+                contentHTML += `<a href="#" data-action="lightbox" data-url="${message.attachmentUrl}" class="block mb-2 rounded-lg overflow-hidden cursor-pointer">
+                    <img src="${message.attachmentUrl}" alt="Attachment Placeholder" class="max-w-xs max-h-60 object-cover rounded-lg transition-transform hover:scale-[1.02] duration-300">
+                </a>`;
             }
 
             if (message.content) {
-                // Basic URL detection
-                const text = message.content.replace(/(https?:\/\/[^\s]+)/g, (url) => `<a href="${url}" target="_blank" class="${isOutgoing ? 'text-white underline' : 'text-purple-400 underline'}">${url}</a>`);
+                const text = message.content.replace(/(https?:\/\/[^\s]+)/g, (url) => `<a href="${url}" target="_blank" class="${isOutgoing ? 'text-white underline' : 'text-highlight underline'}">${url}</a>`);
                 contentHTML += `<p class="text-sm break-words whitespace-pre-wrap">${text}</p>`;
             }
 
             return `
                 <div class="flex flex-col ${messageClass}">
-                    ${!isOutgoing && currentChat.type === 'group' ? `<div class="text-xs text-gray-400 mb-1">${senderName}</div>` : ''}
+                    ${!isOutgoing && currentChat.type === 'group' ? `<div class="text-xs text-text-secondary mb-1">${senderName}</div>` : ''}
                     <div class="flex items-start ${messageClass}">
-                        <div class="message-bubble ${isOutgoing ? 'order-2' : 'order-1'}">
+                        <div class="message-bubble ${isOutgoing ? 'order-2 bg-highlight text-white border-b-right-0' : 'order-1 bg-bg-tertiary text-text-primary border-b-left-0'}">
                             ${contentHTML}
-                            <div class="flex justify-end items-center mt-1 space-x-2 text-xs ${isOutgoing ? 'text-white opacity-80' : 'text-gray-400'}">
+                            <div class="flex justify-end items-center mt-1 space-x-2 text-xs ${isOutgoing ? 'text-white opacity-80' : 'text-text-secondary'}">
                                 <span>${timestamp}</span>
                             </div>
                         </div>
@@ -668,13 +760,9 @@
         function openChat(chatId, type, name, members) {
             if (currentChat.id === chatId) return;
             
-            // Unsubscribe from previous chat's messages
             unsubscribeMessages();
-
-            // Update global state
             currentChat = { id: chatId, type, name, members };
 
-            // Update UI elements
             document.querySelectorAll('.compact-list-item').forEach(el => { el.classList.remove('active'); });
             const activeEl = document.querySelector(`[data-chat-id="${chatId}"]`);
             if (activeEl) { activeEl.classList.add('active'); }
@@ -689,39 +777,18 @@
             dom.messageInputArea.classList.remove('hidden');
             dom.sidebar.dataset.view = 'chat-open';
             
-            // Load messages
+            if (window.innerWidth < 768) { dom.sidebar.style.display = 'none'; }
+            
             listenToMessages(chatId, type);
         }
+
+        // --- FIREBASE CORE LOGIC ---
         
-        function closeChat() {
-            currentChat = { id: null, type: null, name: null, members: [] };
-            unsubscribeMessages();
-            dom.chatHeader.classList.add('hidden');
-            dom.messageInputArea.classList.add('hidden');
-            dom.messagesContainer.innerHTML = `
-                <div class="flex justify-center items-center h-full">
-                    <p class="text-gray-500">Select a chat to begin messaging.</p>
-                </div>`;
-            dom.sidebar.dataset.view = 'chat-list';
-            document.querySelectorAll('.compact-list-item').forEach(el => el.classList.remove('active'));
-        }
-
-        // --- FIREBASE CORE LOGIC (DM/Group/Message Handling) ---
-
-        /**
-         * Creates a unique, sorted ID for DM chats.
-         */
-        function getDmChatId(id1, id2) {
-            return [id1, id2].sort().join('_');
-        }
-
-        /**
-         * Adds a new DM to both users' chat lists or navigates to an existing one.
-         */
         async function handleAddContact() {
             const contactId = dom.contactIdInput.value.trim();
+            
             if (contactId === userId) {
-                dom.addContactStatus.textContent = "Error: Cannot chat with yourself.";
+                dom.addContactStatus.textContent = "Error: Cannot send request to yourself.";
                 dom.addContactStatus.classList.add('text-red-400');
                 return;
             }
@@ -732,53 +799,91 @@
             }
             
             try {
-                // 1. Check if user exists (Optional, but good practice)
-                // For this demo, we assume the ID is valid for simplicity.
-                
-                // 2. Determine chat ID and paths
-                const chatId = getDmChatId(userId, contactId);
-                const chatPublicPath = getPublicPath('chats', chatId);
-                
-                // 3. Create/update the public chat document (Shared data)
-                await setDoc(doc(db, chatPublicPath), {
-                    isGroup: false,
-                    members: [userId, contactId],
-                    createdAt: Timestamp.now(),
-                    // lastMessage and lastTimestamp will be updated on message send
-                }, { merge: true });
-                
-                // 4. Update the current user's private chat list (Private metadata)
-                await setDoc(doc(db, getPrivatePath('chats', chatId)), {
-                    chatId: chatId,
-                    name: contactId, // Display name is the other user's ID
-                    isGroup: false,
-                    lastMessage: 'Chat created.',
-                    lastTimestamp: Timestamp.now(),
-                    members: [userId, contactId]
-                }, { merge: true });
+                const requestId = getDmChatId(userId, contactId); 
+                const requestDocRef = doc(db, getFriendRequestPath(requestId));
 
-                // 5. Success
-                dom.addContactStatus.textContent = `Chat with ${contactId} started successfully!`;
+                // Check if a request already exists
+                const existingRequest = await getDoc(requestDocRef);
+
+                if (existingRequest.exists()) {
+                    const status = existingRequest.data().status;
+                    if (status === 'pending') {
+                        dom.addContactStatus.textContent = `A pending request already exists for ${contactId}.`;
+                    } else if (status === 'accepted') {
+                        dom.addContactStatus.textContent = `${contactId} is already your contact (Chat exists).`;
+                    }
+                    dom.addContactStatus.classList.add('text-red-400');
+                    return;
+                }
+
+                // 2. Create the public friend request document
+                await setDoc(requestDocRef, {
+                    from: userId,
+                    to: contactId,
+                    status: 'pending', 
+                    createdAt: Timestamp.now(),
+                });
+
+                dom.addContactStatus.textContent = `Request sent to ${contactId} successfully!`;
                 dom.addContactStatus.classList.remove('text-red-400');
                 dom.addContactStatus.classList.add('text-green-400');
                 
-                // Close modal and open chat
-                setTimeout(() => {
-                    closeAddContactModal();
-                    openChat(chatId, 'dm', contactId, [userId, contactId]);
-                }, 1000);
+                setTimeout(() => { closeAddContactModal(); }, 1000);
 
             } catch (error) {
-                console.error("Error creating DM chat:", error);
-                dom.addContactStatus.textContent = `Error: Failed to start chat. ${error.message}`;
+                console.error("Error sending friend request:", error);
+                dom.addContactStatus.textContent = `Error: Failed to send request. ${error.message}`;
                 dom.addContactStatus.classList.add('text-red-400');
             }
         }
         
-        /**
-         * Creates a new Group Chat.
-         */
+        async function handleAcceptRequest(requestId, requesterId) {
+            try {
+                const requestDocRef = doc(db, getFriendRequestPath(requestId));
+                
+                // 1. Update the request status
+                await updateDoc(requestDocRef, {
+                    status: 'accepted',
+                    acceptedBy: userId,
+                    acceptedAt: Timestamp.now(),
+                });
+
+                // 2. Create the Public Chat Document
+                const chatId = requestId;
+                const members = [requesterId, userId];
+                const chatPublicPath = getPublicPath('chats', chatId);
+
+                await setDoc(doc(db, chatPublicPath), {
+                    isGroup: false,
+                    members: members,
+                    createdAt: Timestamp.now(),
+                    lastMessage: 'Chat established.',
+                    lastTimestamp: Timestamp.now(),
+                }, { merge: true });
+
+                // 3. Update current user's Private Chat List
+                await setDoc(doc(db, getPrivatePath('chats', chatId)), {
+                    chatId: chatId,
+                    name: requesterId, // Use the requester's ID as the name
+                    isGroup: false,
+                    lastMessage: 'Chat established.',
+                    lastTimestamp: Timestamp.now(),
+                    members: members,
+                }, { merge: true });
+
+                // The requester's client will automatically pick up the 'accepted' status and the new public chat.
+                console.log(`Accepted request from ${requesterId}. Chat created.`);
+                listenToChats(); // Refresh list
+                switchTab('messages'); // Switch back to messages tab
+
+            } catch (error) {
+                console.error("Error accepting request:", error);
+                // Note: Better error handling is needed in a production app
+            }
+        }
+
         async function handleCreateGroupChat() {
+            // ... (Group creation logic remains the same, as no request is needed for self-created groups)
             const groupName = dom.newChatName.value.trim();
             const rawMembers = dom.groupMembersInput.value.split(',').map(id => id.trim()).filter(id => id.length === 8);
             
@@ -788,7 +893,6 @@
                 return;
             }
 
-            // Ensure current user is in the member list and filter out self-duplication
             const uniqueMembers = [...new Set([...rawMembers, userId])];
             
             if (uniqueMembers.length < 2) {
@@ -798,40 +902,30 @@
             }
             
             try {
-                // 1. Create a public chat document (Firestore auto-generates the ID)
                 const groupChatRef = collection(db, getPublicPath('chats'));
                 const newChatDoc = await addDoc(groupChatRef, {
                     isGroup: true,
                     name: groupName,
                     members: uniqueMembers,
                     createdAt: Timestamp.now(),
-                    // lastMessage and lastTimestamp will be updated on message send
+                    lastTimestamp: Timestamp.now(),
+                    lastMessage: 'Group created.',
                 });
                 const chatId = newChatDoc.id;
 
-                // 2. Update private chat lists for ALL members
-                for (const memberId of uniqueMembers) {
-                    // NOTE: This assumes we have a way to translate publicId (memberId) to firestoreUserUid for private paths
-                    // In a real app, we'd look up the UID. Here, we can only update the current user's private list.
-                    // For the demo, we only update the current user.
-                    if (memberId === userId) {
-                        await setDoc(doc(db, getPrivatePath('chats', chatId)), {
-                            chatId: chatId,
-                            name: groupName,
-                            isGroup: true,
-                            lastMessage: 'Group created.',
-                            lastTimestamp: Timestamp.now(),
-                            members: uniqueMembers
-                        }, { merge: true });
-                    }
-                }
+                await setDoc(doc(db, getPrivatePath('chats', chatId)), {
+                    chatId: chatId,
+                    name: groupName,
+                    isGroup: true,
+                    lastMessage: 'Group created.',
+                    lastTimestamp: Timestamp.now(),
+                    members: uniqueMembers
+                }, { merge: true });
 
-                // 3. Success
                 dom.createGroupStatus.textContent = `Group '${groupName}' created successfully!`;
                 dom.createGroupStatus.classList.remove('text-red-400');
                 dom.createGroupStatus.classList.add('text-green-400');
                 
-                // Close modal and open chat
                 setTimeout(() => {
                     closeCreateGroupModal();
                     openChat(chatId, 'group', groupName, uniqueMembers);
@@ -844,21 +938,23 @@
             }
         }
 
-
         function listenToChats() {
             unsubscribeChats();
-            dom.chatListContainer.innerHTML = '<div class="text-center p-4 text-gray-500">Loading chats...</div>';
+            unsubscribeRequests();
+            
+            if (!db || !firestoreUserUid || currentTab !== 'messages') return;
+            
+            dom.chatListContainer.innerHTML = '<div class="text-center p-4 text-text-secondary">Loading chats...</div>';
 
-            if (!db || !firestoreUserUid) return;
-
-            // Listen to the current user's private chat metadata list
             const chatsPath = getPrivatePath('chats');
             const chatsQuery = query(collection(db, chatsPath));
 
             unsubscribeChats = onSnapshot(chatsQuery, (snapshot) => {
+                if (currentTab !== 'messages') return;
+
                 dom.chatListContainer.innerHTML = '';
                 if (snapshot.empty) {
-                    dom.chatListContainer.innerHTML = '<div class="text-center p-4 text-gray-500">No chats found. Use the buttons above to create one.</div>';
+                    dom.chatListContainer.innerHTML = '<div class="text-center p-4 text-text-secondary">No chats found.</div>';
                     return;
                 }
 
@@ -867,62 +963,125 @@
                     chatList.push({ ...doc.data(), chatId: doc.id });
                 });
 
-                // Client-side sort by lastTimestamp (newest first)
                 chatList.sort((a, b) => (b.lastTimestamp?.toMillis() || 0) - (a.lastTimestamp?.toMillis() || 0));
 
                 chatList.forEach(chat => {
                     dom.chatListContainer.appendChild(renderChatListItem(chat));
                 });
-
             }, (error) => {
                 console.error("Error listening to chats:", error);
                 dom.chatListContainer.innerHTML = `<p class="text-red-400 text-center">Failed to load chats: ${error.message}</p>`;
             });
         }
+        
+        function listenToRequests() {
+            unsubscribeChats();
+            unsubscribeRequests();
+            
+            if (!db || !firestoreUserUid || currentTab !== 'requests') return;
 
-        function listenToMessages(chatId, type) {
+            dom.chatListContainer.innerHTML = '<div class="text-center p-4 text-text-secondary">Loading requests...</div>';
+
+            const requestsPath = getFriendRequestPath();
+            // Query where 'to' is the current user and status is 'pending'
+            const requestsQuery = query(
+                collection(db, requestsPath),
+                where('to', '==', userId),
+                where('status', '==', 'pending')
+            );
+
+            unsubscribeRequests = onSnapshot(requestsQuery, (snapshot) => {
+                if (currentTab !== 'requests') return;
+                
+                dom.chatListContainer.innerHTML = '';
+                const requests = [];
+                
+                snapshot.forEach(doc => {
+                    requests.push({ id: doc.id, ...doc.data() });
+                });
+
+                dom.requestsCountBadge.textContent = requests.length;
+                dom.requestsCountBadge.classList.toggle('hidden', requests.length === 0);
+
+                if (requests.length === 0) {
+                    dom.chatListContainer.innerHTML = '<div class="text-center p-4 text-text-secondary">No pending friend requests.</div>';
+                    return;
+                }
+
+                requests.forEach(request => {
+                    dom.chatListContainer.appendChild(renderRequestItem(request));
+                });
+            }, (error) => {
+                console.error("Error listening to requests:", error);
+                dom.chatListContainer.innerHTML = `<p class="text-red-400 text-center">Failed to load requests: ${error.message}</p>`;
+            });
+        }
+
+        async function listenToMessages(chatId, type) {
             unsubscribeMessages();
-            dom.messagesContainer.innerHTML = `<div class="flex justify-center items-center h-full"><p class="text-gray-500">Connecting to messages...</p></div>`;
+            dom.messagesContainer.innerHTML = `<div class="flex justify-center items-center h-full"><p class="text-text-secondary">Loading history...</p></div>`;
 
             if (!db || !firestoreUserUid) return;
 
             const chatPublicPath = getPublicPath('chats', chatId);
             const messagesPath = `${chatPublicPath}/messages`; 
-            
-            // Limit messages to 10 for DM, 5 for Group (client-side implementation)
             const limitCount = type === 'dm' ? DM_MESSAGE_LIMIT : GROUP_MESSAGE_LIMIT;
             
-            // Query for the messages. We will fetch and then manually limit/sort.
-            const messagesQuery = query(collection(db, messagesPath));
+            let allMessagesMap = new Map();
+
+            // --- PART 1: LOAD HISTORICAL MESSAGES FROM INDEXEDDB ---
+            const historicalMessages = await loadHistoricalMessages(chatId);
+            historicalMessages.forEach(msg => {
+                allMessagesMap.set(msg.uniqueId, msg); 
+            });
+            renderAllMessages(Array.from(allMessagesMap.values())); // Initial render of history
+            
+            // --- PART 2: LISTEN TO LIVE MESSAGES FROM FIREBASE ---
+            // Fetch the latest N+1 messages (N is the limitCount)
+            const messagesQuery = query(
+                collection(db, messagesPath),
+                orderBy('timestamp', 'desc'),
+                limit(limitCount + 1)
+            );
 
             unsubscribeMessages = onSnapshot(messagesQuery, (snapshot) => {
                 if (currentChat.id !== chatId) return;
                 const shouldScroll = isAtBottom();
                 
-                dom.messagesContainer.innerHTML = '';
+                let firestoreMessages = [];
+                snapshot.forEach(doc => {
+                    firestoreMessages.push({ id: doc.id, ...doc.data() });
+                });
                 
-                if (snapshot.empty) {
-                    dom.messagesContainer.innerHTML = `<div class="flex justify-center items-center h-full"><p class="text-gray-500">Say something!</p></div>`;
-                    return;
+                firestoreMessages.sort((a, b) => a.timestamp.toMillis() - b.timestamp.toMillis());
+
+                let messagesToSaveLocally = [];
+                let messagesToDisplay = [];
+
+                if (firestoreMessages.length > limitCount) {
+                    // Oldest message(s) go to local storage
+                    messagesToSaveLocally = firestoreMessages.slice(0, firestoreMessages.length - limitCount);
+                    // Remaining N messages stay in Firestore + are displayed
+                    messagesToDisplay = firestoreMessages.slice(firestoreMessages.length - limitCount);
+                } else {
+                    messagesToDisplay = firestoreMessages;
+                }
+
+                // 1. Save historical messages (if any)
+                if (messagesToSaveLocally.length > 0) {
+                    saveHistoricalMessages(chatId, messagesToSaveLocally);
                 }
                 
-                let messages = [];
-                snapshot.forEach(doc => {
-                    const message = doc.data();
-                    // Use server timestamp or fallback to client time if needed for sorting
-                    message.timestamp = message.timestamp || Timestamp.now();
-                    messages.push({ id: doc.id, ...message });
+                // 2. Merge all messages
+                messagesToDisplay.forEach(msg => {
+                    const uniqueId = `${chatId}_${msg.id}_${msg.senderId}`;
+                    allMessagesMap.set(uniqueId, msg);
                 });
 
-                // Client-side sorting and limiting
-                messages.sort((a, b) => a.timestamp.toMillis() - b.timestamp.toMillis());
-                const displayedMessages = messages.slice(-limitCount); // Get only the last N messages
+                let finalMessages = Array.from(allMessagesMap.values()).sort((a, b) => a.timestamp.toMillis() - b.timestamp.toMillis());
                 
-                displayedMessages.forEach(message => {
-                    const messageEl = document.createElement('div');
-                    messageEl.innerHTML = renderMessage(message);
-                    dom.messagesContainer.appendChild(messageEl.firstChild);
-                });
+                // 3. Render the combined list
+                renderAllMessages(finalMessages);
                 
                 if (shouldScroll) {
                     scrollToBottom(true);
@@ -932,19 +1091,14 @@
 
             }, (error) => { 
                 console.error("Error listening to messages:", error); 
-                dom.messagesContainer.innerHTML = `<p class="text-red-400 text-center">Failed to load messages: ${error.message}</p>`; 
+                dom.messagesContainer.innerHTML = `<p class="text-red-400 text-center">Failed to load live messages: ${error.message}</p>`; 
             });
         }
 
-        /**
-         * Handles sending the message and updating the public chat and private chat list.
-         */
         async function handleSendMessage(e) {
             e.preventDefault();
             const content = dom.messageInput.value.trim();
-            // File/Image upload logic would require Firebase Storage, which is omitted here.
-            // For the demo, we assume attachmentUrl is a direct file path or a placeholder.
-            const file = dom.imageUploadInput.files[0] || dom.fileUploadInput.files[0];
+            const file = dom.imageUploadInput.files[0]; // Simplified to handle images only
             
             if (!content && !file) return;
             if (content.length > MESSAGE_CHARACTER_LIMIT) {
@@ -952,57 +1106,96 @@
                 return;
             }
             if (!db || !currentChat.id || !firestoreUserUid) {
-                console.error("Cannot send message: Database not initialized or chat not selected.");
+                console.error("Cannot send message: Chat not selected or not initialized.");
                 return;
             }
 
             try {
-                // 1. Construct the message object
+                const chatPublicPath = getPublicPath('chats', currentChat.id);
+                const messagesPath = `${chatPublicPath}/messages`; 
+
                 const messageData = {
                     senderId: userId,
                     content: content,
                     timestamp: Timestamp.now(),
-                    // Placeholder for attachment
-                    attachmentUrl: file ? 'https://placehold.co/150x150/1f2937/ffffff?text=FILE' : null,
+                    attachmentUrl: file ? 'https://placehold.co/150x150/4f46e5/ffffff?text=Image' : null, // Placeholder URL
                     attachmentName: file ? file.name : null,
                     attachmentType: file ? file.type : null,
                 };
                 
-                const chatPublicPath = getPublicPath('chats', currentChat.id);
-                const messagesPath = `${chatPublicPath}/messages`; 
-
-                // 2. Add message to the public messages collection
+                // 1. Add message to the public messages collection
                 await addDoc(collection(db, messagesPath), messageData);
                 
-                // 3. Update the last message in the public chat document
-                await updateDoc(doc(db, chatPublicPath), {
-                    lastMessage: content || `[${file.name}]`,
+                // 2. Update the last message in the public and private chat documents
+                const updateFields = {
+                    lastMessage: content || `[${file ? file.name : 'Attachment'}]`,
                     lastTimestamp: messageData.timestamp,
-                });
-                
-                // 4. Update the current user's private chat list metadata
-                await updateDoc(doc(db, getPrivatePath('chats', currentChat.id)), {
-                    lastMessage: content || `[${file.name}]`,
-                    lastTimestamp: messageData.timestamp,
-                });
+                };
+                await updateDoc(doc(db, chatPublicPath), updateFields);
+                await updateDoc(doc(db, getPrivatePath('chats', currentChat.id)), updateFields);
 
                 // Clear inputs
                 dom.messageInput.value = '';
                 updateCharacterLimitDisplay();
                 dom.imageUploadInput.value = '';
-                dom.fileUploadInput.value = '';
                 dom.attachedFileStatus.classList.add('hidden');
                 dom.fileMenu.classList.add('hidden');
                 
             } catch (error) {
                 console.error("Error sending message:", error);
-                // Simple error display instead of alert
-                console.log("Failed to send message. See console for details.");
             }
         }
         
+        function switchTab(tab) {
+            currentTab = tab;
+            dom.dmTabBtn.classList.toggle('active', tab === 'messages');
+            dom.requestsTabBtn.classList.toggle('active', tab === 'requests');
+            closeChat();
+            if (tab === 'messages') {
+                listenToChats();
+            } else if (tab === 'requests') {
+                listenToRequests();
+            }
+        }
+
+        // --- Standard UI Utilities (Clock, Scroll, Copy ID, Character Count) ---
+        function updateScrollButtonVisibility() {
+            // ... (scroll logic remains the same)
+            const container = dom.messagesContainer;
+            if (!container) return;
+            if (container.scrollHeight > container.clientHeight && !isAtBottom(100)) {
+                dom.scrollToBottomBtn.classList.remove('hidden');
+            } else {
+                dom.scrollToBottomBtn.classList.add('hidden');
+            }
+        }
+        function isAtBottom(threshold = 50) {
+            const container = dom.messagesContainer;
+            if (!container) return true;
+            return container.scrollHeight - container.scrollTop <= container.clientHeight + threshold;
+        }
+        function scrollToBottom(smooth = false) {
+            const container = dom.messagesContainer;
+            if (container) {
+                container.scrollTo({ top: container.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
+            }
+        }
+        function updateCharacterLimitDisplay() {
+            // ... (character count logic remains the same)
+            const count = dom.messageInput.value.length;
+            dom.characterCountDisplay.textContent = `${count}/${MESSAGE_CHARACTER_LIMIT}`;
+            dom.characterCountDisplay.classList.toggle('text-red-500', count > MESSAGE_CHARACTER_LIMIT);
+            
+            const hasContent = count > 0 && count <= MESSAGE_CHARACTER_LIMIT;
+            const hasAttachment = dom.imageUploadInput.files.length > 0;
+            
+            dom.sendBtn.disabled = !(hasContent || hasAttachment);
+
+            dom.messageInput.style.height = 'auto';
+            dom.messageInput.style.height = dom.messageInput.scrollHeight + 'px';
+        }
         function handleCopyId() {
-            // Using document.execCommand as a fallback for iframe environments
+            // ... (copy ID logic remains the same)
             const textArea = document.createElement("textarea");
             textArea.value = dom.userIdDisplay.textContent;
             document.body.appendChild(textArea);
@@ -1017,56 +1210,54 @@
             }
             document.body.removeChild(textArea);
         }
+        function updateClock() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            dom.currentTimeDisplay.textContent = timeString;
+        }
+
 
         function setupEventListeners() {
             dom.darkModeToggle.addEventListener('click', toggleTheme);
+            dom.dmTabBtn.addEventListener('click', () => switchTab('messages'));
+            dom.requestsTabBtn.addEventListener('click', () => switchTab('requests'));
             dom.addContactBtn.addEventListener('click', showAddContactModal);
             dom.addContactCancelBtn.addEventListener('click', closeAddContactModal);
             dom.addContactConfirmBtn.addEventListener('click', handleAddContact);
-            
             dom.createChatBtn.addEventListener('click', showCreateGroupModal);
             dom.createChatCancelBtn.addEventListener('click', closeCreateGroupModal);
             dom.createChatConfirmBtn.addEventListener('click', handleCreateGroupChat);
-            
             dom.openSettingsBtn.addEventListener('click', showSettingsModal);
             dom.settingsModalCloseBtn.addEventListener('click', closeSettingsModal);
-            dom.imageLightbox.addEventListener('click', () => hideModal(dom.imageLightbox));
-            dom.scrollToBottomBtn.addEventListener('click', () => scrollToBottom(true));
             dom.messagesContainer.addEventListener('scroll', updateScrollButtonVisibility);
+            dom.scrollToBottomBtn.addEventListener('click', () => scrollToBottom(true));
             dom.copyIdBtn.addEventListener('click', handleCopyId);
             dom.backToContactsBtn.addEventListener('click', closeChat);
-
-            // Message Input
             dom.messageForm.addEventListener('submit', handleSendMessage);
             dom.messageInput.addEventListener('input', updateCharacterLimitDisplay);
-            
-            // File Menu Logic
-            dom.openFileMenuBtn.onclick = (e) => { e.stopPropagation(); dom.fileMenu.classList.toggle('hidden'); };
-            document.addEventListener('click', (e) => {
-                if (!dom.fileMenu.classList.contains('hidden') && !e.target.closest('#file-menu') && !e.target.closest('#open-file-menu-btn')) {
-                    dom.fileMenu.classList.add('hidden');
+
+            dom.chatListContainer.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-action="accept-request"]');
+                if (btn) {
+                    const requestId = btn.dataset.id;
+                    const senderId = btn.dataset.sender;
+                    handleAcceptRequest(requestId, senderId);
                 }
             });
 
-            // Attachment input change listener
-            const handleFileChange = (e) => {
+            dom.imageUploadInput.addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (file) {
-                    dom.attachedFileStatus.textContent = `Attached: ${file.name}`;
+                    dom.attachedFileStatus.textContent = `Attached: ${file.name} (Placeholder)`;
                     dom.attachedFileStatus.classList.remove('hidden');
                     dom.sendBtn.disabled = false;
                 } else {
                     dom.attachedFileStatus.classList.add('hidden');
-                    updateCharacterLimitDisplay(); // Re-evaluate send button if text exists
+                    updateCharacterLimitDisplay(); 
                 }
                 dom.fileMenu.classList.add('hidden');
-                if (e.target.id === 'image-upload-input') { dom.fileUploadInput.value = ''; } else { dom.imageUploadInput.value = ''; }
-            };
+            });
 
-            dom.imageUploadInput.addEventListener('change', handleFileChange);
-            dom.fileUploadInput.addEventListener('change', handleFileChange);
-            
-            // Lightbox handler
             dom.messagesContainer.addEventListener('click', (e) => {
                 const target = e.target.closest('[data-action="lightbox"]');
                 if (target) {
@@ -1075,42 +1266,35 @@
                     showModal(dom.imageLightbox);
                 }
             });
-            
-            // Responsive sidebar toggle for mobile
-            window.addEventListener('resize', () => {
-                if (window.innerWidth >= 768) {
-                    dom.sidebar.style.display = 'flex';
-                } else {
-                    if (currentChat.id) {
-                        dom.sidebar.style.display = 'none';
-                    } else {
-                        dom.sidebar.style.display = 'flex';
-                    }
-                }
-            });
-
-            // Initial view state on load
-            if (window.innerWidth < 768 && currentChat.id) {
-                dom.sidebar.style.display = 'none';
-            }
         }
         
         async function initializeFirebase() {
             try {
                 if (Object.keys(firebaseConfig).length === 0) {
-                    throw new Error("Firebase config is missing.");
+                    // Fallback configuration if not injected by canvas
+                    const FALLBACK_CONFIG = {
+                        apiKey: "AIzaSyASqfiYUPf7xY4wgZ0hLl8_Z0ZkBiwFUO8",
+                        authDomain: "theamericanmessenger-0.firebaseapp.com",
+                        projectId: "theamericanmessenger-0",
+                        storageBucket: "theamericanmessenger-0.firebasestorage.app",
+                        appId: "1:963196851685:web:9f709be8b2888ed4e28b0c",
+                    };
+                    app = initializeApp(FALLBACK_CONFIG);
+                } else {
+                    app = initializeApp(firebaseConfig);
                 }
-
-                app = initializeApp(firebaseConfig);
+                
                 db = getFirestore(app);
                 auth = getAuth(app);
-
-                // Sign in using custom token or anonymously
+                
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
                 } else {
                     await signInAnonymously(auth);
                 }
+                
+                await openIndexedDB(); // Initialize IndexedDB here
+
             } catch (error) {
                 console.error("Firebase Initialization Error:", error);
                 dom.chatListContainer.innerHTML = `<p class="text-red-400 text-center">Failed to initialize services: ${error.message}</p>`;
@@ -1118,30 +1302,23 @@
         }
         
         function main() {
-            // 1. Apply theme
             if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                 document.documentElement.classList.add('dark');
             } else {
-                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
             }
-            toggleTheme(); // Initialize toggle button icon
+            toggleTheme();
 
-            // 2. Start clock
             updateClock();
             setInterval(updateClock, 1000);
             
-            // 3. Set up event listeners
             setupEventListeners();
-            
-            // 4. Initialize Firebase services and authentication
             initializeFirebase();
 
-            // 5. Handle Auth state changes
             onAuthStateChanged(auth, (user) => {
                 if (user) {
                     firestoreUserUid = user.uid;
                     
-                    // Retrieve or generate a stable 8-character public ID
                     let publicId = localStorage.getItem('4sp_public_id');
                     if (!publicId || publicId.length !== 8) {
                         publicId = generateRandomId();
@@ -1151,10 +1328,8 @@
                     
                     dom.userIdDisplay.textContent = userId;
                     
-                    // Start listening for data
-                    listenToChats();
+                    switchTab('messages'); // Start by showing messages tab
                 } else {
-                    // Signed out state
                     dom.chatListContainer.innerHTML = '<div class="text-center p-4 text-red-400">Authentication failed.</div>';
                     dom.userIdDisplay.textContent = '********';
                     firestoreUserUid = null;
