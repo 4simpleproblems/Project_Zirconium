@@ -30,6 +30,7 @@
             background-clip: text;
         }
     </style>
+<!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-1D4F692C1Q"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -41,10 +42,10 @@
 </head>
 <body class="bg-black text-white min-h-screen">
     <main>
-        <section class="text-center py-8 sm:py-12 border-b border-gray-900">
+        <section class="text-center py-12 sm:py-20 border-b border-gray-900">
             <div class="mx-auto max-w-4xl px-4">
                 <h1 class="text-3xl sm:text-4xl font-normal text-gray-300 tracking-tighter mb-4 leading-tight">
-                    We're BACK.
+                    Over 190 users, and counting.
                 </h1>
                 <h2 class="text-5xl sm:text-6xl font-semibold tracking-tighter mb-4 leading-tight">
                     <span class="gradient-text font-bold">The Essential Student Toolkit.</span>
@@ -64,7 +65,7 @@
                 </div>
         </section>
 
-        <section id="features" class="py-10 mx-auto max-w-7xl px-4 space-y-16">
+        <section id="features" class="py-16 mx-auto max-w-7xl px-4 space-y-16">
              <h2 class="text-4xl font-medium text-center mb-8">Core Features of 4SP</h2>
 
             <div class="lg:grid lg:grid-cols-2 lg:gap-12 items-center">
@@ -128,7 +129,7 @@
             </div>
         </section>
 
-        <section class="py-8 mx-auto max-w-7xl px-4 text-center border-t border-gray-900">
+        <section class="py-12 mx-auto max-w-7xl px-4 text-center border-t border-gray-900">
             <h2 class="text-xl font-medium text-gray-400 mb-2">Powered by Modern Cloud Tools</h2>
             <p class="text-gray-500 text-lg">
                 <strong class="text-white font-medium">Authentication and Backend Infrastructure</strong>
@@ -140,15 +141,22 @@
 
     </main>
 
-    <footer class="border-t border-gray-900 py-4">
+    <footer class="border-t border-gray-900 py-6">
         <div class="mx-auto max-w-7xl px-4 text-center text-gray-500 text-sm">
             &copy; 2025 4simpleproblems (4SP). Built for students.
         </div>
     </footer>
 
+    <!--
+        COOKIE CONSENT OVERLAY AND BANNER
+        - The overlay (#cookie-overlay) darkens the screen and prevents interaction.
+        - The banner (#cookie-banner) contains the consent information.
+    -->
+    <!-- Updated: Removed 'hidden' class and added initial 'opacity-0' state. Opacity will be controlled by JS. -->
     <div id="cookie-overlay" class="fixed inset-0 bg-black/70 z-[9999] transition-opacity duration-300 opacity-0" style="display: none;">
         <div id="cookie-banner" class="absolute bottom-4 left-1/2 -translate-x-1/2 w-full max-w-7xl px-4">
             <div class="bg-black/95 text-white p-4 sm:p-6 rounded-3xl border border-gray-700 shadow-2xl backdrop-blur-md flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0 md:space-x-6">
+                <!-- Text Content (Left Side) -->
                 <div class="flex-1 min-w-0">
                     <h3 class="text-xl font-bold mb-1">4SP Uses Cookies</h3>
                     <p class="text-sm text-gray-300 mb-2">
@@ -159,13 +167,16 @@
                             Extra (What are cookies?)
                         </a>
                         <a class="text-gray-500 pointer-events-none">|</a>
+                        <!-- UPDATED: Added correct path to legal.html and anchor to #privacy-policy -->
                         <a href="../legal.html#privacy-policy" class="text-blue-400 hover:text-blue-300 underline transition">
                             Privacy Policy
                         </a>
                     </div>
                 </div>
 
+                <!-- Button (Right Side) -->
                 <div class="flex-shrink-0">
+                    <!-- UPDATED: Styled the button to match a prominent purple accented CTA style -->
                     <button id="accept-cookies-button" class="w-full md:w-auto inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-normal rounded-xl text-white bg-purple-500/10 ring-1 ring-purple-500/50 hover:bg-purple-500/20 transition duration-150 transform hover:scale-[1.02]">
                         I Understand
                     </button>
@@ -173,6 +184,8 @@
             </div>
         </div>
     </div>
+    <!-- END COOKIE CONSENT -->
+
     <script type="module" src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
     <script type="module" src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
 
