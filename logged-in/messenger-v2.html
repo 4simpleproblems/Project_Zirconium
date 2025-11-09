@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - MESSENGER</title>
+    <title>4SP - Messenger V2</title>
     <meta name="description" content="A secure, peer-to-peer messenger with group chat functionality, image sharing, and hybrid message storage.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -188,7 +188,7 @@
     <!-- Navigation Bar -->
     <div id="navbar-container" class="sticky top-0 z-10 w-full">
         <nav class="bg-[#0e0e0e] border-b border-[#2d2d2d] p-4 flex items-center justify-between">
-            <h1 class="text-xl font-bold text-white">4SP MESSENGER</h1>
+            <h1 class="text-xl font-bold text-white">4SP Messenger</h1>
             <div id="auth-status-icon">
                 <i class="fas fa-user-circle text-white"></i>
             </div>
@@ -771,8 +771,13 @@
 
         async function sendFriendRequest() {
             const friendId = dom.friendIdInput.value.trim();
+            
+            // Reset status message
+            dom.addFriendStatus.textContent = "Friend requests are sent using their 8-character Public User ID. (Case-sensitive)";
+            dom.addFriendStatus.classList.remove('text-red-400', 'text-green-400');
+
+
             if (friendId.length !== 8 || !/^[a-zA-Z0-9]{8}$/.test(friendId)) {
-                console.error("ID must be exactly 8 alphanumeric characters.");
                 dom.addFriendStatus.textContent = "Error: ID must be 8 alphanumeric characters.";
                 dom.addFriendStatus.classList.add('text-red-400');
                 return;
@@ -782,22 +787,51 @@
                 dom.addFriendStatus.classList.add('text-red-400');
                 return;
             }
+            if (!db || !firestoreUserUid) {
+                 dom.addFriendStatus.textContent = "Error: Authentication is not complete. Please wait.";
+                 dom.addFriendStatus.classList.add('text-red-400');
+                 return;
+            }
             
-            // --- REAL FRIEND REQUEST LOGIC WOULD GO HERE (e.g., writing to a 'requests' collection) ---
-            console.log("Sending simulated friend request to:", friendId);
-            
-            // Show custom success message instead of alert
-            dom.addFriendStatus.textContent = `Friend request successfully sent to ID: ${friendId}`;
-            dom.addFriendStatus.classList.remove('text-red-400');
-            dom.addFriendStatus.classList.add('text-green-400');
-            
-            // Close after a brief delay
-            setTimeout(() => {
-                closeAddFriendModal();
-                dom.addFriendStatus.textContent = "Friend requests are sent using their 8-character Public User ID. (Case-sensitive)";
-                dom.addFriendStatus.classList.remove('text-green-400');
-            }, 1500);
+            try {
+                // 1. Check if the recipient ID exists (Optional but good practice in a real app)
+                // Since we can't search for the publicId easily without creating an index, 
+                // we'll skip the recipient check for this demo and rely on the recipient
+                // side to filter requests by their public ID.
+
+                // Path: /artifacts/{appId}/public/data/friendRequests
+                const requestsCollection = collection(db, `artifacts/${appId}/public/data/friendRequests`);
+
+                const newRequest = {
+                    senderPublicId: userId,           // The 8-char ID used for display
+                    senderUid: firestoreUserUid,      // The secure Firebase UID of the sender
+                    recipientPublicId: friendId,      // The 8-char ID of the intended recipient
+                    status: 'pending',
+                    timestamp: new Date(),
+                };
+
+                await setDoc(doc(requestsCollection), newRequest);
+                
+                console.log("Sent friend request to:", friendId);
+                
+                // Show success message
+                dom.addFriendStatus.textContent = `Friend request successfully sent to ID: ${friendId}`;
+                dom.addFriendStatus.classList.add('text-green-400');
+                
+                // Close after a brief delay
+                setTimeout(() => {
+                    closeAddFriendModal();
+                    dom.addFriendStatus.textContent = "Friend requests are sent using their 8-character Public User ID. (Case-sensitive)";
+                    dom.addFriendStatus.classList.remove('text-green-400');
+                }, 1500);
+
+            } catch (error) {
+                console.error("Error sending friend request:", error);
+                dom.addFriendStatus.textContent = `Error sending request: ${error.message}`;
+                dom.addFriendStatus.classList.add('text-red-400');
+            }
         }
+
 
         function setupEventListeners() {
             dom.dmTabBtn.onclick = () => { dom.dmTabBtn.classList.add('active'); dom.groupTabBtn.classList.remove('active'); };
