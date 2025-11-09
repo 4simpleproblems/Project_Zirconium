@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en" class="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - Messenger V4 (Full Feature)</title>
+    <title>4SP - Messenger V5 (Themed & Stable)</title>
     <meta name="description" content="A secure, peer-to-peer messenger with full feature set, group chat functionality, image sharing, and hybrid message storage.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -36,7 +36,7 @@
 
     <style>
         /* --- CSS Variables for Theme Switching --- */
-        :root { /* Dark Mode Defaults */
+        :root { /* Dark Mode Defaults (for .dark class) */
             --bg-primary: #070707;
             --bg-secondary: #0e0e0e;
             --bg-tertiary: #1a1a1a;
@@ -46,7 +46,7 @@
             --highlight-purple: #4f46e5;
             --standard-roundness: 0.5rem;
         }
-        .light { /* Light Mode Overrides */
+        .light { /* Light Mode Overrides (default) */
             --bg-primary: #f0f2f5;
             --bg-secondary: #ffffff;
             --bg-tertiary: #e9e9e9;
@@ -99,6 +99,19 @@
         }
         
         /* List Items & Tabs */
+        .tab-btn {
+            padding: 0.5rem 0.75rem;
+            border-radius: var(--standard-roundness);
+            font-weight: 500;
+        }
+        .tab-btn.active {
+            background-color: var(--highlight-purple);
+            color: white;
+        }
+        .tab-btn:not(.active):hover {
+            background-color: var(--bg-tertiary);
+        }
+        
         .compact-list-item {
             background-color: transparent; 
             border-radius: var(--standard-roundness);
@@ -106,47 +119,107 @@
             padding: 0.75rem 0.75rem; 
             border-left: 3px solid transparent;
             cursor: pointer;
+            transition: background-color 0.15s ease, border-left 0.15s ease;
         }
         .compact-list-item:hover {
-            background-color: rgba(79, 70, 229, 0.1);
-        }
-        .light .compact-list-item:hover {
-            background-color: rgba(139, 92, 246, 0.1);
+            background-color: var(--bg-tertiary);
         }
 
         .compact-list-item.active {
-            background-color: rgba(79, 70, 229, 0.1);
+            background-color: rgba(139, 92, 246, 0.1);
             border-left: 3px solid var(--highlight-purple);
         }
         .light .compact-list-item.active {
             background-color: rgba(139, 92, 246, 0.1);
         }
+        .dark .compact-list-item.active {
+            background-color: rgba(79, 70, 229, 0.1);
+        }
         
         /* Message Bubbles */
+        .message-bubble {
+            max-width: 80%;
+            padding: 0.75rem 1rem;
+            border-radius: var(--standard-roundness);
+        }
         .message-incoming .message-bubble {
             background-color: var(--bg-tertiary); 
             color: var(--text-primary);
             border-bottom-left-radius: 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+        .message-outgoing .message-bubble {
+            border-bottom-right-radius: 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Modal Backdrop */
+        .custom-modal-backdrop {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 50;
+        }
+        .custom-modal-backdrop.show {
+            opacity: 1;
+        }
+        .custom-modal-content {
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            border: 1px solid var(--border-primary);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+        .custom-modal-backdrop.show .custom-modal-content {
+            transform: scale(1);
+        }
+
+        /* --- Responsive Layout Control (Tailwind + CSS) --- */
+        @media (max-width: 767px) {
+            /* Mobile View: Hide one column when the other is active */
+            main[data-view="chat-open"] #sidebar {
+                display: none !important;
+            }
+            main[data-view="chat-list"] #chat-main {
+                /* Chat view should be hidden when contacts list is visible */
+                display: none !important;
+            }
+            /* Ensure sidebar takes full width when visible on mobile */
+            main #sidebar {
+                width: 100% !important;
+                flex-shrink: 0;
+                border-right: none;
+            }
+            /* Ensure main chat takes full width when visible on mobile */
+            main #chat-main {
+                width: 100% !important;
+            }
         }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
     <!-- Navigation Bar -->
     <div id="navbar-container" class="sticky top-0 z-10 w-full">
-        <nav class="bg-bg-secondary border-b border-border-primary p-4 flex items-center justify-between">
-            <h1 class="text-xl font-bold text-text-primary">4SP Messenger</h1>
-            <button id="dark-mode-toggle" class="custom-btn !p-2 !rounded-lg" title="Toggle Dark/Light Mode"><i class="fas fa-moon"></i></button>
+        <nav class="bg-bg-secondary border-b border-border-primary p-4 flex items-center justify-between shadow-lg">
+            <h1 class="text-2xl font-bold text-highlight">4SP Messenger</h1>
+            <button id="dark-mode-toggle" class="custom-btn !p-2 !rounded-lg" title="Toggle Dark/Light Mode"><i class="fas fa-sun"></i></button>
         </nav>
     </div>
 
-    <!-- Main Content Area -->
-    <main class="flex flex-1 overflow-hidden">
+    <!-- Main Content Area - Set data-view here for mobile responsiveness -->
+    <main id="main-content" class="flex flex-1 overflow-hidden" data-view="chat-list">
         
         <!-- Sidebar: Chat List -->
-        <div id="sidebar" class="w-full md:w-80 border-r border-border-primary flex flex-col bg-bg-secondary md:flex-shrink-0" data-view="chat-list">
+        <div id="sidebar" class="w-full md:w-80 border-r border-border-primary flex flex-col bg-bg-secondary md:flex-shrink-0">
             
             <!-- User ID and Live Clock -->
-            <div class="p-4 border-b border-border-primary bg-bg-secondary space-y-2 rounded-container m-2 shadow-lg">
+            <div class="p-4 border-b border-border-primary bg-bg-secondary space-y-2 m-2 rounded-lg shadow-inner">
                 <div class="flex items-center justify-between">
                     <span class="text-sm font-semibold text-text-primary">Your Public ID:</span>
                     <div class="flex items-center space-x-2">
@@ -163,13 +236,7 @@
             <!-- Sidebar Controls -->
             <div class="p-4 border-b border-border-primary flex flex-col space-y-3">
                 
-                <!-- Search Box (Placeholder) -->
-                <div class="relative">
-                    <input type="text" id="chat-search-input" placeholder="Search chats..." class="w-full bg-bg-tertiary border border-border-primary text-sm p-2.5 text-text-primary placeholder-text-secondary focus:ring-highlight focus:border-highlight transition duration-150 rounded-lg">
-                    <i class="fas fa-search absolute right-3 top-1/2 transform -translate-y-1/2 text-text-secondary"></i>
-                </div>
-
-                <!-- Tabs (DM/Group) & Action Buttons -->
+                <!-- Tabs (DM/Requests) -->
                 <div class="flex space-x-2 text-sm text-text-secondary">
                     <button id="dm-tab-btn" class="tab-btn active">Messages</button>
                     <button id="requests-tab-btn" class="tab-btn relative">
@@ -177,11 +244,11 @@
                         <span id="requests-count-badge" class="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold px-1.5 rounded-full hidden">0</span>
                     </button>
                     <!-- Add Friend Button -->
-                    <button id="add-contact-btn" class="ml-auto custom-btn !p-2 !text-xs !rounded-lg" title="Add Contact">
+                    <button id="add-contact-btn" class="ml-auto custom-btn !p-2 !text-xs !rounded-lg" title="Send Friend Request">
                         <i class="fas fa-user-plus"></i>
                     </button>
                     <!-- Create Chat Button -->
-                    <button id="create-chat-btn" class="custom-btn !p-2 !text-xs !rounded-lg" title="New Group">
+                    <button id="create-chat-btn" class="custom-btn !p-2 !text-xs !rounded-lg" title="New Group Chat">
                         <i class="fas fa-users"></i>
                     </button>
                 </div>
@@ -198,10 +265,10 @@
         <div id="chat-main" class="flex-1 flex flex-col bg-bg-primary">
             
             <!-- Chat Header -->
-            <div id="chat-header" class="w-full border-b border-border-primary p-4 flex items-center justify-between bg-bg-secondary hidden">
+            <div id="chat-header" class="w-full border-b border-border-primary p-4 flex items-center justify-between bg-bg-secondary hidden shadow-md">
                 <div class="flex items-center space-x-3">
                     <button id="back-to-contacts-btn" class="md:hidden custom-btn !p-2 !rounded-lg" title="Back"><i class="fas fa-arrow-left"></i></button>
-                    <div id="chat-avatar" class="w-10 h-10 rounded-lg bg-highlight flex items-center justify-center text-white font-semibold">U</div>
+                    <div id="chat-avatar" class="w-10 h-10 rounded-full bg-highlight flex items-center justify-center text-white font-semibold">U</div>
                     <div>
                         <div id="chat-title" class="text-text-primary font-semibold text-lg">Chat Title</div>
                         <div id="chat-subtitle" class="text-text-secondary text-xs">Subtitle/Status</div>
@@ -234,8 +301,8 @@
                         <button type="button" id="open-file-menu-btn" class="custom-btn !p-3 !rounded-lg !bg-transparent !border-none !text-text-secondary hover:!text-text-primary" title="Attach File">
                             <i class="fas fa-paperclip"></i>
                         </button>
-                        <div id="file-menu" class="custom-menu absolute bottom-full left-0 mb-2 w-48 hidden bg-bg-secondary border-border-primary">
-                            <label for="image-upload-input" class="custom-menu-item flex items-center space-x-2 rounded-lg text-text-primary hover:bg-bg-tertiary">
+                        <div id="file-menu" class="custom-menu absolute bottom-full left-0 mb-2 w-48 hidden bg-bg-secondary border-border-primary rounded-lg shadow-xl p-2">
+                            <label for="image-upload-input" class="custom-menu-item flex items-center space-x-2 p-2 rounded-lg text-text-primary hover:bg-bg-tertiary cursor-pointer">
                                 <i class="fas fa-image w-4"></i> <span>Send Image (Placeholder)</span>
                                 <input type="file" id="image-upload-input" accept="image/*" class="hidden">
                             </label>
@@ -243,7 +310,7 @@
                     </div>
 
                     <!-- Input Box -->
-                    <textarea id="message-input" rows="1" placeholder="Type a message..." class="flex-1 bg-bg-tertiary border border-border-primary text-sm p-3 resize-none text-text-primary placeholder-text-secondary focus:ring-highlight focus:border-highlight transition duration-150 custom-textarea rounded-lg"></textarea>
+                    <textarea id="message-input" rows="1" placeholder="Type a message..." class="flex-1 bg-bg-tertiary border border-border-primary text-sm p-3 resize-none text-text-primary placeholder-text-secondary focus:ring-highlight focus:border-highlight transition duration-150 custom-textarea rounded-xl"></textarea>
                     
                     <!-- Send Button -->
                     <button type="submit" id="send-btn" class="custom-btn primary !p-3 !rounded-lg" disabled title="Send Message">
@@ -263,7 +330,7 @@
 
     <!-- Add Contact/Friend Modal -->
     <div id="add-contact-modal-backdrop" class="custom-modal-backdrop">
-        <div id="add-contact-modal-content" class="custom-modal-content w-[400px] bg-bg-primary border-border-primary">
+        <div id="add-contact-modal-content" class="custom-modal-content w-[400px] bg-bg-secondary border-border-primary">
             <h2 class="text-xl font-bold mb-4 text-text-primary">Send Friend Request</h2>
             <div class="space-y-4">
                 <input type="text" id="contact-id-input" placeholder="Enter contact's 8-character Public ID" maxlength="8" class="w-full bg-bg-tertiary border border-border-primary text-sm p-2.5 text-text-primary placeholder-text-secondary rounded-lg">
@@ -278,7 +345,7 @@
 
     <!-- Create Group Chat Modal -->
     <div id="create-chat-modal-backdrop" class="custom-modal-backdrop">
-        <div id="create-chat-modal-content" class="custom-modal-content w-[400px] bg-bg-primary border-border-primary">
+        <div id="create-chat-modal-content" class="custom-modal-content w-[400px] bg-bg-secondary border-border-primary">
             <h2 class="text-xl font-bold mb-4 text-text-primary">Create New Group Chat</h2>
             <div class="space-y-4">
                 <input type="text" id="new-chat-name" placeholder="Group Name (e.g., Study Group)" class="w-full bg-bg-tertiary border border-border-primary text-sm p-2.5 text-text-primary placeholder-text-secondary rounded-lg">
@@ -294,7 +361,7 @@
 
     <!-- Chat Settings Modal -->
     <div id="settings-modal-backdrop" class="custom-modal-backdrop">
-        <div id="settings-modal-content" class="custom-modal-content w-[400px] bg-bg-primary border-border-primary">
+        <div id="settings-modal-content" class="custom-modal-content w-[400px] bg-bg-secondary border-border-primary">
             <h2 class="text-xl font-bold mb-4 text-text-primary">Chat Settings</h2>
             <div id="settings-content">
                 <p>Chat settings will load here...</p>
@@ -372,6 +439,7 @@
         // DOM Element Mapping (Expanded)
         const dom = {
             // Main structure
+            mainContent: document.getElementById('main-content'),
             sidebar: document.getElementById('sidebar'),
             chatListContainer: document.getElementById('chat-list-container'),
             messagesContainer: document.getElementById('messages-container'),
@@ -433,7 +501,7 @@
 
         // --- INDEXEDDB FUNCTIONS ---
         async function openIndexedDB() {
-            if (dbInstance) return dbInstance; // Return existing instance if available
+            if (dbInstance) return dbInstance;
 
             return new Promise((resolve, reject) => {
                 const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -460,33 +528,28 @@
             });
         }
 
-        /** Saves messages that have rotated out of the Firestore limit to IndexedDB. */
         function saveHistoricalMessages(chatId, messagesToSave) {
             if (!dbInstance || messagesToSave.length === 0) return;
             const tx = dbInstance.transaction(STORE_NAME, 'readwrite');
             const store = tx.objectStore(STORE_NAME);
 
             messagesToSave.forEach(msg => {
-                // Create a unique ID to prevent duplicates if fetching from both ends
                 const uniqueId = `${chatId}_${msg.id || msg.timestamp.toMillis()}_${msg.senderId}`;
                 const messageWithMeta = { 
                     ...msg, 
                     chatId: chatId, 
                     uniqueId: uniqueId, 
-                    timestamp: msg.timestamp.toMillis() // Convert Timestamp to number for IDB
+                    timestamp: msg.timestamp.toMillis()
                 };
-                
-                // Add or overwrite the message
                 store.put(messageWithMeta);
             });
             tx.onerror = (event) => console.error("IDB Save Error:", event.target.error);
         }
 
-        /** Loads all messages for a chatId from IndexedDB. */
         function loadHistoricalMessages(chatId) {
             return new Promise(async (resolve) => {
                 try {
-                    await openIndexedDB(); // Ensure DB is open
+                    await openIndexedDB();
                     if (!dbInstance) return resolve([]);
                     
                     const tx = dbInstance.transaction(STORE_NAME, 'readonly');
@@ -498,9 +561,8 @@
                     request.onsuccess = () => {
                         const messages = request.result.map(msg => ({
                             ...msg,
-                            timestamp: Timestamp.fromMillis(msg.timestamp) // Convert back to Firebase Timestamp
+                            timestamp: Timestamp.fromMillis(msg.timestamp)
                         }));
-                        // Sort by timestamp before resolving
                         messages.sort((a, b) => a.timestamp.toMillis() - b.timestamp.toMillis());
                         resolve(messages);
                     };
@@ -516,7 +578,6 @@
             });
         }
 
-        /** Deletes all messages for a given chatId from IndexedDB. */
         async function clearLocalChatHistory(chatId) {
             return new Promise(async (resolve, reject) => {
                 try {
@@ -554,7 +615,7 @@
         // --- UTILITY FUNCTIONS ---
         
         function generateRandomId() {
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
             let result = '';
             for (let i = 0; i < 8; i++) {
                 result += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -575,7 +636,7 @@
             dom.newChatName.value = '';
             dom.groupMembersInput.value = '';
             dom.createGroupStatus.textContent = "Add members by their 8-character Public IDs.";
-            dom.createGroupStatus.classList.remove('text-red-400');
+            dom.createGroupStatus.classList.remove('text-red-400', 'text-green-400');
             hideModal(dom.addContactModalBackdrop); 
             showModal(dom.createChatModalBackdrop); 
         }
@@ -599,9 +660,8 @@
                 <div class="flex justify-center items-center h-full">
                     <p class="text-text-secondary">Select a chat to begin messaging.</p>
                 </div>`;
-            dom.sidebar.dataset.view = 'chat-list';
+            dom.mainContent.dataset.view = 'chat-list'; // Set main view state
             document.querySelectorAll('.compact-list-item').forEach(el => el.classList.remove('active'));
-            if (window.innerWidth < 768) { dom.sidebar.style.display = 'flex'; }
         }
 
         function showSettingsModal() { 
@@ -611,17 +671,20 @@
                 ? (currentChat.members.find(id => id !== userId) || 'Unknown User')
                 : currentChat.name;
 
+            const limit = currentChat.type === 'dm' ? DM_MESSAGE_LIMIT : GROUP_MESSAGE_LIMIT;
+
             let settingsHTML = `
                 <div class="space-y-4">
-                    <p class="text-text-primary font-semibold text-lg">${chatName} (${currentChat.type === 'group' ? 'Group' : 'DM'})</p>
-                    <p class="text-sm text-text-secondary">Chat ID: <span class="font-mono bg-bg-tertiary p-1 rounded">${currentChat.id}</span></p>
+                    <p class="text-text-primary font-semibold text-lg">${chatName}</p>
+                    <p class="text-sm text-text-secondary font-medium">${currentChat.type === 'group' ? 'Group Chat' : 'Direct Message'}</p>
+                    <p class="text-sm text-text-secondary">Chat ID: <span class="font-mono bg-bg-tertiary p-1 rounded-md">${currentChat.id}</span></p>
                     <p class="text-sm text-text-secondary">Members: ${currentChat.members.join(', ')}</p>
                     <hr class="border-border-primary my-4">
-                    <p class="text-sm text-text-secondary">Messages older than the last ${currentChat.type === 'dm' ? DM_MESSAGE_LIMIT : GROUP_MESSAGE_LIMIT} messages are saved securely on this device's local storage (IndexedDB).</p>
+                    <p class="text-sm text-text-secondary">Messages older than the last <span class="font-semibold text-highlight">${limit}</span> messages are saved securely on this device's local storage (IndexedDB).</p>
                     <button id="clear-local-history-btn" class="custom-btn w-full mt-4 !bg-red-600 hover:!bg-red-700 !text-white">
-                        Clear Local Chat History (Clear ${currentChat.type === 'dm' ? 'DMs' : 'Groups'} on Device)
+                        Clear Local Chat History
                     </button>
-                    <div id="local-clear-status" class="text-sm text-center mt-2"></div>
+                    <div id="local-clear-status" class="text-sm text-center mt-2 font-medium"></div>
                 </div>
             `;
             
@@ -634,12 +697,13 @@
                     const count = await clearLocalChatHistory(currentChat.id);
                     statusEl.textContent = `Successfully cleared ${count} historical messages from local storage.`;
                     statusEl.classList.remove('text-red-400');
-                    statusEl.classList.add('text-green-400');
+                    statusEl.classList.add('text-green-600');
                     // Force re-render of messages to only show Firestore data
                     listenToMessages(currentChat.id, currentChat.type);
                 } catch (e) {
-                    statusEl.textContent = `Error clearing history: ${e.message}`;
+                    statusEl.textContent = `Error clearing history.`;
                     statusEl.classList.add('text-red-400');
+                    console.error('Local Clear Error:', e);
                 }
             };
 
@@ -656,13 +720,31 @@
             if (isDark) {
                 document.documentElement.classList.remove('dark');
                 document.documentElement.classList.add('light');
-                dom.darkModeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+                dom.darkModeToggle.innerHTML = '<i class="fas fa-moon"></i>';
                 localStorage.setItem('theme', 'light');
             } else {
                 document.documentElement.classList.remove('light');
                 document.documentElement.classList.add('dark');
-                dom.darkModeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+                dom.darkModeToggle.innerHTML = '<i class="fas fa-sun"></i>';
                 localStorage.setItem('theme', 'dark');
+            }
+        }
+        
+        function initializeTheme() {
+            let initialTheme = localStorage.getItem('theme');
+            if (!initialTheme) {
+                // Default to light theme as requested by the user
+                initialTheme = 'light';
+            }
+
+            if (initialTheme === 'dark') {
+                document.documentElement.classList.remove('light');
+                document.documentElement.classList.add('dark');
+                dom.darkModeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+                dom.darkModeToggle.innerHTML = '<i class="fas fa-sun"></i>';
             }
         }
 
@@ -678,7 +760,7 @@
             const avatarLetter = displayName[0]?.toUpperCase() || 'U';
 
             listItem.innerHTML = `
-                <div class="w-10 h-10 rounded-lg bg-highlight flex items-center justify-center text-white font-semibold flex-shrink-0">${avatarLetter}</div>
+                <div class="w-10 h-10 rounded-full bg-highlight flex items-center justify-center text-white font-semibold flex-shrink-0">${avatarLetter}</div>
                 <div class="flex-1 min-w-0">
                     <p class="text-text-primary font-semibold truncate">${displayName}</p>
                     <p class="text-text-secondary text-sm truncate">${chat.lastMessage || 'Start a conversation.'}</p>
@@ -696,7 +778,7 @@
 
             listItem.innerHTML = `
                 <div class="flex-1 min-w-0">
-                    <p class="text-text-primary font-semibold">Request from ${requesterId}</p>
+                    <p class="text-text-primary font-semibold">Request from <span class="font-mono text-highlight">${requesterId}</span></p>
                     <p class="text-text-secondary text-sm">Tap to accept.</p>
                 </div>
                 <button data-action="accept-request" data-id="${request.id}" data-sender="${requesterId}" class="custom-btn primary !p-2 !text-xs !rounded-lg"><i class="fas fa-check"></i> Accept</button>
@@ -731,7 +813,6 @@
             let contentHTML = '';
 
             if (message.attachmentUrl) {
-                // Placeholder for attachment
                 contentHTML += `<a href="#" data-action="lightbox" data-url="${message.attachmentUrl}" class="block mb-2 rounded-lg overflow-hidden cursor-pointer">
                     <img src="${message.attachmentUrl}" alt="Attachment Placeholder" class="max-w-xs max-h-60 object-cover rounded-lg transition-transform hover:scale-[1.02] duration-300">
                 </a>`;
@@ -744,9 +825,9 @@
 
             return `
                 <div class="flex flex-col ${messageClass}">
-                    ${!isOutgoing && currentChat.type === 'group' ? `<div class="text-xs text-text-secondary mb-1">${senderName}</div>` : ''}
+                    ${!isOutgoing && currentChat.type === 'group' ? `<div class="text-xs text-text-secondary mb-1 font-semibold">${senderName}</div>` : ''}
                     <div class="flex items-start ${messageClass}">
-                        <div class="message-bubble ${isOutgoing ? 'order-2 bg-highlight text-white border-b-right-0' : 'order-1 bg-bg-tertiary text-text-primary border-b-left-0'}">
+                        <div class="message-bubble ${isOutgoing ? 'order-2 bg-highlight text-white' : 'order-1 bg-bg-tertiary text-text-primary'}">
                             ${contentHTML}
                             <div class="flex justify-end items-center mt-1 space-x-2 text-xs ${isOutgoing ? 'text-white opacity-80' : 'text-text-secondary'}">
                                 <span>${timestamp}</span>
@@ -775,9 +856,9 @@
             dom.chatSubtitle.textContent = type === 'group' ? 'Group Chat' : 'Direct Message';
             dom.chatHeader.classList.remove('hidden');
             dom.messageInputArea.classList.remove('hidden');
-            dom.sidebar.dataset.view = 'chat-open';
             
-            if (window.innerWidth < 768) { dom.sidebar.style.display = 'none'; }
+            // Set the state on the main container for responsive view switching
+            dom.mainContent.dataset.view = 'chat-open';
             
             listenToMessages(chatId, type);
         }
@@ -785,14 +866,20 @@
         // --- FIREBASE CORE LOGIC ---
         
         async function handleAddContact() {
-            const contactId = dom.contactIdInput.value.trim();
+            if (!userId) {
+                dom.addContactStatus.textContent = "Error: User not authenticated.";
+                dom.addContactStatus.classList.add('text-red-400');
+                return;
+            }
+
+            const contactId = dom.contactIdInput.value.trim().toUpperCase();
             
             if (contactId === userId) {
                 dom.addContactStatus.textContent = "Error: Cannot send request to yourself.";
                 dom.addContactStatus.classList.add('text-red-400');
                 return;
             }
-            if (!/^[a-zA-Z0-9]{8}$/.test(contactId)) {
+            if (!/^[A-Z0-9]{8}$/.test(contactId)) {
                 dom.addContactStatus.textContent = "Error: Invalid 8-character Public ID format.";
                 dom.addContactStatus.classList.add('text-red-400');
                 return;
@@ -802,21 +889,27 @@
                 const requestId = getDmChatId(userId, contactId); 
                 const requestDocRef = doc(db, getFriendRequestPath(requestId));
 
-                // Check if a request already exists
                 const existingRequest = await getDoc(requestDocRef);
 
                 if (existingRequest.exists()) {
-                    const status = existingRequest.data().status;
+                    const data = existingRequest.data();
+                    const status = data.status;
+
                     if (status === 'pending') {
-                        dom.addContactStatus.textContent = `A pending request already exists for ${contactId}.`;
+                        // If current user is 'to', they already have a request waiting.
+                        if (data.to === userId) {
+                            dom.addContactStatus.textContent = `You have a pending request from ${contactId}. Check the Requests tab.`;
+                        } else {
+                            dom.addContactStatus.textContent = `A pending request was already sent to ${contactId}.`;
+                        }
                     } else if (status === 'accepted') {
-                        dom.addContactStatus.textContent = `${contactId} is already your contact (Chat exists).`;
+                        dom.addContactStatus.textContent = `${contactId} is already your contact.`;
                     }
                     dom.addContactStatus.classList.add('text-red-400');
                     return;
                 }
 
-                // 2. Create the public friend request document
+                // Create the public friend request document
                 await setDoc(requestDocRef, {
                     from: userId,
                     to: contactId,
@@ -826,18 +919,20 @@
 
                 dom.addContactStatus.textContent = `Request sent to ${contactId} successfully!`;
                 dom.addContactStatus.classList.remove('text-red-400');
-                dom.addContactStatus.classList.add('text-green-400');
+                dom.addContactStatus.classList.add('text-green-600');
                 
-                setTimeout(() => { closeAddContactModal(); }, 1000);
+                setTimeout(() => { closeAddContactModal(); }, 1500);
 
             } catch (error) {
                 console.error("Error sending friend request:", error);
-                dom.addContactStatus.textContent = `Error: Failed to send request. ${error.message}`;
+                dom.addContactStatus.textContent = `Error: Failed to send request.`;
                 dom.addContactStatus.classList.add('text-red-400');
             }
         }
         
         async function handleAcceptRequest(requestId, requesterId) {
+            if (!db || !userId) return;
+
             try {
                 const requestDocRef = doc(db, getFriendRequestPath(requestId));
                 
@@ -852,12 +947,13 @@
                 const chatId = requestId;
                 const members = [requesterId, userId];
                 const chatPublicPath = getPublicPath('chats', chatId);
+                const initialMessage = 'Chat established. Say hi!';
 
                 await setDoc(doc(db, chatPublicPath), {
                     isGroup: false,
                     members: members,
                     createdAt: Timestamp.now(),
-                    lastMessage: 'Chat established.',
+                    lastMessage: initialMessage,
                     lastTimestamp: Timestamp.now(),
                 }, { merge: true });
 
@@ -866,26 +962,34 @@
                     chatId: chatId,
                     name: requesterId, // Use the requester's ID as the name
                     isGroup: false,
-                    lastMessage: 'Chat established.',
+                    lastMessage: initialMessage,
                     lastTimestamp: Timestamp.now(),
                     members: members,
                 }, { merge: true });
+                
+                // 4. Update the requester's Private Chat List (since the request is accepted)
+                // Note: The requester client *must* check the public chat and create its own private record. 
+                // We trust the requester's onSnapshot listener to the friend request status handles this, 
+                // but for a robust app, we should also manually update their private chat record.
+                // Since we don't know the requester's firestoreUserUid, they must rely on the public chat existence. 
 
-                // The requester's client will automatically pick up the 'accepted' status and the new public chat.
                 console.log(`Accepted request from ${requesterId}. Chat created.`);
-                listenToChats(); // Refresh list
-                switchTab('messages'); // Switch back to messages tab
+                switchTab('messages'); // Switch back to messages tab to see the new chat
 
             } catch (error) {
                 console.error("Error accepting request:", error);
-                // Note: Better error handling is needed in a production app
             }
         }
 
         async function handleCreateGroupChat() {
-            // ... (Group creation logic remains the same, as no request is needed for self-created groups)
+            if (!userId) {
+                dom.createGroupStatus.textContent = "Error: User not authenticated.";
+                dom.createGroupStatus.classList.add('text-red-400');
+                return;
+            }
+
             const groupName = dom.newChatName.value.trim();
-            const rawMembers = dom.groupMembersInput.value.split(',').map(id => id.trim()).filter(id => id.length === 8);
+            const rawMembers = dom.groupMembersInput.value.split(',').map(id => id.trim().toUpperCase()).filter(id => id.length === 8);
             
             if (!groupName) {
                 dom.createGroupStatus.textContent = "Error: Group name is required.";
@@ -903,44 +1007,46 @@
             
             try {
                 const groupChatRef = collection(db, getPublicPath('chats'));
+                const initialMessage = `${userId} created the group.`;
+                
                 const newChatDoc = await addDoc(groupChatRef, {
                     isGroup: true,
                     name: groupName,
                     members: uniqueMembers,
                     createdAt: Timestamp.now(),
                     lastTimestamp: Timestamp.now(),
-                    lastMessage: 'Group created.',
+                    lastMessage: initialMessage,
                 });
                 const chatId = newChatDoc.id;
 
+                // Create private record for current user
                 await setDoc(doc(db, getPrivatePath('chats', chatId)), {
                     chatId: chatId,
                     name: groupName,
                     isGroup: true,
-                    lastMessage: 'Group created.',
+                    lastMessage: initialMessage,
                     lastTimestamp: Timestamp.now(),
                     members: uniqueMembers
                 }, { merge: true });
 
                 dom.createGroupStatus.textContent = `Group '${groupName}' created successfully!`;
                 dom.createGroupStatus.classList.remove('text-red-400');
-                dom.createGroupStatus.classList.add('text-green-400');
+                dom.createGroupStatus.classList.add('text-green-600');
                 
                 setTimeout(() => {
                     closeCreateGroupModal();
                     openChat(chatId, 'group', groupName, uniqueMembers);
-                }, 1000);
+                }, 1500);
 
             } catch (error) {
                 console.error("Error creating Group chat:", error);
-                dom.createGroupStatus.textContent = `Error: Failed to create group. ${error.message}`;
+                dom.createGroupStatus.textContent = `Error: Failed to create group.`;
                 dom.createGroupStatus.classList.add('text-red-400');
             }
         }
 
         function listenToChats() {
             unsubscribeChats();
-            unsubscribeRequests();
             
             if (!db || !firestoreUserUid || currentTab !== 'messages') return;
             
@@ -953,15 +1059,15 @@
                 if (currentTab !== 'messages') return;
 
                 dom.chatListContainer.innerHTML = '';
-                if (snapshot.empty) {
-                    dom.chatListContainer.innerHTML = '<div class="text-center p-4 text-text-secondary">No chats found.</div>';
-                    return;
-                }
-
                 let chatList = [];
                 snapshot.forEach(doc => {
                     chatList.push({ ...doc.data(), chatId: doc.id });
                 });
+
+                if (chatList.length === 0) {
+                     dom.chatListContainer.innerHTML = '<div class="text-center p-4 text-text-secondary">No chats found. Send a friend request or start a group.</div>';
+                     return;
+                }
 
                 chatList.sort((a, b) => (b.lastTimestamp?.toMillis() || 0) - (a.lastTimestamp?.toMillis() || 0));
 
@@ -970,12 +1076,11 @@
                 });
             }, (error) => {
                 console.error("Error listening to chats:", error);
-                dom.chatListContainer.innerHTML = `<p class="text-red-400 text-center">Failed to load chats: ${error.message}</p>`;
+                dom.chatListContainer.innerHTML = `<p class="text-red-500 text-center">Failed to load chats: ${error.message}</p>`;
             });
         }
         
         function listenToRequests() {
-            unsubscribeChats();
             unsubscribeRequests();
             
             if (!db || !firestoreUserUid || currentTab !== 'requests') return;
@@ -983,7 +1088,6 @@
             dom.chatListContainer.innerHTML = '<div class="text-center p-4 text-text-secondary">Loading requests...</div>';
 
             const requestsPath = getFriendRequestPath();
-            // Query where 'to' is the current user and status is 'pending'
             const requestsQuery = query(
                 collection(db, requestsPath),
                 where('to', '==', userId),
@@ -1013,7 +1117,7 @@
                 });
             }, (error) => {
                 console.error("Error listening to requests:", error);
-                dom.chatListContainer.innerHTML = `<p class="text-red-400 text-center">Failed to load requests: ${error.message}</p>`;
+                dom.chatListContainer.innerHTML = `<p class="text-red-500 text-center">Failed to load requests: ${error.message}</p>`;
             });
         }
 
@@ -1029,15 +1133,15 @@
             
             let allMessagesMap = new Map();
 
-            // --- PART 1: LOAD HISTORICAL MESSAGES FROM INDEXEDDB ---
+            // 1. LOAD HISTORICAL MESSAGES FROM INDEXEDDB
             const historicalMessages = await loadHistoricalMessages(chatId);
             historicalMessages.forEach(msg => {
-                allMessagesMap.set(msg.uniqueId, msg); 
+                const uniqueId = `${chatId}_${msg.id || msg.timestamp.toMillis()}_${msg.senderId}`;
+                allMessagesMap.set(uniqueId, msg); 
             });
             renderAllMessages(Array.from(allMessagesMap.values())); // Initial render of history
             
-            // --- PART 2: LISTEN TO LIVE MESSAGES FROM FIREBASE ---
-            // Fetch the latest N+1 messages (N is the limitCount)
+            // 2. LISTEN TO LIVE MESSAGES FROM FIREBASE
             const messagesQuery = query(
                 collection(db, messagesPath),
                 orderBy('timestamp', 'desc'),
@@ -1059,20 +1163,25 @@
                 let messagesToDisplay = [];
 
                 if (firestoreMessages.length > limitCount) {
-                    // Oldest message(s) go to local storage
                     messagesToSaveLocally = firestoreMessages.slice(0, firestoreMessages.length - limitCount);
-                    // Remaining N messages stay in Firestore + are displayed
                     messagesToDisplay = firestoreMessages.slice(firestoreMessages.length - limitCount);
                 } else {
                     messagesToDisplay = firestoreMessages;
                 }
 
-                // 1. Save historical messages (if any)
+                // A. Save historical messages (if any)
                 if (messagesToSaveLocally.length > 0) {
                     saveHistoricalMessages(chatId, messagesToSaveLocally);
                 }
                 
-                // 2. Merge all messages
+                // B. Merge and remove old messages from the map before rendering
+                // Re-populate map with ONLY the current live messages (IDB handles the rest)
+                // This prevents duplicates if the user clears IDB and Firestore still contains the limit.
+                allMessagesMap = new Map();
+                historicalMessages.forEach(msg => {
+                     const uniqueId = `${chatId}_${msg.id || msg.timestamp.toMillis()}_${msg.senderId}`;
+                     allMessagesMap.set(uniqueId, msg); 
+                });
                 messagesToDisplay.forEach(msg => {
                     const uniqueId = `${chatId}_${msg.id}_${msg.senderId}`;
                     allMessagesMap.set(uniqueId, msg);
@@ -1080,7 +1189,7 @@
 
                 let finalMessages = Array.from(allMessagesMap.values()).sort((a, b) => a.timestamp.toMillis() - b.timestamp.toMillis());
                 
-                // 3. Render the combined list
+                // C. Render the combined list
                 renderAllMessages(finalMessages);
                 
                 if (shouldScroll) {
@@ -1091,14 +1200,14 @@
 
             }, (error) => { 
                 console.error("Error listening to messages:", error); 
-                dom.messagesContainer.innerHTML = `<p class="text-red-400 text-center">Failed to load live messages: ${error.message}</p>`; 
+                dom.messagesContainer.innerHTML = `<p class="text-red-500 text-center">Failed to load live messages: ${error.message}</p>`; 
             });
         }
 
         async function handleSendMessage(e) {
             e.preventDefault();
             const content = dom.messageInput.value.trim();
-            const file = dom.imageUploadInput.files[0]; // Simplified to handle images only
+            const file = dom.imageUploadInput.files[0];
             
             if (!content && !file) return;
             if (content.length > MESSAGE_CHARACTER_LIMIT) {
@@ -1118,15 +1227,13 @@
                     senderId: userId,
                     content: content,
                     timestamp: Timestamp.now(),
-                    attachmentUrl: file ? 'https://placehold.co/150x150/4f46e5/ffffff?text=Image' : null, // Placeholder URL
+                    attachmentUrl: file ? 'https://placehold.co/150x150/8b5cf6/ffffff?text=Image' : null,
                     attachmentName: file ? file.name : null,
                     attachmentType: file ? file.type : null,
                 };
                 
-                // 1. Add message to the public messages collection
                 await addDoc(collection(db, messagesPath), messageData);
                 
-                // 2. Update the last message in the public and private chat documents
                 const updateFields = {
                     lastMessage: content || `[${file ? file.name : 'Attachment'}]`,
                     lastTimestamp: messageData.timestamp,
@@ -1160,7 +1267,6 @@
 
         // --- Standard UI Utilities (Clock, Scroll, Copy ID, Character Count) ---
         function updateScrollButtonVisibility() {
-            // ... (scroll logic remains the same)
             const container = dom.messagesContainer;
             if (!container) return;
             if (container.scrollHeight > container.clientHeight && !isAtBottom(100)) {
@@ -1181,7 +1287,6 @@
             }
         }
         function updateCharacterLimitDisplay() {
-            // ... (character count logic remains the same)
             const count = dom.messageInput.value.length;
             dom.characterCountDisplay.textContent = `${count}/${MESSAGE_CHARACTER_LIMIT}`;
             dom.characterCountDisplay.classList.toggle('text-red-500', count > MESSAGE_CHARACTER_LIMIT);
@@ -1195,7 +1300,6 @@
             dom.messageInput.style.height = dom.messageInput.scrollHeight + 'px';
         }
         function handleCopyId() {
-            // ... (copy ID logic remains the same)
             const textArea = document.createElement("textarea");
             textArea.value = dom.userIdDisplay.textContent;
             document.body.appendChild(textArea);
@@ -1203,7 +1307,7 @@
             textArea.select();
             try {
                 document.execCommand('copy');
-                dom.copyIdBtn.innerHTML = '<i class="fas fa-check text-green-400"></i>';
+                dom.copyIdBtn.innerHTML = '<i class="fas fa-check text-green-600"></i>';
                 setTimeout(() => { dom.copyIdBtn.innerHTML = '<i class="fas fa-copy"></i>'; }, 2000);
             } catch (err) {
                 console.error('Fallback copy: ', err);
@@ -1257,6 +1361,18 @@
                 }
                 dom.fileMenu.classList.add('hidden');
             });
+            
+            // Toggle file menu
+            document.getElementById('open-file-menu-btn').addEventListener('click', () => {
+                dom.fileMenu.classList.toggle('hidden');
+            });
+            
+            // Close lightbox
+            dom.imageLightbox.addEventListener('click', (e) => {
+                if (e.target.id === 'image-lightbox' || e.target.id === 'lightbox-image') {
+                    hideModal(dom.imageLightbox);
+                }
+            });
 
             dom.messagesContainer.addEventListener('click', (e) => {
                 const target = e.target.closest('[data-action="lightbox"]');
@@ -1270,8 +1386,9 @@
         
         async function initializeFirebase() {
             try {
-                if (Object.keys(firebaseConfig).length === 0) {
-                    // Fallback configuration if not injected by canvas
+                // Initialize Firebase with provided config or fall back
+                if (Object.keys(firebaseConfig).length === 0 || !firebaseConfig.apiKey) {
+                    // Fallback config is needed to prevent app breakage in non-canvas environments
                     const FALLBACK_CONFIG = {
                         apiKey: "AIzaSyASqfiYUPf7xY4wgZ0hLl8_Z0ZkBiwFUO8",
                         authDomain: "theamericanmessenger-0.firebaseapp.com",
@@ -1293,32 +1410,34 @@
                     await signInAnonymously(auth);
                 }
                 
-                await openIndexedDB(); // Initialize IndexedDB here
+                await openIndexedDB();
 
             } catch (error) {
                 console.error("Firebase Initialization Error:", error);
-                dom.chatListContainer.innerHTML = `<p class="text-red-400 text-center">Failed to initialize services: ${error.message}</p>`;
+                dom.chatListContainer.innerHTML = `<p class="text-red-500 text-center">Failed to initialize services: ${error.message}</p>`;
             }
         }
         
         function main() {
-            if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                document.documentElement.classList.add('dark');
-            } else {
-                document.documentElement.classList.add('light');
-            }
-            toggleTheme();
+            // 1. Initialize Theme (defaults to light as requested)
+            initializeTheme();
 
+            // 2. Start clock
             updateClock();
             setInterval(updateClock, 1000);
             
+            // 3. Set up event listeners
             setupEventListeners();
+            
+            // 4. Initialize Firebase services and authentication
             initializeFirebase();
 
+            // 5. Handle Auth state changes
             onAuthStateChanged(auth, (user) => {
                 if (user) {
                     firestoreUserUid = user.uid;
                     
+                    // Retrieve or generate a stable 8-character public ID
                     let publicId = localStorage.getItem('4sp_public_id');
                     if (!publicId || publicId.length !== 8) {
                         publicId = generateRandomId();
@@ -1328,9 +1447,10 @@
                     
                     dom.userIdDisplay.textContent = userId;
                     
-                    switchTab('messages'); // Start by showing messages tab
+                    // Start listening for data
+                    switchTab('messages');
                 } else {
-                    dom.chatListContainer.innerHTML = '<div class="text-center p-4 text-red-400">Authentication failed.</div>';
+                    dom.chatListContainer.innerHTML = '<div class="text-center p-4 text-red-500">Authentication failed.</div>';
                     dom.userIdDisplay.textContent = '********';
                     firestoreUserUid = null;
                     userId = null;
