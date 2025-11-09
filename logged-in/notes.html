@@ -216,12 +216,10 @@
             justify-content: center;
         }
 
-        /* --- Rich Text Editor (Scroll Frame) --- */
+        /* --- Rich Text Editor (Page Scroll) --- */
         #note-editor {
             flex-grow: 1;
-            /* Constrain height to remaining viewport space and enable scrolling */
-            height: calc(100vh - 12rem);
-            overflow-y: auto; /* Make content scrollable */
+            min-height: calc(100vh - 12rem);
             padding: 20px;
             margin-left: 20px;
             margin-right: 20px;
@@ -233,7 +231,7 @@
             outline: none;
             line-height: 1.6;
             font-size: 1rem;
-            /* padding-bottom: 50vh; REMOVED to prevent excessive empty scroll space */
+            padding-bottom: 50vh;
             margin-top: 1.25rem;
             /* Fix for fontName persistence issue: ensure default style is not applied on new lines */
             font-family: inherit;
@@ -391,7 +389,7 @@
                     <div id="file-dropdown" class="dropdown-menu hidden">
                         <div id="export-header" class="dropdown-header">Export</div>
                         <div id="save-text-btn" class="dropdown-item">
-                            <i class="fa-solid fa-file-export w-5"></i> Save Standard Text
+                            <i class="fa-solid fa-file-arrow-right w-5"></i> Save Standard Text
                         </div>
                         <div id="save-encrypted-btn" class="dropdown-item">
                             <i class="fa-solid fa-lock w-5"></i> Save Encrypted (.4spnote)
@@ -400,12 +398,12 @@
                         <div id="import-divider" class="dropdown-divider"></div>
                         <div class="dropdown-header">Import</div>
                         <div id="load-file-btn" class="dropdown-item">
-                            <i class="fa-solid fa-file-import w-5"></i> Load File
+                            <i class="fa-solid fa-file-arrow-left w-5"></i> Load File
                         </div>
 
                         <div id="notebook-divider" class="dropdown-divider hidden"></div>
                         <div id="delete-page-btn" class="dropdown-item hidden text-red-500 hover:bg-red-900/50">
-                            <i class="fa-solid fa-trash-can w-5"></i> Delete Page
+                            <i class="fa-solid fa-trash-can w-5"></i> Delete Current Page
                         </div>
                     </div>
                 </div>
