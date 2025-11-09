@@ -12,7 +12,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-SBGEJDRSBZ"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
@@ -185,7 +184,6 @@
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
-    <!-- Navigation Bar -->
     <div id="navbar-container" class="sticky top-0 z-10 w-full">
         <nav class="bg-[#0e0e0e] border-b border-[#2d2d2d] p-4 flex items-center justify-between">
             <h1 class="text-xl font-bold text-white">4SP Messenger</h1>
@@ -195,13 +193,10 @@
         </nav>
     </div>
 
-    <!-- Main Content Area -->
     <main class="flex flex-1 overflow-hidden">
         
-        <!-- Sidebar: Chat List -->
         <div id="sidebar" class="w-full md:w-80 border-r border-[#2d2d2d] flex flex-col bg-[#0e0e0e] md:flex-shrink-0">
             
-            <!-- User ID and Live Clock (Consistent roundness applied) -->
             <div class="p-4 border-b border-[#2d2d2d] bg-[#111111] space-y-2 rounded-container m-2">
                 <div class="flex items-center justify-between">
                     <span class="text-sm font-semibold text-white">Your Public ID:</span>
@@ -213,40 +208,32 @@
                 </div>
             </div>
 
-            <!-- Sidebar Controls -->
             <div class="p-4 border-b border-[#2d2d2d] flex flex-col space-y-3">
                 
-                <!-- Search Box (Consistent roundness applied) -->
                 <div class="relative">
                     <input type="text" id="chat-search-input" placeholder="Search chats..." class="w-full bg-[#1a1a1a] border border-[#2d2d2d] text-sm p-2.5 text-white placeholder-gray-500 focus:ring-purple-500 focus:border-purple-500 transition duration-150">
                     <i class="fas fa-search absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                 </div>
 
-                <!-- Tabs (DM/Group) & Action Buttons (Consistent roundness applied) -->
                 <div class="flex space-x-2 text-sm text-gray-400">
                     <button id="dm-tab-btn" class="tab-btn active">Direct Messages</button>
                     <button id="group-tab-btn" class="tab-btn">Group Chats</button>
-                    <!-- Add Friend Button -->
                     <button id="add-friend-btn" class="ml-auto custom-btn !p-2 !text-xs !rounded-lg" title="Add Friend">
                         <i class="fas fa-user-plus"></i>
                     </button>
-                    <!-- Create Chat Button -->
                     <button id="create-chat-btn" class="custom-btn !p-2 !text-xs !rounded-lg" title="New Chat/Group">
                         <i class="fas fa-plus"></i>
                     </button>
                 </div>
             </div>
 
-            <!-- Chat List Container -->
             <div id="chat-list-container" class="flex-1 overflow-y-auto p-2 space-y-1">
                 <div class="text-center p-4 text-gray-500">Authenticating...</div>
             </div>
         </div>
 
-        <!-- Main Chat Container -->
         <div id="chat-main" class="flex-1 flex flex-col bg-[#070707]">
             
-            <!-- Chat Header (Consistent roundness applied via container) -->
             <div id="chat-header" class="w-full border-b border-[#2d2d2d] p-4 flex items-center justify-between bg-[#0e0e0e] hidden">
                 <div class="flex items-center space-x-3">
                     <div id="chat-avatar" class="w-10 h-10 rounded-lg bg-gray-600 flex items-center justify-center text-white font-semibold">U</div>
@@ -260,24 +247,19 @@
                 </div>
             </div>
 
-            <!-- Messages Area -->
             <div id="messages-container" class="flex-1 overflow-y-auto p-4 flex flex-col space-y-3">
-                <!-- Initial Placeholder -->
                 <div class="flex justify-center items-center h-full">
                     <p class="text-gray-500">Select a chat to begin messaging.</p>
                 </div>
             </div>
             
-            <!-- Scroll to Bottom Button -->
             <button id="scroll-to-bottom-btn" class="custom-btn !p-3 !rounded-full fixed bottom-24 right-6 shadow-xl hidden transition-opacity duration-300 z-20">
                 <i class="fas fa-arrow-down"></i>
             </button>
 
-            <!-- Message Input Area -->
             <div id="message-input-area" class="w-full border-t border-[#2d2d2d] p-4 bg-[#0e0e0e] hidden">
                 <div class="flex items-end space-x-3">
                     
-                    <!-- File Attachment Button & Menu (Consistent roundness applied) -->
                     <div class="relative">
                         <button id="open-file-menu-btn" class="custom-btn !p-3 !rounded-lg !bg-transparent !border-none !text-gray-400 hover:!text-white" title="Attach File">
                             <i class="fas fa-paperclip"></i>
@@ -294,15 +276,12 @@
                         </div>
                     </div>
 
-                    <!-- Input Box (Consistent roundness applied) -->
                     <textarea id="message-input" rows="1" placeholder="Type a message..." class="flex-1 bg-[#1a1a1a] border border-[#2d2d2d] text-sm p-3 resize-none text-white placeholder-gray-500 focus:ring-purple-500 focus:border-purple-500 transition duration-150 custom-textarea"></textarea>
                     
-                    <!-- Send Button (Consistent roundness applied) -->
                     <button id="send-btn" class="custom-btn primary !p-3 !rounded-lg" disabled title="Send Message">
                         <i class="fas fa-paper-plane"></i>
                     </button>
                 </div>
-                <!-- Character/Attachment Status -->
                 <div class="flex justify-between items-center mt-2 px-2 text-xs text-gray-500">
                     <span id="attached-file-status" class="truncate max-w-[70%] hidden"></span>
                     <span id="character-count-display" class="ml-auto">0/2000</span>
@@ -311,9 +290,6 @@
         </div>
     </main>
 
-    <!-- --- MODALS (CUSTOM UI) --- -->
-
-    <!-- Add Friend Modal -->
     <div id="add-friend-modal-backdrop" class="custom-modal-backdrop">
         <div id="add-friend-modal-content" class="custom-modal-content w-[400px]">
             <h2 class="text-xl font-bold mb-4 text-white">Add Friend by ID</h2>
@@ -328,7 +304,6 @@
         </div>
     </div>
 
-    <!-- Create Chat Modal -->
     <div id="create-chat-modal-backdrop" class="custom-modal-backdrop">
         <div id="create-chat-modal-content" class="custom-modal-content w-[400px]">
             <h2 class="text-xl font-bold mb-4 text-white">Create New Chat</h2>
@@ -346,7 +321,6 @@
         </div>
     </div>
 
-    <!-- Chat Settings Modal -->
     <div id="settings-modal-backdrop" class="custom-modal-backdrop">
         <div id="settings-modal-content" class="custom-modal-content w-[400px]">
             <h2 class="text-xl font-bold mb-4 text-white">Chat Settings</h2>
@@ -359,7 +333,6 @@
         </div>
     </div>
     
-    <!-- Image Lightbox Modal -->
     <div id="image-lightbox" class="custom-modal-backdrop" style="background-color: rgba(0, 0, 0, 0.95);">
         <div class="custom-modal-content !p-0 max-w-[95vw] max-h-[95vh] flex items-center justify-center bg-transparent border-none shadow-none">
             <img id="lightbox-image" src="" alt="Full size attachment" class="max-w-full max-h-full object-contain rounded-lg">
@@ -367,15 +340,14 @@
     </div>
 
 
-    <!-- --- JAVASCRIPT LOGIC (Module for Firebase) --- -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        // NOTE: Updated imports to include 'addDoc'
-        import { getFirestore, doc, onSnapshot, collection, query, orderBy, setDoc, getDoc, setLogLevel, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, onSnapshot, collection, query, orderBy, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- MANDATORY GLOBALS & FIREBASE SETUP ---
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        // Inserted Firebase Config Here
         const firebaseConfig = {
           apiKey: "AIzaSyASqfiYUPf7xY4wgZ0hLl8_Z0ZkBiwFUO8",
           authDomain: "theamericanmessenger-0.firebaseapp.com",
@@ -393,7 +365,7 @@
 
         // Global Firebase instances
         let app, db, auth;
-        let userId; // This holds the DISPLAYED 8-character ID (publicId stored in Firestore)
+        let userId; // This holds the DISPLAYED 8-character ID
         let firestoreUserUid; // This holds the actual Firebase UID for private paths
 
         // State variables
@@ -589,53 +561,6 @@
             `;
         }
         
-        // --- FIREBASE ACCOUNT DATA MANAGEMENT ---
-        /**
-         * Checks if the user's profile document exists in Firestore.
-         * If it exists, retrieves the stable publicId.
-         * If it doesn't exist, creates the profile with a new publicId.
-         * The result is stored in the global 'userId' variable.
-         * @param {string} uid - The Firebase Authentication UID.
-         */
-        async function ensureUserAccountData(uid) {
-            if (!db) return;
-            
-            // Path: /artifacts/{appId}/users/{userId}/profile/info
-            const userDocRef = doc(db, `artifacts/${appId}/users/${uid}/profile/info`);
-
-            try {
-                const docSnap = await getDoc(userDocRef);
-
-                if (docSnap.exists()) {
-                    // User data exists, retrieve public ID
-                    const data = docSnap.data();
-                    // Use the stored publicId, or generate a fallback if data is somehow corrupted
-                    userId = data.publicId || generateRandomId(); 
-                    console.log(`User profile loaded. Public ID: ${userId}`);
-                } else {
-                    // User is signing in for the first time, create their profile document
-                    const newPublicId = generateRandomId();
-                    
-                    const profileData = {
-                        publicId: newPublicId,
-                        createdAt: new Date(),
-                        // Can add other profile info here (e.g., username, status)
-                    };
-                    
-                    await setDoc(userDocRef, profileData);
-                    userId = newPublicId;
-                    console.log(`New user profile created. Public ID: ${userId}`);
-                }
-            } catch (error) {
-                console.error("Error ensuring user account data in Firestore:", error);
-                // Fallback to anonymous ID generation if Firestore fails
-                userId = generateRandomId();
-            }
-            // Ensure no old public ID is left in localStorage
-            localStorage.removeItem('4sp_public_id');
-        }
-
-
         // --- CHAT AND MESSAGE LOGIC (Firestore Real-time) ---
 
         function listenToMessages(chatId) {
@@ -771,13 +696,8 @@
 
         async function sendFriendRequest() {
             const friendId = dom.friendIdInput.value.trim();
-            
-            // Reset status message
-            dom.addFriendStatus.textContent = "Friend requests are sent using their 8-character Public User ID. (Case-sensitive)";
-            dom.addFriendStatus.classList.remove('text-red-400', 'text-green-400');
-
-
             if (friendId.length !== 8 || !/^[a-zA-Z0-9]{8}$/.test(friendId)) {
+                console.error("ID must be exactly 8 alphanumeric characters.");
                 dom.addFriendStatus.textContent = "Error: ID must be 8 alphanumeric characters.";
                 dom.addFriendStatus.classList.add('text-red-400');
                 return;
@@ -787,48 +707,22 @@
                 dom.addFriendStatus.classList.add('text-red-400');
                 return;
             }
-            if (!db || !firestoreUserUid || !userId) { // Added !userId check for robustness
-                 dom.addFriendStatus.textContent = "Error: Authentication is not complete. Please wait for Public ID to load.";
-                 dom.addFriendStatus.classList.add('text-red-400');
-                 console.error("Authentication check failed. DB:", !!db, "UID:", !!firestoreUserUid, "Public ID:", !!userId);
-                 return;
-            }
             
-            try {
-                // Path: /artifacts/{appId}/public/data/friendRequests
-                const requestsCollection = collection(db, `artifacts/${appId}/public/data/friendRequests`);
-
-                const newRequest = {
-                    senderPublicId: userId,           // The 8-char ID used for display
-                    senderUid: firestoreUserUid,      // The secure Firebase UID of the sender
-                    recipientPublicId: friendId,      // The 8-char ID of the intended recipient
-                    status: 'pending',
-                    timestamp: new Date(),
-                };
-
-                // FIX: Using addDoc for cleaner new document creation
-                await addDoc(requestsCollection, newRequest);
-                
-                console.log("Sent friend request to:", friendId, "from UID:", firestoreUserUid);
-                
-                // Show success message
-                dom.addFriendStatus.textContent = `Friend request successfully sent to ID: ${friendId}`;
-                dom.addFriendStatus.classList.add('text-green-400');
-                
-                // Close after a brief delay
-                setTimeout(() => {
-                    closeAddFriendModal();
-                    dom.addFriendStatus.textContent = "Friend requests are sent using their 8-character Public User ID. (Case-sensitive)";
-                    dom.addFriendStatus.classList.remove('text-green-400');
-                }, 1500);
-
-            } catch (error) {
-                console.error("Critical Error sending friend request:", error);
-                dom.addFriendStatus.textContent = `Critical Error sending request: ${error.message}. Check console.`;
-                dom.addFriendStatus.classList.add('text-red-400');
-            }
+            // --- REAL FRIEND REQUEST LOGIC WOULD GO HERE (e.g., writing to a 'requests' collection) ---
+            console.log("Sending simulated friend request to:", friendId);
+            
+            // Show custom success message instead of alert
+            dom.addFriendStatus.textContent = `Friend request successfully sent to ID: ${friendId}`;
+            dom.addFriendStatus.classList.remove('text-red-400');
+            dom.addFriendStatus.classList.add('text-green-400');
+            
+            // Close after a brief delay
+            setTimeout(() => {
+                closeAddFriendModal();
+                dom.addFriendStatus.textContent = "Friend requests are sent using their 8-character Public User ID. (Case-sensitive)";
+                dom.addFriendStatus.classList.remove('text-green-400');
+            }, 1500);
         }
-
 
         function setupEventListeners() {
             dom.dmTabBtn.onclick = () => { dom.dmTabBtn.classList.add('active'); dom.groupTabBtn.classList.remove('active'); };
@@ -902,7 +796,7 @@
                 db = getFirestore(app);
                 auth = getAuth(app);
 
-                // Sign in using custom token or anonymously (prioritizing custom token if available)
+                // Sign in using custom token or anonymously
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
                 } else {
@@ -926,14 +820,18 @@
             initializeFirebase();
 
             // 4. Handle Auth state changes
-            onAuthStateChanged(auth, async (user) => {
+            onAuthStateChanged(auth, (user) => {
                 if (user) {
                     firestoreUserUid = user.uid;
-                    currentUser = user;
                     
-                    // Retrieve or create the user's stable 8-character public ID in Firestore
-                    await ensureUserAccountData(user.uid); 
-
+                    // Retrieve or generate a stable 8-character public ID
+                    let publicId = localStorage.getItem('4sp_public_id');
+                    if (!publicId || publicId.length !== 8) {
+                        publicId = generateRandomId();
+                        localStorage.setItem('4sp_public_id', publicId);
+                    }
+                    userId = publicId;
+                    
                     dom.userIdDisplay.textContent = userId;
                     
                     // Start listening for data
