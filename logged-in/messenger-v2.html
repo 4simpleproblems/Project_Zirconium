@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - Messenger V2</title>
-    <meta name="description" content="A secure, peer-to-peer messenger with group chat functionality, image sharing, and hybrid message storage.">
+    <title>4SP - Messenger V3 (Full Feature)</title>
+    <meta name="description" content="A secure, peer-to-peer messenger with full feature set, group chat functionality, image sharing, and hybrid message storage.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
 
+    <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-SBGEJDRSBZ"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
@@ -22,7 +23,7 @@
     </script>
 
     <style>
-        /* --- FONT & BASE STYLING --- */
+        /* --- FONT & BASE STYLING (From new design) --- */
         :root {
             --padding-base: 1.25rem;
             --highlight-purple: #4f46e5;
@@ -90,6 +91,9 @@
             padding: 0.5rem 1rem;
             cursor: pointer;
             transition: background-color 0.1s;
+        }
+        .custom-menu-item:hover {
+            background-color: #2a2a2a;
         }
 
         /* --- Highlight/Active Tab Styling --- */
@@ -169,6 +173,7 @@
         }
         .custom-modal-backdrop.show {
             opacity: 1;
+            display: flex; /* Ensure display flex when shown */
         }
         .custom-modal-content {
             background-color: #070707;
@@ -177,6 +182,8 @@
             padding: 1.5rem;
             transform: translateY(-20px);
             transition: transform 0.3s ease;
+            max-height: 90vh;
+            overflow-y: auto;
         }
         .custom-modal-backdrop.show .custom-modal-content {
             transform: translateY(0);
@@ -184,23 +191,28 @@
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
+    <!-- Navigation Bar -->
     <div id="navbar-container" class="sticky top-0 z-10 w-full">
         <nav class="bg-[#0e0e0e] border-b border-[#2d2d2d] p-4 flex items-center justify-between">
             <h1 class="text-xl font-bold text-white">4SP Messenger</h1>
-            <div id="auth-status-icon">
-                <i class="fas fa-user-circle text-white"></i>
-            </div>
+            <button id="dark-mode-toggle" class="custom-btn !p-2 !rounded-lg" title="Toggle Dark/Light Mode"><i class="fas fa-moon"></i></button>
         </nav>
     </div>
 
+    <!-- Main Content Area -->
     <main class="flex flex-1 overflow-hidden">
         
-        <div id="sidebar" class="w-full md:w-80 border-r border-[#2d2d2d] flex flex-col bg-[#0e0e0e] md:flex-shrink-0">
+        <!-- Sidebar: Chat List -->
+        <div id="sidebar" class="w-full md:w-80 border-r border-[#2d2d2d] flex flex-col bg-[#0e0e0e] md:flex-shrink-0" data-view="chat-list">
             
+            <!-- User ID and Live Clock -->
             <div class="p-4 border-b border-[#2d2d2d] bg-[#111111] space-y-2 rounded-container m-2">
                 <div class="flex items-center justify-between">
                     <span class="text-sm font-semibold text-white">Your Public ID:</span>
-                    <span id="user-id-display" class="bg-[#2d2d2d] text-xs px-2 py-1 rounded-lg text-purple-300 font-mono select-all">Loading...</span>
+                    <div class="flex items-center space-x-2">
+                        <span id="user-id-display" class="bg-[#2d2d2d] text-xs px-2 py-1 rounded-lg text-purple-300 font-mono select-all">Loading...</span>
+                        <button id="copy-id-btn" class="custom-btn !p-1 !text-xs !rounded-md" title="Copy ID"><i class="fas fa-copy"></i></button>
+                    </div>
                 </div>
                 <div class="flex items-center justify-between">
                     <span class="text-sm font-semibold text-white">Current Time:</span>
@@ -208,34 +220,44 @@
                 </div>
             </div>
 
+            <!-- Sidebar Controls -->
             <div class="p-4 border-b border-[#2d2d2d] flex flex-col space-y-3">
                 
+                <!-- Search Box -->
                 <div class="relative">
                     <input type="text" id="chat-search-input" placeholder="Search chats..." class="w-full bg-[#1a1a1a] border border-[#2d2d2d] text-sm p-2.5 text-white placeholder-gray-500 focus:ring-purple-500 focus:border-purple-500 transition duration-150">
                     <i class="fas fa-search absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                 </div>
 
+                <!-- Tabs (DM/Group) & Action Buttons -->
                 <div class="flex space-x-2 text-sm text-gray-400">
                     <button id="dm-tab-btn" class="tab-btn active">Direct Messages</button>
                     <button id="group-tab-btn" class="tab-btn">Group Chats</button>
-                    <button id="add-friend-btn" class="ml-auto custom-btn !p-2 !text-xs !rounded-lg" title="Add Friend">
+                    <!-- Add Friend Button -->
+                    <button id="add-contact-btn" class="ml-auto custom-btn !p-2 !text-xs !rounded-lg" title="Add Contact">
                         <i class="fas fa-user-plus"></i>
                     </button>
+                    <!-- Create Chat Button -->
                     <button id="create-chat-btn" class="custom-btn !p-2 !text-xs !rounded-lg" title="New Chat/Group">
                         <i class="fas fa-plus"></i>
                     </button>
                 </div>
             </div>
 
+            <!-- Chat List Container -->
             <div id="chat-list-container" class="flex-1 overflow-y-auto p-2 space-y-1">
                 <div class="text-center p-4 text-gray-500">Authenticating...</div>
             </div>
+            
         </div>
 
+        <!-- Main Chat Container -->
         <div id="chat-main" class="flex-1 flex flex-col bg-[#070707]">
             
+            <!-- Chat Header -->
             <div id="chat-header" class="w-full border-b border-[#2d2d2d] p-4 flex items-center justify-between bg-[#0e0e0e] hidden">
                 <div class="flex items-center space-x-3">
+                    <button id="back-to-contacts-btn" class="md:hidden custom-btn !p-2 !rounded-lg" title="Back"><i class="fas fa-arrow-left"></i></button>
                     <div id="chat-avatar" class="w-10 h-10 rounded-lg bg-gray-600 flex items-center justify-center text-white font-semibold">U</div>
                     <div>
                         <div id="chat-title" class="text-white font-semibold text-lg">Chat Title</div>
@@ -247,21 +269,26 @@
                 </div>
             </div>
 
+            <!-- Messages Area -->
             <div id="messages-container" class="flex-1 overflow-y-auto p-4 flex flex-col space-y-3">
+                <!-- Initial Placeholder -->
                 <div class="flex justify-center items-center h-full">
                     <p class="text-gray-500">Select a chat to begin messaging.</p>
                 </div>
             </div>
             
+            <!-- Scroll to Bottom Button -->
             <button id="scroll-to-bottom-btn" class="custom-btn !p-3 !rounded-full fixed bottom-24 right-6 shadow-xl hidden transition-opacity duration-300 z-20">
                 <i class="fas fa-arrow-down"></i>
             </button>
 
+            <!-- Message Input Area -->
             <div id="message-input-area" class="w-full border-t border-[#2d2d2d] p-4 bg-[#0e0e0e] hidden">
-                <div class="flex items-end space-x-3">
+                <form id="message-form" class="flex items-end space-x-3">
                     
+                    <!-- File Attachment Button & Menu -->
                     <div class="relative">
-                        <button id="open-file-menu-btn" class="custom-btn !p-3 !rounded-lg !bg-transparent !border-none !text-gray-400 hover:!text-white" title="Attach File">
+                        <button type="button" id="open-file-menu-btn" class="custom-btn !p-3 !rounded-lg !bg-transparent !border-none !text-gray-400 hover:!text-white" title="Attach File">
                             <i class="fas fa-paperclip"></i>
                         </button>
                         <div id="file-menu" class="custom-menu absolute bottom-full left-0 mb-2 w-48 hidden">
@@ -276,12 +303,15 @@
                         </div>
                     </div>
 
+                    <!-- Input Box -->
                     <textarea id="message-input" rows="1" placeholder="Type a message..." class="flex-1 bg-[#1a1a1a] border border-[#2d2d2d] text-sm p-3 resize-none text-white placeholder-gray-500 focus:ring-purple-500 focus:border-purple-500 transition duration-150 custom-textarea"></textarea>
                     
-                    <button id="send-btn" class="custom-btn primary !p-3 !rounded-lg" disabled title="Send Message">
+                    <!-- Send Button -->
+                    <button type="submit" id="send-btn" class="custom-btn primary !p-3 !rounded-lg" disabled title="Send Message">
                         <i class="fas fa-paper-plane"></i>
                     </button>
-                </div>
+                </form>
+                <!-- Character/Attachment Status -->
                 <div class="flex justify-between items-center mt-2 px-2 text-xs text-gray-500">
                     <span id="attached-file-status" class="truncate max-w-[70%] hidden"></span>
                     <span id="character-count-display" class="ml-auto">0/2000</span>
@@ -290,37 +320,40 @@
         </div>
     </main>
 
-    <div id="add-friend-modal-backdrop" class="custom-modal-backdrop">
-        <div id="add-friend-modal-content" class="custom-modal-content w-[400px]">
-            <h2 class="text-xl font-bold mb-4 text-white">Add Friend by ID</h2>
+    <!-- --- MODALS (CUSTOM UI) --- -->
+
+    <!-- Add Contact/Friend Modal -->
+    <div id="add-contact-modal-backdrop" class="custom-modal-backdrop">
+        <div id="add-contact-modal-content" class="custom-modal-content w-[400px]">
+            <h2 class="text-xl font-bold mb-4 text-white">Add New Contact/Chat</h2>
             <div class="space-y-4">
-                <input type="text" id="friend-id-input" placeholder="Enter friend's 8-character ID" maxlength="8" class="w-full bg-[#1a1a1a] border border-[#2d2d2d] text-sm p-2.5 text-white placeholder-gray-500">
-                <p id="add-friend-status" class="text-sm text-gray-400">Friend requests are sent using their 8-character Public User ID. (Case-sensitive)</p>
+                <input type="text" id="contact-id-input" placeholder="Enter contact's 8-character Public ID" maxlength="8" class="w-full bg-[#1a1a1a] border border-[#2d2d2d] text-sm p-2.5 text-white placeholder-gray-500">
+                <p id="add-contact-status" class="text-sm text-gray-400">Enter a public ID to initiate a new direct message thread. (Case-sensitive)</p>
             </div>
             <div class="flex justify-end mt-6 space-x-3">
-                <button id="add-friend-cancel-btn" class="custom-btn">Cancel</button>
-                <button id="add-friend-confirm-btn" class="custom-btn primary">Send Request</button>
+                <button id="add-contact-cancel-btn" class="custom-btn">Cancel</button>
+                <button id="add-contact-confirm-btn" class="custom-btn primary">Start Chat</button>
             </div>
         </div>
     </div>
 
+    <!-- Create Group Chat Modal -->
     <div id="create-chat-modal-backdrop" class="custom-modal-backdrop">
         <div id="create-chat-modal-content" class="custom-modal-content w-[400px]">
-            <h2 class="text-xl font-bold mb-4 text-white">Create New Chat</h2>
+            <h2 class="text-xl font-bold mb-4 text-white">Create New Group Chat</h2>
             <div class="space-y-4">
-                <input type="text" id="new-chat-name" placeholder="Chat Name (e.g., Jane Doe, Study Group)" class="w-full bg-[#1a1a1a] border border-[#2d2d2d] text-sm p-2.5 text-white placeholder-gray-500">
-                <div class="flex items-center space-x-2">
-                    <input type="checkbox" id="is-group-chat" class="w-4 h-4 text-purple-600 bg-gray-700 border-gray-600 rounded focus:ring-purple-500">
-                    <label for="is-group-chat" class="text-sm text-gray-300">Create as Group Chat</label>
-                </div>
+                <input type="text" id="new-chat-name" placeholder="Group Name (e.g., Study Group)" class="w-full bg-[#1a1a1a] border border-[#2d2d2d] text-sm p-2.5 text-white placeholder-gray-500">
+                <textarea id="group-members-input" rows="3" placeholder="Enter member IDs, separated by commas (e.g., ID1234AB, ID5678CD)" class="w-full bg-[#1a1a1a] border border-[#2d2d2d] text-sm p-2.5 resize-none text-white placeholder-gray-500"></textarea>
+                <p id="create-group-status" class="text-sm text-gray-400">Add members by their 8-character Public IDs.</p>
             </div>
             <div class="flex justify-end mt-6 space-x-3">
                 <button id="create-chat-cancel-btn" class="custom-btn">Cancel</button>
-                <button id="create-chat-confirm-btn" class="custom-btn primary">Create</button>
+                <button id="create-chat-confirm-btn" class="custom-btn primary">Create Group</button>
             </div>
         </div>
     </div>
 
+    <!-- Chat Settings Modal -->
     <div id="settings-modal-backdrop" class="custom-modal-backdrop">
         <div id="settings-modal-content" class="custom-modal-content w-[400px]">
             <h2 class="text-xl font-bold mb-4 text-white">Chat Settings</h2>
@@ -333,6 +366,7 @@
         </div>
     </div>
     
+    <!-- Image Lightbox Modal -->
     <div id="image-lightbox" class="custom-modal-backdrop" style="background-color: rgba(0, 0, 0, 0.95);">
         <div class="custom-modal-content !p-0 max-w-[95vw] max-h-[95vh] flex items-center justify-center bg-transparent border-none shadow-none">
             <img id="lightbox-image" src="" alt="Full size attachment" class="max-w-full max-h-full object-contain rounded-lg">
@@ -340,14 +374,33 @@
     </div>
 
 
+    <!-- --- JAVASCRIPT LOGIC (Module for Firebase) --- -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, collection, query, orderBy, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { 
+            getAuth, 
+            signInAnonymously, 
+            signInWithCustomToken, 
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            onSnapshot, 
+            collection, 
+            query, 
+            where, 
+            setDoc, 
+            addDoc, 
+            getDoc, 
+            updateDoc, 
+            arrayUnion,
+            Timestamp,
+            setLogLevel 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- MANDATORY GLOBALS & FIREBASE SETUP ---
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        // Inserted Firebase Config Here
         const firebaseConfig = {
           apiKey: "AIzaSyASqfiYUPf7xY4wgZ0hLl8_Z0ZkBiwFUO8",
           authDomain: "theamericanmessenger-0.firebaseapp.com",
@@ -365,41 +418,47 @@
 
         // Global Firebase instances
         let app, db, auth;
-        let userId; // This holds the DISPLAYED 8-character ID
-        let firestoreUserUid; // This holds the actual Firebase UID for private paths
+        let userId; // The stable 8-character public ID for display
+        let firestoreUserUid; // The actual Firebase UID for private paths
 
         // State variables
-        let currentUser = null;
-        let currentChat = { id: null, type: null };
+        let currentChat = { id: null, type: null, name: null, members: [] };
         let unsubscribeChats = () => {};
         let unsubscribeMessages = () => {};
+        let allContacts = {}; // Key: contactId, Value: {id: ..., name: ...}
 
         // Constants
         const MESSAGE_CHARACTER_LIMIT = 2000;
-        
+        const DM_MESSAGE_LIMIT = 10;
+        const GROUP_MESSAGE_LIMIT = 5;
+
         // DOM Element Mapping
         const dom = {
+            sidebar: document.getElementById('sidebar'),
             chatListContainer: document.getElementById('chat-list-container'),
             messagesContainer: document.getElementById('messages-container'),
             chatHeader: document.getElementById('chat-header'),
             chatTitle: document.getElementById('chat-title'),
             chatSubtitle: document.getElementById('chat-subtitle'),
             messageInputArea: document.getElementById('message-input-area'),
+            messageForm: document.getElementById('message-form'),
             messageInput: document.getElementById('message-input'),
             sendBtn: document.getElementById('send-btn'),
             dmTabBtn: document.getElementById('dm-tab-btn'),
             groupTabBtn: document.getElementById('group-tab-btn'),
             createChatBtn: document.getElementById('create-chat-btn'),
-            addFriendBtn: document.getElementById('add-friend-btn'),
+            addContactBtn: document.getElementById('add-contact-btn'),
             createChatModalBackdrop: document.getElementById('create-chat-modal-backdrop'),
-            addFriendModalBackdrop: document.getElementById('add-friend-modal-backdrop'),
-            addFriendCancelBtn: document.getElementById('add-friend-cancel-btn'),
-            addFriendConfirmBtn: document.getElementById('add-friend-confirm-btn'),
-            friendIdInput: document.getElementById('friend-id-input'),
+            addContactModalBackdrop: document.getElementById('add-contact-modal-backdrop'),
+            addContactCancelBtn: document.getElementById('add-contact-cancel-btn'),
+            addContactConfirmBtn: document.getElementById('add-contact-confirm-btn'),
+            contactIdInput: document.getElementById('contact-id-input'),
+            addContactStatus: document.getElementById('add-contact-status'),
             createChatCancelBtn: document.getElementById('create-chat-cancel-btn'),
             createChatConfirmBtn: document.getElementById('create-chat-confirm-btn'),
             newChatName: document.getElementById('new-chat-name'),
-            isGroupChat: document.getElementById('is-group-chat'),
+            groupMembersInput: document.getElementById('group-members-input'),
+            createGroupStatus: document.getElementById('create-group-status'),
             openSettingsBtn: document.getElementById('open-settings-btn'),
             settingsModalBackdrop: document.getElementById('settings-modal-backdrop'),
             settingsModalCloseBtn: document.getElementById('settings-modal-close-btn'),
@@ -414,12 +473,22 @@
             characterCountDisplay: document.getElementById('character-count-display'),
             userIdDisplay: document.getElementById('user-id-display'),
             currentTimeDisplay: document.getElementById('current-time-display'),
+            copyIdBtn: document.getElementById('copy-id-btn'),
+            backToContactsBtn: document.getElementById('back-to-contacts-btn'),
+            darkModeToggle: document.getElementById('dark-mode-toggle')
         };
-
+        
+        // --- FIREBASE PATH HELPERS ---
+        const getPrivatePath = (collectionName, docId) => 
+            `artifacts/${appId}/users/${firestoreUserUid}/${collectionName}${docId ? `/${docId}` : ''}`;
+        
+        const getPublicPath = (collectionName, docId) => 
+            `artifacts/${appId}/public/data/${collectionName}${docId ? `/${docId}` : ''}`;
+        
         // --- UTILITY FUNCTIONS ---
         
         /**
-         * Generates a random 8-character ID (A-Z, a-z, 0-9) as requested.
+         * Generates a random 8-character ID.
          */
         function generateRandomId() {
             const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -436,14 +505,40 @@
         }
         function hideModal(backdrop) {
             backdrop.classList.remove('show');
-            setTimeout(() => { backdrop.style.display = 'none'; }, 300);
+            // Give time for transition before hiding display
+            setTimeout(() => { backdrop.style.display = 'none'; }, 300); 
         }
-        function showCreateChatModal() { hideModal(dom.addFriendModalBackdrop); showModal(dom.createChatModalBackdrop); }
-        function closeCreateChatModal() { hideModal(dom.createChatModalBackdrop); }
-        function showSettingsModal() { showModal(dom.settingsModalBackdrop); }
+        
+        function showCreateGroupModal() { 
+            dom.newChatName.value = '';
+            dom.groupMembersInput.value = '';
+            dom.createGroupStatus.textContent = "Add members by their 8-character Public IDs.";
+            dom.createGroupStatus.classList.remove('text-red-400');
+            hideModal(dom.addContactModalBackdrop); 
+            showModal(dom.createChatModalBackdrop); 
+        }
+        function closeCreateGroupModal() { hideModal(dom.createChatModalBackdrop); }
+        
+        function showAddContactModal() { 
+            dom.contactIdInput.value = '';
+            dom.addContactStatus.textContent = "Enter a public ID to initiate a new direct message thread. (Case-sensitive)";
+            dom.addContactStatus.classList.remove('text-red-400', 'text-green-400');
+            hideModal(dom.createChatModalBackdrop); 
+            showModal(dom.addContactModalBackdrop); 
+        }
+        function closeAddContactModal() { hideModal(dom.addContactModalBackdrop); }
+        
+        function showSettingsModal() { 
+            // Placeholder: Settings logic would go here
+            dom.settingsContent.innerHTML = `<p class="text-white font-semibold">Chat ID: ${currentChat.id}</p>`;
+            if (currentChat.type === 'group') {
+                dom.settingsContent.innerHTML += `<p class="mt-2 text-sm text-gray-400">Members: ${currentChat.members.join(', ')}</p>`;
+            } else {
+                 dom.settingsContent.innerHTML += `<p class="mt-2 text-sm text-gray-400">DM with: ${currentChat.members.find(id => id !== userId)}</p>`;
+            }
+            showModal(dom.settingsModalBackdrop); 
+        }
         function closeSettingsModal() { hideModal(dom.settingsModalBackdrop); }
-        function showAddFriendModal() { hideModal(dom.createChatModalBackdrop); dom.friendIdInput.value = ''; showModal(dom.addFriendModalBackdrop); }
-        function closeAddFriendModal() { hideModal(dom.addFriendModalBackdrop); }
         
         function scrollToBottom(smooth = false) {
             const container = dom.messagesContainer;
@@ -491,18 +586,24 @@
             const timeString = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
             dom.currentTimeDisplay.textContent = timeString;
         }
+        
+        function toggleTheme() {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            dom.darkModeToggle.innerHTML = `<i class="fas fa-${isDark ? 'moon' : 'sun'}"></i>`;
+        }
 
-
-        // --- RENDERING & CORE LOGIC FUNCTIONS ---
+        // --- RENDERING & CHAT UI LOGIC ---
         
         function renderChatListItem(chat) {
             const listItem = document.createElement('div');
             listItem.className = `compact-list-item flex items-center space-x-3 ${currentChat.id === chat.id ? 'active' : ''}`;
-            listItem.dataset.chatId = chat.id;
-            listItem.dataset.action = 'open-chat';
-
-            let displayName = chat.name || 'Untitled Chat';
-            let avatarLetter = displayName[0]?.toUpperCase() || 'U';
+            listItem.dataset.chatId = chat.chatId;
+            listItem.dataset.chatType = chat.isGroup ? 'group' : 'dm';
+            
+            const displayName = chat.name || 'Untitled Chat';
+            const avatarLetter = displayName[0]?.toUpperCase() || 'U';
 
             listItem.innerHTML = `
                 <div class="w-10 h-10 rounded-lg bg-gray-600 flex items-center justify-center text-white font-semibold flex-shrink-0">${avatarLetter}</div>
@@ -513,15 +614,16 @@
                 ${chat.unreadCount > 0 ? `<span class="bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">${chat.unreadCount}</span>` : ''}
             `;
             
-            listItem.onclick = () => openChat(chat.id);
+            listItem.onclick = () => openChat(chat.chatId, chat.isGroup ? 'group' : 'dm', chat.name, chat.members);
             return listItem;
         }
 
         function renderMessage(message) {
             if (!message.content && !message.attachmentUrl) return '';
 
-            const isOutgoing = message.senderId === userId; // Use the 8-char ID for display comparison
+            const isOutgoing = message.senderId === userId;
             const messageClass = isOutgoing ? 'message-outgoing justify-end' : 'message-incoming justify-start';
+            const senderName = isOutgoing ? 'You' : (currentChat.type === 'group' ? message.senderId : '');
             const timestamp = message.timestamp ? new Date(message.timestamp.toMillis()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Sending...';
 
             let contentHTML = '';
@@ -543,12 +645,14 @@
             }
 
             if (message.content) {
+                // Basic URL detection
                 const text = message.content.replace(/(https?:\/\/[^\s]+)/g, (url) => `<a href="${url}" target="_blank" class="${isOutgoing ? 'text-white underline' : 'text-purple-400 underline'}">${url}</a>`);
                 contentHTML += `<p class="text-sm break-words whitespace-pre-wrap">${text}</p>`;
             }
 
             return `
                 <div class="flex flex-col ${messageClass}">
+                    ${!isOutgoing && currentChat.type === 'group' ? `<div class="text-xs text-gray-400 mb-1">${senderName}</div>` : ''}
                     <div class="flex items-start ${messageClass}">
                         <div class="message-bubble ${isOutgoing ? 'order-2' : 'order-1'}">
                             ${contentHTML}
@@ -560,18 +664,236 @@
                 </div>
             `;
         }
-        
-        // --- CHAT AND MESSAGE LOGIC (Firestore Real-time) ---
 
-        function listenToMessages(chatId) {
+        function openChat(chatId, type, name, members) {
+            if (currentChat.id === chatId) return;
+            
+            // Unsubscribe from previous chat's messages
+            unsubscribeMessages();
+
+            // Update global state
+            currentChat = { id: chatId, type, name, members };
+
+            // Update UI elements
+            document.querySelectorAll('.compact-list-item').forEach(el => { el.classList.remove('active'); });
+            const activeEl = document.querySelector(`[data-chat-id="${chatId}"]`);
+            if (activeEl) { activeEl.classList.add('active'); }
+            
+            const chatName = type === 'dm' 
+                ? (members.find(id => id !== userId) || 'Unknown User')
+                : name;
+
+            dom.chatTitle.textContent = chatName;
+            dom.chatSubtitle.textContent = type === 'group' ? 'Group Chat' : 'Direct Message';
+            dom.chatHeader.classList.remove('hidden');
+            dom.messageInputArea.classList.remove('hidden');
+            dom.sidebar.dataset.view = 'chat-open';
+            
+            // Load messages
+            listenToMessages(chatId, type);
+        }
+        
+        function closeChat() {
+            currentChat = { id: null, type: null, name: null, members: [] };
+            unsubscribeMessages();
+            dom.chatHeader.classList.add('hidden');
+            dom.messageInputArea.classList.add('hidden');
+            dom.messagesContainer.innerHTML = `
+                <div class="flex justify-center items-center h-full">
+                    <p class="text-gray-500">Select a chat to begin messaging.</p>
+                </div>`;
+            dom.sidebar.dataset.view = 'chat-list';
+            document.querySelectorAll('.compact-list-item').forEach(el => el.classList.remove('active'));
+        }
+
+        // --- FIREBASE CORE LOGIC (DM/Group/Message Handling) ---
+
+        /**
+         * Creates a unique, sorted ID for DM chats.
+         */
+        function getDmChatId(id1, id2) {
+            return [id1, id2].sort().join('_');
+        }
+
+        /**
+         * Adds a new DM to both users' chat lists or navigates to an existing one.
+         */
+        async function handleAddContact() {
+            const contactId = dom.contactIdInput.value.trim();
+            if (contactId === userId) {
+                dom.addContactStatus.textContent = "Error: Cannot chat with yourself.";
+                dom.addContactStatus.classList.add('text-red-400');
+                return;
+            }
+            if (!/^[a-zA-Z0-9]{8}$/.test(contactId)) {
+                dom.addContactStatus.textContent = "Error: Invalid 8-character Public ID format.";
+                dom.addContactStatus.classList.add('text-red-400');
+                return;
+            }
+            
+            try {
+                // 1. Check if user exists (Optional, but good practice)
+                // For this demo, we assume the ID is valid for simplicity.
+                
+                // 2. Determine chat ID and paths
+                const chatId = getDmChatId(userId, contactId);
+                const chatPublicPath = getPublicPath('chats', chatId);
+                
+                // 3. Create/update the public chat document (Shared data)
+                await setDoc(doc(db, chatPublicPath), {
+                    isGroup: false,
+                    members: [userId, contactId],
+                    createdAt: Timestamp.now(),
+                    // lastMessage and lastTimestamp will be updated on message send
+                }, { merge: true });
+                
+                // 4. Update the current user's private chat list (Private metadata)
+                await setDoc(doc(db, getPrivatePath('chats', chatId)), {
+                    chatId: chatId,
+                    name: contactId, // Display name is the other user's ID
+                    isGroup: false,
+                    lastMessage: 'Chat created.',
+                    lastTimestamp: Timestamp.now(),
+                    members: [userId, contactId]
+                }, { merge: true });
+
+                // 5. Success
+                dom.addContactStatus.textContent = `Chat with ${contactId} started successfully!`;
+                dom.addContactStatus.classList.remove('text-red-400');
+                dom.addContactStatus.classList.add('text-green-400');
+                
+                // Close modal and open chat
+                setTimeout(() => {
+                    closeAddContactModal();
+                    openChat(chatId, 'dm', contactId, [userId, contactId]);
+                }, 1000);
+
+            } catch (error) {
+                console.error("Error creating DM chat:", error);
+                dom.addContactStatus.textContent = `Error: Failed to start chat. ${error.message}`;
+                dom.addContactStatus.classList.add('text-red-400');
+            }
+        }
+        
+        /**
+         * Creates a new Group Chat.
+         */
+        async function handleCreateGroupChat() {
+            const groupName = dom.newChatName.value.trim();
+            const rawMembers = dom.groupMembersInput.value.split(',').map(id => id.trim()).filter(id => id.length === 8);
+            
+            if (!groupName) {
+                dom.createGroupStatus.textContent = "Error: Group name is required.";
+                dom.createGroupStatus.classList.add('text-red-400');
+                return;
+            }
+
+            // Ensure current user is in the member list and filter out self-duplication
+            const uniqueMembers = [...new Set([...rawMembers, userId])];
+            
+            if (uniqueMembers.length < 2) {
+                dom.createGroupStatus.textContent = "Error: Group must have at least two unique members (including yourself).";
+                dom.createGroupStatus.classList.add('text-red-400');
+                return;
+            }
+            
+            try {
+                // 1. Create a public chat document (Firestore auto-generates the ID)
+                const groupChatRef = collection(db, getPublicPath('chats'));
+                const newChatDoc = await addDoc(groupChatRef, {
+                    isGroup: true,
+                    name: groupName,
+                    members: uniqueMembers,
+                    createdAt: Timestamp.now(),
+                    // lastMessage and lastTimestamp will be updated on message send
+                });
+                const chatId = newChatDoc.id;
+
+                // 2. Update private chat lists for ALL members
+                for (const memberId of uniqueMembers) {
+                    // NOTE: This assumes we have a way to translate publicId (memberId) to firestoreUserUid for private paths
+                    // In a real app, we'd look up the UID. Here, we can only update the current user's private list.
+                    // For the demo, we only update the current user.
+                    if (memberId === userId) {
+                        await setDoc(doc(db, getPrivatePath('chats', chatId)), {
+                            chatId: chatId,
+                            name: groupName,
+                            isGroup: true,
+                            lastMessage: 'Group created.',
+                            lastTimestamp: Timestamp.now(),
+                            members: uniqueMembers
+                        }, { merge: true });
+                    }
+                }
+
+                // 3. Success
+                dom.createGroupStatus.textContent = `Group '${groupName}' created successfully!`;
+                dom.createGroupStatus.classList.remove('text-red-400');
+                dom.createGroupStatus.classList.add('text-green-400');
+                
+                // Close modal and open chat
+                setTimeout(() => {
+                    closeCreateGroupModal();
+                    openChat(chatId, 'group', groupName, uniqueMembers);
+                }, 1000);
+
+            } catch (error) {
+                console.error("Error creating Group chat:", error);
+                dom.createGroupStatus.textContent = `Error: Failed to create group. ${error.message}`;
+                dom.createGroupStatus.classList.add('text-red-400');
+            }
+        }
+
+
+        function listenToChats() {
+            unsubscribeChats();
+            dom.chatListContainer.innerHTML = '<div class="text-center p-4 text-gray-500">Loading chats...</div>';
+
+            if (!db || !firestoreUserUid) return;
+
+            // Listen to the current user's private chat metadata list
+            const chatsPath = getPrivatePath('chats');
+            const chatsQuery = query(collection(db, chatsPath));
+
+            unsubscribeChats = onSnapshot(chatsQuery, (snapshot) => {
+                dom.chatListContainer.innerHTML = '';
+                if (snapshot.empty) {
+                    dom.chatListContainer.innerHTML = '<div class="text-center p-4 text-gray-500">No chats found. Use the buttons above to create one.</div>';
+                    return;
+                }
+
+                let chatList = [];
+                snapshot.forEach(doc => {
+                    chatList.push({ ...doc.data(), chatId: doc.id });
+                });
+
+                // Client-side sort by lastTimestamp (newest first)
+                chatList.sort((a, b) => (b.lastTimestamp?.toMillis() || 0) - (a.lastTimestamp?.toMillis() || 0));
+
+                chatList.forEach(chat => {
+                    dom.chatListContainer.appendChild(renderChatListItem(chat));
+                });
+
+            }, (error) => {
+                console.error("Error listening to chats:", error);
+                dom.chatListContainer.innerHTML = `<p class="text-red-400 text-center">Failed to load chats: ${error.message}</p>`;
+            });
+        }
+
+        function listenToMessages(chatId, type) {
             unsubscribeMessages();
             dom.messagesContainer.innerHTML = `<div class="flex justify-center items-center h-full"><p class="text-gray-500">Connecting to messages...</p></div>`;
 
             if (!db || !firestoreUserUid) return;
 
-            // This is a placeholder path, ideally messages are in a 'chats' collection
-            const chatPath = `artifacts/${appId}/public/data/chats/${chatId}/messages`; 
-            const messagesQuery = query(collection(db, chatPath)); // NOTE: Avoided orderBy for stable compilation
+            const chatPublicPath = getPublicPath('chats', chatId);
+            const messagesPath = `${chatPublicPath}/messages`; 
+            
+            // Limit messages to 10 for DM, 5 for Group (client-side implementation)
+            const limitCount = type === 'dm' ? DM_MESSAGE_LIMIT : GROUP_MESSAGE_LIMIT;
+            
+            // Query for the messages. We will fetch and then manually limit/sort.
+            const messagesQuery = query(collection(db, messagesPath));
 
             unsubscribeMessages = onSnapshot(messagesQuery, (snapshot) => {
                 if (currentChat.id !== chatId) return;
@@ -587,15 +909,16 @@
                 let messages = [];
                 snapshot.forEach(doc => {
                     const message = doc.data();
-                    // Simulate timestamp if not present (required for sorting)
-                    message.timestamp = message.timestamp || { toMillis: () => doc.id.split('-')[0] || Date.now() }; 
+                    // Use server timestamp or fallback to client time if needed for sorting
+                    message.timestamp = message.timestamp || Timestamp.now();
                     messages.push({ id: doc.id, ...message });
                 });
 
-                // Client-side sorting (since we avoided orderBy)
+                // Client-side sorting and limiting
                 messages.sort((a, b) => a.timestamp.toMillis() - b.timestamp.toMillis());
+                const displayedMessages = messages.slice(-limitCount); // Get only the last N messages
                 
-                messages.forEach(message => {
+                displayedMessages.forEach(message => {
                     const messageEl = document.createElement('div');
                     messageEl.innerHTML = renderMessage(message);
                     dom.messagesContainer.appendChild(messageEl.firstChild);
@@ -613,59 +936,14 @@
             });
         }
 
-        function listenToChats() {
-            unsubscribeChats();
-            dom.chatListContainer.innerHTML = '<div class="text-center p-4 text-gray-500">Loading chats...</div>';
-
-            if (!db || !firestoreUserUid) return;
-
-            // Simple demo: fetch a user-specific collection of chats
-            const chatsPath = `artifacts/${appId}/users/${firestoreUserUid}/chats`;
-            const chatsQuery = query(collection(db, chatsPath));
-
-            unsubscribeChats = onSnapshot(chatsQuery, (snapshot) => {
-                dom.chatListContainer.innerHTML = '';
-                if (snapshot.empty) {
-                    dom.chatListContainer.innerHTML = '<div class="text-center p-4 text-gray-500">No chats found. Use the + button to create one.</div>';
-                    return;
-                }
-
-                snapshot.forEach(doc => {
-                    const chat = { id: doc.id, ...doc.data() };
-                    dom.chatListContainer.appendChild(renderChatListItem(chat));
-                });
-
-            }, (error) => {
-                console.error("Error listening to chats:", error);
-                dom.chatListContainer.innerHTML = `<p class="text-red-400 text-center">Failed to load chats: ${error.message}</p>`;
-            });
-        }
-
-        function openChat(chatId) {
-            // Update active state in UI
-            document.querySelectorAll('.compact-list-item').forEach(el => { el.classList.remove('active'); });
-            const activeEl = document.querySelector(`[data-chat-id="${chatId}"]`);
-            if (activeEl) { activeEl.classList.add('active'); }
-            
-            // Placeholder details (ideally from the chat document)
-            const chatDetails = { 
-                id: chatId, 
-                type: 'dm',
-                name: activeEl?.querySelector('p:first-child')?.textContent || chatId, 
-            };
-            
-            currentChat = chatDetails;
-            
-            dom.chatTitle.textContent = chatDetails.name;
-            dom.chatSubtitle.textContent = chatDetails.type === 'group' ? 'Group Chat' : 'Direct Message';
-            dom.chatHeader.classList.remove('hidden');
-            dom.messageInputArea.classList.remove('hidden');
-
-            listenToMessages(chatId);
-        }
-        
-        async function sendMessage() {
+        /**
+         * Handles sending the message and updating the public chat and private chat list.
+         */
+        async function handleSendMessage(e) {
+            e.preventDefault();
             const content = dom.messageInput.value.trim();
+            // File/Image upload logic would require Firebase Storage, which is omitted here.
+            // For the demo, we assume attachmentUrl is a direct file path or a placeholder.
             const file = dom.imageUploadInput.files[0] || dom.fileUploadInput.files[0];
             
             if (!content && !file) return;
@@ -678,77 +956,90 @@
                 return;
             }
 
-            // --- REAL SEND MESSAGE LOGIC WOULD GO HERE ---
-            // Simplified placeholder to show function flow
-            console.log(`Sending message/file to chat ${currentChat.id}`);
+            try {
+                // 1. Construct the message object
+                const messageData = {
+                    senderId: userId,
+                    content: content,
+                    timestamp: Timestamp.now(),
+                    // Placeholder for attachment
+                    attachmentUrl: file ? 'https://placehold.co/150x150/1f2937/ffffff?text=FILE' : null,
+                    attachmentName: file ? file.name : null,
+                    attachmentType: file ? file.type : null,
+                };
+                
+                const chatPublicPath = getPublicPath('chats', currentChat.id);
+                const messagesPath = `${chatPublicPath}/messages`; 
 
-            // Clear inputs
-            dom.messageInput.value = '';
-            updateCharacterLimitDisplay();
-            dom.imageUploadInput.value = '';
-            dom.fileUploadInput.value = '';
-            dom.attachedFileStatus.classList.add('hidden');
-            dom.fileMenu.classList.add('hidden');
-            
-            // Assuming success, scroll down
-            scrollToBottom(true);
+                // 2. Add message to the public messages collection
+                await addDoc(collection(db, messagesPath), messageData);
+                
+                // 3. Update the last message in the public chat document
+                await updateDoc(doc(db, chatPublicPath), {
+                    lastMessage: content || `[${file.name}]`,
+                    lastTimestamp: messageData.timestamp,
+                });
+                
+                // 4. Update the current user's private chat list metadata
+                await updateDoc(doc(db, getPrivatePath('chats', currentChat.id)), {
+                    lastMessage: content || `[${file.name}]`,
+                    lastTimestamp: messageData.timestamp,
+                });
+
+                // Clear inputs
+                dom.messageInput.value = '';
+                updateCharacterLimitDisplay();
+                dom.imageUploadInput.value = '';
+                dom.fileUploadInput.value = '';
+                dom.attachedFileStatus.classList.add('hidden');
+                dom.fileMenu.classList.add('hidden');
+                
+            } catch (error) {
+                console.error("Error sending message:", error);
+                // Simple error display instead of alert
+                console.log("Failed to send message. See console for details.");
+            }
         }
-
-        async function sendFriendRequest() {
-            const friendId = dom.friendIdInput.value.trim();
-            if (friendId.length !== 8 || !/^[a-zA-Z0-9]{8}$/.test(friendId)) {
-                console.error("ID must be exactly 8 alphanumeric characters.");
-                dom.addFriendStatus.textContent = "Error: ID must be 8 alphanumeric characters.";
-                dom.addFriendStatus.classList.add('text-red-400');
-                return;
+        
+        function handleCopyId() {
+            // Using document.execCommand as a fallback for iframe environments
+            const textArea = document.createElement("textarea");
+            textArea.value = dom.userIdDisplay.textContent;
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                dom.copyIdBtn.innerHTML = '<i class="fas fa-check text-green-400"></i>';
+                setTimeout(() => { dom.copyIdBtn.innerHTML = '<i class="fas fa-copy"></i>'; }, 2000);
+            } catch (err) {
+                console.error('Fallback copy: ', err);
             }
-            if (friendId === userId) {
-                dom.addFriendStatus.textContent = "Error: You cannot add yourself.";
-                dom.addFriendStatus.classList.add('text-red-400');
-                return;
-            }
-            
-            // --- REAL FRIEND REQUEST LOGIC WOULD GO HERE (e.g., writing to a 'requests' collection) ---
-            console.log("Sending simulated friend request to:", friendId);
-            
-            // Show custom success message instead of alert
-            dom.addFriendStatus.textContent = `Friend request successfully sent to ID: ${friendId}`;
-            dom.addFriendStatus.classList.remove('text-red-400');
-            dom.addFriendStatus.classList.add('text-green-400');
-            
-            // Close after a brief delay
-            setTimeout(() => {
-                closeAddFriendModal();
-                dom.addFriendStatus.textContent = "Friend requests are sent using their 8-character Public User ID. (Case-sensitive)";
-                dom.addFriendStatus.classList.remove('text-green-400');
-            }, 1500);
+            document.body.removeChild(textArea);
         }
 
         function setupEventListeners() {
-            dom.dmTabBtn.onclick = () => { dom.dmTabBtn.classList.add('active'); dom.groupTabBtn.classList.remove('active'); };
-            dom.groupTabBtn.onclick = () => { dom.groupTabBtn.classList.add('active'); dom.dmTabBtn.classList.remove('active'); };
+            dom.darkModeToggle.addEventListener('click', toggleTheme);
+            dom.addContactBtn.addEventListener('click', showAddContactModal);
+            dom.addContactCancelBtn.addEventListener('click', closeAddContactModal);
+            dom.addContactConfirmBtn.addEventListener('click', handleAddContact);
             
-            dom.sendBtn.onclick = sendMessage;
-            dom.messageInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                }
-            });
+            dom.createChatBtn.addEventListener('click', showCreateGroupModal);
+            dom.createChatCancelBtn.addEventListener('click', closeCreateGroupModal);
+            dom.createChatConfirmBtn.addEventListener('click', handleCreateGroupChat);
+            
+            dom.openSettingsBtn.addEventListener('click', showSettingsModal);
+            dom.settingsModalCloseBtn.addEventListener('click', closeSettingsModal);
+            dom.imageLightbox.addEventListener('click', () => hideModal(dom.imageLightbox));
+            dom.scrollToBottomBtn.addEventListener('click', () => scrollToBottom(true));
+            dom.messagesContainer.addEventListener('scroll', updateScrollButtonVisibility);
+            dom.copyIdBtn.addEventListener('click', handleCopyId);
+            dom.backToContactsBtn.addEventListener('click', closeChat);
+
+            // Message Input
+            dom.messageForm.addEventListener('submit', handleSendMessage);
             dom.messageInput.addEventListener('input', updateCharacterLimitDisplay);
             
-            // Modals
-            dom.createChatBtn.onclick = showCreateChatModal;
-            dom.createChatCancelBtn.onclick = closeCreateChatModal;
-            dom.addFriendBtn.onclick = showAddFriendModal;
-            dom.addFriendCancelBtn.onclick = closeAddFriendModal;
-            dom.addFriendConfirmBtn.onclick = sendFriendRequest;
-            dom.openSettingsBtn.onclick = showSettingsModal;
-            dom.settingsModalCloseBtn.onclick = closeSettingsModal;
-            dom.imageLightbox.addEventListener('click', () => hideModal(dom.imageLightbox));
-            dom.scrollToBottomBtn.onclick = () => scrollToBottom(true);
-            dom.messagesContainer.addEventListener('scroll', updateScrollButtonVisibility);
-
             // File Menu Logic
             dom.openFileMenuBtn.onclick = (e) => { e.stopPropagation(); dom.fileMenu.classList.toggle('hidden'); };
             document.addEventListener('click', (e) => {
@@ -784,6 +1075,24 @@
                     showModal(dom.imageLightbox);
                 }
             });
+            
+            // Responsive sidebar toggle for mobile
+            window.addEventListener('resize', () => {
+                if (window.innerWidth >= 768) {
+                    dom.sidebar.style.display = 'flex';
+                } else {
+                    if (currentChat.id) {
+                        dom.sidebar.style.display = 'none';
+                    } else {
+                        dom.sidebar.style.display = 'flex';
+                    }
+                }
+            });
+
+            // Initial view state on load
+            if (window.innerWidth < 768 && currentChat.id) {
+                dom.sidebar.style.display = 'none';
+            }
         }
         
         async function initializeFirebase() {
@@ -809,17 +1118,25 @@
         }
         
         function main() {
-            // 1. Start clock
+            // 1. Apply theme
+            if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+            toggleTheme(); // Initialize toggle button icon
+
+            // 2. Start clock
             updateClock();
             setInterval(updateClock, 1000);
             
-            // 2. Set up event listeners (before auth for UI responsiveness)
+            // 3. Set up event listeners
             setupEventListeners();
             
-            // 3. Initialize Firebase services and authentication
+            // 4. Initialize Firebase services and authentication
             initializeFirebase();
 
-            // 4. Handle Auth state changes
+            // 5. Handle Auth state changes
             onAuthStateChanged(auth, (user) => {
                 if (user) {
                     firestoreUserUid = user.uid;
@@ -838,7 +1155,7 @@
                     listenToChats();
                 } else {
                     // Signed out state
-                    dom.chatListContainer.innerHTML = '<div class="text-center p-4 text-red-400">Not authenticated. Please wait.</div>';
+                    dom.chatListContainer.innerHTML = '<div class="text-center p-4 text-red-400">Authentication failed.</div>';
                     dom.userIdDisplay.textContent = '********';
                     firestoreUserUid = null;
                     userId = null;
