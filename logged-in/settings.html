@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="page-title">4SP - Settings</title>
+    <title id="page-title">4SP - SETTINGS</title>
     <meta name="description" content="User settings and application configuration for 4SP.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -237,216 +237,294 @@
 
         /* --- UPDATED CSS for .color-option (Text Centered) --- */
 
-.color-option {
-    /* 1. Wide but not tall / Spacious */
-    width: 100%;
-    padding: 0.75rem 1.25rem; 
-    height: auto; 
-    
-    /* 2. Slightly more rounded (12px) */
-    border-radius: 12px;
-    
-    /* 3. Less spacing between them */
-    margin-bottom: 4px; 
-    
-    /* Standard button styling */
-    cursor: pointer;
-    border: 3px solid #374151; /* gray-700 */
-    transition: background-color 0.2s, border-color 0.2s; 
-    display: flex;
-    align-items: center;
-    /* CHANGE: Sets the horizontal alignment of the flex items to the center */
-    justify-content: center; 
-    
-    font-size: 0.9rem; 
-    color: white;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-    font-weight: 500;
-}
+        .color-option {
+            /* 1. Wide but not tall / Spacious */
+            width: 100%;
+            padding: 0.75rem 1.25rem; 
+            height: auto; 
+            
+            /* 2. Slightly more rounded (12px) */
+            border-radius: 12px;
+            
+            /* 3. Less spacing between them */
+            margin-bottom: 4px; 
+            
+            /* Standard button styling */
+            cursor: pointer;
+            border: 3px solid #374151; /* gray-700 */
+            transition: background-color 0.2s, border-color 0.2s; 
+            display: flex;
+            align-items: center;
+            /* CHANGE: Sets the horizontal alignment of the flex items to the center */
+            justify-content: center; 
+            
+            font-size: 0.9rem; 
+            color: white;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            font-weight: 500;
+        }
 
-.color-option:hover {
-    border-color: #6b7280; /* gray-500 */
-    background-color: #1f1f1f; 
-}
+        .color-option:hover {
+            border-color: #6b7280; /* gray-500 */
+            background-color: #1f1f1f; 
+        }
 
-.color-option.selected {
-    border-color: #3b82f6; /* Blue-500 */
-    box-shadow: 0 0 0 3px #3b82f680;
-    background-color: #18202d;
-}
+        .color-option.selected {
+            border-color: #3b82f6; /* Blue-500 */
+            box-shadow: 0 0 0 3px #3b82f680;
+            background-color: #18202d;
+        }
 
-/* NEW: Avatar and Personalization Styles */
-.avatar-preview {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
+        /* NEW: Avatar and Personalization Styles */
+        .avatar-preview {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-.avatar-options {
-    flex: 1;
-}
+        .avatar-options {
+            flex: 1;
+        }
 
-.form-select, .form-input {
-    background-color: #374151;
-    border: 1px solid #4b5563;
-    border-radius: 6px;
-    color: white;
-    padding: 8px 12px;
-    font-size: 14px;
-}
+        .form-select, .form-input {
+            background-color: #374151;
+            border: 1px solid #4b5563;
+            border-radius: 6px;
+            color: white;
+            padding: 8px 12px;
+            font-size: 14px;
+        }
 
-.form-select:focus, .form-input:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-}
+        .form-select:focus, .form-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+        
+        /* Specific max-width for settings inputs */
+        .form-input.settings-input-width, .form-select.settings-input-width {
+            max-width: 400px;
+        }
 
-.emoji-btn {
-    background: none;
-    border: none;
-    font-size: 18px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
+        .emoji-btn {
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
 
-.emoji-btn:hover {
-    background-color: #374151;
-}
+        .emoji-btn:hover {
+            background-color: #374151;
+        }
 
-.btn-primary {
-    background-color: #3b82f6;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.2s;
-}
+        .btn-primary {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
 
-.btn-primary:hover {
-    background-color: #2563eb;
-}
+        .btn-primary:hover {
+            background-color: #2563eb;
+        }
+        
+        .btn-primary:disabled {
+            background-color: #374151; /* gray-700 */
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
 
-.btn-secondary {
-    background-color: #6b7280;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.2s;
-}
+        .btn-secondary {
+            background-color: #6b7280;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
 
-.btn-secondary:hover {
-    background-color: #4b5563;
-}
+        .btn-secondary:hover {
+            background-color: #4b5563;
+        }
 
-.btn-danger {
-    background-color: #dc2626;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.2s;
-}
+        .btn-danger {
+            background-color: #dc2626;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
 
-.btn-danger:hover {
-    background-color: #b91c1c;
-}
+        .btn-danger:hover {
+            background-color: #b91c1c;
+        }
 
-.setting-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px;
-    background-color: rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
 
-.setting-header {
-    flex: 1;
-}
+        .setting-header {
+            flex: 1;
+        }
 
-.setting-control {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
+        .setting-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
 
-.toggle-switch {
-    position: relative;
-    display: inline-block;
-    width: 48px;
-    height: 24px;
-}
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }
 
-.toggle-switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
 
-.toggle-slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #374151;
-    transition: 0.3s;
-    border-radius: 24px;
-}
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #374151;
+            transition: 0.3s;
+            border-radius: 24px;
+        }
 
-.toggle-slider:before {
-    position: absolute;
-    content: "";
-    height: 18px;
-    width: 18px;
-    left: 3px;
-    bottom: 3px;
-    background-color: white;
-    transition: 0.3s;
-    border-radius: 50%;
-}
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
 
-input:checked + .toggle-slider {
-    background-color: #3b82f6;
-}
+        input:checked + .toggle-slider {
+            background-color: #3b82f6;
+        }
 
-input:checked + .toggle-slider:before {
-    transform: translateX(24px);
-}
+        input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+        }
 
-/* Compact mode styles */
-body.compact-mode {
-    --spacing-scale: 0.8;
-}
+        /* Compact mode styles */
+        body.compact-mode {
+            --spacing-scale: 0.8;
+        }
 
-body.compact-mode .setting-item {
-    padding: 12px;
-}
+        body.compact-mode .setting-item {
+            padding: 12px;
+        }
 
-body.compact-mode .settings-section {
-    margin-bottom: 20px;
-}
+        body.compact-mode .settings-section {
+            margin-bottom: 20px;
+        }
 
-/* Crop canvas styles */
-#crop-canvas {
-    max-width: 200px;
-    max-height: 200px;
-}
+        /* Crop canvas styles */
+        #crop-canvas {
+            max-width: 200px;
+            max-height: 200px;
+        }
 
-.hidden {
-    display: none !important;
-}
+        .hidden {
+            display: none !important;
+        }
+        
+        /* --- START: NEW STYLES FOR TAB DISGUISER --- */
+        
+        /* Style for the custom favicon pickers */
+        .favicon-picker-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+            gap: 10px;
+            padding: 10px;
+            border: 1px solid #4b5563; /* gray-600 */
+            border-radius: 8px;
+            background-color: #374151; /* gray-700 */
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .favicon-picker-item {
+            width: 40px;
+            height: 40px;
+            padding: 5px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            background-color: #4b5563; /* gray-600 */
+        }
+
+        .favicon-picker-item:hover {
+            background-color: #6b7280; /* gray-500 */
+        }
+
+        .favicon-picker-item.selected {
+            border-color: #3b82f6; /* blue-500 */
+            background-color: #1f2937; /* gray-800 */
+        }
+
+        .favicon-picker-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            pointer-events: none;
+        }
+        
+        /* Style for the favicon fetch preview */
+        .favicon-fetch-preview {
+            width: 46px;
+            height: 46px;
+            border: 1px solid #4b5563; /* gray-600 */
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #374151; /* gray-700 */
+            flex-shrink: 0;
+            padding: 5px; /* Added padding */
+        }
+        
+        .favicon-fetch-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        /* --- END: NEW STYLES FOR TAB DISGUISER --- */
+        
     </style>
-<!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-1D4F692C1Q"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -538,6 +616,23 @@ body.compact-mode .settings-section {
         
         // --- FULL THEME PALETTES array removed. ---
         
+        // --- [NEW] CONSTANTS FOR TAB DISGUISER (from settings-old.html logic) ---
+        const TAB_PRESETS = [
+            // Re-creating the 'websites' category from old file
+            { id: 'google-docs', name: 'Google Docs', favicon: 'https://ssl.gstatic.com/docs/doclist/images/infinite_icons/docs_2022q3_2.svg', category: 'websites' },
+            { id: 'google-drive', name: 'Google Drive', favicon: 'https://ssl.gstatic.com/images/branding/product/2x/drive_2020q4_32dp.png', category: 'websites' },
+            { id: 'google-classroom', name: 'Google Classroom', favicon: 'https://ssl.gstatic.com/images/branding/product/1x/classroom_48dp.png', category: 'websites' },
+            { id: 'wikipedia', name: 'Wikipedia', favicon: 'https://en.wikipedia.org/static/favicon/wikipedia.ico', category: 'websites' },
+            { id: 'clever', name: 'Clever', favicon: 'https://assets.clever.com/launchpad/c6a9b5f/favicon.ico?1', category: 'websites' },
+            { id: 'hac', name: 'HAC', favicon: 'https://hac.sparcc.org/HomeAccess/favicon.ico', category: 'websites' },
+        ];
+        
+        const FOURSP_ICONS = [
+             { name: '4SP Dark', url: '../images/logo-dark.png' },
+             { name: '4SP Light', url: '../images/logo.png' }
+        ];
+        // --- [END NEW CONSTANTS] ---
+
         const settingsSections = [
             { id: 'general', title: 'General', icon: 'fa-cog', content: 'Manage your core account settings, username, and password.', color: 'text-yellow-400' },
             { id: 'privacy', title: 'Privacy & Security', icon: 'fa-shield-alt', content: 'Manage your data permissions, account security, and two-factor authentication. Strong security is a priority!', color: 'text-red-400' },
@@ -717,12 +812,14 @@ body.compact-mode .settings-section {
                     panelContent.innerHTML = '<p class="message-area message-error">Could not load theme data. Please try refreshing the page.</p>';
                 }
             }
+            // --- [MODIFICATION START] ---
             else if (sectionId === 'tab-disguiser') {
                 renderTabDisguiserSettings();
             }
             else if (sectionId === 'panic-key') {
                 renderPanicKeySettings();
             }
+            // --- [MODIFICATION END] ---
             // NEW: Privacy & Security section rendering
             else if (sectionId === 'privacy') {
                 renderPrivacySettings();
@@ -1575,8 +1672,7 @@ body.compact-mode .settings-section {
                                         </select>
                                     </div>
                                     <div id="avatar-input-container" class="avatar-input">
-                                        <!-- Dynamic content based on avatar type -->
-                                    </div>
+                                        </div>
                                     <div id="image-upload-container" class="hidden">
                                         <input type="file" id="avatar-image-input" accept="image/*" class="hidden">
                                         <button class="btn-secondary" onclick="document.getElementById('avatar-image-input').click()">
@@ -1854,7 +1950,8 @@ body.compact-mode .settings-section {
         /**
          * Selects an emoji for the avatar
          */
-        function selectEmoji(emoji) {
+        // Make sure it's globally accessible for the onclick attribute
+        window.selectEmoji = (emoji) => {
             document.getElementById('avatar-emoji-input').value = emoji;
             updateAvatarPreview();
         }
@@ -1909,7 +2006,7 @@ body.compact-mode .settings-section {
         /**
          * Applies the cropped image as avatar
          */
-        function applyCroppedImage() {
+        window.applyCroppedImage = () => {
             const canvas = document.getElementById('crop-canvas');
             const dataURL = canvas.toDataURL('image/png');
 
@@ -1927,7 +2024,7 @@ body.compact-mode .settings-section {
         /**
          * Cancels image cropping
          */
-        function cancelImageCrop() {
+        window.cancelImageCrop = () => {
             document.getElementById('image-crop-container').classList.add('hidden');
             document.getElementById('avatar-image-input').value = '';
         }
@@ -2058,291 +2155,497 @@ body.compact-mode .settings-section {
 
         /* --- END PERSONALIZATION FUNCTIONS --- */
         
-        /* --- START TAB DISGUISER FUNCTIONS --- */
+        /* --- [START] RE-IMPLEMENTED TAB DISGUISER FUNCTIONS --- */
 
+        /**
+         * Renders the Tab Disguiser settings, mimicking settings-old.html
+         */
         function renderTabDisguiserSettings() {
+            let selectOptions = `
+                <option value="none" data-favicon="../images/logo.png">None</option>
+                <optgroup label="Websites">
+            `;
+            
+            TAB_PRESETS.forEach(preset => {
+                selectOptions += `<option value="${preset.id}" data-favicon="${preset.favicon}">${preset.name}</option>`;
+            });
+            
+            selectOptions += `
+                </optgroup>
+                <optgroup label="4SP">
+            `;
+
+            FOURSP_ICONS.forEach((icon, index) => {
+                selectOptions += `<option value="4sp-${index}" data-favicon="${icon.url}">${icon.name}</option>`;
+            });
+
+            selectOptions += `
+                </optgroup>
+                <option value="custom" data-favicon="https://ssl.gstatic.com/docs/doclist/images/drive_2022q3_32dp.png">Custom</option>
+            `;
+
+            let fourspPickerHtml = FOURSP_ICONS.map((icon, index) => `
+                <div class="favicon-picker-item" data-favicon-url="${icon.url}" data-picker="4sp" title="${icon.name}">
+                    <img src="${icon.url}" alt="${icon.name}">
+                </div>
+            `).join('');
+            
+            let presetPickerHtml = TAB_PRESETS.map(preset => `
+                <div class="favicon-picker-item" data-favicon-url="${preset.favicon}" data-picker="preset" title="${preset.name}">
+                    <img src="${preset.favicon}" alt="${preset.name}">
+                </div>
+            `).join('');
+
             panelContent.innerHTML = `
                 <div class="settings-section">
-                    <h3 class="text-xl font-semibold text-white mb-4">Tab Disguiser</h3>
+                    <h3 class="text-xl font-semibold text-white mb-4">Tab DisguGEAR</h3>
                     <p class="settings-description mb-4">
-                        Change the title and favicon of your browser tab to disguise your activity.
+                        Change the appearance of the browser tab to blend in. This setting is saved locally on this browser.
                     </p>
-                    <div class="space-y-4">
-                        <div class="setting-item">
-                            <div class="setting-header">
-                                <h4 class="text-lg font-medium text-white">Enable Tab Disguiser</h4>
-                                <p class="text-sm text-gray-400">Turn on/off the tab disguiser feature.</p>
-                            </div>
-                            <div class="setting-control">
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="tab-disguiser-toggle">
-                                    <span class="toggle-slider"></span>
-                                </label>
+                    
+                    <div class="setting-item">
+                        <div class="setting-header">
+                            <h4 class="text-lg font-medium text-white">Preset Selection</h4>
+                            <p class="text-sm text-gray-400">Choose a preset disguise or create a custom one.</p>
+                        </div>
+                        <div class="setting-control">
+                            <select id="disguise-preset-select" class="form-select settings-input-width">
+                                ${selectOptions}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="custom-disguise-options" class="settings-section hidden">
+                    <h3 class="text-xl font-semibold text-white mb-4">Customize Your Tab</h3>
+                    
+                    <div class="space-y-6">
+                        <div>
+                            <label for="custom-title-input" class="settings-label">Custom Title</label>
+                            <input type="text" id="custom-title-input" class="form-input settings-input-width" placeholder="Enter a title...">
+                        </div>
+                        
+                        <div>
+                            <label class="settings-label">... or Choose an Official 4SP Favicon</label>
+                            <div id="favicon-picker-4sp" class="favicon-picker-grid settings-input-width">
+                                ${fourspPickerHtml}
                             </div>
                         </div>
 
-                        <div class="setting-item">
-                            <div class="setting-header">
-                                <h4 class="text-lg font-medium text-white">Select Disguise</h4>
-                                <p class="text-sm text-gray-400">Choose a preset disguise or create a custom one.</p>
+                        <div>
+                            <label for="favicon-fetch-input" class="settings-label">Fetch Favicon from Website URL</label>
+                            <div class="flex items-center gap-2" style="max-width: 500px;">
+                                <input type="text" id="favicon-fetch-input" class="form-input flex-grow" placeholder="e.g., google.com">
+                                <button id="fetch-favicon-btn" class="btn-primary">Fetch</button>
+                                <div id="favicon-fetch-preview" class="favicon-fetch-preview">
+                                    <img src="" alt="Preview" class="hidden">
+                                </div>
                             </div>
-                            <div class="setting-control">
-                                <select id="disguise-preset-select" class="form-select">
-                                    <option value="none">None</option>
-                                    <option value="google-classroom">Google Classroom</option>
-                                    <option value="google-docs">Google Docs</option>
-                                    <option value="google-drive">Google Drive</option>
-                                    <option value="wikipedia">Wikipedia</option>
-                                    <option value="hac">HAC</option>
-                                    <option value="clever">Clever</option>
-                                    <option value="custom">Custom</option>
-                                </select>
-                            </div>
+                            <p class="settings-description">Not all website icons may be available to fetch.</p>
                         </div>
 
-                        <div id="custom-disguise-options" class="space-y-4 hidden">
-                            <div class="setting-item">
-                                <div class="setting-header">
-                                    <h4 class="text-lg font-medium text-white">Custom Title</h4>
-                                    <p class="text-sm text-gray-400">Enter a custom title for your tab.</p>
-                                </div>
-                                <div class="setting-control">
-                                    <input type="text" id="custom-title-input" class="form-input" placeholder="My Custom Tab">
-                                </div>
-                            </div>
-
-                            <div class="setting-item">
-                                <div class="setting-header">
-                                    <h4 class="text-lg font-medium text-white">Custom Favicon URL</h4>
-                                    <p class="text-sm text-gray-400">Enter a URL for a custom favicon (e.g., https://example.com/favicon.ico).</p>
-                                </div>
-                                <div class="setting-control">
-                                    <input type="url" id="custom-favicon-input" class="form-input" placeholder="https://example.com/favicon.ico">
-                                </div>
+                        <div>
+                            <label class="settings-label">... or Choose a Preset Favicon</label>
+                            <div id="favicon-picker-preset" class="favicon-picker-grid settings-input-width">
+                                ${presetPickerHtml}
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <div class="settings-section">
+                    <button id="save-tab-disguise-btn" class="settings-button">
+                        <i class="fas fa-save mr-2"></i> Apply Changes
+                    </button>
                 </div>
             `;
             attachTabDisguiserListeners();
         }
 
+        /**
+         * Attaches listeners for the new Tab Disguiser UI
+         */
         function attachTabDisguiserListeners() {
-            const toggle = document.getElementById('tab-disguiser-toggle');
             const presetSelect = document.getElementById('disguise-preset-select');
             const customOptions = document.getElementById('custom-disguise-options');
-            const customTitleInput = document.getElementById('custom-title-input');
-            const customFaviconInput = document.getElementById('custom-favicon-input');
+            const saveBtn = document.getElementById('save-tab-disguise-btn');
+            const fetchBtn = document.getElementById('fetch-favicon-btn');
 
-            loadTabDisguiserSettings();
-
-            toggle.addEventListener('change', saveTabDisguiserSettings);
             presetSelect.addEventListener('change', () => {
                 if (presetSelect.value === 'custom') {
                     customOptions.classList.remove('hidden');
                 } else {
                     customOptions.classList.add('hidden');
                 }
-                saveTabDisguiserSettings();
             });
-            customTitleInput.addEventListener('input', saveTabDisguiserSettings);
-            customFaviconInput.addEventListener('input', saveTabDisguiserSettings);
+
+            saveBtn.addEventListener('click', saveTabDisguiserSettings);
+            fetchBtn.addEventListener('click', handleFaviconFetch);
+
+            // Add click listeners to all picker items
+            document.querySelectorAll('.favicon-picker-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    // Deselect other selected items
+                    document.querySelectorAll('.favicon-picker-item.selected').forEach(selected => {
+                        selected.classList.remove('selected');
+                    });
+                    // Select this item
+                    item.classList.add('selected');
+                    
+                    // Clear fetch input
+                    document.getElementById('favicon-fetch-input').value = '';
+                    document.getElementById('favicon-fetch-preview').querySelector('img').classList.add('hidden');
+                });
+            });
+
+            loadTabDisguiserSettings();
         }
 
+        /**
+         * Loads the saved Tab Disguiser settings
+         */
         function loadTabDisguiserSettings() {
             try {
                 const settings = JSON.parse(localStorage.getItem('tab-disguiser-settings') || '{}');
-                document.getElementById('tab-disguiser-toggle').checked = settings.enabled || false;
-                document.getElementById('disguise-preset-select').value = settings.preset || 'none';
-                document.getElementById('custom-title-input').value = settings.customTitle || '';
-                document.getElementById('custom-favicon-input').value = settings.customFavicon || '';
-
-                if (settings.preset === 'custom') {
+                const presetSelect = document.getElementById('disguise-preset-select');
+                
+                if (settings.type === 'custom') {
+                    presetSelect.value = 'custom';
                     document.getElementById('custom-disguise-options').classList.remove('hidden');
+                    document.getElementById('custom-title-input').value = settings.title || '';
+                    
+                    if (settings.favicon) {
+                        const item = document.querySelector(`.favicon-picker-item[data-favicon-url="${settings.favicon}"]`);
+                        if (item) {
+                            item.classList.add('selected');
+                        } else {
+                            // If it was a fetched icon, show it in the preview
+                            const previewImg = document.getElementById('favicon-fetch-preview').querySelector('img');
+                            previewImg.src = settings.favicon;
+                            previewImg.classList.remove('hidden');
+                        }
+                    }
+                } else if (settings.id) {
+                    const option = presetSelect.querySelector(`option[value="${settings.id}"]`);
+                    if (option) {
+                        presetSelect.value = settings.id;
+                    } else {
+                        // Check 4SP icons
+                        const fourspIcon = FOURSP_ICONS.find(icon => icon.url === settings.favicon);
+                        if (fourspIcon) {
+                            const fourspIndex = FOURSP_ICONS.indexOf(fourspIcon);
+                            presetSelect.value = `4sp-${fourspIndex}`;
+                        } else {
+                             presetSelect.value = 'none';
+                        }
+                    }
                 } else {
-                    document.getElementById('custom-disguise-options').classList.add('hidden');
+                    presetSelect.value = 'none';
                 }
             } catch (error) {
                 console.error('Error loading tab disguiser settings:', error);
             }
         }
 
+        /**
+         * Saves the Tab Disguiser settings (mimicking old file's structure)
+         */
         function saveTabDisguiserSettings() {
             try {
-                const settings = {
-                    enabled: document.getElementById('tab-disguiser-toggle').checked,
-                    preset: document.getElementById('disguise-preset-select').value,
-                    customTitle: document.getElementById('custom-title-input').value,
-                    customFavicon: document.getElementById('custom-favicon-input').value
-                };
-                localStorage.setItem('tab-disguiser-settings', JSON.stringify(settings));
-                showPersonalizationMessage('Tab disguiser settings saved.', 'success');
-                // Trigger update in injector.js
-                window.postMessage({ type: 'UPDATE_TAB_DISGUISER', settings: settings }, '*');
+                const presetSelect = document.getElementById('disguise-preset-select');
+                const selectedOption = presetSelect.options[presetSelect.selectedIndex];
+                const value = presetSelect.value;
+                
+                let settingsToSave = {};
+
+                if (value === 'custom') {
+                    settingsToSave.type = 'custom';
+                    settingsToSave.title = document.getElementById('custom-title-input').value.trim();
+                    
+                    const selectedPickerItem = document.querySelector('.favicon-picker-item.selected');
+                    const fetchedPreviewImg = document.getElementById('favicon-fetch-preview').querySelector('img');
+
+                    if (selectedPickerItem) {
+                        settingsToSave.favicon = selectedPickerItem.dataset.faviconUrl;
+                    } else if (!fetchedPreviewImg.classList.contains('hidden') && fetchedPreviewImg.src) {
+                        settingsToSave.favicon = fetchedPreviewImg.src;
+                    } else {
+                        settingsToSave.favicon = null; // No custom favicon
+                    }
+
+                } else if (value === 'none') {
+                    settingsToSave.type = 'none';
+                    settingsToSave.id = 'none';
+                    settingsToSave.title = '4SP - Settings'; // Restore original
+                    settingsToSave.favicon = '../favicon.ico';
+                } else {
+                    // It's a preset
+                    settingsToSave.type = 'preset';
+                    settingsToSave.id = value;
+                    settingsToSave.title = selectedOption.textContent;
+                    settingsToSave.favicon = selectedOption.dataset.favicon;
+                }
+
+                localStorage.setItem('tab-disguiser-settings', JSON.stringify(settingsToSave));
+                showPersonalizationMessage('Tab disguiser settings applied.', 'success');
+                
+                // Trigger update in injector.js (the "new file's" way of applying)
+                window.postMessage({ type: 'UPDATE_TAB_DISGUISER', settings: settingsToSave }, '*');
+
             } catch (error) {
                 console.error('Error saving tab disguiser settings:', error);
                 showPersonalizationMessage('Error saving tab disguiser settings.', 'error');
             }
         }
 
-        /* --- END TAB DISGUISER FUNCTIONS --- */
+        /**
+         * Handles the "Fetch Favicon" button click
+         */
+        async function handleFaviconFetch() {
+            const input = document.getElementById('favicon-fetch-input');
+            const button = document.getElementById('fetch-favicon-btn');
+            const previewImg = document.getElementById('favicon-fetch-preview').querySelector('img');
+            let domain = input.value.trim();
+            
+            if (!domain) {
+                showPersonalizationMessage('Please enter a website URL.', 'error');
+                return;
+            }
+            
+            if (!domain.startsWith('http')) {
+                domain = 'https://' + domain;
+            }
+            
+            button.disabled = true;
+            button.textContent = '...';
+            
+            try {
+                // Use Google's S2 service, as seen in settings-old.html logic
+                const faviconUrl = `https://www.google.com/s2/favicons?sz=64&domain_url=${encodeURIComponent(new URL(domain).hostname)}`;
+                
+                // Check if image loads
+                await new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = resolve;
+                    img.onerror = reject;
+                    img.src = faviconUrl;
+                });
 
-        /* --- START PANIC KEY FUNCTIONS --- */
+                previewImg.src = faviconUrl;
+                previewImg.classList.remove('hidden');
+                
+                // Deselect any picker items
+                document.querySelectorAll('.favicon-picker-item.selected').forEach(item => {
+                    item.classList.remove('selected');
+                });
+                
+                showPersonalizationMessage('Favicon found!', 'success');
 
+            } catch (error) {
+                console.error('Fetch favicon error:', error);
+                showPersonalizationMessage('Could not fetch favicon for that domain.', 'error');
+                previewImg.classList.add('hidden');
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Fetch';
+            }
+        }
+
+        /* --- [END] RE-IMPLEMENTED TAB DISGUISER FUNCTIONS --- */
+
+
+        /* --- [START] RE-IMPLEMENTED PANIC KEY FUNCTIONS --- */
+
+        /**
+         * Renders the Panic Key settings, mimicking settings-old.html
+         */
         function renderPanicKeySettings() {
             panelContent.innerHTML = `
                 <div class="settings-section">
-                    <h3 class="text-xl font-semibold text-white mb-4">Panic Key Settings</h3>
+                    <h3 class="text-xl font-semibold text-white mb-4">Panic Key Configuration</h3>
                     <p class="settings-description mb-4">
-                        Set up a panic key to quickly redirect to a safe page or website.
+                        Configure up to 3 single-key shortcuts that will instantly redirect you to a specified URL.
+                        These settings are stored locally in this browser.
                     </p>
-                    <div class="space-y-4">
-                        <div class="setting-item">
-                            <div class="setting-header">
-                                <h4 class="text-lg font-medium text-white">Enable Panic Key</h4>
-                                <p class="text-sm text-gray-400">Turn on/off the panic key feature.</p>
-                            </div>
-                            <div class="setting-control">
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="panic-key-toggle">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
+                    
+                    <div class="setting-item">
+                        <div class="setting-header">
+                            <h4 class="text-lg font-medium text-white">Number of Panic Keys</h4>
+                            <p class="text-sm text-gray-400">Select how many keys you want to activate.</p>
                         </div>
-
-                        <div class="setting-item">
-                            <div class="setting-header">
-                                <h4 class="text-lg font-medium text-white">Panic Mode</h4>
-                                <p class="text-sm text-gray-400">Choose whether to redirect to a URL or a local page.</p>
-                            </div>
-                            <div class="setting-control">
-                                <select id="panic-mode-select" class="form-select">
-                                    <option value="url">Redirect to URL</option>
-                                    <option value="page">Redirect to Page</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div id="panic-key-options" class="space-y-6">
-                            <!-- Panic Key 1 -->
-                            <div class="setting-item flex-col items-start md:flex-row md:items-center">
-                                <div class="setting-header mb-2 md:mb-0">
-                                    <h4 class="text-lg font-medium text-white">Panic Key 1</h4>
-                                    <p class="text-sm text-gray-400">Set the key combination and target for Panic Key 1.</p>
-                                </div>
-                                <div class="setting-control flex-col md:flex-row gap-2 w-full md:w-auto">
-                                    <select id="panic-key-combo-1" class="form-select w-full md:w-auto">
-                                        <option value="none">None</option>
-                                        <option value="ctrl+shift+1">Ctrl+Shift+1</option>
-                                        <option value="ctrl+shift+2">Ctrl+Shift+2</option>
-                                        <option value="ctrl+shift+3">Ctrl+Shift+3</option>
-                                        <option value="alt+shift+1">Alt+Shift+1</option>
-                                        <option value="alt+shift+2">Alt+Shift+2</option>
-                                        <option value="alt+shift+3">Alt+Shift+3</option>
-                                    </select>
-                                    <input type="text" id="panic-key-target-1" class="form-input w-full md:w-64" placeholder="Target URL or Page">
-                                </div>
-                            </div>
-
-                            <!-- Panic Key 2 -->
-                            <div class="setting-item flex-col items-start md:flex-row md:items-center">
-                                <div class="setting-header mb-2 md:mb-0">
-                                    <h4 class="text-lg font-medium text-white">Panic Key 2</h4>
-                                    <p class="text-sm text-gray-400">Set the key combination and target for Panic Key 2.</p>
-                                </div>
-                                <div class="setting-control flex-col md:flex-row gap-2 w-full md:w-auto">
-                                    <select id="panic-key-combo-2" class="form-select w-full md:w-auto">
-                                        <option value="none">None</option>
-                                        <option value="ctrl+shift+1">Ctrl+Shift+1</option>
-                                        <option value="ctrl+shift+2">Ctrl+Shift+2</option>
-                                        <option value="ctrl+shift+3">Ctrl+Shift+3</option>
-                                        <option value="alt+shift+1">Alt+Shift+1</option>
-                                        <option value="alt+shift+2">Alt+Shift+2</option>
-                                        <option value="alt+shift+3">Alt+Shift+3</option>
-                                    </select>
-                                    <input type="text" id="panic-key-target-2" class="form-input w-full md:w-64" placeholder="Target URL or Page">
-                                </div>
-                            </div>
-
-                            <!-- Panic Key 3 -->
-                            <div class="setting-item flex-col items-start md:flex-row md:items-center">
-                                <div class="setting-header mb-2 md:mb-0">
-                                    <h4 class="text-lg font-medium text-white">Panic Key 3</h4>
-                                    <p class="text-sm text-gray-400">Set the key combination and target for Panic Key 3.</p>
-                                </div>
-                                <div class="setting-control flex-col md:flex-row gap-2 w-full md:w-auto">
-                                    <select id="panic-key-combo-3" class="form-select w-full md:w-auto">
-                                        <option value="none">None</option>
-                                        <option value="ctrl+shift+1">Ctrl+Shift+1</option>
-                                        <option value="ctrl+shift+2">Ctrl+Shift+2</option>
-                                        <option value="ctrl+shift+3">Ctrl+Shift+3</option>
-                                        <option value="alt+shift+1">Alt+Shift+1</option>
-                                        <option value="alt+shift+2">Alt+Shift+2</option>
-                                        <option value="alt+shift+3">Alt+Shift+3</option>
-                                    </select>
-                                    <input type="text" id="panic-key-target-3" class="form-input w-full md:w-64" placeholder="Target URL or Page">
-                                </div>
-                            </div>
+                        <div class="setting-control">
+                            <select id="panic-key-count" class="form-select w-32">
+                                <option value="0">None</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                            </select>
                         </div>
                     </div>
+                </div>
+
+                <div id="panic-key-group-1" class="settings-section hidden space-y-4">
+                    <h4 class="text-lg font-semibold text-white">Panic Key 1</h4>
+                    <div class="setting-item">
+                        <label for="panicKey1" class="setting-header">Key (Single, non-special character)</label>
+                        <input type="text" id="panicKey1" class="form-input w-24 text-center" placeholder="e.g., p" maxlength="1">
+                    </div>
+                    <div class="setting-item">
+                        <label for="panicUrl1" class="setting-header">Redirect URL</label>
+                        <input type="text" id="panicUrl1" class="form-input settings-input-width" placeholder="e.g., google.com">
+                    </div>
+                </div>
+                
+                <div id="panic-key-group-2" class="settings-section hidden space-y-4">
+                    <h4 class="text-lg font-semibold text-white">Panic Key 2</h4>
+                    <div class="setting-item">
+                        <label for="panicKey2" class="setting-header">Key (Single, non-special character)</label>
+                        <input type="text" id="panicKey2" class="form-input w-24 text-center" placeholder="e.g., q" maxlength="1">
+                    </div>
+                    <div class="setting-item">
+                        <label for="panicUrl2" class="setting-header">Redirect URL</label>
+                        <input type="text" id="panicUrl2" class="form-input settings-input-width" placeholder="e.g., wikipedia.org">
+                    </div>
+                </div>
+                
+                <div id="panic-key-group-3" class="settings-section hidden space-y-4">
+                    <h4 class="text-lg font-semibold text-white">Panic Key 3</h4>
+                    <div class="setting-item">
+                        <label for="panicKey3" class="setting-header">Key (Single, non-special character)</label>
+                        <input type="text" id="panicKey3" class="form-input w-24 text-center" placeholder="e.g., \`" maxlength="1">
+                    </div>
+                    <div class="setting-item">
+                        <label for="panicUrl3" class="setting-header">Redirect URL</label>
+                        <input type="text" id="panicUrl3" class="form-input settings-input-width" placeholder="e.g., clever.com">
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <button id="save-panic-keys-btn" class="settings-button">
+                        <i class="fas fa-save mr-2"></i> Save Panic Keys
+                    </button>
                 </div>
             `;
             attachPanicKeyListeners();
         }
 
-        function attachPanicKeyListeners() {
-            const toggle = document.getElementById('panic-key-toggle');
-            const modeSelect = document.getElementById('panic-mode-select');
-            const panicKeyOptions = document.getElementById('panic-key-options');
-
-            loadPanicKeySettings();
-
-            toggle.addEventListener('change', savePanicKeySettings);
-            modeSelect.addEventListener('change', savePanicKeySettings);
-
+        /**
+         * Helper to show/hide panic key groups based on selection
+         */
+        function updatePanicKeyVisibility() {
+            const count = parseInt(document.getElementById('panic-key-count').value, 10);
             for (let i = 1; i <= 3; i++) {
-                document.getElementById(`panic-key-combo-${i}`).addEventListener('change', savePanicKeySettings);
-                document.getElementById(`panic-key-target-${i}`).addEventListener('input', savePanicKeySettings);
+                const group = document.getElementById(`panic-key-group-${i}`);
+                if (group) {
+                    group.classList.toggle('hidden', i > count);
+                }
             }
         }
 
+        /**
+         * Attaches listeners for the new Panic Key UI
+         */
+        function attachPanicKeyListeners() {
+            document.getElementById('panic-key-count').addEventListener('change', updatePanicKeyVisibility);
+            document.getElementById('save-panic-keys-btn').addEventListener('click', savePanicKeySettings);
+            
+            loadPanicKeySettings();
+        }
+
+        /**
+         * Loads panic key settings from localStorage (converted from IndexedDB)
+         */
         function loadPanicKeySettings() {
             try {
-                const settings = JSON.parse(localStorage.getItem('panic-key-settings') || '{}');
-                document.getElementById('panic-key-toggle').checked = settings.enabled || false;
-                document.getElementById('panic-mode-select').value = settings.mode || 'url';
-
+                // Using 'panic-key-settings' key as it's the one injector.js is likely watching,
+                // but we will store the old array structure.
+                const settings = JSON.parse(localStorage.getItem('panic-key-settings') || '[]');
+                
+                document.getElementById('panic-key-count').value = settings.length;
+                
                 for (let i = 1; i <= 3; i++) {
-                    document.getElementById(`panic-key-combo-${i}`).value = settings[`key${i}Combo`] || 'none';
-                    document.getElementById(`panic-key-target-${i}`).value = settings[`key${i}Target`] || '';
+                    const keyInput = document.getElementById(`panicKey${i}`);
+                    const urlInput = document.getElementById(`panicUrl${i}`);
+                    
+                    if (settings[i - 1]) {
+                        keyInput.value = settings[i - 1].key || '';
+                        // Remove https:// prefix for display, matching old file's behavior
+                        const displayUrl = (settings[i - 1].url || '').replace(/^https?:\/\//, '');
+                        urlInput.value = displayUrl;
+                    } else {
+                        keyInput.value = '';
+                        urlInput.value = '';
+                    }
                 }
             } catch (error) {
                 console.error('Error loading panic key settings:', error);
             }
+            
+            updatePanicKeyVisibility();
         }
 
+        /**
+         * Saves panic key settings to localStorage (converted from IndexedDB)
+         */
         function savePanicKeySettings() {
-            try {
-                const settings = {
-                    enabled: document.getElementById('panic-key-toggle').checked,
-                    mode: document.getElementById('panic-mode-select').value,
-                };
-
-                for (let i = 1; i <= 3; i++) {
-                    settings[`key${i}Combo`] = document.getElementById(`panic-key-combo-${i}`).value;
-                    settings[`key${i}Target`] = document.getElementById(`panic-key-target-${i}`).value;
+            const count = parseInt(document.getElementById('panic-key-count').value, 10);
+            const settingsToSave = [];
+            const keys = new Set();
+            
+            for (let i = 1; i <= count; i++) {
+                const key = document.getElementById(`panicKey${i}`).value.trim().toLowerCase();
+                let url = document.getElementById(`panicUrl${i}`).value.trim();
+                
+                if (!key || !url) {
+                    showPersonalizationMessage(`Panic Key ${i} is incomplete.`, 'error');
+                    return;
                 }
-                localStorage.setItem('panic-key-settings', JSON.stringify(settings));
-                showPersonalizationMessage('Panic key settings saved.', 'success');
-                // Trigger update in injector.js
-                window.postMessage({ type: 'UPDATE_PANIC_KEY', settings: settings }, '*');
+                
+                if (key.length !== 1 || /[^a-z0-9`\-=\[\];',.\/\\ ]/.test(key)) {
+                    showPersonalizationMessage(`Key for Panic Key ${i} is invalid. Use a single, non-special character.`, 'error');
+                    return;
+                }
+                
+                if (keys.has(key)) {
+                    showPersonalizationMessage(`Duplicate key "${key}" found.`, 'error');
+                    return;
+                }
+                
+                // Simple URL regex check (matching old file)
+                if (!/^(https?:\/\/)?((www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b)([-a-zA-Z0-9@:%_\+.~#?&//=]*)$/i.test(url)) {
+                    showPersonalizationMessage(`URL for Panic Key ${i} is invalid.`, 'error');
+                    return;
+                }
+                
+                keys.add(key);
+                
+                if (!/^https?:\/\//i.test(url)) {
+                    url = 'https://' + url;
+                }
+                
+                // Store in the old file's array-object format
+                settingsToSave.push({ id: `panicKey${i}`, key, url });
+            }
+
+            try {
+                // Save using the old file's data structure, but to localStorage
+                localStorage.setItem('panic-key-settings', JSON.stringify(settingsToSave));
+                
+                // Show message mimicking old file's reload requirement
+                showPersonalizationMessage('Panic key settings saved. Reload page to apply.', 'success');
+                
+                // We DO NOT call postMessage here, as we are mimicking the old
+                // file's functionality which required a reload to be read by panic-key.js.
+                // The new injector.js might not understand this array format.
+                
             } catch (error) {
                 console.error('Error saving panic key settings:', error);
                 showPersonalizationMessage('Error saving panic key settings.', 'error');
             }
         }
 
-        /* --- END PANIC KEY FUNCTIONS --- */
+        /* --- [END] RE-IMPLEMENTED PANIC KEY FUNCTIONS --- */
+        
         
         /* --- START DATA MANAGEMENT FUNCTIONS --- */
         
