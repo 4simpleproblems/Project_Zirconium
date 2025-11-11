@@ -28,6 +28,8 @@
  * 20. (FIXED) SCROLL GLIDER LOGIC: Updated scroll arrow logic to be explicit, ensuring arrows hide/show correctly at scroll edges.
  * 21. **(FIXED)** USERNAME COLOR: Replaced hardcoded `text-white` on username with a CSS variable (`--menu-username-text`) and updated `window.applyTheme` to set this to black for specific light themes.
  * 22. **(NEW)** LOGO THEME CHANGING: Added support for logo color tinting based on the `logo-tint-color` property in themes.json. The logo can now be dynamically colored to match the theme using CSS filters.
+ * 23. **(NEW)** TAB CENTERING: If 9 or fewer tabs are loaded, the scroll menu is hidden, and the tabs are centered.
+ * 24. **(NEW)** FIXED NAVBAR SIZING: Changed navbar height, padding, and tab dimensions from `rem` to `px` to prevent scaling with browser font-size settings.
  */
 
 // =========================================================================
@@ -378,20 +380,21 @@ let db;
     };
 
     // --- 3. INJECT CSS STYLES (MOVED BEFORE INITIALIZEAPP) ---
-    // This now uses CSS variables for all colors and adds transitions.
+    // This now uses CSS variables for all colors and transitions.
+    // *** UPDATED to use px for fixed layout sizing ***
     const injectStyles = () => {
         const style = document.createElement('style');
         style.textContent = `
             /* Base Styles */
-            body { padding-top: 4rem; }
+            body { padding-top: 64px; } /* UPDATED */
             .auth-navbar { 
                 position: fixed; top: 0; left: 0; right: 0; z-index: 1000; 
                 background: var(--navbar-bg); 
                 border-bottom: 1px solid var(--navbar-border); 
-                height: 4rem; 
+                height: 64px; /* UPDATED */
                 transition: background-color 0.3s ease, border-color 0.3s ease;
             }
-            .auth-navbar nav { padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
+            .auth-navbar nav { padding: 0 16px; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; } /* UPDATED */
             .initial-avatar { 
                 background: var(--avatar-gradient); 
                 font-family: sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; 
@@ -403,7 +406,7 @@ let db;
             
             /* Auth Dropdown Menu Styles */
             .auth-menu-container { 
-                position: absolute; right: 0; top: 50px; width: 16rem; 
+                position: absolute; right: 0; top: 60px; width: 16rem; /* UPDATED top from 50px */
                 background: var(--menu-bg);
                 border: 1px solid var(--menu-border); 
                 border-radius: 0.75rem; padding: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
@@ -452,11 +455,18 @@ let db;
             .auth-menu-link i.w-4, .auth-menu-button i.w-4 { width: 1rem; text-align: center; } 
 
             /* Tab Wrapper and Glide Buttons */
-            .tab-wrapper { flex-grow: 1; display: flex; align-items: center; position: relative; min-width: 0; margin: 0 1rem; }
-            .tab-scroll-container { flex-grow: 1; display: flex; align-items: center; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; -ms-overflow-style: none; padding-bottom: 5px; margin-bottom: -5px; scroll-behavior: smooth; }
+            .tab-wrapper { flex-grow: 1; display: flex; align-items: center; position: relative; min-width: 0; margin: 0 1rem; justify-content: center; } /* UPDATED: Added justify-content */
+            .tab-scroll-container { 
+                flex-grow: 1; display: flex; align-items: center; 
+                overflow-x: auto; -webkit-overflow-scrolling: touch; 
+                scrollbar-width: none; -ms-overflow-style: none; 
+                padding-bottom: 5px; margin-bottom: -5px; 
+                scroll-behavior: smooth;
+                max-width: 100%; /* UPDATED: ensure it doesn't overflow parent */
+            }
             .tab-scroll-container::-webkit-scrollbar { display: none; }
             .scroll-glide-button {
-                position: absolute; top: 0; height: 100%; width: 4rem; display: flex; align-items: center; justify-content: center; 
+                position: absolute; top: 0; height: 100%; width: 64px; display: flex; align-items: center; justify-content: center; /* UPDATED width */
                 color: var(--glide-icon-color); font-size: 1.2rem; cursor: pointer; 
                 opacity: 1; 
                 transition: opacity 0.3s, color 0.3s ease; 
@@ -464,21 +474,21 @@ let db;
             }
             #glide-left { 
                 left: 0; background: var(--glide-gradient-left); 
-                justify-content: flex-start; padding-left: 0.5rem; 
+                justify-content: flex-start; padding-left: 8px; /* UPDATED */
                 transition: opacity 0.3s, color 0.3s ease, background 0.3s ease;
             }
             #glide-right { 
                 right: 0; background: var(--glide-gradient-right); 
-                justify-content: flex-end; padding-right: 0.5rem; 
+                justify-content: flex-end; padding-right: 8px; /* UPDATED */
                 transition: opacity 0.3s, color 0.3s ease, background 0.3s ease;
             }
             .scroll-glide-button.hidden { opacity: 0 !important; pointer-events: none !important; }
             
             .nav-tab { 
-                flex-shrink: 0; padding: 0.5rem 1rem; color: var(--tab-text); 
+                flex-shrink: 0; padding: 8px 16px; color: var(--tab-text); /* UPDATED */
                 font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; 
                 transition: all 0.2s, color 0.3s ease, border-color 0.3s ease, background-color 0.3s ease; 
-                text-decoration: none; line-height: 1.5; display: flex; align-items: center; margin-right: 0.5rem; 
+                text-decoration: none; line-height: 1.5; display: flex; align-items: center; margin-right: 8px; /* UPDATED */
                 border: 1px solid transparent; 
             }
             .nav-tab:not(.active):hover { 
@@ -881,6 +891,25 @@ let db;
                     </nav>
                 </header>
             `;
+            
+            // --- NEW: Handle tab centering and overflow based on tab count ---
+            const tabContainer = document.querySelector('.tab-scroll-container');
+            const tabCount = document.querySelectorAll('.nav-tab').length;
+
+            if (tabCount <= 9) {
+                // If 9 or fewer tabs, center them and disable scrolling
+                if(tabContainer) {
+                    tabContainer.style.justifyContent = 'center';
+                    tabContainer.style.overflowX = 'hidden';
+                }
+            } else {
+                // If more than 9 tabs, align left and enable scrolling
+                if(tabContainer) {
+                    tabContainer.style.justifyContent = 'flex-start';
+                    tabContainer.style.overflowX = 'auto';
+                }
+            }
+            // --- END NEW ---
 
             // --- 5. SETUP EVENT LISTENERS (Called after full render) ---
             setupEventListeners(user);
@@ -894,7 +923,7 @@ let db;
             window.applyTheme(savedTheme || DEFAULT_THEME); 
             // --- End theme apply ---
 
-            const tabContainer = document.querySelector('.tab-scroll-container');
+            // const tabContainer = document.querySelector('.tab-scroll-container'); // Already defined above
             
             // Check if we need to restore scroll position (from a full re-render)
             if (currentScrollLeft > 0) {
@@ -969,6 +998,15 @@ let db;
             const container = document.querySelector('.tab-scroll-container');
             const leftButton = document.getElementById('glide-left');
             const rightButton = document.getElementById('glide-right');
+
+            // --- NEW: Check tab count. If 9 or less, hide gliders and exit. ---
+            const tabCount = document.querySelectorAll('.nav-tab').length;
+            if (tabCount <= 9) {
+                if (leftButton) leftButton.classList.add('hidden');
+                if (rightButton) rightButton.classList.add('hidden');
+                return; // Do not run the rest of the scroll logic
+            }
+            // --- END NEW ---
 
             if (!container || !leftButton || !rightButton) return;
             
