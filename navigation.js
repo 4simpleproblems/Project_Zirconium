@@ -487,7 +487,7 @@ let db;
             .scroll-glide-button.hidden { opacity: 0 !important; pointer-events: none !important; }
             
             .nav-tab { 
-                flex-shrink: 0; padding: 8px 12px; color: var(--tab-text); /* UPDATED */
+                flex-shrink: 0; padding: 8px 14px; color: var(--tab-text); /* UPDATED */
                 font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; 
                 transition: all 0.2s, color 0.3s ease, border-color 0.3s ease, background-color 0.3s ease; 
                 text-decoration: none; line-height: 1.5; display: flex; align-items: center; margin-right: 8px; /* UPDATED */
@@ -898,19 +898,31 @@ let db;
             const tabContainer = document.querySelector('.tab-scroll-container');
             const tabCount = document.querySelectorAll('.nav-tab').length;
 
+            // =================================================================
+            // ========= MODIFICATION (1/2) - Center Tab Container ========
+            // =================================================================
             if (tabCount <= 9) {
                 // If 9 or fewer tabs, center them and disable scrolling
                 if(tabContainer) {
                     tabContainer.style.justifyContent = 'center';
                     tabContainer.style.overflowX = 'hidden';
+                    // NEW: Remove flex-grow to allow the container itself to be centered
+                    // by its parent's (tab-wrapper) justify-content: center.
+                    tabContainer.style.flexGrow = '0';
                 }
             } else {
                 // If more than 9 tabs, align left and enable scrolling
                 if(tabContainer) {
                     tabContainer.style.justifyContent = 'flex-start';
                     tabContainer.style.overflowX = 'auto';
+                    // NEW: Restore flex-grow to allow the container to fill
+                    // the space and enable scrolling.
+                    tabContainer.style.flexGrow = '1';
                 }
             }
+            // =================================================================
+            // ====================== END MODIFICATION =========================
+            // =================================================================
             // --- END NEW ---
 
             // --- 5. SETUP EVENT LISTENERS (Called after full render) ---
@@ -1003,7 +1015,16 @@ let db;
 
             // --- NEW: Check tab count. If 9 or less, hide gliders and exit. ---
             const tabCount = document.querySelectorAll('.nav-tab').length;
-            if (tabCount <= 9) {
+            // =================================================================
+            // ========= MODIFICATION (2/2) - Check Tab Container ========
+            // =================================================================
+            // Check if the container is *not* in scroll mode (flex-grow is 0)
+            const isNotScrolling = container && container.style.flexGrow === '0';
+            
+            if (tabCount <= 9 || isNotScrolling) {
+            // =================================================================
+            // ====================== END MODIFICATION =========================
+            // =================================================================
                 if (leftButton) leftButton.classList.add('hidden');
                 if (rightButton) rightButton.classList.add('hidden');
                 return; // Do not run the rest of the scroll logic
