@@ -13,8 +13,22 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <script src="../navigation.js"></script>
-
     <script src="../injector.js"></script>
+
+    <!-- 
+      Added the url-tab-title-changer.js script. 
+      It's loaded here so the global `urlChanger` object is available
+      to the settings page's <script type="module">.
+    -->
+    <script src="../url-tab-title-changer.js"></script>
+    
+    <!-- 
+      Note: panic-key.js is NOT included here. 
+      That script is loaded by your injector on other pages.
+      This settings page will instead write to the *same IndexedDB*
+      that panic-key.js reads from.
+    -->
+
     <style>
         /* --- FONT & BASE STYLING (MATCHING base-template.html) --- */
         :root {
@@ -473,6 +487,7 @@
         }
 
         .favicon-picker-item {
+            position: relative; /* For the delete button */
             width: 40px;
             height: 40px;
             padding: 5px;
@@ -501,6 +516,33 @@
             height: 100%;
             object-fit: contain;
             pointer-events: none;
+        }
+
+        /* NEW: Delete button for custom favicons */
+        .favicon-delete-btn {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 16px;
+            height: 16px;
+            background-color: #dc2626; /* red-600 */
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 10px;
+            line-height: 16px;
+            text-align: center;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 10;
+        }
+
+        .favicon-picker-item:hover .favicon-delete-btn {
+            opacity: 1;
+        }
+        .favicon-delete-btn:hover {
+            background-color: #b91c1c; /* red-700 */
         }
         
         /* Style for the favicon fetch preview */
@@ -554,7 +596,7 @@
             <section class="settings-panel">
                 <h2 id="panel-title" class="text-2xl font-semibold text-indigo-400 mb-6">General</h2>
                 <div id="panel-content" class="text-gray-400">
-                    <p>Loading account details...</p>
+                    <!-- Content is rendered here by JavaScript -->
                 </div>
             </section>
         </div>
@@ -614,17 +656,23 @@
         const NAVBAR_SETTINGS_KEY = 'user-navbar-theme'; 
         const GAME_SAVE_FILENAME = 'strongdog_saves.json'; // New constant for the save file name
         
-        // --- FULL THEME PALETTES array removed. ---
-        
-        // --- [NEW] CONSTANTS FOR TAB DISGUISER (from settings-old.html logic) ---
-        const TAB_PRESETS = [
-            // Re-creating the 'websites' category from old file
-            { id: 'google-docs', name: 'Google Docs', favicon: 'https://ssl.gstatic.com/docs/doclist/images/infinite_icons/docs_2022q3_2.svg', category: 'websites' },
-            { id: 'google-drive', name: 'Google Drive', favicon: 'https://ssl.gstatic.com/images/branding/product/2x/drive_2020q4_32dp.png', category: 'websites' },
-            { id: 'google-classroom', name: 'Google Classroom', favicon: 'https://ssl.gstatic.com/images/branding/product/1x/classroom_48dp.png', category: 'websites' },
-            { id: 'wikipedia', name: 'Wikipedia', favicon: 'https://en.wikipedia.org/static/favicon/wikipedia.ico', category: 'websites' },
-            { id: 'clever', name: 'Clever', favicon: 'https://assets.clever.com/launchpad/c6a9b5f/favicon.ico?1', category: 'websites' },
-            { id: 'hac', name: 'HAC', favicon: 'https://hac.sparcc.org/HomeAccess/favicon.ico', category: 'websites' },
+        // --- [NEW] CONSTANTS FOR PANIC KEY (from panic-key.js) ---
+        const PANIC_KEY_DB_NAME = 'userLocalSettingsDB';
+        const PANIC_KEY_STORE_NAME = 'panicKeyStore';
+
+        // --- [NEW] CONSTANTS FOR TAB DISGUISER (from url-tab-title-changer.js) ---
+        // These are presets *built-in* to the settings page, matching url-tab-title-changer.js
+        const TAB_PRESETS_INTERNAL = [
+            { id: 'hac', name: 'HAC', title: 'Login', favicon: '../favicons/hac.png', category: 'websites' },
+            { id: 'gmm', name: 'GMM', title: 'Get More Math!', favicon: '../favicons/gmm.png', category: 'websites' },
+            { id: 'kahoot', name: 'Kahoot', title: 'Kahoot! | Learning games | Make learning awesome!', favicon: '../favicons/kahoot.png', category: 'websites' },
+            { id: 'g_classroom', name: 'Google Classroom', title: 'Home', favicon: '../favicons/google-classroom.png', category: 'websites' },
+            { id: 'g_docs', name: 'Google Docs', title: 'Google Docs', favicon: '../favicons/google-docs.png', category: 'websites' },
+            { id: 'g_slides', name: 'Google Slides', title: 'Google Slides', favicon: '../favicons/google-slides.png', category: 'websites' },
+            { id: 'g_drive', name: 'Google Drive', title: 'Home - Google Drive', favicon: '../favicons/google-drive.png', category: 'websites' },
+            { id: 'wikipedia', name: 'Wikipedia', title: 'Wikipedia', favicon: '../favicons/wikipedia.png', category: 'websites' },
+            { id: 'clever', name: 'Clever', title: 'Clever | Connect every student to a world of learning', favicon: '../favicons/clever.png', category: 'websites' },
+            // Note: The 'live' preset from url-tab-title-changer.js is also handled.
         ];
         
         const FOURSP_ICONS = [
@@ -640,7 +688,6 @@
             { id: 'tab-disguiser', title: 'Tab Disguiser', icon: 'fa-mask', content: 'Customize your tab appearance to hide your activity.', color: 'text-purple-400' },
             { id: 'panic-key', title: 'Panic Key', icon: 'fa-hand-paper', content: 'Set up a panic key to quickly hide your current activity.', color: 'text-orange-400' },
             { id: 'notifications', title: 'Notifications', icon: 'fa-bell', content: 'Set your preferences for alerts and communication methods. Never miss an important update.', color: 'text-green-400' },
-            // ADDED: Updated content for Data Management
             { id: 'data', title: 'Data Management', icon: 'fa-database', content: 'View, export, or request deletion of your stored data.', color: 'text-blue-400' },
             { id: 'about', title: 'About 4SP', icon: 'fa-info-circle', content: 'Application version, legal notices, and credits.', color: 'text-gray-400' }
         ];
@@ -653,9 +700,6 @@
         const panelTitle = document.getElementById('panel-title');
         const panelContent = document.getElementById('panel-content');
         const pageHtmlTitle = document.getElementById('page-title');
-
-        // --- REMOVED old color functions ---
-        // ...
 
         // --- NEW: AUTHENTICATION & DATA FLOW ---
 
@@ -819,7 +863,6 @@
             else if (sectionId === 'panic-key') {
                 renderPanicKeySettings();
             }
-            // --- [MODIFICATION END] ---
             // NEW: Privacy & Security section rendering
             else if (sectionId === 'privacy') {
                 renderPrivacySettings();
@@ -828,20 +871,19 @@
             else if (sectionId === 'data') {
                 renderDataManagement();
             }
-            // --- END MODIFICATION ---
+            // NEW: About section rendering
+            else if (sectionId === 'about') {
+                renderAboutSection();
+            }
+            // --- [MODIFICATION END] ---
             else {
                 // Render placeholder for all other sections
+                // --- [MODIFICATION] Replaced placeholder with "Coming Soon" ---
                 panelContent.innerHTML = `
-                    <div class="flex flex-col space-y-4">
-                        <p class="text-lg">${section.content}</p>
-                        <div id="section-details" class="bg-gray-800 p-4 rounded-lg border border-gray-700">
-                            <h3 class="text-xl font-semibold mb-2 text-white">Section Details</h3>
-                            <p class="text-sm text-gray-500">
-                                This is where the detailed controls, forms, and toggles for the 
-                                ${section.title} section would be implemented. 
-                                <i class="fas fa-magic text-purple-400 ml-1"></i>
-                            </p>
-                        </div>
+                    <div class="flex flex-col items-center justify-center space-y-4 p-8 min-h-[40vh]">
+                        <i class="fas ${section.icon} text-6xl ${section.color} opacity-50"></i>
+                        <h3 class="text-2xl font-semibold text-white">${section.title}</h3>
+                        <p class="text-lg text-gray-400">This section is coming soon!</p>
                     </div>
                 `;
             }
@@ -1075,11 +1117,19 @@
 
         window.handleAccountUnlink = async (providerId) => {
             if (currentUser.providerData.length <= 1) {
-                alert("You cannot unlink your only sign-in method.");
+                // Use a custom modal or message instead of alert
+                const message = document.getElementById('linking-message');
+                message.textContent = 'You cannot unlink your only sign-in method.';
+                message.className = 'message-area message-error';
                 return;
             }
             
-            if (!confirm(`Are you sure you want to unlink your ${providerId} account?`)) {
+            // Re-implement confirm with a simple prompt
+            const confirmed = prompt(`To unlink your ${providerId} account, type "UNLINK":`);
+            if (confirmed !== 'UNLINK') {
+                const message = document.getElementById('linking-message');
+                message.textContent = 'Unlink cancelled.';
+                message.className = 'message-area message-warning';
                 return;
             }
 
@@ -1315,7 +1365,7 @@
                 
                 // This will trigger the onAuthStateChanged listener,
                 // which will redirect to the login page.
-                alert('Account successfully deleted.');
+                // alert('Account successfully deleted.'); // Cannot use alert
                 
             } catch (error) {
                 console.error("Account deletion error:", error);
@@ -1373,7 +1423,7 @@
                                 <p class="text-sm text-gray-400">Manage your active sessions and devices</p>
                             </div>
                             <div class="setting-control">
-                                <button class="btn-secondary" onclick="showActiveSessions()">
+                                <button class="btn-secondary" id="show-sessions-btn">
                                     <i class="fas fa-devices mr-2"></i>View Active Sessions
                                 </button>
                             </div>
@@ -1480,7 +1530,7 @@
                                 <p class="text-sm text-gray-400">Get a copy of all your data stored in 4SP</p>
                             </div>
                             <div class="setting-control">
-                                <button class="btn-secondary" onclick="requestDataDownload()">
+                                <button class="btn-secondary" id="request-download-btn">
                                     <i class="fas fa-download mr-2"></i>Request Download
                                 </button>
                             </div>
@@ -1492,7 +1542,7 @@
                                 <p class="text-sm text-gray-400">Permanently delete your account and all associated data</p>
                             </div>
                             <div class="setting-control">
-                                <button class="btn-danger" onclick="initiateAccountDeletion()">
+                                <button class="btn-danger" id="initiate-delete-btn">
                                     <i class="fas fa-trash mr-2"></i>Delete Account
                                 </button>
                             </div>
@@ -1517,6 +1567,11 @@
             document.getElementById('marketing-toggle').addEventListener('change', savePrivacySettings);
             document.getElementById('research-toggle').addEventListener('change', savePrivacySettings);
             document.getElementById('data-retention-select').addEventListener('change', savePrivacySettings);
+
+            // Button listeners
+            document.getElementById('show-sessions-btn').addEventListener('click', showActiveSessions);
+            document.getElementById('request-download-btn').addEventListener('click', requestDataDownload);
+            document.getElementById('initiate-delete-btn').addEventListener('click', initiateAccountDeletion);
         }
 
         function loadPrivacySettings() {
@@ -1586,19 +1641,24 @@
         }
 
         function showActiveSessions() {
-            alert('Active Sessions feature coming soon! This will show all devices and locations where your account is currently logged in.');
+            // Cannot use alert
+            showPrivacyMessage('Active Sessions feature coming soon!', 'warning');
         }
 
         function requestDataDownload() {
-            alert('Data download feature coming soon! You will be able to download all your data in a portable format.');
+            // Cannot use alert
+            showPrivacyMessage('Data download feature coming soon!', 'warning');
         }
 
         function initiateAccountDeletion() {
-            if (confirm('Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently lost.')) {
-                if (confirm('This is your final warning. Are you absolutely sure you want to delete your account?')) {
-                    alert('Account deletion feature coming soon! This will permanently delete your account and all associated data.');
-                }
-            }
+            // Cannot use alert, redirect to general tab's delete button
+            showPrivacyMessage('Please use the "Delete My Account" button in the General tab.', 'error');
+            loadSection('general');
+            // Scroll to the bottom
+            setTimeout(() => {
+                document.getElementById('delete-account-btn').scrollIntoView({ behavior: 'smooth' });
+                document.getElementById('delete-account-btn').focus();
+            }, 100);
         }
 
         /* --- START PERSONALIZATION FUNCTIONS (EXACTLY AS REQUESTED) --- */
@@ -1964,7 +2024,8 @@
             if (!file) return;
 
             if (!file.type.startsWith('image/')) {
-                alert('Please select a valid image file.');
+                // Cannot use alert
+                showPersonalizationMessage('Please select a valid image file.', 'error');
                 return;
             }
 
@@ -2013,6 +2074,7 @@
             // Update preview
             const preview = document.getElementById('current-avatar');
             preview.innerHTML = `<img src="${dataURL}" class="w-full h-full rounded-full object-cover">`;
+            preview.style.backgroundColor = 'transparent'; // Remove bg color for image
 
             // Save avatar settings
             saveAvatarSettings('image', dataURL, null);
@@ -2059,6 +2121,13 @@
                 if (avatarSettings.bgColor) {
                     document.getElementById('avatar-bg-color').value = avatarSettings.bgColor;
                 }
+                
+                // If type is image, update preview
+                if(avatarSettings.type === 'image' && avatarSettings.display) {
+                    const preview = document.getElementById('current-avatar');
+                    preview.innerHTML = `<img src="${avatarSettings.display}" class="w-full h-full rounded-full object-cover">`;
+                    preview.style.backgroundColor = 'transparent';
+                }
 
                 // Load interface settings
                 const interfaceSettings = JSON.parse(localStorage.getItem('interface-settings') || '{}');
@@ -2069,6 +2138,10 @@
                 if (interfaceSettings.fontSize) {
                     document.getElementById('font-size-select').value = interfaceSettings.fontSize;
                 }
+
+                // Apply settings on load
+                applyInterfaceSettings(interfaceSettings);
+
             } catch (error) {
                 console.error('Error loading personalization settings:', error);
             }
@@ -2155,42 +2228,62 @@
 
         /* --- END PERSONALIZATION FUNCTIONS --- */
         
-        /* --- [START] RE-IMPLEMENTED TAB DISGUISER FUNCTIONS --- */
+        /* --- [START] UPDATED TAB DISGUISER FUNCTIONS (to work with url-tab-title-changer.js) --- */
 
         /**
-         * Renders the Tab Disguiser settings, mimicking settings-old.html
+         * Renders the Tab Disguiser settings
          */
         function renderTabDisguiserSettings() {
+            // Check if urlChanger object is available
+            if (typeof window.urlChanger === 'undefined') {
+                panelContent.innerHTML = `<p class="message-area message-error">Error: <code>url-tab-title-changer.js</code> script not loaded. Tab Disguiser settings cannot be managed.</p>`;
+                return;
+            }
+
+            // Build options from the live urlChanger object
             let selectOptions = `
-                <option value="none" data-favicon="../images/logo.png">None</option>
-                <optgroup label="Websites">
+                <option value="none" data-favicon="../favicon.ico">None (Default)</option>
             `;
+
+            // Get presets from urlChanger
+            const websitePresets = window.urlChanger.presets.filter(p => p.category === 'websites');
+            const livePresets = window.urlChanger.presets.filter(p => p.category === 'live');
+
+            if (websitePresets.length > 0) {
+                selectOptions += `<optgroup label="Websites">`;
+                websitePresets.forEach(preset => {
+                    selectOptions += `<option value="${preset.id}" data-favicon="${preset.favicon}">${preset.name}</option>`;
+                });
+                selectOptions += `</optgroup>`;
+            }
             
-            TAB_PRESETS.forEach(preset => {
-                selectOptions += `<option value="${preset.id}" data-favicon="${preset.favicon}">${preset.name}</option>`;
-            });
-            
+            if (livePresets.length > 0) {
+                selectOptions += `<optgroup label="Live">`;
+                livePresets.forEach(preset => {
+                    selectOptions += `<option value="${preset.id}" data-favicon="">${preset.name}</option>`;
+                });
+                selectOptions += `</optgroup>`;
+            }
+
             selectOptions += `
-                </optgroup>
                 <optgroup label="4SP">
             `;
-
             FOURSP_ICONS.forEach((icon, index) => {
-                selectOptions += `<option value="4sp-${index}" data-favicon="${icon.url}">${icon.name}</option>`;
+                // Use a unique ID for 4SP icons
+                const id = `4sp-${index}`;
+                selectOptions += `<option value="${id}" data-favicon="${icon.url}">${icon.name}</option>`;
             });
+            selectOptions += `</optgroup>`;
+            
+            selectOptions += `<option value="custom" data-favicon="">Custom</option>`;
 
-            selectOptions += `
-                </optgroup>
-                <option value="custom" data-favicon="https://ssl.gstatic.com/docs/doclist/images/drive_2022q3_32dp.png">Custom</option>
-            `;
-
-            let fourspPickerHtml = FOURSP_ICONS.map((icon, index) => `
+            let fourspPickerHtml = FOURSP_ICONS.map((icon) => `
                 <div class="favicon-picker-item" data-favicon-url="${icon.url}" data-picker="4sp" title="${icon.name}">
                     <img src="${icon.url}" alt="${icon.name}">
                 </div>
             `).join('');
             
-            let presetPickerHtml = TAB_PRESETS.map(preset => `
+            let presetPickerHtml = websitePresets.map(preset => `
                 <div class="favicon-picker-item" data-favicon-url="${preset.favicon}" data-picker="preset" title="${preset.name}">
                     <img src="${preset.favicon}" alt="${preset.name}">
                 </div>
@@ -2198,9 +2291,9 @@
 
             panelContent.innerHTML = `
                 <div class="settings-section">
-                    <h3 class="text-xl font-semibold text-white mb-4">Tab DisguGEAR</h3>
+                    <h3 class="text-xl font-semibold text-white mb-4">Tab Disguiser</h3>
                     <p class="settings-description mb-4">
-                        Change the appearance of the browser tab to blend in. This setting is saved locally on this browser.
+                        Change the appearance of the browser tab to blend in. This setting is applied instantly and saved locally on this browser.
                     </p>
                     
                     <div class="setting-item">
@@ -2226,14 +2319,17 @@
                         </div>
                         
                         <div>
-                            <label class="settings-label">... or Choose an Official 4SP Favicon</label>
-                            <div id="favicon-picker-4sp" class="favicon-picker-grid settings-input-width">
+                            <label class="settings-label">Custom Favicon</label>
+                            <p class="settings-description mb-2">
+                                Choose a 4SP icon, fetch a new one, or select a preset/previously fetched icon.
+                            </p>
+                            
+                            <label class="settings-label text-sm text-gray-300">4SP Icons</label>
+                            <div id="favicon-picker-4sp" class="favicon-picker-grid settings-input-width mb-4">
                                 ${fourspPickerHtml}
                             </div>
-                        </div>
-
-                        <div>
-                            <label for="favicon-fetch-input" class="settings-label">Fetch Favicon from Website URL</label>
+                            
+                            <label for="favicon-fetch-input" class="settings-label text-sm text-gray-300">Fetch New Favicon from URL</label>
                             <div class="flex items-center gap-2" style="max-width: 500px;">
                                 <input type="text" id="favicon-fetch-input" class="form-input flex-grow" placeholder="e.g., google.com">
                                 <button id="fetch-favicon-btn" class="btn-primary">Fetch</button>
@@ -2241,13 +2337,12 @@
                                     <img src="" alt="Preview" class="hidden">
                                 </div>
                             </div>
-                            <p class="settings-description">Not all website icons may be available to fetch.</p>
-                        </div>
+                            <p class="settings-description mb-4">Not all website icons may be available to fetch.</p>
 
-                        <div>
-                            <label class="settings-label">... or Choose a Preset Favicon</label>
-                            <div id="favicon-picker-preset" class="favicon-picker-grid settings-input-width">
+                            <label class="settings-label text-sm text-gray-300">Preset & Saved Icons</label>
+                            <div id="favicon-picker-custom" class="favicon-picker-grid settings-input-width">
                                 ${presetPickerHtml}
+                                <!-- Custom fetched icons will be added here by JS -->
                             </div>
                         </div>
                     </div>
@@ -2257,9 +2352,80 @@
                     <button id="save-tab-disguise-btn" class="settings-button">
                         <i class="fas fa-save mr-2"></i> Apply Changes
                     </button>
+                    <div id="tab-disguise-message" class="message-area"></div>
                 </div>
             `;
+            renderCustomFaviconGrid(); // Render the grid of custom/preset icons
             attachTabDisguiserListeners();
+        }
+        
+        /**
+         * Renders the grid of custom-fetched and preset favicons
+         */
+        function renderCustomFaviconGrid() {
+            if (typeof window.urlChanger === 'undefined') return;
+
+            const container = document.getElementById('favicon-picker-custom');
+            if (!container) return; // Not on the tab disguiser page
+
+            container.innerHTML = ''; // Clear it
+            let html = '';
+
+            // 1. Add presets first
+            const websitePresets = window.urlChanger.presets.filter(p => p.category === 'websites');
+            html += websitePresets.map(preset => `
+                <div class="favicon-picker-item" data-favicon-url="${preset.favicon}" data-picker="preset" title="${preset.name}">
+                    <img src="${preset.favicon}" alt="${preset.name}">
+                </div>
+            `).join('');
+
+            // 2. Add custom favicons from urlChanger
+            // Ensure customFavicons is loaded (it should be by init)
+            if (!window.urlChanger.customFavicons) {
+                window.urlChanger.loadCustomFavicons();
+            }
+            
+            html += window.urlChanger.customFavicons.map(iconUrl => `
+                <div class="favicon-picker-item" data-favicon-url="${iconUrl}" data-picker="custom" title="Custom Icon">
+                    <img src="${iconUrl}" alt="Custom Icon">
+                    <button class="favicon-delete-btn" data-favicon-url="${iconUrl}" title="Remove">&times;</button>
+                </div>
+            `).join('');
+            
+            container.innerHTML = html;
+            
+            // Re-attach listeners for these new items
+            attachPickerItemListeners(container);
+        }
+        
+        /**
+         * Attaches click listeners to all favicon picker items
+         */
+        function attachPickerItemListeners(container) {
+             container.querySelectorAll('.favicon-picker-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('favicon-delete-btn')) {
+                        // Handle delete click
+                        const url = e.target.dataset.faviconUrl;
+                        if (window.urlChanger) {
+                            window.urlChanger.removeCustomFavicon(url);
+                            renderCustomFaviconGrid(); // Re-render grid
+                        }
+                        return; // Stop propagation
+                    }
+                    
+                    // Deselect other selected items in *all* pickers
+                    document.querySelectorAll('.favicon-picker-item.selected').forEach(selected => {
+                        selected.classList.remove('selected');
+                    });
+                    // Select this item
+                    item.classList.add('selected');
+                    
+                    // Clear fetch input
+                    document.getElementById('favicon-fetch-input').value = '';
+                    document.getElementById('favicon-fetch-preview').querySelector('img').classList.add('hidden');
+                });
+            });
         }
 
         /**
@@ -2282,61 +2448,58 @@
             saveBtn.addEventListener('click', saveTabDisguiserSettings);
             fetchBtn.addEventListener('click', handleFaviconFetch);
 
-            // Add click listeners to all picker items
-            document.querySelectorAll('.favicon-picker-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    // Deselect other selected items
-                    document.querySelectorAll('.favicon-picker-item.selected').forEach(selected => {
-                        selected.classList.remove('selected');
-                    });
-                    // Select this item
-                    item.classList.add('selected');
-                    
-                    // Clear fetch input
-                    document.getElementById('favicon-fetch-input').value = '';
-                    document.getElementById('favicon-fetch-preview').querySelector('img').classList.add('hidden');
-                });
-            });
+            // Add click listeners to 4SP picker items
+            attachPickerItemListeners(document.getElementById('favicon-picker-4sp'));
 
             loadTabDisguiserSettings();
         }
 
         /**
-         * Loads the saved Tab Disguiser settings
+         * Loads the saved Tab Disguiser settings from localStorage
          */
         function loadTabDisguiserSettings() {
+            if (typeof window.urlChanger === 'undefined') return;
+
             try {
-                const settings = JSON.parse(localStorage.getItem('tab-disguiser-settings') || '{}');
+                // Read from the key url-tab-title-changer.js uses
+                const savedSettingsJSON = localStorage.getItem('selectedUrlPreset');
                 const presetSelect = document.getElementById('disguise-preset-select');
                 
+                let settings = { type: 'none' };
+                if (savedSettingsJSON) {
+                    try { settings = JSON.parse(savedSettingsJSON); } catch(e) {}
+                }
+
                 if (settings.type === 'custom') {
                     presetSelect.value = 'custom';
                     document.getElementById('custom-disguise-options').classList.remove('hidden');
                     document.getElementById('custom-title-input').value = settings.title || '';
                     
                     if (settings.favicon) {
+                        // Check all pickers for this favicon
                         const item = document.querySelector(`.favicon-picker-item[data-favicon-url="${settings.favicon}"]`);
                         if (item) {
                             item.classList.add('selected');
                         } else {
-                            // If it was a fetched icon, show it in the preview
+                            // If it was a fetched icon not in the lists, show it in the preview
                             const previewImg = document.getElementById('favicon-fetch-preview').querySelector('img');
                             previewImg.src = settings.favicon;
                             previewImg.classList.remove('hidden');
                         }
                     }
-                } else if (settings.id) {
-                    const option = presetSelect.querySelector(`option[value="${settings.id}"]`);
-                    if (option) {
-                        presetSelect.value = settings.id;
+                } else if (settings.type === 'preset' && settings.id) {
+                    // Check if it's a 4SP icon
+                    const fourspIcon = FOURSP_ICONS.find(icon => icon.url === settings.favicon);
+                    if (fourspIcon) {
+                        const fourspIndex = FOURSP_ICONS.indexOf(fourspIcon);
+                        presetSelect.value = `4sp-${fourspIndex}`;
                     } else {
-                        // Check 4SP icons
-                        const fourspIcon = FOURSP_ICONS.find(icon => icon.url === settings.favicon);
-                        if (fourspIcon) {
-                            const fourspIndex = FOURSP_ICONS.indexOf(fourspIcon);
-                            presetSelect.value = `4sp-${fourspIndex}`;
+                        // Check standard presets
+                         const option = presetSelect.querySelector(`option[value="${settings.id}"]`);
+                        if (option) {
+                            presetSelect.value = settings.id;
                         } else {
-                             presetSelect.value = 'none';
+                            presetSelect.value = 'none';
                         }
                     }
                 } else {
@@ -2348,9 +2511,16 @@
         }
 
         /**
-         * Saves the Tab Disguiser settings (mimicking old file's structure)
+         * Saves the Tab Disguiser settings using urlChanger object
          */
         function saveTabDisguiserSettings() {
+            const messageEl = document.getElementById('tab-disguise-message');
+            if (typeof window.urlChanger === 'undefined') {
+                messageEl.textContent = 'Error: urlChanger script not found.';
+                messageEl.className = 'message-area message-error';
+                return;
+            }
+
             try {
                 const presetSelect = document.getElementById('disguise-preset-select');
                 const selectedOption = presetSelect.options[presetSelect.selectedIndex];
@@ -2370,31 +2540,49 @@
                     } else if (!fetchedPreviewImg.classList.contains('hidden') && fetchedPreviewImg.src) {
                         settingsToSave.favicon = fetchedPreviewImg.src;
                     } else {
-                        settingsToSave.favicon = null; // No custom favicon
+                        settingsToSave.favicon = ''; // Use original favicon
                     }
 
                 } else if (value === 'none') {
                     settingsToSave.type = 'none';
                     settingsToSave.id = 'none';
-                    settingsToSave.title = '4SP - Settings'; // Restore original
-                    settingsToSave.favicon = '../favicon.ico';
                 } else {
-                    // It's a preset
+                    // It's a preset (from urlChanger, or one of our 4SP icons)
                     settingsToSave.type = 'preset';
                     settingsToSave.id = value;
-                    settingsToSave.title = selectedOption.textContent;
-                    settingsToSave.favicon = selectedOption.dataset.favicon;
+                    
+                    // Re-find the preset/icon from the loaded data
+                    let preset = window.urlChanger.presets.find(p => p.id === value);
+                    if (!preset) {
+                        // Check 4SP icons
+                        if (value.startsWith('4sp-')) {
+                            const index = parseInt(value.split('-')[1]);
+                            const icon = FOURSP_ICONS[index];
+                            if (icon) {
+                                preset = { id: value, name: icon.name, title: window.urlChanger.originalTitle, favicon: icon.url };
+                            }
+                        }
+                    }
+                    
+                    if(preset) {
+                        // Use the title from the preset, or original title for 4SP icons
+                        settingsToSave.title = preset.title || window.urlChanger.originalTitle;
+                        settingsToSave.favicon = preset.favicon;
+                    } else {
+                         throw new Error("Could not find preset data for: " + value);
+                    }
                 }
 
-                localStorage.setItem('tab-disguiser-settings', JSON.stringify(settingsToSave));
-                showPersonalizationMessage('Tab disguiser settings applied.', 'success');
-                
-                // Trigger update in injector.js (the "new file's" way of applying)
-                window.postMessage({ type: 'UPDATE_TAB_DISGUISER', settings: settingsToSave }, '*');
+                // Use the urlChanger's save method to apply AND save
+                window.urlChanger.savePreset(settingsToSave);
+
+                messageEl.textContent = 'Tab disguiser settings applied!';
+                messageEl.className = 'message-area message-success';
 
             } catch (error) {
                 console.error('Error saving tab disguiser settings:', error);
-                showPersonalizationMessage('Error saving tab disguiser settings.', 'error');
+                messageEl.textContent = 'Error saving settings: ' + error.message;
+                messageEl.className = 'message-area message-error';
             }
         }
 
@@ -2402,34 +2590,28 @@
          * Handles the "Fetch Favicon" button click
          */
         async function handleFaviconFetch() {
+            if (typeof window.urlChanger === 'undefined') return;
+
             const input = document.getElementById('favicon-fetch-input');
             const button = document.getElementById('fetch-favicon-btn');
             const previewImg = document.getElementById('favicon-fetch-preview').querySelector('img');
+            const messageEl = document.getElementById('tab-disguise-message');
             let domain = input.value.trim();
             
             if (!domain) {
-                showPersonalizationMessage('Please enter a website URL.', 'error');
+                messageEl.textContent = 'Please enter a website URL.';
+                messageEl.className = 'message-area message-error';
                 return;
-            }
-            
-            if (!domain.startsWith('http')) {
-                domain = 'https://' + domain;
             }
             
             button.disabled = true;
             button.textContent = '...';
+            messageEl.textContent = 'Fetching...';
+            messageEl.className = 'message-area message-warning';
             
             try {
-                // Use Google's S2 service, as seen in settings-old.html logic
-                const faviconUrl = `https://www.google.com/s2/favicons?sz=64&domain_url=${encodeURIComponent(new URL(domain).hostname)}`;
-                
-                // Check if image loads
-                await new Promise((resolve, reject) => {
-                    const img = new Image();
-                    img.onload = resolve;
-                    img.onerror = reject;
-                    img.src = faviconUrl;
-                });
+                // Use the fetchFavicon method from url-tab-title-changer.js
+                const faviconUrl = await window.urlChanger.fetchFavicon(domain);
 
                 previewImg.src = faviconUrl;
                 previewImg.classList.remove('hidden');
@@ -2439,11 +2621,17 @@
                     item.classList.remove('selected');
                 });
                 
-                showPersonalizationMessage('Favicon found!', 'success');
+                // Add to custom favicons and re-render grid
+                window.urlChanger.addCustomFavicon(faviconUrl);
+                renderCustomFaviconGrid();
+
+                messageEl.textContent = 'Favicon found! It has been added to your saved icons.';
+                messageEl.className = 'message-area message-success';
 
             } catch (error) {
                 console.error('Fetch favicon error:', error);
-                showPersonalizationMessage('Could not fetch favicon for that domain.', 'error');
+                messageEl.textContent = `Could not fetch favicon: ${error.message}`;
+                messageEl.className = 'message-area message-error';
                 previewImg.classList.add('hidden');
             } finally {
                 button.disabled = false;
@@ -2451,13 +2639,33 @@
             }
         }
 
-        /* --- [END] RE-IMPLEMENTED TAB DISGUISER FUNCTIONS --- */
+        /* --- [END] UPDATED TAB DISGUISER FUNCTIONS --- */
 
 
-        /* --- [START] RE-IMPLEMENTED PANIC KEY FUNCTIONS --- */
+        /* --- [START] UPDATED PANIC KEY FUNCTIONS (to work with panic-key.js IndexedDB) --- */
 
         /**
-         * Renders the Panic Key settings, mimicking settings-old.html
+         * Opens the IndexedDB specified in panic-key.js
+         * @returns {Promise<IDBDatabase>} A promise that resolves with the database object.
+         */
+        function openPanicKeyDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(PANIC_KEY_DB_NAME);
+
+                request.onupgradeneeded = event => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains(PANIC_KEY_STORE_NAME)) {
+                        db.createObjectStore(PANIC_KEY_STORE_NAME, { keyPath: 'id' });
+                    }
+                };
+
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        /**
+         * Renders the Panic Key settings
          */
         function renderPanicKeySettings() {
             panelContent.innerHTML = `
@@ -2465,7 +2673,7 @@
                     <h3 class="text-xl font-semibold text-white mb-4">Panic Key Configuration</h3>
                     <p class="settings-description mb-4">
                         Configure up to 3 single-key shortcuts that will instantly redirect you to a specified URL.
-                        These settings are stored locally in this browser.
+                        These settings are stored locally in this browser's IndexedDB.
                     </p>
                     
                     <div class="setting-item">
@@ -2524,6 +2732,7 @@
                     <button id="save-panic-keys-btn" class="settings-button">
                         <i class="fas fa-save mr-2"></i> Save Panic Keys
                     </button>
+                    <div id="panic-key-message" class="message-area"></div>
                 </div>
             `;
             attachPanicKeyListeners();
@@ -2553,41 +2762,57 @@
         }
 
         /**
-         * Loads panic key settings from localStorage (converted from IndexedDB)
+         * Loads panic key settings from IndexedDB
          */
-        function loadPanicKeySettings() {
+        async function loadPanicKeySettings() {
             try {
-                // Using 'panic-key-settings' key as it's the one injector.js is likely watching,
-                // but we will store the old array structure.
-                const settings = JSON.parse(localStorage.getItem('panic-key-settings') || '[]');
+                const db = await openPanicKeyDB();
+                const transaction = db.transaction(PANIC_KEY_STORE_NAME, 'readonly');
+                const store = transaction.objectStore(PANIC_KEY_STORE_NAME);
+                const request = store.getAll();
                 
-                document.getElementById('panic-key-count').value = settings.length;
-                
-                for (let i = 1; i <= 3; i++) {
-                    const keyInput = document.getElementById(`panicKey${i}`);
-                    const urlInput = document.getElementById(`panicUrl${i}`);
+                request.onsuccess = () => {
+                    const settings = request.result || [];
+                    db.close();
+
+                    document.getElementById('panic-key-count').value = settings.length;
                     
-                    if (settings[i - 1]) {
-                        keyInput.value = settings[i - 1].key || '';
-                        // Remove https:// prefix for display, matching old file's behavior
-                        const displayUrl = (settings[i - 1].url || '').replace(/^https?:\/\//, '');
-                        urlInput.value = displayUrl;
-                    } else {
-                        keyInput.value = '';
-                        urlInput.value = '';
+                    // Sort settings by ID (panicKey1, panicKey2, ...) to ensure correct order
+                    settings.sort((a, b) => a.id.localeCompare(b.id));
+
+                    for (let i = 1; i <= 3; i++) {
+                        const keyInput = document.getElementById(`panicKey${i}`);
+                        const urlInput = document.getElementById(`panicUrl${i}`);
+                        
+                        const setting = settings[i - 1];
+                        if (setting) {
+                            keyInput.value = setting.key || '';
+                            // Remove https:// prefix for display, matching old file's behavior
+                            const displayUrl = (setting.url || '').replace(/^https?:\/\//, '');
+                            urlInput.value = displayUrl;
+                        } else {
+                            keyInput.value = '';
+                            urlInput.value = '';
+                        }
                     }
+                    updatePanicKeyVisibility();
+                };
+                request.onerror = (e) => {
+                    db.close();
+                    throw e.target.error;
                 }
             } catch (error) {
                 console.error('Error loading panic key settings:', error);
+                document.getElementById('panic-key-message').textContent = 'Error loading settings from database.';
+                document.getElementById('panic-key-message').className = 'message-area message-error';
             }
-            
-            updatePanicKeyVisibility();
         }
 
         /**
-         * Saves panic key settings to localStorage (converted from IndexedDB)
+         * Saves panic key settings to IndexedDB
          */
-        function savePanicKeySettings() {
+        async function savePanicKeySettings() {
+            const messageEl = document.getElementById('panic-key-message');
             const count = parseInt(document.getElementById('panic-key-count').value, 10);
             const settingsToSave = [];
             const keys = new Set();
@@ -2597,23 +2822,27 @@
                 let url = document.getElementById(`panicUrl${i}`).value.trim();
                 
                 if (!key || !url) {
-                    showPersonalizationMessage(`Panic Key ${i} is incomplete.`, 'error');
+                    messageEl.textContent = `Panic Key ${i} is incomplete.`;
+                    messageEl.className = 'message-area message-error';
                     return;
                 }
                 
                 if (key.length !== 1 || /[^a-z0-9`\-=\[\];',.\/\\ ]/.test(key)) {
-                    showPersonalizationMessage(`Key for Panic Key ${i} is invalid. Use a single, non-special character.`, 'error');
+                    messageEl.textContent = `Key for Panic Key ${i} is invalid. Use a single, non-special character.`;
+                    messageEl.className = 'message-area message-error';
                     return;
                 }
                 
                 if (keys.has(key)) {
-                    showPersonalizationMessage(`Duplicate key "${key}" found.`, 'error');
+                    messageEl.textContent = `Duplicate key "${key}" found.`;
+                    messageEl.className = 'message-area message-error';
                     return;
                 }
                 
                 // Simple URL regex check (matching old file)
                 if (!/^(https?:\/\/)?((www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b)([-a-zA-Z0-9@:%_\+.~#?&//=]*)$/i.test(url)) {
-                    showPersonalizationMessage(`URL for Panic Key ${i} is invalid.`, 'error');
+                    messageEl.textContent = `URL for Panic Key ${i} is invalid.`;
+                    messageEl.className = 'message-area message-error';
                     return;
                 }
                 
@@ -2623,28 +2852,51 @@
                     url = 'https://' + url;
                 }
                 
-                // Store in the old file's array-object format
+                // Store in the format panic-key.js expects
                 settingsToSave.push({ id: `panicKey${i}`, key, url });
             }
 
             try {
-                // Save using the old file's data structure, but to localStorage
-                localStorage.setItem('panic-key-settings', JSON.stringify(settingsToSave));
+                // Save to IndexedDB
+                const db = await openPanicKeyDB();
+                const transaction = db.transaction(PANIC_KEY_STORE_NAME, 'readwrite');
+                const store = transaction.objectStore(PANIC_KEY_STORE_NAME);
                 
-                // Show message mimicking old file's reload requirement
-                showPersonalizationMessage('Panic key settings saved. Reload page to apply.', 'success');
+                // Clear all old settings first
+                await new Promise((resolve, reject) => {
+                   const req = store.clear();
+                   req.onsuccess = resolve;
+                   req.onerror = reject;
+                });
                 
-                // We DO NOT call postMessage here, as we are mimicking the old
-                // file's functionality which required a reload to be read by panic-key.js.
-                // The new injector.js might not understand this array format.
+                // Add all new settings
+                for (const setting of settingsToSave) {
+                    await new Promise((resolve, reject) => {
+                        const req = store.put(setting);
+                        req.onsuccess = resolve;
+                        req.onerror = reject;
+                    });
+                }
+                
+                await new Promise((resolve, reject) => {
+                    transaction.oncomplete = resolve;
+                    transaction.onerror = reject;
+                });
+                
+                db.close();
+                
+                // Show message
+                messageEl.textContent = 'Panic key settings saved. Reload any open 4SP pages for changes to take effect.';
+                messageEl.className = 'message-area message-success';
                 
             } catch (error) {
                 console.error('Error saving panic key settings:', error);
-                showPersonalizationMessage('Error saving panic key settings.', 'error');
+                messageEl.textContent = 'Error saving settings to database.';
+                messageEl.className = 'message-area message-error';
             }
         }
 
-        /* --- [END] RE-IMPLEMENTED PANIC KEY FUNCTIONS --- */
+        /* --- [END] UPDATED PANIC KEY FUNCTIONS --- */
         
         
         /* --- START DATA MANAGEMENT FUNCTIONS --- */
@@ -2712,7 +2964,17 @@
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
                 // Exclude settings keys that should not be part of a game save file
-                if (key !== NAVBAR_SETTINGS_KEY) { 
+                // UPDATED: Also exclude tab disguiser and avatar keys
+                const excludedKeys = [
+                    NAVBAR_SETTINGS_KEY, 
+                    'user-avatar-settings', 
+                    'interface-settings',
+                    'privacy-settings',
+                    'selectedUrlPreset', // Handled by url-tab-title-changer.js
+                    'tabDisguiseCustomFavicons' // Handled by url-tab-title-changer.js
+                ];
+                
+                if (!excludedKeys.includes(key)) { 
                     try {
                         // Attempt to parse to see if it's JSON, otherwise keep as string
                         data[key] = JSON.parse(localStorage.getItem(key));
@@ -2775,7 +3037,10 @@
                 return;
             }
 
-            if (!confirm("Are you sure you want to import this save file? Your current local game progress will be overwritten.")) {
+            const confirmed = prompt(`This will overwrite all local game data. To confirm, type "IMPORT":`);
+            if (confirmed !== 'IMPORT') {
+                message.textContent = 'Import cancelled.';
+                message.className = 'message-area message-warning';
                 return;
             }
 
@@ -2825,21 +3090,32 @@
          * NOTE: This is a destructive operation.
          */
         function applyImportedData(data) {
-            // OPTIONAL: Clear specific keys only if needed, but for a full save replace, a more direct approach is:
-            // This implementation assumes a full overwrite of game-related keys.
-            
-            // 1. (Optional but safer) Clear only game-related keys
-            // You would need a list of all game keys here. For simplicity, we'll
-            // assume that any key NOT the NAVBAR_SETTINGS_KEY is a game key.
+            // Exclude settings keys that should not be part of a game save file
+            const excludedKeys = [
+                NAVBAR_SETTINGS_KEY, 
+                'user-avatar-settings', 
+                'interface-settings',
+                'privacy-settings',
+                'selectedUrlPreset',
+                'tabDisguiseCustomFavicons'
+            ];
+
+            // 1. (Safer) Clear only game-related keys
             for (let i = localStorage.length - 1; i >= 0; i--) {
                 const key = localStorage.key(i);
-                if (key !== NAVBAR_SETTINGS_KEY) {
+                if (!excludedKeys.includes(key)) {
                     localStorage.removeItem(key);
                 }
             }
             
             // 2. Apply new data
             for (const key in data) {
+                // Ensure we don't accidentally import a settings key
+                if (excludedKeys.includes(key)) {
+                    console.warn(`Skipped importing reserved key: ${key}`);
+                    continue;
+                }
+                
                 const value = data[key];
                 // localStorage only stores strings, so convert objects back to JSON strings
                 if (typeof value === 'object' && value !== null) {
@@ -2852,6 +3128,43 @@
 
         /* --- END DATA MANAGEMENT FUNCTIONS --- */
         
+        /* --- [START] NEW ABOUT 4SP FUNCTION --- */
+        
+        /**
+         * Renders the content for the "About 4SP" tab
+         */
+        function renderAboutSection() {
+            panelContent.innerHTML = `
+                <div class="settings-section">
+                    <h3 class="text-2xl font-semibold text-white mb-2">(4SP) 4simpleproblems</h3>
+                    <p class="text-sm text-gray-400 mb-4">Version 4.0 beta 4</p>
+                    <p class="text-lg text-gray-300 italic mb-6">
+                        "A student toolkit without ads, <strong>ever</strong>."
+                    </p>
+                </div>
+                <div class="settings-section">
+                    <h3 class="text-xl font-semibold text-white mb-4">Connect with 4SP</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <a href="https://github.com/v5-4simpleproblems/" target="_blank" rel="noopener noreferrer" class="settings-button settings-button-secondary text-center flex items-center justify-center py-4 text-base">
+                            <i class="fab fa-github fa-fw mr-3 text-lg"></i> GitHub
+                        </a>
+                        <a href="https://youtube.com/@4simpleproblems" target="_blank" rel="noopener noreferrer" class="settings-button text-center flex items-center justify-center py-4 text-base" style="background-color: #CD201F; border-color: #CD201F; color: white;">
+                            <i class="fab fa-youtube fa-fw mr-3 text-lg"></i> YouTube
+                        </a>
+                        <a href="https://x.com/4simpleproblems" target="_blank" rel="noopener noreferrer" class="settings-button text-center flex items-center justify-center py-4 text-base" style="background-color: #1DA1F2; border-color: #1DA1F2; color: white;">
+                            <i class="fab fa-twitter fa-fw mr-3 text-lg"></i> Twitter (X)
+                        </a>
+                        <a href="https://buymeacoffee.com/4simpleproblems" target="_blank" rel="noopener noreferrer" class="settings-button text-center flex items-center justify-center py-4 text-base" style="background-color: #FFDD00; border-color: #FFDD00; color: #000000;">
+                            <i class="fas fa-coffee fa-fw mr-3 text-lg"></i> Buy Me a Coffee
+                        </a>
+                    </div>
+                </div>
+            `;
+        }
+        
+        /* --- [END] NEW ABOUT 4SP FUNCTION --- */
+
+
         // --- START APPLICATION ---
         document.addEventListener('DOMContentLoaded', startAuthFlow);
     </script>
