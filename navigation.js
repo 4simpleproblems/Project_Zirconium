@@ -487,7 +487,7 @@ let db;
             .scroll-glide-button.hidden { opacity: 0 !important; pointer-events: none !important; }
             
             .nav-tab { 
-                flex-shrink: 0; padding: 8px 16px; color: var(--tab-text); /* UPDATED */
+                flex-shrink: 0; padding: 8px 12px; color: var(--tab-text); /* UPDATED */
                 font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; 
                 transition: all 0.2s, color 0.3s ease, border-color 0.3s ease, background-color 0.3s ease; 
                 text-decoration: none; line-height: 1.5; display: flex; align-items: center; margin-right: 8px; /* UPDATED */
