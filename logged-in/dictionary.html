@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - DICTIONARY</title>
+    <title>4SP - Interactive Dictionary</title>
     <meta name="description" content="A simple interactive dictionary with search and definition display using dictionaryapi.dev.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -235,7 +235,7 @@
                     type="text"
                     id="search-input"
                     placeholder="Type a word and press Enter or click the Search icon..."
-                    class="w-full p-4 pl-12 pr-20 rounded-xl bg-[#0d0d0d] text-white border border-[#1a1a1a] focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-150"
+                    class="w-full p-4 pl-12 pr-20 rounded-3xl bg-[#0d0d0d] text-white border border-[#1a1a1a] focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-150"
                     autocomplete="off"
                 />
                 <i class="fa-solid fa-book absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
@@ -285,7 +285,6 @@
         const auth = getAuth(app);
 
         // --- DOM Elements ---
-        // const loadingScreen = document.getElementById('loading-screen'); // REMOVED
         const pageContent = document.getElementById('page-content');
         const searchInput = document.getElementById('search-input');
         const searchButton = document.getElementById('search-button');
@@ -439,7 +438,7 @@
                     htmlContent += `
                         <div class="ml-4 pt-4 p-3 bg-zinc-800 border border-indigo-700 rounded-lg shadow-inner">
                             <p class="text-lg text-white font-bold mb-2">Synonyms:</p>
-                            <p class="flex flex-wrap gap-2">${synonymsTags}</p>
+                            <p class="flex flex-wrap gap-2">${synonymTags}</p>
                         </div>
                     `;
                 }
@@ -512,8 +511,6 @@
                 // User is authenticated
                 console.log("User authenticated. UID:", user.uid);
                 
-                // Hide loading screen and show content
-                // loadingScreen.style.display = 'none'; // REMOVED
                 pageContent.classList.remove('hidden');
                 // Added from notes.html to ensure content displays correctly
                 pageContent.style.display = 'flex'; 
