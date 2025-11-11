@@ -21,7 +21,7 @@
     <script src="../injector.js"></script>
 
     <style>
-        /* --- FONT & BASE STYLING (MATCHING notes.html) --- */
+        /* --- FONT & BASE STYLING (MATCHING notes.html + Thinner text) --- */
         body { 
             font-family: 'Geist', sans-serif; 
             background-color: #070707; 
@@ -30,6 +30,12 @@
             font-size: 16px;
             overflow-x: hidden;
             min-height: 100vh;
+            font-weight: 300; /* <-- ADDED: Thinner base font */
+        }
+
+        /* <-- ADDED: Thinner bold/headings --> */
+        h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
+            font-weight: 400 !important;
         }
 
         /* --- THEME-AWARE STYLES (COPIED FROM notes.html) --- */
@@ -235,7 +241,7 @@
                     type="text"
                     id="search-input"
                     placeholder="Type a word and press Enter or click the Search icon..."
-                    class="w-full p-4 pl-12 pr-20 rounded-3xl bg-[#0d0d0d] text-white border border-[#1a1a1a] focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-150"
+                    class="w-full p-4 pl-12 pr-20 rounded-2xl bg-[#0d0d0d] text-white border border-[#1a1a1a] focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-150"
                     autocomplete="off"
                 />
                 <i class="fa-solid fa-book absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
