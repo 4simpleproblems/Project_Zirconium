@@ -463,6 +463,8 @@ let db;
                 padding-bottom: 5px; margin-bottom: -5px; 
                 scroll-behavior: smooth;
                 max-width: 100%; /* UPDATED: ensure it doesn't overflow parent */
+                padding-left: 16px; /* MODIFICATION: Added to prevent first tab cutoff */
+                padding-right: 16px; /* MODIFICATION: Added for symmetry */
             }
             .tab-scroll-container::-webkit-scrollbar { display: none; }
             .scroll-glide-button {
