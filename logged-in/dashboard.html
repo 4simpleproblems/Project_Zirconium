@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>4SP - DASHBOARD</title>
     
-    <!-- Load Geist Font and TailwindCSS -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
@@ -14,19 +13,13 @@
     <script src="../navigation.js"></script>
 
     <script src="../injector.js"></script>
-    <!-- 
-        *** FIX: Load global Firebase SDKs BEFORE navigation-test.js ***
-        This is necessary for the global 'firebase' object to be defined.
-    -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     
-    <!-- Load the main AI script AFTER Firebase is globally available -->
     <script src="../humanity-agent.js"></script>
 
 
-    <!-- Firebase Initialization and Clock Logic -->
     <script type="module">
         import { firebaseConfig } from '../firebase-config.js';
 
@@ -95,11 +88,14 @@
         // Add CSS for minimal black screen look
         document.head.insertAdjacentHTML('beforeend', `
             <style>
-                /* Apply Geist font universally */
+                /* Apply Geist font universally (from notes.html) */
                 body { 
                     font-family: 'Geist', sans-serif; 
-                    background-color: #000000;
-                    color: #FFFFFF;
+                    background-color: #070707; /* MATCHED */
+                    color: #c0c0c0; /* MATCHED */
+                    font-weight: 300; /* ADDED */
+                    
+                    /* Centering styles for dashboard */
                     display: flex;
                     justify-content: center;
                     align-items: center;
@@ -107,12 +103,17 @@
                     margin: 0;
                     text-align: center;
                 }
+                
+                /* ADDED: Thinner bold/headings (from notes.html) */
+                h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
+                    font-weight: 400 !important;
+                }
+
                 /* Ensure HTML and body take full viewport height */
                 html { height: 100%; }
             </style>
         `);
     </script>
-<!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-1D4F692C1Q"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -123,9 +124,7 @@
 </script>
 </head>
 <body>
-    <div id="date-time-display" class="tracking-tighter p-8 rounded-xl bg-white/5 backdrop-blur-sm shadow-2xl">
-        <!-- Content will be injected by JavaScript -->
-        <p class="text-xl">Loading time and authentication check...</p>
-    </div>
+    <div id="date-time-display" class="tracking-tighter p-8 rounded-2xl bg-[#0d0d0d] border border-[#1a1a1a]">
+        </div>
 </body>
 </html>
