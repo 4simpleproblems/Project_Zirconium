@@ -233,12 +233,22 @@
         }
         
         .btn-danger-style {
-            color: #f87171; /* red-400 */
+            color: #dc2626; /* red-600 - Darker Red */
         }
         .btn-danger-style:hover {
-            background-color: rgba(220, 38, 38, 0.1); /* red-600 with 10% opacity */
-            border-color: #dc2626; /* red-600 */
-            color: #ef4444; /* red-500 */
+            background-color: rgba(220, 38, 38, 0.15); /* red-600 with 15% opacity */
+            border-color: #ef4444; /* red-500 */
+            color: #f87171; /* red-400 - Brighter on hover */
+        }
+        
+        /* NEW: Secondary button style with accent */
+        .btn-secondary-style {
+            color: #60a5fa; /* blue-400 */
+        }
+        .btn-secondary-style:hover {
+            background-color: rgba(96, 165, 250, 0.1); /* blue-400 with 10% opacity */
+            border-color: #60a5fa; /* blue-400 */
+            color: #93c5fd; /* blue-300 */
         }
         /* --- END STYLING UPDATE --- */
 
@@ -1390,34 +1400,7 @@
                                 <p class="text-sm text-gray-400">Add an extra layer of security to your account</p>
                             </div>
                             <div class="setting-control">
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="two-factor-toggle" disabled>
-                                    <span class="toggle-slider"></span>
-                                </label>
-                                <span class="text-sm text-gray-500 ml-2">Coming Soon</span>
-                            </div>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-header">
-                                <h4 class="text-lg font-medium text-white">Login Notifications</h4>
-                                <p class="text-sm text-gray-400">Get notified when someone logs into your account</p>
-                            </div>
-                            <div class="setting-control">
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="login-notifications-toggle" checked>
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-header">
-                                <h4 class="text-lg font-medium text-white">Session Management</h4>
-                                <p class="text-sm text-gray-400">Manage your active sessions and devices</p>
-                            </div>
-                            <div class="setting-control">
-                                <button class="btn-base" id="show-sessions-btn">
+                                <button class="btn-base btn-secondary-style" id="show-sessions-btn">
                                     <i class="fas fa-devices mr-2"></i>View Active Sessions
                                 </button>
                             </div>
@@ -1434,97 +1417,7 @@
                                 <p class="text-sm text-gray-400">Help improve 4SP by sharing anonymous usage statistics</p>
                             </div>
                             <div class="setting-control">
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="analytics-toggle" checked>
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-header">
-                                <h4 class="text-lg font-medium text-white">Location Services</h4>
-                                <p class="text-sm text-gray-400">Allow location-based features and services</p>
-                            </div>
-                            <div class="setting-control">
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="location-toggle">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-header">
-                                <h4 class="text-lg font-medium text-white">AI Data Processing</h4>
-                                <p class="text-sm text-gray-400">Allow AI features to process your data for personalization</p>
-                            </div>
-                            <div class="setting-control">
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="ai-processing-toggle" checked>
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-header">
-                                <h4 class="text-lg font-medium text-white">Data Retention</h4>
-                                <p class="text-sm text-gray-400">Control how long your data is stored</p>
-                            </div>
-                            <div class="setting-control">
-                                <select id="data-retention-select" class="form-select">
-                                    <option value="1year">1 Year</option>
-                                    <option value="2years" selected>2 Years</option>
-                                    <option value="5years">5 Years</option>
-                                    <option value="indefinite">Indefinite</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="settings-section">
-                    <h3 class="text-xl font-semibold text-white mb-4">Communication Preferences</h3>
-                    <div class="space-y-4">
-                        <div class="setting-item">
-                            <div class="setting-header">
-                                <h4 class="text-lg font-medium text-white">Marketing Communications</h4>
-                                <p class="text-sm text-gray-400">Receive updates about new features and improvements</p>
-                            </div>
-                            <div class="setting-control">
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="marketing-toggle">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-header">
-                                <h4 class="text-lg font-medium text-white">Research Participation</h4>
-                                <p class="text-sm text-gray-400">Participate in user research and feedback programs</p>
-                            </div>
-                            <div class="setting-control">
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="research-toggle">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="settings-section">
-                    <h3 class="text-xl font-semibold text-white mb-4">Account Actions</h3>
-                    <div class="space-y-4">
-                        <div class="setting-item">
-                            <div class="setting-header">
-                                <h4 class="text-lg font-medium text-white">Download Your Data</h4>
-                                <p class="text-sm text-gray-400">Get a copy of all your data stored in 4SP</p>
-                            </div>
-                            <div class="setting-control">
-                                <button class="btn-base" id="request-download-btn">
+                                <button class="btn-base btn-secondary-style" id="request-download-btn">
                                     <i class="fas fa-download mr-2"></i>Request Download
                                 </button>
                             </div>
@@ -1731,14 +1624,14 @@
                                         </div>
                                     <div id="image-upload-container" class="hidden">
                                         <input type="file" id="avatar-image-input" accept="image/*" class="hidden">
-                                        <button class="btn-base" onclick="document.getElementById('avatar-image-input').click()">
+                                        <button class="btn-base btn-secondary-style" onclick="document.getElementById('avatar-image-input').click()">
                                             <i class="fas fa-upload mr-2"></i>Upload Image
                                         </button>
                                         <div id="image-crop-container" class="hidden mt-4">
                                             <canvas id="crop-canvas" class="border border-gray-600 rounded"></canvas>
                                             <div class="mt-2 space-x-2">
                                                 <button class="btn-base btn-primary-style" onclick="applyCroppedImage()">Apply</button>
-                                                <button class="btn-base" onclick="cancelImageCrop()">Cancel</button>
+                                                <button class="btn-base btn-secondary-style" onclick="cancelImageCrop()">Cancel</button>
                                             </div>
                                         </div>
                                     </div>
@@ -2914,7 +2807,7 @@
                     <p class="settings-description mb-4">
                         Download a local JSON file containing your game's data stored in this browser's Local Storage. This file can be used to restore your progress on another device or browser.
                     </p>
-                    <button id="export-data-btn" class="btn-base">
+                    <button id="export-data-btn" class="btn-base btn-secondary-style">
                         <i class="fas fa-download mr-2"></i> Download ${GAME_SAVE_FILENAME}
                     </button>
                     <div id="export-message" class="message-area"></div>
@@ -3150,7 +3043,7 @@
                 <div class="settings-section">
                     <h3 class="text-xl font-semibold text-white mb-4">Connect with 4SP</h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <a href="https://github.com/v5-4simpleproblems/" target="_blank" rel="noopener noreferrer" class="btn-base text-center flex items-center justify-center py-4 text-base">
+                        <a href="https://github.com/v5-4simpleproblems/" target="_blank" rel="noopener noreferrer" class="btn-base btn-secondary-style text-center flex items-center justify-center py-4 text-base">
                             <i class="fab fa-github fa-fw mr-3 text-lg"></i> GitHub
                         </a>
                         <a href="https://youtube.com/@4simpleproblems" target="_blank" rel="noopener noreferrer" class="btn-base text-center flex items-center justify-center py-4 text-base" style="background-color: #CD201F; border-color: #CD201F; color: white;">
