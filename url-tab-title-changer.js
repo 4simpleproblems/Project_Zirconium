@@ -13,7 +13,7 @@ const urlChanger = {
         { id: 'google-docs', name: 'Google Docs', title: 'Google Docs', favicon: '../favicons/google-docs.png', category: 'websites' },
         { id: 'google-drive', name: 'Google Drive', title: 'My Drive - Google Drive', favicon: '../favicons/google-drive.png', category: 'websites' },
         { id: 'wikipedia', name: 'Wikipedia', title: 'Wikipedia', favicon: '../favicons/wikipedia.png', category: 'websites' },
-        { id: 'hac', name: 'HAC', title: 'Home Access Center', favicon: '../favicons/hac.png', category: 'websites' },
+        { id: 'hac', name: 'Home Access Center', title: 'Home Access Center', favicon: '../favicons/hac.png', category: 'websites' },
         { id: 'clever', name: 'Clever', title: 'Clever | Portal', favicon: '../favicons/clever.png', category: 'websites' },
     ],
 
@@ -147,9 +147,12 @@ const urlChanger = {
             };
             img.src = targetIconUrl;
         }
-    },
+    }
+}; // <-- FIX: Closed the 'urlChanger' object here.
 
+// FIX: Moved this outside the object.
 document.addEventListener('DOMContentLoaded', () => {
     urlChanger.init();
 });
 
+// <-- FIX: Removed the stray '}' that was here.
