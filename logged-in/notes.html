@@ -36,6 +36,12 @@
             transition: all 0.3s ease;
             font-size: 16px;
             overflow-x: hidden;
+            font-weight: 300; /* <-- ADDED: Thinner base font */
+        }
+
+        /* <-- ADDED: Thinner bold/headings --> */
+        h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
+            font-weight: 400 !important;
         }
 
         /* --- THEME-AWARE STYLES (from navigation.js) --- */
@@ -364,7 +370,6 @@
         }
 
     </style>
-<!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-1D4F692C1Q"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
