@@ -29,7 +29,7 @@
         
         /* NOTE: Marquee animation removed per user request */
 
-        /* --- FONT & BASE STYLING (THICKENED FONT) --- */
+        /* --- FONT & BASE STYLING (MATCHING notes.html) --- */
         body { 
             font-family: 'Geist', sans-serif; 
             background-color: #070707; 
@@ -53,11 +53,11 @@
             padding: 0 1rem;
         }
 
-        /* --- CONSISTENT PANEL STYLING (UPDATED: Slight Rounding) --- */
+        /* --- CONSISTENT PANEL STYLING (UPDATED: Matched to notes.html) --- */
         .left-panel, .feed-panel { 
-            background-color: #111111; 
-            border: 1px solid #252525; 
-            border-radius: 1rem; /* UPDATED: Increased rounding */
+            background-color: #0d0d0d; /* UPDATED */
+            border: 1px solid #1a1a1a; /* UPDATED */
+            border-radius: 1rem; 
             padding: 1.5rem; 
             height: fit-content;
         }
@@ -70,7 +70,7 @@
         /* --- Custom Friend Code Input Styling (8 character underlines) --- */
         .friend-code-input-styled {
             /* Create 8 repeating lines for each character space */
-            background-image: linear-gradient(to right, #252525 0%, #252525 90%);
+            background-image: linear-gradient(to right, #1a1a1a 0%, #1a1a1a 90%); /* UPDATED */
             background-size: 12.5% 2px; 
             background-repeat: repeat-x;
             background-position: 0 90%;
@@ -85,12 +85,12 @@
              background-image: linear-gradient(to right, #4f46e5 0%, #4f46e5 90%);
         }
         
-        /* --- Compact List Styling for Friends and Daily Posts (UPDATED: Slight Rounding) --- */
+        /* --- Compact List Styling for Friends and Daily Posts (UPDATED) --- */
         .compact-list-wrapper {
-             background-color: #0d0d0d; 
-             border-radius: 0.75rem; /* UPDATED: Slightly rounded wrapper */
+             background-color: #0d0d0d; /* UPDATED */
+             border-radius: 0.75rem; 
              padding: 0.25rem 0.5rem; 
-             border: 1px solid #1a1a1a;
+             border: 1px solid #1a1a1a; /* UPDATED */
              margin-top: 0.75rem;
         }
         .compact-list-items {
@@ -107,7 +107,7 @@
         /* General style for a list item/card (Friends list & NEW Daily Posts) */
         .compact-list-item {
             background-color: transparent; 
-            border-radius: 0.5rem; /* UPDATED: Rounded item cards */
+            border-radius: 0.5rem; 
             margin-bottom: 0.25rem; /* Spacing */
             padding: 0.5rem 0.5rem; 
             transition: background-color 0.2s;
@@ -115,7 +115,7 @@
             border-bottom: none;
         }
         .compact-list-item:hover {
-            background-color: #1f1f1f;
+            background-color: #1f1f1f; /* Keep hover distinct */
             transform: none; 
         }
         .compact-list-item:last-child {
@@ -277,7 +277,7 @@
 
         .upload-drop-zone {
             background-color: #0a0a0a;
-            border: 2px dashed #252525;
+            border: 2px dashed #1a1a1a; /* UPDATED */
             border-radius: 0.5rem;
             padding: 2rem;
             text-align: center;
@@ -287,7 +287,7 @@
         }
         .upload-drop-zone:hover {
             border-color: #4f46e5;
-            background-color: #111;
+            background-color: #0d0d0d; /* UPDATED */
         }
         .upload-drop-zone.drag-over {
             border-color: #818cf8;
@@ -309,8 +309,8 @@
         }
 
         .modal-content {
-            background-color: #111111;
-            border: 1px solid #252525; 
+            background-color: #0d0d0d; /* UPDATED */
+            border: 1px solid #1a1a1a; /* UPDATED */
             border-radius: 1rem;
             padding: 2rem;
             
@@ -340,7 +340,6 @@
         }
         
     </style>
-<!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-1D4F692C1Q"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -460,8 +459,7 @@
     </main>
 
     <div id="loading-screen" class="flex justify-center items-center h-screen">
-        <p class="text-xl">Authenticating and loading Dailyphoto...</p>
-    </div>
+        <p class="text-xl text-c0c0c0">Authenticating and loading Dailyphoto...</p> </div>
 
     <script type="module">
         // --- Firebase Core Imports ---
@@ -1084,8 +1082,7 @@
                                 </form>
                             </div>
                         </div>
-                        <div id="delete-confirmation-view" class="absolute inset-0 hidden flex justify-center items-center p-6 bg-[#111111]/95 rounded-xl">
-                            <div class="text-center">
+                        <div id="delete-confirmation-view" class="absolute inset-0 hidden flex justify-center items-center p-6 bg-[#0d0d0d]/95 rounded-xl"> <div class="text-center">
                                 <h4 class="text-2xl font-bold text-red-400 mb-4">Are you sure?</h4>
                                 <p class="text-gray-300 mb-6">Deleting this post will not free up your daily slot.</p>
                                 <div class="flex justify-center gap-4">
@@ -1337,4 +1334,3 @@
     </script>
 </body>
 </html>
-
