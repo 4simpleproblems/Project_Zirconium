@@ -43,6 +43,68 @@
             font-weight: 400 !important; 
         }
 
+        /* --- ADDED: THEME-AWARE STYLES (from notes.html) --- */
+        
+        .btn-toolbar-style {
+            background: var(--menu-bg, #0000000);
+            border: 1px solid var(--menu-border, #333);
+            border-radius: 0.75rem;
+            color: var(--menu-text, #d1d5db);
+            padding: 0.5rem 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center; /* ADDED */
+            gap: 0.5rem;
+        }
+        /* MODIFIED: Mode Toggle Hover now keeps black background, but text highlights */
+        .btn-toolbar-style:hover {
+            background-color: var(--menu-bg, #000000); /* Force to Menu BG (black) */
+            border-color: var(--menu-border, #fff); /* Force to Menu Border */
+            color: var(--tab-hover-text, #ffffff); /* Keep the text highlight color */
+        }
+        
+        /* MODIFIED: Files Button now uses Active Tab Texture */
+        .btn-toolbar-style.btn-primary-override {
+            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
+            border: 1px solid var(--tab-active-border, #4f46e5);
+            color: var(--tab-active-text, #4f46e5);
+        }
+        /* Files Button Hover now uses Active Tab Hover Texture */
+        .btn-toolbar-style.btn-primary-override:hover {
+            background-color: var(--tab-active-hover-bg, rgba(79, 70, 229, 0.15));
+            border-color: var(--tab-active-hover-border, #6366f1);
+            color: var(--tab-active-hover-text, #6366f1);
+        }
+
+        .btn-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.25rem; /* 36px */
+            height: 2.25rem; /* 36px */
+            border-radius: 0.5rem;
+            background-color: transparent;
+            border: 1px solid transparent;
+            color: var(--tab-text, #9ca3af);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-icon:hover {
+            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
+            color: var(--tab-active-text, #4f46e5);
+            border-color: var(--tab-active-border, #4f46e5);
+        }
+        .btn-icon.active {
+             background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
+            color: var(--tab-active-text, #4f46e5);
+            border-color: var(--tab-active-border, #4f46e5);
+        }
+        /* --- END: THEME-AWARE STYLES --- */
+
+
         /* Responsive Container */
         .messenger-container {
             display: grid;
@@ -355,7 +417,7 @@
         <div class="modal-content w-full max-w-sm p-6 text-center">
             <h3 id="message-modal-title" class="text-xl font-bold mb-4 text-white"></h3>
             <p id="message-modal-body" class="mb-6 text-gray-300"></p>
-            <button id="message-modal-close-btn" class="px-4 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold w-full">Close</button>
+            <button id="message-modal-close-btn" class="btn-toolbar-style btn-primary-override font-semibold w-full">Close</button>
         </div>
     </div>
 
@@ -369,9 +431,9 @@
             <h3 class="text-xl font-bold mb-4 text-white">Edit Title</h3>
             <form id="edit-title-form" data-post-id="" class="flex flex-col gap-4">
                 <input type="text" id="title-edit-input" placeholder="Enter your photo title (max 48 chars)" class="p-3 bg-gray-900 border border-gray-700 rounded-md focus:ring-indigo-500" maxlength="48" required>
-                <button type="submit" class="px-4 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold w-full">Save Title</button>
+                <button type="submit" class="btn-toolbar-style btn-primary-override font-semibold w-full">Save Title</button>
             </form>
-            <button id="title-modal-close-btn" class="mt-3 text-sm text-gray-400 hover:text-white">Cancel</button>
+            <button id="title-modal-close-btn" class="btn-toolbar-style mt-3 w-full">Cancel</button>
         </div>
     </div>
     
@@ -396,13 +458,13 @@
                  
                  <form id="create-post-form" class="flex flex-col gap-4">
                     <input type="text" id="post-title-input" placeholder="Enter your photo title (max 48 chars)" class="p-3 bg-gray-900 border border-gray-700 rounded-md focus:ring-indigo-500" maxlength="48" required>
-                    <button type="submit" id="create-post-btn" class="px-4 py-3 bg-green-600 rounded-lg hover:bg-green-700 transition font-semibold w-full">
+                    <button type="submit" id="create-post-btn" class="btn-toolbar-style btn-primary-override font-semibold w-full">
                         <i class="fas fa-arrows-down-to-people mr-2"></i> Create Daily Post
                     </button>
                  </form>
             </div>
 
-            <button id="upload-menu-close-btn" class="mt-6 text-sm text-gray-400 hover:text-white w-full">Cancel</button>
+            <button id="upload-menu-close-btn" class="btn-toolbar-style mt-6 w-full">Cancel</button>
         </div>
     </div>
 
@@ -423,7 +485,7 @@
                 <h2 class="text-xl font-bold mb-2">Add a Friend</h2>
                 <form id="add-friend-form" class="flex gap-2">
                     <input type="text" id="friend-code-input" placeholder="********" maxlength="8" class="friend-code-input-styled flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase tracking-widest text-center" style="font-family: monospace;" title="8 alphanumeric characters only">
-                    <button type="submit" class="px-3 py-2 bg-indigo-600 rounded-md hover:bg-indigo-700 transition font-semibold" title="Send Request">
+                    <button type="submit" class="btn-icon" title="Send Request">
                         <i class="fas fa-user-plus"></i>
                     </button>
                 </form>
@@ -467,7 +529,7 @@
         import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { 
             getFirestore, doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, serverTimestamp, orderBy, deleteDoc, onSnapshot, writeBatch, limit
-        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        } from "httpsS://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
         // --- CONFIGURATION IMPORT ---
         import { firebaseConfig } from "../firebase-config.js";
@@ -883,7 +945,7 @@
                         <div class="flex-grow overflow-hidden whitespace-nowrap mr-2">
                             <span class="font-semibold inline-block title-text-span">${name}</span>
                         </div>
-                        ${isViewable ? `<button class="view-post-btn text-indigo-400 hover:text-indigo-500 transition px-2 py-1" title="View Post"><i class="fas fa-eye"></i></button>` : `<span class="text-gray-600 text-sm">${postData ? 'No Title' : 'Slot Used'}</span>`}`;
+                        ${isViewable ? `<button class="view-post-btn btn-icon" title="View Post"><i class="fas fa-eye"></i></button>` : `<span class="text-gray-600 text-sm">${postData ? 'No Title' : 'Slot Used'}</span>`}`;
                     
                     if (isViewable) {
                         div.querySelector('.view-post-btn').addEventListener('click', () => openPhotoModal(postId));
@@ -897,7 +959,7 @@
                     // Available slot is the one immediately after the last used slot
                     div.innerHTML = `
                         <span class="font-semibold text-gray-400">Post #${i + 1}</span>
-                        <button data-slot-index="${i}" class="open-upload-menu-btn px-3 py-1 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition font-semibold text-white" title="Upload Photo"><i class="fas fa-image"></i></button>`;
+                        <button data-slot-index="${i}" class="open-upload-menu-btn btn-icon" title="Upload Photo"><i class="fas fa-image"></i></button>`;
                     div.querySelector('.open-upload-menu-btn').addEventListener('click', e => openUploadMenu(parseInt(e.currentTarget.dataset.slotIndex)));
                 } else {
                     // Locked slots (only slots after the next available slot are locked)
@@ -1058,7 +1120,7 @@
                                 <img id="modal-main-image" src="${photoData.imageBase64}" alt="${photoData.title}" class="rounded-lg photo-modal-img">
                             </div>
                             <div id="photo-info-panel" class="w-full md:w-[350px] flex-shrink-0 flex flex-col relative">
-                                <button id="close-modal-btn" class="absolute top-0 right-0 p-2 text-white/50 hover:text-white transition" title="Close"><i class="fas fa-times"></i></button>
+                                <button id="close-modal-btn" class="btn-icon absolute top-0 right-0 p-0" title="Close"><i class="fas fa-times"></i></button>
                                 <div class="absolute top-0 right-8">
                                     <span id="unread-comments-badge" class="hidden bg-red-600 text-white font-bold rounded-full flex items-center justify-center" title="Unread Comments"></span>
                                 </div>
@@ -1078,7 +1140,7 @@
                                 <div id="modal-comment-message" class="text-sm min-h-[20px] flex-shrink-0"></div>
                                 <form id="comment-form" class="flex gap-2 flex-shrink-0">
                                     <input type="text" id="comment-input" placeholder="Add a comment..." class="flex-grow p-2 bg-gray-900 border border-gray-700 rounded-md" maxlength="480">
-                                    <button type="submit" id="comment-submit-btn" class="px-3 py-2 bg-indigo-600 rounded-md font-semibold" title="Post Comment"><i class="fas fa-comment"></i></button>
+                                    <button type="submit" id="comment-submit-btn" class="btn-icon" title="Post Comment"><i class="fas fa-comment"></i></button>
                                 </form>
                             </div>
                         </div>
@@ -1087,7 +1149,7 @@
                                 <p class="text-gray-300 mb-6">Deleting this post will not free up your daily slot.</p>
                                 <div class="flex justify-center gap-4">
                                     <button id="confirm-delete-btn" class="px-5 py-2 bg-red-600 rounded-lg hover:bg-red-700 font-semibold">Yes, Delete It</button>
-                                    <button id="cancel-delete-btn" class="px-5 py-2 bg-gray-700 rounded-lg hover:bg-gray-800 font-semibold">Cancel</button>
+                                    <button id="cancel-delete-btn" class="btn-toolbar-style">Cancel</button>
                                 </div>
                             </div>
                         </div>`;
