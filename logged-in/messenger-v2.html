@@ -13,9 +13,7 @@
     
     <link rel="stylesheet" href="https://kit-pro.fontawesome.com/releases/v7.0.1/css/pro.min.css" media="all">
 
-    <script>
-        // Remove default Tailwind config
-    </script>
+    <link href="../injector.js">
 
     <style>
         /* --- FONT & BASE STYLING (MATCHING notes.html) --- */
@@ -296,49 +294,8 @@
             font-weight: 400;
         }
 
-        /* --- NEW: Expandable Message Content (Unchanged) --- */
-        .message-content {
-            max-height: 2000px; /* Default max-height for animation */
-            transition: max-height 0.3s ease-in-out;
-            overflow: hidden;
-            position: relative;
-        }
-        .message-content.truncated {
-            max-height: 120px;
-        }
-        /* Fade-out for truncated text */
-        .message-content.truncated::after {
-            content: "";
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 40px;
-            background: linear-gradient(to bottom, transparent, #0d0d0d 90%);
-            pointer-events: none; 
-            z-index: 10;
-        }
-        /* "Show More" arrow */
-        .fade-arrow {
-            position: absolute;
-            bottom: 4px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 20;
-            color: var(--tab-active-text);
-            background-color: #0d0d0d;
-            padding: 2px 4px;
-            border-radius: 99px;
-            border: 1px solid #1a1a1a;
-            cursor: pointer;
-        }
-        .fade-arrow i {
-            transition: transform 0.3s ease-in-out;
-        }
-        /* Class to be toggled by JS */
-        .fade-arrow.expanded i {
-            transform: rotate(180deg);
-        }
+        /* --- REMOVED: Expandable Message Content --- */
+        /* All .message-content, .truncated, and .fade-arrow styles removed */
         
         /* --- Input Bar (LESS ROUND) --- */
         .btn-themed-primary.btn-send {
@@ -533,7 +490,7 @@
 
         // --- GLOBAL STATE & DOM ELEMENTS ---
         const MESSAGE_CHARACTER_LIMIT = 10000;
-        const MESSAGE_TRUNCATE_LENGTH = 300;
+        // const MESSAGE_TRUNCATE_LENGTH = 300; // REMOVED
         const MESSAGE_STORAGE_LIMIT = 25; // Keep 25 messages
         const SEEN_DELAY_MS = 3000;
 
@@ -1009,6 +966,7 @@
             });
         }
         
+        // --- MODIFIED: renderMessage ---
         function renderMessage(data, last3SeenTimestamps = []) {
             if (!data || (!data.text && (!data.images || data.images.length === 0))) return;
             
@@ -1027,8 +985,8 @@
                 timestampISO = date.toISOString();
             }
 
-            const isLargeMessage = data.text && data.text.length > MESSAGE_TRUNCATE_LENGTH;
-            const displayText = data.text && (isLargeMessage ? data.text.substring(0, MESSAGE_TRUNCATE_LENGTH) + '...' : data.text);
+            // const isLargeMessage = data.text && data.text.length > MESSAGE_TRUNCATE_LENGTH; // REMOVED
+            // const displayText = data.text && (isLargeMessage ? data.text.substring(0, MESSAGE_TRUNCATE_LENGTH) + '...' : data.text); // REMOVED
             const bubbleClasses = isSent ? 'sent-bubble' : 'received-bubble';
             
             messageWrapper.className = `message-wrapper flex ${isSent ? 'justify-end' : 'justify-start'}`;
@@ -1037,15 +995,12 @@
             // --- Check for seen in the last 3 timestamps list ---
             const showSeen = isSent && data.seen && last3SeenTimestamps.includes(timestampISO); 
             
+            // --- MODIFIED: Simplified textHTML, removed message-content and truncated classes ---
             const textHTML = data.text ? `
-                <p class="message-text message-content ${isLargeMessage ? 'truncated' : ''}">${displayText || ''}</p>
+                <p class="message-text">${data.text || ''}</p>
             ` : '';
             
-            const fadeArrowHTML = isLargeMessage ? `
-                <div class="fade-arrow" data-action="toggle-truncate">
-                    <i class="fa-solid fa-chevron-down w-3 h-3"></i>
-                </div>
-            ` : '';
+            // const fadeArrowHTML = isLargeMessage ? ... // REMOVED
 
             let imagesHTML = '';
             if (data.images && data.images.length > 0) {
@@ -1058,12 +1013,12 @@
                 `;
             }
 
+            // --- MODIFIED: Removed fadeArrowHTML and 'relative' class from bubble ---
             messageWrapper.innerHTML = `
                 <div class="flex flex-col ${isSent ? 'items-end' : 'items-start'}">
-                    <div class="message-bubble ${bubbleClasses} relative">
+                    <div class="message-bubble ${bubbleClasses}">
                         ${textHTML}
                         ${imagesHTML}
-                        ${fadeArrowHTML}
                     </div>
                     <p class="message-timestamp px-2 ${isSent ? 'text-right' : 'text-left'}">
                         <span>${time}</span>
@@ -1074,18 +1029,7 @@
             dom.messagesContainerEl.appendChild(messageWrapper);
         }
 
-        function handleToggleTruncate(e) {
-            const button = e.target.closest('[data-action="toggle-truncate"]');
-            if (!button) return;
-
-            const messageBubble = button.closest('.message-bubble');
-            const content = messageBubble.querySelector('.message-content');
-            
-            if (content) {
-                content.classList.toggle('truncated');
-                button.classList.toggle('expanded');
-            }
-        }
+        // --- REMOVED: handleToggleTruncate ---
         
         // --- MODIFIED: Handle viewing/downloading an image (Unchanged from previous update) ---
         function handleViewImage(e) {
@@ -1475,7 +1419,7 @@
 
             // --- MODIFIED: Listen on container for delegation ---
             dom.messagesContainerEl.addEventListener('click', (e) => {
-                handleToggleTruncate(e);
+                // handleToggleTruncate(e); // REMOVED
                 handleViewImage(e);
             });
 
