@@ -58,12 +58,12 @@
         .view-transition { transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out; }
         .view-hidden { opacity: 0; transform: scale(0.98); pointer-events: none; }
         
-        /* --- THEME-AWARE BUTTONS (from notes.html) --- */
+        /* --- THEME-AWARE BUTTONS (LESS ROUND) --- */
         
         .btn-themed-secondary {
             background: var(--menu-bg, #0000000);
             border: 1px solid var(--menu-border, #333);
-            border-radius: 0.75rem;
+            border-radius: 0.5rem; /* 8px */
             color: var(--menu-text, #d1d5db);
             padding: 0.5rem 1rem;
             font-weight: 500;
@@ -85,7 +85,7 @@
             background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
             border: 1px solid var(--tab-active-border, #4f46e5);
             color: var(--tab-active-text, #4f46e5);
-            border-radius: 0.75rem;
+            border-radius: 0.5rem; /* 8px */
             padding: 0.5rem 1rem;
             font-weight: 500;
             cursor: pointer;
@@ -114,7 +114,7 @@
             justify-content: center;
             width: 2.25rem; /* 36px */
             height: 2.25rem; /* 36px */
-            border-radius: 0.5rem;
+            border-radius: 0.5rem; /* 8px */
             background-color: transparent;
             border: 1px solid transparent;
             color: var(--tab-text, #9ca3af);
@@ -132,12 +132,12 @@
             border-color: #dc2626;
         }
 
-        /* --- THEMED INPUT (from dictionary.html) --- */
+        /* --- THEMED INPUT (LESS ROUND) --- */
         .themed-input {
             background-color: #0d0d0d;
             border: 1px solid #1a1a1a;
             color: #c0c0c0;
-            border-radius: 0.75rem;
+            border-radius: 0.5rem; /* 8px */
             padding: 0.75rem 1rem;
             transition: all 0.2s;
             width: 100%;
@@ -152,9 +152,7 @@
         /* --- MESSENGER LAYOUT STYLES --- */
         #app-container {
             background-color: #070707;
-            /* Removed border, max-width, margin, rounded, etc. for fullscreen */
         }
-
         #contacts-view {
             background-color: #070707; 
             border-color: #1a1a1a;
@@ -162,18 +160,18 @@
         .themed-header, .themed-footer { border-color: #1a1a1a; }
         .themed-footer { background-color: #070707; }
         #chat-view { background-color: #0d0d0d; }
-        #my-id-box { background-color: #0d0d0d; border: 1px solid #1a1a1a; }
+        #my-id-box { background-color: #0d0d0d; border: 1px solid #1a1a1a; border-radius: 0.5rem; } /* 8px */
 
-        /* --- FRIEND/REQUEST LIST (Styled like settings.html sidebar) --- */
+        /* --- FRIEND/REQUEST LIST --- */
         .friend-list-item {
             padding: 0.75rem 1rem;
             transition: background-color 0.2s ease, color 0.2s ease;
-            border-radius: 0.5rem;
+            border-radius: 0.5rem; /* 8px */
             margin: 0.25rem 1rem;
             width: calc(100% - 2rem);
             display: flex;
             align-items: center;
-            gap: 1rem; /* 16px */
+            gap: 1rem; 
             cursor: pointer;
         }
         .friend-list-item:hover {
@@ -193,9 +191,9 @@
             background-color: #1a1a1a;
             color: #c0c0c0;
             font-weight: 400;
-            width: 40px; /* 2.5rem */
-            height: 40px; /* 2.5rem */
-            border-radius: 99px; /* rounded-full */
+            width: 40px; 
+            height: 40px;
+            border-radius: 99px; /* Still round, as is standard */
             flex-shrink: 0;
             display: flex;
             align-items: center;
@@ -214,11 +212,11 @@
             padding: 0.75rem;
             background-color: #0d0d0d;
             border: 1px solid #1a1a1a;
-            border-radius: 0.75rem;
+            border-radius: 0.5rem; /* 8px */
         }
         .request-item .btn-icon-theme {
-            width: 2rem; /* 32px */
-            height: 2rem; /* 32px */
+            width: 2rem;
+            height: 2rem;
         }
         .request-item .btn-icon-theme.btn-accept:hover {
             background-color: rgba(34, 197, 94, 0.1);
@@ -226,22 +224,22 @@
             color: #22c55e;
         }
 
-        /* --- MESSAGE BUBBLES --- */
+        /* --- MESSAGE BUBBLES (LESS ROUND) --- */
         .message-bubble {
             padding: 0.5rem 1rem;
-            border-radius: 1rem;
+            border-radius: 0.75rem; /* 12px */
             max-width: 80%;
             word-break: break-word;
         }
         .sent-bubble {
             background-color: #4f46e5;
             color: white;
-            border-bottom-right-radius: 0.25rem;
+            border-bottom-right-radius: 0.25rem; /* 4px for "tail" */
         }
         .received-bubble {
             background-color: #1f2937;
             color: #c0c0c0;
-            border-bottom-left-radius: 0.25rem;
+            border-bottom-left-radius: 0.25rem; /* 4px for "tail" */
         }
         .message-text {
             font-weight: 300;
@@ -290,14 +288,11 @@
             border: 1px solid #1a1a1a;
         }
         
-        /* --- NEW: Fullscreen Input Bar --- */
-        .themed-input.rounded-full {
-            border-radius: 99px;
-        }
-        .btn-themed-primary.rounded-full {
-            border-radius: 99px;
-            padding-left: 0; /* Reset padding */
-            padding-right: 0; /* Reset padding */
+        /* --- Input Bar (LESS ROUND) --- */
+        .btn-themed-primary.btn-send {
+            border-radius: 0.5rem; /* 8px */
+            padding-left: 0;
+            padding-right: 0;
             line-height: 1;
         }
     </style>
@@ -320,7 +315,7 @@
                         <button id="dark-mode-toggle" class="btn-icon-theme"></button>
                     </div>
                 </div>
-                <div id="my-id-box" class="mt-4 p-3 rounded-xl flex items-center justify-between">
+                <div id="my-id-box" class="mt-4 p-3 flex items-center justify-between">
                     <div class="flex items-center gap-2 overflow-hidden">
                         <span class="text-sm font-medium text-gray-400 flex-shrink-0">My ID:</span>
                         <span id="my-id" class="font-mono text-sm truncate text-gray-300 font-semibold">loading...</span>
@@ -356,16 +351,16 @@
                 <div>
                     <h3 class="text-lg font-semibold mb-2">Incoming</h3>
                     <ul id="incoming-requests-list" class="space-y-2">
-                        </ul>
+                    </ul>
                 </div>
                 
                 <div>
                     <h3 class="text-lg font-semibold mb-2">Outgoing</h3>
                     <ul id="outgoing-requests-list" class="space-y-2">
-                        </ul>
+                    </ul>
                 </div>
             </div>
-            </div>
+        </div>
 
         <div id="chat-view" class="w-full h-full flex flex-col view-transition sm:w-[calc(100%-20rem)] sm:relative absolute top-0 left-0 view-hidden">
             <header class="p-4 border-b themed-header flex items-center justify-between flex-shrink-0">
@@ -384,8 +379,8 @@
             
             <footer class="p-4 border-t themed-footer flex-shrink-0">
                 <form id="message-form" class="flex gap-3 items-center">
-                    <input type="text" id="message-input" placeholder="Type a message (max 10,000 chars)..." maxlength="10000" class="themed-input rounded-full py-2 px-4">
-                    <button type="submit" id="send-btn" class="btn-themed-primary w-10 h-10 flex-shrink-0 rounded-full p-0">
+                    <input type="text" id="message-input" placeholder="Type a message (max 10,000 chars)..." maxlength="10000" class="themed-input py-2 px-4">
+                    <button type="submit" id="send-btn" class="btn-themed-primary btn-send w-10 h-10 flex-shrink-0">
                         <i class="fa-solid fa-arrow-up w-5 h-5"></i>
                     </button>
                 </form>
@@ -394,11 +389,12 @@
     </div>
 
     <script type="module">
+        // --- Firebase Imports ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, serverTimestamp, arrayUnion, arrayRemove, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- FIREBASE CONFIGURATION (REPLACE WITH YOURS) ---
+        // --- FIREBASE CONFIGURATION ---
         const firebaseConfig = {
             apiKey: "AIzaSyASqfiYUPf7xY4wgZ0hLl8_Z0ZkBiwFUO8",
             authDomain: "theamericanmessenger-0.firebaseapp.com",
@@ -418,7 +414,7 @@
         // --- GLOBAL STATE & DOM ELEMENTS ---
         const MESSAGE_CHARACTER_LIMIT = 10000;
         const MESSAGE_TRUNCATE_LENGTH = 300;
-        const MESSAGE_STORAGE_LIMIT = 25;
+        const MESSAGE_STORAGE_LIMIT = 25; // Keep 25 messages
         const SEEN_DELAY_MS = 3000;
 
         let currentUser = null;
@@ -495,12 +491,11 @@
                 await setupUserDocument();
                 listenForUserDocChanges();
                 listenForFriends();
-                listenForFriendRequests(); // NEW
+                listenForFriendRequests();
                 startStatusUpdates();
                 dom.appContainer.classList.remove('hidden');
                 dom.chatPlaceholder.classList.remove('hidden');
             } else {
-                // ... (cleanup logic) ...
                 stopStatusUpdates();
                 dom.appContainer.classList.add('hidden');
             }
@@ -536,8 +531,8 @@
             unsubscribeUserDoc = onSnapshot(userDocRef, (doc) => {
                 const data = doc.data();
                 blockedUsers = data?.blockedUsers || [];
-                myPublicName = data.name || myPublicName; // Update name if changed
-                listenForFriends(); // Re-render friends to show block status
+                myPublicName = data.name || myPublicName;
+                listenForFriends();
             });
         }
         
@@ -549,7 +544,7 @@
             localStorage.theme = 'dark';
         }
 
-        function toggleTheme() { initTheme(); } // Lock to dark
+        function toggleTheme() { initTheme(); }
 
         function scrollToBottom() {
             setTimeout(() => {
@@ -571,7 +566,7 @@
             }
         }
 
-        // --- STATUS BAR (Unchanged) ---
+        // --- STATUS BAR ---
         function startStatusUpdates() {
             stopStatusUpdates();
             const update = async () => {
@@ -612,7 +607,7 @@
         function renderFriend(uid, data) {
             const isBlocked = blockedUsers.includes(uid);
             const li = document.createElement('li');
-            li.className = 'friend-list-item'; // Using new base class
+            li.className = 'friend-list-item';
             li.dataset.uid = uid;
             li.dataset.name = data.name || 'Unnamed';
 
@@ -651,7 +646,6 @@
             
             const reqsRef = collection(db, 'friendRequests');
 
-            // Incoming
             const incomingQuery = query(reqsRef, where('receiverId', '==', currentUser.uid));
             unsubscribeIncomingRequests = onSnapshot(incomingQuery, (snapshot) => {
                 dom.incomingRequestsListEl.innerHTML = '';
@@ -660,13 +654,11 @@
                 }
                 snapshot.docs.forEach(doc => renderIncomingRequest(doc.id, doc.data()));
                 
-                // Update badge
                 const count = snapshot.size;
                 dom.requestsBadge.textContent = count;
                 dom.requestsBadge.classList.toggle('hidden', count === 0);
             });
 
-            // Outgoing
             const outgoingQuery = query(reqsRef, where('requesterId', '==', currentUser.uid));
             unsubscribeOutgoingRequests = onSnapshot(outgoingQuery, (snapshot) => {
                 dom.outgoingRequestsListEl.innerHTML = '';
@@ -745,7 +737,6 @@
             dom.contactsView.classList.remove('view-hidden');
         }
 
-        // --- Message Visibility (Unchanged) ---
         function setupSeenObserver(messages) {
             if (currentObserver) currentObserver.disconnect();
             const chatPartnerId = currentChatPartner.uid;
@@ -813,7 +804,6 @@
             });
         }
         
-        // --- Render Message (Unchanged from previous step) ---
         function renderMessage(data) {
             if (!data || !data.text) return;
             const messageWrapper = document.createElement('div');
@@ -882,6 +872,7 @@
             }
         }
 
+        // --- THIS IS THE CHAT HISTORY SENDING LOGIC ---
         async function writeMessageToChat(messageData) {
             const chatId = [currentUser.uid, currentChatPartner.uid].sort().join('_');
             const chatDocRef = doc(db, 'chats', chatId);
@@ -891,6 +882,7 @@
             if (currentMessages.length > MESSAGE_STORAGE_LIMIT) {
                 currentMessages = currentMessages.slice(-MESSAGE_STORAGE_LIMIT);
             }
+            // This sets the *entire document* to be { messages: [...] }
             await setDoc(chatDocRef, { messages: currentMessages });
         }
         
@@ -924,7 +916,10 @@
             const messageData = { text: filteredText, senderId: currentUser.uid, timestamp: serverTimestamp(), seen: false };
             
             try {
+                // Use the array-based chat history logic
                 await writeMessageToChat(messageData);
+                
+                // Update contact lists for both users
                 const recipientContactRef = doc(db, `users/${currentChatPartner.uid}/contacts`, currentUser.uid);
                 await setDoc(recipientContactRef, { lastMessage: filteredText, unread: true, timestamp: serverTimestamp() }, { merge: true });
                 const senderContactRef = doc(db, `users/${currentUser.uid}/contacts`, currentChatPartner.uid);
@@ -954,11 +949,9 @@
             const receiverName = contactUser.name;
             const reqId = [currentUser.uid, receiverId].sort().join('_');
 
-            // Check if already friends
             const friendDoc = await getDoc(doc(db, `users/${currentUser.uid}/contacts`, receiverId));
             if (friendDoc.exists()) return setAddFriendMessage('You are already friends with this user.');
 
-            // Check if request already exists
             const requestDoc = await getDoc(doc(db, 'friendRequests', reqId));
             if (requestDoc.exists()) return setAddFriendMessage('A request already exists with this user.');
             
@@ -968,7 +961,7 @@
                     requesterName: myPublicName,
                     receiverId: receiverId,
                     receiverName: receiverName,
-                    receiverPublicId: id, // For display on outgoing
+                    receiverPublicId: id,
                     status: 'pending',
                     timestamp: serverTimestamp()
                 });
@@ -1001,15 +994,12 @@
                     
                     const batch = writeBatch(db);
                     
-                    // 1. Add to my contacts
                     const myContactRef = doc(db, `users/${currentUser.uid}/contacts`, data.requesterId);
                     batch.set(myContactRef, { name: data.requesterName, unread: false, timestamp: serverTimestamp() });
                     
-                    // 2. Add to their contacts
                     const theirContactRef = doc(db, `users/${data.requesterId}/contacts`, currentUser.uid);
                     batch.set(theirContactRef, { name: myPublicName, unread: false, timestamp: serverTimestamp() });
                     
-                    // 3. Delete the request
                     batch.delete(reqDocRef);
                     
                     await batch.commit();
@@ -1059,7 +1049,6 @@
                 } else if (action === 'delete') {
                     if (confirm(`Are you sure you want to delete ${name} from your contacts? This cannot be undone.`)) {
                         await deleteDoc(doc(db, `users/${currentUser.uid}/contacts`, uid));
-                        // BONUS: Also delete from other user's contacts
                         const theirContactRef = doc(db, `users/${uid}/contacts`, currentUser.uid);
                         await deleteDoc(theirContactRef);
                     }
