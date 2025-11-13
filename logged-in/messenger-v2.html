@@ -240,39 +240,39 @@
             color: #22c55e;
         }
 
-        /* --- REDESIGNED MESSAGE BUBBLES (Button Styled) --- */
+        /* --- REDESIGNED MESSAGE BUBBLES (Matching original messenger.html rules) --- */
         .message-bubble {
-            display: inline-block; /* <-- RE-ADDED: Essential for shrink-wrapping to content width */
-            padding: 0.75rem 1.2rem; /* Slightly larger padding for button look */
-            border-radius: 0.75rem;
-            max-width: 50%; /* IMPLEMENTED: Max width is half the container */
-            /* word-break: break-word; <-- REMOVED FROM HERE */
+            display: inline-block; 
+            padding: 10px 15px; /* Adjusted to match original padding */
+            border-radius: 20px; /* Adjusted to match original general radius */
+            max-width: 70%; /* Adjusted to match original max width */
             border-width: 1px;
             transition: all 0.2s; 
         }
         .sent-bubble {
-            /* Styled like btn-themed-primary */
+            /* Styled using theme variables */
             background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
             border-color: var(--tab-active-border, #4f46e5);
             color: var(--tab-active-text, #4f46e5);
-            border-bottom-right-radius: 0.25rem;
+            border-bottom-right-radius: 5px; /* Adjusted to match original specific corner radius */
         }
         .received-bubble {
-            /* Styled like btn-themed-secondary */
+            /* Styled using theme variables */
             background-color: var(--menu-bg, #000000);
             border-color: var(--menu-border, #333);
             color: var(--menu-text, #d1d5db);
-            border-bottom-left-radius: 0.25rem;
+            border-bottom-left-radius: 5px; /* Adjusted to match original specific corner radius */
         }
         .message-text {
             font-weight: 300;
             font-size: 0.95rem;
             line-height: 1.6;
             white-space: pre-wrap; /* Allows wrapping but respects newlines */
-            /* min-width: 1rem; <-- REMOVED */
-            /* word-break: break-word; <-- REPLACED */
-            overflow-wrap: break-word; /* <-- WITH THIS */
-            text-align: left; /* <-- ADDED THIS */
+            overflow-wrap: break-word; 
+            text-align: left; 
+            /* Ensuring no max height is applied */
+            max-height: none; 
+            overflow-y: visible;
         }
         /* Ensure text and links inside the new bubbles inherit color */
         .sent-bubble .message-text, .sent-bubble .message-text a {
@@ -300,9 +300,6 @@
             font-weight: 400;
         }
 
-        /* --- REMOVED: Expandable Message Content --- */
-        /* All .message-content, .truncated, and .fade-arrow styles removed */
-        
         /* --- Input Bar (LESS ROUND) --- */
         .btn-themed-primary.btn-send {
             border-radius: 0.5rem; /* 8px */
