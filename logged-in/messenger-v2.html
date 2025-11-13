@@ -258,12 +258,17 @@
             font-weight: 400;
         }
 
-        /* Large Message Truncation */
-        .message-content.truncated {
-            max-height: 120px;
+        /* --- NEW: Expandable Message Content --- */
+        .message-content {
+            max-height: 2000px; /* Default max-height for animation */
+            transition: max-height 0.3s ease-in-out;
             overflow: hidden;
             position: relative;
         }
+        .message-content.truncated {
+            max-height: 120px;
+        }
+        /* Fade-out for truncated text */
         .message-content.truncated::after {
             content: "";
             position: absolute;
@@ -275,7 +280,8 @@
             pointer-events: none; 
             z-index: 10;
         }
-        .message-content.truncated .fade-arrow {
+        /* "Show More" arrow */
+        .fade-arrow {
             position: absolute;
             bottom: 4px;
             left: 50%;
@@ -286,6 +292,14 @@
             padding: 2px 4px;
             border-radius: 99px;
             border: 1px solid #1a1a1a;
+            cursor: pointer;
+        }
+        .fade-arrow i {
+            transition: transform 0.3s ease-in-out;
+        }
+        /* Class to be toggled by JS */
+        .fade-arrow.expanded i {
+            transform: rotate(180deg);
         }
         
         /* --- Input Bar (LESS ROUND) --- */
@@ -294,6 +308,56 @@
             padding-left: 0;
             padding-right: 0;
             line-height: 1;
+        }
+        
+        /* --- NEW: Image Attachment Styles --- */
+        #image-preview-container {
+            border-color: #1a1a1a;
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            border-radius: 0.5rem;
+        }
+        .image-preview-item {
+            position: relative;
+            width: 4rem; /* 64px */
+            height: 4rem; /* 64px */
+            border-radius: 0.375rem; /* 6px */
+            overflow: hidden;
+            flex-shrink: 0;
+            border: 1px solid #1a1a1a;
+        }
+        .remove-image-btn {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 16px;
+            height: 16px;
+            background-color: #dc2626;
+            color: white;
+            border: none;
+            border-radius: 99px;
+            font-size: 12px;
+            line-height: 16px;
+            text-align: center;
+            cursor: pointer;
+            z-index: 10;
+        }
+        .message-bubble .image-attachment-grid {
+            margin-top: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .message-bubble .image-attachment {
+            width: 128px; /* 8rem */
+            height: 128px; /* 8rem */
+            border-radius: 0.5rem; /* 8px */
+            object-fit: cover;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .message-bubble .image-attachment:hover {
+            opacity: 0.8;
         }
     </style>
 </head>
@@ -312,8 +376,7 @@
                             <span>|</span>
                             <span id="local-time">--:--</span>
                         </div>
-                        <button id="dark-mode-toggle" class="btn-icon-theme"></button>
-                    </div>
+                        </div>
                 </div>
                 <div id="my-id-box" class="mt-4 p-3 flex items-center justify-between">
                     <div class="flex items-center gap-2 overflow-hidden">
@@ -377,8 +440,13 @@
                 </div>
             </div>
             
-            <footer class="p-4 border-t themed-footer flex-shrink-0">
+            <footer class="p-4 border-t themed-footer flex-shrink-0 flex flex-col">
+                <div id="image-preview-container" class="hidden mb-2 flex gap-2 overflow-x-auto border border-dashed">
+                    </div>
                 <form id="message-form" class="flex gap-3 items-center">
+                    <button type="button" id="attach-image-btn" class="btn-icon-theme w-10 h-10 flex-shrink-0">
+                        <i class="fa-solid fa-paperclip w-5 h-5"></i>
+                    </button>
                     <input type="text" id="message-input" placeholder="Type a message (max 10,000 chars)..." maxlength="10000" class="themed-input py-2 px-4">
                     <button type="submit" id="send-btn" class="btn-themed-primary btn-send w-10 h-10 flex-shrink-0">
                         <i class="fa-solid fa-arrow-up w-5 h-5"></i>
@@ -387,6 +455,8 @@
             </footer>
         </div>
     </div>
+    
+    <input type="file" id="image-input" multiple accept="image/*" class="hidden">
 
     <script type="module">
         // --- Firebase Imports ---
@@ -422,6 +492,9 @@
         let myPublicName = null;
         let currentChatPartner = null;
         let blockedUsers = [];
+        
+        // NEW: For image attachments
+        let imageAttachmentsBase64 = [];
         
         let unsubscribeUserDoc = () => {};
         let unsubscribeFriends = () => {};
@@ -459,15 +532,19 @@
             messageForm: document.getElementById('message-form'),
             messageInput: document.getElementById('message-input'),
             sendBtn: document.getElementById('send-btn'),
-            darkModeToggle: document.getElementById('dark-mode-toggle'),
+            // darkModeToggle: (REMOVED)
             batteryStatusEl: document.getElementById('battery-status'),
             localTimeEl: document.getElementById('local-time'),
             chatPlaceholder: document.getElementById('chat-placeholder'),
+            
+            // NEW: Image elements
+            attachImageBtn: document.getElementById('attach-image-btn'),
+            imageInput: document.getElementById('image-input'),
+            imagePreviewContainer: document.getElementById('image-preview-container'),
         };
 
         const icons = {
-            sun: `<i class="fa-solid fa-sun-bright w-5 h-5"></i>`,
-            moon: `<i class="fa-solid fa-moon w-5 h-5"></i>`,
+            // sun/moon removed
             send: `<i class="fa-solid fa-arrow-up w-5 h-5"></i>`,
             check: `<i class="fa-solid fa-check w-5 h-5"></i>`,
             arrowDown: `<i class="fa-solid fa-chevron-down w-3 h-3"></i>`,
@@ -479,7 +556,7 @@
         // --- MAIN APP LOGIC ---
 
         function main() {
-            initTheme();
+            initTheme(); // Still sets dark class
             setupEventListeners();
             signInAnonymously(auth).catch(err => console.error("Sign-in failed:", err));
             onAuthStateChanged(auth, handleAuthStateChange);
@@ -506,7 +583,8 @@
             const userDoc = await getDoc(userDocRef);
             if (!userDoc.exists()) {
                 const newId = await generateUniqueId();
-                const newName = `User (${newId.substring(0, 4)})`;
+                // --- MODIFIED: Fallback name ---
+                const newName = newId.substring(0, 4);
                 await setDoc(userDocRef, { 
                     publicId: newId, 
                     name: newName,
@@ -519,7 +597,8 @@
             } else {
                 const data = userDoc.data();
                 myPublicId = data.publicId;
-                myPublicName = data.name || `User (${data.publicId.substring(0, 4)})`;
+                // --- MODIFIED: Fallback name ---
+                myPublicName = data.name || data.publicId.substring(0, 4);
                 dom.myIdEl.textContent = data.publicId;
                 blockedUsers = data.blockedUsers || [];
             }
@@ -531,7 +610,8 @@
             unsubscribeUserDoc = onSnapshot(userDocRef, (doc) => {
                 const data = doc.data();
                 blockedUsers = data?.blockedUsers || [];
-                myPublicName = data.name || myPublicName;
+                // --- MODIFIED: Fallback name ---
+                myPublicName = data.name || myPublicId.substring(0, 4);
                 listenForFriends();
             });
         }
@@ -539,12 +619,12 @@
         // --- UI & THEME ---
 
         function initTheme() {
+            // Hard-code dark theme
             document.documentElement.classList.add('dark');
-            dom.darkModeToggle.innerHTML = icons.sun;
             localStorage.theme = 'dark';
         }
-
-        function toggleTheme() { initTheme(); }
+        
+        // toggleTheme removed
 
         function scrollToBottom() {
             setTimeout(() => {
@@ -583,7 +663,7 @@
         }
         function stopStatusUpdates() { if (statusInterval) clearInterval(statusInterval); }
         
-        // --- FRIEND & REQUEST MANAGEMENT ---
+        // --- FRIEND & REQUEST MANAGEMENT (Unchanged) ---
 
         function listenForFriends() {
             unsubscribeFriends();
@@ -778,7 +858,7 @@
             }, { threshold: 0.8 });
 
             unreadMessages.forEach(msg => {
-                const timestampISO = msg.timestamp?.toDate()?.toISOString();
+                const timestampISO = msg.timestamp?.toDate ? msg.timestamp.toDate().toISOString() : new Date(msg.timestamp).toISOString();
                 const element = document.querySelector(`.message-wrapper[data-timestamp="${timestampISO}"]`);
                 if (element) currentObserver.observe(element);
             });
@@ -797,11 +877,9 @@
                 const data = doc.data();
                 const messages = data.messages || [];
                 
-                // Sort messages by timestamp
-                // This handles potential client-side time differences
                 const sortedMessages = messages.sort((a, b) => {
-                    const timeA = a.timestamp?.seconds || 0;
-                    const timeB = b.timestamp?.seconds || 0;
+                    const timeA = (a.timestamp?.seconds || a.timestamp / 1000) || 0;
+                    const timeB = (b.timestamp?.seconds || b.timestamp / 1000) || 0;
                     return timeA - timeB;
                 });
 
@@ -815,34 +893,55 @@
         }
         
         function renderMessage(data) {
-            if (!data || !data.text) return;
+            if (!data || (!data.text && (!data.images || data.images.length === 0))) return;
+            
             const messageWrapper = document.createElement('div');
             const isSent = data.senderId === currentUser.uid;
             
-            // Handle both Firestore Timestamp (from server) and JS Date (from our new Date())
             let time = '';
-            if (data.timestamp?.toDate) { // Firestore Timestamp
+            if (data.timestamp?.toDate) {
                 time = data.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            } else if (data.timestamp) { // JS Date object or ISO string
+            } else if (data.timestamp) {
                 time = new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             }
 
             const timestampISO = data.timestamp?.toDate ? data.timestamp.toDate().toISOString() : new Date(data.timestamp).toISOString();
             
-            const isLargeMessage = data.text.length > MESSAGE_TRUNCATE_LENGTH;
+            const isLargeMessage = data.text && data.text.length > MESSAGE_TRUNCATE_LENGTH;
             const displayText = isLargeMessage ? data.text.substring(0, MESSAGE_TRUNCATE_LENGTH) + '...' : data.text;
             const bubbleClasses = isSent ? 'sent-bubble' : 'received-bubble';
             
             messageWrapper.className = `message-wrapper flex ${isSent ? 'justify-end' : 'justify-start'}`;
             messageWrapper.dataset.timestamp = timestampISO;
 
+            // --- NEW: Build HTML for text and images ---
+            const textHTML = data.text ? `
+                <p class="message-text message-content ${isLargeMessage ? 'truncated' : ''}">${displayText}</p>
+            ` : '';
+            
+            const fadeArrowHTML = isLargeMessage ? `
+                <div class="fade-arrow" data-action="toggle-truncate">
+                    <i class="fa-solid fa-chevron-down w-3 h-3"></i>
+                </div>
+            ` : '';
+
+            let imagesHTML = '';
+            if (data.images && data.images.length > 0) {
+                imagesHTML = `
+                    <div class="image-attachment-grid">
+                        ${data.images.map(imgBase64 => `
+                            <img src="${imgBase64}" class="image-attachment" data-action="view-image">
+                        `).join('')}
+                    </div>
+                `;
+            }
+
             messageWrapper.innerHTML = `
                 <div class="flex flex-col ${isSent ? 'items-end' : 'items-start'}">
-                    <div class="message-bubble ${bubbleClasses} cursor-pointer relative ${isLargeMessage ? 'overflow-hidden' : ''}"
-                        data-action="expand-message"
-                        data-full-text="${isLargeMessage ? encodeURIComponent(data.text) : ''}">
-                        <p class="message-text message-content ${isLargeMessage ? 'truncated' : ''}">${displayText}</p>
-                        ${isLargeMessage ? `<div class="fade-arrow pointer-events-none">${icons.arrowDown}</div>` : ''}
+                    <div class="message-bubble ${bubbleClasses} relative">
+                        ${textHTML}
+                        ${imagesHTML}
+                        ${fadeArrowHTML}
                     </div>
                     <p class="message-timestamp px-2 ${isSent ? 'text-right' : 'text-left'}">
                         <span>${time}</span>
@@ -852,13 +951,80 @@
             `;
             dom.messagesContainerEl.appendChild(messageWrapper);
         }
-        function handleExpandMessage(e) {
-            const messageEl = e.target.closest('[data-action="expand-message"]');
-            if (!messageEl) return;
-            const isTruncated = messageEl.querySelector('.message-content').classList.contains('truncated');
-            if (!isTruncated) return;
-            const fullText = decodeURIComponent(messageEl.dataset.fullText);
-            alert(`Full Message:\n\n${fullText}`);
+
+        // --- MODIFIED: Renamed and logic changed for toggle ---
+        function handleToggleTruncate(e) {
+            const button = e.target.closest('[data-action="toggle-truncate"]');
+            if (!button) return;
+
+            const messageBubble = button.closest('.message-bubble');
+            const content = messageBubble.querySelector('.message-content');
+            
+            if (content) {
+                content.classList.toggle('truncated');
+                button.classList.toggle('expanded');
+            }
+        }
+        
+        // --- NEW: Handle viewing an image ---
+        function handleViewImage(e) {
+            const img = e.target.closest('[data-action="view-image"]');
+            if (!img) return;
+            window.open(img.src, '_blank');
+        }
+
+        // --- NEW: Handle image upload ---
+        function handleImageUpload(e) {
+            imageAttachmentsBase64 = [];
+            dom.imagePreviewContainer.innerHTML = '';
+            
+            const files = e.target.files;
+            if (!files || files.length === 0) return;
+            
+            if (files.length > 5) {
+                alert("You can only attach up to 5 images.");
+                dom.imageInput.value = ''; // Clear selection
+                return;
+            }
+
+            dom.imagePreviewContainer.classList.remove('hidden');
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const reader = new FileReader();
+                
+                reader.onload = (event) => {
+                    const base64String = event.target.result;
+                    imageAttachmentsBase64.push(base64String);
+                    
+                    const previewEl = document.createElement('div');
+                    previewEl.className = "image-preview-item";
+                    previewEl.innerHTML = `
+                        <img src="${base64String}" class="w-full h-full object-cover">
+                        <button data-b64="${base64String}" class="remove-image-btn" title="Remove image">&times;</button>
+                    `;
+                    dom.imagePreviewContainer.appendChild(previewEl);
+                };
+                
+                reader.readAsDataURL(file);
+            }
+            // Clear input value to allow re-uploading the same file
+            dom.imageInput.value = '';
+        }
+
+        // --- NEW: Handle removing an image from preview ---
+        function handleRemoveImage(e) {
+            const button = e.target.closest('.remove-image-btn');
+            if (!button) return;
+            
+            const base64ToRemove = button.dataset.b64;
+            imageAttachmentsBase64 = imageAttachmentsBase64.filter(b64 => b64 !== base64ToRemove);
+            
+            button.parentElement.remove();
+            
+            if (imageAttachmentsBase64.length === 0) {
+                dom.imagePreviewContainer.classList.add('hidden');
+            }
         }
         
         // --- UTILITIES ---
@@ -880,8 +1046,8 @@
         }
 
         function formatTimestamp(timestamp) {
-            if (!timestamp || !timestamp.toDate) return '';
-            const date = timestamp.toDate();
+            if (!timestamp) return '';
+            const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
             const today = new Date();
             const isToday = date.toDateString() === today.toDateString();
             if (isToday) {
@@ -915,7 +1081,10 @@
         async function handleSendMessage(e) {
             e.preventDefault();
             const text = dom.messageInput.value.trim();
-            if (text === '' || !currentChatPartner) return;
+            
+            // --- MODIFIED: Check for text OR images ---
+            if (text === '' && imageAttachmentsBase64.length === 0) return;
+            
             if (text.length > MESSAGE_CHARACTER_LIMIT) return alert(`Message exceeds ${MESSAGE_CHARACTER_LIMIT} chars.`);
 
             dom.sendBtn.disabled = true;
@@ -931,32 +1100,40 @@
 
             const filteredText = await filterProfanity(text);
             
-            // --- *** FIX 1: Using client-side new Date() *** ---
-            // This avoids the serverTimestamp() in array error.
             const messageData = { 
                 text: filteredText, 
                 senderId: currentUser.uid, 
-                timestamp: new Date(), // <-- CHANGED FROM serverTimestamp()
-                seen: false 
+                timestamp: new Date(),
+                seen: false,
+                // --- NEW: Add images array ---
+                images: imageAttachmentsBase64
             };
             
             try {
                 await writeMessageToChat(messageData);
                 
+                const lastMessageText = filteredText ? filteredText : `[${imageAttachmentsBase64.length} image(s)]`;
+                
                 const recipientContactRef = doc(db, `users/${currentChatPartner.uid}/contacts`, currentUser.uid);
                 await setDoc(recipientContactRef, { 
-                    lastMessage: filteredText, 
+                    lastMessage: lastMessageText, 
                     unread: true, 
-                    timestamp: serverTimestamp() // This is fine, it's not in an array
+                    timestamp: serverTimestamp()
                 }, { merge: true });
                 
                 const senderContactRef = doc(db, `users/${currentUser.uid}/contacts`, currentChatPartner.uid);
                 await updateDoc(senderContactRef, { 
-                    lastMessage: `You: ${filteredText}`, 
-                    timestamp: serverTimestamp() // This is also fine
+                    lastMessage: `You: ${lastMessageText}`, 
+                    timestamp: serverTimestamp()
                 });
                 
+                // --- NEW: Clear text and images ---
                 dom.messageInput.value = '';
+                imageAttachmentsBase64 = [];
+                dom.imagePreviewContainer.innerHTML = '';
+                dom.imagePreviewContainer.classList.add('hidden');
+                dom.imageInput.value = '';
+
             } catch (error) {
                 console.error("Send message error:", error);
             } finally {
@@ -978,9 +1155,8 @@
             
             const contactUser = snapshot.docs[0].data();
             const receiverId = contactUser.uid;
-            
-            // --- *** FIX 2: Add fallback for receiverName *** ---
-            const receiverName = contactUser.name || `User (${contactUser.publicId.substring(0, 4)})`;
+            // --- MODIFIED: Fallback name ---
+            const receiverName = contactUser.name || contactUser.publicId.substring(0, 4);
             
             const reqId = [currentUser.uid, receiverId].sort().join('_');
 
@@ -995,10 +1171,10 @@
                     requesterId: currentUser.uid,
                     requesterName: myPublicName,
                     receiverId: receiverId,
-                    receiverName: receiverName, // <-- This is now safe
+                    receiverName: receiverName,
                     receiverPublicId: id,
                     status: 'pending',
-                    timestamp: serverTimestamp() // This is fine
+                    timestamp: serverTimestamp()
                 });
                 setAddFriendMessage('Friend request sent!', 'success');
                 dom.addContactIdInput.value = '';
@@ -1101,7 +1277,7 @@
         }
 
         function setupEventListeners() {
-            dom.darkModeToggle.addEventListener('click', toggleTheme);
+            // dom.darkModeToggle.addEventListener('click', toggleTheme); // REMOVED
             dom.addContactBtn.addEventListener('click', handleSendFriendRequest);
             dom.friendsListEl.addEventListener('click', handleFriendsListClick);
             dom.incomingRequestsListEl.addEventListener('click', handleIncomingRequestClick);
@@ -1110,16 +1286,26 @@
             dom.backToContactsBtn.addEventListener('click', closeChat);
             dom.messageForm.addEventListener('submit', handleSendMessage);
             dom.copyIdBtn.addEventListener('click', handleCopyId);
-            dom.messagesContainerEl.addEventListener('click', handleExpandMessage);
+            
+            // --- MODIFIED: Listen on container for delegation ---
+            dom.messagesContainerEl.addEventListener('click', (e) => {
+                handleToggleTruncate(e);
+                handleViewImage(e);
+            });
 
             dom.tabBtnFriends.addEventListener('click', () => switchTab('friends'));
             dom.tabBtnRequests.addEventListener('click', () => switchTab('requests'));
 
             dom.messageInput.addEventListener('input', () => {
-                if (dom.messageInput.value.trim() !== '') {
+                if (dom.messageInput.value.trim() !== '' || imageAttachmentsBase64.length > 0) {
                     dom.sendBtn.innerHTML = icons.send;
                 }
             });
+            
+            // --- NEW: Image Listeners ---
+            dom.attachImageBtn.addEventListener('click', () => dom.imageInput.click());
+            dom.imageInput.addEventListener('change', handleImageUpload);
+            dom.imagePreviewContainer.addEventListener('click', handleRemoveImage);
         }
 
         // --- START THE APP ---
