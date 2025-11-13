@@ -22,6 +22,8 @@
                         // Set Geist as the primary font
                         sans: ['Geist', 'sans-serif'],
                         display: ['Geist', 'sans-serif'], // Use Geist for display too
+                        // Add font-mono for the ID input
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', '"Liberation Mono"', '"Courier New"', 'monospace'],
                     }
                 }
             }
@@ -74,7 +76,8 @@
         .btn-toolbar-style {
             background: var(--menu-bg, #0000000);
             border: 1px solid var(--menu-border, #333);
-            border-radius: 0.75rem;
+            /* UPDATED: Less rounded corners */
+            border-radius: 0.5rem; 
             color: var(--menu-text, #d1d5db);
             padding: 0.5rem 1rem;
             font-weight: 500;
@@ -139,6 +142,7 @@
             justify-content: center;
             width: 2.25rem; /* 36px */
             height: 2.25rem; /* 36px */
+            /* UPDATED: Less rounded corners */
             border-radius: 0.5rem;
             background-color: transparent;
             border: 1px solid transparent;
@@ -199,22 +203,20 @@
                             <span>|</span>
                             <span id="local-time">--:--</span>
                         </div>
-                        <button id="dark-mode-toggle" class="btn-icon">
-                            </button>
-                    </div>
+                        </div>
                 </div>
                 <div class="mt-4 bg-[#111111] p-3 rounded-lg border border-[#1a1a1a] flex items-center justify-between">
                     <div class="flex items-center gap-2 overflow-hidden">
                         <span class="text-sm font-medium text-gray-400 flex-shrink-0">Your ID:</span>
                         <span id="my-id" class="font-mono text-sm truncate text-gray-300 font-semibold">loading...</span>
                     </div>
-                    <button id="copy-id-btn" class="btn-toolbar-style px-3 py-1 text-xs">Copy</button>
+                    <button id="copy-id-btn" class="btn-toolbar-style">Copy</button>
                 </div>
             </header>
 
             <div class="p-4 border-b border-[#1a1a1a] flex-shrink-0">
                 <div class="flex gap-2">
-                    <input type="text" id="add-contact-id" placeholder="Enter 8-character ID to send request..." class="settings-input">
+                    <input type="text" id="add-contact-id" placeholder="Enter 8-character ID to send request..." class="settings-input font-mono">
                     <button id="add-contact-btn" class="btn-toolbar-style btn-primary-override px-4">
                         <i class="fa-solid fa-user-plus"></i>
                         <span>Add</span>
@@ -313,14 +315,13 @@
             messageForm: document.getElementById('message-form'),
             messageInput: document.getElementById('message-input'),
             sendBtn: document.getElementById('send-btn'),
-            darkModeToggle: document.getElementById('dark-mode-toggle'),
+            // REMOVED: darkModeToggle
             batteryStatusEl: document.getElementById('battery-status'),
             localTimeEl: document.getElementById('local-time'),
         };
 
         const icons = {
-            sun: `<i class="fa-solid fa-sun-bright"></i>`,
-            moon: `<i class="fa-solid fa-moon"></i>`,
+            // REMOVED: sun, moon
             send: `<i class="fa-solid fa-paper-plane-top"></i>`,
             check: `<i class="fa-solid fa-check"></i>`,
             spinner: `<i class="fa-solid fa-spinner fa-spin"></i>`
@@ -329,7 +330,7 @@
         // --- MAIN APP LOGIC ---
 
         function main() {
-            initTheme();
+            // REMOVED: initTheme()
             setupEventListeners();
             signInAnonymously(auth).catch(err => console.error("Sign-in failed:", err));
             onAuthStateChanged(auth, handleAuthStateChange);
@@ -370,6 +371,10 @@
             } else {
                 const data = userDoc.data();
                 dom.myIdEl.textContent = data.publicId;
+                // Ensure username exists if doc exists but username doesn't (for older users)
+                if (!data.username) {
+                    await updateDoc(userDocRef, { username: `User ${data.publicId}` });
+                }
             }
         }
 
@@ -383,23 +388,7 @@
 
         // --- UI & THEME ---
 
-        function initTheme() {
-            // 4SP uses 'dark' class and localStorage.theme
-            if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                document.documentElement.classList.add('dark');
-                dom.darkModeToggle.innerHTML = icons.sun;
-            } else {
-                document.documentElement.classList.remove('dark');
-                dom.darkModeToggle.innerHTML = icons.moon;
-            }
-        }
-
-        function toggleTheme() {
-            document.documentElement.classList.toggle('dark');
-            const isDark = document.documentElement.classList.contains('dark');
-            localStorage.theme = isDark ? 'dark' : 'light';
-            dom.darkModeToggle.innerHTML = isDark ? icons.sun : icons.moon;
-        }
+        // REMOVED: initTheme() and toggleTheme() functions
 
         function scrollToBottom() {
             setTimeout(() => {
@@ -489,7 +478,6 @@
 
             // 2. Listen for Incoming Requests
             unsubPendingIn();
-            // *** FIXED PATH ***
             const pendingInRef = collection(db, `users/${currentUser.uid}/pendingIn`);
             unsubPendingIn = onSnapshot(query(pendingInRef), (snapshot) => {
                 state.incoming = snapshot.docs;
@@ -498,7 +486,6 @@
             
             // 3. Listen for Outgoing Requests
             unsubPendingOut();
-            // *** FIXED PATH ***
             const pendingOutRef = collection(db, `users/${currentUser.uid}/pendingOut`);
             unsubPendingOut = onSnapshot(query(pendingOutRef), (snapshot) => {
                 state.outgoing = snapshot.docs;
@@ -672,7 +659,10 @@
                 if (!doc.exists()) return; // No history
                 
                 const dbMessages = doc.data().messages || [];
-                mergeAndRenderMessages(currentChatPartner.uid, dbMessages);
+                // Check if component is still active
+                if (currentChatPartner) {
+                    mergeAndRenderMessages(currentChatPartner.uid, dbMessages);
+                }
             });
         }
 
@@ -939,7 +929,6 @@
             }
             
             // Check if request already sent
-            // *** FIXED PATH ***
             const outDoc = await getDoc(doc(db, `users/${currentUser.uid}/pendingOut`, contactUid));
             if (outDoc.exists()) {
                 dom.addContactMessage.textContent = 'Request already sent.';
@@ -947,12 +936,11 @@
             }
             
             // Check if we have an incoming request from them (auto-accept)
-            // *** FIXED PATH ***
             const inDocRef = doc(db, `users/${currentUser.uid}/pendingIn`, contactUid);
             const inDoc = await getDoc(inDocRef);
             if (inDoc.exists()) {
                 await handleAcceptRequest(contactUid, contactUser.username, contactUser.publicId);
-                dom.addContactMessage.textContent = `You are now friends with ${contactUser.username}!`;
+                dom.addContactMessage.textContent = `You are now friends with ${contactUser.username || contactUser.publicId}!`;
                 dom.addContactIdInput.value = '';
                 return;
             }
@@ -963,19 +951,19 @@
             const batch = writeBatch(db);
             
             // Set outgoing request for me
-            // *** FIXED PATH ***
             const myOutRef = doc(db, `users/${currentUser.uid}/pendingOut`, contactUid);
+            // *** FIXED: Added fallback for username ***
             batch.set(myOutRef, { 
-                username: contactUser.username, 
+                username: contactUser.username || `User ${contactUser.publicId}`, 
                 publicId: contactUser.publicId, 
                 timestamp: serverTimestamp() 
             });
             
             // Set incoming request for them
-            // *** FIXED PATH ***
             const theirInRef = doc(db, `users/${contactUid}/pendingIn`, currentUser.uid);
+            // *** FIXED: Added fallback for username ***
             batch.set(theirInRef, { 
-                username: myUserDoc.username, 
+                username: myUserDoc.username || `User ${myUserDoc.publicId}`, 
                 publicId: myUserDoc.publicId, 
                 timestamp: serverTimestamp() 
             });
@@ -991,12 +979,12 @@
             const batch = writeBatch(db);
             
             // 1. Delete requests
-            // *** FIXED PATH ***
             batch.delete(doc(db, `users/${currentUser.uid}/pendingIn`, uid));
             batch.delete(doc(db, `users/${uid}/pendingOut`, currentUser.uid));
             
             // 2. Create contact for me
             const myContactRef = doc(db, `users/${currentUser.uid}/contacts`, uid);
+            // *** FIXED: Added fallback for name ***
             batch.set(myContactRef, { 
                 name: name || `User ${publicId}`, 
                 unread: false, 
@@ -1005,8 +993,9 @@
             
             // 3. Create contact for them
             const theirContactRef = doc(db, `users/${uid}/contacts`, currentUser.uid);
+            // *** FIXED: Added fallback for name ***
             batch.set(theirContactRef, { 
-                name: myUserDoc.username, 
+                name: myUserDoc.username || `User ${myUserDoc.publicId}`, 
                 unread: false, 
                 timestamp: serverTimestamp() 
             });
@@ -1016,7 +1005,6 @@
         
         async function handleDeclineRequest(uid) {
             const batch = writeBatch(db);
-            // *** FIXED PATH ***
             batch.delete(doc(db, `users/${currentUser.uid}/pendingIn`, uid));
             batch.delete(doc(db, `users/${uid}/pendingOut`, currentUser.uid));
             await batch.commit();
@@ -1024,7 +1012,6 @@
         
         async function handleCancelRequest(uid) {
             const batch = writeBatch(db);
-            // *** FIXED PATH ***
             batch.delete(doc(db, `users/${currentUser.uid}/pendingOut`, uid));
             batch.delete(doc(db, `users/${uid}/pendingIn`, currentUser.uid));
             await batch.commit();
@@ -1129,7 +1116,7 @@
         }
 
         function setupEventListeners() {
-            dom.darkModeToggle.addEventListener('click', toggleTheme);
+            // REMOVED: dark mode listener
             dom.addContactBtn.addEventListener('click', handleAddContact);
             dom.contactsListEl.addEventListener('click', handleContactsListClick);
             dom.backToContactsBtn.addEventListener('click', closeChat);
