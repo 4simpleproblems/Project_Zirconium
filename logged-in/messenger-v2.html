@@ -270,7 +270,9 @@
             line-height: 1.6;
             white-space: pre-wrap; /* Allows wrapping but respects newlines */
             /* min-width: 1rem; <-- REMOVED */
-            word-break: break-word; /* <-- ADDED HERE */
+            /* word-break: break-word; <-- REPLACED */
+            overflow-wrap: break-word; /* <-- WITH THIS */
+            text-align: left; /* <-- ADDED THIS */
         }
         /* Ensure text and links inside the new bubbles inherit color */
         .sent-bubble .message-text, .sent-bubble .message-text a {
