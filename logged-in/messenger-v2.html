@@ -13,7 +13,9 @@
     
     <link rel="stylesheet" href="https://kit-pro.fontawesome.com/releases/v7.0.1/css/pro.min.css" media="all">
 
-    <link href="../injector.js">
+    <script>
+        // Remove default Tailwind config
+    </script>
 
     <style>
         /* --- FONT & BASE STYLING (MATCHING notes.html) --- */
@@ -243,7 +245,7 @@
             padding: 0.75rem 1.2rem; /* Slightly larger padding for button look */
             border-radius: 0.75rem;
             max-width: 50%; /* IMPLEMENTED: Max width is half the container */
-            word-break: break-word;
+            /* word-break: break-word; <-- REMOVED FROM HERE */
             border-width: 1px;
             transition: all 0.2s; 
         }
@@ -266,7 +268,8 @@
             font-size: 0.95rem;
             line-height: 1.6;
             white-space: pre-wrap; /* Allows wrapping but respects newlines */
-            min-width: 1rem; 
+            /* min-width: 1rem; <-- REMOVED */
+            word-break: break-word; /* <-- ADDED HERE */
         }
         /* Ensure text and links inside the new bubbles inherit color */
         .sent-bubble .message-text, .sent-bubble .message-text a {
