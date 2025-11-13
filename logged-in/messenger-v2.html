@@ -245,6 +245,9 @@
             font-weight: 300;
             font-size: 0.95rem;
             line-height: 1.6;
+            white-space: pre-wrap; /* Allows wrapping but respects newlines */
+            /* Ensure text fits content without unnecessary wrapping for short lines */
+            min-width: 1rem; 
         }
         .message-timestamp {
             font-weight: 300;
@@ -310,7 +313,7 @@
             line-height: 1;
         }
         
-        /* --- NEW: Image Attachment Styles --- */
+        /* --- NEW: Image Attachment Styles (Updated) --- */
         #image-preview-container {
             border-color: #1a1a1a;
             padding: 0.5rem;
@@ -342,19 +345,25 @@
             cursor: pointer;
             z-index: 10;
         }
+        
+        /* Image grid is now horizontally scrolling */
         .message-bubble .image-attachment-grid {
             margin-top: 8px;
             display: flex;
-            flex-wrap: wrap;
             gap: 8px;
+            overflow-x: auto; /* Horizontal scroll */
+            padding-bottom: 8px; /* Give room for scrollbar */
+            max-width: 100%; 
         }
         .message-bubble .image-attachment {
-            width: 128px; /* 8rem */
-            height: 128px; /* 8rem */
+            height: 120px; /* Set height */
+            width: auto; /* Auto width to maintain aspect ratio */
+            max-width: 256px; /* Cap max width for extremely wide images */
             border-radius: 0.5rem; /* 8px */
-            object-fit: cover;
+            object-fit: cover; /* Use cover to fill the 120px height */
             cursor: pointer;
             transition: opacity 0.2s;
+            flex-shrink: 0; /* Important for horizontal scroll */
         }
         .message-bubble .image-attachment:hover {
             opacity: 0.8;
@@ -376,7 +385,7 @@
                             <span>|</span>
                             <span id="local-time">--:--</span>
                         </div>
-                        </div>
+                    </div>
                 </div>
                 <div id="my-id-box" class="mt-4 p-3 flex items-center justify-between">
                     <div class="flex items-center gap-2 overflow-hidden">
@@ -431,7 +440,9 @@
                     <i class="fa-solid fa-chevron-left w-5 h-5"></i>
                 </button>
                 <h2 id="chat-header" class="text-lg font-semibold">Select a Chat</h2>
-                <div class="w-8 sm:w-0"></div>
+                <button id="lcc-btn" class="btn-icon-theme btn-danger text-red-500" title="Clear Local Chat History">
+                    <i class="fa-solid fa-trash-can w-5 h-5"></i>
+                </button>
             </header>
             
             <div class="chat-messages flex-grow overflow-y-auto p-4 space-y-4" id="messages-container">
@@ -505,6 +516,9 @@
         let statusInterval = null;
         let seenTimeout = null;
         let currentObserver = null;
+        
+        // NEW: For auto-scroll control
+        let lastMessageCount = 0;
 
         const dom = {
             appContainer: document.getElementById('app-container'),
@@ -532,7 +546,6 @@
             messageForm: document.getElementById('message-form'),
             messageInput: document.getElementById('message-input'),
             sendBtn: document.getElementById('send-btn'),
-            // darkModeToggle: (REMOVED)
             batteryStatusEl: document.getElementById('battery-status'),
             localTimeEl: document.getElementById('local-time'),
             chatPlaceholder: document.getElementById('chat-placeholder'),
@@ -541,10 +554,12 @@
             attachImageBtn: document.getElementById('attach-image-btn'),
             imageInput: document.getElementById('image-input'),
             imagePreviewContainer: document.getElementById('image-preview-container'),
+            
+            // NEW: LCC Button
+            lccBtn: document.getElementById('lcc-btn'),
         };
 
         const icons = {
-            // sun/moon removed
             send: `<i class="fa-solid fa-arrow-up w-5 h-5"></i>`,
             check: `<i class="fa-solid fa-check w-5 h-5"></i>`,
             arrowDown: `<i class="fa-solid fa-chevron-down w-3 h-3"></i>`,
@@ -624,8 +639,6 @@
             localStorage.theme = 'dark';
         }
         
-        // toggleTheme removed
-
         function scrollToBottom() {
             setTimeout(() => {
                 dom.messagesContainerEl.scrollTo({ top: dom.messagesContainerEl.scrollHeight, behavior: 'smooth' });
@@ -646,7 +659,7 @@
             }
         }
 
-        // --- STATUS BAR ---
+        // --- STATUS BAR (Unchanged) ---
         function startStatusUpdates() {
             stopStatusUpdates();
             const update = async () => {
@@ -664,7 +677,6 @@
         function stopStatusUpdates() { if (statusInterval) clearInterval(statusInterval); }
         
         // --- FRIEND & REQUEST MANAGEMENT (Unchanged) ---
-
         function listenForFriends() {
             unsubscribeFriends();
             const friendsRef = collection(db, `users/${currentUser.uid}/contacts`);
@@ -815,63 +827,88 @@
             document.querySelectorAll('#friends-list li.active').forEach(el => el.classList.remove('active'));
             dom.chatView.classList.add('view-hidden');
             dom.contactsView.classList.remove('view-hidden');
+            // Reset message count on closing chat
+            lastMessageCount = 0;
         }
 
         function setupSeenObserver(messages) {
             if (currentObserver) currentObserver.disconnect();
             const chatPartnerId = currentChatPartner.uid;
-            const unreadMessages = messages.filter(msg => msg.senderId === chatPartnerId && !msg.seen);
+            // Only observe the chat partner's messages that are unread
+            const unreadMessages = messages.filter(msg => msg.senderId === chatPartnerId && !msg.seen); 
             if (unreadMessages.length === 0) return;
 
             currentObserver = new IntersectionObserver(async (entries) => {
+                let messagesToUpdate = [];
                 for (const entry of entries) {
                     if (entry.isIntersecting) {
                         const messageEl = entry.target;
-                        const messageTimestamp = messageEl.dataset.timestamp;
+                        const timestampISO = messageEl.dataset.timestamp;
+                        
+                        // Set a timeout to mark as seen after delay
                         if (!messageEl.dataset.seenTimer) {
-                            messageEl.dataset.seenTimer = setTimeout(async () => {
-                                if (currentChatPartner && currentChatPartner.uid === chatPartnerId) {
-                                    const chatId = [currentUser.uid, currentChatPartner.uid].sort().join('_');
-                                    const chatDocRef = doc(db, 'chats', chatId);
-                                    const chatDoc = await getDoc(chatDocRef);
-                                    if (chatDoc.exists()) {
-                                        const currentMessages = chatDoc.data().messages || [];
-                                        const updatedMessages = currentMessages.map(msg => {
-                                            if (msg.timestamp?.toDate()?.toISOString() === messageTimestamp) {
-                                                return { ...msg, seen: true };
-                                            }
-                                            return msg;
-                                        });
-                                        await updateDoc(chatDocRef, { messages: updatedMessages });
-                                    }
-                                }
+                            messageEl.dataset.seenTimer = setTimeout(() => {
+                                messagesToUpdate.push(timestampISO);
+                                // Immediately mark the element visually to avoid duplicates
+                                messageEl.dataset.markedSeen = 'true';
                                 currentObserver.unobserve(messageEl);
+                                
+                                // Batch the update to Firebase (only if we are still in the chat)
+                                if (currentChatPartner && currentChatPartner.uid === chatPartnerId && messagesToUpdate.length > 0) {
+                                    handleSeenUpdate(messagesToUpdate);
+                                    messagesToUpdate = []; // Clear batch after send
+                                }
                             }, SEEN_DELAY_MS);
                         }
                     } else {
+                        // If it moves out of view, clear the timer
                         if (entry.target.dataset.seenTimer) {
                             clearTimeout(entry.target.dataset.seenTimer);
                             delete entry.target.dataset.seenTimer;
                         }
                     }
                 }
-            }, { threshold: 0.8 });
+            }, { threshold: 0.8 }); // Require 80% visibility to trigger
 
             unreadMessages.forEach(msg => {
                 const timestampISO = msg.timestamp?.toDate ? msg.timestamp.toDate().toISOString() : new Date(msg.timestamp).toISOString();
+                // Ensure we only observe the DOM elements corresponding to the unread messages
                 const element = document.querySelector(`.message-wrapper[data-timestamp="${timestampISO}"]`);
-                if (element) currentObserver.observe(element);
+                if (element && !element.dataset.markedSeen) currentObserver.observe(element);
             });
+        }
+        
+        async function handleSeenUpdate(timestampsToMark) {
+            if (!currentChatPartner) return;
+            const chatId = [currentUser.uid, currentChatPartner.uid].sort().join('_');
+            const chatDocRef = doc(db, 'chats', chatId);
+            const chatDoc = await getDoc(chatDocRef);
+            
+            if (chatDoc.exists()) {
+                const currentMessages = chatDoc.data().messages || [];
+                const updatedMessages = currentMessages.map(msg => {
+                    const msgTimestampISO = msg.timestamp?.toDate ? msg.timestamp.toDate().toISOString() : new Date(msg.timestamp).toISOString();
+                    if (timestampsToMark.includes(msgTimestampISO) && !msg.seen) {
+                        return { ...msg, seen: true };
+                    }
+                    return msg;
+                });
+                // Using merge: true prevents overwriting other fields if they existed, though 'messages' is the only expected one.
+                await setDoc(chatDocRef, { messages: updatedMessages }, { merge: true });
+            }
         }
 
         function listenForMessages() {
             unsubscribeMessages();
+            if (!currentChatPartner) return; // Guard for closing chat
+            
             const chatId = [currentUser.uid, currentChatPartner.uid].sort().join('_');
             const chatDocRef = doc(db, 'chats', chatId);
             
             unsubscribeMessages = onSnapshot(chatDocRef, (doc) => {
                 if (!doc.exists()) {
                     dom.messagesContainerEl.innerHTML = '';
+                    lastMessageCount = 0; // Reset count
                     return;
                 }
                 const data = doc.data();
@@ -885,38 +922,58 @@
 
                 const filteredMessages = sortedMessages.filter(msg => !(msg.senderId !== currentUser.uid && blockedUsers.includes(msg.senderId)));
                 
+                // --- NEW: Logic for last 3 seen messages ---
+                const sentMessages = filteredMessages.filter(msg => msg.senderId === currentUser.uid);
+                const last3SeenTimestamps = sentMessages
+                    .filter(msg => msg.seen)
+                    .slice(-3) // Take the last 3 seen messages
+                    .map(msg => msg.timestamp?.toDate ? msg.timestamp.toDate().toISOString() : new Date(msg.timestamp).toISOString());
+
+                // --- NEW: Auto-scroll control ---
+                const currentMessageCount = filteredMessages.length;
+                const shouldScroll = currentMessageCount > lastMessageCount;
+                lastMessageCount = currentMessageCount; // Update count for next time
+
                 dom.messagesContainerEl.innerHTML = '';
-                filteredMessages.forEach(msg => renderMessage(msg));
+                filteredMessages.forEach(msg => renderMessage(msg, last3SeenTimestamps));
                 setupSeenObserver(filteredMessages);
-                scrollToBottom();
+                
+                if (shouldScroll) {
+                    scrollToBottom();
+                }
             });
         }
         
-        function renderMessage(data) {
+        function renderMessage(data, last3SeenTimestamps = []) {
             if (!data || (!data.text && (!data.images || data.images.length === 0))) return;
             
             const messageWrapper = document.createElement('div');
             const isSent = data.senderId === currentUser.uid;
             
             let time = '';
+            let timestampISO = '';
             if (data.timestamp?.toDate) {
-                time = data.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const date = data.timestamp.toDate();
+                time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                timestampISO = date.toISOString();
             } else if (data.timestamp) {
-                time = new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const date = new Date(data.timestamp);
+                time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                timestampISO = date.toISOString();
             }
 
-            const timestampISO = data.timestamp?.toDate ? data.timestamp.toDate().toISOString() : new Date(data.timestamp).toISOString();
-            
             const isLargeMessage = data.text && data.text.length > MESSAGE_TRUNCATE_LENGTH;
-            const displayText = isLargeMessage ? data.text.substring(0, MESSAGE_TRUNCATE_LENGTH) + '...' : data.text;
+            const displayText = data.text && (isLargeMessage ? data.text.substring(0, MESSAGE_TRUNCATE_LENGTH) + '...' : data.text);
             const bubbleClasses = isSent ? 'sent-bubble' : 'received-bubble';
             
             messageWrapper.className = `message-wrapper flex ${isSent ? 'justify-end' : 'justify-start'}`;
             messageWrapper.dataset.timestamp = timestampISO;
 
-            // --- NEW: Build HTML for text and images ---
+            // --- NEW: Check for seen in the last 3 timestamps list ---
+            const showSeen = isSent && data.seen && last3SeenTimestamps.includes(timestampISO); 
+            
             const textHTML = data.text ? `
-                <p class="message-text message-content ${isLargeMessage ? 'truncated' : ''}">${displayText}</p>
+                <p class="message-text message-content ${isLargeMessage ? 'truncated' : ''}">${displayText || ''}</p>
             ` : '';
             
             const fadeArrowHTML = isLargeMessage ? `
@@ -945,14 +1002,13 @@
                     </div>
                     <p class="message-timestamp px-2 ${isSent ? 'text-right' : 'text-left'}">
                         <span>${time}</span>
-                        ${isSent && data.seen ? '<span class="seen-status ml-2">Seen</span>' : ''}
+                        ${showSeen ? '<span class="seen-status ml-2">Seen</span>' : ''}
                     </p>
                 </div>
             `;
             dom.messagesContainerEl.appendChild(messageWrapper);
         }
 
-        // --- MODIFIED: Renamed and logic changed for toggle ---
         function handleToggleTruncate(e) {
             const button = e.target.closest('[data-action="toggle-truncate"]');
             if (!button) return;
@@ -966,14 +1022,29 @@
             }
         }
         
-        // --- NEW: Handle viewing an image ---
+        // --- MODIFIED: Handle viewing/downloading an image ---
         function handleViewImage(e) {
             const img = e.target.closest('[data-action="view-image"]');
             if (!img) return;
-            window.open(img.src, '_blank');
+            
+            const imageUrl = img.src;
+
+            // Prompt user for confirmation before downloading
+            if (confirm("Do you want to download this image? Click Cancel to view it in a new tab.")) {
+                const a = document.createElement('a');
+                a.href = imageUrl;
+                // Use a simple, date-stamped filename
+                a.download = `messenger_image_${new Date().toISOString().substring(0, 10)}_${Math.random().toString(36).substring(2, 6)}.png`; 
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            } else {
+                 // Open in new tab if download is cancelled
+                window.open(imageUrl, '_blank');
+            }
         }
 
-        // --- NEW: Handle image upload ---
+        // --- NEW: Handle image upload (Unchanged from previous version) ---
         function handleImageUpload(e) {
             imageAttachmentsBase64 = [];
             dom.imagePreviewContainer.innerHTML = '';
@@ -1012,7 +1083,7 @@
             dom.imageInput.value = '';
         }
 
-        // --- NEW: Handle removing an image from preview ---
+        // --- NEW: Handle removing an image from preview (Unchanged from previous version) ---
         function handleRemoveImage(e) {
             const button = e.target.closest('.remove-image-btn');
             if (!button) return;
@@ -1027,7 +1098,46 @@
             }
         }
         
-        // --- UTILITIES ---
+        // --- NEW: Local Chat Clearing Function ---
+        async function handleClearLocalChat() {
+            if (!currentChatPartner) return;
+            
+            const chatHeader = dom.chatHeaderEl.textContent;
+            const confirmed = confirm(`Are you sure you want to clear your local chat history with ${chatHeader}? All messages will be gone forever from your view.`);
+            
+            if (confirmed) {
+                // 1. Add clearing animation (fade out all messages)
+                const messages = dom.messagesContainerEl.querySelectorAll('.message-wrapper');
+                messages.forEach(msg => {
+                    msg.style.transition = 'opacity 0.5s ease-out';
+                    msg.style.opacity = '0';
+                });
+                
+                // 2. Wait for fade out, then clear DOM and re-render
+                setTimeout(() => {
+                    dom.messagesContainerEl.innerHTML = '';
+                    
+                    // 3. Add a local-only "cleared" marker
+                    const clearedMarker = document.createElement('div');
+                    clearedMarker.className = 'text-center text-gray-500 text-sm italic py-4';
+                    clearedMarker.innerHTML = `
+                        <div class="inline-block px-4 py-1 rounded-full bg-[#1a1a1a] border border-[#333]">
+                            Your local chat history for this conversation has been cleared.
+                        </div>
+                    `;
+                    dom.messagesContainerEl.appendChild(clearedMarker);
+                    
+                    scrollToBottom();
+                    
+                    // 4. Re-load the chat, which pulls the last 25 messages from the database
+                    // This effectively provides the visual "clear" of older, un-persisted messages.
+                    lastMessageCount = 0;
+                    listenForMessages(); 
+                }, 500);
+            }
+        }
+
+        // --- UTILITIES (Unchanged or Minor) ---
 
         async function filterProfanity(text) {
             try {
@@ -1082,7 +1192,7 @@
             e.preventDefault();
             const text = dom.messageInput.value.trim();
             
-            // --- MODIFIED: Check for text OR images ---
+            // --- MODIFIED: Robust check for text OR images ---
             if (text === '' && imageAttachmentsBase64.length === 0) return;
             
             if (text.length > MESSAGE_CHARACTER_LIMIT) return alert(`Message exceeds ${MESSAGE_CHARACTER_LIMIT} chars.`);
@@ -1105,13 +1215,13 @@
                 senderId: currentUser.uid, 
                 timestamp: new Date(),
                 seen: false,
-                // --- NEW: Add images array ---
                 images: imageAttachmentsBase64
             };
             
             try {
                 await writeMessageToChat(messageData);
                 
+                // Determine the text for the contact list snippet
                 const lastMessageText = filteredText ? filteredText : `[${imageAttachmentsBase64.length} image(s)]`;
                 
                 const recipientContactRef = doc(db, `users/${currentChatPartner.uid}/contacts`, currentUser.uid);
@@ -1262,6 +1372,11 @@
                         await deleteDoc(doc(db, `users/${currentUser.uid}/contacts`, uid));
                         const theirContactRef = doc(db, `users/${uid}/contacts`, currentUser.uid);
                         await deleteDoc(theirContactRef);
+                        
+                        // If the deleted contact was the active chat, close it
+                        if (currentChatPartner && currentChatPartner.uid === uid) {
+                            closeChat();
+                        }
                     }
                 }
             } else {
@@ -1277,7 +1392,6 @@
         }
 
         function setupEventListeners() {
-            // dom.darkModeToggle.addEventListener('click', toggleTheme); // REMOVED
             dom.addContactBtn.addEventListener('click', handleSendFriendRequest);
             dom.friendsListEl.addEventListener('click', handleFriendsListClick);
             dom.incomingRequestsListEl.addEventListener('click', handleIncomingRequestClick);
@@ -1287,6 +1401,9 @@
             dom.messageForm.addEventListener('submit', handleSendMessage);
             dom.copyIdBtn.addEventListener('click', handleCopyId);
             
+            // NEW LCC listener
+            dom.lccBtn.addEventListener('click', handleClearLocalChat);
+
             // --- MODIFIED: Listen on container for delegation ---
             dom.messagesContainerEl.addEventListener('click', (e) => {
                 handleToggleTruncate(e);
