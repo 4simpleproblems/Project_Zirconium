@@ -153,11 +153,13 @@
         .auto-expand-textarea {
             resize: none; /* Disable manual resize handle */
             overflow-y: hidden; /* Hide scrollbar initially */
-            min-height: 2.75rem; /* Initial height for one line */
+            /* UPDATED: Increased min-height to prevent vertical wrapping on short text */
+            min-height: 3.5rem; /* ~1.5rem (line height) + 0.5rem*2 (py) + 1px*2 (border) = ~2.75rem. Adjusted to 3.5rem for safety/padding. */
             max-height: 150px; /* Max height before scroll is hit */
             padding-top: 0.5rem;
             padding-bottom: 0.5rem;
             line-height: 1.5; /* Ensure text line height is correct */
+            box-sizing: border-box; /* Include padding and border in the element's total height */
         }
         .auto-expand-textarea.scrollable {
             overflow-y: auto; /* Show scrollbar when max-height is reached */
@@ -492,7 +494,7 @@
                     </button>
                     <textarea 
                         id="message-input" 
-                        placeholder="Type a message (max 10,000 chars)..." 
+                        placeholder="Type a message (Enter to send, Shift+Enter for new line)..." 
                         maxlength="10000" 
                         class="themed-input auto-expand-textarea py-2 px-4"
                         rows="1"></textarea>
@@ -687,18 +689,21 @@
             // Reset height to collapse it first, correctly calculating scrollHeight
             el.style.height = 'auto'; 
             
-            // Check if scrollHeight exceeds the max-height (150px)
+            // Set the element's height to its scrollHeight (content height)
+            // Note: The scrollHeight calculation should now correctly factor in the min-height from CSS.
+            let newHeight = el.scrollHeight;
+
             const maxHeight = 150;
-            const newHeight = Math.min(el.scrollHeight, maxHeight);
             
-            el.style.height = newHeight + 'px';
-            
-            // Add or remove the 'scrollable' class based on if the max-height was hit.
-            if (el.scrollHeight > maxHeight) {
+            // Check if scrollHeight exceeds the max-height (150px)
+            if (newHeight > maxHeight) {
+                newHeight = maxHeight;
                 el.classList.add('scrollable');
             } else {
                 el.classList.remove('scrollable');
             }
+            
+            el.style.height = newHeight + 'px';
         }
 
         function switchTab(tab) {
@@ -1249,7 +1254,9 @@
         // --- EVENT HANDLERS ---
         
         async function handleSendMessage(e) {
-            e.preventDefault();
+            if (e) e.preventDefault();
+            
+            // Trim to prevent sending messages that are only whitespace
             const text = dom.messageInput.value.trim();
             
             // --- MODIFIED: Robust check for text OR images ---
@@ -1268,7 +1275,7 @@
                 return;
             }
 
-            const filteredText = await filterProfanity(text);
+            const filteredText = await filterProfanity(dom.messageInput.value); // Use the full text to ensure newlines are preserved
             
             const messageData = { 
                 text: filteredText, 
@@ -1282,7 +1289,8 @@
                 await writeMessageToChat(messageData);
                 
                 // Determine the text for the contact list snippet
-                const lastMessageText = filteredText ? filteredText : `[${imageAttachmentsBase64.length} image(s)]`;
+                const snippetText = filteredText.replace(/\s+/g, ' '); // Clean up newlines for the snippet
+                const lastMessageText = snippetText ? snippetText : `[${imageAttachmentsBase64.length} image(s)]`;
                 
                 const recipientContactRef = doc(db, `users/${currentChatPartner.uid}/contacts`, currentUser.uid);
                 await setDoc(recipientContactRef, { 
@@ -1479,6 +1487,21 @@
                 autoExpandTextarea(dom.messageInput); // Call auto-expand logic
                 if (dom.messageInput.value.trim() !== '' || imageAttachmentsBase64.length > 0) {
                     dom.sendBtn.innerHTML = icons.send;
+                }
+            });
+            
+            // --- NEW: Keydown Listener for Enter/Shift+Enter logic ---
+            dom.messageInput.addEventListener('keydown', (e) => {
+                // If the user presses Enter (key code 13)
+                if (e.key === 'Enter') {
+                    // If Shift is NOT held, send the message
+                    if (!e.shiftKey) {
+                        e.preventDefault(); // Prevent default new line behavior
+                        handleSendMessage(); // Call the send function
+                    } else {
+                        // If Shift IS held, allow the new line, and adjust the textarea size
+                        setTimeout(() => autoExpandTextarea(dom.messageInput), 0); // Delay to allow the newline character to register
+                    }
                 }
             });
             
