@@ -796,7 +796,17 @@
                 }
                 const data = doc.data();
                 const messages = data.messages || [];
-                const filteredMessages = messages.filter(msg => !(msg.senderId !== currentUser.uid && blockedUsers.includes(msg.senderId)));
+                
+                // Sort messages by timestamp
+                // This handles potential client-side time differences
+                const sortedMessages = messages.sort((a, b) => {
+                    const timeA = a.timestamp?.seconds || 0;
+                    const timeB = b.timestamp?.seconds || 0;
+                    return timeA - timeB;
+                });
+
+                const filteredMessages = sortedMessages.filter(msg => !(msg.senderId !== currentUser.uid && blockedUsers.includes(msg.senderId)));
+                
                 dom.messagesContainerEl.innerHTML = '';
                 filteredMessages.forEach(msg => renderMessage(msg));
                 setupSeenObserver(filteredMessages);
@@ -808,8 +818,17 @@
             if (!data || !data.text) return;
             const messageWrapper = document.createElement('div');
             const isSent = data.senderId === currentUser.uid;
-            const time = data.timestamp?.toDate()?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || '';
-            const timestampISO = data.timestamp?.toDate()?.toISOString() || Date.now().toISOString();
+            
+            // Handle both Firestore Timestamp (from server) and JS Date (from our new Date())
+            let time = '';
+            if (data.timestamp?.toDate) { // Firestore Timestamp
+                time = data.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            } else if (data.timestamp) { // JS Date object or ISO string
+                time = new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+
+            const timestampISO = data.timestamp?.toDate ? data.timestamp.toDate().toISOString() : new Date(data.timestamp).toISOString();
+            
             const isLargeMessage = data.text.length > MESSAGE_TRUNCATE_LENGTH;
             const displayText = isLargeMessage ? data.text.substring(0, MESSAGE_TRUNCATE_LENGTH) + '...' : data.text;
             const bubbleClasses = isSent ? 'sent-bubble' : 'received-bubble';
@@ -872,7 +891,6 @@
             }
         }
 
-        // --- THIS IS THE CHAT HISTORY SENDING LOGIC ---
         async function writeMessageToChat(messageData) {
             const chatId = [currentUser.uid, currentChatPartner.uid].sort().join('_');
             const chatDocRef = doc(db, 'chats', chatId);
@@ -882,7 +900,6 @@
             if (currentMessages.length > MESSAGE_STORAGE_LIMIT) {
                 currentMessages = currentMessages.slice(-MESSAGE_STORAGE_LIMIT);
             }
-            // This sets the *entire document* to be { messages: [...] }
             await setDoc(chatDocRef, { messages: currentMessages });
         }
         
@@ -913,17 +930,32 @@
             }
 
             const filteredText = await filterProfanity(text);
-            const messageData = { text: filteredText, senderId: currentUser.uid, timestamp: serverTimestamp(), seen: false };
+            
+            // --- *** FIX 1: Using client-side new Date() *** ---
+            // This avoids the serverTimestamp() in array error.
+            const messageData = { 
+                text: filteredText, 
+                senderId: currentUser.uid, 
+                timestamp: new Date(), // <-- CHANGED FROM serverTimestamp()
+                seen: false 
+            };
             
             try {
-                // Use the array-based chat history logic
                 await writeMessageToChat(messageData);
                 
-                // Update contact lists for both users
                 const recipientContactRef = doc(db, `users/${currentChatPartner.uid}/contacts`, currentUser.uid);
-                await setDoc(recipientContactRef, { lastMessage: filteredText, unread: true, timestamp: serverTimestamp() }, { merge: true });
+                await setDoc(recipientContactRef, { 
+                    lastMessage: filteredText, 
+                    unread: true, 
+                    timestamp: serverTimestamp() // This is fine, it's not in an array
+                }, { merge: true });
+                
                 const senderContactRef = doc(db, `users/${currentUser.uid}/contacts`, currentChatPartner.uid);
-                await updateDoc(senderContactRef, { lastMessage: `You: ${filteredText}`, timestamp: serverTimestamp() });
+                await updateDoc(senderContactRef, { 
+                    lastMessage: `You: ${filteredText}`, 
+                    timestamp: serverTimestamp() // This is also fine
+                });
+                
                 dom.messageInput.value = '';
             } catch (error) {
                 console.error("Send message error:", error);
@@ -946,7 +978,10 @@
             
             const contactUser = snapshot.docs[0].data();
             const receiverId = contactUser.uid;
-            const receiverName = contactUser.name;
+            
+            // --- *** FIX 2: Add fallback for receiverName *** ---
+            const receiverName = contactUser.name || `User (${contactUser.publicId.substring(0, 4)})`;
+            
             const reqId = [currentUser.uid, receiverId].sort().join('_');
 
             const friendDoc = await getDoc(doc(db, `users/${currentUser.uid}/contacts`, receiverId));
@@ -960,10 +995,10 @@
                     requesterId: currentUser.uid,
                     requesterName: myPublicName,
                     receiverId: receiverId,
-                    receiverName: receiverName,
+                    receiverName: receiverName, // <-- This is now safe
                     receiverPublicId: id,
                     status: 'pending',
-                    timestamp: serverTimestamp()
+                    timestamp: serverTimestamp() // This is fine
                 });
                 setAddFriendMessage('Friend request sent!', 'success');
                 dom.addContactIdInput.value = '';
