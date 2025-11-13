@@ -149,6 +149,20 @@
         }
         .themed-input::placeholder { color: #707070; font-weight: 300; }
 
+        /* --- NEW: Auto-Expanding Textarea Styles --- */
+        .auto-expand-textarea {
+            resize: none; /* Disable manual resize handle */
+            overflow-y: hidden; /* Hide scrollbar initially */
+            min-height: 2.75rem; /* Initial height for one line */
+            max-height: 150px; /* Max height before scroll is hit */
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+            line-height: 1.5; /* Ensure text line height is correct */
+        }
+        .auto-expand-textarea.scrollable {
+            overflow-y: auto; /* Show scrollbar when max-height is reached */
+        }
+        
         /* --- MESSENGER LAYOUT STYLES --- */
         #app-container {
             background-color: #070707;
@@ -224,44 +238,63 @@
             color: #22c55e;
         }
 
-        /* --- MESSAGE BUBBLES (LESS ROUND) --- */
+        /* --- REDESIGNED MESSAGE BUBBLES (Button Styled) --- */
         .message-bubble {
-            padding: 0.5rem 1rem;
-            border-radius: 0.75rem; /* 12px */
-            max-width: 80%;
+            padding: 0.75rem 1.2rem; /* Slightly larger padding for button look */
+            border-radius: 0.75rem;
+            max-width: 50%; /* IMPLEMENTED: Max width is half the container */
             word-break: break-word;
+            border-width: 1px;
+            transition: all 0.2s; 
         }
         .sent-bubble {
-            background-color: #4f46e5;
-            color: white;
-            border-bottom-right-radius: 0.25rem; /* 4px for "tail" */
+            /* Styled like btn-themed-primary */
+            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
+            border-color: var(--tab-active-border, #4f46e5);
+            color: var(--tab-active-text, #4f46e5);
+            border-bottom-right-radius: 0.25rem;
         }
         .received-bubble {
-            background-color: #1f2937;
-            color: #c0c0c0;
-            border-bottom-left-radius: 0.25rem; /* 4px for "tail" */
+            /* Styled like btn-themed-secondary */
+            background-color: var(--menu-bg, #000000);
+            border-color: var(--menu-border, #333);
+            color: var(--menu-text, #d1d5db);
+            border-bottom-left-radius: 0.25rem;
         }
         .message-text {
             font-weight: 300;
             font-size: 0.95rem;
             line-height: 1.6;
             white-space: pre-wrap; /* Allows wrapping but respects newlines */
-            /* Ensure text fits content without unnecessary wrapping for short lines */
             min-width: 1rem; 
         }
+        /* Ensure text and links inside the new bubbles inherit color */
+        .sent-bubble .message-text, .sent-bubble .message-text a {
+            color: var(--tab-active-text, #4f46e5);
+        }
+        .received-bubble .message-text, .received-bubble .message-text a {
+            color: var(--menu-text, #d1d5db);
+        }
+        
+        /* --- Redesigned Timestamp and Seen Status --- */
         .message-timestamp {
             font-weight: 300;
             font-size: 0.75rem;
-            color: #707070;
             margin-top: 4px;
+            color: #707070; 
         }
-        .sent-bubble + .message-timestamp { color: #a0a0a0; }
+        .sent-bubble + .message-timestamp { 
+            color: var(--tab-active-text, #4f46e5); /* Themed color for sent message timestamp/seen */
+        }
+        .received-bubble + .message-timestamp { 
+            color: var(--menu-text, #9ca3af); /* Lighter gray for received */
+        }
         .message-timestamp .seen-status {
-            color: var(--tab-active-border);
+            color: var(--tab-active-border); 
             font-weight: 400;
         }
 
-        /* --- NEW: Expandable Message Content --- */
+        /* --- NEW: Expandable Message Content (Unchanged) --- */
         .message-content {
             max-height: 2000px; /* Default max-height for animation */
             transition: max-height 0.3s ease-in-out;
@@ -313,7 +346,7 @@
             line-height: 1;
         }
         
-        /* --- NEW: Image Attachment Styles (Updated) --- */
+        /* --- Image Attachment Styles (Unchanged) --- */
         #image-preview-container {
             border-color: #1a1a1a;
             padding: 0.5rem;
@@ -454,12 +487,16 @@
             <footer class="p-4 border-t themed-footer flex-shrink-0 flex flex-col">
                 <div id="image-preview-container" class="hidden mb-2 flex gap-2 overflow-x-auto border border-dashed">
                     </div>
-                <form id="message-form" class="flex gap-3 items-center">
-                    <button type="button" id="attach-image-btn" class="btn-icon-theme w-10 h-10 flex-shrink-0">
+                <form id="message-form" class="flex gap-3 items-end"> <button type="button" id="attach-image-btn" class="btn-icon-theme w-10 h-10 flex-shrink-0 mb-1">
                         <i class="fa-solid fa-paperclip w-5 h-5"></i>
                     </button>
-                    <input type="text" id="message-input" placeholder="Type a message (max 10,000 chars)..." maxlength="10000" class="themed-input py-2 px-4">
-                    <button type="submit" id="send-btn" class="btn-themed-primary btn-send w-10 h-10 flex-shrink-0">
+                    <textarea 
+                        id="message-input" 
+                        placeholder="Type a message (max 10,000 chars)..." 
+                        maxlength="10000" 
+                        class="themed-input auto-expand-textarea py-2 px-4"
+                        rows="1"></textarea>
+                    <button type="submit" id="send-btn" class="btn-themed-primary btn-send w-10 h-10 flex-shrink-0 mb-1">
                         <i class="fa-solid fa-arrow-up w-5 h-5"></i>
                     </button>
                 </form>
@@ -544,7 +581,7 @@
             chatHeaderEl: document.getElementById('chat-header'),
             messagesContainerEl: document.getElementById('messages-container'),
             messageForm: document.getElementById('message-form'),
-            messageInput: document.getElementById('message-input'),
+            messageInput: document.getElementById('message-input'), // Now a <textarea>
             sendBtn: document.getElementById('send-btn'),
             batteryStatusEl: document.getElementById('battery-status'),
             localTimeEl: document.getElementById('local-time'),
@@ -643,6 +680,25 @@
             setTimeout(() => {
                 dom.messagesContainerEl.scrollTo({ top: dom.messagesContainerEl.scrollHeight, behavior: 'smooth' });
             }, 50);
+        }
+        
+        // --- NEW: Function to auto-expand textarea ---
+        function autoExpandTextarea(el) {
+            // Reset height to collapse it first, correctly calculating scrollHeight
+            el.style.height = 'auto'; 
+            
+            // Check if scrollHeight exceeds the max-height (150px)
+            const maxHeight = 150;
+            const newHeight = Math.min(el.scrollHeight, maxHeight);
+            
+            el.style.height = newHeight + 'px';
+            
+            // Add or remove the 'scrollable' class based on if the max-height was hit.
+            if (el.scrollHeight > maxHeight) {
+                el.classList.add('scrollable');
+            } else {
+                el.classList.remove('scrollable');
+            }
         }
 
         function switchTab(tab) {
@@ -829,6 +885,10 @@
             dom.contactsView.classList.remove('view-hidden');
             // Reset message count on closing chat
             lastMessageCount = 0;
+            
+            // NEW: Collapse textarea on closing chat
+            dom.messageInput.value = '';
+            autoExpandTextarea(dom.messageInput); 
         }
 
         function setupSeenObserver(messages) {
@@ -929,7 +989,7 @@
                     .slice(-3) // Take the last 3 seen messages
                     .map(msg => msg.timestamp?.toDate ? msg.timestamp.toDate().toISOString() : new Date(msg.timestamp).toISOString());
 
-                // --- NEW: Auto-scroll control ---
+                // --- NEW: Auto-scroll control (only scrolls if message count increases) ---
                 const currentMessageCount = filteredMessages.length;
                 const shouldScroll = currentMessageCount > lastMessageCount;
                 lastMessageCount = currentMessageCount; // Update count for next time
@@ -969,7 +1029,7 @@
             messageWrapper.className = `message-wrapper flex ${isSent ? 'justify-end' : 'justify-start'}`;
             messageWrapper.dataset.timestamp = timestampISO;
 
-            // --- NEW: Check for seen in the last 3 timestamps list ---
+            // --- Check for seen in the last 3 timestamps list ---
             const showSeen = isSent && data.seen && last3SeenTimestamps.includes(timestampISO); 
             
             const textHTML = data.text ? `
@@ -1022,7 +1082,7 @@
             }
         }
         
-        // --- MODIFIED: Handle viewing/downloading an image ---
+        // --- MODIFIED: Handle viewing/downloading an image (Unchanged from previous update) ---
         function handleViewImage(e) {
             const img = e.target.closest('[data-action="view-image"]');
             if (!img) return;
@@ -1044,7 +1104,7 @@
             }
         }
 
-        // --- NEW: Handle image upload (Unchanged from previous version) ---
+        // --- NEW: Handle image upload (Unchanged from previous update) ---
         function handleImageUpload(e) {
             imageAttachmentsBase64 = [];
             dom.imagePreviewContainer.innerHTML = '';
@@ -1083,7 +1143,7 @@
             dom.imageInput.value = '';
         }
 
-        // --- NEW: Handle removing an image from preview (Unchanged from previous version) ---
+        // --- NEW: Handle removing an image from preview (Unchanged from previous update) ---
         function handleRemoveImage(e) {
             const button = e.target.closest('.remove-image-btn');
             if (!button) return;
@@ -1098,7 +1158,7 @@
             }
         }
         
-        // --- NEW: Local Chat Clearing Function ---
+        // --- NEW: Local Chat Clearing Function (Unchanged from previous update) ---
         async function handleClearLocalChat() {
             if (!currentChatPartner) return;
             
@@ -1237,8 +1297,9 @@
                     timestamp: serverTimestamp()
                 });
                 
-                // --- NEW: Clear text and images ---
+                // --- NEW: Clear text and images AND collapse textarea ---
                 dom.messageInput.value = '';
+                autoExpandTextarea(dom.messageInput); // Collapse the textarea back to min-height
                 imageAttachmentsBase64 = [];
                 dom.imagePreviewContainer.innerHTML = '';
                 dom.imagePreviewContainer.classList.add('hidden');
@@ -1413,7 +1474,9 @@
             dom.tabBtnFriends.addEventListener('click', () => switchTab('friends'));
             dom.tabBtnRequests.addEventListener('click', () => switchTab('requests'));
 
+            // --- UPDATED: Textarea Input Listener ---
             dom.messageInput.addEventListener('input', () => {
+                autoExpandTextarea(dom.messageInput); // Call auto-expand logic
                 if (dom.messageInput.value.trim() !== '' || imageAttachmentsBase64.length > 0) {
                     dom.sendBtn.innerHTML = icons.send;
                 }
