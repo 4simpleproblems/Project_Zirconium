@@ -489,7 +489,8 @@
 
             // 2. Listen for Incoming Requests
             unsubPendingIn();
-            const pendingInRef = collection(db, `users/${currentUser.uid}/friendRequests/pendingIn`);
+            // *** FIXED PATH ***
+            const pendingInRef = collection(db, `users/${currentUser.uid}/pendingIn`);
             unsubPendingIn = onSnapshot(query(pendingInRef), (snapshot) => {
                 state.incoming = snapshot.docs;
                 renderAll();
@@ -497,7 +498,8 @@
             
             // 3. Listen for Outgoing Requests
             unsubPendingOut();
-            const pendingOutRef = collection(db, `users/${currentUser.uid}/friendRequests/pendingOut`);
+            // *** FIXED PATH ***
+            const pendingOutRef = collection(db, `users/${currentUser.uid}/pendingOut`);
             unsubPendingOut = onSnapshot(query(pendingOutRef), (snapshot) => {
                 state.outgoing = snapshot.docs;
                 renderAll();
@@ -937,14 +939,16 @@
             }
             
             // Check if request already sent
-            const outDoc = await getDoc(doc(db, `users/${currentUser.uid}/friendRequests/pendingOut`, contactUid));
+            // *** FIXED PATH ***
+            const outDoc = await getDoc(doc(db, `users/${currentUser.uid}/pendingOut`, contactUid));
             if (outDoc.exists()) {
                 dom.addContactMessage.textContent = 'Request already sent.';
                 return;
             }
             
             // Check if we have an incoming request from them (auto-accept)
-            const inDocRef = doc(db, `users/${currentUser.uid}/friendRequests/pendingIn`, contactUid);
+            // *** FIXED PATH ***
+            const inDocRef = doc(db, `users/${currentUser.uid}/pendingIn`, contactUid);
             const inDoc = await getDoc(inDocRef);
             if (inDoc.exists()) {
                 await handleAcceptRequest(contactUid, contactUser.username, contactUser.publicId);
@@ -959,7 +963,8 @@
             const batch = writeBatch(db);
             
             // Set outgoing request for me
-            const myOutRef = doc(db, `users/${currentUser.uid}/friendRequests/pendingOut`, contactUid);
+            // *** FIXED PATH ***
+            const myOutRef = doc(db, `users/${currentUser.uid}/pendingOut`, contactUid);
             batch.set(myOutRef, { 
                 username: contactUser.username, 
                 publicId: contactUser.publicId, 
@@ -967,7 +972,8 @@
             });
             
             // Set incoming request for them
-            const theirInRef = doc(db, `users/${contactUid}/friendRequests/pendingIn`, currentUser.uid);
+            // *** FIXED PATH ***
+            const theirInRef = doc(db, `users/${contactUid}/pendingIn`, currentUser.uid);
             batch.set(theirInRef, { 
                 username: myUserDoc.username, 
                 publicId: myUserDoc.publicId, 
@@ -985,8 +991,9 @@
             const batch = writeBatch(db);
             
             // 1. Delete requests
-            batch.delete(doc(db, `users/${currentUser.uid}/friendRequests/pendingIn`, uid));
-            batch.delete(doc(db, `users/${uid}/friendRequests/pendingOut`, currentUser.uid));
+            // *** FIXED PATH ***
+            batch.delete(doc(db, `users/${currentUser.uid}/pendingIn`, uid));
+            batch.delete(doc(db, `users/${uid}/pendingOut`, currentUser.uid));
             
             // 2. Create contact for me
             const myContactRef = doc(db, `users/${currentUser.uid}/contacts`, uid);
@@ -1009,15 +1016,17 @@
         
         async function handleDeclineRequest(uid) {
             const batch = writeBatch(db);
-            batch.delete(doc(db, `users/${currentUser.uid}/friendRequests/pendingIn`, uid));
-            batch.delete(doc(db, `users/${uid}/friendRequests/pendingOut`, currentUser.uid));
+            // *** FIXED PATH ***
+            batch.delete(doc(db, `users/${currentUser.uid}/pendingIn`, uid));
+            batch.delete(doc(db, `users/${uid}/pendingOut`, currentUser.uid));
             await batch.commit();
         }
         
         async function handleCancelRequest(uid) {
             const batch = writeBatch(db);
-            batch.delete(doc(db, `users/${currentUser.uid}/friendRequests/pendingOut`, uid));
-            batch.delete(doc(db, `users/${uid}/friendRequests/pendingIn`, currentUser.uid));
+            // *** FIXED PATH ***
+            batch.delete(doc(db, `users/${currentUser.uid}/pendingOut`, uid));
+            batch.delete(doc(db, `users/${uid}/pendingIn`, currentUser.uid));
             await batch.commit();
         }
         
