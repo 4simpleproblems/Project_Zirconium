@@ -153,8 +153,7 @@
         .auto-expand-textarea {
             resize: none; /* Disable manual resize handle */
             overflow-y: hidden; /* Hide scrollbar initially */
-            /* UPDATED: Increased min-height to prevent vertical wrapping on short text */
-            min-height: 3.5rem; /* ~1.5rem (line height) + 0.5rem*2 (py) + 1px*2 (border) = ~2.75rem. Adjusted to 3.5rem for safety/padding. */
+            min-height: 3.5rem; 
             max-height: 150px; /* Max height before scroll is hit */
             padding-top: 0.5rem;
             padding-bottom: 0.5rem;
@@ -244,7 +243,7 @@
         .message-bubble {
             padding: 0.75rem 1.2rem; /* Slightly larger padding for button look */
             border-radius: 0.75rem;
-            max-width: 50%; /* IMPLEMENTED: Max width is half the container */
+            /* max-width: 50%; <--- REMOVED */
             word-break: break-word;
             border-width: 1px;
             transition: all 0.2s; 
@@ -296,7 +295,7 @@
             font-weight: 400;
         }
 
-        /* --- NEW: Expandable Message Content (Unchanged) --- */
+        /* --- NEW: Expandable Message Content (Updated for better look/UX) --- */
         .message-content {
             max-height: 2000px; /* Default max-height for animation */
             transition: max-height 0.3s ease-in-out;
@@ -306,7 +305,7 @@
         .message-content.truncated {
             max-height: 120px;
         }
-        /* Fade-out for truncated text */
+        /* Fade-out for truncated text: SCOPED TO BUBBLE TYPE */
         .message-content.truncated::after {
             content: "";
             position: absolute;
@@ -314,26 +313,53 @@
             left: 0;
             right: 0;
             height: 40px;
-            background: linear-gradient(to bottom, transparent, #0d0d0d 90%);
             pointer-events: none; 
             z-index: 10;
         }
-        /* "Show More" arrow */
+        .received-bubble .message-content.truncated::after {
+            /* Fade to received bubble background */
+            background: linear-gradient(to bottom, transparent, var(--menu-bg) 90%);
+        }
+        .sent-bubble .message-content.truncated::after {
+            /* Fade to sent bubble background */
+            background: linear-gradient(to bottom, transparent, var(--tab-active-bg) 90%);
+        }
+
+        /* "Show More" arrow: SCOPED TO BUBBLE TYPE AND IMPROVED UI */
         .fade-arrow {
             position: absolute;
             bottom: 4px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 20;
-            color: var(--tab-active-text);
-            background-color: #0d0d0d;
-            padding: 2px 4px;
+            padding: 2px 8px; /* Slightly wider padding */
             border-radius: 99px;
-            border: 1px solid #1a1a1a;
+            border-width: 1px;
             cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.75rem;
         }
-        .fade-arrow i {
-            transition: transform 0.3s ease-in-out;
+        .received-bubble .fade-arrow {
+            background-color: var(--menu-bg, #000000);
+            border-color: var(--menu-border, #333);
+            color: var(--menu-text, #d1d5db);
+        }
+        .received-bubble .fade-arrow:hover {
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
+        .sent-bubble .fade-arrow {
+            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
+            border-color: var(--tab-active-border, #4f46e5);
+            color: var(--tab-active-text, #4f46e5);
+        }
+        .sent-bubble .fade-arrow:hover {
+            background-color: var(--tab-active-hover-bg, rgba(79, 70, 229, 0.15));
+            border-color: var(--tab-active-hover-border, #6366f1);
+            color: var(--tab-active-hover-text, #6366f1);
         }
         /* Class to be toggled by JS */
         .fade-arrow.expanded i {
@@ -489,7 +515,8 @@
             <footer class="p-4 border-t themed-footer flex-shrink-0 flex flex-col">
                 <div id="image-preview-container" class="hidden mb-2 flex gap-2 overflow-x-auto border border-dashed">
                     </div>
-                <form id="message-form" class="flex gap-3 items-end"> <button type="button" id="attach-image-btn" class="btn-icon-theme w-10 h-10 flex-shrink-0 mb-1">
+                <form id="message-form" class="flex gap-3 items-end"> 
+                    <button type="button" id="attach-image-btn" class="btn-icon-theme w-10 h-10 flex-shrink-0 mb-1">
                         <i class="fa-solid fa-paperclip w-5 h-5"></i>
                     </button>
                     <textarea 
@@ -513,6 +540,8 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, serverTimestamp, arrayUnion, arrayRemove, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getStorage, ref as storageRef, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+
 
         // --- FIREBASE CONFIGURATION ---
         const firebaseConfig = {
@@ -530,34 +559,26 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        const storage = getStorage(app);
 
-        // --- GLOBAL STATE & DOM ELEMENTS ---
-        const MESSAGE_CHARACTER_LIMIT = 10000;
-        const MESSAGE_TRUNCATE_LENGTH = 300;
-        const MESSAGE_STORAGE_LIMIT = 25; // Keep 25 messages
-        const SEEN_DELAY_MS = 3000;
-
+        // --- GLOBAL STATE & CONSTANTS ---
         let currentUser = null;
+        let currentChatPartner = null;
         let myPublicId = null;
         let myPublicName = null;
-        let currentChatPartner = null;
         let blockedUsers = [];
-        
-        // NEW: For image attachments
-        let imageAttachmentsBase64 = [];
-        
         let unsubscribeUserDoc = () => {};
         let unsubscribeFriends = () => {};
         let unsubscribeIncomingRequests = () => {};
         let unsubscribeOutgoingRequests = () => {};
         let unsubscribeMessages = () => {};
-        
         let statusInterval = null;
-        let seenTimeout = null;
-        let currentObserver = null;
-        
-        // NEW: For auto-scroll control
-        let lastMessageCount = 0;
+        let imageAttachmentsBase64 = [];
+        let lastMessageCount = 0; // For scroll control
+
+        const MESSAGE_TRUNCATE_LENGTH = 400; // Character limit for truncation
+        const MESSAGE_LIMIT = 25; // Number of messages to load from chat history
+        const SEEN_DELAY_MS = 1000; // Delay before marking a message as seen
 
         const dom = {
             appContainer: document.getElementById('app-container'),
@@ -566,17 +587,14 @@
             addContactIdInput: document.getElementById('add-contact-id'),
             addContactBtn: document.getElementById('add-contact-btn'),
             addFriendMessage: document.getElementById('add-friend-message'),
-            
             friendsListEl: document.getElementById('friends-list'),
             incomingRequestsListEl: document.getElementById('incoming-requests-list'),
             outgoingRequestsListEl: document.getElementById('outgoing-requests-list'),
-            
             tabBtnFriends: document.getElementById('tab-btn-friends'),
             tabBtnRequests: document.getElementById('tab-btn-requests'),
             tabContentFriends: document.getElementById('tab-content-friends'),
             tabContentRequests: document.getElementById('tab-content-requests'),
             requestsBadge: document.getElementById('requests-badge'),
-            
             contactsView: document.getElementById('contacts-view'),
             chatView: document.getElementById('chat-view'),
             backToContactsBtn: document.getElementById('back-to-contacts-btn'),
@@ -588,12 +606,10 @@
             batteryStatusEl: document.getElementById('battery-status'),
             localTimeEl: document.getElementById('local-time'),
             chatPlaceholder: document.getElementById('chat-placeholder'),
-            
             // NEW: Image elements
             attachImageBtn: document.getElementById('attach-image-btn'),
             imageInput: document.getElementById('image-input'),
             imagePreviewContainer: document.getElementById('image-preview-container'),
-            
             // NEW: LCC Button
             lccBtn: document.getElementById('lcc-btn'),
         };
@@ -606,11 +622,55 @@
             deny: `<i class="fa-solid fa-xmark w-4 h-4"></i>`,
             cancel: `<i class="fa-solid fa-trash-can w-4 h-4"></i>`,
         };
-        
-        // --- MAIN APP LOGIC ---
 
+        // --- UTILITY FUNCTIONS ---
+        
+        // NEW: Generates a random 8-character ID
+        async function generateUniqueId() {
+            let id;
+            let docRef;
+            let docSnap;
+            do {
+                id = Math.random().toString(36).substring(2, 10).toUpperCase();
+                docRef = doc(db, 'public_ids', id);
+                docSnap = await getDoc(docRef);
+            } while (docSnap.exists());
+            
+            await setDoc(docRef, { uid: currentUser.uid });
+            return id;
+        }
+
+        function getChatId(uid1, uid2) {
+            return [uid1, uid2].sort().join('_');
+        }
+
+        function formatTimestamp(timestamp) {
+            if (!timestamp) return 'Time Unknown';
+            const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // NEW: Auto-expanding textarea logic
+        function autoExpandTextarea(element) {
+            // Reset height to auto to correctly calculate scrollHeight
+            element.style.height = 'auto';
+            
+            // Set element height to its scroll height
+            let newHeight = element.scrollHeight;
+            let maxHeight = parseInt(window.getComputedStyle(element).maxHeight.replace('px', ''));
+            
+            if (newHeight > maxHeight) {
+                newHeight = maxHeight;
+                element.classList.add('scrollable');
+            } else {
+                element.classList.remove('scrollable');
+            }
+            
+            element.style.height = newHeight + 'px';
+        }
+
+        // --- MAIN APP LOGIC ---
         function main() {
-            initTheme(); // Still sets dark class
             setupEventListeners();
             signInAnonymously(auth).catch(err => console.error("Sign-in failed:", err));
             onAuthStateChanged(auth, handleAuthStateChange);
@@ -625,7 +685,7 @@
                 listenForFriendRequests();
                 startStatusUpdates();
                 dom.appContainer.classList.remove('hidden');
-                dom.chatPlaceholder.classList.remove('hidden');
+                dom.messageInput.style.height = 'auto'; // Reset textarea height on load
             } else {
                 stopStatusUpdates();
                 dom.appContainer.classList.add('hidden');
@@ -637,23 +697,16 @@
             const userDoc = await getDoc(userDocRef);
             if (!userDoc.exists()) {
                 const newId = await generateUniqueId();
-                // --- MODIFIED: Fallback name ---
-                const newName = newId.substring(0, 4);
-                await setDoc(userDocRef, { 
-                    publicId: newId, 
-                    name: newName,
-                    uid: currentUser.uid, 
-                    blockedUsers: [] 
-                });
+                const defaultName = 'User ' + newId.substring(0, 4);
+                await setDoc(userDocRef, { publicId: newId, uid: currentUser.uid, blockedUsers: [], name: defaultName, });
                 myPublicId = newId;
-                myPublicName = newName;
+                myPublicName = defaultName;
                 dom.myIdEl.textContent = newId;
             } else {
                 const data = userDoc.data();
                 myPublicId = data.publicId;
-                // --- MODIFIED: Fallback name ---
-                myPublicName = data.name || data.publicId.substring(0, 4);
-                dom.myIdEl.textContent = data.publicId;
+                myPublicName = data.name || 'Unknown';
+                dom.myIdEl.textContent = myPublicId;
                 blockedUsers = data.blockedUsers || [];
             }
         }
@@ -662,332 +715,370 @@
             unsubscribeUserDoc();
             const userDocRef = doc(db, 'users', currentUser.uid);
             unsubscribeUserDoc = onSnapshot(userDocRef, (doc) => {
-                const data = doc.data();
-                blockedUsers = data?.blockedUsers || [];
-                // --- MODIFIED: Fallback name ---
-                myPublicName = data.name || myPublicId.substring(0, 4);
-                listenForFriends();
+                if (doc.exists()) {
+                    blockedUsers = doc.data().blockedUsers || [];
+                    myPublicName = doc.data().name || 'Unknown';
+                    // Re-render friends list to update block/unblock buttons
+                    listenForFriends(); 
+                    if (currentChatPartner) {
+                        // Check if current partner is now blocked or blocked us
+                        listenForMessages(); 
+                    }
+                }
             });
         }
-        
-        // --- UI & THEME ---
 
-        function initTheme() {
-            // Hard-code dark theme
-            document.documentElement.classList.add('dark');
-            localStorage.theme = 'dark';
-        }
-        
-        function scrollToBottom() {
-            setTimeout(() => {
-                dom.messagesContainerEl.scrollTo({ top: dom.messagesContainerEl.scrollHeight, behavior: 'smooth' });
-            }, 50);
-        }
-        
-        // --- NEW: Function to auto-expand textarea ---
-        function autoExpandTextarea(el) {
-            // Reset height to collapse it first, correctly calculating scrollHeight
-            el.style.height = 'auto'; 
-            
-            // Set the element's height to its scrollHeight (content height)
-            // Note: The scrollHeight calculation should now correctly factor in the min-height from CSS.
-            let newHeight = el.scrollHeight;
+        // --- FRIEND & REQUEST MANAGEMENT ---
 
-            const maxHeight = 150;
-            
-            // Check if scrollHeight exceeds the max-height (150px)
-            if (newHeight > maxHeight) {
-                newHeight = maxHeight;
-                el.classList.add('scrollable');
-            } else {
-                el.classList.remove('scrollable');
-            }
-            
-            el.style.height = newHeight + 'px';
-        }
-
-        function switchTab(tab) {
-            if (tab === 'friends') {
-                dom.tabContentFriends.classList.remove('hidden');
-                dom.tabContentRequests.classList.add('hidden');
-                dom.tabBtnFriends.classList.replace('btn-themed-secondary', 'btn-themed-primary');
-                dom.tabBtnRequests.classList.replace('btn-themed-primary', 'btn-themed-secondary');
-            } else {
-                dom.tabContentFriends.classList.add('hidden');
-                dom.tabContentRequests.classList.remove('hidden');
-                dom.tabBtnFriends.classList.replace('btn-themed-primary', 'btn-themed-secondary');
-                dom.tabBtnRequests.classList.replace('btn-themed-secondary', 'btn-themed-primary');
-            }
-        }
-
-        // --- STATUS BAR (Unchanged) ---
-        function startStatusUpdates() {
-            stopStatusUpdates();
-            const update = async () => {
-                dom.localTimeEl.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-                try {
-                    if ('getBattery' in navigator) {
-                        const battery = await navigator.getBattery();
-                        dom.batteryStatusEl.textContent = `${Math.floor(battery.level * 100)}%`;
-                    } else { dom.batteryStatusEl.textContent = 'N/A'; }
-                } catch { dom.batteryStatusEl.textContent = 'N/A'; }
-            };
-            update();
-            statusInterval = setInterval(update, 30000);
-        }
-        function stopStatusUpdates() { if (statusInterval) clearInterval(statusInterval); }
-        
-        // --- FRIEND & REQUEST MANAGEMENT (Unchanged) ---
         function listenForFriends() {
             unsubscribeFriends();
-            const friendsRef = collection(db, `users/${currentUser.uid}/contacts`);
-            unsubscribeFriends = onSnapshot(query(friendsRef), (snapshot) => {
+            const friendsCollectionRef = collection(db, `users/${currentUser.uid}/contacts`);
+            // Query friends (contacts are essentially friends)
+            const q = query(friendsCollectionRef, where('isFriend', '==', true));
+
+            unsubscribeFriends = onSnapshot(q, (snapshot) => {
                 dom.friendsListEl.innerHTML = '';
-                if (snapshot.empty) {
-                    dom.friendsListEl.innerHTML = `<li class="p-4 text-center text-gray-500 font-thin">No friends yet. Add one in the 'Requests' tab.</li>`;
-                    return;
-                }
-                const sortedDocs = snapshot.docs.sort((a, b) => (a.data().timestamp?.toMillis() || 0) - (b.data().timestamp?.toMillis() || 0));
-                sortedDocs.forEach(doc => renderFriend(doc.id, doc.data()));
-                
-                if (currentChatPartner) {
-                    const activeLi = document.querySelector(`#friends-list li[data-uid="${currentChatPartner.uid}"]`);
-                    if (activeLi) activeLi.classList.add('active');
-                }
+                snapshot.forEach(doc => {
+                    const friend = doc.data();
+                    renderFriendListItem(friend);
+                });
             });
         }
-        
-        function renderFriend(uid, data) {
-            const isBlocked = blockedUsers.includes(uid);
-            const li = document.createElement('li');
-            li.className = 'friend-list-item';
-            li.dataset.uid = uid;
-            li.dataset.name = data.name || 'Unnamed';
 
-            const name = data.name || 'Unnamed';
-            const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        function renderFriendListItem(friend) {
+            const item = document.createElement('li');
+            const isActive = currentChatPartner?.uid === friend.uid;
+            const hasUnread = friend.unread === true;
+            
+            // Determine initials and color
+            const initials = friend.name ? friend.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '??';
 
-            let indicatorHTML = '';
-            if (data.unread) {
-                indicatorHTML = `<p class="text-sm text-gray-200 font-semibold truncate max-w-[150px]">${data.lastMessage || ''}</p><span class="w-2.5 h-2.5 bg-indigo-500 rounded-full ml-auto flex-shrink-0"></span>`;
-            } else if (data.lastMessage) {
-                indicatorHTML = `<p class="text-sm text-gray-400 font-thin truncate max-w-[150px]">${data.lastMessage || ''}</p><p class="text-xs text-gray-500 ml-auto whitespace-nowrap font-thin">${formatTimestamp(data.timestamp)}</p>`;
-            } else {
-                 indicatorHTML = `<p class="text-sm text-gray-500 font-thin">No messages yet.</p>`;
-            }
-
-            li.innerHTML = `
-                <div data-action="open-chat" class="flex-grow flex items-center gap-4 cursor-pointer overflow-hidden">
-                    <div class="contact-initials"><span>${initials}</span></div>
-                    <div class="flex-grow overflow-hidden">
-                        <span class="font-semibold">${name} ${isBlocked ? '<span class="text-xs text-red-500 font-thin">(Blocked)</span>' : ''}</span>
-                        <div class="flex items-center gap-2">${indicatorHTML}</div>
+            item.className = `friend-list-item ${isActive ? 'active' : ''}`;
+            item.dataset.uid = friend.uid;
+            item.dataset.name = friend.name;
+            item.innerHTML = `
+                <div class="contact-initials">${initials}</div>
+                <div class="flex-grow overflow-hidden">
+                    <div class="flex items-center justify-between">
+                        <span class="font-medium truncate ${hasUnread ? 'text-white' : ''}">${friend.name || 'Unknown User'}</span>
+                        ${hasUnread ? `<span class="w-2 h-2 bg-red-500 rounded-full flex-shrink-0"></span>` : ''}
                     </div>
-                </div>
-                <div class="flex items-center gap-1 flex-shrink-0">
-                    <button data-action="edit" title="Edit Name" class="btn-icon-theme"><i class="fa-solid fa-pen w-4 h-4"></i></button>
-                    <button data-action="block" title="${isBlocked ? 'Unblock User' : 'Block User'}" class="btn-icon-theme"><i class="fa-solid fa-ban w-4 h-4"></i></button>
-                    <button data-action="delete" title="Delete Contact" class="btn-icon-theme btn-danger text-red-500"><i class="fa-solid fa-trash-can w-4 h-4"></i></button>
+                    <p class="text-xs font-thin truncate ${hasUnread ? 'text-red-300' : 'text-gray-400'}">
+                        ${friend.lastMessage ? friend.lastMessage : 'No messages yet'}
+                    </p>
                 </div>
             `;
-            dom.friendsListEl.appendChild(li);
+            dom.friendsListEl.appendChild(item);
+        }
+
+        async function handleContactsListClick(e) {
+            const item = e.target.closest('.friend-list-item');
+            if (item) {
+                const uid = item.dataset.uid;
+                const name = item.dataset.name;
+                
+                // Remove 'active' class from all, add to clicked item
+                document.querySelectorAll('.friend-list-item').forEach(el => el.classList.remove('active'));
+                item.classList.add('active');
+                
+                await openChat(uid, name);
+            }
         }
 
         function listenForFriendRequests() {
             unsubscribeIncomingRequests();
             unsubscribeOutgoingRequests();
-            
-            const reqsRef = collection(db, 'friendRequests');
 
-            const incomingQuery = query(reqsRef, where('receiverId', '==', currentUser.uid));
-            unsubscribeIncomingRequests = onSnapshot(incomingQuery, (snapshot) => {
+            // Incoming Requests
+            const incomingRef = collection(db, `users/${currentUser.uid}/requests`);
+            const qIncoming = query(incomingRef, where('type', '==', 'incoming'));
+            unsubscribeIncomingRequests = onSnapshot(qIncoming, (snapshot) => {
                 dom.incomingRequestsListEl.innerHTML = '';
-                if (snapshot.empty) {
-                    dom.incomingRequestsListEl.innerHTML = `<li class="text-sm text-gray-500 font-thin">No incoming requests.</li>`;
-                }
-                snapshot.docs.forEach(doc => renderIncomingRequest(doc.id, doc.data()));
-                
-                const count = snapshot.size;
-                dom.requestsBadge.textContent = count;
-                dom.requestsBadge.classList.toggle('hidden', count === 0);
+                let count = 0;
+                snapshot.forEach(doc => {
+                    renderRequestItem(doc.data(), doc.id, 'incoming');
+                    count++;
+                });
+                updateRequestsBadge(count);
             });
 
-            const outgoingQuery = query(reqsRef, where('requesterId', '==', currentUser.uid));
-            unsubscribeOutgoingRequests = onSnapshot(outgoingQuery, (snapshot) => {
+            // Outgoing Requests
+            const outgoingRef = collection(db, `users/${currentUser.uid}/requests`);
+            const qOutgoing = query(outgoingRef, where('type', '==', 'outgoing'));
+            unsubscribeOutgoingRequests = onSnapshot(qOutgoing, (snapshot) => {
                 dom.outgoingRequestsListEl.innerHTML = '';
-                if (snapshot.empty) {
-                    dom.outgoingRequestsListEl.innerHTML = `<li class="text-sm text-gray-500 font-thin">No outgoing requests.</li>`;
-                }
-                snapshot.docs.forEach(doc => renderOutgoingRequest(doc.id, doc.data()));
+                snapshot.forEach(doc => {
+                    renderRequestItem(doc.data(), doc.id, 'outgoing');
+                });
             });
         }
-        
-        function renderIncomingRequest(reqId, data) {
-            const li = document.createElement('li');
-            li.className = 'request-item';
-            li.innerHTML = `
-                <div class="overflow-hidden">
-                    <p class="font-semibold truncate">${data.requesterName || 'Unknown User'}</p>
-                    <p class="text-xs text-gray-400 font-thin truncate">${data.requesterId}</p>
-                </div>
-                <div class="flex gap-2 flex-shrink-0">
-                    <button data-action="accept" data-req-id="${reqId}" title="Accept" class="btn-icon-theme btn-accept text-green-500">
-                        ${icons.accept}
-                    </button>
-                    <button data-action="deny" data-req-id="${reqId}" title="Deny" class="btn-icon-theme btn-danger text-red-500">
-                        ${icons.deny}
-                    </button>
-                </div>
-            `;
-            dom.incomingRequestsListEl.appendChild(li);
+
+        function updateRequestsBadge(count) {
+            if (count > 0) {
+                dom.requestsBadge.textContent = count;
+                dom.requestsBadge.classList.remove('hidden');
+            } else {
+                dom.requestsBadge.classList.add('hidden');
+            }
         }
 
-        function renderOutgoingRequest(reqId, data) {
-            const li = document.createElement('li');
-            li.className = 'request-item';
-            li.innerHTML = `
-                <div class="overflow-hidden">
-                    <p class="font-semibold truncate">${data.receiverName || 'Unknown User'}</p>
-                    <p class="text-xs text-gray-400 font-thin truncate">${data.receiverPublicId}</p>
+        function renderRequestItem(request, docId, type) {
+            const listEl = type === 'incoming' ? dom.incomingRequestsListEl : dom.outgoingRequestsListEl;
+            const item = document.createElement('li');
+            item.className = 'request-item';
+
+            // Determine initials
+            const initials = request.senderName ? request.senderName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '??';
+
+            item.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <div class="contact-initials text-sm">${initials}</div>
+                    <span class="text-sm font-thin">${request.senderName || request.senderPublicId}</span>
                 </div>
-                <button data-action="cancel" data-req-id="${reqId}" title="Cancel" class="btn-icon-theme btn-danger text-red-500">
-                    ${icons.cancel}
-                </button>
+                <div>
+                    ${type === 'incoming' ? `
+                        <button class="btn-icon-theme btn-accept mr-1" data-action="accept-request" data-id="${docId}">
+                            ${icons.accept}
+                        </button>
+                        <button class="btn-icon-theme btn-danger" data-action="deny-request" data-id="${docId}">
+                            ${icons.deny}
+                        </button>
+                    ` : `
+                        <button class="btn-icon-theme btn-danger" data-action="cancel-request" data-id="${docId}">
+                            ${icons.cancel}
+                        </button>
+                    `}
+                </div>
             `;
-            dom.outgoingRequestsListEl.appendChild(li);
+            listEl.appendChild(item);
         }
 
-        // --- CHAT LOGIC ---
+        async function handleAddContact() {
+            const targetId = dom.addContactIdInput.value.trim().toUpperCase();
+            if (targetId.length !== 8) {
+                dom.addFriendMessage.textContent = 'Please enter a valid 8-character ID.';
+                dom.addFriendMessage.className = 'text-sm mt-2 text-red-400 font-thin';
+                return;
+            }
+            if (targetId === myPublicId) {
+                dom.addFriendMessage.textContent = 'You cannot add yourself!';
+                dom.addFriendMessage.className = 'text-sm mt-2 text-red-400 font-thin';
+                return;
+            }
+
+            try {
+                // 1. Find the UID for the public ID
+                const publicIdDoc = await getDoc(doc(db, 'public_ids', targetId));
+                if (!publicIdDoc.exists()) {
+                    dom.addFriendMessage.textContent = 'User ID not found.';
+                    dom.addFriendMessage.className = 'text-sm mt-2 text-red-400 font-thin';
+                    return;
+                }
+                const targetUid = publicIdDoc.data().uid;
+
+                // 2. Check for existing friendship or pending request (outgoing)
+                const contactDoc = await getDoc(doc(db, `users/${currentUser.uid}/contacts`, targetUid));
+                if (contactDoc.exists() && contactDoc.data().isFriend) {
+                    dom.addFriendMessage.textContent = 'You are already friends with this user.';
+                    dom.addFriendMessage.className = 'text-sm mt-2 text-yellow-400 font-thin';
+                    return;
+                }
+                const existingRequestDoc = await getDoc(doc(db, `users/${currentUser.uid}/requests`, targetUid));
+                if (existingRequestDoc.exists() && existingRequestDoc.data().type === 'outgoing') {
+                    dom.addFriendMessage.textContent = 'Request already sent.';
+                    dom.addFriendMessage.className = 'text-sm mt-2 text-yellow-400 font-thin';
+                    return;
+                }
+
+                // 3. Create the batch write
+                const batch = writeBatch(db);
+
+                // A. Outgoing request in my own queue
+                batch.set(doc(db, `users/${currentUser.uid}/requests`, targetUid), {
+                    type: 'outgoing',
+                    senderUid: currentUser.uid,
+                    senderPublicId: myPublicId,
+                    senderName: myPublicName,
+                    timestamp: serverTimestamp()
+                });
+
+                // B. Incoming request in the target user's queue
+                batch.set(doc(db, `users/${targetUid}/requests`, currentUser.uid), {
+                    type: 'incoming',
+                    senderUid: currentUser.uid,
+                    senderPublicId: myPublicId,
+                    senderName: myPublicName,
+                    timestamp: serverTimestamp()
+                });
+
+                await batch.commit();
+
+                dom.addFriendMessage.textContent = 'Friend request sent!';
+                dom.addFriendMessage.className = 'text-sm mt-2 text-green-400 font-thin';
+                dom.addContactIdInput.value = '';
+            } catch (error) {
+                console.error("Error sending friend request:", error);
+                dom.addFriendMessage.textContent = 'Failed to send request. Try again.';
+                dom.addFriendMessage.className = 'text-sm mt-2 text-red-400 font-thin';
+            }
+        }
+
+        async function handleRequestAction(e) {
+            const btn = e.target.closest('button');
+            const action = btn?.dataset.action;
+            const targetUid = btn?.dataset.id; 
+            
+            if (!action || !targetUid) return;
+
+            try {
+                if (action === 'accept-request') {
+                    await acceptRequest(targetUid);
+                } else if (action === 'deny-request' || action === 'cancel-request') {
+                    await removeRequest(targetUid, action === 'cancel-request');
+                }
+            } catch (error) {
+                console.error(`Error handling request action ${action}:`, error);
+                alert(`Failed to complete action: ${error.message}`);
+            }
+        }
+
+        async function acceptRequest(targetUid) {
+            // 1. Get sender info from the request doc before deleting it
+            const incomingRef = doc(db, `users/${currentUser.uid}/requests`, targetUid);
+            const incomingSnap = await getDoc(incomingRef);
+            if (!incomingSnap.exists()) throw new Error("Incoming request not found.");
+            const senderData = incomingSnap.data();
+
+            const batch = writeBatch(db);
+            
+            // 2. Mutual Contact Creation
+            // My contact document (me -> sender)
+            batch.set(doc(db, `users/${currentUser.uid}/contacts`, targetUid), {
+                uid: targetUid,
+                name: senderData.senderName,
+                isFriend: true,
+                lastMessage: 'Accepted friend request.',
+                unread: false,
+                timestamp: serverTimestamp()
+            });
+
+            // Sender's contact document (sender -> me)
+            const senderUserDoc = await getDoc(doc(db, 'users', targetUid));
+            const senderName = senderUserDoc.data()?.name || myPublicId;
+
+            batch.set(doc(db, `users/${targetUid}/contacts`, currentUser.uid), {
+                uid: currentUser.uid,
+                name: myPublicName,
+                isFriend: true,
+                lastMessage: 'Accepted friend request.',
+                unread: false,
+                timestamp: serverTimestamp()
+            });
+            
+            // 3. Mutual Request Deletion
+            // Delete my incoming request
+            batch.delete(doc(db, `users/${currentUser.uid}/requests`, targetUid));
+            // Delete sender's outgoing request
+            batch.delete(doc(db, `users/${targetUid}/requests`, currentUser.uid));
+
+            await batch.commit();
+            console.log(`Accepted request from ${targetUid}`);
+        }
+
+        async function removeRequest(targetUid, isOutgoing) {
+            const batch = writeBatch(db);
+            
+            // If it's an incoming request (I am denying)
+            if (!isOutgoing) {
+                // Delete my incoming request
+                batch.delete(doc(db, `users/${currentUser.uid}/requests`, targetUid));
+                // Delete the sender's outgoing request
+                batch.delete(doc(db, `users/${targetUid}/requests`, currentUser.uid));
+            } 
+            // If it's an outgoing request (I am cancelling)
+            else {
+                // Delete my outgoing request
+                batch.delete(doc(db, `users/${currentUser.uid}/requests`, targetUid));
+                // Delete the recipient's incoming request
+                batch.delete(doc(db, `users/${targetUid}/requests`, currentUser.uid));
+            }
+
+            await batch.commit();
+            console.log(`Request removed for ${targetUid}`);
+        }
+
+        // --- CHAT FUNCTIONS ---
+
+        function scrollToBottom() {
+            setTimeout(() => {
+                dom.messagesContainerEl.scrollTop = dom.messagesContainerEl.scrollHeight;
+            }, 0); 
+        }
 
         async function openChat(uid, name) {
+            if (currentChatPartner?.uid === uid) return; // Already open
+
             currentChatPartner = { uid, name };
             dom.chatHeaderEl.textContent = name;
             dom.messagesContainerEl.innerHTML = '';
             dom.chatPlaceholder.classList.add('hidden');
-            
-            document.querySelectorAll('#friends-list li').forEach(el => el.classList.remove('active'));
-            const activeLi = document.querySelector(`#friends-list li[data-uid="${uid}"]`);
-            if (activeLi) activeLi.classList.add('active');
+            lastMessageCount = 0; // Reset message count for new chat
 
-            if (window.innerWidth < 640) dom.contactsView.classList.add('view-hidden');
-            dom.chatView.classList.remove('view-hidden');
+            // Mobile-specific view change
+            if (window.innerWidth < 640) {
+                dom.contactsView.classList.add('view-hidden');
+                dom.chatView.classList.remove('view-hidden');
+            }
             dom.messageInput.focus();
-
-            listenForMessages();
             
+            listenForMessages(uid);
+            
+            // Mark unread as read in contacts list
             const contactRef = doc(db, `users/${currentUser.uid}/contacts`, uid);
-            try { await updateDoc(contactRef, { unread: false }); } catch (e) { /* ignore */ }
+            try { 
+                await updateDoc(contactRef, { unread: false });
+            } catch (e) { 
+                console.log("Contact not found for unread update, likely new chat.");
+            }
         }
 
         function closeChat() {
             unsubscribeMessages();
-            if (currentObserver) currentObserver.disconnect();
             currentChatPartner = null;
-            dom.messagesContainerEl.innerHTML = '';
-            dom.chatPlaceholder.classList.remove('hidden');
-            document.querySelectorAll('#friends-list li.active').forEach(el => el.classList.remove('active'));
+            // Mobile-specific view change
             dom.chatView.classList.add('view-hidden');
             dom.contactsView.classList.remove('view-hidden');
-            // Reset message count on closing chat
-            lastMessageCount = 0;
-            
-            // NEW: Collapse textarea on closing chat
-            dom.messageInput.value = '';
-            autoExpandTextarea(dom.messageInput); 
+            // Clear message list
+            dom.messagesContainerEl.innerHTML = '';
+            dom.chatPlaceholder.classList.remove('hidden');
         }
 
-        function setupSeenObserver(messages) {
-            if (currentObserver) currentObserver.disconnect();
-            const chatPartnerId = currentChatPartner.uid;
-            // Only observe the chat partner's messages that are unread
-            const unreadMessages = messages.filter(msg => msg.senderId === chatPartnerId && !msg.seen); 
-            if (unreadMessages.length === 0) return;
-
-            currentObserver = new IntersectionObserver(async (entries) => {
-                let messagesToUpdate = [];
-                for (const entry of entries) {
-                    if (entry.isIntersecting) {
-                        const messageEl = entry.target;
-                        const timestampISO = messageEl.dataset.timestamp;
-                        
-                        // Set a timeout to mark as seen after delay
-                        if (!messageEl.dataset.seenTimer) {
-                            messageEl.dataset.seenTimer = setTimeout(() => {
-                                messagesToUpdate.push(timestampISO);
-                                // Immediately mark the element visually to avoid duplicates
-                                messageEl.dataset.markedSeen = 'true';
-                                currentObserver.unobserve(messageEl);
-                                
-                                // Batch the update to Firebase (only if we are still in the chat)
-                                if (currentChatPartner && currentChatPartner.uid === chatPartnerId && messagesToUpdate.length > 0) {
-                                    handleSeenUpdate(messagesToUpdate);
-                                    messagesToUpdate = []; // Clear batch after send
-                                }
-                            }, SEEN_DELAY_MS);
-                        }
-                    } else {
-                        // If it moves out of view, clear the timer
-                        if (entry.target.dataset.seenTimer) {
-                            clearTimeout(entry.target.dataset.seenTimer);
-                            delete entry.target.dataset.seenTimer;
-                        }
-                    }
-                }
-            }, { threshold: 0.8 }); // Require 80% visibility to trigger
-
-            unreadMessages.forEach(msg => {
-                const timestampISO = msg.timestamp?.toDate ? msg.timestamp.toDate().toISOString() : new Date(msg.timestamp).toISOString();
-                // Ensure we only observe the DOM elements corresponding to the unread messages
-                const element = document.querySelector(`.message-wrapper[data-timestamp="${timestampISO}"]`);
-                if (element && !element.dataset.markedSeen) currentObserver.observe(element);
-            });
-        }
-        
-        async function handleSeenUpdate(timestampsToMark) {
-            if (!currentChatPartner) return;
-            const chatId = [currentUser.uid, currentChatPartner.uid].sort().join('_');
-            const chatDocRef = doc(db, 'chats', chatId);
-            const chatDoc = await getDoc(chatDocRef);
-            
-            if (chatDoc.exists()) {
-                const currentMessages = chatDoc.data().messages || [];
-                const updatedMessages = currentMessages.map(msg => {
-                    const msgTimestampISO = msg.timestamp?.toDate ? msg.timestamp.toDate().toISOString() : new Date(msg.timestamp).toISOString();
-                    if (timestampsToMark.includes(msgTimestampISO) && !msg.seen) {
-                        return { ...msg, seen: true };
-                    }
-                    return msg;
-                });
-                // Using merge: true prevents overwriting other fields if they existed, though 'messages' is the only expected one.
-                await setDoc(chatDocRef, { messages: updatedMessages }, { merge: true });
-            }
-        }
-
-        function listenForMessages() {
+        function listenForMessages(chatPartnerId = currentChatPartner?.uid) {
             unsubscribeMessages();
-            if (!currentChatPartner) return; // Guard for closing chat
-            
-            const chatId = [currentUser.uid, currentChatPartner.uid].sort().join('_');
+            if (!chatPartnerId) return;
+
+            const chatId = getChatId(currentUser.uid, chatPartnerId);
             const chatDocRef = doc(db, 'chats', chatId);
             
             unsubscribeMessages = onSnapshot(chatDocRef, (doc) => {
                 if (!doc.exists()) {
-                    dom.messagesContainerEl.innerHTML = '';
-                    lastMessageCount = 0; // Reset count
+                    dom.messagesContainerEl.innerHTML = `<div class="p-4 text-center text-gray-500 font-thin">Start your conversation!</div>`;
+                    lastMessageCount = 0;
                     return;
                 }
                 const data = doc.data();
-                const messages = data.messages || [];
-                
-                const sortedMessages = messages.sort((a, b) => {
-                    const timeA = (a.timestamp?.seconds || a.timestamp / 1000) || 0;
-                    const timeB = (b.timestamp?.seconds || b.timestamp / 1000) || 0;
-                    return timeA - timeB;
-                });
+                const allMessages = data.messages || [];
 
-                const filteredMessages = sortedMessages.filter(msg => !(msg.senderId !== currentUser.uid && blockedUsers.includes(msg.senderId)));
-                
-                // --- NEW: Logic for last 3 seen messages ---
+                // Filter out messages blocked users may have sent
+                const filteredMessages = allMessages.filter(msg => 
+                    msg.senderId === currentUser.uid || !blockedUsers.includes(msg.senderId)
+                );
+
+                // --- Message Rendering Logic ---
+                // Only take the last MESSAGE_LIMIT messages
+                const messagesToDisplay = filteredMessages.slice(-MESSAGE_LIMIT);
+
+                // Find the timestamps of the last 3 *sent* messages that have been marked as seen
                 const sentMessages = filteredMessages.filter(msg => msg.senderId === currentUser.uid);
                 const last3SeenTimestamps = sentMessages
                     .filter(msg => msg.seen)
@@ -995,28 +1086,30 @@
                     .map(msg => msg.timestamp?.toDate ? msg.timestamp.toDate().toISOString() : new Date(msg.timestamp).toISOString());
 
                 // --- NEW: Auto-scroll control (only scrolls if message count increases) ---
-                const currentMessageCount = filteredMessages.length;
+                const currentMessageCount = messagesToDisplay.length;
                 const shouldScroll = currentMessageCount > lastMessageCount;
                 lastMessageCount = currentMessageCount; // Update count for next time
 
                 dom.messagesContainerEl.innerHTML = '';
-                filteredMessages.forEach(msg => renderMessage(msg, last3SeenTimestamps));
-                setupSeenObserver(filteredMessages);
+                messagesToDisplay.forEach(msg => renderMessage(msg, last3SeenTimestamps));
+                
+                setupSeenObserver(messagesToDisplay);
                 
                 if (shouldScroll) {
                     scrollToBottom();
                 }
             });
         }
-        
+
+
         function renderMessage(data, last3SeenTimestamps = []) {
             if (!data || (!data.text && (!data.images || data.images.length === 0))) return;
             
             const messageWrapper = document.createElement('div');
             const isSent = data.senderId === currentUser.uid;
-            
             let time = '';
             let timestampISO = '';
+
             if (data.timestamp?.toDate) {
                 const date = data.timestamp.toDate();
                 time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -1026,478 +1119,493 @@
                 time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 timestampISO = date.toISOString();
             }
-
+            
+            // --- NEW: Message Truncation/Expansion Logic ---
             const isLargeMessage = data.text && data.text.length > MESSAGE_TRUNCATE_LENGTH;
-            const displayText = data.text && (isLargeMessage ? data.text.substring(0, MESSAGE_TRUNCATE_LENGTH) + '...' : data.text);
-            const bubbleClasses = isSent ? 'sent-bubble' : 'received-bubble';
+            // Always render the full text, let CSS handle truncation
+            const displayText = data.text; 
             
-            messageWrapper.className = `message-wrapper flex ${isSent ? 'justify-end' : 'justify-start'}`;
-            messageWrapper.dataset.timestamp = timestampISO;
+            const messageContentClasses = isLargeMessage ? 'message-content truncated' : 'message-content';
 
-            // --- Check for seen in the last 3 timestamps list ---
-            const showSeen = isSent && data.seen && last3SeenTimestamps.includes(timestampISO); 
-            
-            const textHTML = data.text ? `
-                <p class="message-text message-content ${isLargeMessage ? 'truncated' : ''}">${displayText || ''}</p>
-            ` : '';
-            
-            const fadeArrowHTML = isLargeMessage ? `
-                <div class="fade-arrow" data-action="toggle-truncate">
-                    <i class="fa-solid fa-chevron-down w-3 h-3"></i>
-                </div>
-            ` : '';
+            // Check if this message is one of the last 3 seen messages
+            const isSeen = last3SeenTimestamps.includes(timestampISO);
+
+            const bubbleClasses = isSent ? 'sent-bubble' : 'received-bubble';
 
             let imagesHTML = '';
             if (data.images && data.images.length > 0) {
                 imagesHTML = `
                     <div class="image-attachment-grid">
-                        ${data.images.map(imgBase64 => `
-                            <img src="${imgBase64}" class="image-attachment" data-action="view-image">
+                        ${data.images.map(url => `
+                            <img src="${url}" class="image-attachment" data-action="view-image">
                         `).join('')}
                     </div>
                 `;
             }
 
+            // MODIFIED: Added Show More/Show Less text to the arrow button
+            const fadeArrowHTML = isLargeMessage ? `
+                <div class="fade-arrow" data-action="toggle-expand">
+                    <span data-state="collapsed">Show More</span>
+                    <span data-state="expanded" class="hidden">Show Less</span>
+                    <i class="fa-solid fa-chevron-down w-3 h-3"></i>
+                </div>
+            ` : '';
+
+            // MODIFIED: Added responsive Tailwind max-width classes
+            messageWrapper.className = `flex ${isSent ? 'justify-end' : 'justify-start'} message-wrapper my-3`;
+            messageWrapper.dataset.timestamp = timestampISO;
             messageWrapper.innerHTML = `
-                <div class="flex flex-col ${isSent ? 'items-end' : 'items-start'}">
-                    <div class="message-bubble ${bubbleClasses} relative">
-                        ${textHTML}
-                        ${imagesHTML}
+                <div data-timestamp="${timestampISO}" data-seen="${data.seen ? 'true' : 'false'}" 
+                     class="message-bubble ${bubbleClasses} ${!data.seen && !isSent ? 'unread-message' : ''} max-w-xs md:max-w-md lg:max-w-lg" 
+                     data-action="toggle-expand"> 
+                    
+                    <div class="${messageContentClasses}">
+                        ${displayText ? `<p class="message-text">${displayText}</p>` : ''}
+                        ${data.images && data.images.length > 0 && !isLargeMessage ? imagesHTML : ''}
                         ${fadeArrowHTML}
                     </div>
-                    <p class="message-timestamp px-2 ${isSent ? 'text-right' : 'text-left'}">
-                        <span>${time}</span>
-                        ${showSeen ? '<span class="seen-status ml-2">Seen</span>' : ''}
-                    </p>
+
+                    ${data.images && data.images.length > 0 && isLargeMessage ? imagesHTML : ''}
                 </div>
             `;
+            
+            // Insert timestamp below the bubble
+            const timestampEl = document.createElement('div');
+            timestampEl.className = `message-timestamp ${isSent ? 'text-right' : 'text-left'}`;
+            timestampEl.innerHTML = `
+                ${time}
+                ${isSent ? `<span class="seen-status">${isSeen ? ' · Seen' : ''}</span>` : ''}
+            `;
+
             dom.messagesContainerEl.appendChild(messageWrapper);
+            dom.messagesContainerEl.appendChild(timestampEl);
         }
 
-        function handleToggleTruncate(e) {
-            const button = e.target.closest('[data-action="toggle-truncate"]');
-            if (!button) return;
+        // --- SEEN STATUS LOGIC ---
 
-            const messageBubble = button.closest('.message-bubble');
-            const content = messageBubble.querySelector('.message-content');
-            
-            if (content) {
-                content.classList.toggle('truncated');
-                button.classList.toggle('expanded');
-            }
-        }
-        
-        // --- MODIFIED: Handle viewing/downloading an image (Unchanged from previous update) ---
-        function handleViewImage(e) {
-            const img = e.target.closest('[data-action="view-image"]');
-            if (!img) return;
-            
-            const imageUrl = img.src;
-
-            // Prompt user for confirmation before downloading
-            if (confirm("Do you want to download this image? Click Cancel to view it in a new tab.")) {
-                const a = document.createElement('a');
-                a.href = imageUrl;
-                // Use a simple, date-stamped filename
-                a.download = `messenger_image_${new Date().toISOString().substring(0, 10)}_${Math.random().toString(36).substring(2, 6)}.png`; 
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-            } else {
-                 // Open in new tab if download is cancelled
-                window.open(imageUrl, '_blank');
-            }
-        }
-
-        // --- NEW: Handle image upload (Unchanged from previous update) ---
-        function handleImageUpload(e) {
-            imageAttachmentsBase64 = [];
-            dom.imagePreviewContainer.innerHTML = '';
-            
-            const files = e.target.files;
-            if (!files || files.length === 0) return;
-            
-            if (files.length > 5) {
-                alert("You can only attach up to 5 images.");
-                dom.imageInput.value = ''; // Clear selection
-                return;
-            }
-
-            dom.imagePreviewContainer.classList.remove('hidden');
-            
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                const reader = new FileReader();
-                
-                reader.onload = (event) => {
-                    const base64String = event.target.result;
-                    imageAttachmentsBase64.push(base64String);
-                    
-                    const previewEl = document.createElement('div');
-                    previewEl.className = "image-preview-item";
-                    previewEl.innerHTML = `
-                        <img src="${base64String}" class="w-full h-full object-cover">
-                        <button data-b64="${base64String}" class="remove-image-btn" title="Remove image">&times;</button>
-                    `;
-                    dom.imagePreviewContainer.appendChild(previewEl);
-                };
-                
-                reader.readAsDataURL(file);
-            }
-            // Clear input value to allow re-uploading the same file
-            dom.imageInput.value = '';
-        }
-
-        // --- NEW: Handle removing an image from preview (Unchanged from previous update) ---
-        function handleRemoveImage(e) {
-            const button = e.target.closest('.remove-image-btn');
-            if (!button) return;
-            
-            const base64ToRemove = button.dataset.b64;
-            imageAttachmentsBase64 = imageAttachmentsBase64.filter(b64 => b64 !== base64ToRemove);
-            
-            button.parentElement.remove();
-            
-            if (imageAttachmentsBase64.length === 0) {
-                dom.imagePreviewContainer.classList.add('hidden');
-            }
-        }
-        
-        // --- NEW: Local Chat Clearing Function (Unchanged from previous update) ---
-        async function handleClearLocalChat() {
+        function setupSeenObserver(messages) {
             if (!currentChatPartner) return;
-            
-            const chatHeader = dom.chatHeaderEl.textContent;
-            const confirmed = confirm(`Are you sure you want to clear your local chat history with ${chatHeader}? All messages will be gone forever from your view.`);
-            
-            if (confirmed) {
-                // 1. Add clearing animation (fade out all messages)
-                const messages = dom.messagesContainerEl.querySelectorAll('.message-wrapper');
-                messages.forEach(msg => {
-                    msg.style.transition = 'opacity 0.5s ease-out';
-                    msg.style.opacity = '0';
+
+            // Stop observing all previous targets
+            if (window.seenObserver) {
+                window.seenObserver.disconnect();
+            }
+
+            // Filter for unread *received* messages
+            const unreadReceivedMessages = messages.filter(msg => 
+                msg.senderId === currentChatPartner.uid && !msg.seen
+            );
+
+            if (unreadReceivedMessages.length === 0) return;
+
+            // Get the corresponding DOM elements
+            const unreadElements = Array.from(dom.messagesContainerEl.querySelectorAll('.unread-message'));
+
+            window.seenObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+                        const messageElement = entry.target.closest('.message-bubble');
+                        const timestampISO = messageElement.dataset.timestamp;
+
+                        // Use a timeout to simulate a delay before marking seen
+                        setTimeout(() => {
+                            // Check again if it's still visible and hasn't been marked seen by another process
+                            if (messageElement.dataset.seen !== 'true') {
+                                handleSeenUpdate(timestampISO);
+                                window.seenObserver.unobserve(messageElement);
+                            }
+                        }, SEEN_DELAY_MS);
+                    }
                 });
-                
-                // 2. Wait for fade out, then clear DOM and re-render
-                setTimeout(() => {
-                    dom.messagesContainerEl.innerHTML = '';
-                    
-                    // 3. Add a local-only "cleared" marker
-                    const clearedMarker = document.createElement('div');
-                    clearedMarker.className = 'text-center text-gray-500 text-sm italic py-4';
-                    clearedMarker.innerHTML = `
-                        <div class="inline-block px-4 py-1 rounded-full bg-[#1a1a1a] border border-[#333]">
-                            Your local chat history for this conversation has been cleared.
-                        </div>
-                    `;
-                    dom.messagesContainerEl.appendChild(clearedMarker);
-                    
-                    scrollToBottom();
-                    
-                    // 4. Re-load the chat, which pulls the last 25 messages from the database
-                    // This effectively provides the visual "clear" of older, un-persisted messages.
-                    lastMessageCount = 0;
-                    listenForMessages(); 
-                }, 500);
-            }
+            }, {
+                root: dom.messagesContainerEl,
+                threshold: 0.5, // Trigger when 50% of the target is visible
+            });
+
+            // Start observing all unread received messages
+            unreadElements.forEach(el => window.seenObserver.observe(el));
         }
 
-        // --- UTILITIES (Unchanged or Minor) ---
-
-        async function filterProfanity(text) {
-            try {
-                const response = await fetch(`https://www.purgomalum.com/service/plain?text=${encodeURIComponent(text)}`);
-                return response.ok ? await response.text() : text;
-            } catch (error) { console.error("Profanity filter failed:", error); return text; }
-        }
-
-        async function generateUniqueId(length = 8) {
-            while (true) {
-                const id = Math.random().toString(36).substring(2, 2 + length);
-                const q = query(collection(db, 'users'), where('publicId', '==', id));
-                const snapshot = await getDocs(q);
-                if (snapshot.empty) return id;
-            }
-        }
-
-        function formatTimestamp(timestamp) {
-            if (!timestamp) return '';
-            const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-            const today = new Date();
-            const isToday = date.toDateString() === today.toDateString();
-            if (isToday) {
-                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            } else {
-                return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-            }
-        }
-
-        async function writeMessageToChat(messageData) {
-            const chatId = [currentUser.uid, currentChatPartner.uid].sort().join('_');
+        async function handleSeenUpdate(timestampISO) {
+            if (!currentChatPartner) return;
+            const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
             const chatDocRef = doc(db, 'chats', chatId);
-            const chatDoc = await getDoc(chatDocRef);
-            let currentMessages = chatDoc.exists() ? chatDoc.data().messages || [] : [];
-            currentMessages.push(messageData);
-            if (currentMessages.length > MESSAGE_STORAGE_LIMIT) {
-                currentMessages = currentMessages.slice(-MESSAGE_STORAGE_LIMIT);
+
+            try {
+                // The transaction will read the current messages array, update the one matching the timestamp, and write it back
+                const docSnap = await getDoc(chatDocRef);
+                if (docSnap.exists()) {
+                    const messages = docSnap.data().messages || [];
+                    
+                    const updatedMessages = messages.map(msg => {
+                        // Normalize timestamp for comparison (Firestore Timestamp vs ISO string from DOM)
+                        let msgTimestampISO = msg.timestamp?.toDate ? msg.timestamp.toDate().toISOString() : new Date(msg.timestamp).toISOString();
+                        
+                        if (msgTimestampISO === timestampISO && msg.senderId === currentChatPartner.uid && !msg.seen) {
+                            return { ...msg, seen: true };
+                        }
+                        return msg;
+                    });
+                    
+                    // Only update if changes were made
+                    if (messages.length !== updatedMessages.length || JSON.stringify(messages) !== JSON.stringify(updatedMessages)) {
+                         await updateDoc(chatDocRef, { messages: updatedMessages });
+                    }
+                }
+            } catch (error) {
+                console.error("Error updating seen status:", error);
             }
-            await setDoc(chatDocRef, { messages: currentMessages });
-        }
-        
-        function setAddFriendMessage(message, type = 'error') {
-            const el = dom.addFriendMessage;
-            el.textContent = message;
-            el.className = `text-sm mt-2 font-thin ${type === 'error' ? 'text-red-400' : 'text-green-400'}`;
-            setTimeout(() => el.textContent = '', 3000);
         }
 
-        // --- EVENT HANDLERS ---
-        
+        // --- MESSAGE SENDING ---
+
         async function handleSendMessage(e) {
             if (e) e.preventDefault();
             
-            // Trim to prevent sending messages that are only whitespace
-            const text = dom.messageInput.value.trim();
-            
-            // --- MODIFIED: Robust check for text OR images ---
-            if (text === '' && imageAttachmentsBase64.length === 0) return;
-            
-            if (text.length > MESSAGE_CHARACTER_LIMIT) return alert(`Message exceeds ${MESSAGE_CHARACTER_LIMIT} chars.`);
-
-            dom.sendBtn.disabled = true;
-            dom.sendBtn.innerHTML = '...';
-
-            const recipientDoc = await getDoc(doc(db, 'users', currentChatPartner.uid));
-            if (recipientDoc.data()?.blockedUsers?.includes(currentUser.uid)) {
-                alert('You cannot send a message to this user. You may be blocked.');
-                dom.sendBtn.disabled = false;
-                dom.sendBtn.innerHTML = icons.send;
+            if (!currentChatPartner) {
+                alert("Please select a friend to chat with first.");
                 return;
             }
 
-            const filteredText = await filterProfanity(dom.messageInput.value); // Use the full text to ensure newlines are preserved
+            const text = dom.messageInput.value.trim();
+            const images = imageAttachmentsBase64;
             
-            const messageData = { 
-                text: filteredText, 
-                senderId: currentUser.uid, 
-                timestamp: new Date(),
-                seen: false,
-                images: imageAttachmentsBase64
+            if (text === '' && images.length === 0) {
+                return; // Do nothing if both are empty
+            }
+
+            // 1. Upload Images to Firebase Storage (if any)
+            let imageUrls = [];
+            if (images.length > 0) {
+                dom.sendBtn.disabled = true;
+                dom.sendBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin w-5 h-5"></i>`; // Loading spinner
+
+                try {
+                    const uploadPromises = images.map((base64String, index) => {
+                        const filename = `${currentUser.uid}_${Date.now()}_${index}.png`;
+                        const imgRef = storageRef(storage, `chat_images/${currentChatPartner.uid}/${filename}`);
+                        // Use base64 string directly
+                        return uploadString(imgRef, base64String, 'data_url')
+                            .then(snapshot => getDownloadURL(snapshot.ref));
+                    });
+                    imageUrls = await Promise.all(uploadPromises);
+                } catch (error) {
+                    console.error("Image upload failed:", error);
+                    alert("Failed to upload image(s). Message not sent.");
+                    dom.sendBtn.disabled = false;
+                    dom.sendBtn.innerHTML = icons.send;
+                    return;
+                }
+            }
+
+            // 2. Write Message to Chat
+            await writeMessageToChat(text, imageUrls);
+
+            // 3. Clear UI
+            dom.messageInput.value = '';
+            imageAttachmentsBase64 = [];
+            dom.imageInput.value = ''; // Clear file input
+            dom.imagePreviewContainer.innerHTML = '';
+            dom.imagePreviewContainer.classList.add('hidden');
+            dom.sendBtn.innerHTML = icons.send;
+            dom.sendBtn.disabled = false;
+            
+            // NEW: Reset textarea height
+            dom.messageInput.style.height = 'auto'; 
+            autoExpandTextarea(dom.messageInput);
+        }
+        
+        async function writeMessageToChat(text, imageUrls) {
+            const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
+            const chatDocRef = doc(db, 'chats', chatId);
+            
+            const messageData = {
+                senderId: currentUser.uid,
+                text: text,
+                images: imageUrls,
+                timestamp: serverTimestamp(),
+                seen: false
             };
             
             try {
-                await writeMessageToChat(messageData);
-                
-                // Determine the text for the contact list snippet
-                const snippetText = filteredText.replace(/\s+/g, ' '); // Clean up newlines for the snippet
-                const lastMessageText = snippetText ? snippetText : `[${imageAttachmentsBase64.length} image(s)]`;
-                
-                const recipientContactRef = doc(db, `users/${currentChatPartner.uid}/contacts`, currentUser.uid);
-                await setDoc(recipientContactRef, { 
-                    lastMessage: lastMessageText, 
-                    unread: true, 
-                    timestamp: serverTimestamp()
-                }, { merge: true });
-                
-                const senderContactRef = doc(db, `users/${currentUser.uid}/contacts`, currentChatPartner.uid);
-                await updateDoc(senderContactRef, { 
-                    lastMessage: `You: ${lastMessageText}`, 
-                    timestamp: serverTimestamp()
+                // Check if chat document exists to decide whether to use setDoc or updateDoc
+                const chatSnap = await getDoc(chatDocRef);
+                const messageUpdate = {
+                    messages: arrayUnion(messageData),
+                };
+
+                if (chatSnap.exists()) {
+                    await updateDoc(chatDocRef, messageUpdate);
+                } else {
+                    await setDoc(chatDocRef, messageUpdate);
+                }
+
+                // 4. Update both users' contact lists (Last Message & Unread status)
+                const lastMessageText = text || 'Sent image(s)';
+                const myContactRef = doc(db, `users/${currentUser.uid}/contacts`, currentChatPartner.uid);
+                const partnerContactRef = doc(db, `users/${currentChatPartner.uid}/contacts`, currentUser.uid);
+
+                const batch = writeBatch(db);
+
+                // My side: Update last message
+                batch.update(myContactRef, { 
+                    lastMessage: lastMessageText,
+                    timestamp: serverTimestamp(),
                 });
-                
-                // --- NEW: Clear text and images AND collapse textarea ---
-                dom.messageInput.value = '';
-                autoExpandTextarea(dom.messageInput); // Collapse the textarea back to min-height
-                imageAttachmentsBase64 = [];
-                dom.imagePreviewContainer.innerHTML = '';
-                dom.imagePreviewContainer.classList.add('hidden');
-                dom.imageInput.value = '';
+
+                // Partner side: Update last message and set unread to true
+                batch.update(partnerContactRef, { 
+                    lastMessage: lastMessageText,
+                    unread: true,
+                    timestamp: serverTimestamp(),
+                });
+
+                await batch.commit();
 
             } catch (error) {
-                console.error("Send message error:", error);
-            } finally {
-                dom.sendBtn.disabled = false;
-                dom.sendBtn.innerHTML = icons.check;
-                setTimeout(() => dom.sendBtn.innerHTML = icons.send, 1000);
-                dom.messageInput.focus();
-            }
-        }
-
-        async function handleSendFriendRequest() {
-            const id = dom.addContactIdInput.value.trim().toLowerCase();
-            if (id.length !== 8) return setAddFriendMessage('Please enter a valid 8-character ID.');
-            if (id === myPublicId) return setAddFriendMessage("You can't add yourself.");
-
-            const q = query(collection(db, 'users'), where('publicId', '==', id));
-            const snapshot = await getDocs(q);
-            if (snapshot.empty) return setAddFriendMessage('User not found.');
-            
-            const contactUser = snapshot.docs[0].data();
-            const receiverId = contactUser.uid;
-            // --- MODIFIED: Fallback name ---
-            const receiverName = contactUser.name || contactUser.publicId.substring(0, 4);
-            
-            const reqId = [currentUser.uid, receiverId].sort().join('_');
-
-            const friendDoc = await getDoc(doc(db, `users/${currentUser.uid}/contacts`, receiverId));
-            if (friendDoc.exists()) return setAddFriendMessage('You are already friends with this user.');
-
-            const requestDoc = await getDoc(doc(db, 'friendRequests', reqId));
-            if (requestDoc.exists()) return setAddFriendMessage('A request already exists with this user.');
-            
-            try {
-                await setDoc(doc(db, 'friendRequests', reqId), {
-                    requesterId: currentUser.uid,
-                    requesterName: myPublicName,
-                    receiverId: receiverId,
-                    receiverName: receiverName,
-                    receiverPublicId: id,
-                    status: 'pending',
-                    timestamp: serverTimestamp()
-                });
-                setAddFriendMessage('Friend request sent!', 'success');
-                dom.addContactIdInput.value = '';
-            } catch (error) {
-                console.error("Send request error:", error);
-                setAddFriendMessage('Failed to send request.');
+                console.error("Error writing message or updating contacts:", error);
+                alert("Failed to send message and/or update contacts.");
             }
         }
         
-        async function handleIncomingRequestClick(e) {
-            const button = e.target.closest('[data-action]');
-            if (!button) return;
+        // --- IMAGE ATTACHMENT LOGIC ---
+        
+        function handleImageUpload(e) {
+            const files = e.target.files;
+            if (files.length === 0) return;
+
+            // Clear previous attachments only if new files are selected
+            imageAttachmentsBase64 = [];
+            dom.imagePreviewContainer.innerHTML = '';
+            dom.imagePreviewContainer.classList.add('hidden');
+
+            Array.from(files).slice(0, 5).forEach(file => { // Limit to 5 images
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const base64 = event.target.result;
+                        imageAttachmentsBase64.push(base64);
+                        renderImagePreview(base64);
+                        dom.sendBtn.innerHTML = icons.send; // Ensure send icon is active
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        function renderImagePreview(base64) {
+            dom.imagePreviewContainer.classList.remove('hidden');
+            const previewItem = document.createElement('div');
+            previewItem.className = 'image-preview-item';
+            previewItem.dataset.base64 = base64; // Store base64 for removal
+
+            previewItem.innerHTML = `
+                <img src="${base64}" alt="Image preview" class="w-full h-full object-cover">
+                <button class="remove-image-btn" data-action="remove-image">&times;</button>
+            `;
+            dom.imagePreviewContainer.appendChild(previewItem);
+        }
+
+        function handleRemoveImage(e) {
+            const btn = e.target.closest('[data-action="remove-image"]');
+            if (!btn) return;
+
+            const item = btn.closest('.image-preview-item');
+            const base64ToRemove = item.dataset.base64;
+
+            // Remove from array
+            imageAttachmentsBase64 = imageAttachmentsBase64.filter(b => b !== base64ToRemove);
+
+            // Remove from DOM
+            item.remove();
+
+            // Hide container if empty
+            if (imageAttachmentsBase64.length === 0) {
+                dom.imagePreviewContainer.classList.add('hidden');
+                if (dom.messageInput.value.trim() === '') {
+                    // Update send button if message is also empty
+                    dom.sendBtn.innerHTML = icons.check; 
+                }
+            }
+            // Ensure the file input itself is cleared so re-uploading the same file works
+            dom.imageInput.value = '';
+        }
+
+        // --- UI EVENT HANDLERS ---
+        
+        function handleMessageClick(e) {
+            // Find the closest parent element that is the message bubble or the fade arrow
+            let target = e.target.closest('[data-action="toggle-expand"]');
             
-            const action = button.dataset.action;
-            const reqId = button.dataset.reqId;
-            const reqDocRef = doc(db, 'friendRequests', reqId);
-            
-            if (action === 'deny') {
-                try { await deleteDoc(reqDocRef); } catch (e) { console.error("Error denying request:", e); }
+            // If the user clicks on the image itself, ignore this handler
+            if (e.target.closest('[data-action="view-image"]')) return;
+
+            const bubble = e.target.closest('.message-bubble');
+            if (!bubble) return;
+
+            // If the click happened on the arrow button OR the bubble itself (when truncated)
+            if (target || bubble.querySelector('.message-content.truncated')) {
+                const content = bubble.querySelector('.message-content');
+                if (!content) return;
+
+                // This toggles the 'truncated' class on the content div
+                const isTruncated = content.classList.toggle('truncated');
+                
+                // Toggle the 'expanded' class on the arrow wrapper
+                const arrow = bubble.querySelector('.fade-arrow');
+                if (arrow) {
+                    arrow.classList.toggle('expanded', !isTruncated);
+                    
+                    // Toggle the 'Show More' / 'Show Less' text for better UX
+                    const collapsedText = arrow.querySelector('[data-state="collapsed"]');
+                    const expandedText = arrow.querySelector('[data-state="expanded"]');
+                    
+                    if (isTruncated) {
+                        collapsedText.classList.remove('hidden');
+                        expandedText.classList.add('hidden');
+                    } else {
+                        collapsedText.classList.add('hidden');
+                        expandedText.classList.remove('hidden');
+                    }
+                    
+                    // Re-calculate scroll position after expansion/collapse
+                    scrollToBottom();
+                }
+            }
+        }
+
+        async function handleCopyId() {
+            if (!navigator.clipboard) {
+                // Using document.execCommand as a fallback for iframe environments
+                const textArea = document.createElement("textarea");
+                textArea.value = dom.myIdEl.textContent;
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    dom.copyIdBtn.textContent = 'Copied!';
+                    setTimeout(() => { dom.copyIdBtn.textContent = 'Copy'; }, 2000);
+                } catch (err) {
+                    console.error('Fallback copy: ', err);
+                }
+                document.body.removeChild(textArea);
                 return;
             }
             
-            if (action === 'accept') {
-                try {
-                    const reqDoc = await getDoc(reqDocRef);
-                    if (!reqDoc.exists()) return;
-                    const data = reqDoc.data();
-                    
-                    const batch = writeBatch(db);
-                    
-                    const myContactRef = doc(db, `users/${currentUser.uid}/contacts`, data.requesterId);
-                    batch.set(myContactRef, { name: data.requesterName, unread: false, timestamp: serverTimestamp() });
-                    
-                    const theirContactRef = doc(db, `users/${data.requesterId}/contacts`, currentUser.uid);
-                    batch.set(theirContactRef, { name: myPublicName, unread: false, timestamp: serverTimestamp() });
-                    
-                    batch.delete(reqDocRef);
-                    
-                    await batch.commit();
-                } catch (e) { console.error("Error accepting request:", e); }
-            }
-        }
-        
-        async function handleOutgoingRequestClick(e) {
-            const button = e.target.closest('[data-action="cancel"]');
-            if (!button) return;
-            
-            const reqId = button.dataset.reqId;
-            if (confirm("Are you sure you want to cancel this friend request?")) {
-                try {
-                    await deleteDoc(doc(db, 'friendRequests', reqId));
-                } catch (e) { console.error("Error cancelling request:", e); }
-            }
-        }
-
-        async function handleFriendsListClick(e) {
-            const li = e.target.closest('li.friend-list-item');
-            if (!li || !li.dataset.uid) return;
-
-            const uid = li.dataset.uid;
-            const name = li.dataset.name;
-            const actionTarget = e.target.closest('[data-action]');
-
-            if (actionTarget) {
-                const action = actionTarget.dataset.action;
-                e.stopPropagation(); 
-
-                if (action === 'open-chat') {
-                    openChat(uid, name);
-                } else if (action === 'edit') {
-                    const newName = prompt("Enter new name for contact:", name);
-                    if (newName && newName.trim() !== '') {
-                        await updateDoc(doc(db, `users/${currentUser.uid}/contacts`, uid), { name: newName.trim() });
-                    }
-                } else if (action === 'block') {
-                    const userDocRef = doc(db, 'users', currentUser.uid);
-                    const isBlocked = blockedUsers.includes(uid);
-                    const operation = isBlocked ? arrayRemove : arrayUnion;
-                    const confirmationText = isBlocked ? `Are you sure you want to unblock ${name}?` : `Are you sure you want to block ${name}? They will not be able to send you messages.`;
-                    if (confirm(confirmationText)) {
-                        await updateDoc(userDocRef, { blockedUsers: operation(uid) });
-                    }
-                } else if (action === 'delete') {
-                    if (confirm(`Are you sure you want to delete ${name} from your contacts? This cannot be undone.`)) {
-                        await deleteDoc(doc(db, `users/${currentUser.uid}/contacts`, uid));
-                        const theirContactRef = doc(db, `users/${uid}/contacts`, currentUser.uid);
-                        await deleteDoc(theirContactRef);
-                        
-                        // If the deleted contact was the active chat, close it
-                        if (currentChatPartner && currentChatPartner.uid === uid) {
-                            closeChat();
-                        }
-                    }
-                }
-            } else {
-                openChat(uid, name);
-            }
-        }
-
-        function handleCopyId() {
-            navigator.clipboard.writeText(myPublicId).then(() => {
+            try {
+                await navigator.clipboard.writeText(dom.myIdEl.textContent);
                 dom.copyIdBtn.textContent = 'Copied!';
                 setTimeout(() => { dom.copyIdBtn.textContent = 'Copy'; }, 2000);
-            });
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+            }
         }
 
-        function setupEventListeners() {
-            dom.addContactBtn.addEventListener('click', handleSendFriendRequest);
-            dom.friendsListEl.addEventListener('click', handleFriendsListClick);
-            dom.incomingRequestsListEl.addEventListener('click', handleIncomingRequestClick);
-            dom.outgoingRequestsListEl.addEventListener('click', handleOutgoingRequestClick);
+        function handleTabClick(e) {
+            const target = e.target.closest('button');
+            if (!target) return;
+
+            const isFriends = target.id === 'tab-btn-friends';
+
+            // Toggle button styles
+            dom.tabBtnFriends.className = isFriends ? 'btn-themed-primary flex-1' : 'btn-themed-secondary flex-1';
+            dom.tabBtnRequests.className = isFriends ? 'btn-themed-secondary flex-1' : 'btn-themed-primary flex-1';
+
+            // Toggle content visibility
+            dom.tabContentFriends.classList.toggle('hidden', !isFriends);
+            dom.tabContentRequests.classList.toggle('hidden', isFriends);
+        }
+
+        async function handleClearLocalChat() {
+            if (!currentChatPartner) {
+                alert("Please select a chat to clear its local history.");
+                return;
+            }
+            const partnerName = currentChatPartner.name;
+            const confirmation = confirm(`Are you sure you want to clear the local chat history with ${partnerName}? This action is irreversible.`);
             
+            if (confirmation) {
+                // Clearing local history means deleting the chat document entirely
+                const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
+                const chatDocRef = doc(db, 'chats', chatId);
+
+                try {
+                    await deleteDoc(chatDocRef);
+                    alert(`Chat history with ${partnerName} cleared successfully!`);
+                    // This will trigger listenForMessages to re-render the empty chat
+                } catch (error) {
+                    console.error("Error clearing chat history:", error);
+                    alert("Failed to clear chat history. Please check console for details.");
+                }
+            }
+        }
+
+        // --- STATUS & TIME ---
+
+        function updateStatus() {
+            // Update time
+            dom.localTimeEl.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            // Update battery (if supported)
+            if ('getBattery' in navigator) {
+                navigator.getBattery().then(battery => {
+                    dom.batteryStatusEl.textContent = `${Math.round(battery.level * 100)}%`;
+                });
+            } else {
+                dom.batteryStatusEl.textContent = `N/A`;
+            }
+        }
+
+        function startStatusUpdates() {
+            updateStatus();
+            if (statusInterval) clearInterval(statusInterval);
+            statusInterval = setInterval(updateStatus, 5000);
+        }
+
+        function stopStatusUpdates() {
+            if (statusInterval) clearInterval(statusInterval);
+        }
+
+        // --- INITIAL SETUP ---
+
+        function setupEventListeners() {
+            dom.copyIdBtn.addEventListener('click', handleCopyId);
+            dom.addContactBtn.addEventListener('click', handleAddContact);
+            dom.friendsListEl.addEventListener('click', handleContactsListClick);
+            
+            dom.tabBtnFriends.addEventListener('click', handleTabClick);
+            dom.tabBtnRequests.addEventListener('click', handleTabClick);
+            
+            dom.tabContentRequests.addEventListener('click', handleRequestAction);
             dom.backToContactsBtn.addEventListener('click', closeChat);
             dom.messageForm.addEventListener('submit', handleSendMessage);
-            dom.copyIdBtn.addEventListener('click', handleCopyId);
             
-            // NEW LCC listener
+            dom.messagesContainerEl.addEventListener('click', handleMessageClick);
+            
             dom.lccBtn.addEventListener('click', handleClearLocalChat);
 
-            // --- MODIFIED: Listen on container for delegation ---
-            dom.messagesContainerEl.addEventListener('click', (e) => {
-                handleToggleTruncate(e);
-                handleViewImage(e);
-            });
-
-            dom.tabBtnFriends.addEventListener('click', () => switchTab('friends'));
-            dom.tabBtnRequests.addEventListener('click', () => switchTab('requests'));
-
-            // --- UPDATED: Textarea Input Listener ---
+            // --- NEW: Textarea & Send Button Logic ---
             dom.messageInput.addEventListener('input', () => {
                 autoExpandTextarea(dom.messageInput); // Call auto-expand logic
                 if (dom.messageInput.value.trim() !== '' || imageAttachmentsBase64.length > 0) {
                     dom.sendBtn.innerHTML = icons.send;
+                } else {
+                    dom.sendBtn.innerHTML = icons.check; 
                 }
             });
             
-            // --- NEW: Keydown Listener for Enter/Shift+Enter logic ---
+            // Keydown Listener for Enter/Shift+Enter logic
             dom.messageInput.addEventListener('keydown', (e) => {
                 // If the user presses Enter (key code 13)
                 if (e.key === 'Enter') {
                     // If Shift is NOT held, send the message
                     if (!e.shiftKey) {
                         e.preventDefault(); // Prevent default new line behavior
-                        handleSendMessage(); // Call the send function
+                        if (dom.messageInput.value.trim() !== '' || imageAttachmentsBase64.length > 0) {
+                             handleSendMessage(); // Call the send function
+                        }
                     } else {
                         // If Shift IS held, allow the new line, and adjust the textarea size
                         setTimeout(() => autoExpandTextarea(dom.messageInput), 0); // Delay to allow the newline character to register
