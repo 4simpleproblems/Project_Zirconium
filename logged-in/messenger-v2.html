@@ -239,29 +239,18 @@
             color: #22c55e;
         }
 
-        /* --- REDESIGNED MESSAGE BUBBLES (Matching original messenger.html rules) --- */
+        /* --- REDESIGNED MESSAGE BUBBLES (Plain Text Style - Single Restrictive Rule) --- */
         .message-bubble {
             display: inline-block; 
-            padding: 10px 15px; /* Matches original padding */
-            border-radius: 20px; /* Matches original general radius */
-            max-width: 70%; /* Matches original max width */
-            border-width: 1px;
-            transition: all 0.2s; 
+            padding: 0; /* Remove padding */
+            border-radius: 0; /* Remove rounding */
+            max-width: 70%; /* Keep max width to prevent text from spanning the entire screen */
+            border: none;
+            background-color: transparent;
+            color: inherit;
+            transition: none; 
         }
-        .sent-bubble {
-            /* Hardcoded colors from original messenger.html for solid appearance */
-            background-color: #4f46e5; 
-            border-color: #4f46e5;
-            color: white; /* Sent messages have white text */
-            border-bottom-right-radius: 5px; /* Matches original specific corner radius */
-        }
-        .received-bubble {
-            /* Hardcoded colors from original messenger.html for solid appearance */
-            background-color: #1f2937;
-            border-color: #1f2937;
-            color: white; /* Received messages have white text */
-            border-bottom-left-radius: 5px; /* Matches original specific corner radius */
-        }
+
         .message-text {
             font-weight: 300;
             font-size: 0.95rem;
@@ -272,13 +261,7 @@
             /* Ensuring no max height is applied */
             max-height: none; 
             overflow-y: visible;
-        }
-        /* Ensure text and links inside the bubbles are white */
-        .sent-bubble .message-text, .sent-bubble .message-text a {
-            color: white;
-        }
-        .received-bubble .message-text, .received-bubble .message-text a {
-            color: white;
+            color: inherit; /* Ensure text color is inherited from body (light gray) */
         }
         
         /* --- Redesigned Timestamp and Seen Status --- */
@@ -987,8 +970,6 @@
                 timestampISO = date.toISOString();
             }
 
-            // const isLargeMessage = data.text && data.text.length > MESSAGE_TRUNCATE_LENGTH; // REMOVED
-            // const displayText = data.text && (isLargeMessage ? data.text.substring(0, MESSAGE_TRUNCATE_LENGTH) + '...' : data.text); // REMOVED
             const bubbleClasses = isSent ? 'sent-bubble' : 'received-bubble';
             
             messageWrapper.className = `message-wrapper flex ${isSent ? 'justify-end' : 'justify-start'}`;
@@ -1002,8 +983,6 @@
                 <p class="message-text">${data.text || ''}</p>
             ` : '';
             
-            // const fadeArrowHTML = isLargeMessage ? ... // REMOVED
-
             let imagesHTML = '';
             if (data.images && data.images.length > 0) {
                 imagesHTML = `
@@ -1045,7 +1024,7 @@
                 const a = document.createElement('a');
                 a.href = imageUrl;
                 // Use a simple, date-stamped filename
-                a.download = `messenger_image_${new Date().toISOString().substring(0, 10)}_${Math.random().toString(36).substring(2, 6)}.png`; 
+                a.download = `messenger_image_${new Date().toISOString().substring(0, 10)}_$${Math.random().toString(36).substring(2, 6)}.png`; 
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
