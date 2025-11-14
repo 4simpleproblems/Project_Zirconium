@@ -175,6 +175,21 @@
             border-color: #3b82f6; /* blue-500 */
             box-shadow: 0 0 0 2px #3b82f640;
         }
+
+        .message-input-style {
+            width: 100%;
+            background-color: #1a1a1a;
+            border: 1px solid #374151; /* gray-700 */
+            color: #f3f4f6; /* gray-100 */
+            border-radius: 9999px;
+            padding: 0.5rem 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .message-input-style:focus {
+            outline: none;
+            border-color: #3b82f6; /* blue-500 */
+            box-shadow: 0 0 0 2px #3b82f640;
+        }
         
         /* Header for sections in contact list */
         .contact-section-header {
@@ -305,7 +320,7 @@
                         <i class="fa-solid fa-paperclip"></i>
                     </button>
                     <input type="file" id="image-input" accept="image/*" multiple class="hidden">
-                    <input type="text" id="message-input" placeholder="Type a message..." class="settings-input rounded-full py-2 px-4 bg-[#1a1a1a]">
+                    <input type="text" id="message-input" placeholder="Type a message..." class="message-input-style">
                     <button type="submit" id="send-btn" class="btn-icon active" title="Send Message" disabled>
                         <i class="fa-solid fa-paper-plane-top"></i>
                     </button>
@@ -1129,7 +1144,7 @@
                 const chatDoc = await getDoc(chatDocRef);
                 const messages = chatDoc.exists() ? chatDoc.data().messages || [] : [];
                 messages.push(messageData);
-                const trimmedMessages = messages.slice(-50); 
+                const trimmedMessages = messages.slice(-5); 
                 
                 await setDoc(chatDocRef, { messages: trimmedMessages });
                 
@@ -1348,7 +1363,7 @@
         }
         
         async function handleClearLocalHistory() {
-            if (!currentChatPartner || !confirm(`Are you sure you want to clear local-only message history for this chat? The last 50 messages will be kept.`)) return;
+            if (!currentChatPartner || !confirm(`Are you sure you want to clear local-only message history for this chat? The last 5 messages will be kept.`)) return;
 
             const chatId = [currentUser.uid, currentChatPartner.uid].sort().join('_');
             const chatDocRef = doc(db, 'chats', chatId);
