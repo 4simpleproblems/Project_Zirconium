@@ -1,24 +1,29 @@
 <!DOCTYPE html>
-<html lang="en" class="">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Messenger</title>
     
-    <script src="https://cdn.tailwindcss.com"></script>
-
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://kit-pro.fontawesome.com/releases/v7.0.1/css/pro.min.css" media="all">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
 
     <script>
         tailwind.config = {
-            darkMode: 'class',
+            darkMode: 'class', // 'class' mode is used by 4SP
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                        display: ['Poppins', 'sans-serif'],
+                        // Set Geist as the primary font
+                        sans: ['Geist', 'sans-serif'],
+                        display: ['Geist', 'sans-serif'], // Use Geist for display too
+                        // Add font-mono for the ID input
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', '"Liberation Mono"', '"Courier New"', 'monospace'],
                     }
                 }
             }
@@ -26,23 +31,37 @@
     </script>
 
     <style>
-        /* Prevents layout shift during load */
-        .hidden { display: none; }
-
-        /* Custom scrollbar for a cleaner look */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
-        .dark ::-webkit-scrollbar-thumb { background: #4b5563; }
-        .dark ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
-
-        /* Smooth transitions for a better UX */
-        body {
-            font-family: 'Inter', sans-serif;
+        /* --- FONT & BASE STYLING (MATCHING notes.html) --- */
+        body { 
+            font-family: 'Geist', sans-serif; 
+            background-color: #070707; 
+            color: #c0c0c0; 
+            transition: all 0.3s ease;
+            font-size: 16px;
+            overflow-x: hidden;
+            font-weight: 300; /* Thinner base font */
+            margin: 0;
+            padding: 0;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
 
+        /* Thinner bold/headings (from notes.html) */
+        h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
+            font-weight: 400 !important;
+        }
+
+        /* Prevents layout shift during load */
+        .hidden { display: none; }
+
+        /* Custom scrollbar (from notes.html, adapted) */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        .dark ::-webkit-scrollbar-thumb { background: #4b5563; }
+        .dark ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+
+        /* Smooth transitions for a better UX */
         .view-transition {
             transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
         }
@@ -51,96 +70,233 @@
             transform: scale(0.98);
             pointer-events: none;
         }
-
-        /* --- Custom Tooltip Styling for Clipping Fix --- */
-        [title] {
-            position: relative;
+        
+        /* --- THEME-AWARE STYLES (from notes.html) --- */
+        
+        .btn-toolbar-style {
+            background: var(--menu-bg, #0000000);
+            border: 1px solid var(--menu-border, #333);
+            border-radius: 0.5rem; 
+            color: var(--menu-text, #d1d5db);
+            padding: 0.5rem 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            position: relative; /* Added for tooltip positioning */
+        }
+        .btn-toolbar-style:hover {
+            background-color: var(--menu-bg, #000000);
+            border-color: var(--menu-border, #fff);
+            color: var(--tab-hover-text, #ffffff);
+        }
+        
+        /* Primary (Indigo) Button Style */
+        .btn-primary-override {
+            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
+            border: 1px solid var(--tab-active-border, #4f46e5);
+            color: var(--tab-active-text, #4f46e5);
+        }
+        .btn-primary-override:hover {
+            background-color: var(--tab-active-hover-bg, rgba(79, 70, 229, 0.15));
+            border-color: var(--tab-active-hover-border, #6366f1);
+            color: var(--tab-active-hover-text, #6366f1);
+        }
+        .btn-primary-override:disabled {
+            background-color: #1a1a1a;
+            border-color: #333;
+            color: #707070;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        
+        /* Secondary/Danger buttons for requests */
+        .btn-success {
+            background-color: rgba(16, 185, 129, 0.1);
+            border-color: #10b981;
+            color: #10b981;
+        }
+        .btn-success:hover {
+            background-color: rgba(16, 185, 129, 0.15);
+            border-color: #34d399;
+            color: #34d399;
+        }
+        .btn-danger {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+        .btn-danger:hover {
+            background-color: rgba(239, 68, 68, 0.15);
+            border-color: #f87171;
+            color: #f87171;
         }
 
-        /* Default Tooltip Position: Below the element */
-        [title]:after {
+        .btn-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.25rem; /* 36px */
+            height: 2.25rem; /* 36px */
+            border-radius: 0.5rem;
+            background-color: transparent;
+            border: 1px solid transparent;
+            color: var(--tab-text, #9ca3af);
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative; /* Added for tooltip positioning */
+        }
+        .btn-icon:hover {
+            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
+            color: var(--tab-active-text, #4f46e5);
+            border-color: var(--tab-active-border, #4f46e5);
+        }
+        .btn-icon.active {
+             background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
+            color: var(--tab-active-text, #4f46e5);
+            border-color: var(--tab-active-border, #4f46e5);
+        }
+        
+        /* Input Style (from settings.html) */
+        .settings-input {
+            width: 100%;
+            background-color: #1f2937; /* gray-800 */
+            border: 1px solid #374151; /* gray-700 */
+            color: #f3f4f6; /* gray-100 */
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .settings-input:focus {
+            outline: none;
+            border-color: #3b82f6; /* blue-500 */
+            box-shadow: 0 0 0 2px #3b82f640;
+        }
+        
+        /* Header for sections in contact list */
+        .contact-section-header {
+            padding: 0.5rem 1rem;
+            color: var(--tab-text, #9ca3af);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            background-color: #111111;
+            border-top: 1px solid #1a1a1a;
+            border-bottom: 1px solid #1a1a1a;
+        }
+
+        /* --- NEW: Tooltip Styling --- */
+        [title]:hover::after {
             content: attr(title);
             position: absolute;
-            bottom: -35px; /* Default: below the element */
+            top: 100%;
             left: 50%;
-            transform: translateX(-50%);
-            background-color: rgba(0, 0, 0, 0.9);
-            color: white;
+            transform: translateX(-50%) translateY(5px);
+            background-color: #111;
+            color: #fff;
             padding: 4px 8px;
             border-radius: 4px;
-            font-size: 0.75rem;
+            font-size: 0.75rem; /* 12px */
+            font-weight: 400; /* Regular weight for tooltip */
             white-space: nowrap;
             z-index: 1000;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s;
-            transition-property: opacity, top, bottom;
-        }
-
-        [title]:hover:after {
+            border: 1px solid #333;
+            
+            /* Fade-in animation */
             opacity: 1;
+            visibility: visible;
+            transition: opacity 0.2s ease, visibility 0.2s ease;
         }
-
-        /* New class for displaying the tooltip above the element (used by JS) */
-        .tooltip-above:after {
-            bottom: unset; /* Reset default bottom */
-            top: -35px; /* Position above the element */
+        
+        /* Hide tooltip by default */
+        [title]::after {
+            content: attr(title);
+            position: absolute;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none; /* Prevents tooltip from interfering with mouse */
+        }
+        
+        /* --- NEW: Date Separator Styling --- */
+        .date-separator {
+            text-align: center;
+            margin: 1rem 0;
+            color: #707070; /* Muted grey */
+            font-size: 0.8rem; /* 13px */
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
     </style>
 </head>
-<body class="bg-gray-100 dark:bg-black text-gray-800 dark:text-gray-200 transition-colors duration-300">
+<body class="bg-[#070707] text-gray-200">
 
-    <div id="app-container" class="hidden max-w-4xl mx-auto my-0 sm:my-4 h-screen sm:h-[calc(100vh-2rem)] flex bg-white dark:bg-gray-900 shadow-2xl sm:rounded-2xl overflow-hidden backdrop-blur-xl border border-gray-200 dark:border-gray-800">
+    <div id="app-container" class="hidden h-screen w-screen flex bg-[#0d0d0d] dark:bg-[#0d0d0d] overflow-hidden">
         
         <div id="contacts-view" class="w-full h-full flex flex-col view-transition">
-            <header class="p-4 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
+            <header class="p-4 border-b border-[#1a1a1a] flex-shrink-0">
                 <div class="flex justify-between items-center">
-                    <h1 class="font-display text-2xl font-bold text-gray-800 dark:text-gray-200">Messenger</h1>
+                    <h1 class="text-2xl font-bold text-white">Messenger</h1>
                     <div class="flex items-center gap-3">
                         <div id="status-icons" class="text-xs font-mono flex items-center gap-2 text-gray-400 dark:text-gray-500">
                             <span id="battery-status">--%</span>
                             <span>|</span>
                             <span id="local-time">--:--</span>
                         </div>
-                        <button id="dark-mode-toggle" class="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"></button>
                     </div>
                 </div>
-                <div class="mt-4 bg-gray-100 dark:bg-gray-800 p-3 rounded-lg flex items-center justify-between">
+                <div class="mt-4 bg-[#111111] p-3 rounded-lg border border-[#1a1a1a] flex items-center justify-between">
                     <div class="flex items-center gap-2 overflow-hidden">
-                        <span class="text-sm font-medium text-gray-500 dark:text-gray-400 flex-shrink-0">Your ID:</span>
-                        <span id="my-id" class="font-mono text-sm truncate text-gray-700 dark:text-gray-300 font-semibold">loading...</span>
+                        <span class="text-sm font-medium text-gray-400 flex-shrink-0">Your ID:</span>
+                        <span id="my-id" class="font-mono text-sm truncate text-gray-300 font-semibold">loading...</span>
                     </div>
-                    <button id="copy-id-btn" class="flex-shrink-0 bg-white dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 px-3 py-1 rounded-md text-xs font-semibold hover:bg-gray-200 dark:hover:bg-gray-600/50 border border-gray-200 dark:border-gray-600 transition-all">Copy</button>
+                    <button id="copy-id-btn" class="btn-toolbar-style" title="Copy Your ID">Copy</button>
                 </div>
             </header>
 
-            <div class="p-4 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
+            <div class="p-4 border-b border-[#1a1a1a] flex-shrink-0">
                 <div class="flex gap-2">
-                    <input type="text" id="add-contact-id" placeholder="Enter friend's 8-character ID" class="w-full bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
-                    <button id="add-contact-btn" class="bg-gray-800 text-white font-semibold px-4 py-2 rounded-lg hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Add</button>
+                    <input type="text" id="add-contact-id" placeholder="Enter 8-character ID to send request..." class="settings-input font-mono">
+                    <button id="add-contact-btn" class="btn-toolbar-style btn-primary-override px-4" title="Send Friend Request">
+                        <i class="fa-solid fa-user-plus"></i>
+                        <span>Add</span>
+                    </button>
                 </div>
+                <p id="add-contact-message" class="text-sm text-gray-400 mt-2"></p>
             </div>
 
-            <div id="contacts-list-wrapper" class="flex-grow overflow-y-auto">
-                <ul id="contacts-list" class="divide-y divide-gray-200 dark:divide-gray-800"></ul>
+            <div class="flex-grow overflow-y-auto">
+                <ul id="contacts-list" class="divide-y divide-[#1a1a1a]">
+                    </ul>
             </div>
         </div>
 
         <div id="chat-view" class="w-full h-full flex flex-col view-transition view-hidden absolute top-0 left-0">
-            <header class="p-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between flex-shrink-0">
-                <button id="back-to-contacts-btn" class="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+            <header class="p-4 border-b border-[#1a1a1a] flex items-center justify-between flex-shrink-0">
+                <button id="back-to-contacts-btn" class="btn-icon" title="Back to Contacts">
+                    <i class="fa-solid fa-arrow-left"></i>
                 </button>
-                <h2 id="chat-header" class="text-lg font-bold">Chat</h2>
-                <div class="w-8"></div> </header>
+                <div class="flex items-center gap-2">
+                    <h2 id="chat-header" class="text-lg font-bold text-white">Chat</h2>
+                    <button id="edit-chat-name-btn" class="btn-icon" title="Edit Contact Name">
+                        <i class="fa-solid fa-pen-to-square text-sm"></i>
+                    </button>
+                </div>
+                <button id="clear-local-history-btn" class="btn-icon" title="Clear Local History">
+                    <i class="fa-solid fa-broom"></i>
+                </button>
+            </header>
             
-            <div class="chat-messages flex-grow overflow-y-auto p-4 space-y-4" id="messages-container"></div>
+            <div class="chat-messages flex-grow overflow-y-auto p-4 space-y-4" id="messages-container">
+                </div>
             
-            <footer class="p-4 border-t border-gray-200 dark:border-gray-800 flex-shrink-0 bg-white dark:bg-gray-900">
+            <footer class="p-4 border-t border-[#1a1a1a] flex-shrink-0 bg-[#0d0d0d]">
                 <form id="message-form" class="flex gap-3 items-center">
-                    <input type="text" id="message-input" placeholder="Type a message..." class="w-full bg-gray-100 dark:bg-gray-700 border-transparent rounded-full py-2 px-4 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
-                    <button type="submit" id="send-btn" class="w-10 h-10 flex-shrink-0 bg-gray-800 text-white rounded-full flex items-center justify-center hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                        <svg class="w-5 h-5 transform rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                    <input type="text" id="message-input" placeholder="Type a message..." class="settings-input rounded-full py-2 px-4 bg-[#1a1a1a]">
+                    <button type="submit" id="send-btn" class="btn-icon active" title="Send Message" disabled>
+                        <i class="fa-solid fa-paper-plane-top"></i>
                     </button>
                 </form>
             </footer>
@@ -148,9 +304,13 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, serverTimestamp, arrayUnion, arrayRemove, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { 
+            getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, 
+            collection, query, where, getDocs, serverTimestamp, arrayUnion, arrayRemove, 
+            writeBatch, runTransaction
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         // --- FIREBASE CONFIGURATION (REPLACE WITH YOURS) ---
         const firebaseConfig = {
@@ -158,7 +318,7 @@
             authDomain: "theamericanmessenger-0.firebaseapp.com",
             databaseURL: "https://theamericanmessenger-0-default-rtdb.firebaseio.com",
             projectId: "theamericanmessenger-0",
-            storageBucket: "theamericanmessenger-0.firebasestorage.app",
+            storageBucket: "theamericanmessenger-0.firebase-storage.app",
             messagingSenderId: "963196851685",
             appId: "1:963196851685:web:9f709be8b2888ed4e28b0c",
             measurementId: "G-SBGEJDRSBZ"
@@ -172,12 +332,18 @@
         // --- GLOBAL STATE & DOM ELEMENTS ---
         let currentUser = null;
         let currentChatPartner = null;
-        let blockedUsers = [];
-        let unsubscribeUserDoc = () => {};
-        let unsubscribeContacts = () => {};
-        let unsubscribeMessages = () => {};
-        let statusInterval = null;
         let localMessagesCache = JSON.parse(localStorage.getItem('localMessagesCache')) || {};
+        
+        let statusInterval = null;
+        let seenObserver = null;
+        if (!window.seenTimers) window.seenTimers = new Map();
+
+        // Unsubscribe functions
+        let unsubUserDoc = () => {};
+        let unsubContacts = () => {};
+        let unsubPendingIn = () => {};
+        let unsubPendingOut = () => {};
+        let unsubMessages = () => {};
 
         const dom = {
             appContainer: document.getElementById('app-container'),
@@ -185,32 +351,31 @@
             copyIdBtn: document.getElementById('copy-id-btn'),
             addContactIdInput: document.getElementById('add-contact-id'),
             addContactBtn: document.getElementById('add-contact-btn'),
+            addContactMessage: document.getElementById('add-contact-message'),
             contactsListEl: document.getElementById('contacts-list'),
-            contactsListWrapper: document.getElementById('contacts-list-wrapper'), // For tooltip clipping check
             contactsView: document.getElementById('contacts-view'),
             chatView: document.getElementById('chat-view'),
             backToContactsBtn: document.getElementById('back-to-contacts-btn'),
             chatHeaderEl: document.getElementById('chat-header'),
+            editChatNameBtn: document.getElementById('edit-chat-name-btn'), 
+            clearLocalHistoryBtn: document.getElementById('clear-local-history-btn'),
             messagesContainerEl: document.getElementById('messages-container'),
             messageForm: document.getElementById('message-form'),
             messageInput: document.getElementById('message-input'),
             sendBtn: document.getElementById('send-btn'),
-            darkModeToggle: document.getElementById('dark-mode-toggle'),
             batteryStatusEl: document.getElementById('battery-status'),
             localTimeEl: document.getElementById('local-time'),
         };
 
         const icons = {
-            sun: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>`,
-            moon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>`,
-            send: `<svg class="w-5 h-5 transform rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>`,
-            check: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`,
+            send: `<i class="fa-solid fa-paper-plane-top"></i>`,
+            check: `<i class="fa-solid fa-check"></i>`,
+            spinner: `<i class="fa-solid fa-spinner fa-spin"></i>`
         };
 
         // --- MAIN APP LOGIC ---
 
         function main() {
-            initTheme();
             setupEventListeners();
             signInAnonymously(auth).catch(err => console.error("Sign-in failed:", err));
             onAuthStateChanged(auth, handleAuthStateChange);
@@ -221,12 +386,17 @@
                 currentUser = user;
                 await setupUserDocument();
                 listenForUserDocChanges();
-                listenForContacts();
+                listenForContacts(); 
                 startStatusUpdates();
                 dom.appContainer.classList.remove('hidden');
             } else {
                 stopStatusUpdates();
                 dom.appContainer.classList.add('hidden');
+                unsubUserDoc();
+                unsubContacts();
+                unsubPendingIn();
+                unsubPendingOut();
+                unsubMessages();
             }
         }
 
@@ -235,59 +405,40 @@
             const userDoc = await getDoc(userDocRef);
             if (!userDoc.exists()) {
                 const newId = await generateUniqueId();
-                await setDoc(userDocRef, { publicId: newId, uid: currentUser.uid, blockedUsers: [] });
+                await setDoc(userDocRef, { 
+                    publicId: newId, 
+                    uid: currentUser.uid, 
+                    blockedUsers: [],
+                    username: `User ${newId}` 
+                });
                 dom.myIdEl.textContent = newId;
             } else {
                 const data = userDoc.data();
                 dom.myIdEl.textContent = data.publicId;
-                blockedUsers = data.blockedUsers || [];
+                if (!data.username) {
+                    await updateDoc(userDocRef, { username: `User ${data.publicId}` });
+                }
             }
         }
 
         function listenForUserDocChanges() {
-            unsubscribeUserDoc();
+            unsubUserDoc();
             const userDocRef = doc(db, 'users', currentUser.uid);
-            unsubscribeUserDoc = onSnapshot(userDocRef, (doc) => {
-                blockedUsers = doc.data()?.blockedUsers || [];
-                listenForContacts();
+            unsubUserDoc = onSnapshot(userDocRef, (doc) => {
+                // Future use
             });
         }
 
         // --- UI & THEME ---
 
-        function initTheme() {
-            if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                document.documentElement.classList.add('dark');
-                dom.darkModeToggle.innerHTML = icons.sun;
-            } else {
-                document.documentElement.classList.remove('dark');
-                dom.darkModeToggle.innerHTML = icons.moon;
-            }
+        function scrollToBottom(behavior = 'smooth') {
+            setTimeout(() => {
+                dom.messagesContainerEl.scrollTo({ top: dom.messagesContainerEl.scrollHeight, behavior: behavior });
+            }, 50);
         }
-
-        function toggleTheme() {
-            document.documentElement.classList.toggle('dark');
-            const isDark = document.documentElement.classList.contains('dark');
-            localStorage.theme = isDark ? 'dark' : 'light';
-            dom.darkModeToggle.innerHTML = isDark ? icons.sun : icons.moon;
-        }
-
-        // NEW: Check if user is near the bottom (for auto-scroll logic)
-        function isUserAtBottom() {
-            const el = dom.messagesContainerEl;
-            if (!el) return false;
-            // 100px tolerance from the bottom
-            return el.scrollHeight - el.scrollTop - el.clientHeight < 100; 
-        }
-
-        // UPDATED: Scroll function accepts a force parameter, but we'll use auto-scroll if near the bottom for new messages.
-        function scrollToBottom(behavior = 'smooth', force = true) {
-             // Only scroll if 'force' is true (user sent message) OR if the user is already near the bottom (incoming message)
-            if (force || isUserAtBottom()) { 
-                setTimeout(() => {
-                    dom.messagesContainerEl.scrollTo({ top: dom.messagesContainerEl.scrollHeight, behavior: behavior });
-                }, 50);
-            }
+        
+        function saveCacheToLocalStorage() {
+            localStorage.setItem('localMessagesCache', JSON.stringify(localMessagesCache));
         }
 
         // --- STATUS BAR ---
@@ -311,30 +462,102 @@
             if (statusInterval) clearInterval(statusInterval);
         }
 
-        // --- CONTACT MANAGEMENT ---
+        // --- FRIEND & CONTACT MANAGEMENT ---
 
         function listenForContacts() {
-            unsubscribeContacts();
-            const contactsRef = collection(db, `users/${currentUser.uid}/contacts`);
-            unsubscribeContacts = onSnapshot(query(contactsRef), (snapshot) => {
+            const state = {
+                incoming: [],
+                outgoing: [],
+                friends: []
+            };
+
+            const renderAll = () => {
                 dom.contactsListEl.innerHTML = '';
-                if (snapshot.empty) {
-                    dom.contactsListEl.innerHTML = `<li class="p-4 text-center text-gray-500 dark:text-gray-400">No contacts yet. Add one above!</li>`;
-                    return;
+                
+                if (state.incoming.length > 0) {
+                    const header = document.createElement('li');
+                    header.className = 'contact-section-header';
+                    header.textContent = 'Incoming Requests';
+                    dom.contactsListEl.appendChild(header);
+                    state.incoming.forEach(doc => renderFriendRequest(doc.id, doc.data(), 'incoming'));
                 }
-                const sortedDocs = snapshot.docs.sort((a, b) => {
-                    const timeA = a.data().timestamp?.toMillis() || 0;
-                    const timeB = b.data().timestamp?.toMillis() || 0;
-                    return timeB - timeA;
-                });
-                sortedDocs.forEach(doc => renderContact(doc.id, doc.data()));
+
+                if (state.outgoing.length > 0) {
+                    const header = document.createElement('li');
+                    header.className = 'contact-section-header';
+                    header.textContent = 'Outgoing Requests';
+                    dom.contactsListEl.appendChild(header);
+                    state.outgoing.forEach(doc => renderFriendRequest(doc.id, doc.data(), 'outgoing'));
+                }
+                
+                if (state.friends.length > 0) {
+                    const header = document.createElement('li');
+                    header.className = 'contact-section-header';
+                    header.textContent = 'Friends';
+                    dom.contactsListEl.appendChild(header);
+                    
+                    const sortedFriends = state.friends.sort((a, b) => {
+                        const timeA = a.data().timestamp?.toMillis() || 0;
+                        const timeB = b.data().timestamp?.toMillis() || 0;
+                        return timeB - timeA;
+                    });
+                    sortedFriends.forEach(doc => renderContact(doc.id, doc.data()));
+                }
+
+                if (state.incoming.length === 0 && state.outgoing.length === 0 && state.friends.length === 0) {
+                    dom.contactsListEl.innerHTML = `<li class="p-4 text-center text-gray-500 dark:text-gray-400">No contacts or requests yet.</li>`;
+                }
+            };
+            
+            unsubContacts();
+            const contactsRef = collection(db, `users/${currentUser.uid}/contacts`);
+            unsubContacts = onSnapshot(query(contactsRef), (snapshot) => {
+                const friendUids = new Set(snapshot.docs.map(d => d.id));
+
+                // If a chat is open, check if the contact still exists. If not, close the chat.
+                if (currentChatPartner && !friendUids.has(currentChatPartner.uid)) {
+                    // Also clear local cache for the removed contact
+                    if (localMessagesCache[currentChatPartner.uid]) {
+                        delete localMessagesCache[currentChatPartner.uid];
+                        saveCacheToLocalStorage();
+                    }
+                    closeChat();
+                }
+
+                state.friends = snapshot.docs;
+                
+                // If a chat is open, check if the name changed
+                if (currentChatPartner) {
+                    const changedDoc = snapshot.docs.find(doc => doc.id === currentChatPartner.uid);
+                    if (changedDoc) {
+                        const newName = changedDoc.data().name;
+                        if (newName !== currentChatPartner.name) {
+                            currentChatPartner.name = newName;
+                            dom.chatHeaderEl.textContent = newName;
+                        }
+                    }
+                }
+                renderAll();
+            });
+
+            unsubPendingIn();
+            const pendingInRef = collection(db, `users/${currentUser.uid}/pendingIn`);
+            unsubPendingIn = onSnapshot(query(pendingInRef), (snapshot) => {
+                state.incoming = snapshot.docs;
+                renderAll();
+            });
+            
+            unsubPendingOut();
+            const pendingOutRef = collection(db, `users/${currentUser.uid}/pendingOut`);
+            unsubPendingOut = onSnapshot(query(pendingOutRef), (snapshot) => {
+                state.outgoing = snapshot.docs;
+                renderAll();
             });
         }
 
         function renderContact(uid, data) {
-            const isBlocked = blockedUsers.includes(uid);
             const li = document.createElement('li');
-            li.className = 'px-4 py-3 flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors';
+            li.className = 'px-4 py-3 flex items-center gap-4 hover:bg-[#1a1a1a] transition-colors';
             li.dataset.uid = uid;
             li.dataset.name = data.name || 'Unnamed';
 
@@ -344,49 +567,103 @@
             let indicatorHTML = '';
             if (data.unread) {
                 indicatorHTML = `
-                    <p class="text-sm text-gray-800 dark:text-gray-200 font-semibold truncate max-w-[150px]">${data.lastMessage || ''}</p>
-                    <span class="w-2.5 h-2.5 bg-blue-500 rounded-full ml-auto"></span>`;
+                    <p class="text-sm text-white font-semibold truncate max-w-[150px]">${data.lastMessage || ''}</p>
+                    <span class="w-2.5 h-2.5 bg-indigo-500 rounded-full ml-auto"></span>`;
             } else if (data.lastMessage) {
                 indicatorHTML = `
-                    <p class="text-sm text-gray-500 dark:text-gray-400 truncate max-w-[150px]">${data.lastMessage || ''}</p>
-                    <p class="text-xs text-gray-400 dark:text-gray-500 ml-auto whitespace-nowrap">${formatTimestamp(data.timestamp)}</p>`;
+                    <p class="text-sm text-gray-500 truncate max-w-[150px]">${data.lastMessage || ''}</p>
+                    <p class="text-xs text-gray-500 ml-auto whitespace-nowrap">${formatTimestamp(data.timestamp)}</p>`;
             } else {
-                 indicatorHTML = `<p class="text-sm text-gray-400 dark:text-gray-500">No messages yet.</p>`;
+                 indicatorHTML = `<p class="text-sm text-gray-500">No messages yet.</p>`;
             }
 
             li.innerHTML = `
                 <div data-action="open-chat" class="flex-grow flex items-center gap-4 cursor-pointer overflow-hidden">
-                    <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center">
-                        <span class="font-bold text-gray-600 dark:text-gray-300">${initials}</span>
+                    <div class="w-10 h-10 rounded-full bg-[#1a1a1a] border border-[#333] flex-shrink-0 flex items-center justify-center">
+                        <span class="font-bold text-gray-300">${initials}</span>
                     </div>
                     <div class="flex-grow overflow-hidden">
-                        <span class="font-semibold">${name} ${isBlocked ? '<span class="text-xs text-red-500">(Blocked)</span>' : ''}</span>
+                        <span class="font-semibold text-white">${name}</span>
                         <div class="flex items-center gap-2">${indicatorHTML}</div>
                     </div>
                 </div>
                 <div class="flex items-center gap-1 flex-shrink-0">
-                    <button data-action="edit" title="Edit Name" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-gray-500 dark:text-gray-400"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z"></path><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd"></path></svg>
+                    <button data-action="edit-name" title="Edit Name" class="btn-icon">
+                        <i class="fa-solid fa-pen-to-square"></i>
                     </button>
-                    <button data-action="block" title="${isBlocked ? 'Unblock User' : 'Block User'}" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-gray-500 dark:text-gray-400"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>
-                    </button>
-                    <button data-action="delete" title="Delete Contact" class="p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-red-500"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+                    <button data-action="delete-friend" title="Delete Contact" class="btn-icon">
+                        <i class="fa-solid fa-trash-can text-red-500"></i>
                     </button>
                 </div>
             `;
             dom.contactsListEl.appendChild(li);
         }
 
+        function renderFriendRequest(uid, data, type) {
+            const li = document.createElement('li');
+            li.className = 'px-4 py-3 flex items-center gap-4 hover:bg-[#1a1a1a] transition-colors';
+            li.dataset.uid = uid;
+            li.dataset.name = data.username || 'Unnamed';
+            li.dataset.publicId = data.publicId || ''; // Store publicId for accept logic
+
+            const name = data.username || `User (${data.publicId})`;
+            const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+
+            let buttonsHTML = '';
+            if (type === 'incoming') {
+                buttonsHTML = `
+                    <button data-action="accept-request" title="Accept" class="btn-toolbar-style btn-success px-3 py-1 text-xs">
+                        <i class="fa-solid fa-check"></i>
+                    </button>
+                    <button data-action="decline-request" title="Decline" class="btn-toolbar-style btn-danger px-3 py-1 text-xs">
+                        <i class="fa-solid fa-times"></i>
+                    </button>
+                `;
+            } else if (type === 'outgoing') {
+                buttonsHTML = `
+                    <button data-action="cancel-request" title="Cancel Request" class="btn-toolbar-style btn-danger px-3 py-1 text-xs">
+                        Cancel
+                    </button>
+                `;
+            }
+
+            li.innerHTML = `
+                <div class="flex-grow flex items-center gap-4 overflow-hidden">
+                    <div class="w-10 h-10 rounded-full bg-[#1a1a1a] border border-[#333] flex-shrink-0 flex items-center justify-center">
+                        <span class="font-bold text-gray-300">${initials}</span>
+                    </div>
+                    <div class="flex-grow overflow-hidden">
+                        <span class="font-semibold text-white">${name}</span>
+                        <p class="text-sm text-gray-500">${type === 'incoming' ? 'Wants to be your friend' : 'Request sent'}</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    ${buttonsHTML}
+                </div>
+            `;
+            dom.contactsListEl.appendChild(li);
+        }
+        
         // --- CHAT LOGIC ---
 
         async function openChat(uid, name) {
             currentChatPartner = { uid, name };
             dom.chatHeaderEl.textContent = name;
             dom.messagesContainerEl.innerHTML = '';
+            
             loadLocalMessages(uid);
-
+            
+            const chatId = [currentUser.uid, currentChatPartner.uid].sort().join('_');
+            const chatDocRef = doc(db, 'chats', chatId);
+            const chatDoc = await getDoc(chatDocRef);
+            
+            let dbMessages = [];
+            if (chatDoc.exists()) {
+                dbMessages = chatDoc.data().messages || [];
+            }
+            
+            mergeAndRenderMessages(uid, dbMessages);
+            
             dom.contactsView.classList.add('view-hidden');
             dom.chatView.classList.remove('view-hidden');
             dom.messageInput.focus();
@@ -394,56 +671,83 @@
             listenForMessages();
             
             const contactRef = doc(db, `users/${currentUser.uid}/contacts`, uid);
-            try { await updateDoc(contactRef, { unread: false }); } catch (e) { console.log("Contact not found for unread update, likely new chat."); }
+            try { await updateDoc(contactRef, { unread: false }); } catch (e) { /* (e) */ }
         }
 
         function closeChat() {
-            unsubscribeMessages();
+            unsubMessages();
+            if (seenObserver) seenObserver.disconnect();
+            window.seenTimers.forEach(timer => clearTimeout(timer));
+            window.seenTimers.clear();
+            
             currentChatPartner = null;
             dom.chatView.classList.add('view-hidden');
             dom.contactsView.classList.remove('view-hidden');
         }
 
+        // --- NEW: Helper for Date Formatting ---
+        function formatDateSeparator(date) {
+            const now = new Date();
+            const isSameYear = date.getFullYear() === now.getFullYear();
+            
+            const options = {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric'
+            };
+            
+            if (!isSameYear) {
+                options.year = 'numeric';
+            }
+            
+            return date.toLocaleDateString('en-US', options);
+        }
+
+        // --- UPDATED: Message Rendering with Date Separators ---
+        function mergeAndRenderMessages(uid, dbMessages) {
+            const chatCache = localMessagesCache[uid] || [];
+            
+            const dbMessageIds = new Set(dbMessages.map(m => m.id));
+            const olderCachedMessages = chatCache.filter(m => !dbMessageIds.has(m.id));
+            
+            const allMessages = [...olderCachedMessages, ...dbMessages];
+            
+            localMessagesCache[uid] = allMessages;
+            saveCacheToLocalStorage();
+
+            dom.messagesContainerEl.innerHTML = '';
+            
+            // Add date separators
+            let lastRenderedDateString = null;
+            allMessages.forEach(msg => {
+                const msgDate = new Date(msg.timestamp);
+                const msgDateString = formatDateSeparator(msgDate);
+                
+                if (msgDateString !== lastRenderedDateString) {
+                    const separator = document.createElement('div');
+                    separator.className = 'date-separator';
+                    separator.textContent = msgDateString;
+                    dom.messagesContainerEl.appendChild(separator);
+                    lastRenderedDateString = msgDateString;
+                }
+                
+                renderMessage(msg);
+            });
+            
+            scrollToBottom('auto'); // Use 'auto' for initial load
+            setupSeenObserver(); 
+        }
+
         function listenForMessages() {
-            unsubscribeMessages();
+            unsubMessages();
             const chatId = [currentUser.uid, currentChatPartner.uid].sort().join('_');
             const chatDocRef = doc(db, 'chats', chatId);
 
-            unsubscribeMessages = onSnapshot(chatDocRef, (doc) => {
+            unsubMessages = onSnapshot(chatDocRef, (doc) => {
+                if (!doc.exists() || !currentChatPartner) return; 
                 
-                // FINAL UPDATE: Kickout Logic - If the document is deleted by the partner
-                if (!doc.exists() && currentChatPartner) {
-                    // Use a timeout to ensure our own batch write (if we deleted it) has settled
-                    setTimeout(async () => {
-                        const contactDocRef = doc(db, `users/${currentUser.uid}/contacts`, currentChatPartner.uid);
-                        const contactDoc = await getDoc(contactDocRef);
-                        
-                        // If the contact still exists, the partner deleted the chat.
-                        if (contactDoc.exists()) {
-                            alert("This chat history was deleted by the other user. Returning to contacts.");
-                            closeChat();
-                        }
-                    }, 200);
-                    return;
-                }
-                
-                if (doc.metadata.hasPendingWrites) return;
-                
-                const messageData = doc.data();
-                // Safety check against blocked users
-                if (messageData.senderId !== currentUser.uid && blockedUsers.includes(messageData.senderId)) return;
-                
-                const incomingTimestampISO = messageData.timestamp?.toDate()?.toISOString();
-                const chatCache = localMessagesCache[currentChatPartner.uid] || [];
-                // Check if the message is already in cache to prevent re-rendering on every update.
-                const messageExists = chatCache.some(msg => msg.timestamp === incomingTimestampISO);
-
-                if (!messageExists && messageData.text) { // Ensure messageData.text exists before rendering
-                    renderMessage(messageData);
-                    saveMessageToCache(currentChatPartner.uid, messageData);
-                    // Do not force scroll if the user is scrolled up
-                    scrollToBottom('smooth', false); 
-                }
+                const dbMessages = doc.data().messages || [];
+                mergeAndRenderMessages(currentChatPartner.uid, dbMessages);
             });
         }
 
@@ -451,51 +755,140 @@
             if (!data || !data.text) return;
             const messageWrapper = document.createElement('div');
             const isSent = data.senderId === currentUser.uid;
-            messageWrapper.className = `flex ${isSent ? 'justify-end' : 'justify-start'}`;
-
-            const time = data.timestamp?.toDate()?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || '';
             
+            // Outer wrapper for alignment (flex justify-end/start)
+            messageWrapper.className = `flex ${isSent ? 'justify-end' : 'justify-start'} ${!isSent ? 'message-received' : ''}`;
+
+            const time = data.timestamp ? new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+            
+            let seenIndicator = '';
+            if (isSent) {
+                seenIndicator = `<span class="text-xs text-gray-500">${data.seen ? 'Seen' : 'Sent'}</span>`;
+            }
+            
+            // **FIXED LOGIC:**
+            // 1. New inner wrapper uses `flex flex-col` to stack the bubble and timestamp vertically.
+            // 2. The bubble DIV now uses `inline-block` to force it to shrink-wrap its content, and `max-w-*` to limit its size.
+            // 3. `items-end`/`items-start` aligns the stacked elements within the new wrapper.
             messageWrapper.innerHTML = `
-                <div class="max-w-xs md:max-w-md lg:max-w-lg">
-                    <div class="px-4 py-2 rounded-2xl ${isSent ? 'bg-gray-800 dark:bg-gray-700 text-white rounded-br-lg' : 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-bl-lg'}">
+                <div class="flex flex-col ${isSent ? 'items-end' : 'items-start'}">
+                    
+                    <div class="px-4 py-2 rounded-2xl ${isSent ? 'bg-indigo-700 text-white rounded-br-lg' : 'bg-[#1a1a1a] text-gray-200 rounded-bl-lg'} **inline-block max-w-xs md:max-w-md lg:max-w-lg**" data-message-id="${data.id}">
                         <p class="break-words">${data.text}</p>
                     </div>
-                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1 px-2 ${isSent ? 'text-right' : 'text-left'}">${time}</p>
+                    
+                    <div class="flex ${isSent ? 'justify-end' : 'justify-start'} items-center gap-2 mt-1 px-2 w-full">
+                        <p class="text-xs text-gray-500">${time}</p>
+                        ${seenIndicator}
+                    </div>
                 </div>
             `;
             dom.messagesContainerEl.appendChild(messageWrapper);
         }
         
+        // --- "SEEN" RECEIPT LOGIC ---
+        
+        function setupSeenObserver() {
+            if (seenObserver) seenObserver.disconnect();
+            if (!currentChatPartner) return;
+
+            const options = { 
+                root: dom.messagesContainerEl, 
+                threshold: 0.8 
+            };
+            seenObserver = new IntersectionObserver(handleSeenIntersection, options);
+
+            const chatCache = localMessagesCache[currentChatPartner.uid] || [];
+
+            dom.messagesContainerEl.querySelectorAll('.message-received').forEach(el => {
+                const msgId = el.querySelector('[data-message-id]')?.dataset.messageId;
+                if (!msgId) return;
+
+                const msgData = chatCache.find(m => m.id === msgId);
+                if (msgData && !msgData.seen) {
+                    seenObserver.observe(el);
+                }
+            });
+        }
+        
+        function handleSeenIntersection(entries, observer) {
+            entries.forEach(entry => {
+                const messageEl = entry.target.querySelector('[data-message-id]');
+                if (!messageEl) return;
+                
+                const messageId = messageEl.dataset.messageId;
+                
+                if (entry.isIntersecting) {
+                    if (window.seenTimers.has(messageId)) return; 
+                    
+                    const timer = setTimeout(() => {
+                        markMessageAsSeen(messageId);
+                        window.seenTimers.delete(messageId);
+                        observer.unobserve(entry.target); 
+                    }, 3000);
+                    window.seenTimers.set(messageId, timer);
+
+                } else {
+                    if (window.seenTimers.has(messageId)) {
+                        clearTimeout(window.seenTimers.get(messageId));
+                        window.seenTimers.delete(messageId);
+                    }
+                }
+            });
+        }
+        
+        async function markMessageAsSeen(messageId) {
+            if (!currentChatPartner) return;
+            
+            const chatId = [currentUser.uid, currentChatPartner.uid].sort().join('_');
+            const chatDocRef = doc(db, 'chats', chatId);
+            
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const chatDoc = await transaction.get(chatDocRef);
+                    if (!chatDoc.exists()) return;
+                    
+                    const messages = chatDoc.data().messages || [];
+                    let messageUpdated = false;
+                    
+                    const updatedMessages = messages.map(msg => {
+                        if (msg.id === messageId && !msg.seen) {
+                            messageUpdated = true;
+                            return { ...msg, seen: true };
+                        }
+                        return msg;
+                    });
+                    
+                    if (messageUpdated) {
+                        transaction.set(chatDocRef, { messages: updatedMessages });
+                    }
+                });
+            } catch (error) {
+                console.error("Failed to mark message as seen:", error);
+            }
+        }
+
         // --- LOCAL CACHE & UTILITIES ---
 
         function loadLocalMessages(uid) {
             const messages = localMessagesCache[uid] || [];
             dom.messagesContainerEl.innerHTML = '';
+            
+            let lastRenderedDateString = null;
             messages.forEach(msg => {
-                const renderableMsg = { ...msg, timestamp: { toDate: () => new Date(msg.timestamp) } };
-                renderMessage(renderableMsg);
+                const msgDate = new Date(msg.timestamp);
+                const msgDateString = formatDateSeparator(msgDate);
+                
+                if (msgDateString !== lastRenderedDateString) {
+                    const separator = document.createElement('div');
+                    separator.className = 'date-separator';
+                    separator.textContent = msgDateString;
+                    dom.messagesContainerEl.appendChild(separator);
+                    lastRenderedDateString = msgDateString;
+                }
+                renderMessage(msg);
             });
-            // Force scroll on initial load
-            scrollToBottom('auto', true); 
-        }
-
-        function saveMessageToCache(uid, messageData) {
-            if (!localMessagesCache[uid]) localMessagesCache[uid] = [];
-            
-            // Convert Firestore Timestamp to ISO string for storage
-            const serializableMessage = { 
-                ...messageData, 
-                timestamp: messageData.timestamp?.toDate()?.toISOString() 
-            };
-            
-            // Prevent duplicates (basic check, could be improved with unique message IDs)
-            if (localMessagesCache[uid].some(msg => msg.timestamp === serializableMessage.timestamp)) return;
-
-            localMessagesCache[uid].push(serializableMessage);
-            // Keep cache size reasonable
-            if (localMessagesCache[uid].length > 100) localMessagesCache[uid].shift(); 
-            
-            localStorage.setItem('localMessagesCache', JSON.stringify(localMessagesCache));
+            scrollToBottom('auto');
         }
 
         function formatTimestamp(timestamp) {
@@ -528,6 +921,12 @@
                 if (snapshot.empty) return id;
             }
         }
+        
+        async function getUserDoc(uid) {
+            if (!uid) return null;
+            const userDoc = await getDoc(doc(db, 'users', uid));
+            return userDoc.exists() ? userDoc.data() : null;
+        }
 
         // --- EVENT HANDLERS ---
         
@@ -537,10 +936,10 @@
             if (text === '' || !currentChatPartner) return;
 
             dom.sendBtn.disabled = true;
-            dom.sendBtn.innerHTML = '...';
+            dom.sendBtn.innerHTML = icons.spinner;
 
-            const recipientDoc = await getDoc(doc(db, 'users', currentChatPartner.uid));
-            if (recipientDoc.data()?.blockedUsers?.includes(currentUser.uid)) {
+            const recipientDoc = await getUserDoc(currentChatPartner.uid);
+            if (recipientDoc?.blockedUsers?.includes(currentUser.uid)) {
                 alert('You cannot send a message to this user.');
                 dom.sendBtn.disabled = false;
                 dom.sendBtn.innerHTML = icons.send;
@@ -548,27 +947,41 @@
             }
 
             const filteredText = await filterProfanity(text);
-            // NOTE: Using a simplified chat model where the chat doc stores the latest message.
-            const messageData = { text: filteredText, senderId: currentUser.uid, timestamp: serverTimestamp() };
             const chatId = [currentUser.uid, currentChatPartner.uid].sort().join('_');
+            const chatDocRef = doc(db, 'chats', chatId);
+
+            const messageData = {
+                id: doc(collection(db, 'temp')).id, 
+                text: filteredText, 
+                senderId: currentUser.uid, 
+                timestamp: new Date().toISOString(), 
+                seen: false
+            };
 
             try {
-                await setDoc(doc(db, 'chats', chatId), messageData, { merge: true });
+                const chatDoc = await getDoc(chatDocRef);
+                const messages = chatDoc.exists() ? chatDoc.data().messages || [] : [];
+                messages.push(messageData);
+                const trimmedMessages = messages.slice(-5); 
                 
-                // Save the sent message to local cache immediately (before Firestore confirms)
-                saveMessageToCache(currentChatPartner.uid, { ...messageData, timestamp: new Date().toISOString() });
+                await setDoc(chatDocRef, { messages: trimmedMessages });
                 
-                // Update recipient's contact list
                 const recipientContactRef = doc(db, `users/${currentChatPartner.uid}/contacts`, currentUser.uid);
-                await setDoc(recipientContactRef, { lastMessage: filteredText, unread: true, timestamp: serverTimestamp() }, { merge: true });
+                await setDoc(recipientContactRef, { 
+                    lastMessage: filteredText, 
+                    unread: true, 
+                    timestamp: serverTimestamp(),
+                    name: (await getUserDoc(currentUser.uid))?.username || 'New Contact'
+                }, { merge: true });
 
-                // Update sender's contact list
                 const senderContactRef = doc(db, `users/${currentUser.uid}/contacts`, currentChatPartner.uid);
-                await updateDoc(senderContactRef, { lastMessage: `You: ${filteredText}`, timestamp: serverTimestamp() });
+                await updateDoc(senderContactRef, { 
+                    lastMessage: `You: ${filteredText}`, 
+                    timestamp: serverTimestamp() 
+                });
                 
                 dom.messageInput.value = '';
-                // Force scroll to bottom when user sends a message
-                scrollToBottom('smooth', true); 
+                scrollToBottom('smooth'); // Smooth scroll on new message
             } catch (error) {
                 console.error("Send message error:", error);
                 alert("Failed to send message.");
@@ -582,78 +995,148 @@
 
         async function handleAddContact() {
             const id = dom.addContactIdInput.value.trim().toLowerCase();
-            if (id.length !== 8) return alert('Please enter a valid 8-character ID.');
-            if (id === dom.myIdEl.textContent) return alert("You can't add yourself.");
+            dom.addContactMessage.textContent = '';
+            
+            if (id.length !== 8) {
+                dom.addContactMessage.textContent = 'Please enter a valid 8-character ID.';
+                return;
+            }
+            if (id === dom.myIdEl.textContent) {
+                dom.addContactMessage.textContent = "You can't add yourself.";
+                return;
+            }
 
             const q = query(collection(db, 'users'), where('publicId', '==', id));
             const snapshot = await getDocs(q);
-            if (snapshot.empty) return alert('User not found.');
+            if (snapshot.empty) {
+                dom.addContactMessage.textContent = 'User not found.';
+                return;
+            }
             
             const contactUser = snapshot.docs[0].data();
-            const name = prompt("Enter a name for this contact:", "New Contact");
-            if (name) {
-                // Add to current user's contacts
-                await setDoc(doc(db, `users/${currentUser.uid}/contacts`, contactUser.uid), { name, unread: false, timestamp: serverTimestamp() });
-                
-                // Add to partner's contacts
-                const myUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
-                const myPublicName = `User (${myUserDoc.data().publicId})`;
-                await setDoc(doc(db, `users/${contactUser.uid}/contacts`, currentUser.uid), { name: myPublicName, unread: false, timestamp: serverTimestamp() });
-                
-                dom.addContactIdInput.value = '';
+            const contactUid = contactUser.uid;
+            
+            const friendDoc = await getDoc(doc(db, `users/${currentUser.uid}/contacts`, contactUid));
+            if (friendDoc.exists()) {
+                dom.addContactMessage.textContent = 'You are already friends with this user.';
+                return;
             }
-        }
+            
+            const outDoc = await getDoc(doc(db, `users/${currentUser.uid}/pendingOut`, contactUid));
+            if (outDoc.exists()) {
+                dom.addContactMessage.textContent = 'Request already sent.';
+                return;
+            }
+            
+            const inDocRef = doc(db, `users/${currentUser.uid}/pendingIn`, contactUid);
+            const inDoc = await getDoc(inDocRef);
+            if (inDoc.exists()) {
+                await handleAcceptRequest(contactUid, contactUser.username, contactUser.publicId);
+                dom.addContactMessage.textContent = `You are now friends with ${contactUser.username || contactUser.publicId}!`;
+                dom.addContactIdInput.value = '';
+                return;
+            }
 
-        // FINAL UPDATE: Function for comprehensive friend and chat deletion (clears both sides)
-        async function handleDeleteFriend(uid, name) {
-            if (!confirm(`Are you sure you want to delete ${name} from your contacts? This will also delete them from their contacts and permanently delete all chat history from the server.`)) return;
+            const myUserDoc = await getUserDoc(currentUser.uid);
             
             const batch = writeBatch(db);
-            const chatId = [currentUser.uid, uid].sort().join('_'); 
+            
+            const myOutRef = doc(db, `users/${currentUser.uid}/pendingOut`, contactUid);
+            batch.set(myOutRef, { 
+                username: contactUser.username || `User ${contactUser.publicId}`, 
+                publicId: contactUser.publicId, 
+                timestamp: serverTimestamp() 
+            });
+            
+            const theirInRef = doc(db, `users/${contactUid}/pendingIn`, currentUser.uid);
+            batch.set(theirInRef, { 
+                username: myUserDoc.username || `User ${myUserDoc.publicId}`, 
+                publicId: myUserDoc.publicId, 
+                timestamp: serverTimestamp() 
+            });
+            
+            await batch.commit();
+            dom.addContactMessage.textContent = 'Friend request sent!';
+            dom.addContactIdInput.value = '';
+        }
+        
+        async function handleAcceptRequest(uid, name, publicId) {
+            const myUserDoc = await getUserDoc(currentUser.uid);
+            
+            const batch = writeBatch(db);
+            
+            batch.delete(doc(db, `users/${currentUser.uid}/pendingIn`, uid));
+            batch.delete(doc(db, `users/${uid}/pendingOut`, currentUser.uid));
+            
+            const myContactRef = doc(db, `users/${currentUser.uid}/contacts`, uid);
+            batch.set(myContactRef, { 
+                name: name || `User ${publicId}`, 
+                unread: false, 
+                timestamp: serverTimestamp() 
+            });
+            
+            const theirContactRef = doc(db, `users/${uid}/contacts`, currentUser.uid);
+            batch.set(theirContactRef, { 
+                name: myUserDoc.username || `User ${myUserDoc.publicId}`, 
+                unread: false, 
+                timestamp: serverTimestamp() 
+            });
+            
+            await batch.commit();
+        }
+        
+        async function handleDeclineRequest(uid) {
+            const batch = writeBatch(db);
+            batch.delete(doc(db, `users/${currentUser.uid}/pendingIn`, uid));
+            batch.delete(doc(db, `users/${uid}/pendingOut`, currentUser.uid));
+            await batch.commit();
+        }
+        
+        async function handleCancelRequest(uid) {
+            const batch = writeBatch(db);
+            batch.delete(doc(db, `users/${currentUser.uid}/pendingOut`, uid));
+            batch.delete(doc(db, `users/${uid}/pendingIn`, currentUser.uid));
+            await batch.commit();
+        }
+        
+        async function handleDeleteFriend(uid, name) {
+            if (!confirm(`Are you sure you want to delete ${name} from your contacts? This will also delete them from their contacts and clear all chat history.`)) return;
+            
+            // If currently chatting with this user, close the chat window first
+            if (currentChatPartner && currentChatPartner.uid === uid) {
+                closeChat();
+            }
 
-            // 1. Delete contact from current user
+            const batch = writeBatch(db);
+            
+            // Delete contacts for both users
             batch.delete(doc(db, `users/${currentUser.uid}/contacts`, uid));
-            // 2. Delete contact from partner
             batch.delete(doc(db, `users/${uid}/contacts`, currentUser.uid));
+
+            // Delete chat document
+            const chatId = [currentUser.uid, uid].sort().join('_');
+            const chatDocRef = doc(db, 'chats', chatId);
+            batch.delete(chatDocRef);
             
-            // 3. Delete the chat document from the database (clearing history for both)
-            batch.delete(doc(db, 'chats', chatId));
-            
-            try {
-                await batch.commit();
-                
-                // 4. Delete messages locally (clearing cache)
-                if (localMessagesCache[uid]) {
-                    delete localMessagesCache[uid];
-                    localStorage.setItem('localMessagesCache', JSON.stringify(localMessagesCache));
-                }
-                
-                // 5. If the deleted contact is the current chat, close the chat view
-                if (currentChatPartner?.uid === uid) {
-                    closeChat();
-                }
-                
-            } catch (error) {
-                console.error("Failed to delete friend and chat history:", error);
-                alert("Failed to delete contact and chat history.");
+            await batch.commit();
+
+            // Clear local cache for the deleted contact
+            if (localMessagesCache[uid]) {
+                delete localMessagesCache[uid];
+                saveCacheToLocalStorage();
             }
         }
         
-        // FINAL UPDATE: Logic to check button position for tooltip clipping
-        function checkButtonTooltipPosition(e) {
-            const btn = e.target.closest('button[data-action]');
-            if (!btn || !btn.title) return;
-            
-            const listRect = dom.contactsListWrapper.getBoundingClientRect();
-            const btnRect = btn.getBoundingClientRect();
-            
-            // 50px buffer: accounts for the 35px high tooltip + margin.
-            const distanceToBottom = listRect.bottom - btnRect.bottom;
-            
-            if (distanceToBottom < 50) {
-                btn.classList.add('tooltip-above');
-            } else {
-                btn.classList.remove('tooltip-above');
+        async function handleEditName(uid, oldName) {
+            const newName = prompt("Enter new name for contact:", oldName);
+            if (newName && newName.trim() !== '' && newName.trim() !== oldName) {
+                await updateDoc(doc(db, `users/${currentUser.uid}/contacts`, uid), { name: newName.trim() });
+                
+                // NEW: If this is the currently open chat, update UI
+                if (currentChatPartner && currentChatPartner.uid === uid) {
+                    currentChatPartner.name = newName.trim();
+                    dom.chatHeaderEl.textContent = newName.trim();
+                }
             }
         }
 
@@ -664,80 +1147,97 @@
             const uid = li.dataset.uid;
             const name = li.dataset.name;
             const actionTarget = e.target.closest('[data-action]');
-
-            if (!actionTarget) {
-                // Check for generic click on the main area to open chat
-                if (e.target.closest('[data-action="open-chat"]')) {
-                    openChat(uid, name);
-                }
-                return;
-            }
-
+            if (!actionTarget) return;
+            
             const action = actionTarget.dataset.action;
 
-            if (action === 'open-chat') {
-                openChat(uid, name);
-            } else if (action === 'edit') {
-                const newName = prompt("Enter new name for contact:", name);
-                if (newName && newName.trim() !== '') {
-                    await updateDoc(doc(db, `users/${currentUser.uid}/contacts`, uid), { name: newName.trim() });
-                }
-            } else if (action === 'block') {
-                const userDocRef = doc(db, 'users', currentUser.uid);
-                const isBlocked = blockedUsers.includes(uid);
-                const operation = isBlocked ? arrayRemove : arrayUnion;
-                const confirmationText = isBlocked ? `Are you sure you want to unblock ${name}?` : `Are you sure you want to block ${name}? They will not be able to send you messages.`;
-                if (confirm(confirmationText)) {
-                    await updateDoc(userDocRef, { blockedUsers: operation(uid) });
-                }
-            } else if (action === 'delete') {
-                // Use new comprehensive delete function
-                handleDeleteFriend(uid, name);
+            switch (action) {
+                case 'open-chat':
+                    openChat(uid, name);
+                    break;
+                case 'edit-name':
+                    handleEditName(uid, name);
+                    break;
+                case 'delete-friend':
+                    handleDeleteFriend(uid, name);
+                    break;
+                case 'accept-request':
+                    handleAcceptRequest(uid, name, li.dataset.publicId);
+                    break;
+                case 'decline-request':
+                    handleDeclineRequest(uid);
+                    break;
+                case 'cancel-request':
+                    handleCancelRequest(uid);
+                    break;
             }
+        }
+        
+        async function handleClearLocalHistory() {
+            if (!currentChatPartner || !confirm(`Are you sure you want to clear local-only message history for this chat? The last 5 messages will be kept.`)) return;
+
+            const chatId = [currentUser.uid, currentChatPartner.uid].sort().join('_');
+            const chatDocRef = doc(db, 'chats', chatId);
+            const chatDoc = await getDoc(chatDocRef);
+            
+            const dbMessages = chatDoc.exists() ? chatDoc.data().messages || [] : [];
+            
+            localMessagesCache[currentChatPartner.uid] = dbMessages;
+            saveCacheToLocalStorage();
+
+            // Re-render
+            mergeAndRenderMessages(currentChatPartner.uid, dbMessages);
         }
 
         function handleCopyId() {
-            // Using document.execCommand as a fallback for iframe environments
-            const textArea = document.createElement("textarea");
-            textArea.value = dom.myIdEl.textContent;
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-            try {
-                document.execCommand('copy');
+            const textToCopy = dom.myIdEl.textContent;
+            navigator.clipboard.writeText(textToCopy).then(() => {
                 dom.copyIdBtn.textContent = 'Copied!';
                 setTimeout(() => { dom.copyIdBtn.textContent = 'Copy'; }, 2000);
-            } catch (err) {
-                console.error('Fallback copy: ', err);
+            }, (err) => {
+                console.error('Failed to copy: ', err);
+                try {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = textToCopy;
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    dom.copyIdBtn.textContent = 'Copied!';
+                    setTimeout(() => { dom.copyIdBtn.textContent = 'Copy'; }, 2000);
+                } catch (fallbackErr) {
+                    console.error('Fallback copy failed: ', fallbackErr);
+                }
+            });
+        }
+        
+        // NEW: Handler for editing name from chat header
+        function handleEditChatName() {
+            if (currentChatPartner) {
+                handleEditName(currentChatPartner.uid, currentChatPartner.name);
             }
-            document.body.removeChild(textArea);
         }
 
         function setupEventListeners() {
-            dom.darkModeToggle.addEventListener('click', toggleTheme);
             dom.addContactBtn.addEventListener('click', handleAddContact);
             dom.contactsListEl.addEventListener('click', handleContactsListClick);
             dom.backToContactsBtn.addEventListener('click', closeChat);
+            dom.editChatNameBtn.addEventListener('click', handleEditChatName); 
+            dom.clearLocalHistoryBtn.addEventListener('click', handleClearLocalHistory);
             dom.messageForm.addEventListener('submit', handleSendMessage);
             dom.copyIdBtn.addEventListener('click', handleCopyId);
 
-            // Tooltip clipping listeners (FINAL UPDATE)
-            dom.contactsListEl.addEventListener('mouseover', checkButtonTooltipPosition);
-            dom.contactsListEl.addEventListener('mouseout', (e) => {
-                const btn = e.target.closest('button[data-action]');
-                if (btn) btn.classList.remove('tooltip-above');
-            });
-
-            // Change send button icon on input
             dom.messageInput.addEventListener('input', () => {
-                if (dom.messageInput.value.trim() !== '') {
+                const text = dom.messageInput.value.trim();
+                if (text !== '') {
+                    dom.sendBtn.innerHTML = icons.send;
                     dom.sendBtn.disabled = false;
-                    dom.sendBtn.innerHTML = icons.send;
                 } else {
+                    dom.sendBtn.innerHTML = icons.send; 
                     dom.sendBtn.disabled = true;
-                    dom.sendBtn.innerHTML = icons.send;
                 }
-            })
+            });
         }
 
         // --- START THE APP ---
