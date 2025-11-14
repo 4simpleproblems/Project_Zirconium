@@ -229,12 +229,6 @@
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
-        
-        /* --- FIX: Message Bubble Width --- */
-        .shrink-to-fit {
-            display: inline-block;
-            max-width: 100%; /* Important: makes the message bubble only as wide as its content */
-        }
     </style>
 </head>
 <body class="bg-[#070707] text-gray-200">
@@ -749,6 +743,7 @@
             const messageWrapper = document.createElement('div');
             const isSent = data.senderId === currentUser.uid;
             
+            // Outer wrapper for alignment (flex justify-end/start)
             messageWrapper.className = `flex ${isSent ? 'justify-end' : 'justify-start'} ${!isSent ? 'message-received' : ''}`;
 
             const time = data.timestamp ? new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
@@ -758,13 +753,18 @@
                 seenIndicator = `<span class="text-xs text-gray-500">${data.seen ? 'Seen' : 'Sent'}</span>`;
             }
             
-            // The addition of 'shrink-to-fit' here is the crucial fix.
+            // **FIXED LOGIC:**
+            // 1. New inner wrapper uses `flex flex-col` to stack the bubble and timestamp vertically.
+            // 2. The bubble DIV now uses `inline-block` to force it to shrink-wrap its content, and `max-w-*` to limit its size.
+            // 3. `items-end`/`items-start` aligns the stacked elements within the new wrapper.
             messageWrapper.innerHTML = `
-                <div class="max-w-xs md:max-w-md lg:max-w-lg shrink-to-fit">
-                    <div class="px-4 py-2 rounded-2xl ${isSent ? 'bg-indigo-700 text-white rounded-br-lg' : 'bg-[#1a1a1a] text-gray-200 rounded-bl-lg'}" data-message-id="${data.id}">
+                <div class="flex flex-col ${isSent ? 'items-end' : 'items-start'}">
+                    
+                    <div class="px-4 py-2 rounded-2xl ${isSent ? 'bg-indigo-700 text-white rounded-br-lg' : 'bg-[#1a1a1a] text-gray-200 rounded-bl-lg'} **inline-block max-w-xs md:max-w-md lg:max-w-lg**" data-message-id="${data.id}">
                         <p class="break-words">${data.text}</p>
                     </div>
-                    <div class="flex ${isSent ? 'justify-end' : 'justify-start'} items-center gap-2 mt-1 px-2">
+                    
+                    <div class="flex ${isSent ? 'justify-end' : 'justify-start'} items-center gap-2 mt-1 px-2 w-full">
                         <p class="text-xs text-gray-500">${time}</p>
                         ${seenIndicator}
                     </div>
