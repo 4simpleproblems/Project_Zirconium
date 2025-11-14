@@ -76,7 +76,7 @@
         .btn-toolbar-style {
             background: var(--menu-bg, #0000000);
             border: 1px solid var(--menu-border, #333);
-            border-radius: 0.5rem; 
+            border-radius: 0.75rem; 
             color: var(--menu-text, #d1d5db);
             padding: 0.5rem 1rem;
             font-weight: 500;
@@ -185,8 +185,8 @@
         }
         .message-input-style:focus {
             outline: none;
-            border-color: #3b82f6; /* blue-500 */
-            box-shadow: 0 0 0 2px #3b82f640;
+            border-color: #374151; /* gray-700 */
+            box-shadow: none;
         }
 
         #attach-image-btn {
@@ -257,7 +257,7 @@
                 <div class="mt-4 bg-[#111111] p-3 rounded-lg border border-[#1a1a1a] flex items-center justify-between">
                     <div class="flex items-center gap-2 overflow-hidden">
                         <span class="text-sm font-medium text-gray-400 flex-shrink-0">Your ID:</span>
-                        <span id="my-id" class="font-mono text-sm truncate text-gray-300 font-semibold">loading...</span>
+                        <span id="my-id" class="font-mono text-base truncate text-gray-300 font-semibold">loading...</span>
                     </div>
                     <button id="copy-id-btn" class="btn-toolbar-style">Copy</button>
                 </div>
