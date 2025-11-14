@@ -2,7 +2,7 @@
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale-1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Messenger</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -318,7 +318,7 @@
             authDomain: "theamericanmessenger-0.firebaseapp.com",
             databaseURL: "https://theamericanmessenger-0-default-rtdb.firebaseio.com",
             projectId: "theamericanmessenger-0",
-            storageBucket: "theamericanmessenger-0.firebasestorage.app",
+            storageBucket: "theamericanmessenger-0.firebase-storage.app",
             messagingSenderId: "963196851685",
             appId: "1:963196851685:web:9f709be8b2888ed4e28b0c",
             measurementId: "G-SBGEJDRSBZ"
@@ -357,7 +357,7 @@
             chatView: document.getElementById('chat-view'),
             backToContactsBtn: document.getElementById('back-to-contacts-btn'),
             chatHeaderEl: document.getElementById('chat-header'),
-            editChatNameBtn: document.getElementById('edit-chat-name-btn'), // NEW
+            editChatNameBtn: document.getElementById('edit-chat-name-btn'), 
             clearLocalHistoryBtn: document.getElementById('clear-local-history-btn'),
             messagesContainerEl: document.getElementById('messages-container'),
             messageForm: document.getElementById('message-form'),
@@ -743,6 +743,7 @@
             const messageWrapper = document.createElement('div');
             const isSent = data.senderId === currentUser.uid;
             
+            // Outer wrapper for alignment (flex justify-end/start)
             messageWrapper.className = `flex ${isSent ? 'justify-end' : 'justify-start'} ${!isSent ? 'message-received' : ''}`;
 
             const time = data.timestamp ? new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
@@ -752,12 +753,18 @@
                 seenIndicator = `<span class="text-xs text-gray-500">${data.seen ? 'Seen' : 'Sent'}</span>`;
             }
             
+            // **FIXED LOGIC:**
+            // 1. New inner wrapper uses `flex flex-col` to stack the bubble and timestamp vertically.
+            // 2. The bubble DIV now uses `inline-block` to force it to shrink-wrap its content, and `max-w-*` to limit its size.
+            // 3. `items-end`/`items-start` aligns the stacked elements within the new wrapper.
             messageWrapper.innerHTML = `
-                <div class="max-w-xs md:max-w-md lg:max-w-lg">
-                    <div class="px-4 py-2 rounded-2xl ${isSent ? 'bg-indigo-700 text-white rounded-br-lg' : 'bg-[#1a1a1a] text-gray-200 rounded-bl-lg'}" data-message-id="${data.id}">
+                <div class="flex flex-col ${isSent ? 'items-end' : 'items-start'}">
+                    
+                    <div class="px-4 py-2 rounded-2xl ${isSent ? 'bg-indigo-700 text-white rounded-br-lg' : 'bg-[#1a1a1a] text-gray-200 rounded-bl-lg'} **inline-block max-w-xs md:max-w-md lg:max-w-lg**" data-message-id="${data.id}">
                         <p class="break-words">${data.text}</p>
                     </div>
-                    <div class="flex ${isSent ? 'justify-end' : 'justify-start'} items-center gap-2 mt-1 px-2">
+                    
+                    <div class="flex ${isSent ? 'justify-end' : 'justify-start'} items-center gap-2 mt-1 px-2 w-full">
                         <p class="text-xs text-gray-500">${time}</p>
                         ${seenIndicator}
                     </div>
@@ -1186,7 +1193,7 @@
             dom.addContactBtn.addEventListener('click', handleAddContact);
             dom.contactsListEl.addEventListener('click', handleContactsListClick);
             dom.backToContactsBtn.addEventListener('click', closeChat);
-            dom.editChatNameBtn.addEventListener('click', handleEditChatName); // NEW
+            dom.editChatNameBtn.addEventListener('click', handleEditChatName); 
             dom.clearLocalHistoryBtn.addEventListener('click', handleClearLocalHistory);
             dom.messageForm.addEventListener('submit', handleSendMessage);
             dom.copyIdBtn.addEventListener('click', handleCopyId);
