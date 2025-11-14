@@ -2,7 +2,7 @@
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale-1.0">
     <title>Messenger</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -76,7 +76,6 @@
         .btn-toolbar-style {
             background: var(--menu-bg, #0000000);
             border: 1px solid var(--menu-border, #333);
-            /* UPDATED: Less rounded corners */
             border-radius: 0.5rem; 
             color: var(--menu-text, #d1d5db);
             padding: 0.5rem 1rem;
@@ -87,6 +86,7 @@
             align-items: center;
             justify-content: center;
             gap: 0.5rem;
+            position: relative; /* Added for tooltip positioning */
         }
         .btn-toolbar-style:hover {
             background-color: var(--menu-bg, #000000);
@@ -135,20 +135,19 @@
             color: #f87171;
         }
 
-
         .btn-icon {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             width: 2.25rem; /* 36px */
             height: 2.25rem; /* 36px */
-            /* UPDATED: Less rounded corners */
             border-radius: 0.5rem;
             background-color: transparent;
             border: 1px solid transparent;
             color: var(--tab-text, #9ca3af);
             cursor: pointer;
             transition: all 0.2s;
+            position: relative; /* Added for tooltip positioning */
         }
         .btn-icon:hover {
             background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
@@ -187,6 +186,49 @@
             border-top: 1px solid #1a1a1a;
             border-bottom: 1px solid #1a1a1a;
         }
+
+        /* --- NEW: Tooltip Styling --- */
+        [title]:hover::after {
+            content: attr(title);
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%) translateY(5px);
+            background-color: #111;
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem; /* 12px */
+            font-weight: 400; /* Regular weight for tooltip */
+            white-space: nowrap;
+            z-index: 1000;
+            border: 1px solid #333;
+            
+            /* Fade-in animation */
+            opacity: 1;
+            visibility: visible;
+            transition: opacity 0.2s ease, visibility 0.2s ease;
+        }
+        
+        /* Hide tooltip by default */
+        [title]::after {
+            content: attr(title);
+            position: absolute;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none; /* Prevents tooltip from interfering with mouse */
+        }
+        
+        /* --- NEW: Date Separator Styling --- */
+        .date-separator {
+            text-align: center;
+            margin: 1rem 0;
+            color: #707070; /* Muted grey */
+            font-size: 0.8rem; /* 13px */
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
     </style>
 </head>
 <body class="bg-[#070707] text-gray-200">
@@ -203,21 +245,21 @@
                             <span>|</span>
                             <span id="local-time">--:--</span>
                         </div>
-                        </div>
+                    </div>
                 </div>
                 <div class="mt-4 bg-[#111111] p-3 rounded-lg border border-[#1a1a1a] flex items-center justify-between">
                     <div class="flex items-center gap-2 overflow-hidden">
                         <span class="text-sm font-medium text-gray-400 flex-shrink-0">Your ID:</span>
                         <span id="my-id" class="font-mono text-sm truncate text-gray-300 font-semibold">loading...</span>
                     </div>
-                    <button id="copy-id-btn" class="btn-toolbar-style">Copy</button>
+                    <button id="copy-id-btn" class="btn-toolbar-style" title="Copy Your ID">Copy</button>
                 </div>
             </header>
 
             <div class="p-4 border-b border-[#1a1a1a] flex-shrink-0">
                 <div class="flex gap-2">
                     <input type="text" id="add-contact-id" placeholder="Enter 8-character ID to send request..." class="settings-input font-mono">
-                    <button id="add-contact-btn" class="btn-toolbar-style btn-primary-override px-4">
+                    <button id="add-contact-btn" class="btn-toolbar-style btn-primary-override px-4" title="Send Friend Request">
                         <i class="fa-solid fa-user-plus"></i>
                         <span>Add</span>
                     </button>
@@ -233,11 +275,16 @@
 
         <div id="chat-view" class="w-full h-full flex flex-col view-transition view-hidden absolute top-0 left-0">
             <header class="p-4 border-b border-[#1a1a1a] flex items-center justify-between flex-shrink-0">
-                <button id="back-to-contacts-btn" class="btn-icon">
+                <button id="back-to-contacts-btn" class="btn-icon" title="Back to Contacts">
                     <i class="fa-solid fa-arrow-left"></i>
                 </button>
-                <h2 id="chat-header" class="text-lg font-bold text-white">Chat</h2>
-                <button id="clear-local-history-btn" class="btn-icon" title="Clear Local-Only History">
+                <div class="flex items-center gap-2">
+                    <h2 id="chat-header" class="text-lg font-bold text-white">Chat</h2>
+                    <button id="edit-chat-name-btn" class="btn-icon" title="Edit Contact Name">
+                        <i class="fa-solid fa-pen-to-square text-sm"></i>
+                    </button>
+                </div>
+                <button id="clear-local-history-btn" class="btn-icon" title="Clear Local History">
                     <i class="fa-solid fa-broom"></i>
                 </button>
             </header>
@@ -248,7 +295,7 @@
             <footer class="p-4 border-t border-[#1a1a1a] flex-shrink-0 bg-[#0d0d0d]">
                 <form id="message-form" class="flex gap-3 items-center">
                     <input type="text" id="message-input" placeholder="Type a message..." class="settings-input rounded-full py-2 px-4 bg-[#1a1a1a]">
-                    <button type="submit" id="send-btn" class="btn-icon active" disabled>
+                    <button type="submit" id="send-btn" class="btn-icon active" title="Send Message" disabled>
                         <i class="fa-solid fa-paper-plane-top"></i>
                     </button>
                 </form>
@@ -310,18 +357,17 @@
             chatView: document.getElementById('chat-view'),
             backToContactsBtn: document.getElementById('back-to-contacts-btn'),
             chatHeaderEl: document.getElementById('chat-header'),
+            editChatNameBtn: document.getElementById('edit-chat-name-btn'), // NEW
             clearLocalHistoryBtn: document.getElementById('clear-local-history-btn'),
             messagesContainerEl: document.getElementById('messages-container'),
             messageForm: document.getElementById('message-form'),
             messageInput: document.getElementById('message-input'),
             sendBtn: document.getElementById('send-btn'),
-            // REMOVED: darkModeToggle
             batteryStatusEl: document.getElementById('battery-status'),
             localTimeEl: document.getElementById('local-time'),
         };
 
         const icons = {
-            // REMOVED: sun, moon
             send: `<i class="fa-solid fa-paper-plane-top"></i>`,
             check: `<i class="fa-solid fa-check"></i>`,
             spinner: `<i class="fa-solid fa-spinner fa-spin"></i>`
@@ -330,7 +376,6 @@
         // --- MAIN APP LOGIC ---
 
         function main() {
-            // REMOVED: initTheme()
             setupEventListeners();
             signInAnonymously(auth).catch(err => console.error("Sign-in failed:", err));
             onAuthStateChanged(auth, handleAuthStateChange);
@@ -341,13 +386,12 @@
                 currentUser = user;
                 await setupUserDocument();
                 listenForUserDocChanges();
-                listenForContacts(); // This will now listen for friends AND requests
+                listenForContacts(); 
                 startStatusUpdates();
                 dom.appContainer.classList.remove('hidden');
             } else {
                 stopStatusUpdates();
                 dom.appContainer.classList.add('hidden');
-                // Unsubscribe from all listeners
                 unsubUserDoc();
                 unsubContacts();
                 unsubPendingIn();
@@ -365,13 +409,12 @@
                     publicId: newId, 
                     uid: currentUser.uid, 
                     blockedUsers: [],
-                    username: `User ${newId}` // Default username
+                    username: `User ${newId}` 
                 });
                 dom.myIdEl.textContent = newId;
             } else {
                 const data = userDoc.data();
                 dom.myIdEl.textContent = data.publicId;
-                // Ensure username exists if doc exists but username doesn't (for older users)
                 if (!data.username) {
                     await updateDoc(userDocRef, { username: `User ${data.publicId}` });
                 }
@@ -382,17 +425,15 @@
             unsubUserDoc();
             const userDocRef = doc(db, 'users', currentUser.uid);
             unsubUserDoc = onSnapshot(userDocRef, (doc) => {
-                // We can use this to update other things if needed
+                // Future use
             });
         }
 
         // --- UI & THEME ---
 
-        // REMOVED: initTheme() and toggleTheme() functions
-
-        function scrollToBottom() {
+        function scrollToBottom(behavior = 'smooth') {
             setTimeout(() => {
-                dom.messagesContainerEl.scrollTo({ top: dom.messagesContainerEl.scrollHeight, behavior: 'smooth' });
+                dom.messagesContainerEl.scrollTo({ top: dom.messagesContainerEl.scrollHeight, behavior: behavior });
             }, 50);
         }
         
@@ -421,7 +462,7 @@
             if (statusInterval) clearInterval(statusInterval);
         }
 
-        // --- FRIEND & CONTACT MANAGEMENT (NEW) ---
+        // --- FRIEND & CONTACT MANAGEMENT ---
 
         function listenForContacts() {
             const state = {
@@ -468,15 +509,24 @@
                 }
             };
             
-            // 1. Listen for Friends
             unsubContacts();
             const contactsRef = collection(db, `users/${currentUser.uid}/contacts`);
             unsubContacts = onSnapshot(query(contactsRef), (snapshot) => {
                 state.friends = snapshot.docs;
+                // NEW: If a chat is open, check if the name changed
+                if (currentChatPartner) {
+                    const changedDoc = snapshot.docs.find(doc => doc.id === currentChatPartner.uid);
+                    if (changedDoc) {
+                        const newName = changedDoc.data().name;
+                        if (newName !== currentChatPartner.name) {
+                            currentChatPartner.name = newName;
+                            dom.chatHeaderEl.textContent = newName;
+                        }
+                    }
+                }
                 renderAll();
             });
 
-            // 2. Listen for Incoming Requests
             unsubPendingIn();
             const pendingInRef = collection(db, `users/${currentUser.uid}/pendingIn`);
             unsubPendingIn = onSnapshot(query(pendingInRef), (snapshot) => {
@@ -484,7 +534,6 @@
                 renderAll();
             });
             
-            // 3. Listen for Outgoing Requests
             unsubPendingOut();
             const pendingOutRef = collection(db, `users/${currentUser.uid}/pendingOut`);
             unsubPendingOut = onSnapshot(query(pendingOutRef), (snapshot) => {
@@ -542,6 +591,7 @@
             li.className = 'px-4 py-3 flex items-center gap-4 hover:bg-[#1a1a1a] transition-colors';
             li.dataset.uid = uid;
             li.dataset.name = data.username || 'Unnamed';
+            li.dataset.publicId = data.publicId || ''; // Store publicId for accept logic
 
             const name = data.username || `User (${data.publicId})`;
             const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
@@ -588,10 +638,8 @@
             dom.chatHeaderEl.textContent = name;
             dom.messagesContainerEl.innerHTML = '';
             
-            // 1. Load local messages first for speed
             loadLocalMessages(uid);
             
-            // 2. Fetch DB history (last 5)
             const chatId = [currentUser.uid, currentChatPartner.uid].sort().join('_');
             const chatDocRef = doc(db, 'chats', chatId);
             const chatDoc = await getDoc(chatDocRef);
@@ -601,20 +649,16 @@
                 dbMessages = chatDoc.data().messages || [];
             }
             
-            // 3. Merge local and DB messages
             mergeAndRenderMessages(uid, dbMessages);
             
-            // 4. Show UI
             dom.contactsView.classList.add('view-hidden');
             dom.chatView.classList.remove('view-hidden');
             dom.messageInput.focus();
 
-            // 5. Start listening for new messages
             listenForMessages();
             
-            // 6. Mark chat as read
             const contactRef = doc(db, `users/${currentUser.uid}/contacts`, uid);
-            try { await updateDoc(contactRef, { unread: false }); } catch (e) { /* Contact may not exist yet if it's a new chat */ }
+            try { await updateDoc(contactRef, { unread: false }); } catch (e) { /* (e) */ }
         }
 
         function closeChat() {
@@ -627,27 +671,58 @@
             dom.chatView.classList.add('view-hidden');
             dom.contactsView.classList.remove('view-hidden');
         }
-        
+
+        // --- NEW: Helper for Date Formatting ---
+        function formatDateSeparator(date) {
+            const now = new Date();
+            const isSameYear = date.getFullYear() === now.getFullYear();
+            
+            const options = {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric'
+            };
+            
+            if (!isSameYear) {
+                options.year = 'numeric';
+            }
+            
+            return date.toLocaleDateString('en-US', options);
+        }
+
+        // --- UPDATED: Message Rendering with Date Separators ---
         function mergeAndRenderMessages(uid, dbMessages) {
             const chatCache = localMessagesCache[uid] || [];
             
             const dbMessageIds = new Set(dbMessages.map(m => m.id));
             const olderCachedMessages = chatCache.filter(m => !dbMessageIds.has(m.id));
             
-            // Ensure correct order. DB messages are the most recent 5.
             const allMessages = [...olderCachedMessages, ...dbMessages];
             
-            // Save this new merged list to the cache
             localMessagesCache[uid] = allMessages;
             saveCacheToLocalStorage();
 
-            // Re-render
             dom.messagesContainerEl.innerHTML = '';
+            
+            // Add date separators
+            let lastRenderedDateString = null;
             allMessages.forEach(msg => {
+                const msgDate = new Date(msg.timestamp);
+                const msgDateString = formatDateSeparator(msgDate);
+                
+                if (msgDateString !== lastRenderedDateString) {
+                    const separator = document.createElement('div');
+                    separator.className = 'date-separator';
+                    separator.textContent = msgDateString;
+                    dom.messagesContainerEl.appendChild(separator);
+                    lastRenderedDateString = msgDateString;
+                }
+                
                 renderMessage(msg);
             });
-            scrollToBottom();
-            setupSeenObserver(); // Setup observer after rendering
+            
+            scrollToBottom('auto'); // Use 'auto' for initial load
+            setupSeenObserver(); 
         }
 
         function listenForMessages() {
@@ -656,13 +731,10 @@
             const chatDocRef = doc(db, 'chats', chatId);
 
             unsubMessages = onSnapshot(chatDocRef, (doc) => {
-                if (!doc.exists()) return; // No history
+                if (!doc.exists() || !currentChatPartner) return; 
                 
                 const dbMessages = doc.data().messages || [];
-                // Check if component is still active
-                if (currentChatPartner) {
-                    mergeAndRenderMessages(currentChatPartner.uid, dbMessages);
-                }
+                mergeAndRenderMessages(currentChatPartner.uid, dbMessages);
             });
         }
 
@@ -671,7 +743,6 @@
             const messageWrapper = document.createElement('div');
             const isSent = data.senderId === currentUser.uid;
             
-            // Add class for seen observer
             messageWrapper.className = `flex ${isSent ? 'justify-end' : 'justify-start'} ${!isSent ? 'message-received' : ''}`;
 
             const time = data.timestamp ? new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
@@ -714,7 +785,6 @@
                 if (!msgId) return;
 
                 const msgData = chatCache.find(m => m.id === msgId);
-                // Only observe if it's not seen
                 if (msgData && !msgData.seen) {
                     seenObserver.observe(el);
                 }
@@ -729,18 +799,16 @@
                 const messageId = messageEl.dataset.messageId;
                 
                 if (entry.isIntersecting) {
-                    // Start timer
-                    if (window.seenTimers.has(messageId)) return; // Timer already running
+                    if (window.seenTimers.has(messageId)) return; 
                     
                     const timer = setTimeout(() => {
                         markMessageAsSeen(messageId);
                         window.seenTimers.delete(messageId);
-                        observer.unobserve(entry.target); // Stop observing once seen
+                        observer.unobserve(entry.target); 
                     }, 3000);
                     window.seenTimers.set(messageId, timer);
 
                 } else {
-                    // Not intersecting, clear timer
                     if (window.seenTimers.has(messageId)) {
                         clearTimeout(window.seenTimers.get(messageId));
                         window.seenTimers.delete(messageId);
@@ -756,7 +824,6 @@
             const chatDocRef = doc(db, 'chats', chatId);
             
             try {
-                // Use a transaction to safely update the 'seen' status
                 await runTransaction(db, async (transaction) => {
                     const chatDoc = await transaction.get(chatDocRef);
                     if (!chatDoc.exists()) return;
@@ -786,10 +853,22 @@
         function loadLocalMessages(uid) {
             const messages = localMessagesCache[uid] || [];
             dom.messagesContainerEl.innerHTML = '';
+            
+            let lastRenderedDateString = null;
             messages.forEach(msg => {
+                const msgDate = new Date(msg.timestamp);
+                const msgDateString = formatDateSeparator(msgDate);
+                
+                if (msgDateString !== lastRenderedDateString) {
+                    const separator = document.createElement('div');
+                    separator.className = 'date-separator';
+                    separator.textContent = msgDateString;
+                    dom.messagesContainerEl.appendChild(separator);
+                    lastRenderedDateString = msgDateString;
+                }
                 renderMessage(msg);
             });
-            scrollToBottom();
+            scrollToBottom('auto');
         }
 
         function formatTimestamp(timestamp) {
@@ -839,7 +918,6 @@
             dom.sendBtn.disabled = true;
             dom.sendBtn.innerHTML = icons.spinner;
 
-            // Check if recipient has blocked us
             const recipientDoc = await getUserDoc(currentChatPartner.uid);
             if (recipientDoc?.blockedUsers?.includes(currentUser.uid)) {
                 alert('You cannot send a message to this user.');
@@ -852,25 +930,22 @@
             const chatId = [currentUser.uid, currentChatPartner.uid].sort().join('_');
             const chatDocRef = doc(db, 'chats', chatId);
 
-            // New message object
             const messageData = {
-                id: doc(collection(db, 'temp')).id, // Unique ID for message
+                id: doc(collection(db, 'temp')).id, 
                 text: filteredText, 
                 senderId: currentUser.uid, 
-                timestamp: new Date().toISOString(), // Use ISO string for consistency
+                timestamp: new Date().toISOString(), 
                 seen: false
             };
 
             try {
-                // Get current messages, add new one, trim to last 5
                 const chatDoc = await getDoc(chatDocRef);
                 const messages = chatDoc.exists() ? chatDoc.data().messages || [] : [];
                 messages.push(messageData);
-                const trimmedMessages = messages.slice(-5); // Keep only last 5
+                const trimmedMessages = messages.slice(-5); 
                 
                 await setDoc(chatDocRef, { messages: trimmedMessages });
                 
-                // Update contact list for recipient
                 const recipientContactRef = doc(db, `users/${currentChatPartner.uid}/contacts`, currentUser.uid);
                 await setDoc(recipientContactRef, { 
                     lastMessage: filteredText, 
@@ -879,7 +954,6 @@
                     name: (await getUserDoc(currentUser.uid))?.username || 'New Contact'
                 }, { merge: true });
 
-                // Update contact list for sender
                 const senderContactRef = doc(db, `users/${currentUser.uid}/contacts`, currentChatPartner.uid);
                 await updateDoc(senderContactRef, { 
                     lastMessage: `You: ${filteredText}`, 
@@ -887,6 +961,7 @@
                 });
                 
                 dom.messageInput.value = '';
+                scrollToBottom('smooth'); // Smooth scroll on new message
             } catch (error) {
                 console.error("Send message error:", error);
                 alert("Failed to send message.");
@@ -921,21 +996,18 @@
             const contactUser = snapshot.docs[0].data();
             const contactUid = contactUser.uid;
             
-            // Check if already friends
             const friendDoc = await getDoc(doc(db, `users/${currentUser.uid}/contacts`, contactUid));
             if (friendDoc.exists()) {
                 dom.addContactMessage.textContent = 'You are already friends with this user.';
                 return;
             }
             
-            // Check if request already sent
             const outDoc = await getDoc(doc(db, `users/${currentUser.uid}/pendingOut`, contactUid));
             if (outDoc.exists()) {
                 dom.addContactMessage.textContent = 'Request already sent.';
                 return;
             }
             
-            // Check if we have an incoming request from them (auto-accept)
             const inDocRef = doc(db, `users/${currentUser.uid}/pendingIn`, contactUid);
             const inDoc = await getDoc(inDocRef);
             if (inDoc.exists()) {
@@ -945,23 +1017,18 @@
                 return;
             }
 
-            // Send new request
             const myUserDoc = await getUserDoc(currentUser.uid);
             
             const batch = writeBatch(db);
             
-            // Set outgoing request for me
             const myOutRef = doc(db, `users/${currentUser.uid}/pendingOut`, contactUid);
-            // *** FIXED: Added fallback for username ***
             batch.set(myOutRef, { 
                 username: contactUser.username || `User ${contactUser.publicId}`, 
                 publicId: contactUser.publicId, 
                 timestamp: serverTimestamp() 
             });
             
-            // Set incoming request for them
             const theirInRef = doc(db, `users/${contactUid}/pendingIn`, currentUser.uid);
-            // *** FIXED: Added fallback for username ***
             batch.set(theirInRef, { 
                 username: myUserDoc.username || `User ${myUserDoc.publicId}`, 
                 publicId: myUserDoc.publicId, 
@@ -978,22 +1045,17 @@
             
             const batch = writeBatch(db);
             
-            // 1. Delete requests
             batch.delete(doc(db, `users/${currentUser.uid}/pendingIn`, uid));
             batch.delete(doc(db, `users/${uid}/pendingOut`, currentUser.uid));
             
-            // 2. Create contact for me
             const myContactRef = doc(db, `users/${currentUser.uid}/contacts`, uid);
-            // *** FIXED: Added fallback for name ***
             batch.set(myContactRef, { 
                 name: name || `User ${publicId}`, 
                 unread: false, 
                 timestamp: serverTimestamp() 
             });
             
-            // 3. Create contact for them
             const theirContactRef = doc(db, `users/${uid}/contacts`, currentUser.uid);
-            // *** FIXED: Added fallback for name ***
             batch.set(theirContactRef, { 
                 name: myUserDoc.username || `User ${myUserDoc.publicId}`, 
                 unread: false, 
@@ -1022,9 +1084,7 @@
             
             const batch = writeBatch(db);
             
-            // Delete from my contacts
             batch.delete(doc(db, `users/${currentUser.uid}/contacts`, uid));
-            // Delete me from their contacts
             batch.delete(doc(db, `users/${uid}/contacts`, currentUser.uid));
             
             await batch.commit();
@@ -1034,6 +1094,12 @@
             const newName = prompt("Enter new name for contact:", oldName);
             if (newName && newName.trim() !== '' && newName.trim() !== oldName) {
                 await updateDoc(doc(db, `users/${currentUser.uid}/contacts`, uid), { name: newName.trim() });
+                
+                // NEW: If this is the currently open chat, update UI
+                if (currentChatPartner && currentChatPartner.uid === uid) {
+                    currentChatPartner.name = newName.trim();
+                    dom.chatHeaderEl.textContent = newName.trim();
+                }
             }
         }
 
@@ -1079,16 +1145,11 @@
             
             const dbMessages = chatDoc.exists() ? chatDoc.data().messages || [] : [];
             
-            // Overwrite the local cache with *only* the DB messages
             localMessagesCache[currentChatPartner.uid] = dbMessages;
             saveCacheToLocalStorage();
 
             // Re-render
-            dom.messagesContainerEl.innerHTML = '';
-            dbMessages.forEach(msg => {
-                renderMessage(msg);
-            });
-            scrollToBottom();
+            mergeAndRenderMessages(currentChatPartner.uid, dbMessages);
         }
 
         function handleCopyId() {
@@ -1098,7 +1159,6 @@
                 setTimeout(() => { dom.copyIdBtn.textContent = 'Copy'; }, 2000);
             }, (err) => {
                 console.error('Failed to copy: ', err);
-                // Fallback for non-secure contexts
                 try {
                     const textArea = document.createElement("textarea");
                     textArea.value = textToCopy;
@@ -1114,24 +1174,30 @@
                 }
             });
         }
+        
+        // NEW: Handler for editing name from chat header
+        function handleEditChatName() {
+            if (currentChatPartner) {
+                handleEditName(currentChatPartner.uid, currentChatPartner.name);
+            }
+        }
 
         function setupEventListeners() {
-            // REMOVED: dark mode listener
             dom.addContactBtn.addEventListener('click', handleAddContact);
             dom.contactsListEl.addEventListener('click', handleContactsListClick);
             dom.backToContactsBtn.addEventListener('click', closeChat);
+            dom.editChatNameBtn.addEventListener('click', handleEditChatName); // NEW
             dom.clearLocalHistoryBtn.addEventListener('click', handleClearLocalHistory);
             dom.messageForm.addEventListener('submit', handleSendMessage);
             dom.copyIdBtn.addEventListener('click', handleCopyId);
 
-            // Change send button icon on input
             dom.messageInput.addEventListener('input', () => {
                 const text = dom.messageInput.value.trim();
                 if (text !== '') {
                     dom.sendBtn.innerHTML = icons.send;
                     dom.sendBtn.disabled = false;
                 } else {
-                    dom.sendBtn.innerHTML = icons.send; // Keep send icon
+                    dom.sendBtn.innerHTML = icons.send; 
                     dom.sendBtn.disabled = true;
                 }
             });
