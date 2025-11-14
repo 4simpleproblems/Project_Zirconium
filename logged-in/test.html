@@ -142,15 +142,15 @@
             height: 2.25rem; /* 36px */
             border-radius: 0.5rem;
             background-color: transparent;
-            border: 1px solid transparent;
+            border: 1px solid #374151; /* gray-700 */
             color: var(--tab-text, #9ca3af);
             cursor: pointer;
             transition: all 0.2s;
         }
         .btn-icon:hover {
-            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
-            color: var(--tab-active-text, #4f46e5);
-            border-color: var(--tab-active-border, #4f46e5);
+            background-color: #374151; /* gray-700 */
+            color: #f3f4f6; /* gray-100 */
+            border-color: #374151; /* gray-700 */
         }
         .btn-icon.active {
              background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
@@ -198,15 +198,9 @@
             border-color: #374151; /* gray-700 */
         }
 
-        [data-action="edit-name"],
-        [data-action="delete-friend"] {
-            border: 1px solid #374151; /* gray-700 */
-        }
-        [data-action="edit-name"]:hover,
-        [data-action="delete-friend"]:hover {
-            background-color: #374151; /* gray-700 */
-            color: #f3f4f6; /* gray-100 */
-            border-color: #374151; /* gray-700 */
+        .chat-footer-btn {
+            width: 2.5rem; /* 40px */
+            height: 2.5rem; /* 40px */
         }
         
         /* Header for sections in contact list */
@@ -308,12 +302,12 @@
             <footer class="p-4 border-t border-[#1a1a1a] flex-shrink-0 bg-[#0d0d0d]">
                 <div id="image-preview-container" class="flex gap-2 mb-2"></div>
                 <form id="message-form" class="flex gap-3 items-center">
-                    <button type="button" id="attach-image-btn" class="btn-icon">
+                    <button type="button" id="attach-image-btn" class="btn-icon chat-footer-btn">
                         <i class="fa-solid fa-paperclip"></i>
                     </button>
                     <input type="file" id="image-input" accept="image/*" multiple class="hidden">
-                    <input type="text" id="message-input" placeholder="Type a message..." class="message-input-style">
-                    <button type="submit" id="send-btn" class="btn-icon active" disabled>
+                    <input type="text" id="message-input" placeholder="Type a message..." class="message-input-style h-10">
+                    <button type="submit" id="send-btn" class="btn-icon active chat-footer-btn" disabled>
                         <i class="fa-solid fa-paper-plane-top"></i>
                     </button>
                 </form>
