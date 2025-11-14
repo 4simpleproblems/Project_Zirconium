@@ -76,7 +76,7 @@
         .btn-toolbar-style {
             background: var(--menu-bg, #0000000);
             border: 1px solid var(--menu-border, #333);
-            border-radius: 0.5rem; 
+            border-radius: 0.75rem; 
             color: var(--menu-text, #d1d5db);
             padding: 0.5rem 1rem;
             font-weight: 500;
@@ -86,7 +86,6 @@
             align-items: center;
             justify-content: center;
             gap: 0.5rem;
-            position: relative; /* Added for tooltip positioning */
         }
         .btn-toolbar-style:hover {
             background-color: var(--menu-bg, #000000);
@@ -143,16 +142,15 @@
             height: 2.25rem; /* 36px */
             border-radius: 0.5rem;
             background-color: transparent;
-            border: 1px solid transparent;
+            border: 1px solid #374151; /* gray-700 */
             color: var(--tab-text, #9ca3af);
             cursor: pointer;
             transition: all 0.2s;
-            position: relative; /* Added for tooltip positioning */
         }
         .btn-icon:hover {
-            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
-            color: var(--tab-active-text, #4f46e5);
-            border-color: var(--tab-active-border, #4f46e5);
+            background-color: #374151; /* gray-700 */
+            color: #f3f4f6; /* gray-100 */
+            border-color: #374151; /* gray-700 */
         }
         .btn-icon.active {
              background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
@@ -175,6 +173,35 @@
             border-color: #3b82f6; /* blue-500 */
             box-shadow: 0 0 0 2px #3b82f640;
         }
+
+        .message-input-style {
+            width: 100%;
+            background-color: #1a1a1a;
+            border: 1px solid #374151; /* gray-700 */
+            color: #f3f4f6; /* gray-100 */
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .message-input-style:focus {
+            outline: none;
+            border-color: #374151; /* gray-700 */
+            box-shadow: none;
+        }
+
+        #attach-image-btn {
+            border: 1px solid #374151; /* gray-700 */
+        }
+        #attach-image-btn:hover {
+            background-color: #374151; /* gray-700 */
+            color: #f3f4f6; /* gray-100 */
+            border-color: #374151; /* gray-700 */
+        }
+
+        .chat-footer-btn {
+            width: 2.5rem; /* 40px */
+            height: 2.5rem; /* 40px */
+        }
         
         /* Header for sections in contact list */
         .contact-section-header {
@@ -187,38 +214,18 @@
             border-bottom: 1px solid #1a1a1a;
         }
 
-        /* --- NEW: Tooltip Styling --- */
-        [title]:hover::after {
-            content: attr(title);
-            position: absolute;
-            top: 100%;
-            left: 50%;
-            transform: translateX(-50%) translateY(5px);
-            background-color: #111;
-            color: #fff;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.75rem; /* 12px */
-            font-weight: 400; /* Regular weight for tooltip */
-            white-space: nowrap;
-            z-index: 1000;
-            border: 1px solid #333;
-            
-            /* Fade-in animation */
-            opacity: 1;
-            visibility: visible;
-            transition: opacity 0.2s ease, visibility 0.2s ease;
+        .sent-bubble {
+            background-color: rgba(79, 70, 229, 0.1);
+            border: 1px solid #4f46e5;
+            color: #e0e0e0;
         }
-        
-        /* Hide tooltip by default */
-        [title]::after {
-            content: attr(title);
-            position: absolute;
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none; /* Prevents tooltip from interfering with mouse */
+
+        .received-bubble {
+            background-color: #1a1a1a;
+            border: 1px solid #374151;
+            color: #c0c0c0;
         }
-        
+
         /* --- NEW: Date Separator Styling --- */
         .date-separator {
             text-align: center;
@@ -250,16 +257,16 @@
                 <div class="mt-4 bg-[#111111] p-3 rounded-lg border border-[#1a1a1a] flex items-center justify-between">
                     <div class="flex items-center gap-2 overflow-hidden">
                         <span class="text-sm font-medium text-gray-400 flex-shrink-0">Your ID:</span>
-                        <span id="my-id" class="font-mono text-sm truncate text-gray-300 font-semibold">loading...</span>
+                        <span id="my-id" class="font-mono text-base truncate text-gray-300 font-semibold">loading...</span>
                     </div>
-                    <button id="copy-id-btn" class="btn-toolbar-style" title="Copy Your ID">Copy</button>
+                    <button id="copy-id-btn" class="btn-toolbar-style">Copy</button>
                 </div>
             </header>
 
             <div class="p-4 border-b border-[#1a1a1a] flex-shrink-0">
                 <div class="flex gap-2">
                     <input type="text" id="add-contact-id" placeholder="Enter 8-character ID to send request..." class="settings-input font-mono">
-                    <button id="add-contact-btn" class="btn-toolbar-style btn-primary-override px-4" title="Send Friend Request">
+                    <button id="add-contact-btn" class="btn-toolbar-style btn-primary-override px-4">
                         <i class="fa-solid fa-user-plus"></i>
                         <span>Add</span>
                     </button>
@@ -275,16 +282,16 @@
 
         <div id="chat-view" class="w-full h-full flex flex-col view-transition view-hidden absolute top-0 left-0">
             <header class="p-4 border-b border-[#1a1a1a] flex items-center justify-between flex-shrink-0">
-                <button id="back-to-contacts-btn" class="btn-icon" title="Back to Contacts">
+                <button id="back-to-contacts-btn" class="btn-icon">
                     <i class="fa-solid fa-arrow-left"></i>
                 </button>
                 <div class="flex items-center gap-2">
                     <h2 id="chat-header" class="text-lg font-bold text-white">Chat</h2>
-                    <button id="edit-chat-name-btn" class="btn-icon" title="Edit Contact Name">
+                    <button id="edit-chat-name-btn" class="btn-icon">
                         <i class="fa-solid fa-pen-to-square text-sm"></i>
                     </button>
                 </div>
-                <button id="clear-local-history-btn" class="btn-icon" title="Clear Local History">
+                <button id="clear-local-history-btn" class="btn-icon">
                     <i class="fa-solid fa-broom"></i>
                 </button>
             </header>
@@ -293,14 +300,26 @@
                 </div>
             
             <footer class="p-4 border-t border-[#1a1a1a] flex-shrink-0 bg-[#0d0d0d]">
+                <div id="image-preview-container" class="flex gap-2 mb-2"></div>
                 <form id="message-form" class="flex gap-3 items-center">
-                    <input type="text" id="message-input" placeholder="Type a message..." class="settings-input rounded-full py-2 px-4 bg-[#1a1a1a]">
-                    <button type="submit" id="send-btn" class="btn-icon active" title="Send Message" disabled>
+                    <button type="button" id="attach-image-btn" class="btn-icon chat-footer-btn">
+                        <i class="fa-solid fa-paperclip"></i>
+                    </button>
+                    <input type="file" id="image-input" accept="image/*" multiple class="hidden">
+                    <input type="text" id="message-input" placeholder="Type a message..." class="message-input-style h-10">
+                    <button type="submit" id="send-btn" class="btn-icon active chat-footer-btn" disabled>
                         <i class="fa-solid fa-paper-plane-top"></i>
                     </button>
                 </form>
             </footer>
         </div>
+    </div>
+
+    <div id="image-viewer" class="hidden fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center">
+        <button id="close-viewer-btn" class="absolute top-4 right-4 text-white text-3xl">&times;</button>
+        <button id="prev-image-btn" class="absolute left-4 text-white text-3xl">&lt;</button>
+        <img id="viewer-image" src="" class="max-w-[90vw] max-h-[90vh] object-contain">
+        <button id="next-image-btn" class="absolute right-4 text-white text-3xl">&gt;</button>
     </div>
 
     <script type="module">
@@ -333,6 +352,12 @@
         let currentUser = null;
         let currentChatPartner = null;
         let localMessagesCache = JSON.parse(localStorage.getItem('localMessagesCache')) || {};
+        let selectedImages = [];
+        let currentImageView = {
+            messageId: null,
+            images: [],
+            currentIndex: 0
+        };
         
         let statusInterval = null;
         let seenObserver = null;
@@ -365,6 +390,14 @@
             sendBtn: document.getElementById('send-btn'),
             batteryStatusEl: document.getElementById('battery-status'),
             localTimeEl: document.getElementById('local-time'),
+            attachImageBtn: document.getElementById('attach-image-btn'),
+            imageInput: document.getElementById('image-input'),
+            imagePreviewContainer: document.getElementById('image-preview-container'),
+            imageViewer: document.getElementById('image-viewer'),
+            closeViewerBtn: document.getElementById('close-viewer-btn'),
+            prevImageBtn: document.getElementById('prev-image-btn'),
+            nextImageBtn: document.getElementById('next-image-btn'),
+            viewerImage: document.getElementById('viewer-image'),
         };
 
         const icons = {
@@ -512,8 +545,21 @@
             unsubContacts();
             const contactsRef = collection(db, `users/${currentUser.uid}/contacts`);
             unsubContacts = onSnapshot(query(contactsRef), (snapshot) => {
+                const friendUids = new Set(snapshot.docs.map(d => d.id));
+
+                // If a chat is open, check if the contact still exists. If not, close the chat.
+                if (currentChatPartner && !friendUids.has(currentChatPartner.uid)) {
+                    // Also clear local cache for the removed contact
+                    if (localMessagesCache[currentChatPartner.uid]) {
+                        delete localMessagesCache[currentChatPartner.uid];
+                        saveCacheToLocalStorage();
+                    }
+                    closeChat();
+                }
+
                 state.friends = snapshot.docs;
-                // NEW: If a chat is open, check if the name changed
+                
+                // If a chat is open, check if the name changed
                 if (currentChatPartner) {
                     const changedDoc = snapshot.docs.find(doc => doc.id === currentChatPartner.uid);
                     if (changedDoc) {
@@ -575,10 +621,10 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-1 flex-shrink-0">
-                    <button data-action="edit-name" title="Edit Name" class="btn-icon">
+                    <button data-action="edit-name" class="btn-icon">
                         <i class="fa-solid fa-pen-to-square"></i>
                     </button>
-                    <button data-action="delete-friend" title="Delete Contact" class="btn-icon">
+                    <button data-action="delete-friend" class="btn-icon">
                         <i class="fa-solid fa-trash-can text-red-500"></i>
                     </button>
                 </div>
@@ -599,16 +645,16 @@
             let buttonsHTML = '';
             if (type === 'incoming') {
                 buttonsHTML = `
-                    <button data-action="accept-request" title="Accept" class="btn-toolbar-style btn-success px-3 py-1 text-xs">
+                    <button data-action="accept-request" class="btn-toolbar-style btn-success px-3 py-1 text-xs">
                         <i class="fa-solid fa-check"></i>
                     </button>
-                    <button data-action="decline-request" title="Decline" class="btn-toolbar-style btn-danger px-3 py-1 text-xs">
+                    <button data-action="decline-request" class="btn-toolbar-style btn-danger px-3 py-1 text-xs">
                         <i class="fa-solid fa-times"></i>
                     </button>
                 `;
             } else if (type === 'outgoing') {
                 buttonsHTML = `
-                    <button data-action="cancel-request" title="Cancel Request" class="btn-toolbar-style btn-danger px-3 py-1 text-xs">
+                    <button data-action="cancel-request" class="btn-toolbar-style btn-danger px-3 py-1 text-xs">
                         Cancel
                     </button>
                 `;
@@ -670,6 +716,10 @@
             currentChatPartner = null;
             dom.chatView.classList.add('view-hidden');
             dom.contactsView.classList.remove('view-hidden');
+
+            // Clear image previews
+            selectedImages = [];
+            renderImagePreviews();
         }
 
         // --- NEW: Helper for Date Formatting ---
@@ -739,7 +789,7 @@
         }
 
         function renderMessage(data) {
-            if (!data || !data.text) return;
+            if (!data || (!data.text && !data.images)) return;
             const messageWrapper = document.createElement('div');
             const isSent = data.senderId === currentUser.uid;
             
@@ -752,16 +802,22 @@
             if (isSent) {
                 seenIndicator = `<span class="text-xs text-gray-500">${data.seen ? 'Seen' : 'Sent'}</span>`;
             }
+
+            let imagesHTML = '';
+            if (data.images && data.images.length > 0) {
+                imagesHTML = '<div class="flex gap-2 mt-2">';
+                data.images.forEach((imgData, index) => {
+                    imagesHTML += `<img src="${imgData}" data-message-id="${data.id}" data-image-index="${index}" class="w-24 h-24 object-cover rounded-md cursor-pointer chat-image">`;
+                });
+                imagesHTML += '</div>';
+            }
             
-            // **FIXED LOGIC:**
-            // 1. New inner wrapper uses `flex flex-col` to stack the bubble and timestamp vertically.
-            // 2. The bubble DIV now uses `inline-block` to force it to shrink-wrap its content, and `max-w-*` to limit its size.
-            // 3. `items-end`/`items-start` aligns the stacked elements within the new wrapper.
             messageWrapper.innerHTML = `
                 <div class="flex flex-col ${isSent ? 'items-end' : 'items-start'}">
                     
-                    <div class="px-4 py-2 rounded-2xl ${isSent ? 'bg-indigo-700 text-white rounded-br-lg' : 'bg-[#1a1a1a] text-gray-200 rounded-bl-lg'} **inline-block max-w-xs md:max-w-md lg:max-w-lg**" data-message-id="${data.id}">
+                    <div class="p-3 rounded-2xl ${isSent ? 'sent-bubble rounded-br-lg' : 'received-bubble rounded-bl-lg'} **inline-block max-w-xs md:max-w-md lg:max-w-lg**" data-message-id="${data.id}">
                         <p class="break-words">${data.text}</p>
+                        ${imagesHTML}
                     </div>
                     
                     <div class="flex ${isSent ? 'justify-end' : 'justify-start'} items-center gap-2 mt-1 px-2 w-full">
@@ -915,12 +971,136 @@
             return userDoc.exists() ? userDoc.data() : null;
         }
 
+        // --- IMAGE HANDLING ---
+
+        function handleImageSelection(e) {
+            const files = e.target.files;
+            if (!files) return;
+
+            if (files.length + selectedImages.length > 3) {
+                alert('You can only attach up to 3 images.');
+                return;
+            }
+
+            for (const file of files) {
+                if (selectedImages.length >= 3) break;
+                selectedImages.push(file);
+            }
+            
+            renderImagePreviews();
+            updateSendButtonState();
+        }
+
+        function renderImagePreviews() {
+            dom.imagePreviewContainer.innerHTML = '';
+            selectedImages.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const previewEl = document.createElement('div');
+                    previewEl.className = 'relative w-16 h-16';
+                    previewEl.innerHTML = `
+                        <img src="${e.target.result}" class="w-full h-full object-cover rounded-md">
+                        <button data-index="${index}" class="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">&times;</button>
+                    `;
+                    dom.imagePreviewContainer.appendChild(previewEl);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function processImages() {
+            const promises = selectedImages.map(file => {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            
+                            const MAX_WIDTH = 800;
+                            const MAX_HEIGHT = 800;
+                            let width = img.width;
+                            let height = img.height;
+
+                            if (width > height) {
+                                if (width > MAX_WIDTH) {
+                                    height *= MAX_WIDTH / width;
+                                    width = MAX_WIDTH;
+                                }
+                            } else {
+                                if (height > MAX_HEIGHT) {
+                                    width *= MAX_HEIGHT / height;
+                                    height = MAX_HEIGHT;
+                                }
+                            }
+                            canvas.width = width;
+                            canvas.height = height;
+                            ctx.drawImage(img, 0, 0, width, height);
+                            
+                            const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                            resolve(dataUrl);
+                        };
+                        img.onerror = reject;
+                        img.src = event.target.result;
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            });
+            return Promise.all(promises);
+        }
+
+        function openImageViewer(images, index, messageId) {
+            currentImageView = { messageId, images, currentIndex: index };
+            updateImageViewer();
+            dom.imageViewer.classList.remove('hidden');
+        }
+
+        function closeImageViewer() {
+            dom.imageViewer.classList.add('hidden');
+            currentImageView = { messageId: null, images: [], currentIndex: 0 };
+        }
+
+        function updateImageViewer() {
+            dom.viewerImage.src = currentImageView.images[currentImageView.currentIndex];
+            dom.prevImageBtn.classList.toggle('hidden', currentImageView.currentIndex === 0);
+            dom.nextImageBtn.classList.toggle('hidden', currentImageView.currentIndex === currentImageView.images.length - 1);
+        }
+
+        function showPrevImage() {
+            if (currentImageView.currentIndex > 0) {
+                currentImageView.currentIndex--;
+                updateImageViewer();
+            }
+        }
+
+        function showNextImage() {
+            if (currentImageView.currentIndex < currentImageView.images.length - 1) {
+                currentImageView.currentIndex++;
+                updateImageViewer();
+            }
+        }
+
+        function updateSendButtonState() {
+            const text = dom.messageInput.value.trim();
+            if (text !== '' || selectedImages.length > 0) {
+                dom.sendBtn.innerHTML = icons.send;
+                dom.sendBtn.disabled = false;
+            } else {
+                dom.sendBtn.innerHTML = icons.send; 
+                dom.sendBtn.disabled = true;
+            }
+        }
+
         // --- EVENT HANDLERS ---
         
         async function handleSendMessage(e) {
             e.preventDefault();
             const text = dom.messageInput.value.trim();
-            if (text === '' || !currentChatPartner) return;
+            const images = await processImages();
+
+            if ((text === '' && images.length === 0) || !currentChatPartner) return;
 
             dom.sendBtn.disabled = true;
             dom.sendBtn.innerHTML = icons.spinner;
@@ -940,6 +1120,7 @@
             const messageData = {
                 id: doc(collection(db, 'temp')).id, 
                 text: filteredText, 
+                images: images,
                 senderId: currentUser.uid, 
                 timestamp: new Date().toISOString(), 
                 seen: false
@@ -953,9 +1134,10 @@
                 
                 await setDoc(chatDocRef, { messages: trimmedMessages });
                 
+                const lastMessageText = filteredText || (images.length > 0 ? 'Sent an image' : 'New Message');
                 const recipientContactRef = doc(db, `users/${currentChatPartner.uid}/contacts`, currentUser.uid);
                 await setDoc(recipientContactRef, { 
-                    lastMessage: filteredText, 
+                    lastMessage: lastMessageText, 
                     unread: true, 
                     timestamp: serverTimestamp(),
                     name: (await getUserDoc(currentUser.uid))?.username || 'New Contact'
@@ -963,19 +1145,25 @@
 
                 const senderContactRef = doc(db, `users/${currentUser.uid}/contacts`, currentChatPartner.uid);
                 await updateDoc(senderContactRef, { 
-                    lastMessage: `You: ${filteredText}`, 
+                    lastMessage: `You: ${lastMessageText}`, 
                     timestamp: serverTimestamp() 
                 });
                 
                 dom.messageInput.value = '';
-                scrollToBottom('smooth'); // Smooth scroll on new message
+                selectedImages = [];
+                renderImagePreviews();
+                dom.imageInput.value = '';
+                updateSendButtonState();
+                scrollToBottom('smooth');
             } catch (error) {
                 console.error("Send message error:", error);
                 alert("Failed to send message.");
             } finally {
                 dom.sendBtn.disabled = false;
                 dom.sendBtn.innerHTML = icons.check;
-                setTimeout(() => dom.sendBtn.innerHTML = icons.send, 1000);
+                setTimeout(() => {
+                    updateSendButtonState();
+                }, 1000);
                 dom.messageInput.focus();
             }
         }
@@ -1087,14 +1275,31 @@
         }
         
         async function handleDeleteFriend(uid, name) {
-            if (!confirm(`Are you sure you want to delete ${name} from your contacts? This will also delete them from their contacts.`)) return;
+            if (!confirm(`Are you sure you want to delete ${name} from your contacts? This will also delete them from their contacts and clear all chat history.`)) return;
             
+            // If currently chatting with this user, close the chat window first
+            if (currentChatPartner && currentChatPartner.uid === uid) {
+                closeChat();
+            }
+
             const batch = writeBatch(db);
             
+            // Delete contacts for both users
             batch.delete(doc(db, `users/${currentUser.uid}/contacts`, uid));
             batch.delete(doc(db, `users/${uid}/contacts`, currentUser.uid));
+
+            // Delete chat document
+            const chatId = [currentUser.uid, uid].sort().join('_');
+            const chatDocRef = doc(db, 'chats', chatId);
+            batch.delete(chatDocRef);
             
             await batch.commit();
+
+            // Clear local cache for the deleted contact
+            if (localMessagesCache[uid]) {
+                delete localMessagesCache[uid];
+                saveCacheToLocalStorage();
+            }
         }
         
         async function handleEditName(uid, oldName) {
@@ -1198,16 +1403,41 @@
             dom.messageForm.addEventListener('submit', handleSendMessage);
             dom.copyIdBtn.addEventListener('click', handleCopyId);
 
-            dom.messageInput.addEventListener('input', () => {
-                const text = dom.messageInput.value.trim();
-                if (text !== '') {
-                    dom.sendBtn.innerHTML = icons.send;
-                    dom.sendBtn.disabled = false;
-                } else {
-                    dom.sendBtn.innerHTML = icons.send; 
-                    dom.sendBtn.disabled = true;
+            dom.attachImageBtn.addEventListener('click', () => dom.imageInput.click());
+            dom.imageInput.addEventListener('change', handleImageSelection);
+            dom.imagePreviewContainer.addEventListener('click', (e) => {
+                if (e.target.tagName === 'BUTTON') {
+                    const index = parseInt(e.target.dataset.index, 10);
+                    selectedImages.splice(index, 1);
+                    renderImagePreviews();
+                    updateSendButtonState();
                 }
             });
+
+            dom.messagesContainerEl.addEventListener('click', (e) => {
+                if (e.target.classList.contains('chat-image')) {
+                    const messageId = e.target.dataset.messageId;
+                    const imageIndex = parseInt(e.target.dataset.imageIndex, 10);
+                    
+                    const chatCache = localMessagesCache[currentChatPartner.uid] || [];
+                    const message = chatCache.find(m => m.id === messageId);
+
+                    if (message && message.images) {
+                        openImageViewer(message.images, imageIndex, messageId);
+                    }
+                }
+            });
+
+            dom.closeViewerBtn.addEventListener('click', closeImageViewer);
+            dom.imageViewer.addEventListener('click', (e) => {
+                if (e.target.id === 'image-viewer') {
+                    closeImageViewer();
+                }
+            });
+            dom.prevImageBtn.addEventListener('click', showPrevImage);
+            dom.nextImageBtn.addEventListener('click', showNextImage);
+
+            dom.messageInput.addEventListener('input', updateSendButtonState);
         }
 
         // --- START THE APP ---
