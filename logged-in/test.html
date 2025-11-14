@@ -821,7 +821,7 @@
             messageWrapper.innerHTML = `
                 <div class="flex flex-col ${isSent ? 'items-end' : 'items-start'}">
                     
-                    <div class="p-3 rounded-xl ${isSent ? 'sent-bubble rounded-br-lg' : 'received-bubble rounded-bl-lg'} **inline-block max-w-xs md:max-w-md lg:max-w-lg**" data-message-id="${data.id}">
+                    <div class="p-3 rounded-2xl ${isSent ? 'sent-bubble rounded-br-lg' : 'received-bubble rounded-bl-lg'} **inline-block max-w-xs md:max-w-md lg:max-w-lg**" data-message-id="${data.id}">
                         <p class="break-words">${data.text}</p>
                         ${imagesHTML}
                     </div>
