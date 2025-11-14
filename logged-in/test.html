@@ -181,7 +181,7 @@
             background-color: #1a1a1a;
             border: 1px solid #374151; /* gray-700 */
             color: #f3f4f6; /* gray-100 */
-            border-radius: 9999px;
+            border-radius: 0.5rem;
             padding: 0.5rem 1rem;
             transition: border-color 0.2s, box-shadow 0.2s;
         }
@@ -189,6 +189,15 @@
             outline: none;
             border-color: #3b82f6; /* blue-500 */
             box-shadow: 0 0 0 2px #3b82f640;
+        }
+
+        #attach-image-btn {
+            border: 1px solid #374151; /* gray-700 */
+        }
+        #attach-image-btn:hover {
+            background-color: #374151; /* gray-700 */
+            color: #f3f4f6; /* gray-100 */
+            border-color: #374151; /* gray-700 */
         }
         
         /* Header for sections in contact list */
@@ -202,38 +211,6 @@
             border-bottom: 1px solid #1a1a1a;
         }
 
-        /* --- NEW: Tooltip Styling --- */
-        [title]:hover::after {
-            content: attr(title);
-            position: absolute;
-            top: 100%;
-            left: 50%;
-            transform: translateX(-50%) translateY(5px);
-            background-color: #111;
-            color: #fff;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.75rem; /* 12px */
-            font-weight: 400; /* Regular weight for tooltip */
-            white-space: nowrap;
-            z-index: 1000;
-            border: 1px solid #333;
-            
-            /* Fade-in animation */
-            opacity: 1;
-            visibility: visible;
-            transition: opacity 0.2s ease, visibility 0.2s ease;
-        }
-        
-        /* Hide tooltip by default */
-        [title]::after {
-            content: attr(title);
-            position: absolute;
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none; /* Prevents tooltip from interfering with mouse */
-        }
-        
         /* --- NEW: Date Separator Styling --- */
         .date-separator {
             text-align: center;
@@ -243,12 +220,6 @@
             font-weight: 400;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-        }
-
-        [data-action="delete-friend"][title]:hover::after {
-            left: auto;
-            right: 105%; /* Position it to the left of the button */
-            transform: translateX(0);
         }
     </style>
 </head>
@@ -273,14 +244,14 @@
                         <span class="text-sm font-medium text-gray-400 flex-shrink-0">Your ID:</span>
                         <span id="my-id" class="font-mono text-sm truncate text-gray-300 font-semibold">loading...</span>
                     </div>
-                    <button id="copy-id-btn" class="btn-toolbar-style" title="Copy Your ID">Copy</button>
+                    <button id="copy-id-btn" class="btn-toolbar-style">Copy</button>
                 </div>
             </header>
 
             <div class="p-4 border-b border-[#1a1a1a] flex-shrink-0">
                 <div class="flex gap-2">
                     <input type="text" id="add-contact-id" placeholder="Enter 8-character ID to send request..." class="settings-input font-mono">
-                    <button id="add-contact-btn" class="btn-toolbar-style btn-primary-override px-4" title="Send Friend Request">
+                    <button id="add-contact-btn" class="btn-toolbar-style btn-primary-override px-4">
                         <i class="fa-solid fa-user-plus"></i>
                         <span>Add</span>
                     </button>
@@ -296,16 +267,16 @@
 
         <div id="chat-view" class="w-full h-full flex flex-col view-transition view-hidden absolute top-0 left-0">
             <header class="p-4 border-b border-[#1a1a1a] flex items-center justify-between flex-shrink-0">
-                <button id="back-to-contacts-btn" class="btn-icon" title="Back to Contacts">
+                <button id="back-to-contacts-btn" class="btn-icon">
                     <i class="fa-solid fa-arrow-left"></i>
                 </button>
                 <div class="flex items-center gap-2">
                     <h2 id="chat-header" class="text-lg font-bold text-white">Chat</h2>
-                    <button id="edit-chat-name-btn" class="btn-icon" title="Edit Contact Name">
+                    <button id="edit-chat-name-btn" class="btn-icon">
                         <i class="fa-solid fa-pen-to-square text-sm"></i>
                     </button>
                 </div>
-                <button id="clear-local-history-btn" class="btn-icon" title="Clear Local History">
+                <button id="clear-local-history-btn" class="btn-icon">
                     <i class="fa-solid fa-broom"></i>
                 </button>
             </header>
@@ -316,12 +287,12 @@
             <footer class="p-4 border-t border-[#1a1a1a] flex-shrink-0 bg-[#0d0d0d]">
                 <div id="image-preview-container" class="flex gap-2 mb-2"></div>
                 <form id="message-form" class="flex gap-3 items-center">
-                    <button type="button" id="attach-image-btn" class="btn-icon" title="Attach Images">
+                    <button type="button" id="attach-image-btn" class="btn-icon">
                         <i class="fa-solid fa-paperclip"></i>
                     </button>
                     <input type="file" id="image-input" accept="image/*" multiple class="hidden">
                     <input type="text" id="message-input" placeholder="Type a message..." class="message-input-style">
-                    <button type="submit" id="send-btn" class="btn-icon active" title="Send Message" disabled>
+                    <button type="submit" id="send-btn" class="btn-icon active" disabled>
                         <i class="fa-solid fa-paper-plane-top"></i>
                     </button>
                 </form>
@@ -635,10 +606,10 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-1 flex-shrink-0">
-                    <button data-action="edit-name" title="Edit Name" class="btn-icon">
+                    <button data-action="edit-name" class="btn-icon">
                         <i class="fa-solid fa-pen-to-square"></i>
                     </button>
-                    <button data-action="delete-friend" title="Delete Contact" class="btn-icon">
+                    <button data-action="delete-friend" class="btn-icon">
                         <i class="fa-solid fa-trash-can text-red-500"></i>
                     </button>
                 </div>
@@ -659,16 +630,16 @@
             let buttonsHTML = '';
             if (type === 'incoming') {
                 buttonsHTML = `
-                    <button data-action="accept-request" title="Accept" class="btn-toolbar-style btn-success px-3 py-1 text-xs">
+                    <button data-action="accept-request" class="btn-toolbar-style btn-success px-3 py-1 text-xs">
                         <i class="fa-solid fa-check"></i>
                     </button>
-                    <button data-action="decline-request" title="Decline" class="btn-toolbar-style btn-danger px-3 py-1 text-xs">
+                    <button data-action="decline-request" class="btn-toolbar-style btn-danger px-3 py-1 text-xs">
                         <i class="fa-solid fa-times"></i>
                     </button>
                 `;
             } else if (type === 'outgoing') {
                 buttonsHTML = `
-                    <button data-action="cancel-request" title="Cancel Request" class="btn-toolbar-style btn-danger px-3 py-1 text-xs">
+                    <button data-action="cancel-request" class="btn-toolbar-style btn-danger px-3 py-1 text-xs">
                         Cancel
                     </button>
                 `;
