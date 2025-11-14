@@ -294,7 +294,7 @@
             
             <footer class="p-4 border-t border-[#1a1a1a] flex-shrink-0 bg-[#0d0d0d]">
                 <form id="message-form" class="flex gap-3 items-center">
-                    <input type="text" id="message-input" placeholder="Type a message..." class="settings-input rounded-full py-2 px-4 bg-[#1a1a1a]">
+                    <input type="text" id="message-input" placeholder="Type a message..." class="flex-grow bg-[#1a1a1a] border border-[#333] text-gray-200 rounded-full py-2 px-4 focus:outline-none focus:border-indigo-500 transition-colors">
                     <button type="submit" id="send-btn" class="btn-icon active" title="Send Message" disabled>
                         <i class="fa-solid fa-paper-plane-top"></i>
                     </button>
@@ -431,10 +431,22 @@
 
         // --- UI & THEME ---
 
-        function scrollToBottom(behavior = 'smooth') {
-            setTimeout(() => {
-                dom.messagesContainerEl.scrollTo({ top: dom.messagesContainerEl.scrollHeight, behavior: behavior });
-            }, 50);
+        // NEW HELPER: Check if user is near the bottom
+        function isUserAtBottom() {
+            const el = dom.messagesContainerEl;
+            if (!el) return false;
+            // 100px tolerance from the bottom
+            return el.scrollHeight - el.scrollTop - el.clientHeight < 100; 
+        }
+
+        // UPDATED: Scroll function accepts a force parameter.
+        function scrollToBottom(behavior = 'smooth', force = false) {
+            // Only scroll if 'force' is true (initial load/user send) OR if the user is already near the bottom (incoming message/seen update)
+            if (force || isUserAtBottom()) { 
+                setTimeout(() => {
+                    dom.messagesContainerEl.scrollTo({ top: dom.messagesContainerEl.scrollHeight, behavior: behavior });
+                }, 50);
+            }
         }
         
         function saveCacheToLocalStorage() {
@@ -649,7 +661,8 @@
                 dbMessages = chatDoc.data().messages || [];
             }
             
-            mergeAndRenderMessages(uid, dbMessages);
+            // On open, merge and render DB messages, but DONT force a scroll (loadLocalMessages already did that)
+            mergeAndRenderMessages(uid, dbMessages); 
             
             dom.contactsView.classList.add('view-hidden');
             dom.chatView.classList.remove('view-hidden');
@@ -721,7 +734,8 @@
                 renderMessage(msg);
             });
             
-            scrollToBottom('auto'); // Use 'auto' for initial load
+            // Scroll to bottom only if user is already at the bottom (for incoming/seen updates)
+            scrollToBottom('smooth'); 
             setupSeenObserver(); 
         }
 
@@ -760,7 +774,7 @@
             messageWrapper.innerHTML = `
                 <div class="flex flex-col ${isSent ? 'items-end' : 'items-start'}">
                     
-                    <div class="px-4 py-2 rounded-2xl ${isSent ? 'bg-indigo-700 text-white rounded-br-lg' : 'bg-[#1a1a1a] text-gray-200 rounded-bl-lg'} **inline-block max-w-xs md:max-w-md lg:max-w-lg**" data-message-id="${data.id}">
+                    <div class="px-4 py-2 rounded-2xl ${isSent ? 'bg-indigo-700 text-white rounded-br-lg' : 'bg-[#1a1a1a] text-gray-200 rounded-bl-lg'} inline-block max-w-xs md:max-w-md lg:max-w-lg" data-message-id="${data.id}">
                         <p class="break-words">${data.text}</p>
                     </div>
                     
@@ -875,7 +889,8 @@
                 }
                 renderMessage(msg);
             });
-            scrollToBottom('auto');
+            // UPDATED: Force scroll to bottom on initial chat load
+            scrollToBottom('auto', true); 
         }
 
         function formatTimestamp(timestamp) {
@@ -968,7 +983,8 @@
                 });
                 
                 dom.messageInput.value = '';
-                scrollToBottom('smooth'); // Smooth scroll on new message
+                // UPDATED: Force scroll to bottom when user sends a message
+                scrollToBottom('smooth', true); 
             } catch (error) {
                 console.error("Send message error:", error);
                 alert("Failed to send message.");
@@ -1086,15 +1102,38 @@
             await batch.commit();
         }
         
+        // FINAL UPDATE: Added logic to delete messages from local cache and database
         async function handleDeleteFriend(uid, name) {
-            if (!confirm(`Are you sure you want to delete ${name} from your contacts? This will also delete them from their contacts.`)) return;
+            if (!confirm(`Are you sure you want to delete ${name} from your contacts? This will also delete them from their contacts and permanently delete all chat history.`)) return;
             
             const batch = writeBatch(db);
+            const chatId = [currentUser.uid, uid].sort().join('_'); // Get the chat ID
             
+            // 1. Delete contact from both users
             batch.delete(doc(db, `users/${currentUser.uid}/contacts`, uid));
             batch.delete(doc(db, `users/${uid}/contacts`, currentUser.uid));
             
-            await batch.commit();
+            // 2. Delete the chat document from the database
+            batch.delete(doc(db, 'chats', chatId));
+            
+            try {
+                await batch.commit();
+                
+                // 3. Delete messages locally (AFTER successful DB commit)
+                if (localMessagesCache[uid]) {
+                    delete localMessagesCache[uid];
+                    saveCacheToLocalStorage();
+                }
+                
+                // If the deleted contact is the current chat, close the chat view
+                if (currentChatPartner?.uid === uid) {
+                    closeChat();
+                }
+                
+            } catch (error) {
+                console.error("Failed to delete friend and chat history:", error);
+                alert("Failed to delete contact and chat history.");
+            }
         }
         
         async function handleEditName(uid, oldName) {
