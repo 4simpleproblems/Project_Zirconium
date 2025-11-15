@@ -37,7 +37,7 @@
     "messenger-v2": {
         "name": "Messenger",
         "icon": "fa-solid fa-comments", 
-        "url": "../logged-in/messenger-v2.html"
+        "url": "../logged-in/messenger-tutorial.html"
     },
     "games": {
         "name": "Games",
