@@ -78,7 +78,6 @@
     {
         "name": "Matrix",
         "logo-src": "/images/logo.png",
-        "logo-tint-color": "#00ff00",
         "navbar-bg": "#020a04",
         "navbar-border": "#003b00",
         "avatar-gradient": "linear-gradient(135deg, #003b00 0%, #020a04 100%)",
@@ -117,7 +116,6 @@
     {
         "name": "Deep Blue",
         "logo-src": "/images/logo.png",
-        "logo-tint-color": "#64ffda",
         "navbar-bg": "#0a192f",
         "navbar-border": "#172a45",
         "avatar-gradient": "linear-gradient(135deg, #172a45 0%, #0a192f 100%)",
@@ -156,7 +154,6 @@
     {
         "name": "Royal",
         "logo-src": "/images/logo.png",
-        "logo-tint-color": "#d2a6ff",
         "navbar-bg": "#1a0033",
         "navbar-border": "#3c0066",
         "avatar-gradient": "linear-gradient(135deg, #3c0066 0%, #1a0033 100%)",
@@ -195,7 +192,6 @@
     {
         "name": "Sunset",
         "logo-src": "/images/logo.png",
-        "logo-tint-color": "#ffb380",
         "navbar-bg": "#260c00",
         "navbar-border": "#661f00",
         "avatar-gradient": "linear-gradient(135deg, #661f00 0%, #260c00 100%)",
@@ -234,7 +230,6 @@
     {
         "name": "Crimson",
         "logo-src": "/images/logo.png",
-        "logo-tint-color": "#ff8080",
         "navbar-bg": "#2a0000",
         "navbar-border": "#550000",
         "avatar-gradient": "linear-gradient(135deg, #550000 0%, #2a0000 100%)",
@@ -273,7 +268,6 @@
     {
         "name": "Slate",
         "logo-src": "/images/logo.png",
-        "logo-tint-color": "#94a3b8",
         "navbar-bg": "#0f172a",
         "navbar-border": "#1e293b",
         "avatar-gradient": "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
@@ -312,7 +306,6 @@
     {
         "name": "Forest",
         "logo-src": "/images/logo.png",
-        "logo-tint-color": "#a8a29e",
         "navbar-bg": "#14371e",
         "navbar-border": "#2c6e3b",
         "avatar-gradient": "linear-gradient(135deg, #2c6e3b 0%, #14371e 100%)",
@@ -351,7 +344,6 @@
     {
         "name": "Lavender",
         "logo-src": "/images/logo-dark.png",
-        "logo-tint-color": "#a78bfa",
         "navbar-bg": "#fefefe",
         "navbar-border": "#e5e7eb",
         "avatar-gradient": "linear-gradient(135deg, #ede9fe 0%, #dcd6ff 100%)",
@@ -390,7 +382,6 @@
     {
         "name": "Rose Gold",
         "logo-src": "/images/logo-dark.png",
-        "logo-tint-color": "#a36c6c",
         "navbar-bg": "#fef7f7",
         "navbar-border": "#fbebeb",
         "avatar-gradient": "linear-gradient(135deg, #fbebeb 0%, #f7e6e6 100%)",
@@ -429,7 +420,6 @@
     {
         "name": "Mint",
         "logo-src": "/images/logo-dark.png",
-        "logo-tint-color": "#06b6d4",
         "navbar-bg": "#f7fcfc",
         "navbar-border": "#e0f2f1",
         "avatar-gradient": "linear-gradient(135deg, #e0f2f1 0%, #c4f7f5 100%)",
@@ -468,7 +458,6 @@
     {
         "name": "Ocean",
         "logo-src": "/images/logo.png",
-        "logo-tint-color": "#3b82f6",
         "navbar-bg": "#0e2c4d",
         "navbar-border": "#1c5180",
         "avatar-gradient": "linear-gradient(135deg, #1c5180 0%, #0e2c4d 100%)",
@@ -507,7 +496,6 @@
     {
         "name": "Gold",
         "logo-src": "/images/logo.png",
-        "logo-tint-color": "#facc15",
         "navbar-bg": "#332200",
         "navbar-border": "#664400",
         "avatar-gradient": "linear-gradient(135deg, #664400 0%, #332200 100%)",
@@ -546,7 +534,6 @@
     {
         "name": "Fire",
         "logo-src": "/images/logo.png",
-        "logo-tint-color": "#f87171",
         "navbar-bg": "#3c0000",
         "navbar-border": "#7f1d1d",
         "avatar-gradient": "linear-gradient(135deg, #7f1d1d 0%, #3c0000 100%)",
@@ -585,7 +572,6 @@
     {
         "name": "Monochrome",
         "logo-src": "/images/logo.png",
-        "logo-tint-color": "#a1a1aa",
         "navbar-bg": "#18181b",
         "navbar-border": "#3f3f46",
         "avatar-gradient": "linear-gradient(135deg, #3f3f46 0%, #18181b 100%)",
@@ -624,7 +610,6 @@
     {
         "name": "Teal Dream",
         "logo-src": "/images/logo.png",
-        "logo-tint-color": "#2dd4bf",
         "navbar-bg": "#0f424f",
         "navbar-border": "#1e6b7d",
         "avatar-gradient": "linear-gradient(135deg, #1e6b7d 0%, #0f424f 100%)",
@@ -663,7 +648,6 @@
     {
         "name": "Haze",
         "logo-src": "/images/logo.png",
-        "logo-tint-color": "#c084fc",
         "navbar-bg": "#2e1065",
         "navbar-border": "#4c1d95",
         "avatar-gradient": "linear-gradient(135deg, #4c1d95 0%, #2e1065 100%)",
@@ -702,7 +686,6 @@
     {
         "name": "Ember",
         "logo-src": "/images/logo.png",
-        "logo-tint-color": "#fdba74",
         "navbar-bg": "#451a03",
         "navbar-border": "#7c2d12",
         "avatar-gradient": "linear-gradient(135deg, #7c2d12 0%, #451a03 100%)",
@@ -741,7 +724,6 @@
     {
         "name": "Coral",
         "logo-src": "/images/logo.png",
-        "logo-tint-color": "#f971d6",
         "navbar-bg": "#4d082c",
         "navbar-border": "#7c184c",
         "avatar-gradient": "linear-gradient(135deg, #7c184c 0%, #4d082c 100%)",
@@ -780,7 +762,6 @@
     {
         "name": "Rust",
         "logo-src": "/images/logo.png",
-        "logo-tint-color": "#f97316",
         "navbar-bg": "#5a1800",
         "navbar-border": "#8f3800",
         "avatar-gradient": "linear-gradient(135deg, #8f3800 0%, #5a1800 100%)",
@@ -819,7 +800,6 @@
     {
         "name": "Copper",
         "logo-src": "/images/logo.png",
-        "logo-tint-color": "#f59e0b",
         "navbar-bg": "#2d1400",
         "navbar-border": "#592700",
         "avatar-gradient": "linear-gradient(135deg, #592700 0%, #2d1400 100%)",
@@ -858,7 +838,6 @@
     {
         "name": "Silver",
         "logo-src": "/images/logo.png",
-        "logo-tint-color": "#9ca3af",
         "navbar-bg": "#1f2937",
         "navbar-border": "#4b5563",
         "avatar-gradient": "linear-gradient(135deg, #4b5563 0%, #1f2937 100%)",
