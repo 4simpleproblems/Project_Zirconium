@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     
+    <!-- Using Font Awesome Pro -->
     <link rel="stylesheet" href="https://kit-pro.fontawesome.com/releases/v7.0.1/css/pro.min.css" media="all">
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -71,7 +72,7 @@
             pointer-events: none;
         }
         
-        /* --- THEME-AWARE STYLES (from notes.html) --- */
+        /* --- THEME-AWARE STYLING (from notes.html) --- */
         
         .btn-toolbar-style {
             background: var(--menu-bg, #0000000);
@@ -300,6 +301,10 @@
                 </div>
             
             <footer class="p-4 border-t border-[#1a1a1a] flex-shrink-0 bg-[#0d0d0d]">
+                <!-- NEW: Typing Indicator -->
+                <div id="typing-indicator" class="h-5 text-sm text-gray-400 italic mb-1" style="display: none;">
+                    Typing...
+                </div>
                 <div id="image-preview-container" class="flex gap-2 mb-2"></div>
                 <form id="message-form" class="flex gap-3 items-center">
                     <button type="button" id="attach-image-btn" class="btn-icon chat-footer-btn">
@@ -315,11 +320,18 @@
         </div>
     </div>
 
-    <div id="image-viewer" class="hidden fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center">
-        <button id="close-viewer-btn" class="absolute top-4 right-4 text-white text-3xl">&times;</button>
-        <button id="prev-image-btn" class="absolute left-4 text-white text-3xl">&lt;</button>
-        <img id="viewer-image" src="" class="max-w-[90vw] max-h-[90vh] object-contain">
-        <button id="next-image-btn" class="absolute right-4 text-white text-3xl">&gt;</button>
+    <!-- UPDATED: Image Viewer with new UI -->
+    <div id="image-viewer" class="hidden fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center p-4">
+        <button id="close-viewer-btn" class="btn-icon absolute top-4 right-4 z-10">
+            <i class="fa-solid fa-times text-lg"></i>
+        </button>
+        <button id="prev-image-btn" class="btn-icon absolute left-4 top-1/2 -translate-y-1/2 z-10">
+            <i class="fa-solid fa-arrow-left text-lg"></i>
+        </button>
+        <img id="viewer-image" src="" class="max-w-full max-h-full object-contain">
+        <button id="next-image-btn" class="btn-icon absolute right-4 top-1/2 -translate-y-1/2 z-10">
+            <i class="fa-solid fa-arrow-right text-lg"></i>
+        </button>
     </div>
 
     <script type="module">
@@ -363,12 +375,16 @@
         let seenObserver = null;
         if (!window.seenTimers) window.seenTimers = new Map();
 
+        // NEW: Typing indicator state
+        let typingTimeout = null;
+
         // Unsubscribe functions
         let unsubUserDoc = () => {};
         let unsubContacts = () => {};
         let unsubPendingIn = () => {};
         let unsubPendingOut = () => {};
         let unsubMessages = () => {};
+        let unsubPartnerDoc = () => {}; // NEW: For typing status
 
         const dom = {
             appContainer: document.getElementById('app-container'),
@@ -398,6 +414,7 @@
             prevImageBtn: document.getElementById('prev-image-btn'),
             nextImageBtn: document.getElementById('next-image-btn'),
             viewerImage: document.getElementById('viewer-image'),
+            typingIndicatorEl: document.getElementById('typing-indicator'), // NEW
         };
 
         const icons = {
@@ -430,6 +447,7 @@
                 unsubPendingIn();
                 unsubPendingOut();
                 unsubMessages();
+                unsubPartnerDoc(); // NEW
             }
         }
 
@@ -442,14 +460,22 @@
                     publicId: newId, 
                     uid: currentUser.uid, 
                     blockedUsers: [],
-                    username: `User ${newId}` 
+                    username: `User ${newId}`,
+                    typingInChatWith: null // NEW
                 });
                 dom.myIdEl.textContent = newId;
             } else {
                 const data = userDoc.data();
                 dom.myIdEl.textContent = data.publicId;
+                let updates = {};
                 if (!data.username) {
-                    await updateDoc(userDocRef, { username: `User ${data.publicId}` });
+                    updates.username = `User ${data.publicId}`;
+                }
+                if (data.typingInChatWith) { // Clear stale typing status on load
+                    updates.typingInChatWith = null;
+                }
+                if (Object.keys(updates).length > 0) {
+                    await updateDoc(userDocRef, updates);
                 }
             }
         }
@@ -567,6 +593,10 @@
                         if (newName !== currentChatPartner.name) {
                             currentChatPartner.name = newName;
                             dom.chatHeaderEl.textContent = newName;
+                            // NEW: Update typing indicator if it's showing
+                            if (dom.typingIndicatorEl.style.display === 'block') {
+                                dom.typingIndicatorEl.textContent = `${currentChatPartner.name} is typing...`;
+                            }
                         }
                     }
                 }
@@ -702,6 +732,7 @@
             dom.messageInput.focus();
 
             listenForMessages();
+            listenForPartnerTyping(uid); // NEW
             
             const contactRef = doc(db, `users/${currentUser.uid}/contacts`, uid);
             try { await updateDoc(contactRef, { unread: false }); } catch (e) { /* (e) */ }
@@ -709,6 +740,9 @@
 
         function closeChat() {
             unsubMessages();
+            unsubPartnerDoc(); // NEW
+            handleTypingStop(); // NEW
+            
             if (seenObserver) seenObserver.disconnect();
             window.seenTimers.forEach(timer => clearTimeout(timer));
             window.seenTimers.clear();
@@ -800,14 +834,22 @@
             
             let seenIndicator = '';
             if (isSent) {
-                seenIndicator = `<span class="text-xs text-gray-500">${data.seen ? 'Seen' : 'Sent'}</span>`;
+                // UPDATED: "Seen" to "Read"
+                seenIndicator = `<span class="text-xs text-gray-500">${data.seen ? 'Read' : 'Sent'}</span>`;
             }
 
+            // UPDATED: Image rendering with hover effect
             let imagesHTML = '';
             if (data.images && data.images.length > 0) {
-                imagesHTML = '<div class="flex gap-2 mt-2">';
+                imagesHTML = '<div class="flex flex-wrap gap-2 mt-2">';
                 data.images.forEach((imgData, index) => {
-                    imagesHTML += `<img src="${imgData}" data-message-id="${data.id}" data-image-index="${index}" class="w-24 h-24 object-cover rounded-md cursor-pointer chat-image">`;
+                    imagesHTML += `
+                        <div class="chat-image-container group relative w-24 h-24 rounded-md overflow-hidden cursor-pointer" data-message-id="${data.id}" data-image-index="${index}">
+                            <img src="${imgData}" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105">
+                            <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 flex items-center justify-center transition-all duration-300">
+                                <i class="fa-solid fa-eye text-white text-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></i>
+                            </div>
+                        </div>`;
                 });
                 imagesHTML += '</div>';
             }
@@ -815,7 +857,7 @@
             messageWrapper.innerHTML = `
                 <div class="flex flex-col ${isSent ? 'items-end' : 'items-start'}">
                     
-                    <div class="p-3 rounded-2xl ${isSent ? 'sent-bubble rounded-br-lg' : 'received-bubble rounded-bl-lg'} **inline-block max-w-xs md:max-w-md lg:max-w-lg**" data-message-id="${data.id}">
+                    <div class="p-3 rounded-2xl ${isSent ? 'sent-bubble rounded-br-lg' : 'received-bubble rounded-bl-lg'} block max-w-xs md:max-w-md lg:max-w-lg" data-message-id="${data.id}">
                         <p class="break-words">${data.text}</p>
                         ${imagesHTML}
                     </div>
@@ -829,7 +871,7 @@
             dom.messagesContainerEl.appendChild(messageWrapper);
         }
         
-        // --- "SEEN" RECEIPT LOGIC ---
+        // --- "SEEN" (READ) RECEIPT LOGIC ---
         
         function setupSeenObserver() {
             if (seenObserver) seenObserver.disconnect();
@@ -864,11 +906,12 @@
                 if (entry.isIntersecting) {
                     if (window.seenTimers.has(messageId)) return; 
                     
+                    // UPDATED: Delay from 3s to 1.2s
                     const timer = setTimeout(() => {
                         markMessageAsSeen(messageId);
                         window.seenTimers.delete(messageId);
                         observer.unobserve(entry.target); 
-                    }, 3000);
+                    }, 1200);
                     window.seenTimers.set(messageId, timer);
 
                 } else {
@@ -1008,7 +1051,39 @@
             });
         }
 
-        function processImages() {
+        // --- UPDATED: Smart Image Processing ---
+        function processImages(text) {
+            const numImages = selectedImages.length;
+            const textLength = text ? text.length : 0;
+
+            let MAX_WIDTH = 800;
+            let MAX_HEIGHT = 800;
+            let quality = 0.7;
+
+            if (numImages === 1 && textLength < 200) {
+                // Tier 1 (High Quality): 1 image, short text
+                MAX_WIDTH = 1280;
+                MAX_HEIGHT = 1280;
+                quality = 0.8;
+            } else if ((numImages === 1 && textLength >= 200) || (numImages === 2 && textLength < 200)) {
+                // Tier 2 (Good Quality): 1 image, long text OR 2 images, short text
+                MAX_WIDTH = 1024;
+                MAX_HEIGHT = 1024;
+                quality = 0.7;
+            } else if ((numImages === 2 && textLength >= 200) || (numImages === 3 && textLength < 200)) {
+                // Tier 3 (Medium Quality): 2 images, long text OR 3 images, short text
+                MAX_WIDTH = 800;
+                MAX_HEIGHT = 800;
+                quality = 0.6;
+            } else if (numImages === 3 && textLength >= 200) {
+                // Tier 4 (Low Quality): 3 images, long text
+                MAX_WIDTH = 600;
+                MAX_HEIGHT = 600;
+                quality = 0.5;
+            }
+            // If numImages is 0, this function won't be called with an empty array, 
+            // but if it were, these defaults are fine.
+
             const promises = selectedImages.map(file => {
                 return new Promise((resolve, reject) => {
                     const reader = new FileReader();
@@ -1018,8 +1093,6 @@
                             const canvas = document.createElement('canvas');
                             const ctx = canvas.getContext('2d');
                             
-                            const MAX_WIDTH = 800;
-                            const MAX_HEIGHT = 800;
                             let width = img.width;
                             let height = img.height;
 
@@ -1038,7 +1111,8 @@
                             canvas.height = height;
                             ctx.drawImage(img, 0, 0, width, height);
                             
-                            const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                            // Use the dynamically set quality
+                            const dataUrl = canvas.toDataURL('image/jpeg', quality); 
                             resolve(dataUrl);
                         };
                         img.onerror = reject;
@@ -1093,13 +1167,70 @@
             }
         }
 
+        // --- NEW: Typing Indicator Functions ---
+        
+        function handleTyping() {
+            if (!currentChatPartner) return;
+            
+            // Tell partner we are typing
+            try {
+                updateDoc(doc(db, 'users', currentUser.uid), { typingInChatWith: currentChatPartner.uid });
+            } catch(e) { console.error("Error setting typing status", e); }
+
+            // Clear existing timeout
+            if (typingTimeout) clearTimeout(typingTimeout);
+            
+            // Set new timeout to clear status
+            typingTimeout = setTimeout(() => {
+                handleTypingStop();
+            }, 2000); // 2 second timeout
+        }
+
+        function handleTypingStop() {
+            if (typingTimeout) {
+                clearTimeout(typingTimeout);
+                typingTimeout = null;
+            }
+            try {
+                // Set typing status to null in Firestore
+                updateDoc(doc(db, 'users', currentUser.uid), { typingInChatWith: null });
+            } catch(e) { /* Fails silently if offline or user is gone */ }
+        }
+
+        function listenForPartnerTyping(partnerUid) {
+            unsubPartnerDoc(); // Unsubscribe from old partner
+            unsubPartnerDoc = onSnapshot(doc(db, 'users', partnerUid), (doc) => {
+                if (doc.exists() && currentChatPartner) {
+                    const data = doc.data();
+                    // Check if partner is typing in chat with *us*
+                    if (data.typingInChatWith === currentUser.uid) {
+                        dom.typingIndicatorEl.textContent = `${currentChatPartner.name} is typing...`;
+                        dom.typingIndicatorEl.style.display = 'block';
+                    } else {
+                        dom.typingIndicatorEl.style.display = 'none';
+                    }
+                } else {
+                    dom.typingIndicatorEl.style.display = 'none';
+                }
+            }, (error) => {
+                console.error("Error listening to partner typing:", error);
+                dom.typingIndicatorEl.style.display = 'none';
+            });
+        }
+
         // --- EVENT HANDLERS ---
         
         async function handleSendMessage(e) {
             e.preventDefault();
-            const text = dom.messageInput.value.trim();
-            const images = await processImages();
+            
+            // NEW: Stop typing indicator immediately
+            handleTypingStop();
 
+            const text = dom.messageInput.value.trim();
+            // --- UPDATED: Pass text to processImages ---
+            const images = await processImages(text);
+
+            // This logic is correct, it allows image-only messages.
             if ((text === '' && images.length === 0) || !currentChatPartner) return;
 
             dom.sendBtn.disabled = true;
@@ -1136,11 +1267,14 @@
                 
                 const lastMessageText = filteredText || (images.length > 0 ? 'Sent an image' : 'New Message');
                 const recipientContactRef = doc(db, `users/${currentChatPartner.uid}/contacts`, currentUser.uid);
+                
+                // --- FIX: Removed 'name' property from this update ---
+                // This prevents overwriting the contact's custom name for us.
                 await setDoc(recipientContactRef, { 
                     lastMessage: lastMessageText, 
                     unread: true, 
-                    timestamp: serverTimestamp(),
-                    name: (await getUserDoc(currentUser.uid))?.username || 'New Contact'
+                    timestamp: serverTimestamp()
+                    // REMOVED: name: (await getUserDoc(currentUser.uid))?.username || 'New Contact'
                 }, { merge: true });
 
                 const senderContactRef = doc(db, `users/${currentUser.uid}/contacts`, currentChatPartner.uid);
@@ -1414,10 +1548,12 @@
                 }
             });
 
+            // UPDATED: Image click listener
             dom.messagesContainerEl.addEventListener('click', (e) => {
-                if (e.target.classList.contains('chat-image')) {
-                    const messageId = e.target.dataset.messageId;
-                    const imageIndex = parseInt(e.target.dataset.imageIndex, 10);
+                const imageContainer = e.target.closest('.chat-image-container');
+                if (imageContainer) {
+                    const messageId = imageContainer.dataset.messageId;
+                    const imageIndex = parseInt(imageContainer.dataset.imageIndex, 10);
                     
                     const chatCache = localMessagesCache[currentChatPartner.uid] || [];
                     const message = chatCache.find(m => m.id === messageId);
@@ -1430,6 +1566,7 @@
 
             dom.closeViewerBtn.addEventListener('click', closeImageViewer);
             dom.imageViewer.addEventListener('click', (e) => {
+                // Closes if clicking on the backdrop
                 if (e.target.id === 'image-viewer') {
                     closeImageViewer();
                 }
@@ -1438,6 +1575,10 @@
             dom.nextImageBtn.addEventListener('click', showNextImage);
 
             dom.messageInput.addEventListener('input', updateSendButtonState);
+
+            // NEW: Typing indicator listeners
+            dom.messageInput.addEventListener('input', handleTyping);
+            dom.messageInput.addEventListener('blur', handleTypingStop);
         }
 
         // --- START THE APP ---
