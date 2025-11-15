@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4SP - CLOCK</title>
+    <meta name="description" content="Create custom countdowns, timers, and see world clocks.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://kit-pro.fontawesome.com/releases/v7.0.1/css/pro.min.css" media="all">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../navigation.js"></script>
+    <script src="../injector.js"></script>
+
+    <style>
+        body { 
+            font-family: 'Geist', sans-serif; 
+            background-color: #070707; 
+            color: #c0c0c0; 
+            font-weight: 300;
+        }
+
+        h1, h2, h3, .font-bold, .font-semibold, strong {
+            font-weight: 400 !important;
+        }
+
+        .btn-toolbar-style {
+            background: var(--menu-bg, #000000);
+            border: 1px solid var(--menu-border, #333);
+            border-radius: 0.75rem;
+            color: var(--menu-text, #d1d5db);
+            padding: 0.5rem 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn-toolbar-style:hover {
+            background-color: var(--menu-bg, #000000);
+            border-color: var(--menu-border, #fff);
+            color: var(--tab-hover-text, #ffffff);
+        }
+        
+        .btn-primary-override {
+            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
+            border: 1px solid var(--tab-active-border, #4f46e5);
+            color: var(--tab-active-text, #4f46e5);
+        }
+        .btn-primary-override:hover {
+            background-color: var(--tab-active-hover-bg, rgba(79, 70, 229, 0.15));
+            border-color: var(--tab-active-hover-border, #6366f1);
+            color: var(--tab-active-hover-text, #6366f1);
+        }
+
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+        .tab-btn.active {
+            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
+            border-color: var(--tab-active-border, #4f46e5);
+            color: var(--tab-active-text, #4f46e5);
+        }
+        .tab-btn:not(.active) {
+            color: var(--menu-text, #d1d5db);
+            background-color: var(--menu-bg, #000000);
+            border: 1px solid var(--menu-border, #333);
+        }
+        .tab-btn:not(.active):hover {
+            background-color: #1a1a1a;
+            border-color: #4a4a4a;
+        }
+
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-input {
+            width: 100%;
+            background-color: #1f2937;
+            border: 1px solid #374151;
+            color: #f3f4f6;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px #3b82f640;
+        }
+
+        .day-selector button {
+            border: 1px solid #374151;
+            background-color: #1f2937;
+            color: #9ca3af;
+        }
+        .day-selector button.active {
+            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
+            border-color: var(--tab-active-border, #4f46e5);
+            color: var(--tab-active-text, #4f46e5);
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div id="page-content">
+        <header class="flex justify-between items-center p-4 border-b border-[#1a1a1a]">
+            <h1 class="text-2xl font-bold text-white">Countdowns & Timers</h1>
+        </header>
+
+        <main class="p-4 md:p-8">
+            <div class="flex justify-center mb-8 space-x-2">
+                <button class="tab-btn active" data-tab="countdowns">Countdowns</button>
+                <button class="tab-btn" data-tab="timers">Timers</button>
+                <button class="tab-btn" data-tab="clock">World Clock</button>
+            </div>
+
+            <div id="countdowns" class="tab-content active">
+                <div class="max-w-2xl mx-auto bg-[#0d0d0d] p-6 rounded-lg border border-[#1a1a1a]">
+                    <h2 class="text-2xl font-bold mb-4">New Countdown</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="countdown-name" class="block text-sm font-medium mb-1">Name</label>
+                            <input type="text" id="countdown-name" class="form-input" placeholder="e.g., New Year's Day">
+                        </div>
+                        <div>
+                            <label for="countdown-date" class="block text-sm font-medium mb-1">Date</label>
+                            <input type="date" id="countdown-date" class="form-input">
+                        </div>
+                        <div>
+                            <label for="countdown-time" class="block text-sm font-medium mb-1">Time</label>
+                            <input type="time" id="countdown-time" class="form-input">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Repeat</label>
+                            <div class="day-selector flex space-x-1">
+                                <button data-day="0" class="w-10 h-10 rounded-md">S</button>
+                                <button data-day="1" class="w-10 h-10 rounded-md">M</button>
+                                <button data-day="2" class="w-10 h-10 rounded-md">T</button>
+                                <button data-day="3" class="w-10 h-10 rounded-md">W</button>
+                                <button data-day="4" class="w-10 h-10 rounded-md">T</button>
+                                <button data-day="5" class="w-10 h-10 rounded-md">F</button>
+                                <button data-day="6" class="w-10 h-10 rounded-md">S</button>
+                            </div>
+                        </div>
+                        <button id="add-countdown" class="btn-primary-override w-full justify-center py-3">Add Countdown</button>
+                    </div>
+                    <div id="countdown-list" class="mt-8"></div>
+                </div>
+            </div>
+
+            <div id="timers" class="tab-content">
+                <div class="max-w-2xl mx-auto bg-[#0d0d0d] p-6 rounded-lg border border-[#1a1a1a]">
+                    <h2 class="text-2xl font-bold mb-4">New Timer</h2>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="timer-hours" class="block text-sm font-medium mb-1">Hours</label>
+                            <input type="number" id="timer-hours" class="form-input" min="0" max="12" placeholder="0">
+                        </div>
+                        <div>
+                            <label for="timer-minutes" class="block text-sm font-medium mb-1">Minutes</label>
+                            <input type="number" id="timer-minutes" class="form-input" min="0" max="59" placeholder="0">
+                        </div>
+                        <div>
+                            <label for="timer-seconds" class="block text-sm font-medium mb-1">Seconds</label>
+                            <input type="number" id="timer-seconds" class="form-input" min="0" max="59" placeholder="30">
+                        </div>
+                    </div>
+                    <button id="add-timer" class="btn-primary-override w-full justify-center py-3 mt-4">Start Timer</button>
+                    <div id="timer-list" class="mt-8"></div>
+                </div>
+            </div>
+
+            <div id="clock" class="tab-content">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-[#0d0d0d] p-6 rounded-lg border border-[#1a1a1a] text-center">
+                        <h3 class="text-xl font-bold">New York</h3>
+                        <p id="time-ny" class="text-4xl font-light mt-2"></p>
+                        <p id="date-ny" class="text-lg font-thin"></p>
+                    </div>
+                    <div class="bg-[#0d0d0d] p-6 rounded-lg border border-[#1a1a1a] text-center">
+                        <h3 class="text-xl font-bold">London</h3>
+                        <p id="time-london" class="text-4xl font-light mt-2"></p>
+                        <p id="date-london" class="text-lg font-thin"></p>
+                    </div>
+                    <div class="bg-[#0d0d0d] p-6 rounded-lg border border-[#1a1a1a] text-center">
+                        <h3 class="text-xl font-bold">Tokyo</h3>
+                        <p id="time-tokyo" class="text-4xl font-light mt-2"></p>
+                        <p id="date-tokyo" class="text-lg font-thin"></p>
+                    </div>
+                    <div class="bg-[#0d0d0d] p-6 rounded-lg border border-[#1a1a1a] text-center">
+                        <h3 class="text-xl font-bold">Sydney</h3>
+                        <p id="time-sydney" class="text-4xl font-light mt-2"></p>
+                        <p id="date-sydney" class="text-lg font-thin"></p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const tabs = document.querySelectorAll('.tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+
+                    const target = document.getElementById(tab.dataset.tab);
+                    tabContents.forEach(tc => tc.classList.remove('active'));
+                    target.classList.add('active');
+                });
+            });
+
+            // Countdown logic
+            const countdownName = document.getElementById('countdown-name');
+            const countdownDate = document.getElementById('countdown-date');
+            const countdownTime = document.getElementById('countdown-time');
+            const addCountdownBtn = document.getElementById('add-countdown');
+            const countdownList = document.getElementById('countdown-list');
+            const daySelector = document.querySelector('.day-selector');
+            
+            let countdowns = [];
+
+            daySelector.addEventListener('click', (e) => {
+                if(e.target.tagName === 'BUTTON') {
+                    e.target.classList.toggle('active');
+                }
+            });
+
+            addCountdownBtn.addEventListener('click', () => {
+                const name = countdownName.value;
+                const date = countdownDate.value;
+                const time = countdownTime.value;
+                const repeatDays = Array.from(daySelector.querySelectorAll('button.active')).map(b => parseInt(b.dataset.day));
+
+                if (name && date && time) {
+                    const targetDate = new Date(`${date}T${time}`);
+                    if (targetDate > new Date()) {
+                        const id = Date.now();
+                        countdowns.push({ id, name, targetDate, repeatDays });
+                        renderCountdowns();
+                        countdownName.value = '';
+                        countdownDate.value = '';
+                        countdownTime.value = '';
+                        daySelector.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                    } else {
+                        alert("Please select a future date and time.");
+                    }
+                }
+            });
+
+            function renderCountdowns() {
+                countdownList.innerHTML = '';
+                countdowns.forEach(c => {
+                    const el = document.createElement('div');
+                    el.className = 'bg-[#1f2937] p-4 rounded-lg mb-4';
+                    el.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <h4 class="text-lg font-bold">${c.name}</h4>
+                            <button data-id="${c.id}" class="text-red-500">Delete</button>
+                        </div>
+                        <p id="countdown-${c.id}" class="text-2xl font-mono mt-2"></p>
+                    `;
+                    countdownList.appendChild(el);
+                });
+            }
+
+            function updateCountdowns() {
+                countdowns.forEach(c => {
+                    const now = new Date();
+                    let target = c.targetDate;
+
+                    if (c.repeatDays.length > 0) {
+                        if (now > target) {
+                            let nextDate = new Date(target);
+                            while(nextDate <= now || !c.repeatDays.includes(nextDate.getDay())) {
+                                nextDate.setDate(nextDate.getDate() + 1);
+                            }
+                            c.targetDate = nextDate;
+                            target = nextDate;
+                        }
+                    }
+
+                    const diff = target - now;
+                    if (diff > 0) {
+                        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                        const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+                        const minutes = Math.floor((diff / 1000 / 60) % 60);
+                        const seconds = Math.floor((diff / 1000) % 60);
+                        document.getElementById(`countdown-${c.id}`).textContent = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+                    } else {
+                        document.getElementById(`countdown-${c.id}`).textContent = "Finished!";
+                    }
+                });
+            }
+            
+            countdownList.addEventListener('click', (e) => {
+                if(e.target.tagName === 'BUTTON') {
+                    const id = parseInt(e.target.dataset.id);
+                    countdowns = countdowns.filter(c => c.id !== id);
+                    renderCountdowns();
+                }
+            });
+
+            // Timer logic
+            const timerHours = document.getElementById('timer-hours');
+            const timerMinutes = document.getElementById('timer-minutes');
+            const timerSeconds = document.getElementById('timer-seconds');
+            const addTimerBtn = document.getElementById('add-timer');
+            const timerList = document.getElementById('timer-list');
+            let timers = [];
+
+            addTimerBtn.addEventListener('click', () => {
+                const hours = parseInt(timerHours.value) || 0;
+                const minutes = parseInt(timerMinutes.value) || 0;
+                const seconds = parseInt(timerSeconds.value) || 0;
+                const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+
+                if (totalSeconds >= 30 && totalSeconds <= 12 * 3600) {
+                    const id = Date.now();
+                    const endTime = new Date(Date.now() + totalSeconds * 1000);
+                    timers.push({ id, endTime, totalSeconds });
+                    renderTimers();
+                } else {
+                    alert("Timer must be between 30 seconds and 12 hours.");
+                }
+            });
+
+            function renderTimers() {
+                timerList.innerHTML = '';
+                timers.forEach(t => {
+                    const el = document.createElement('div');
+                    el.className = 'bg-[#1f2937] p-4 rounded-lg mb-4';
+                    el.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <h4 class="text-lg font-bold">Timer</h4>
+                            <button data-id="${t.id}" class="text-red-500">Delete</button>
+                        </div>
+                        <p id="timer-${t.id}" class="text-2xl font-mono mt-2"></p>
+                    `;
+                    timerList.appendChild(el);
+                });
+            }
+
+            function updateTimers() {
+                timers.forEach(t => {
+                    const diff = t.endTime - new Date();
+                    if (diff > 0) {
+                        const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+                        const minutes = Math.floor((diff / 1000 / 60) % 60);
+                        const seconds = Math.floor((diff / 1000) % 60);
+                        document.getElementById(`timer-${t.id}`).textContent = `${hours}h ${minutes}m ${seconds}s`;
+                    } else {
+                        document.getElementById(`timer-${t.id}`).textContent = "Done!";
+                    }
+                });
+            }
+            
+            timerList.addEventListener('click', (e) => {
+                if(e.target.tagName === 'BUTTON') {
+                    const id = parseInt(e.target.dataset.id);
+                    timers = timers.filter(t => t.id !== id);
+                    renderTimers();
+                }
+            });
+
+            // Clock logic
+            function updateClocks() {
+                const now = new Date();
+                const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+                const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+
+                // New York (UTC-4/UTC-5)
+                const nyTime = now.toLocaleTimeString('en-US', { ...timeOptions, timeZone: 'America/New_York' });
+                const nyDate = now.toLocaleDateString('en-US', { ...dateOptions, timeZone: 'America/New_York' });
+                document.getElementById('time-ny').textContent = nyTime;
+                document.getElementById('date-ny').textContent = nyDate;
+
+                // London (UTC+0/UTC+1)
+                const londonTime = now.toLocaleTimeString('en-GB', { ...timeOptions, timeZone: 'Europe/London' });
+                const londonDate = now.toLocaleDateString('en-GB', { ...dateOptions, timeZone: 'Europe/London' });
+                document.getElementById('time-london').textContent = londonTime;
+                document.getElementById('date-london').textContent = londonDate;
+
+                // Tokyo (UTC+9)
+                const tokyoTime = now.toLocaleTimeString('ja-JP', { ...timeOptions, timeZone: 'Asia/Tokyo' });
+                const tokyoDate = now.toLocaleDateString('ja-JP', { ...dateOptions, timeZone: 'Asia/Tokyo' });
+                document.getElementById('time-tokyo').textContent = tokyoTime;
+                document.getElementById('date-tokyo').textContent = tokyoDate;
+
+                // Sydney (UTC+10/UTC+11)
+                const sydneyTime = now.toLocaleTimeString('en-AU', { ...timeOptions, timeZone: 'Australia/Sydney' });
+                const sydneyDate = now.toLocaleDateString('en-AU', { ...dateOptions, timeZone: 'Australia/Sydney' });
+                document.getElementById('time-sydney').textContent = sydneyTime;
+                document.getElementById('date-sydney').textContent = sydneyDate;
+            }
+
+            setInterval(() => {
+                updateCountdowns();
+                updateTimers();
+                updateClocks();
+            }, 1000);
+            
+            updateClocks();
+        });
+    </script>
+</body>
+</html>
