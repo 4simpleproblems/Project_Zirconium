@@ -308,6 +308,12 @@
                 mainView.style.justifyContent = 'flex-start'; /* Use flex-start on mainView */
                 mainView.style.alignItems = 'flex-start'; /* Use flex-start on mainView */
             }
+
+            // 3. New: Smoothly scroll the window back to the top (y=0)
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
         }
 
         // --- Initialization on Load ---
