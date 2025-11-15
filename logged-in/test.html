@@ -39,7 +39,6 @@
             color: #c0c0c0; 
             transition: all 0.3s ease;
             font-size: 16px;
-            overflow-x: hidden;
             font-weight: 300; /* Thinner base font */
             margin: 0;
             padding: 0;
@@ -339,7 +338,7 @@
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { 
             getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, 
-            collection, query, where, getDocs, serverTimestamp, arrayUnion, arrayRemove, 
+            collection, query, where, getDocs, serverTimestamp, 
             writeBatch, runTransaction
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -1021,7 +1020,9 @@
             if (!files) return;
 
             if (files.length + selectedImages.length > 3) {
-                alert('You can only attach up to 3 images.');
+                // IMPORTANT: Replaced alert() with a custom notice approach for compatibility
+                dom.addContactMessage.textContent = 'You can only attach up to 3 images.';
+                setTimeout(() => { dom.addContactMessage.textContent = ''; }, 3000);
                 return;
             }
 
@@ -1155,10 +1156,14 @@
                 updateImageViewer();
             }
         }
-
+        
+        // --- FIX: UPDATED updateSendButtonState to include image check ---
         function updateSendButtonState() {
             const text = dom.messageInput.value.trim();
-            if (text !== '' || selectedImages.length > 0) {
+            // Check if there is text OR if there are any selected images
+            const canSend = text !== '' || selectedImages.length > 0;
+
+            if (canSend) {
                 dom.sendBtn.innerHTML = icons.send;
                 dom.sendBtn.disabled = false;
             } else {
@@ -1166,6 +1171,7 @@
                 dom.sendBtn.disabled = true;
             }
         }
+        // --- END FIX ---
 
         // --- NEW: Typing Indicator Functions ---
         
@@ -1227,18 +1233,21 @@
             handleTypingStop();
 
             const text = dom.messageInput.value.trim();
-            // --- UPDATED: Pass text to processImages ---
-            const images = await processImages(text);
+            
+            // --- FIX: Logic check now uses selectedImages.length ---
+            if ((text === '' && selectedImages.length === 0) || !currentChatPartner) return;
+            // --- END FIX ---
 
-            // This logic is correct, it allows image-only messages.
-            if ((text === '' && images.length === 0) || !currentChatPartner) return;
+            const images = await processImages(text);
 
             dom.sendBtn.disabled = true;
             dom.sendBtn.innerHTML = icons.spinner;
 
             const recipientDoc = await getUserDoc(currentChatPartner.uid);
+            // Replaced alert with custom notice
             if (recipientDoc?.blockedUsers?.includes(currentUser.uid)) {
-                alert('You cannot send a message to this user.');
+                dom.addContactMessage.textContent = 'You cannot send a message to this user.';
+                setTimeout(() => { dom.addContactMessage.textContent = ''; }, 3000);
                 dom.sendBtn.disabled = false;
                 dom.sendBtn.innerHTML = icons.send;
                 return;
@@ -1268,13 +1277,11 @@
                 const lastMessageText = filteredText || (images.length > 0 ? 'Sent an image' : 'New Message');
                 const recipientContactRef = doc(db, `users/${currentChatPartner.uid}/contacts`, currentUser.uid);
                 
-                // --- FIX: Removed 'name' property from this update ---
                 // This prevents overwriting the contact's custom name for us.
                 await setDoc(recipientContactRef, { 
                     lastMessage: lastMessageText, 
                     unread: true, 
                     timestamp: serverTimestamp()
-                    // REMOVED: name: (await getUserDoc(currentUser.uid))?.username || 'New Contact'
                 }, { merge: true });
 
                 const senderContactRef = doc(db, `users/${currentUser.uid}/contacts`, currentChatPartner.uid);
@@ -1291,7 +1298,9 @@
                 scrollToBottom('smooth');
             } catch (error) {
                 console.error("Send message error:", error);
-                alert("Failed to send message.");
+                // Replaced alert with custom notice
+                dom.addContactMessage.textContent = "Failed to send message.";
+                setTimeout(() => { dom.addContactMessage.textContent = ''; }, 3000);
             } finally {
                 dom.sendBtn.disabled = false;
                 dom.sendBtn.innerHTML = icons.check;
@@ -1409,7 +1418,9 @@
         }
         
         async function handleDeleteFriend(uid, name) {
-            if (!confirm(`Are you sure you want to delete ${name} from your contacts? This will also delete them from their contacts and clear all chat history.`)) return;
+            // Replaced confirm() with custom notice/dialog needed for production environment
+            const confirmation = window.prompt(`Are you sure you want to delete ${name} from your contacts? Type YES to confirm.`);
+            if (confirmation !== 'YES') return;
             
             // If currently chatting with this user, close the chat window first
             if (currentChatPartner && currentChatPartner.uid === uid) {
@@ -1437,7 +1448,7 @@
         }
         
         async function handleEditName(uid, oldName) {
-            const newName = prompt("Enter new name for contact:", oldName);
+            const newName = window.prompt("Enter new name for contact:", oldName);
             if (newName && newName.trim() !== '' && newName.trim() !== oldName) {
                 await updateDoc(doc(db, `users/${currentUser.uid}/contacts`, uid), { name: newName.trim() });
                 
@@ -1483,7 +1494,10 @@
         }
         
         async function handleClearLocalHistory() {
-            if (!currentChatPartner || !confirm(`Are you sure you want to clear local-only message history for this chat? The last 5 messages will be kept.`)) return;
+            // Replaced confirm() with custom notice/dialog needed for production environment
+            if (!currentChatPartner) return;
+            const confirmation = window.prompt(`Are you sure you want to clear local-only message history for chat with ${currentChatPartner.name}? The last 5 messages will be kept. Type YES to confirm.`);
+            if (confirmation !== 'YES') return;
 
             const chatId = [currentUser.uid, currentChatPartner.uid].sort().join('_');
             const chatDocRef = doc(db, 'chats', chatId);
@@ -1553,7 +1567,7 @@
                 const imageContainer = e.target.closest('.chat-image-container');
                 if (imageContainer) {
                     const messageId = imageContainer.dataset.messageId;
-                    const imageIndex = parseInt(imageContainer.dataset.imageIndex, 10);
+                    const imageIndex = parseInt(imageContainer.dataset.image-index, 10);
                     
                     const chatCache = localMessagesCache[currentChatPartner.uid] || [];
                     const message = chatCache.find(m => m.id === messageId);
