@@ -13,6 +13,8 @@
     <link rel="stylesheet" href="https://kit-pro.fontawesome.com/releases/v7.0.1/css/pro.min.css" media="all">
     
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../injector.js"></script>
+
 
     <script>
         tailwind.config = {
@@ -336,7 +338,6 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        // --- FIX: Added 'from' keyword ---
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { 
             getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, 
@@ -1052,7 +1053,39 @@
             });
         }
 
-        function processImages() {
+        // --- UPDATED: Smart Image Processing ---
+        function processImages(text) {
+            const numImages = selectedImages.length;
+            const textLength = text ? text.length : 0;
+
+            let MAX_WIDTH = 800;
+            let MAX_HEIGHT = 800;
+            let quality = 0.7;
+
+            if (numImages === 1 && textLength < 200) {
+                // Tier 1 (High Quality): 1 image, short text
+                MAX_WIDTH = 1280;
+                MAX_HEIGHT = 1280;
+                quality = 0.8;
+            } else if ((numImages === 1 && textLength >= 200) || (numImages === 2 && textLength < 200)) {
+                // Tier 2 (Good Quality): 1 image, long text OR 2 images, short text
+                MAX_WIDTH = 1024;
+                MAX_HEIGHT = 1024;
+                quality = 0.7;
+            } else if ((numImages === 2 && textLength >= 200) || (numImages === 3 && textLength < 200)) {
+                // Tier 3 (Medium Quality): 2 images, long text OR 3 images, short text
+                MAX_WIDTH = 800;
+                MAX_HEIGHT = 800;
+                quality = 0.6;
+            } else if (numImages === 3 && textLength >= 200) {
+                // Tier 4 (Low Quality): 3 images, long text
+                MAX_WIDTH = 600;
+                MAX_HEIGHT = 600;
+                quality = 0.5;
+            }
+            // If numImages is 0, this function won't be called with an empty array, 
+            // but if it were, these defaults are fine.
+
             const promises = selectedImages.map(file => {
                 return new Promise((resolve, reject) => {
                     const reader = new FileReader();
@@ -1062,8 +1095,6 @@
                             const canvas = document.createElement('canvas');
                             const ctx = canvas.getContext('2d');
                             
-                            const MAX_WIDTH = 800;
-                            const MAX_HEIGHT = 800;
                             let width = img.width;
                             let height = img.height;
 
@@ -1082,7 +1113,8 @@
                             canvas.height = height;
                             ctx.drawImage(img, 0, 0, width, height);
                             
-                            const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                            // Use the dynamically set quality
+                            const dataUrl = canvas.toDataURL('image/jpeg', quality); 
                             resolve(dataUrl);
                         };
                         img.onerror = reject;
@@ -1197,7 +1229,8 @@
             handleTypingStop();
 
             const text = dom.messageInput.value.trim();
-            const images = await processImages();
+            // --- UPDATED: Pass text to processImages ---
+            const images = await processImages(text);
 
             // This logic is correct, it allows image-only messages.
             if ((text === '' && images.length === 0) || !currentChatPartner) return;
