@@ -3,99 +3,491 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - Messenger Tutorial</title>
-    <meta name="description" content="A tutorial on how to install and open the Messenger 2.0 app.">
+    <title>4SP - MESSENGER TUTORIAL</title>
+    <meta name="description" content="A tutorial on how to install and open the Messenger app.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     
+    <!-- Using Font Awesome Pro for icons, matching messenger-v2.html -->
     <link rel="stylesheet" href="https://kit-pro.fontawesome.com/releases/v7.0.1/css/pro.min.css" media="all">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="../navigation.js"></script>
     <script src="../injector.js"></script>
 
+    <script>
+        // Customizing Tailwind to use the Geist font and dark mode settings
+        tailwind.config = {
+            darkMode: 'class', 
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Geist', 'sans-serif'],
+                        display: ['Geist', 'sans-serif'],
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', '"Liberation Mono"', '"Courier New"', 'monospace'],
+                    },
+                    colors: {
+                        'background': '#070707',
+                        'card': '#1a1a1a',
+                        'border-strong': '#374151',
+                        'text-primary': '#c0c0c0',
+                        'text-secondary': '#9ca3af',
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent scrolling for true fullscreen experience */
+        }
         body { 
             font-family: 'Geist', sans-serif; 
             background-color: #070707; 
             color: #c0c0c0; 
-            font-weight: 300;
+            font-weight: 300; /* Base font weight */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100vw; /* Full viewport width */
+            height: 100vh; /* Full viewport height */
         }
 
-        h1, h2, h3, .font-bold, .font-semibold, strong {
+        /* Use font-weight 400 for headers and defined bold styles */
+        h1, h2, h3, .font-bold, .font-semibold {
             font-weight: 400 !important;
         }
 
-        .btn-purple {
-            padding: 10px;
+        /* Custom class for slightly bolder text (+100 weight from base 300) */
+        .font-accent-bold {
+            font-weight: 400; 
+            color: #ffffff; /* Make the highlighted text stand out */
+        }
+        
+        /* Main Fullscreen Container for the Two-Column Layout */
+        .main-tutorial-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            background-color: #070707;
+        }
+
+        /* Left Column: Fixed steps/navigation */
+        .left-column {
+            width: 350px; /* Fixed width for steps/navigation */
+            flex-shrink: 0;
+            background-color: #111111;
+            border-right: 1px solid #374151;
+            padding: 40px 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        /* Right Column: Dynamic content area */
+        .right-column {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+        
+        /* Highlight active step text on the left */
+        .step-indicator.active .step-title {
+            color: white;
+            /* Note: font-weight 600 in Tailwind config is 400 here, but we use it for visual distinction */
+            font-weight: 600; 
+        }
+        .step-indicator.active .step-subtitle {
+            color: #d1d5db; /* Gray-300 */
+        }
+
+        /* ------------------------------------------- */
+        /* --- CUSTOMIZABLE BUTTON & STEP DOT STYLES --- */
+        /* ------------------------------------------- */
+
+        /* 1. Icon Button Styles (for Step Dots) */
+        .btn-icon {
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            /* Tailwinds are used for w/h of step dots (w-10 h-10) - override the 2.25rem size for uniformity here */
             border-radius: 0.5rem;
             background-color: transparent;
-            border: 1px solid #aaaaaa;
-            color: var(--tab-text, #9ca3af);
+            border: 1px solid #374151; /* gray-700 */
+            color: #9ca3af; 
             cursor: pointer;
             transition: all 0.2s;
+            line-height: 1; /* Fix vertical alignment for the number */
+            font-weight: 400;
+        }
+        .btn-icon:hover {
+            background-color: #374151; /* gray-700 */
+            color: #f3f4f6; /* gray-100 */
+            border-color: #374151; /* gray-700 */
+        }
+        .btn-icon.active {
+            /* Active style (subtle purple/indigo) */
+            background-color: rgba(79, 70, 229, 0.1);
+            color: #4f46e5;
+            border-color: #4f46e5;
+        }
+        .btn-icon:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
         }
 
-        .btn-purple:hover {
-            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
-            color: var(--tab-active-text, #4f46e5);
-            border-color: var(--tab-active-border, #4f46e5);        }
+
+        /* 2. Main Action Button Style (for Download Button) */
+        .btn-main-action {
+            /* Match .btn-icon.active colors */
+            background-color: rgba(79, 70, 229, 0.15); /* Slightly stronger transparent background */
+            color: #4f46e5; /* Strong blue text color */
+            border: 1px solid #4f46e5; /* Strong blue border color */
+            transition: all 0.3s ease;
+            box-shadow: none; /* Removed the glow effect */
+            font-weight: 600;
+        }
+        .btn-main-action:hover {
+            background-color: rgba(79, 70, 229, 0.3); /* Darker hover */
+            color: #ffffff; /* White text on hover for contrast */
+        }
+
+        /* 3. Navigation Action Button Style (for Prev/Next) */
+        .btn-nav-action {
+            /* Base style: Match .btn-main-action's colors */
+            background-color: rgba(79, 70, 229, 0.15); /* Indigo 500 @ 15% */
+            color: #4f46e5; /* Indigo 500 */
+            border: 1px solid #4f46e5; /* Indigo 500 */
+            transition: all 0.2s ease;
+            box-shadow: none;
+            font-weight: 600;
+            
+            /* Shape and size: Match btn-icon size (w-10 h-10 = 2.5rem), but rounded-xl (0.75rem) */
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.5rem; /* w-10 */
+            height: 2.5rem; /* h-10 */
+            border-radius: 0.75rem; /* rounded-xl */
+            cursor: pointer;
+        }
+        .btn-nav-action:hover:not(:disabled) {
+            background-color: rgba(79, 70, 229, 0.3); /* Darker hover */
+            color: #ffffff; /* White text on hover for contrast */
+        }
+        .btn-nav-action:disabled {
+            opacity: 0.4; /* Stronger disabled look */
+            cursor: not-allowed;
+            background-color: transparent; /* Makes the disabled look cleaner */
+            border-color: #374151; /* gray-700 for disabled border */
+            color: #9ca3af; /* gray-400 for disabled icon */
+        }
+
+        /* 4. Description Block Custom Styling */
+        #description-block {
+            /* Slightly more rounded (1rem is rounded-2xl) */
+            border-radius: 1rem;
+            /* Less side padding (p-6 was 1.5rem, px-4 is 1rem) */
+            padding: 1.5rem 1rem; /* 24px top/bottom, 16px left/right */
+        }
+
+        /* Smaller font size for list items within the block */
+        #description-block ul li {
+            /* text-sm equivalent (0.875rem / 14px) */
+            font-size: 0.875rem; 
+        }
+
+        /* Step Animation CSS for the Right Column */
+        .step-container {
+            position: relative;
+            overflow: hidden;
+            height: 500px; /* Increased height for better visibility on non-fullscreen views */
+            width: 100%;
+            max-width: 600px;
+        }
+        .step-content {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .step-content.active {
+            opacity: 1;
+            pointer-events: all;
+            transform: translateX(0);
+        }
+        /* State when sliding out to the left (next step) */
+        .step-content.slide-left {
+            transform: translateX(-100%);
+        }
+        /* State when sliding out to the right (previous step) */
+        .step-content.slide-right {
+            transform: translateX(100%);
+        }
+
     </style>
 </head>
-<body class="min-h-screen">
-    <div id="page-content" class="flex flex-col items-center justify-center min-h-screen p-4">
-        <div class="w-full max-w-2xl mx-auto">
-            <h1 class="text-3xl font-bold text-white text-center mb-6">Messenger 2.0 Installation Tutorial</h1>
+<body class="dark bg-background">
+
+    <!-- Main Fullscreen Container for the Two-Column Layout -->
+    <div class="main-tutorial-container">
+        
+        <!-- LEFT COLUMN: Steps/Navigation Indicators -->
+        <div class="left-column">
+            <h2 class="text-3xl font-display text-white mb-10 text-center border-b border-border-strong/50 pb-4">
+                <i class="fa-solid fa-graduation-cap text-indigo-500 mr-2"></i>
+                <span class="font-bold">Setup Guide</span>
+            </h2>
+
+            <!-- DOWNLOAD BUTTON: Moved here to be always available -->
+            <div class="mb-10 w-full">
+                <a href="./messenger-v2.html" download="messenger-v2.html" id="download-btn-fixed" 
+                   class="btn-main-action flex items-center justify-center space-x-2 py-3 px-8 rounded-xl font-semibold text-xl w-full">
+                    <i class="fa-solid fa-download"></i>
+                    <span>Download Here</span>
+                </a>
+            </div>
+            <!-- END DOWNLOAD BUTTON -->
+
+            <!-- Step Indicators -->
+            <div id="step-indicators" class="space-y-8 flex-grow flex flex-col justify-center">
+                
+                <!-- Step 1 Indicator -->
+                <div class="step-indicator active flex items-start space-x-4 cursor-pointer" data-step="1">
+                    <button class="step-dot btn-icon active w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg" data-step="1" title="Go to Step 1">1</button>
+                    <div>
+                        <p class="text-white font-semibold text-xl step-title">Download App</p>
+                        <p class="text-text-secondary text-sm step-subtitle">Get the file onto your device.</p>
+                    </div>
+                </div>
+                
+                <!-- Step 2 Indicator -->
+                <div class="step-indicator flex items-start space-x-4 cursor-pointer" data-step="2">
+                    <button class="step-dot btn-icon w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg" data-step="2" title="Go to Step 2">2</button>
+                    <div>
+                        <p class="text-text-primary font-semibold text-xl step-title">Locate File</p>
+                        <p class="text-text-secondary text-sm step-subtitle">Find it in your downloads folder.</p>
+                    </div>
+                </div>
+                
+                <!-- Step 3 Indicator -->
+                <div class="step-indicator flex items-start space-x-4 cursor-pointer" data-step="3">
+                    <button class="step-dot btn-icon w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg" data-step="3" title="Go to Step 3">3</button>
+                    <div>
+                        <p class="text-text-primary font-semibold text-xl step-title">Open & Launch</p>
+                        <p class="text-text-secondary text-sm step-subtitle">Double-click to start chatting.</p>
+                    </div>
+                </div>
+            </div>
             
-            <div class="space-y-8 text-lg">
-                <div class="flex items-start gap-4">
-                    <div class="flex-shrink-0 w-8 h-8 bg-purple-500/20 text-purple-300 rounded-full flex items-center justify-center font-bold">1</div>
-                    <div>
-                        <h2 class="font-semibold text-white mb-1">Download the File</h2>
-                        <p>Click the download button at the bottom-right of this page to download the <code class="bg-gray-800 px-1 rounded">messenger-v2.html</code> file.</p>
+            <!-- Navigation Arrows: Using the new btn-nav-action style -->
+            <div class="flex justify-between items-center mt-10">
+                <button id="prev-btn" class="btn-nav-action" title="Previous Step">
+                    <i class="fa-solid fa-arrow-left fa-lg"></i>
+                </button>
+                <button id="next-btn" class="btn-nav-action" title="Next Step">
+                    <i class="fa-solid fa-arrow-right fa-lg"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: Dynamic Content and Description -->
+        <div class="right-column">
+            
+            <h1 class="text-4xl font-display text-white mb-8 text-center">
+                <i class="fa-solid fa-message-code text-indigo-500 mr-2"></i>
+                <span class="font-bold">Messenger 2.0 Features</span>
+            </h1>
+            
+            <!-- Description Block (Static) -->
+            <div id="description-block" class="bg-card shadow-2xl border border-border-strong/50 w-full max-w-lg mb-8">
+                <h3 class="text-xl font-semibold text-white mb-4 flex items-center">
+                    <i class="fa-solid fa-hand-stars text-yellow-400 mr-2"></i>
+                    What you can do:
+                </h3>
+                <ul class="text-text-secondary space-y-3 list-disc list-inside">
+                    <li>Add new <span class="font-accent-bold">friends using their 8-digit unique code</span>.</li>
+                    <li>See <span class="font-accent-bold">read receipts</span> instantly to know when your message was viewed.</li>
+                    <li>Easily clear your <span class="font-accent-bold">local chat history</span> (the last 5 messages are permanently saved in the database).</li>
+                    <li><span class="font-accent-bold">Attach images</span> to your messages (Note: GIFs and videos are currently not supported).</li>
+                </ul>
+            </div>
+            
+            <!-- Dynamic Step Content Area -->
+            <div class="step-container">
+                <!-- STEP 1: DOWNLOAD -->
+                <div id="step-1" class="step-content active">
+                    <div class="flex flex-col items-center text-center w-full">
+                        <i class="fa-solid fa-arrow-down-to-bracket text-6xl text-indigo-500 mb-6"></i>
+                        <h2 class="text-2xl font-semibold text-white mb-3">1. Download the App File</h2>
+                        <p class="text-text-secondary text-lg">
+                            Click the <span class="font-accent-bold">"Download Messenger"</span> button in the sidebar to get the <span class="font-accent-bold">single HTML file</span> that holds the entire Messenger application.
+                        </p>
+                        <!-- DOWNLOAD BUTTON REMOVED FROM HERE -->
                     </div>
                 </div>
 
-                <div class="flex items-start gap-4">
-                    <div class="flex-shrink-0 w-8 h-8 bg-purple-500/20 text-purple-300 rounded-full flex items-center justify-center font-bold">2</div>
-                    <div>
-                        <h2 class="font-semibold text-white mb-1">Find the File</h2>
-                        <p>Open your computer's file explorer or downloads folder to locate the file you just downloaded.</p>
+                <!-- STEP 2: LOCATE -->
+                <div id="step-2" class="step-content">
+                    <div class="flex flex-col items-center text-center w-full">
+                        <i class="fa-solid fa-magnifying-glass text-6xl text-blue-400 mb-6"></i>
+                        <h2 class="text-2xl font-semibold text-white mb-3">2. Locate the Download</h2>
+                        <p class="text-text-secondary text-lg">
+                            Find the file named <code class="bg-gray-800 text-yellow-300 px-2 py-1 rounded-md text-sm font-mono tracking-wider shadow-inner">messenger-v2.html</code>, usually in your Downloads folder.
+                        </p>
                     </div>
                 </div>
 
-                <div class="flex items-start gap-4">
-                    <div class="flex-shrink-0 w-8 h-8 bg-purple-500/20 text-purple-300 rounded-full flex items-center justify-center font-bold">3</div>
-                    <div>
-                        <h2 class="font-semibold text-white mb-1">Open in Browser</h2>
-                        <p>Double-click the <code class="bg-gray-800 px-1 rounded">messenger-v2.html</code> file. It should automatically open in your default web browser, launching the Messenger 2.0 application.</p>
+                <!-- STEP 3: OPEN -->
+                <div id="step-3" class="step-content">
+                    <div class="flex flex-col items-center text-center w-full">
+                        <i class="fa-solid fa-browser text-6xl text-green-400 mb-6"></i>
+                        <h2 class="text-2xl font-semibold text-white mb-3">3. Launch the Application</h2>
+                        <p class="text-text-secondary text-lg">
+                            <span class="font-accent-bold">Double-click</span> the file to open it in your web browser. That's it—the app is now running!
+                        </p>
                     </div>
                 </div>
             </div>
         </div>
+
     </div>
 
-    <a href="./messenger-v2.html" download="messenger-v2.html" class="fixed bottom-8 right-8 btn-purple" title="Download messenger-v2.html">
-        <i class="fa-solid fa-download"></i>
-        <span>Download App</span>
-    </a>
 
     <script>
-        // Basic script to prevent auth redirect issues if any exist
-        const mockAuth = { onAuthStateChanged: (cb) => cb(true) }; 
-        function initializeAuth() {
-            mockAuth.onAuthStateChanged((user) => {
-                if (!user) {
-                    // In a real app, you might redirect, but for this tutorial, we'll just stay.
-                    // window.location.href = '../index.html'; 
+        const dom = {
+            stepContents: document.querySelectorAll('.step-content'),
+            stepIndicators: document.querySelectorAll('.step-indicator'), 
+            stepDots: document.querySelectorAll('.step-dot'),
+            prevBtn: document.getElementById('prev-btn'),
+            nextBtn: document.getElementById('next-btn'),
+        };
+
+        let currentStep = 1;
+        const totalSteps = dom.stepContents.length;
+        let isAnimating = false;
+
+        /**
+         * Updates the tutorial step with a fade and slide animation.
+         * @param {number} newStep - The step number to navigate to (1, 2, or 3).
+         */
+        function updateStep(newStep) {
+            if (isAnimating || newStep < 1 || newStep > totalSteps || newStep === currentStep) return;
+            isAnimating = true;
+
+            const direction = newStep > currentStep ? 'next' : 'prev';
+            const oldStepElement = document.getElementById(`step-${currentStep}`);
+            const newStepElement = document.getElementById(`step-${newStep}`);
+            const directionClass = direction === 'next' ? 'slide-left' : 'slide-right';
+
+            // 1. Start transition: Make old step slide out
+            if (oldStepElement) {
+                oldStepElement.classList.add(directionClass);
+                oldStepElement.classList.remove('active');
+            }
+            
+            // 2. Prepare new step: position it off-screen on the opposite side
+            if (newStepElement) {
+                const resetClass = direction === 'next' ? 'slide-right' : 'slide-left';
+                newStepElement.classList.add(resetClass);
+            }
+            
+            // Short timeout to ensure CSS registers the slide-out and off-screen prep before slide-in starts
+            setTimeout(() => {
+                // 3. Activate new step and remove off-screen class to trigger slide-in
+                if (newStepElement) {
+                    newStepElement.classList.remove('slide-left', 'slide-right');
+                    newStepElement.classList.add('active');
+                }
+                
+                // 4. Update state and UI
+                currentStep = newStep;
+                updateUI();
+
+                // 5. Clean up old step and finish animation flag
+                setTimeout(() => {
+                    if (oldStepElement) {
+                        oldStepElement.classList.remove('slide-left', 'slide-right');
+                    }
+                    isAnimating = false;
+                }, 500); // Matches CSS transition duration
+            }, 10); 
+        }
+
+        /**
+         * Updates the visual state of navigation buttons and step dots/indicators.
+         */
+        function updateUI() {
+            // Update dots and indicator styling
+            dom.stepIndicators.forEach(indicator => {
+                const stepDot = indicator.querySelector('.step-dot');
+                const stepTitle = indicator.querySelector('.step-title');
+                const stepSubtitle = indicator.querySelector('.step-subtitle');
+                const stepNum = parseInt(indicator.dataset.step, 10);
+                
+                const isActive = stepNum === currentStep;
+                indicator.classList.toggle('active', isActive);
+                
+                // Dot styling: Toggle 'active' class for the new .btn-icon styling
+                stepDot.classList.toggle('active', isActive);
+
+                // Text styling (Ensures inactive text remains secondary)
+                if (!isActive) {
+                    stepTitle.classList.remove('text-white', 'font-semibold');
+                    stepTitle.classList.add('text-text-primary');
+                    stepSubtitle.classList.add('text-text-secondary');
                 }
             });
+
+            // Update navigation buttons (disabled states)
+            // The visual disabled state is now handled by the .btn-nav-action:disabled CSS rule
+            dom.prevBtn.disabled = currentStep === 1;
+            dom.nextBtn.disabled = currentStep === totalSteps;
         }
-        setTimeout(() => { initializeAuth(); }, 100); 
+
+        /**
+         * Initializes event listeners for navigation.
+         */
+        function initListeners() {
+            dom.prevBtn.addEventListener('click', () => updateStep(currentStep - 1));
+            dom.nextBtn.addEventListener('click', () => updateStep(currentStep + 1));
+            
+            // Use the whole indicator div to trigger the step change
+            dom.stepIndicators.forEach(indicator => {
+                indicator.addEventListener('click', (e) => {
+                    // Find the step number, prioritizing the button's data-step if clicked, otherwise the indicator's.
+                    let stepNum = parseInt(e.currentTarget.dataset.step, 10);
+
+                    // If a button inside was clicked, use its data-step
+                    const dot = e.target.closest('.step-dot');
+                    if (dot) {
+                        stepNum = parseInt(dot.dataset.step, 10);
+                    }
+                    
+                    updateStep(stepNum);
+                });
+            });
+        }
+
+        // --- Start the Tutorial App ---
+        window.onload = function() {
+            initListeners();
+            updateUI(); // Set initial state
+        }
     </script>
 </body>
 </html>
