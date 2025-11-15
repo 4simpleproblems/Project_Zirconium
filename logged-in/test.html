@@ -233,7 +233,7 @@
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
         // --- Import Firebase Config (Assumed to exist in a relative file) ---
-        import { firebaseConfig } from "../authentication/firebase-config.js"; 
+        import { firebaseConfig } from "../firebase-config.js"; 
 
         if (!firebaseConfig || !firebaseConfig.apiKey) {
             console.error("FATAL ERROR: Firebase configuration is missing or invalid.");
