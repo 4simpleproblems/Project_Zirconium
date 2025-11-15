@@ -61,6 +61,10 @@
         }
         
         .btn-toolbar-style.btn-primary-override {
+            /* Full Width button override for general settings */
+            width: 100%; 
+            justify-content: center;
+            
             background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
             border: 1px solid var(--tab-active-border, #4f46e5);
             color: var(--tab-active-text, #4f46e5);
@@ -158,7 +162,7 @@
             border-radius: 0.5rem; 
             color: #c0c0c0; 
             transition: all 0.2s;
-            max-width: 400px; /* Limit input width */
+            /* Removed max-width to allow w-full inside the max-w-xl parent */
         }
         .input-text-style:focus {
             border-color: #505050; 
@@ -232,7 +236,9 @@
             serverTimestamp
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
-        // --- Import Firebase Config (Assumed to exist in a relative file) ---
+        // **IMPORTANT NOTE**: The external import for firebase-config.js was kept here from the
+        // file you provided, but remember this line may cause a 404 error if that file is not
+        // in the correct relative path. 
         import { firebaseConfig } from "../firebase-config.js"; 
 
         if (!firebaseConfig || !firebaseConfig.apiKey) {
@@ -284,8 +290,11 @@
 
         /**
          * Generates the HTML for the "General Settings" section, including Username Change.
+         * MODIFIED to include currentMonthName and new UI styles.
          */
-        function getGeneralContent(currentUsername, changesRemaining) {
+        function getGeneralContent(currentUsername, changesRemaining, currentMonthName) {
+             const MAX_CHANGES = 3;
+             const changesUsed = MAX_CHANGES - changesRemaining;
              const isDisabled = changesRemaining <= 0;
              const buttonText = isDisabled ? 'Limit Reached' : 'Change Username';
              
@@ -297,33 +306,38 @@
                     <p class="text-lg text-gray-400 leading-relaxed mb-4">
                         Your current 4SP username is: <span class="text-emphasis text-blue-400">${currentUsername}</span>
                     </p>
+
+                    <div class="flex justify-between items-center mb-4 p-3 rounded-lg border border-yellow-800/20 bg-yellow-900/10">
+                        <p class="text-sm font-light text-gray-300">
+                           <i class="fa-solid fa-calendar-alt mr-2 text-yellow-500"></i>
+                           Username change limit for:
+                           <span class="text-emphasis text-yellow-300">${currentMonthName}</span>
+                        </p>
+                        <span class="text-lg font-semibold ${changesRemaining > 0 ? 'text-green-400' : 'text-red-400'}">
+                            ${changesUsed}/${MAX_CHANGES} used
+                        </span>
+                    </div>
                     
                     <form id="usernameChangeForm" novalidate class="flex flex-col gap-4"> 
-                        <div>
+                        <div class="w-full">
                             <label for="newUsername" class="block mb-2 text-gray-400 text-sm font-light">New Username</label>
-                            <div class="flex gap-2">
-                                <input type="text" id="newUsername" placeholder="4-24 characters, only allowed symbols" required 
-                                    class="input-text-style flex-grow" ${isDisabled ? 'disabled' : ''}>
-                                <button type="submit" id="changeUsernameBtn" 
-                                    class="p-3 text-lg rounded-xl font-normal transition min-w-[150px] 
-                                    ${isDisabled ? 'ring-1 ring-gray-600 text-gray-600 bg-gray-900/50 cursor-not-allowed' : 'ring-1 ring-white/20 text-white bg-white/5 hover:bg-white/10'}"
-                                    ${isDisabled ? 'disabled' : ''}>
-                                    ${buttonText}
-                                </button>
-                            </div>
+                            <input type="text" id="newUsername" placeholder="4-24 characters, only allowed symbols" required 
+                                class="input-text-style w-full" ${isDisabled ? 'disabled' : ''}>
                             <p class="text-xs text-gray-500 mt-2 font-light">
-                                Allowed symbols: .,-+\_!?$
+                                Allowed symbols: .,-+\\_!?$
                             </p>
                         </div>
                         
                         <div id="usernameChangeMessage" class="general-message-area text-sm"></div>
-                        
-                        <p class="text-sm text-gray-400 mt-2 font-light">
-                            You have <span class="text-emphasis ${changesRemaining > 0 ? 'text-green-400' : 'text-red-400'}">${changesRemaining}</span> username change${changesRemaining === 1 ? '' : 's'} remaining this month. 
-                            Limit resets on the 1st of every month.
-                        </p>
+
+                        <button type="submit" id="changeUsernameBtn" 
+                            class="py-3 text-lg rounded-lg font-normal transition 
+                            ${isDisabled ? 'ring-1 ring-gray-600 text-gray-600 bg-gray-900/50 cursor-not-allowed' : 'btn-primary-override'}"
+                            ${isDisabled ? 'disabled' : ''}>
+                            <i class="fa-solid fa-user-pen mr-2"></i> 
+                            ${buttonText}
+                        </button>
                     </form>
-                    
                  </div>
              `;
          }
@@ -343,7 +357,7 @@
                     
                     <h3 class="text-xl font-bold text-white mt-6 mb-2">The Four Simple Challenges We Address</h3>
                     <ul class="list-disc list-inside ml-4 text-lg text-gray-400 leading-relaxed">
-                        <li>Providing a <span class="text-emphasis">digital leisure platform free of  advertisements</span>.</li>
+                        <li>Providing a <span class="text-emphasis">digital leisure platform free of advertisements</span>.</li>
                         <li>Delivering a <span class="text-emphasis">student toolkit designed for accessibility and consistent availability</span>, bypassing typical institutional network restrictions.</li>
                         <li>Establishing a <span class="text-emphasis">free, comprehensive, and reliable entertainment and resource hub</span>.</li>
                         <li>Enforcing <span class="text-emphasis">internal governance and balance of power</span>: Administrative authority is strictly limited to necessary website management functions, and only the creator holds full administrative power, ensuring neutrality.</li>
@@ -399,6 +413,7 @@
 
         /**
          * Loads user data, checks rate limit, and renders the General tab.
+         * MODIFIED to get the current month name.
          */
         async function loadGeneralTab() {
             if (!currentUser) return; // Should not happen if auth check passes
@@ -413,19 +428,20 @@
 
             let userData = userDocSnap.data();
             const today = new Date();
-            const currentMonth = today.getMonth() + 1; // 1-12
+            const currentMonthNumber = today.getMonth() + 1; // 1-12
+            const currentMonthName = today.toLocaleDateString('en-US', { month: 'long' }); // e.g., "November"
             const MAX_CHANGES = 3;
 
             let changesThisMonth = userData.usernameChangesThisMonth || 0;
             let lastChangeMonth = userData.lastUsernameChangeMonth || 0;
 
             // --- Monthly Reset Logic ---
-            if (currentMonth !== lastChangeMonth) {
+            if (currentMonthNumber !== lastChangeMonth) {
                 // It's a new month, reset the counter
                 changesThisMonth = 0;
                 await updateDoc(userDocRef, {
                     usernameChangesThisMonth: 0,
-                    lastUsernameChangeMonth: currentMonth
+                    lastUsernameChangeMonth: currentMonthNumber
                 });
                 // Re-fetch or update data structure after reset
                 userDocSnap = await getDoc(userDocRef);
@@ -434,8 +450,8 @@
             
             const changesRemaining = MAX_CHANGES - changesThisMonth;
 
-            // 1. Render the General Content
-            mainView.innerHTML = getGeneralContent(userData.username, changesRemaining);
+            // 1. Render the General Content - PASS THE MONTH NAME
+            mainView.innerHTML = getGeneralContent(userData.username, changesRemaining, currentMonthName);
             
             // 2. Attach Event Listener for Username Change
             const usernameChangeForm = document.getElementById('usernameChangeForm');
@@ -480,7 +496,7 @@
                         await updateDoc(userDocRef, {
                             username: newUsername,
                             usernameChangesThisMonth: newChangesCount,
-                            lastUsernameChangeMonth: currentMonth // Ensure month is current even if it was reset
+                            lastUsernameChangeMonth: currentMonthNumber // Ensure month is current even if it was reset
                         });
 
                         showMessage(messageElement, `Username successfully changed to ${newUsername}!`, 'success');
@@ -547,7 +563,7 @@
         });
 
 
-        // --- AUTHENTICATION/REDIRECT LOGIC (Retained and Modified) ---
+        // --- AUTHENTICATION/REDIRECT LOGIC (Retained and Modified) ---\
         const loadingScreen = document.getElementById('loading-screen');
         const pageContent = document.getElementById('page-content');
 
