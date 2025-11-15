@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4SP - Messenger Tutorial</title>
+    <meta name="description" content="A tutorial on how to install and open the Messenger 2.0 app.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://kit-pro.fontawesome.com/releases/v7.0.1/css/pro.min.css" media="all">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../navigation.js"></script>
+    <script src="../injector.js"></script>
+
+    <style>
+        body { 
+            font-family: 'Geist', sans-serif; 
+            background-color: #070707; 
+            color: #c0c0c0; 
+            font-weight: 300;
+        }
+
+        h1, h2, h3, .font-bold, .font-semibold, strong {
+            font-weight: 400 !important;
+        }
+
+        .btn-purple {
+            background-color: #5b21b6;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-purple:hover {
+            background-color: #4c1d95;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div id="page-content" class="flex flex-col items-center justify-center min-h-screen p-4">
+        <div class="w-full max-w-2xl mx-auto">
+            <h1 class="text-3xl font-bold text-white text-center mb-6">Messenger 2.0 Installation Tutorial</h1>
+            
+            <div class="space-y-8 text-lg">
+                <div class="flex items-start gap-4">
+                    <div class="flex-shrink-0 w-8 h-8 bg-purple-500/20 text-purple-300 rounded-full flex items-center justify-center font-bold">1</div>
+                    <div>
+                        <h2 class="font-semibold text-white mb-1">Download the File</h2>
+                        <p>Click the download button at the bottom-right of this page to download the <code class="bg-gray-800 px-1 rounded">messenger-v2.html</code> file.</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start gap-4">
+                    <div class="flex-shrink-0 w-8 h-8 bg-purple-500/20 text-purple-300 rounded-full flex items-center justify-center font-bold">2</div>
+                    <div>
+                        <h2 class="font-semibold text-white mb-1">Find the File</h2>
+                        <p>Open your computer's file explorer or downloads folder to locate the file you just downloaded.</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start gap-4">
+                    <div class="flex-shrink-0 w-8 h-8 bg-purple-500/20 text-purple-300 rounded-full flex items-center justify-center font-bold">3</div>
+                    <div>
+                        <h2 class="font-semibold text-white mb-1">Open in Browser</h2>
+                        <p>Double-click the <code class="bg-gray-800 px-1 rounded">messenger-v2.html</code> file. It should automatically open in your default web browser, launching the Messenger 2.0 application.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <a href="./messenger-v2.html" download="messenger-v2.html" class="fixed bottom-8 right-8 btn-purple" title="Download messenger-v2.html">
+        <i class="fa-solid fa-download"></i>
+        <span>Download App</span>
+    </a>
+
+    <script>
+        // Basic script to prevent auth redirect issues if any exist
+        const mockAuth = { onAuthStateChanged: (cb) => cb(true) }; 
+        function initializeAuth() {
+            mockAuth.onAuthStateChanged((user) => {
+                if (!user) {
+                    // In a real app, you might redirect, but for this tutorial, we'll just stay.
+                    // window.location.href = '../index.html'; 
+                }
+            });
+        }
+        setTimeout(() => { initializeAuth(); }, 100); 
+    </script>
+</body>
+</html>
