@@ -1,73 +1,107 @@
-// [START initialize_firebase_in_sw]
+// --- Firebase Messaging Service Worker ---
+// This file must be placed in the ROOT directory of your web app (e.g., your_project_root/firebase-messaging-sw.js)
 
-// ⚠️ IMPORTANT: These scripts must use the compatibility version of the Firebase SDK
-// and MUST be accessible via Google's CDN.
-importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
+// Import the Firebase components needed for the Service Worker (compatibility version)
+importScripts('https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/11.6.1/firebase-messaging-compat.js');
 
-// 🚨 REQUIRED ACTION: As the Service Worker runs in a separate thread and context, 
-// you MUST manually copy the contents of your `firebaseConfig` object from 
+// 🚨 IMPORTANT: The configuration details MUST be correct.
+// Using the config that was identified in previous steps
 const firebaseConfig = {
-  apiKey: "AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro",
-  authDomain: "project-zirconium.firebaseapp.com",
-  projectId: "project-zirconium",
-  storageBucket: "project-zirconium.firebasestorage.app",
-  messagingSenderId: "1096564243475",
-  appId: "1:1096564243475:web:6d0956a70125eeea1ad3e6",
-  measurementId: "G-1D4F692C1Q"
+    apiKey: "AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro",
+    authDomain: "project-zirconium.firebaseapp.com",
+    projectId: "project-zirconium",
+    storageBucket: "project-zirconium.firebasestorage.app",
+    messagingSenderId: "1096564243475",
+    appId: "1:1096564243475:web:6d0956a70125eeea1ad3e6" 
 };
 
-// Initialize Firebase in the service worker.
+// Initialize the Firebase app
 firebase.initializeApp(firebaseConfig);
 
-// Retrieve the messaging module.
+// Retrieve the Firebase Messaging service worker instance
 const messaging = firebase.messaging();
 
-// Handle incoming messages in the background (when the app is closed or in a background tab).
+/**
+ * Handles incoming push messages when the app is in the background or closed.
+ * NOW INCLUDES RICH OPTIONS FOR CHROMEOS DISPLAY
+ */
 messaging.onBackgroundMessage((payload) => {
     console.log('[firebase-messaging-sw.js] Received background message ', payload);
 
-    // Default title if not provided by the message payload
-    const notificationTitle = payload.notification?.title || 'New 4SP Notification';
-    
-    // Customize notification options
+    const notificationTitle = payload.notification.title;
+    const notificationBody = payload.notification.body;
+
+    let actions = [];
+    try {
+        // Safely parse actions string from data payload
+        if (payload.data.actions) {
+            actions = JSON.parse(payload.data.actions);
+        }
+    } catch (e) {
+        console.error("Failed to parse notification actions:", e);
+    }
+
     const notificationOptions = {
-        body: payload.notification?.body || 'You have a new update.',
-        icon: 'https://v5-4simpleproblems.github.io/images/logo.png', // ⬅️ UPDATED ICON PATH
-        // Arbitrary data passed with the message, often used for click tracking
-        data: payload.data 
+        body: notificationBody,
+        icon: payload.notification.icon || '/images/logo.png',
+        image: payload.notification.image, // Add the larger image for rich display
+        data: payload.data, 
+        
+        // Add action buttons
+        actions: actions
     };
 
-    // Display the notification
+    // Show the notification using the Service Worker's registration
     self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
+/**
+ * Handles what happens when the user clicks the notification or one of its action buttons.
+ */
 self.addEventListener('notificationclick', (event) => {
+    // Determine if an action button was clicked or the main body
+    const clickedAction = event.action;
     event.notification.close();
     
     let url = '/dailyphoto.html'; 
-    const action = event.notification.data?.action;
+    const payloadData = event.notification.data;
 
-    if (action === 'VIEW_POST' && event.notification.data?.postId) {
-        url = `/dailyphoto.html?view=post&id=${event.notification.data.postId}`;
-    } else if (action === 'VIEW_REQUESTS') {
-        url = `/dailyphoto.html?view=friends`; // Redirects to the page to manage requests
-    } else if (action === 'FRIEND_ACCEPTED') {
+    // --- Action Button Handling (for rich notifications) ---
+    if (clickedAction === 'view-requests-action') {
         url = `/dailyphoto.html?view=friends`;
+    } else if (clickedAction === 'share-daily-action') {
+        url = `/dailyphoto.html?view=share`;
+    } 
+    // --- Main Notification Body Click Handling (fallback to existing logic) ---
+    else {
+        const actionType = payloadData.action;
+
+        if (actionType === 'VIEW_POST' && payloadData.postId) {
+            url = `/dailyphoto.html?view=post&id=${payloadData.postId}`;
+        } else if (actionType === 'VIEW_REQUESTS') {
+            url = `/dailyphoto.html?view=friends`;
+        } else if (actionType === 'FRIEND_ACCEPTED') {
+            url = `/dailyphoto.html?view=friends`;
+        } else if (payloadData.click_action) {
+            // Use the click_action specified in the data payload as a fallback default URL
+            url = payloadData.click_action; 
+        }
     }
     
     // Look at all the window clients (browser tabs) and focus an existing one or open a new one
     event.waitUntil(
         clients.matchAll({ type: 'window' }).then((clientList) => {
             for (const client of clientList) {
+                // If a client is already open at the target URL, focus it
                 if (client.url.includes(url) && 'focus' in client) {
                     return client.focus();
                 }
             }
+            // Otherwise, open a new window
             if (clients.openWindow) {
                 return clients.openWindow(url);
             }
         })
     );
 });
-// [END initialize_firebase_in_sw]
