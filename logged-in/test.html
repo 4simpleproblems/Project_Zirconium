@@ -220,9 +220,17 @@
             getAuth, 
             onAuthStateChanged, 
             signOut,
-            EmailAuthProvider, // NEW
-            reauthenticateWithCredential, // NEW
-            updatePassword // NEW
+            EmailAuthProvider, 
+            reauthenticateWithCredential, 
+            updatePassword,
+            // NEW AUTH IMPORTS
+            GoogleAuthProvider,
+            GithubAuthProvider,
+            OAuthProvider,
+            linkWithPopup,
+            unlink,
+            reauthenticateWithPopup,
+            deleteUser
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { 
             getFirestore, 
@@ -233,7 +241,8 @@
             query,
             where,
             getDocs,
-            serverTimestamp
+            serverTimestamp,
+            deleteDoc // NEW FIREBASE IMPORT
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
         // --- Import Firebase Config (Assumed to exist in a relative file) ---
@@ -253,7 +262,7 @@
         const mainView = document.getElementById('settings-main-view');
         let currentUser = null; // To store the authenticated user object
         
-        // Constants for validation and limits (UPDATED)
+        // Constants for validation and limits
         const MIN_LENGTH = 6; 
         const MAX_LENGTH = 24;
         const MAX_CHANGES = 5; 
@@ -267,6 +276,31 @@
             'data': { title: 'Data Management', icon: 'fa-database' },
             'about': { title: 'About 4SP', icon: 'fa-circle-info' },
         };
+        
+        // Constants for providers (NEW)
+        const PROVIDER_CONFIG = {
+            'google.com': { 
+                name: 'Google', 
+                icon: '../images/google-icon.png', 
+                instance: () => new GoogleAuthProvider() 
+            },
+            'github.com': { 
+                name: 'GitHub', 
+                icon: '../images/github-mark-white.png', 
+                instance: () => new GithubAuthProvider() 
+            },
+            'microsoft.com': { 
+                name: 'Microsoft', 
+                icon: '../images/microsoft.png', 
+                instance: () => new OAuthProvider('microsoft.com') 
+            },
+            'password': { 
+                name: 'Email & Password', 
+                icon: '<i class="fa-solid fa-at fa-lg mr-3"></i>', 
+                isCredential: true
+            }
+        };
+
         
         // --- Shared Helper Functions ---
         const getUserDocRef = (userId) => doc(db, 'users', userId);
@@ -318,13 +352,138 @@
                 </div>
             `;
         }
+        
+        /**
+         * Renders the Linked Providers and Account Deletion section. (NEW FUNCTION)
+         */
+        function getAccountManagementContent(providerData) {
+            // Determine the Primary Provider (the first one in the list)
+            const primaryProviderId = providerData[0].providerId;
+            
+            let linkedProvidersHtml = providerData.map(info => {
+                const id = info.providerId;
+                const config = PROVIDER_CONFIG[id] || { name: id, icon: '<i class="fa-solid fa-puzzle-piece fa-lg mr-3"></i>' };
+                
+                // Determine if this provider can be unlinked
+                // Cannot unlink if: 
+                // 1. It's the only provider left (length === 1).
+                // 2. It's the primary 'password' provider (the user can't remove their only password login).
+                const canUnlink = providerData.length > 1 && !(id === 'password' && primaryProviderId === 'password');
+                
+                // Determine if icon is an image or a FontAwesome icon
+                let iconHtml = config.icon.startsWith('<i') ? config.icon : `<img src="${config.icon}" alt="${config.name} Icon" class="w-5 h-5 mr-3">`;
+
+                return `
+                    <div class="flex justify-between items-center py-2 px-3 border-b border-[#252525] last:border-b-0">
+                        <div class="flex items-center text-lg text-white">
+                            ${iconHtml}
+                            ${config.name}
+                            ${id === primaryProviderId ? '<span class="text-xs text-yellow-400 ml-2 font-normal">(Primary)</span>' : ''}
+                        </div>
+                        ${canUnlink ? 
+                            `<button class="btn-toolbar-style text-red-400 hover:border-red-600 hover:text-red-600" data-provider-id="${id}" data-action="unlink" style="padding: 0.5rem 0.75rem;">
+                                <i class="fa-solid fa-unlink mr-1"></i> Unlink
+                            </button>` : 
+                            `<span class="text-xs text-custom-light-gray font-light ml-4">Cannot Unlink</span>`
+                        }
+                    </div>
+                `;
+            }).join('');
+
+            // Filter out already linked social providers for the linking list
+            const linkedIds = providerData.map(p => p.providerId);
+            let availableProvidersHtml = Object.keys(PROVIDER_CONFIG)
+                .filter(id => id !== 'password' && !linkedIds.includes(id))
+                .map(id => {
+                    const config = PROVIDER_CONFIG[id];
+                    let iconHtml = config.icon.startsWith('<i') ? config.icon : `<img src="${config.icon}" alt="${config.name} Icon" class="w-5 h-5 mr-3">`;
+
+                    return `
+                        <button class="btn-toolbar-style settings-box flex items-center justify-start w-full" data-provider-id="${id}" data-action="link" style="padding: 0.5rem 1rem;">
+                            ${iconHtml}
+                            Link with ${config.name}
+                        </button>
+                    `;
+                }).join('');
+                
+            if (availableProvidersHtml === '') {
+                availableProvidersHtml = `<p class="text-sm text-gray-500 text-center py-2">All available social providers are linked.</p>`;
+            }
+
+
+            // --- Account Deletion Section ---
+            let deletionContent = '';
+            
+            if (primaryProviderId === 'password') {
+                // Email/Password Deletion
+                deletionContent = `
+                    <h3 class="text-xl font-bold text-white mb-2 mt-8">Delete Account</h3>
+                    <div id="deletionSection" class="settings-box p-4 w-full max-w-xl bg-red-900/10 border-red-700/50">
+                        <p class="text-sm font-light text-red-300 mb-3">
+                            <i class="fa-solid fa-triangle-exclamation mr-1"></i> 
+                            WARNING: Deleting your account is permanent and cannot be undone.
+                        </p>
+                        
+                        <div id="passwordDeletionStep1">
+                            <label for="deletePasswordInput" class="block text-red-300 text-sm font-light mb-2">Confirm Current Password</label>
+                            <input type="password" id="deletePasswordInput" placeholder="Current Password" class="input-text-style w-full bg-red-900/20 border-red-700/50 mb-3">
+                            
+                            <label for="deleteConfirmText" class="block text-red-300 text-sm font-light mb-2">Type "Delete My Account" to confirm (Case-insensitive)</label>
+                            <input type="text" id="deleteConfirmText" placeholder="Delete My Account" class="input-text-style w-full bg-red-900/20 border-red-700/50">
+                            
+                            <div class="flex justify-between items-center pt-4">
+                                <p id="deleteMessage" class="general-message-area text-sm"></p>
+                                <button id="finalDeleteBtn" class="btn-toolbar-style w-48 bg-red-700 hover:bg-red-800 text-white border-red-700 hover:border-red-800" disabled style="padding: 0.5rem 0.75rem;">
+                                     <i class="fa-solid fa-trash mr-1"></i> Delete Account
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Social Provider Deletion
+                deletionContent = `
+                    <h3 class="text-xl font-bold text-white mb-2 mt-8">Delete Account</h3>
+                    <div id="deletionSection" class="settings-box p-4 w-full max-w-xl bg-red-900/10 border-red-700/50">
+                        <p class="text-sm font-light text-red-300 mb-3">
+                            <i class="fa-solid fa-triangle-exclamation mr-1"></i> 
+                            WARNING: Deleting your account is permanent. You must re-authenticate with ${PROVIDER_CONFIG[primaryProviderId].name} to proceed.
+                        </p>
+                        
+                        <div class="flex justify-between items-center pt-2">
+                            <p id="deleteMessage" class="general-message-area text-sm"></p>
+                            <button id="reauthenticateBtn" class="btn-toolbar-style w-48 btn-primary-override" data-provider-id="${primaryProviderId}" style="padding: 0.5rem 0.75rem;">
+                                 <i class="fa-solid fa-key mr-1"></i> Re-authenticate
+                            </button>
+                            <button id="finalDeleteBtn" class="btn-toolbar-style w-48 bg-red-700 hover:bg-red-800 text-white border-red-700 hover:border-red-800 hidden" style="padding: 0.5rem 0.75rem;">
+                                 <i class="fa-solid fa-trash mr-1"></i> Delete Account
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // --- Combined HTML for Account Management ---
+            return `
+                <h3 class="text-xl font-bold text-white mb-2 mt-8">Linked Providers</h3>
+                <div class="settings-box p-0 w-full max-w-xl mb-4" data-section="linked-providers">
+                    ${linkedProvidersHtml}
+                </div>
+                
+                <h3 class="text-xl font-bold text-white mb-2">Link New Providers</h3>
+                <div class="w-full max-w-xl flex flex-col gap-3">
+                    ${availableProvidersHtml}
+                </div>
+                
+                ${deletionContent}
+            `;
+        }
 
 
         /**
          * Generates the HTML for the "General Settings" section.
-         * Added isEmailPasswordUser parameter to conditionally render password section.
          */
-        function getGeneralContent(currentUsername, changesRemaining, changesThisMonth, currentMonthName, isEmailPasswordUser) {
+        function getGeneralContent(currentUsername, changesRemaining, changesThisMonth, currentMonthName, isEmailPasswordUser, providerData) {
              const changesUsed = changesThisMonth;
              
              // Conditionally generate the password section HTML
@@ -388,6 +547,8 @@
                 </div>
                 
                 ${passwordSectionHtml}
+                
+                ${getAccountManagementContent(providerData)}
              `;
          }
 
@@ -458,6 +619,13 @@
                 </div>
             `;
         }
+        
+        // Helper for refreshing the General Tab
+        const refreshGeneralTab = () => {
+            // Clear the current view state and re-render the General tab
+            // This is necessary because currentUser.providerData needs to be fresh
+            switchTab('general');
+        };
 
         /**
          * Loads user data, checks rate limit, and renders the General tab.
@@ -505,7 +673,8 @@
                 changesRemaining, 
                 changesThisMonth, 
                 currentMonthName,
-                isEmailPasswordUser // Pass provider info
+                isEmailPasswordUser, 
+                currentUser.providerData // Pass provider info
             );
             
             // 2. Element References (Username Section)
@@ -727,13 +896,191 @@
                         // Re-enable button if there was an error
                         if (!passwordMessage.innerHTML.includes('success')) {
                             applyPasswordBtn.disabled = false;
-                            // checkPasswordFields(); // Already re-enabled if logic failed before try/catch
                         }
                     }
                 });
             }
+            
+            // =================================================================
+            // --- LINKING / UNLINKING PROVIDERS LOGIC (NEW) ---
+            // =================================================================
+
+            const linkProviderButtons = mainView.querySelectorAll('button[data-action="link"]');
+            const unlinkProviderButtons = mainView.querySelectorAll('button[data-action="unlink"]');
+
+            // --- LINKING Providers ---
+            linkProviderButtons.forEach(button => {
+                button.addEventListener('click', async () => {
+                    const providerId = button.dataset.providerId;
+                    const config = PROVIDER_CONFIG[providerId];
+                    const providerInstance = config.instance();
+                    
+                    showMessage(messageElement, `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Attempting to link with ${config.name}...`, 'warning');
+                    
+                    try {
+                        await linkWithPopup(auth.currentUser, providerInstance);
+                        showMessage(messageElement, `${config.name} successfully linked to your account!`, 'success');
+                        setTimeout(refreshGeneralTab, 1500); // Refresh UI
+                    } catch (error) {
+                        console.error("Error linking provider:", error);
+                        let msg = `Failed to link ${config.name}.`;
+                        if (error.code === 'auth/credential-already-in-use') {
+                            msg = `This ${config.name} account is already linked to another user.`;
+                        } else if (error.code === 'auth/popup-closed-by-user') {
+                            msg = 'Link cancelled by user.';
+                        } else if (error.code === 'auth/requires-recent-login') {
+                            msg = 'Please sign out and sign in again to link a new provider.';
+                        }
+                        showMessage(messageElement, msg, 'error');
+                    }
+                });
+            });
+
+            // --- UNLINKING Providers ---
+            unlinkProviderButtons.forEach(button => {
+                button.addEventListener('click', async () => {
+                    const providerId = button.dataset.providerId;
+                    const config = PROVIDER_CONFIG[providerId];
+                    
+                    showMessage(messageElement, `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Unlinking ${config.name}...`, 'warning');
+                    
+                    try {
+                        await unlink(auth.currentUser, providerId);
+                        showMessage(messageElement, `${config.name} successfully unlinked.`, 'success');
+                        setTimeout(refreshGeneralTab, 1500); // Refresh UI
+                    } catch (error) {
+                        console.error("Error unlinking provider:", error);
+                        let msg = `Failed to unlink ${config.name}.`;
+                        if (error.code === 'auth/no-such-provider') {
+                            msg = 'Provider not found on this account.';
+                        } else if (error.code === 'auth/requires-recent-login') {
+                             msg = 'Please sign out and sign in again to unlink this provider.';
+                        } else if (error.code === 'auth/provider-already-linked') {
+                            // This can happen if attempting to unlink the last provider
+                            msg = "Cannot unlink the last remaining sign-in method.";
+                        }
+                        
+                        showMessage(messageElement, msg, 'error');
+                    }
+                });
+            });
+
+            // =================================================================
+            // --- ACCOUNT DELETION LOGIC (NEW) ---
+            // =================================================================
+            const deletePasswordInput = document.getElementById('deletePasswordInput');
+            const deleteConfirmText = document.getElementById('deleteConfirmText');
+            const reauthenticateBtn = document.getElementById('reauthenticateBtn');
+            const finalDeleteBtn = document.getElementById('finalDeleteBtn');
+            const deleteMessage = document.getElementById('deleteMessage');
+            const primaryProviderId = currentUser.providerData[0].providerId;
 
 
+            const performAccountDeletion = async () => {
+                deleteMessage.innerHTML = '';
+                showMessage(deleteMessage, '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Deleting account...', 'warning');
+
+                try {
+                    // Delete user's Firestore document first (to prevent orphaned data)
+                    await deleteDoc(userDocRef); 
+                    
+                    // Delete Firebase Auth user
+                    await deleteUser(auth.currentUser);
+
+                    // Sign out and redirect to authentication page
+                    await signOut(auth);
+                    window.location.href = '../authentication.html';
+
+                } catch (error) {
+                    console.error("Error deleting account:", error);
+                    let msg = "Failed to delete account. Please try again or sign in again.";
+                    if (error.code === 'auth/requires-recent-login') {
+                        msg = 'Deletion failed: Please sign out and sign in again immediately to proceed with deletion.';
+                    }
+                    showMessage(deleteMessage, msg, 'error');
+                    // Re-enable/reset UI elements
+                    if (reauthenticateBtn) reauthenticateBtn.classList.remove('hidden');
+                    if (finalDeleteBtn) finalDeleteBtn.classList.add('hidden');
+                }
+            };
+
+
+            // --- Email/Password Primary Deletion Logic ---
+            if (primaryProviderId === 'password' && deletePasswordInput) {
+                const checkDeletionInputs = () => {
+                    const passwordMatch = deletePasswordInput.value.length > 0;
+                    const textConfirmed = deleteConfirmText.value.trim().toLowerCase() === 'delete my account';
+                    
+                    finalDeleteBtn.disabled = !(passwordMatch && textConfirmed);
+                };
+
+                deletePasswordInput.addEventListener('input', checkDeletionInputs);
+                deleteConfirmText.addEventListener('input', checkDeletionInputs);
+                
+                finalDeleteBtn.addEventListener('click', async () => {
+                    if (finalDeleteBtn.disabled) return;
+                    
+                    finalDeleteBtn.disabled = true;
+                    deleteMessage.innerHTML = '';
+                    showMessage(deleteMessage, '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Re-authenticating...', 'warning');
+                    
+                    try {
+                        // Re-authenticate using email/password credential
+                        const credential = EmailAuthProvider.credential(auth.currentUser.email, deletePasswordInput.value);
+                        await reauthenticateWithCredential(auth.currentUser, credential);
+
+                        // If re-auth is successful, proceed to final deletion
+                        await performAccountDeletion();
+
+                    } catch (error) {
+                        console.error("Error during password re-authentication for deletion:", error);
+                        let msg = 'Re-authentication failed. Incorrect password.';
+                        if (error.code === 'auth/requires-recent-login') {
+                             msg = 'Please sign out and sign in again immediately to proceed with deletion.';
+                        }
+                        showMessage(deleteMessage, msg, 'error');
+                        finalDeleteBtn.disabled = false;
+                    }
+                });
+            } 
+            // --- Social Provider Primary Deletion Logic ---
+            else if (reauthenticateBtn) {
+                
+                reauthenticateBtn.addEventListener('click', async () => {
+                    const providerInstance = PROVIDER_CONFIG[primaryProviderId].instance();
+                    
+                    reauthenticateBtn.disabled = true;
+                    deleteMessage.innerHTML = '';
+                    showMessage(deleteMessage, `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Re-authenticating with ${PROVIDER_CONFIG[primaryProviderId].name}...`, 'warning');
+                    
+                    try {
+                        // Re-authenticate using the social provider popup
+                        await reauthenticateWithPopup(auth.currentUser, providerInstance);
+                        
+                        // Re-authentication successful: change button to final delete button
+                        reauthenticateBtn.classList.add('hidden');
+                        finalDeleteBtn.classList.remove('hidden');
+                        showMessage(deleteMessage, 'Authentication successful. Click "Delete Account" one last time to confirm.', 'success');
+
+                    } catch (error) {
+                        console.error("Error during social re-authentication for deletion:", error);
+                        let msg = 'Re-authentication failed. Please try again.';
+                         if (error.code === 'auth/popup-closed-by-user') {
+                            msg = 'Re-authentication cancelled by user.';
+                        } else if (error.code === 'auth/requires-recent-login') {
+                             msg = 'Please sign out and sign in again immediately to proceed with deletion.';
+                        }
+                        showMessage(deleteMessage, msg, 'error');
+                        reauthenticateBtn.disabled = false;
+                    }
+                    if (reauthenticateBtn.classList.contains('hidden') === false) {
+                        reauthenticateBtn.disabled = false;
+                    }
+                });
+                
+                // Final Delete button click
+                finalDeleteBtn.addEventListener('click', performAccountDeletion);
+            }
         }
 
 
