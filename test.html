@@ -101,11 +101,11 @@
                     </form>
                     <div id="loginMessage" class="message-area w-full max-w-md mt-4 text-center text-sm"></div>
                     <div class="w-full max-w-md mt-4 text-center"> 
-                        <a id="forgotPasswordLink" class="text-blue-400 hover:text-blue-300 font-normal text-sm cursor-pointer">Forgot Password?</a> 
+                        <a id="forgotPasswordLink" class="text-white hover:text-gray-300 font-normal text-sm cursor-pointer">Forgot Password?</a> 
                     </div>
                     <p class="text-sm text-custom-light-gray mt-6 text-center w-full max-w-md">
                         Don't have an account? 
-                        <a id="showSignupLink" href="#" class="text-blue-400 hover:text-blue-300 font-normal transition">Sign up here</a>
+                        <a id="showSignupLink" href="#" class="text-white hover:text-gray-300 font-normal transition">Sign up here</a>
                     </p>
                 </div>
 
@@ -121,7 +121,7 @@
                     </form>
                     <div id="resetMessage" class="message-area w-full max-w-md mt-4 text-center text-sm"></div>
                     <div class="w-full max-w-md mt-6 text-center"> 
-                        <a id="backToLoginLink" class="text-blue-400 hover:text-blue-300 font-normal text-sm cursor-pointer">&larr; Back to Login</a> 
+                        <a id="backToLoginLink" class="text-white hover:text-gray-300 font-normal text-sm cursor-pointer">&larr; Back to Login</a> 
                     </div>
                 </div>
 
@@ -138,7 +138,7 @@
                     <div id="usernameMessage" class="message-area w-full max-w-md mt-4 text-center text-sm"></div>
                     <p class="text-sm text-custom-light-gray mt-6 text-center w-full max-w-md">
                         Already have an account? 
-                        <a id="showLoginLink" href="#" class="text-blue-400 hover:text-blue-300 font-normal transition">Login here</a>
+                        <a id="showLoginLink" href="#" class="text-white hover:text-gray-300 font-normal transition">Login here</a>
                     </p>
                 </div>
                 
@@ -158,7 +158,7 @@
                     </form>
                     <div id="signupMessage" class="message-area w-full max-w-md mt-4 text-center text-sm"></div>
                     <div class="w-full max-w-md mt-6 text-center"> 
-                        <a id="backToUsernameLink" class="text-blue-400 hover:text-blue-300 font-normal text-sm cursor-pointer">&larr; Back to Username</a> 
+                        <a id="backToUsernameLink" class="text-white hover:text-gray-300 font-normal text-sm cursor-pointer">&larr; Back to Username</a> 
                     </div>
                 </div>
 
@@ -186,8 +186,8 @@
                     
                     <p class="text-xs italic text-custom-light-gray text-center max-w-md mt-4 leading-relaxed font-light">
                         By continuing, you agree to our 
-                        <a href="legal.html" target="_blank" class="text-blue-400 hover:text-blue-300 font-normal">Terms of Service</a> and 
-                        <a href="legal.html" target="_blank" class="text-blue-400 hover:text-blue-300 font-normal">Privacy Policy</a>.
+                        <a href="legal.html" target="_blank" class="text-white hover:text-gray-300 font-normal">Terms of Service</a> and 
+                        <a href="legal.html" target="_blank" class="text-white hover:text-gray-300 font-normal">Privacy Policy</a>.
                     </p>
                 </div>
             </div>
@@ -218,11 +218,11 @@
             updateProfile,
             setPersistence,
             browserLocalPersistence,
-            onAuthStateChanged
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, query, collection, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         // Import the configuration object exported from your file.
+        // NOTE: This path MUST be correct in your file structure for the script to work.
         import { firebaseConfig, appId, googleFormLink } from '../firebase-config.js';
 
         // --- Firebase Initialization ---
@@ -317,8 +317,9 @@
             // --- NEW: BETA TESTER CHECK (for Login) ---
             const isBetaTester = await isUserBetaTester(user.email);
             if (!isBetaTester) {
+                // UPDATED: Link color to text-white
                 showMessage(messageDivs.login, 
-                    `Access is currently restricted to beta testers. Your email is not on the beta tester list. <a href="${googleFormLink}" target="_blank" class="underline font-normal text-yellow-300">Apply for beta access here</a>.`, 
+                    `Access is currently restricted to beta testers. Your email is not on the beta tester list. <a href="${googleFormLink}" target="_blank" class="underline font-normal text-white">Apply for beta access here</a>.`, 
                     'warning');
                 await signOut(auth); // Log them out.
                 return; // Stop further execution.
@@ -330,7 +331,8 @@
             if (user.emailVerified || isProviderLogin) {
                 navigateToDashboard();
             } else {
-                showMessage(messageDivs.login, 'Your email is not verified. Please check your inbox. <a href="#" id="resend-link" class="underline cursor-pointer text-blue-400 font-normal">Resend email</a>', 'error');
+                // UPDATED: Link color to text-white
+                showMessage(messageDivs.login, 'Your email is not verified. Please check your inbox. <a href="#" id="resend-link" class="underline cursor-pointer text-white font-normal">Resend email</a>', 'error');
                 
                 document.getElementById('resend-link').addEventListener('click', async (e) => {
                     e.preventDefault();
@@ -490,8 +492,9 @@
                     // Check if user is a beta tester before creating the account
                     const isBetaTester = await isUserBetaTester(email);
                     if (!isBetaTester) {
+                        // UPDATED: Link color to text-white
                         showMessage(messageDivs.signup, 
-                            `Account creation is currently restricted to beta testers. Your email is not on the beta tester list. <a href="${googleFormLink}" target="_blank" class="underline font-normal text-yellow-300">Apply for beta access here</a>.`, 
+                            `Account creation is currently restricted to beta testers. Your email is not on the beta tester list. <a href="${googleFormLink}" target="_blank" class="underline font-normal text-white">Apply for beta access here</a>.`, 
                             'warning');
                         return;
                     }
@@ -547,8 +550,9 @@
                         // New user -> Beta check, then create account
                         const isBetaTester = await isUserBetaTester(user.email);
                         if (!isBetaTester) {
+                            // UPDATED: Link color to text-white
                             showMessage(messageDivs.login, 
-                                `Access is currently restricted to beta testers. Your email is not on the beta tester list. <a href="${googleFormLink}" target="_blank" class="underline font-normal text-yellow-300">Apply for beta access here</a>.`, 
+                                `Access is currently restricted to beta testers. Your email is not on the beta tester list. <a href="${googleFormLink}" target="_blank" class="underline font-normal text-white">Apply for beta access here</a>.`, 
                                 'warning');
                             await signOut(auth); // Log them out immediately
                             return;
@@ -577,9 +581,17 @@
                     } else if (error.code === 'auth/popup-closed-by-user') {
                         return; // User cancelled, do nothing.
                     }
-                    // Show error on the currently visible panel
-                    const visibleMessageDiv = containers.login.style.display === 'flex' ? messageDivs.login : 
-                                            containers.username.style.display === 'flex' ? messageDivs.username : messageDivs.login;
+                    
+                    // --- JS ROBUSTNESS FIX ---
+                    // Determine which message panel is currently visible to display the error.
+                    let visibleMessageDiv = messageDivs.login; // Default to login
+                    if (containers.username.style.display === 'flex') {
+                        visibleMessageDiv = messageDivs.username;
+                    } else if (containers.signup.style.display === 'flex') {
+                        visibleMessageDiv = messageDivs.signup;
+                    }
+                    // This logic is safer and uses plain JS style checks instead of offsetParent.
+                    
                     showMessage(visibleMessageDiv, msg);
                 }
             };
