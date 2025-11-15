@@ -216,7 +216,14 @@
     
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { 
+            getAuth, 
+            onAuthStateChanged, 
+            signOut,
+            EmailAuthProvider, // NEW
+            reauthenticateWithCredential, // NEW
+            updatePassword // NEW
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { 
             getFirestore, 
             doc, 
@@ -265,6 +272,8 @@
         const getUserDocRef = (userId) => doc(db, 'users', userId);
         
         const showMessage = (element, text, type = 'error') => {
+            // Prevent clearing a success message if a warning is generated elsewhere
+            if (element.innerHTML.includes('success') && type !== 'error') return;
             element.innerHTML = text;
             element.className = `general-message-area text-sm ${type}-message`;
         };
@@ -283,14 +292,47 @@
             return !querySnapshot.empty;
         };
 
+        /**
+         * Generates the HTML for the "Change Password" section.
+         */
+        function getChangePasswordSection() {
+            return `
+                <h3 class="text-xl font-bold text-white mb-2 mt-8">Change Password</h3>
+                <div id="passwordChangeSection" class="settings-box p-4 w-full max-w-xl">
+                    <p class="text-sm font-light text-gray-400 mb-3">
+                        Change your password. You must provide your current password for security.
+                    </p>
+                    
+                    <div class="flex flex-col gap-3">
+                        <input type="password" id="currentPasswordInput" placeholder="Current Password" class="input-text-style">
+                        <input type="password" id="newPasswordInput" placeholder="New Password (min 6 characters)" class="input-text-style">
+                        <input type="password" id="confirmPasswordInput" placeholder="Confirm New Password" class="input-text-style">
+                    </div>
+                    
+                    <div class="flex justify-between items-center pt-4">
+                        <p id="passwordMessage" class="general-message-area text-sm"></p>
+                        <button id="applyPasswordBtn" class="btn-toolbar-style btn-primary-override w-32" disabled style="padding: 0.5rem 0.75rem;">
+                            <i class="fa-solid fa-lock mr-1"></i> Apply
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
 
         /**
          * Generates the HTML for the "General Settings" section.
+         * Added isEmailPasswordUser parameter to conditionally render password section.
          */
-        function getGeneralContent(currentUsername, changesRemaining, changesThisMonth, currentMonthName) {
-             // Uses global MAX_CHANGES
+        function getGeneralContent(currentUsername, changesRemaining, changesThisMonth, currentMonthName, isEmailPasswordUser) {
              const changesUsed = changesThisMonth;
              
+             // Conditionally generate the password section HTML
+             let passwordSectionHtml = '';
+             if (isEmailPasswordUser) {
+                 passwordSectionHtml = getChangePasswordSection();
+             }
+
              return `
                  <h2 class="text-3xl font-bold text-white mb-6">General Settings</h2>
                  
@@ -344,6 +386,8 @@
 
                     <div id="usernameChangeMessage" class="general-message-area text-sm"></div>
                 </div>
+                
+                ${passwordSectionHtml}
              `;
          }
 
@@ -421,6 +465,11 @@
         async function loadGeneralTab() {
             if (!currentUser) return; 
 
+            // Check if user is using email/password authentication (providerId 'password')
+            const isEmailPasswordUser = currentUser.providerData.some(
+                (info) => info.providerId === 'password'
+            );
+            
             const userDocRef = getUserDocRef(currentUser.uid);
             let userDocSnap = await getDoc(userDocRef);
 
@@ -434,8 +483,6 @@
             const currentMonthNumber = today.getMonth() + 1; 
             const currentMonthName = today.toLocaleDateString('en-US', { month: 'long' }); 
             
-            // MAX_CHANGES is a global constant
-
             let changesThisMonth = userData.usernameChangesThisMonth || 0;
             let lastChangeMonth = userData.lastUsernameChangeMonth || 0;
 
@@ -453,9 +500,15 @@
             const changesRemaining = MAX_CHANGES - changesThisMonth;
 
             // 1. Render the General Content
-            mainView.innerHTML = getGeneralContent(userData.username, changesRemaining, changesThisMonth, currentMonthName);
+            mainView.innerHTML = getGeneralContent(
+                userData.username, 
+                changesRemaining, 
+                changesThisMonth, 
+                currentMonthName,
+                isEmailPasswordUser // Pass provider info
+            );
             
-            // 2. Element References
+            // 2. Element References (Username Section)
             const viewMode = document.getElementById('viewMode');
             const editMode = document.getElementById('editMode');
             const enterEditModeBtn = document.getElementById('enterEditModeBtn');
@@ -467,13 +520,12 @@
             const minLengthElement = document.getElementById('minLength');
             const maxLengthElement = document.getElementById('maxLength');
 
-            // --- UI State Management Functions ---
+            // --- Username UI State Management Functions ---
             const setEditMode = (isEditing) => {
                 messageElement.innerHTML = ''; // Clear message
                 
                 if (isEditing) {
                     if (changesRemaining <= 0) {
-                        // Uses global MAX_CHANGES
                         showMessage(messageElement, `You have reached your limit of ${MAX_CHANGES} username changes for the current month.`, 'error'); 
                         return;
                     }
@@ -495,7 +547,6 @@
                 
                 charCountElement.textContent = count;
                 
-                // Uses global MIN_LENGTH and MAX_LENGTH
                 const isValidLength = count >= MIN_LENGTH && count <= MAX_LENGTH;
                 const isChanged = newUsername !== userData.username;
                 
@@ -511,16 +562,12 @@
 
 
                 // 2. Update button state
-                // Button is enabled if length is valid, a change was made, AND rate limit is available
                 applyUsernameBtn.disabled = !isChanged || !isValidLength || changesRemaining <= 0;
             };
 
-            // --- Event Listeners ---
-
+            // --- Username Event Listeners ---
             enterEditModeBtn.addEventListener('click', () => setEditMode(true));
-
             cancelEditBtn.addEventListener('click', () => setEditMode(false));
-
             newUsernameInput.addEventListener('input', updateCounterAndValidation);
 
 
@@ -528,7 +575,6 @@
                 e.preventDefault();
                 const newUsername = newUsernameInput.value.trim();
                 
-                // Re-check validation just in case
                 if (applyUsernameBtn.disabled || changesRemaining <= 0) {
                     showMessage(messageElement, 'Cannot apply changes due to validation errors, rate limit, or no change was made.', 'error');
                     return;
@@ -538,7 +584,7 @@
                 showMessage(messageElement, '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Checking availability and profanity...', 'warning');
 
                 try {
-                    // --- Validation (Redundant length check for security) ---
+                    // --- Validation ---
                     if (newUsername.length < MIN_LENGTH || newUsername.length > MAX_LENGTH) { 
                         showMessage(messageElement, `Username must be between ${MIN_LENGTH} and ${MAX_LENGTH} characters.`, 'error'); 
                         return; 
@@ -575,12 +621,119 @@
                     console.error("Error updating username:", error);
                     showMessage(messageElement, `An unexpected error occurred: ${error.message}`, 'error');
                 } finally {
-                    // Only re-enable if there was a blockable error (not success/re-render)
                     if (messageElement.innerHTML.includes('Error') || messageElement.innerHTML.includes('not allowed') || messageElement.innerHTML.includes('taken')) {
                         applyUsernameBtn.disabled = false;
                     }
                 }
             });
+            
+            
+            // =================================================================
+            // --- PASSWORD CHANGE LOGIC (Conditional) ---
+            // =================================================================
+            if (isEmailPasswordUser) {
+                const currentPasswordInput = document.getElementById('currentPasswordInput');
+                const newPasswordInput = document.getElementById('newPasswordInput');
+                const confirmPasswordInput = document.getElementById('confirmPasswordInput');
+                const applyPasswordBtn = document.getElementById('applyPasswordBtn');
+                const passwordMessage = document.getElementById('passwordMessage');
+                
+                // Input handler for enabling/disabling apply button
+                const checkPasswordFields = () => {
+                    const currentPass = currentPasswordInput.value;
+                    const newPass = newPasswordInput.value;
+                    const confirmPass = confirmPasswordInput.value;
+                    
+                    const MIN_PASS_LENGTH = 6;
+                    
+                    const isLengthValid = newPass.length >= MIN_PASS_LENGTH;
+                    const isMatch = newPass === confirmPass;
+                    const isCurrentProvided = currentPass.length > 0;
+                    
+                    // Enable if all requirements are met
+                    applyPasswordBtn.disabled = !(isLengthValid && isMatch && isCurrentProvided);
+                    
+                    // Provide gentle feedback
+                    passwordMessage.innerHTML = '';
+                    if (newPass.length > 0 && newPass.length < MIN_PASS_LENGTH) {
+                        showMessage(passwordMessage, `New password must be at least ${MIN_PASS_LENGTH} characters.`, 'warning');
+                    } else if (newPass.length >= MIN_PASS_LENGTH && newPass !== confirmPass) {
+                         showMessage(passwordMessage, 'New and confirmation passwords do not match.', 'warning');
+                    } else if (newPass === currentPass && isLengthValid && isMatch) {
+                         showMessage(passwordMessage, 'New password cannot be the same as your current password.', 'warning');
+                         applyPasswordBtn.disabled = true;
+                    }
+                };
+
+                currentPasswordInput.addEventListener('input', checkPasswordFields);
+                newPasswordInput.addEventListener('input', checkPasswordFields);
+                confirmPasswordInput.addEventListener('input', checkPasswordFields);
+                
+                applyPasswordBtn.addEventListener('click', async () => {
+                    applyPasswordBtn.disabled = true;
+                    passwordMessage.innerHTML = ''; // Clear prior message
+                    showMessage(passwordMessage, '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Attempting password change...', 'warning');
+
+                    const currentPass = currentPasswordInput.value;
+                    const newPass = newPasswordInput.value;
+                    
+                    if (newPass.length < 6) {
+                         showMessage(passwordMessage, 'New password must be at least 6 characters.', 'error');
+                         applyPasswordBtn.disabled = false;
+                         return;
+                    }
+                    if (newPass === currentPass) {
+                        showMessage(passwordMessage, 'New password cannot be the same as your current password.', 'error');
+                        applyPasswordBtn.disabled = false;
+                        return;
+                    }
+
+                    try {
+                        // 1. Re-authenticate the user
+                        const credential = EmailAuthProvider.credential(currentUser.email, currentPass);
+                        await reauthenticateWithCredential(currentUser, credential);
+
+                        // 2. Update the password
+                        await updatePassword(currentUser, newPass);
+
+                        showMessage(passwordMessage, 'Password successfully updated!', 'success');
+                        
+                        // Clear fields on success
+                        currentPasswordInput.value = '';
+                        newPasswordInput.value = '';
+                        confirmPasswordInput.value = '';
+                        // Re-check fields to disable the button
+                        checkPasswordFields(); 
+
+                    } catch (error) {
+                        console.error("Error changing password:", error);
+                        let errorMessage = "An unknown error occurred.";
+                        
+                        switch (error.code) {
+                            case 'auth/requires-recent-login':
+                                errorMessage = 'Password change failed. Please sign out and sign in again to change your password.';
+                                break;
+                            case 'auth/wrong-password':
+                                errorMessage = 'The current password you provided is incorrect.';
+                                break;
+                            case 'auth/weak-password':
+                                errorMessage = 'The new password is too weak. Please use a stronger one (min 6 characters).';
+                                break;
+                            default:
+                                errorMessage = `Password change failed. (${error.message})`;
+                        }
+                        showMessage(passwordMessage, errorMessage, 'error');
+                    } finally {
+                        // Re-enable button if there was an error
+                        if (!passwordMessage.innerHTML.includes('success')) {
+                            applyPasswordBtn.disabled = false;
+                            // checkPasswordFields(); // Already re-enabled if logic failed before try/catch
+                        }
+                    }
+                });
+            }
+
+
         }
 
 
@@ -625,7 +778,7 @@
         });
 
 
-        // --- AUTHENTICATION/REDIRECT LOGIC (Cleaned up and path fixed) ---
+        // --- AUTHENTICATION/REDIRECT LOGIC (Retained and Modified) ---
         function initializeAuth() {
             onAuthStateChanged(auth, (user) => {
                 if (!user) {
