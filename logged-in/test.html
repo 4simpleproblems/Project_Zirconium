@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FCM Client Self-Notification Test</title>
+    
     <style>
         body { font-family: sans-serif; padding: 20px; background-color: #f0f0f0; color: #333; }
         .container { max-width: 700px; margin: auto; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
@@ -16,10 +17,33 @@
         #log { list-style: none; padding: 0; margin-top: 20px; border-top: 1px solid #eee; }
         #log li { padding: 5px 0; border-bottom: 1px dotted #eee; }
     </style>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Single-User FCM Loopback Test</h1>
+        <p>This page confirms that your **browser can get a token** and that your **Service Worker can display a notification** when triggered by your Cloud Function.</p>
+
+        <button id="selfTestButton" disabled>
+            Initializing...
+        </button>
+
+        <h2>Console Log:</h2>
+        <ul id="log"></ul>
+        
+        <h2>Retrieved FCM Token (Should match Firestore):</h2>
+        <div id="fcm-token-display" class="status-box">Waiting for token...</div>
+
+        <p class="status-error mt-4">
+            ⚠️ **IMPORTANT:** To test the background message handler, you must **minimize or switch to another tab** immediately after pressing the button.
+        </p>
+    </div>
+
+    <script>
         // 🚨 YOUR CONFIGURATION
         const VAPID_KEY = 'BHYM9iOhL3KZqDwYo-_Qx9Nh7bksKoZT-XZ0IJa6RN-vqJ0DT-2EM1Y7V0fMpjyseMNszEj-CU0e3pj87z3lcbw';
         
@@ -36,12 +60,13 @@
         // --- DOM Elements ---
         const broadcastButton = document.getElementById('selfTestButton');
         const tokenDisplay = document.getElementById('fcm-token-display');
-        const statusMessage = document.getElementById('statusMessage');
         const log = document.getElementById('log');
 
-        // --- Global Variables ---
-        const app = initializeApp(firebaseConfig);
-        const messaging = getMessaging(app);
+        // --- Initialization (Compatibility Syntax) ---
+        const app = firebase.initializeApp(firebaseConfig);
+        const functionsInstance = app.functions('us-central1'); // Use your function region
+        const sendBroadcast = functionsInstance.httpsCallable('sendTestBroadcast'); 
+        
         let currentFCMToken = null;
 
         // --- Logging Helper ---
@@ -70,8 +95,8 @@
                 }
                 logMessage('Permission granted.', 'success');
 
-                // 3. Get FCM Token
-                currentFCMToken = await getToken(messaging, { 
+                // 3. Get FCM Token (using compatibility method)
+                currentFCMToken = await firebase.messaging().getToken({ 
                     vapidKey: VAPID_KEY, 
                     serviceWorkerRegistration: registration 
                 });
@@ -92,43 +117,24 @@
             }
         }
 
-        // --- Foreground Message Handler ---
-        onMessage(messaging, (payload) => {
-            logMessage('Foreground message received (Alerting instead of showing standard notification).', 'info');
-            // Foreground messages are usually handled by an alert or in-app UI, not the SW.
-            alert(`FG Message Received:\nTitle: ${payload.notification?.title}\nBody: ${payload.notification?.body}`);
+        // --- Foreground Message Handler (using compatibility method) ---
+        firebase.messaging().onMessage((payload) => {
+            logMessage('Foreground message received. Displaying an alert (SW bypass).', 'info');
+            alert(`Foreground Message Received:\nTitle: ${payload.notification?.title}\nBody: ${payload.notification?.body}`);
         });
 
-        // --- Test Function: Send message to itself via Google's Test API ---
+        // --- Test Function: Send message to itself via Cloud Function ---
         async function sendSelfTestNotification() {
             if (!currentFCMToken) {
                 return logMessage('Error: No token available to send test message.', 'error');
             }
-
-            // This endpoint is part of Google's Cloud Messaging API for testing.
-            const TEST_API_ENDPOINT = 'https://fcm.googleapis.com/fcm/send';
-            
-            // Your Firebase Server Key (required by this API call) is part of your project settings, 
-            // but for this specific test, we'll try sending through a simplified method 
-            // that doesn't require exposing the server key publicly.
-            
-            // 🚨 Since we cannot send directly to the FCM API from a public HTML page 
-            // without exposing the server key, we will use a dedicated Cloud Function 
-            // to send the message to the current token.
-            
-            // --- CALLING A CLOUD FUNCTION IS REQUIRED FOR SECURITY ---
             
             logMessage('Calling Cloud Function to send notification back to this browser...');
+            broadcastButton.disabled = true;
             
             try {
-                // We'll use the 'sendTestBroadcast' function you just deployed, 
-                // but modify the payload to send only to the current token.
-                
-                // You must ensure your Cloud Function supports receiving the token via data
-                const functionsInstance = getFunctions(app, 'us-central1'); // Assuming 'us-central1'
-                const broadcastFunction = httpsCallable(functionsInstance, 'sendTestBroadcast');
-                
-                const response = await broadcastFunction({ 
+                // Call the function using the 'sendBroadcast' callable instance
+                const response = await sendBroadcast({ 
                     targetToken: currentFCMToken,
                     message: `Self-Test @ ${new Date().toLocaleTimeString()}`
                 });
@@ -136,7 +142,10 @@
                 logMessage(`Cloud Function Response: ${response.data.message}`, 'success');
 
             } catch (e) {
-                logMessage(`Self-Test API Error: Could not reach the Cloud Function or send message. ${e.message}`, 'error');
+                logMessage(`Self-Test API Error: ${e.message}`, 'error');
+                console.error('Function call failed:', e);
+            } finally {
+                broadcastButton.disabled = false;
             }
         }
 
@@ -144,27 +153,6 @@
             setupFCM();
             broadcastButton.addEventListener('click', sendSelfTestNotification);
         });
-
     </script>
-</head>
-<body>
-    <div class="container">
-        <h1>Single-User FCM Loopback Test</h1>
-        <p>This page tests if your browser can retrieve an FCM token and if your Service Worker can display a notification when the browser is in the background.</p>
-
-        <button id="selfTestButton" disabled>
-            Initializing...
-        </button>
-
-        <h2>Console Log:</h2>
-        <ul id="log"></ul>
-        
-        <h2>Retrieved FCM Token (Copy this!):</h2>
-        <div id="fcm-token-display" class="status-box">Waiting for token...</div>
-
-        <p class="status-error mt-4">
-            ⚠️ **IMPORTANT:** To test the background message handler, you must minimize or switch tabs after pressing the button. The notification should pop up within a few seconds.
-        </p>
-    </div>
 </body>
 </html>
