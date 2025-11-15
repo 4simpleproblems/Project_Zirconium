@@ -3,26 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FCM Notification Client Test</title>
+    <title>Notification Broadcast Test Page</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { font-family: sans-serif; padding: 20px; background-color: #0d0d0d; color: #c0c0c0; }
-        .container { max-width: 600px; margin: auto; background: #1a1a1a; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
-        button { padding: 10px 20px; background-color: #4f46e5; color: white; border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; font-weight: 500;}
-        button:hover { background-color: #6366f1; }
-        .status-box { margin-top: 15px; padding: 10px; border: 1px solid #333; background-color: #262626; word-break: break-all; font-family: monospace; }
-        .status-success { color: #48bb78; }
-        .status-error { color: #f56565; }
-        h1, h2 { color: #ffffff; }
+        body { min-height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #f7f7f7; font-family: sans-serif; }
+        .container { background-color: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); max-width: 400px; text-align: center; }
     </style>
-    <script type="module">
-        // 1. Core Firebase/Messaging Imports
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
-
-        // 2. Configuration from your project
-        const VAPID_KEY = 'BHYM9iOhL3KZqDwYo-_Qx9Nh7bksKoZT-XZ0IJa6RN-vqJ0DT-2EM1Y7V0fMpjyseMNszEj-CU0e3pj87z3lcbw';
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-xl font-bold mb-4">Test Broadcast Center 📢</h1>
+        <p class="text-gray-600 mb-6">Press the button below to send a notification to *all* currently signed-in users with a valid token.</p>
         
-        // Your actual firebaseConfig object
+        <textarea id="messageInput" rows="3" class="w-full p-2 border border-gray-300 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="Enter custom message (optional)"></textarea>
+
+        <button id="broadcastButton" 
+                class="w-full bg-red-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-red-700 transition duration-150 ease-in-out disabled:opacity-50"
+                disabled>
+            Initialize Firebase & Load...
+        </button>
+
+        <p id="statusMessage" class="mt-4 text-sm text-gray-500"></p>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
+    
+    <script>
+        // 🚨 IMPORTANT: Use your actual Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro",
             authDomain: "project-zirconium.firebaseapp.com",
@@ -32,115 +41,64 @@
             appId: "1:1096564243475:web:6d0956a70125eeea1ad3e6",
             measurementId: "G-1D4F692C1Q"
         };
+
+        // Initialize Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const functions = app.functions('us-central1'); // Use the region where your function is deployed
+        const auth = app.auth();
+        const sendBroadcast = functions.httpsCallable('sendTestBroadcast');
+
+        const broadcastButton = document.getElementById('broadcastButton');
+        const messageInput = document.getElementById('messageInput');
+        const statusMessage = document.getElementById('statusMessage');
         
-        // 3. Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const messaging = getMessaging(app);
+        // --- Initialization and Authentication ---
 
-        const statusDiv = document.getElementById('status-message');
-        const tokenDisplay = document.getElementById('fcm-token-display');
-        const testNotificationBtn = document.getElementById('test-notification-btn');
-
-        function updateStatus(message, type = 'info') {
-            statusDiv.textContent = message;
-            statusDiv.className = 'status-box ' + (type === 'success' ? 'status-success' : (type === 'error' ? 'status-error' : ''));
-        }
-
-        /**
-         * Core setup function: Register SW, get permission, get token.
-         */
-        async function setupFCM() {
-            if (!('serviceWorker' in navigator) || !('Notification' in window)) {
-                return updateStatus('Service Workers or Notifications are not supported in this browser.', 'error');
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                broadcastButton.disabled = false;
+                broadcastButton.textContent = 'SEND BROADCAST TO ALL USERS';
+                statusMessage.textContent = `Authenticated as: ${user.email || user.uid}`;
+            } else {
+                // If not logged in, prompt user to log in first (e.g., via dailyphoto.html or a separate login)
+                statusMessage.textContent = 'Please log in to Firebase first.';
+                broadcastButton.textContent = 'Log in Required';
+                // For quick testing, you can use signInAnonymously() here:
+                // auth.signInAnonymously().catch(e => statusMessage.textContent = 'Login failed: ' + e.message);
             }
+        });
 
+        // --- Broadcast Logic ---
+
+        broadcastButton.addEventListener('click', async () => {
+            if (broadcastButton.disabled) return;
+            
+            statusMessage.textContent = 'Sending broadcast...';
+            broadcastButton.disabled = true;
+            
+            const customMessage = messageInput.value.trim();
+            
             try {
-                updateStatus('Registering Service Worker...');
-                // Uses the root path /sw.js, matching your dailyphoto.html registration
-                const registration = await navigator.serviceWorker.register('/sw.js'); 
-                updateStatus('Service Worker registered. Requesting permission...');
-
-                const permission = await Notification.requestPermission();
-                if (permission !== 'granted') {
-                    return updateStatus('Notification permission denied by user.', 'error');
-                }
-                updateStatus('Permission granted. Retrieving FCM Token...');
-
-                const currentToken = await getToken(messaging, { 
-                    vapidKey: VAPID_KEY, 
-                    serviceWorkerRegistration: registration 
-                });
+                const result = await sendBroadcast({ message: customMessage });
                 
-                if (currentToken) {
-                    updateStatus('FCM Setup Complete!', 'success');
-                    tokenDisplay.textContent = currentToken;
-
-                    // Handle foreground messages just like in dailyphoto.html
-                    onMessage(messaging, (payload) => {
-                        console.log('Foreground Message received:', payload);
-                        alert(`Foreground Notification: ${payload.notification?.title || 'New Message'}`);
-                    });
-
+                if (result.data.success) {
+                    statusMessage.textContent = `✅ Success: ${result.data.message}`;
+                    statusMessage.style.color = 'green';
                 } else {
-                    updateStatus('Failed to retrieve FCM Token.', 'error');
+                    statusMessage.textContent = `⚠️ Warning: ${result.data.message}`;
+                    statusMessage.style.color = 'orange';
                 }
-            } catch (err) {
-                console.error('FCM Setup Error:', err);
-                updateStatus(`FCM Setup failed. Error: ${err.message}. Check that sw.js is in the root directory.`, 'error');
-            }
-        }
-
-        /**
-         * Simulates a background notification being handled and displayed by the Service Worker.
-         */
-        async function sendTestNotification() {
-            try {
-                const registration = await navigator.serviceWorker.getRegistration();
-                if (!registration) {
-                    return updateStatus('Service Worker not found. Re-run setup.', 'error');
-                }
-
-                // Call the Service Worker's showNotification API
-                registration.showNotification('Friend Action Test', {
-                    body: 'A friend request was just sent or accepted!',
-                    icon: '../images/logo.png', 
-                    // Use a data payload your sw.js will recognize
-                    data: {
-                        action: 'VIEW_REQUESTS', 
-                        test: true 
-                    }
-                });
-                updateStatus('Test notification triggered successfully. Check your desktop notifications.', 'success');
 
             } catch (error) {
-                console.error('Test Notification Error:', error);
-                updateStatus(`Failed to display test notification: ${error.message}`, 'error');
+                console.error("Error calling function:", error);
+                statusMessage.textContent = `❌ Error: ${error.message}`;
+                statusMessage.style.color = 'red';
+            } finally {
+                broadcastButton.disabled = false;
+                setTimeout(() => statusMessage.style.color = 'gray', 5000);
             }
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            setupFCM();
-            testNotificationBtn.addEventListener('click', sendTestNotification);
         });
 
     </script>
-</head>
-<body>
-    <div class="container">
-        <h1>FCM Client Test</h1>
-        <p>This page verifies the client-side ability to register and display notifications.</p>
-        
-        <button id="test-notification-btn">Trigger Local Test Notification</button>
-
-        <div id="status-message" class="status-box">Loading FCM setup...</div>
-        
-        <h2>Retrieved FCM Token:</h2>
-        <div id="fcm-token-display" class="status-box">Waiting for token...</div>
-
-        <p class="status-error" style="color:#f56565;">
-            👉 **IMPORTANT:** If the button above works, your client-side setup is 100% correct.
-            The issue is with your **Cloud Function/Backend** code that needs to listen to Firestore changes and use the token to send the message via the Firebase Admin SDK.
-        </p>
-    </div>
 </body>
 </html>
