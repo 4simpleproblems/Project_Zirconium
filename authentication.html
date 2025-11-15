@@ -41,20 +41,27 @@
             background-color: rgb(var(--geist-background));
             color: rgb(var(--geist-foreground));
             transition: all 0.3s ease;
+            font-weight: 300; /* CUSTOM: Lighter base font weight */
+        }
+
+        /* CUSTOM: Lighter bold/headings to match notes.html */
+        h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-tighter {
+            font-weight: 400 !important;
         }
 
         .btn-social {
             transition: background-color 0.3s ease, border-color 0.3s ease;
         }
         .btn-social:hover {
+            /* Keep existing hover effect for social buttons */
             background-color: rgba(37, 37, 37, 0.7); /* custom-medium-gray with transparency */
             border-color: #383838;
         }
         
         .message-area { min-height: 20px; }
-        .error-message { color: #f87171; font-weight: bold; }
-        .success-message { color: #4ade80; }
-        .warning-message { color: #fbbf24; }
+        .error-message { color: #f87171; font-weight: 400; /* Match new heading weight */ }
+        .success-message { color: #4ade80; font-weight: 400; }
+        .warning-message { color: #fbbf24; font-weight: 400; }
         
         .auth-split-container { max-width: 1200px; margin: 0 auto; }
         @media (min-width: 768px) { .auth-col { } }
@@ -63,7 +70,6 @@
             .left-col { border-right: none; }
         }
     </style>
-<!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-1D4F692C1Q"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -81,93 +87,107 @@
             <div class="auth-col left-col flex-1 p-8 flex flex-col justify-center items-center bg-custom-darkest-gray min-w-[300px]">
 
                 <div id="loginContainer" class="w-full flex flex-col items-center">
-                    <h2 class="text-3xl font-bold text-custom-white-gray mb-6 text-center w-full tracking-tighter">Login to Your Account</h2>
+                    <h2 class="text-3xl font-normal text-custom-white-gray mb-6 text-center w-full tracking-tighter">Login to Your Account</h2>
                     <form id="loginForm" novalidate class="w-full max-w-md"> 
                         <div class="mb-5">
-                            <label for="loginEmail" class="block mb-2 text-custom-light-gray text-sm font-medium text-left">Email</label>
-                            <input type="email" id="loginEmail" placeholder="Enter your email" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-lg text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
+                            <label for="loginEmail" class="block mb-2 text-custom-light-gray text-sm font-light text-left">Email</label>
+                            <input type="email" id="loginEmail" placeholder="Enter your email" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-xl text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
                         </div>
                         <div class="mb-5">
-                            <label for="loginPassword" class="block mb-2 text-custom-light-gray text-sm font-medium text-left">Password</label>
-                            <input type="password" id="loginPassword" placeholder="Enter your password" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-lg text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
+                            <label for="loginPassword" class="block mb-2 text-custom-light-gray text-sm font-light text-left">Password</label>
+                            <input type="password" id="loginPassword" placeholder="Enter your password" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-xl text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
                         </div>
-                        <button type="submit" class="w-full p-3 bg-custom-medium-gray text-custom-white-gray rounded-lg font-semibold text-lg cursor-pointer transition hover:bg-custom-light-gray">LOGIN</button>
+                        <button type="submit" class="w-full p-3 text-lg rounded-xl font-normal ring-1 ring-white/20 text-white bg-white/5 hover:bg-white/10 transition">LOGIN</button>
                     </form>
                     <div id="loginMessage" class="message-area w-full max-w-md mt-4 text-center text-sm"></div>
-                    <div class="w-full max-w-md mt-4 text-center"> <a id="forgotPasswordLink" class="text-custom-light-gray hover:text-custom-lighter-gray font-medium text-sm cursor-pointer">Forgot Password?</a> </div>
-                    <p class="text-sm text-custom-light-gray mt-6 text-center w-full max-w-md">Don't have an account? <a id="showSignupLink" href="#" class="text-custom-light-gray font-semibold hover:text-custom-lighter-gray transition">Sign up here</a></p>
+                    <div class="w-full max-w-md mt-4 text-center"> 
+                        <a id="forgotPasswordLink" class="text-white hover:text-gray-300 font-normal text-sm cursor-pointer">Forgot Password?</a> 
+                    </div>
+                    <p class="text-sm text-custom-light-gray mt-6 text-center w-full max-w-md">
+                        Don't have an account? 
+                        <a id="showSignupLink" href="#" class="text-white hover:text-gray-300 font-normal transition">Sign up here</a>
+                    </p>
                 </div>
 
                 <div id="resetPasswordContainer" class="w-full flex-col items-center" style="display: none;">
-                    <h2 class="text-3xl font-bold text-custom-white-gray mb-6 text-center w-full tracking-tighter">Reset Your Password</h2>
-                    <p class="text-custom-light-gray text-base mb-6 text-center max-w-md">Enter your email address and we'll send you a link to reset your password.</p>
+                    <h2 class="text-3xl font-normal text-custom-white-gray mb-6 text-center w-full tracking-tighter">Reset Your Password</h2>
+                    <p class="text-custom-light-gray text-base mb-6 text-center max-w-md font-normal">Enter your email address and we'll send you a link to reset your password.</p>
                     <form id="resetPasswordForm" novalidate class="w-full max-w-md">
                         <div class="mb-5">
-                            <label for="resetEmail" class="block mb-2 text-custom-light-gray text-sm font-medium text-left">Email</label>
-                            <input type="email" id="resetEmail" placeholder="Enter your registered email" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-lg text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
+                            <label for="resetEmail" class="block mb-2 text-custom-light-gray text-sm font-light text-left">Email</label>
+                            <input type="email" id="resetEmail" placeholder="Enter your registered email" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-xl text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
                         </div>
-                        <button type="submit" class="w-full p-3 bg-custom-medium-gray text-custom-white-gray rounded-lg font-semibold text-lg cursor-pointer transition hover:bg-custom-light-gray">SEND RESET LINK</button>
+                        <button type="submit" class="w-full p-3 text-lg rounded-xl font-normal ring-1 ring-white/20 text-white bg-white/5 hover:bg-white/10 transition">SEND RESET LINK</button>
                     </form>
                     <div id="resetMessage" class="message-area w-full max-w-md mt-4 text-center text-sm"></div>
-                    <div class="w-full max-w-md mt-6 text-center"> <a id="backToLoginLink" class="text-custom-light-gray hover:text-custom-lighter-gray font-medium text-sm cursor-pointer">&larr; Back to Login</a> </div>
+                    <div class="w-full max-w-md mt-6 text-center"> 
+                        <a id="backToLoginLink" class="text-white hover:text-gray-300 font-normal text-sm cursor-pointer">&larr; Back to Login</a> 
+                    </div>
                 </div>
 
                 <div id="usernameContainer" class="w-full flex-col items-center" style="display: none;">
-                    <h2 class="text-3xl font-bold text-custom-white-gray mb-6 text-center w-full tracking-tighter">Choose Your Username</h2>
+                    <h2 class="text-3xl font-normal text-custom-white-gray mb-6 text-center w-full tracking-tighter">Choose Your Username</h2>
                     <form id="usernameForm" novalidate class="w-full max-w-md"> 
                         <div class="mb-5">
-                            <label for="signupUsername" class="block mb-2 text-custom-light-gray text-sm font-medium text-left">Username</label>
-                            <input type="text" id="signupUsername" placeholder="4-24 characters, including symbols" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-lg text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
-                            <p class="text-xs text-custom-lighter-gray mt-2 text-left">Allowed symbols: .,-+\_!?$</p>
+                            <label for="signupUsername" class="block mb-2 text-custom-light-gray text-sm font-light text-left">Username</label>
+                            <input type="text" id="signupUsername" placeholder="4-24 characters, including symbols" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-xl text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
+                            <p class="text-xs text-custom-lighter-gray mt-2 text-left font-light">Allowed symbols: .,-+\_!?$</p>
                         </div>
-                        <button type="submit" class="w-full p-3 bg-custom-medium-gray text-custom-white-gray rounded-lg font-semibold text-lg cursor-pointer transition hover:bg-custom-light-gray">NEXT</button>
+                        <button type="submit" class="w-full p-3 text-lg rounded-xl font-normal ring-1 ring-white/20 text-white bg-white/5 hover:bg-white/10 transition">NEXT</button>
                     </form>
                     <div id="usernameMessage" class="message-area w-full max-w-md mt-4 text-center text-sm"></div>
-                    <p class="text-sm text-custom-light-gray mt-6 text-center w-full max-w-md">Already have an account? <a id="showLoginLink" href="#" class="text-custom-light-gray font-semibold hover:text-custom-lighter-gray transition">Login here</a></p>
+                    <p class="text-sm text-custom-light-gray mt-6 text-center w-full max-w-md">
+                        Already have an account? 
+                        <a id="showLoginLink" href="#" class="text-white hover:text-gray-300 font-normal transition">Login here</a>
+                    </p>
                 </div>
                 
                 <div id="signupContainer" class="w-full flex-col items-center" style="display: none;">
-                    <h2 class="text-3xl font-bold text-custom-white-gray mb-6 text-center w-full tracking-tighter">Set Your Credentials</h2>
+                    <h2 class="text-3xl font-normal text-custom-white-gray mb-6 text-center w-full tracking-tighter">Set Your Credentials</h2>
                     <form id="signupForm" novalidate class="w-full max-w-md"> 
                         <div class="mb-5">
-                            <label for="signupEmail" class="block mb-2 text-custom-light-gray text-sm font-medium text-left">Email</label>
-                            <input type="email" id="signupEmail" placeholder="Enter your email" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-lg text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
+                            <label for="signupEmail" class="block mb-2 text-custom-light-gray text-sm font-light text-left">Email</label>
+                            <input type="email" id="signupEmail" placeholder="Enter your email" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-xl text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
                         </div>
                         <div class="mb-5">
-                            <label for="signupPassword" class="block mb-2 text-custom-light-gray text-sm font-medium text-left">Password</label>
-                            <input type="password" id="signupPassword" placeholder="Enter your password" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-lg text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
-                            <p class="text-xs text-custom-lighter-gray mt-2 text-left">8-48 chars, must include 1 uppercase, 1 number, and 1 special symbol.</p>
+                            <label for="signupPassword" class="block mb-2 text-custom-light-gray text-sm font-light text-left">Password</label>
+                            <input type="password" id="signupPassword" placeholder="Enter your password" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-xl text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
+                            <p class="text-xs text-custom-lighter-gray mt-2 text-left font-light">8-48 chars, must include 1 uppercase, 1 number, and 1 special symbol.</p>
                         </div>
-                        <button type="submit" class="w-full p-3 bg-custom-medium-gray text-custom-white-gray rounded-lg font-semibold text-lg cursor-pointer transition hover:bg-custom-light-gray">CREATE ACCOUNT</button>
+                        <button type="submit" class="w-full p-3 text-lg rounded-xl font-normal ring-1 ring-white/20 text-white bg-white/5 hover:bg-white/10 transition">CREATE ACCOUNT</button>
                     </form>
                     <div id="signupMessage" class="message-area w-full max-w-md mt-4 text-center text-sm"></div>
-                    <div class="w-full max-w-md mt-6 text-center"> <a id="backToUsernameLink" class="text-custom-light-gray hover:text-custom-lighter-gray font-medium text-sm cursor-pointer">&larr; Back to Username</a> </div>
+                    <div class="w-full max-w-md mt-6 text-center"> 
+                        <a id="backToUsernameLink" class="text-white hover:text-gray-300 font-normal text-sm cursor-pointer">&larr; Back to Username</a> 
+                    </div>
                 </div>
 
             </div>
 
             <div class="auth-col right-col flex-1 p-8 flex flex-col justify-center items-center bg-custom-darkest-gray">
                 <div class="w-full flex flex-col items-center justify-center">
-                    <h2 class="text-3xl font-bold text-custom-white-gray mb-6 text-center w-full tracking-tighter">Continue instantly</h2>
-                    <p class="text-lg text-custom-light-gray mb-8 text-center max-w-md">
+                    <h2 class="text-3xl font-normal text-custom-white-gray mb-6 text-center w-full tracking-tighter">Continue instantly</h2>
+                    <p class="text-lg text-custom-light-gray mb-8 text-center max-w-md font-normal">
                         Use a trusted provider to sign in or create an account in one click.
                     </p>
                     
-                    <button id="googleAuthBtn" class="btn-social flex items-center justify-center w-full max-w-md p-3 bg-custom-dark-gray text-custom-white-gray border border-custom-medium-gray rounded-lg font-medium cursor-pointer mb-3">
+                    <button id="googleAuthBtn" class="btn-social flex items-center justify-center w-full max-w-md p-3 bg-custom-dark-gray text-custom-white-gray border border-custom-medium-gray rounded-xl font-normal cursor-pointer mb-3">
                         <img src="images/google-icon.png" alt="Google Logo" class="w-5 h-5 mr-3">
                         Continue with Google
                     </button>
-                    <button id="githubAuthBtn" class="btn-social flex items-center justify-center w-full max-w-md p-3 bg-custom-dark-gray text-custom-white-gray border border-custom-medium-gray rounded-lg font-medium cursor-pointer mb-3">
+                    <button id="githubAuthBtn" class="btn-social flex items-center justify-center w-full max-w-md p-3 bg-custom-dark-gray text-custom-white-gray border border-custom-medium-gray rounded-xl font-normal cursor-pointer mb-3">
                         <img src="images/github-mark-white.png" alt="GitHub Logo" class="w-5 h-5 mr-3">
                         Continue with GitHub
                     </button>
-                    <button id="microsoftAuthBtn" class="btn-social flex items-center justify-center w-full max-w-md p-3 bg-custom-dark-gray text-custom-white-gray border border-custom-medium-gray rounded-lg font-medium cursor-pointer mb-3">
+                    <button id="microsoftAuthBtn" class="btn-social flex items-center justify-center w-full max-w-md p-3 bg-custom-dark-gray text-custom-white-gray border border-custom-medium-gray rounded-xl font-normal cursor-pointer mb-3">
                         <img src="images/microsoft.png" alt="Microsoft Logo" class="w-5 h-5 mr-3">
                         Continue with Microsoft
                     </button>
                     
-                    <p class="text-xs italic text-custom-light-gray text-center max-w-md mt-4 leading-relaxed">
-                        By continuing, you agree to our <a href="legal.html" target="_blank" class="text-custom-light-gray hover:text-custom-lighter-gray">Terms of Service</a> and <a href="legal.html" target="_blank" class="text-custom-light-gray hover:text-custom-lighter-gray">Privacy Policy</a>.
+                    <p class="text-xs italic text-custom-light-gray text-center max-w-md mt-4 leading-relaxed font-light">
+                        By continuing, you agree to our 
+                        <a href="legal.html#terms-of-service" target="_blank" class="text-white hover:text-gray-300 font-normal">Terms of Service</a> and 
+                        <a href="legal.html#privacy-policy" target="_blank" class="text-white hover:text-gray-300 font-normal">Privacy Policy</a>.
                     </p>
                 </div>
             </div>
@@ -175,12 +195,12 @@
     </main>
 
     <footer class="w-full h-10 flex items-center justify-center bg-black border-t border-custom-medium-gray">
-        <div class="text-center text-custom-light-gray text-xs">
+        <div class="text-center text-custom-light-gray text-xs font-light">
             &copy; 2024 4simpleproblems (4SP). Built for students.
         </div>
     </footer>
 
-    <script type="module">
+<script type="module">
         // --- Firebase Imports (Combined) ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import {
