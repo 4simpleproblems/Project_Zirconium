@@ -802,7 +802,7 @@
                         
                         <div class="flex justify-between items-center pt-4 border-t border-[#252525]">
                             <p id="panicKeyMessage" class="general-message-area text-sm"></p>
-                            <button id="applyPanicKeyBtn" class="btn-toolbar-style btn-primary-override w-32" style="padding: 0.5rem 0.75rem;">
+                            <button id="applyPanicKeyBtn" class="btn-toolbar-style btn-primary-override w-36" style="padding: 0.5rem 0.75rem;">
                                 <i class="fa-solid fa-check mr-1"></i> Apply Keys
                             </button>
                         </div>
@@ -846,12 +846,8 @@
                                 </div>
                                 
                                 <!-- Modified Favicon Section -->
-                                <div>
-                                    <label for="customTabFavicon" class="block text-gray-400 text-sm font-light mb-2">Custom Favicon URL</label>
-                                    <input type="url" id="customTabFavicon" class="input-text-style" placeholder="Paste URL here, or fetch from a domain below">
-                                </div>
                                 <div class="form-group">
-                                    <label for="faviconFetchInput" class="block text-gray-400 text-sm font-light mb-2">Fetch Favicon from Domain</label>
+                                    <label for="faviconFetchInput" class="block text-gray-400 text-sm font-light mb-2">Custom Favicon (Fetch from Domain)</label>
                                     <div class="flex items-center gap-2">
                                         <input type="text" id="faviconFetchInput" class="input-text-style" placeholder="e.g., google.com">
                                         <button type="button" id="fetchFaviconBtn" class="btn-toolbar-style btn-primary-override w-28" style="padding: 0.5rem 0.75rem;">Fetch</button>
@@ -867,7 +863,7 @@
 
                         <div class="flex justify-between items-center pt-4 mt-4 border-t border-[#252525]">
                             <p id="urlChangerMessage" class="general-message-area text-sm"></p>
-                            <button id="applyUrlChangerBtn" class="btn-toolbar-style btn-primary-override w-32" style="padding: 0.5rem 0.75rem;">
+                            <button id="applyUrlChangerBtn" class="btn-toolbar-style btn-primary-override w-36" style="padding: 0.5rem 0.75rem;">
                                 <i class="fa-solid fa-check mr-1"></i> Apply Tab
                             </button>
                         </div>
@@ -1426,7 +1422,6 @@
             const presetSelect = document.getElementById('tabDisguisePreset');
             const customGroup = document.getElementById('tabDisguiseCustomGroup');
             const customTitle = document.getElementById('customTabTitle');
-            const customFavicon = document.getElementById('customTabFavicon');
             const applyUrlChangerBtn = document.getElementById('applyUrlChangerBtn');
             const urlChangerMessage = document.getElementById('urlChangerMessage');
             
@@ -1471,7 +1466,12 @@
             } else if (savedUrlSettings.type === 'custom') {
                 customGroup.classList.remove('hidden');
                 customTitle.value = savedUrlSettings.title || '';
-                customFavicon.value = savedUrlSettings.favicon || '';
+                
+                // NEW logic to load saved custom favicon into the preview
+                if (savedUrlSettings.favicon) {
+                    previewImg.src = savedUrlSettings.favicon;
+                    previewImg.style.display = 'block';
+                }
             }
 
             // --- 4. Add Event Listeners ---
@@ -1611,14 +1611,11 @@
                     
                     const faviconUrl = await urlChanger.fetchFavicon(domain);
                     
-                    // Set the URL in the input field
-                    customFavicon.value = faviconUrl;
-                    
                     // Show preview
                     previewImg.src = faviconUrl;
                     previewImg.style.display = 'block';
                     
-                    showMessage(urlChangerMessage, 'Favicon found! URL has been added to the input.', 'success');
+                    showMessage(urlChangerMessage, 'Favicon found and set as preview.', 'success');
                     
                 } catch (error) {
                     console.error("Error fetching favicon:", error);
@@ -1646,12 +1643,14 @@
                 } 
                 else if (mode === 'custom') {
                     const title = customTitle.value.trim();
-                    const favicon = customFavicon.value.trim();
-                    if (!title && !favicon) {
-                         showMessage(urlChangerMessage, 'Please provide at least a custom title or favicon URL.', 'error');
+                    // NEW: Get favicon from preview image
+                    const favicon = (previewImg.src && previewImg.style.display !== 'none') ? previewImg.src : '';
+                    
+                    if (!title && !favicon) { // Check against new favicon variable
+                         showMessage(urlChangerMessage, 'Please provide at least a custom title or fetch a favicon.', 'error'); // Update message
                         return;
                     }
-                    settingsToSave = { type: 'custom', title: title, favicon: favicon };
+                    settingsToSave = { type: 'custom', title: title, favicon: favicon }; // Use new favicon variable
                 }
                 
                 // Save to localStorage
