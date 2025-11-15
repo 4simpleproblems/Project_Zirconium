@@ -160,7 +160,8 @@
         /* Container style to match tab look (used for rate limit and input wrapper) */
         .settings-box { 
             border: 1px solid var(--menu-border, #333); 
-            border-radius: 0.75rem; 
+            /* MODIFICATION: Changed border-radius from 0.75rem to 1rem for increased rounding */
+            border-radius: 1rem; 
             background-color: var(--menu-bg, #0000000); 
             padding: 0.75rem 1rem;
             transition: all 0.2s;
@@ -390,7 +391,7 @@
                 let iconHtml = config.icon.startsWith('<i') ? config.icon : `<img src="${config.icon}" alt="${config.name} Icon" class="w-5 h-5 mr-3">`;
 
                 return `
-                    <div class="flex justify-between items-center py-2 px-3 border-b border-[#252525] last:border-b-0">
+                    <div class="flex justify-between items-center py-2 px-1 last:pb-0">
                         <div class="flex items-center text-lg text-white">
                             ${iconHtml}
                             ${config.name}
@@ -482,7 +483,7 @@
             // --- Combined HTML for Account Management ---
             return `
                 <h3 class="text-xl font-bold text-white mb-2 mt-8">Linked Providers</h3>
-                <div class="settings-box p-0 w-full max-w-2xl mb-4" data-section="linked-providers">
+                <div class="settings-box p-4 w-full max-w-2xl mb-4" data-section="linked-providers">
                     ${linkedProvidersHtml}
                 </div>
                 
