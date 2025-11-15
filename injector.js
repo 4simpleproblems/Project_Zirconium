@@ -9,7 +9,9 @@
     // Update this array (and ONLY this array) to manage your application's scripts.
     const scriptsToLoad = [
       '../url-tab-title-changer.js',
-      '../panic-key.js'
+      '../panic-key.js',
+      '../navigation.js'
+
     
     ];
 
