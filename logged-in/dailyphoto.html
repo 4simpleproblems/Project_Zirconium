@@ -550,7 +550,7 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         const messaging = getMessaging(app); // 🚀 NEW: Initialize Messaging
-        initializeNotifications(app, db);
+
         
         // --- Global State & Constants ---
         let CURRENT_FRIENDS = [];
@@ -566,8 +566,7 @@
         const POST_SLOTS_MAX = 5;
         const MARQUEE_TRIGGER_LENGTH = 30; // Marquee logic removed, but keeping constant for title length checks if needed later
         const HEART_DELAY_MS = 500; // NEW: Debounce hearting for 0.75 seconds
-        // 🔑 NEW: VAPID Key from user request
-        const VAPID_KEY = 'BHYM9iOhL3KZqDwYo-_Qx9Nh7bksKoZT-XZ0IJa6RN-vqJ0DT-2EM1Y7V0fMpjyseMNszEj-CU0e3pj87z3lcbw'; 
+
 
         // --- DOM Elements ---
         const loadingScreen = document.getElementById('loading-screen');
@@ -1848,6 +1847,7 @@
                     await cleanupOldPosts(user);
                     setupFriendListListener(user);
                     setupDailyPostsListener(user); 
+                    await initializeNotifications(app, db);
                     
                     loadingScreen.style.display = 'none';
                     messengerUi.style.display = 'grid';

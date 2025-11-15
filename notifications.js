@@ -36,10 +36,18 @@ function initializeFCM(messaging) {
 }
 
 
-export function initializeNotifications(app, db) {
+export async function initializeNotifications(app, db) {
     const VAPID_KEY = 'BHYM9iOhL3KZqDwYo-_Qx9Nh7bksKoZT-XZ0IJa6RN-vqJ0DT-2EM1Y7V0fMpjyseMNszEj-CU0e3pj87z3lcbw';
     const auth = getAuth(app);
     const messaging = getMessaging(app);
+
+    if (!('serviceWorker' in navigator) || !('Notification' in window)) {
+        console.log('Notifications or Service Workers are not supported in this browser.');
+        return;
+    }
+
+    const registration = await navigator.serviceWorker.register('/sw.js');
+    console.log('Service Worker registered with scope:', registration.scope);
 
     auth.onAuthStateChanged(function(user) {
         if (user) {
@@ -47,7 +55,7 @@ export function initializeNotifications(app, db) {
                 if (permission === 'granted') {
                     console.log('Notification permission granted.');
                     // Get the token
-                    getToken(messaging, { vapidKey: VAPID_KEY }).then((currentToken) => {
+                    getToken(messaging, { serviceWorkerRegistration: registration, vapidKey: VAPID_KEY }).then((currentToken) => {
                         if (currentToken) {
                             console.log('FCM Token:', currentToken);
                             // Save the token to the user's profile
