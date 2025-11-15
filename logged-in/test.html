@@ -572,7 +572,7 @@
             onAuthStateChanged(auth, (user) => {
                 if (!user) {
                     // No user is logged in, redirect to index (login page)
-                    window.location.href = '../authentication/authentication.html'; 
+                    window.location.href = '../authentication.html'; 
                 } else {
                     currentUser = user; // Store the user object globally
                     loadingScreen.style.display = 'none';
