@@ -41,12 +41,13 @@
         }
 
         /* --- THEME-AWARE STYLES --- */
+        /* MODIFICATION: These styles are now HARD-CODED to the default theme */
         
         .btn-toolbar-style {
-            background: var(--menu-bg, #0000000);
-            border: 1px solid var(--menu-border, #333);
+            background: #0000000;
+            border: 1px solid #333;
             border-radius: 0.75rem;
-            color: var(--menu-text, #d1d5db);
+            color: #d1d5db;
             padding: 0.5rem 1rem;
             font-weight: 500;
             cursor: pointer;
@@ -56,23 +57,22 @@
             gap: 0.5rem;
         }
         .btn-toolbar-style:hover {
-            background-color: var(--menu-bg, #000000);
-            border-color: var(--menu-border, #fff);
-            color: var(--tab-hover-text, #ffffff);
+            background-color: #000000;
+            border-color: #fff;
+            color: #ffffff;
         }
         
         .btn-toolbar-style.btn-primary-override {
             /* For the Apply button (Blue) */
             justify-content: center;
-            
-            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
-            border: 1px solid var(--tab-active-border, #4f46e5);
-            color: var(--tab-active-text, #4f46e5);
+            background-color: rgba(79, 70, 229, 0.1);
+            border: 1px solid #4f46e5;
+            color: #4f46e5;
         }
         .btn-toolbar-style.btn-primary-override:hover {
-            background-color: var(--tab-active-hover-bg, rgba(79, 70, 229, 0.15));
-            border-color: var(--tab-active-hover-border, #6366f1);
-            color: var(--tab-active-hover-text, #6366f1);
+            background-color: rgba(79, 70, 229, 0.15);
+            border-color: #6366f1;
+            color: #6366f1;
         }
         
         /* NEW DANGER STYLE - Based on primary style but with red colors */
@@ -95,14 +95,14 @@
             justify-content: flex-start;
         }
         .settings-tab.active {
-            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
-            border: 1px solid var(--tab-active-border, #4f46e5);
-            color: var(--tab-active-text, #4f46e5);
+            background-color: rgba(79, 70, 229, 0.1);
+            border: 1px solid #4f46e5;
+            color: #4f46e5;
         }
         .settings-tab.active:hover {
-             background-color: var(--tab-active-hover-bg, rgba(79, 70, 229, 0.15));
-            border-color: var(--tab-active-hover-border, #6366f1);
-            color: var(--tab-active-hover-text, #6366f1);
+             background-color: rgba(79, 70, 229, 0.15);
+            border-color: #6366f1;
+            color: #6366f1;
         }
         
         /* --- Page Content Layout --- */
@@ -160,11 +160,11 @@
         }
         
         /* Container style to match tab look (used for rate limit and input wrapper) */
+        /* MODIFICATION: Hard-coded default theme */
         .settings-box { 
-            border: 1px solid var(--menu-border, #333); 
+            border: 1px solid #333; 
             border-radius: 1rem; 
-            background-color: var(--menu-bg, #0000000); 
-            /* MODIFICATION: Removed explicit padding here to rely on p-X classes for precise control */
+            background-color: #0000000; 
             transition: all 0.2s;
         }
         
@@ -237,6 +237,7 @@
         .warning-message { color: #fbbf24; }
         
         /* --- NEW: Theme Picker Styles --- */
+        /* MODIFICATION: These styles ARE theme-aware */
         #theme-picker-container {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -244,10 +245,11 @@
             width: 100%;
         }
         .theme-button {
-            border: 2px solid var(--menu-border, #333);
-            background-color: #111; /* MODIFICATION: This will be overridden by inline style */
-            border-radius: 0.75rem; /* MODIFICATION: Now matches tab buttons */
-            padding: 1rem;
+            /* MODIFICATION: Border color is now theme-aware */
+            border: 2px solid var(--tab-active-border, #4f46e5); 
+            background-color: #111; /* This will be overridden by inline style */
+            border-radius: 0.75rem; 
+            padding: 0.75rem; /* MODIFICATION: Reduced padding */
             text-align: center;
             cursor: pointer;
             transition: all 0.2s ease-out;
@@ -256,14 +258,15 @@
         }
         .theme-button:hover {
             opacity: 1;
-            border-color: #666;
+            /* MODIFICATION: Use a consistent hover border */
+            border-color: var(--tab-active-hover-border, #6366f1);
             transform: translateY(-2px);
         }
         .theme-button.active {
             opacity: 1;
-            border-color: var(--tab-active-border, #4f46e5);
-            /* MODIFICATION: Removed background-color override, will use inline style */
-            box-shadow: 0 0 10px rgba(79, 70, 229, 0.3);
+            /* MODIFICATION: Removed redundant border-color */
+            box-shadow: 0 0 10px rgba(79, 70, 229, 0.3); /* Will use variable shadow */
+            box-shadow: 0 0 10px var(--tab-active-shadow, rgba(79, 70, 229, 0.3));
         }
         .theme-button.active::after {
             content: '\f00c'; /* Font Awesome checkmark */
@@ -276,10 +279,8 @@
         }
         .theme-button-name {
             font-weight: 500;
-            color: #e0e0e0; /* MODIFICATION: This will be overridden by inline style */
-            /* MODIFICATION: Removed margin-top */
+            color: #e0e0e0; /* This will be overridden by inline style */
         }
-        /* MODIFICATION: Removed theme-color-preview styles as they are no longer used */
     </style>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-1D4F692C1Q"></script>
 <script>
@@ -1787,9 +1788,16 @@
                     // Get the theme's main background and text colors for the button
                     const previewBg = theme['navbar-bg'] || '#000000';
                     const previewText = theme['navbar-text'] || '#c0c0c0';
+                    // Get the theme's accent border color
+                    const previewBorder = theme['tab-active-border'] || '#4f46e5';
+
 
                     themeButtonsHtml += `
-                        <button class="theme-button ${isActive ? 'active' : ''}" data-theme-name="${theme.name}" style="background-color: ${previewBg};">
+                        <button 
+                            class="theme-button ${isActive ? 'active' : ''}" 
+                            data-theme-name="${theme.name}" 
+                            style="background-color: ${previewBg}; border-color: ${previewBorder};"
+                        >
                             <div class="theme-button-name" style="color: ${previewText};">${theme.name}</div>
                         </button>
                     `;
@@ -1811,8 +1819,7 @@
                             localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(themeToApply));
                             
                             // === MODIFICATION START ===
-                            // 2. Apply theme for live preview (DISABLED per user request)
-                            /*
+                            // 2. Apply theme for live preview (ENABLED per user request)
                             if (window.applyTheme) {
                                 window.applyTheme(themeToApply);
                             } else {
@@ -1820,7 +1827,6 @@
                                 showMessage(themeMessage, 'Error applying theme preview.', 'error');
                                 return;
                             }
-                            */
                             // === MODIFICATION END ===
                             
                             // 3. Update active class
