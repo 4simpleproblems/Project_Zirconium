@@ -61,8 +61,7 @@
         }
         
         .btn-toolbar-style.btn-primary-override {
-            /* Ensures primary buttons in the general settings form are full-width and centered */
-            width: 100%; 
+            /* For the Apply button */
             justify-content: center;
             
             background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
@@ -97,16 +96,13 @@
             flex-direction: column;
         }
 
-        /* NEW: Main Settings Container - Takes all remaining height */
         #settings-container {
             display: flex;
             flex-grow: 1;
             padding: 20px;
-            /* Added min-height to ensure it respects the full viewport minus header */
             min-height: calc(100vh - 4rem - 40px); 
         }
 
-        /* NEW: Sidebar Styling - MADE STICKY */
         #settings-sidebar {
             width: 250px;
             padding-right: 20px;
@@ -114,13 +110,11 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
-            /* New properties for sticky behavior */
             position: sticky; 
-            top: 4.5rem; /* Increased from 1rem to 4.5rem to clear the injected navigation bar */
-            align-self: flex-start; /* Important for sticky behavior inside a flex container */
+            top: 4.5rem; 
+            align-self: flex-start; 
         }
 
-        /* MODIFIED: Main View Styling */
         #settings-main-view {
             flex-grow: 1;
             padding: 20px;
@@ -133,38 +127,34 @@
             align-items: flex-start;
         }
         
-        /* MODIFIED: About Section specific styles - REMOVED max-width */
         .about-section-content {
             width: 100%;
             margin-top: 1rem;
         }
-        /* Grouping container for social links - styling is minimal now */
         .social-link-group {
             display: flex;
             gap: 15px;
             margin-top: 15px;
             margin-bottom: 20px;
         }
-        
-        /* Grouping container for legal links - styling is minimal now */
         .legal-buttons {
             display: flex;
             gap: 15px;
             margin-top: 20px;
         }
         
-        /* NEW: Container style to match tab look (used for rate limit and input wrapper) */
+        /* Container style to match tab look (used for rate limit and input wrapper) */
         .settings-box { 
             border: 1px solid var(--menu-border, #333); 
             border-radius: 0.75rem; 
-            background-color: var(--menu-bg, #0000000); /* Transparent background */
+            background-color: var(--menu-bg, #0000000); 
             padding: 0.75rem 1rem;
             transition: all 0.2s;
         }
         
-        /* MODIFIED: Utility styles for form elements */
+        /* Utility styles for form elements */
         .input-text-style {
-            width: 100%; /* Ensure it takes full width of parent */
+            width: 100%; 
             padding: 0.75rem; 
             border: 1px solid #252525; 
             background-color: #111111; 
@@ -256,6 +246,11 @@
         const sidebarTabs = document.querySelectorAll('.settings-tab');
         const mainView = document.getElementById('settings-main-view');
         let currentUser = null; // To store the authenticated user object
+        
+        // Constants for validation
+        const MIN_LENGTH = 6;
+        const MAX_LENGTH = 36;
+
 
         // Tab Content Data Structure (can be expanded later)
         const tabContent = {
@@ -283,7 +278,6 @@
         };
 
         const isUsernameTaken = async (username) => {
-            // New function, similar to the one in authentication.html
             const q = query(collection(db, 'users'), where('username', '==', username));
             const querySnapshot = await getDocs(q);
             return !querySnapshot.empty;
@@ -291,24 +285,17 @@
 
 
         /**
-         * Generates the HTML for the "General Settings" section, including Username Change.
-         * Note: The previous UI changes (settings-box, full-width button) are correctly used 
-         * in the template function below as per the prior turn's output.
+         * Generates the HTML for the "General Settings" section.
+         * MODIFIED: Uses new structure for username edit/display modes.
          */
         function getGeneralContent(currentUsername, changesRemaining, changesThisMonth, currentMonthName) {
              const MAX_CHANGES = 3;
              const changesUsed = changesThisMonth;
-             const isDisabled = changesRemaining <= 0;
-             const buttonText = isDisabled ? 'Limit Reached' : 'Change Username';
              
              return `
                  <h2 class="text-3xl font-bold text-white mb-6">General Settings</h2>
                  
                  <div class="w-full max-w-xl">
-                    <h3 class="text-xl font-bold text-white mb-2">Account Username</h3>
-                    <p class="text-lg text-gray-400 leading-relaxed mb-4">
-                        Your current 4SP username is: <span class="text-emphasis text-blue-400">${currentUsername}</span>
-                    </p>
                     
                     <div class="flex justify-between items-center mb-4 settings-box">
                         <p class="text-sm font-light text-gray-300">
@@ -320,34 +307,50 @@
                         </span>
                     </div>
 
-                    <form id="usernameChangeForm" novalidate class="flex flex-col gap-4"> 
-                        
-                        <div class="settings-box p-3"> <label for="newUsername" class="block mb-2 text-gray-400 text-sm font-light">New Username</label>
-                            <input type="text" id="newUsername" placeholder="4-24 characters, only allowed symbols" required 
-                                class="input-text-style w-full" ${isDisabled ? 'disabled' : ''}>
-                            <p class="text-xs text-gray-500 mt-2 font-light">
-                                Allowed symbols: .,-+\\_!?$
-                            </p>
-                        </div>
-                        
-                        <div id="usernameChangeMessage" class="general-message-area text-sm"></div>
-
-                        <button type="submit" id="changeUsernameBtn" 
-                            class="py-3 text-lg rounded-xl font-normal transition 
-                            ${isDisabled ? 'ring-1 ring-gray-600 text-gray-600 bg-gray-900/50 cursor-not-allowed' : 'btn-toolbar-style btn-primary-override'}"
-                            ${isDisabled ? 'disabled' : ''}>
-                            <i class="fa-solid fa-user-pen mr-2"></i> 
-                            ${buttonText}
-                        </button>
-                    </form>
+                    <h3 class="text-xl font-bold text-white mb-2">Account Username</h3>
                     
-                 </div>
+                    <div id="usernameSection" class="settings-box p-3 transition-all duration-300">
+                        
+                        <div id="viewMode" class="flex justify-between items-center">
+                            <p class="text-lg text-gray-400 leading-relaxed">
+                                Current: <span id="currentUsernameText" class="text-emphasis text-blue-400">${currentUsername}</span>
+                            </p>
+                            <button id="enterEditModeBtn" class="btn-toolbar-style" style="padding: 0.5rem 0.75rem;">
+                                 <i class="fa-solid fa-pen-to-square mr-1"></i> Change
+                            </button>
+                        </div>
+
+                        <div id="editMode" class="hidden flex-col gap-3">
+                            <label for="newUsernameInput" class="block text-gray-400 text-sm font-light">New Username</label>
+                            <input type="text" id="newUsernameInput" value="${currentUsername}" maxlength="${MAX_LENGTH}"
+                                   class="input-text-style w-full" 
+                                   placeholder="${MIN_LENGTH}-${MAX_LENGTH} characters, only allowed symbols">
+                            
+                            <div class="flex justify-between items-center pt-2">
+                                <p class="text-xs text-gray-500 font-light whitespace-nowrap">
+                                    Length: <span id="minLength" class="font-semibold text-gray-400">${MIN_LENGTH}</span>/<span id="charCount" class="font-semibold text-gray-400">${currentUsername.length}</span>/<span id="maxLength" class="font-semibold text-gray-400">${MAX_LENGTH}</span>
+                                </p>
+                                
+                                <div class="flex gap-2">
+                                    <button id="applyUsernameBtn" class="btn-toolbar-style btn-primary-override w-24 transition-opacity duration-300" disabled style="padding: 0.5rem 0.75rem;">
+                                        <i class="fa-solid fa-check"></i> Apply
+                                    </button>
+                                    <button id="cancelEditBtn" class="btn-toolbar-style w-24 transition-opacity duration-300" style="padding: 0.5rem 0.75rem;">
+                                        <i class="fa-solid fa-xmark"></i> Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="usernameChangeMessage" class="general-message-area text-sm"></div>
+                </div>
              `;
          }
 
 
         /**
-         * Generates the HTML for the "About 4SP" section.
+         * Generates the HTML for the "About 4SP" section. (Unchanged)
          */
         function getAboutContent() {
             return `
@@ -401,7 +404,7 @@
         }
 
         /**
-         * Generates the HTML for the "Coming Soon" sections.
+         * Generates the HTML for the "Coming Soon" sections. (Unchanged)
          */
         function getComingSoonContent(title) {
             return `
@@ -413,12 +416,12 @@
             `;
         }
 
-
         /**
          * Loads user data, checks rate limit, and renders the General tab.
+         * MODIFIED: Implements the new state management for username editing.
          */
         async function loadGeneralTab() {
-            if (!currentUser) return; // Should not happen if auth check passes
+            if (!currentUser) return; 
 
             const userDocRef = getUserDocRef(currentUser.uid);
             let userDocSnap = await getDoc(userDocRef);
@@ -430,8 +433,8 @@
 
             let userData = userDocSnap.data();
             const today = new Date();
-            const currentMonthNumber = today.getMonth() + 1; // 1-12
-            const currentMonthName = today.toLocaleDateString('en-US', { month: 'long' }); // e.g., "November"
+            const currentMonthNumber = today.getMonth() + 1; 
+            const currentMonthName = today.toLocaleDateString('en-US', { month: 'long' }); 
             const MAX_CHANGES = 3;
 
             let changesThisMonth = userData.usernameChangesThisMonth || 0;
@@ -439,91 +442,149 @@
 
             // --- Monthly Reset Logic ---
             if (currentMonthNumber !== lastChangeMonth) {
-                // It's a new month, reset the counter
                 changesThisMonth = 0;
                 await updateDoc(userDocRef, {
                     usernameChangesThisMonth: 0,
                     lastUsernameChangeMonth: currentMonthNumber
                 });
-                // Re-fetch or update data structure after reset
                 userDocSnap = await getDoc(userDocRef);
                 userData = userDocSnap.data(); 
             }
             
             const changesRemaining = MAX_CHANGES - changesThisMonth;
 
-            // 1. Render the General Content - PASS THE MONTH NAME AND CHANGES USED
+            // 1. Render the General Content
             mainView.innerHTML = getGeneralContent(userData.username, changesRemaining, changesThisMonth, currentMonthName);
             
-            // 2. Attach Event Listener for Username Change
-            const usernameChangeForm = document.getElementById('usernameChangeForm');
+            // 2. Element References
+            const viewMode = document.getElementById('viewMode');
+            const editMode = document.getElementById('editMode');
+            const enterEditModeBtn = document.getElementById('enterEditModeBtn');
+            const cancelEditBtn = document.getElementById('cancelEditBtn');
+            const applyUsernameBtn = document.getElementById('applyUsernameBtn');
+            const newUsernameInput = document.getElementById('newUsernameInput');
             const messageElement = document.getElementById('usernameChangeMessage');
-            
-            if (usernameChangeForm && changesRemaining > 0) {
-                usernameChangeForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    const newUsername = document.getElementById('newUsername').value.trim();
-                    const changeBtn = document.getElementById('changeUsernameBtn');
-                    
-                    changeBtn.disabled = true;
-                    showMessage(messageElement, '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Processing...', 'warning');
+            const charCountElement = document.getElementById('charCount');
+            const minLengthElement = document.getElementById('minLength');
+            const maxLengthElement = document.getElementById('maxLength');
 
-                    try {
-                        // --- Validation ---
-                        if (newUsername === userData.username) { 
-                            showMessage(messageElement, 'New username is the same as your current username.', 'warning');
-                            return;
-                        }
-                        if (newUsername.length < 4 || newUsername.length > 24) { 
-                            showMessage(messageElement, 'Username must be 4-24 characters.', 'error'); 
-                            return; 
-                        }
-                        if (!/^[a-zA-Z0-9.,\-+_\!\?\$\\]+$/.test(newUsername)) { 
-                            showMessage(messageElement, 'Username contains invalid characters (Allowed symbols: .,-+\\_!?$).', 'error'); 
-                            return; 
-                        }
-                        
-                        // --- Checks ---
-                        if (await checkProfanity(newUsername)) { 
-                            showMessage(messageElement, 'This username is not allowed.', 'error'); 
-                            return; 
-                        }
-                        if (await isUsernameTaken(newUsername)) { 
-                            showMessage(messageElement, 'This username is already taken.', 'error'); 
-                            return; 
-                        }
-                        
-                        // --- Update Logic ---
-                        const newChangesCount = changesThisMonth + 1;
-                        await updateDoc(userDocRef, {
-                            username: newUsername,
-                            usernameChangesThisMonth: newChangesCount,
-                            lastUsernameChangeMonth: currentMonthNumber // Ensure month is current even if it was reset
-                        });
-
-                        showMessage(messageElement, `Username successfully changed to ${newUsername}!`, 'success');
-                        
-                        // Re-render the tab content to update the display and counter
-                        // A short delay before re-load gives the user time to read the success message
-                        setTimeout(() => { switchTab('general'); }, 1500);
-
-                    } catch (error) {
-                        console.error("Error updating username:", error);
-                        showMessage(messageElement, `An unexpected error occurred: ${error.message}`, 'error');
-                    } finally {
-                        // The button will be re-enabled/disabled by the re-render in the success path
-                        // If there was an error, re-enable it immediately for the user to try again
-                        if (messageElement.innerHTML.includes('Error') || messageElement.innerHTML.includes('not allowed') || messageElement.innerHTML.includes('taken')) {
-                            changeBtn.disabled = false;
-                        }
+            // --- UI State Management Functions ---
+            const setEditMode = (isEditing) => {
+                messageElement.innerHTML = ''; // Clear message
+                
+                if (isEditing) {
+                    if (changesRemaining <= 0) {
+                        showMessage(messageElement, `You have reached your limit of ${MAX_CHANGES} username changes for the current month.`, 'error');
+                        return;
                     }
-                });
-            }
+                    viewMode.classList.add('hidden');
+                    editMode.classList.remove('hidden');
+                    newUsernameInput.focus();
+                    updateCounterAndValidation(); 
+                } else {
+                    editMode.classList.add('hidden');
+                    viewMode.classList.remove('hidden');
+                    newUsernameInput.value = userData.username; // Reset input value
+                    applyUsernameBtn.disabled = true;
+                }
+            };
+
+            const updateCounterAndValidation = () => {
+                const newUsername = newUsernameInput.value.trim();
+                const count = newUsername.length;
+                
+                charCountElement.textContent = count;
+                
+                const isValidLength = count >= MIN_LENGTH && count <= MAX_LENGTH;
+                const isChanged = newUsername !== userData.username;
+                
+                // 1. Update counter colors
+                minLengthElement.classList.toggle('text-red-400', count < MIN_LENGTH);
+                maxLengthElement.classList.toggle('text-red-400', count > MAX_LENGTH);
+                
+                minLengthElement.classList.toggle('text-gray-400', count >= MIN_LENGTH);
+                maxLengthElement.classList.toggle('text-gray-400', count <= MAX_LENGTH);
+                
+                charCountElement.classList.toggle('text-red-400', !isValidLength);
+                charCountElement.classList.toggle('text-gray-400', isValidLength);
+
+
+                // 2. Update button state
+                // Button is enabled if length is valid, a change was made, AND rate limit is available
+                applyUsernameBtn.disabled = !isChanged || !isValidLength || changesRemaining <= 0;
+            };
+
+            // --- Event Listeners ---
+
+            enterEditModeBtn.addEventListener('click', () => setEditMode(true));
+
+            cancelEditBtn.addEventListener('click', () => setEditMode(false));
+
+            newUsernameInput.addEventListener('input', updateCounterAndValidation);
+
+
+            applyUsernameBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const newUsername = newUsernameInput.value.trim();
+                
+                // Re-check validation just in case
+                if (applyUsernameBtn.disabled || changesRemaining <= 0) {
+                    showMessage(messageElement, 'Cannot apply changes due to validation errors, rate limit, or no change was made.', 'error');
+                    return;
+                }
+
+                applyUsernameBtn.disabled = true;
+                showMessage(messageElement, '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Checking availability and profanity...', 'warning');
+
+                try {
+                    // --- Validation (Redundant length check for security) ---
+                    if (newUsername.length < MIN_LENGTH || newUsername.length > MAX_LENGTH) { 
+                        showMessage(messageElement, `Username must be between ${MIN_LENGTH} and ${MAX_LENGTH} characters.`, 'error'); 
+                        return; 
+                    }
+                    if (!/^[a-zA-Z0-9.,\-+_\!\?\$\\]+$/.test(newUsername)) { 
+                        showMessage(messageElement, 'Username contains invalid characters (Allowed symbols: .,-+\\_!?$).', 'error'); 
+                        return; 
+                    }
+                    
+                    // --- Checks ---
+                    if (await checkProfanity(newUsername)) { 
+                        showMessage(messageElement, 'This username is not allowed (Profanity filter triggered).', 'error'); 
+                        return; 
+                    }
+                    if (await isUsernameTaken(newUsername)) { 
+                        showMessage(messageElement, 'This username is already taken.', 'error'); 
+                        return; 
+                    }
+                    
+                    // --- Update Logic ---
+                    const newChangesCount = changesThisMonth + 1;
+                    await updateDoc(userDocRef, {
+                        username: newUsername,
+                        usernameChangesThisMonth: newChangesCount,
+                        lastUsernameChangeMonth: currentMonthNumber 
+                    });
+
+                    showMessage(messageElement, `Username successfully changed to ${newUsername}!`, 'success');
+                    
+                    // Re-render the tab content to update the display, counter, and state
+                    setTimeout(() => { switchTab('general'); }, 1500);
+
+                } catch (error) {
+                    console.error("Error updating username:", error);
+                    showMessage(messageElement, `An unexpected error occurred: ${error.message}`, 'error');
+                } finally {
+                    // Only re-enable if there was a blockable error (not success/re-render)
+                    if (messageElement.innerHTML.includes('Error') || messageElement.innerHTML.includes('not allowed') || messageElement.innerHTML.includes('taken')) {
+                        applyUsernameBtn.disabled = false;
+                    }
+                }
+            });
         }
 
 
         /**
-         * Handles the switching of tabs and updating the main content view.
+         * Handles the switching of tabs and updating the main content view. (Unchanged)
          */
         async function switchTab(tabId) {
             // 1. Update active class on sidebar tabs
@@ -537,7 +598,6 @@
             mainView.style.alignItems = 'flex-start';
 
             if (tabId === 'general') {
-                // NEW: Call the function that handles data fetching and rendering for General
                 await loadGeneralTab(); 
             }
             else if (tabId === 'about') {
@@ -559,24 +619,19 @@
         // Add listener to each sidebar button
         sidebarTabs.forEach(tab => {
             tab.addEventListener('click', async () => {
-                // Must be async to handle data fetching for 'general' tab
                 await switchTab(tab.dataset.tab);
             });
         });
 
 
-        // --- AUTHENTICATION/REDIRECT LOGIC (Cleaned up) ---
-        const pageContent = document.getElementById('page-content');
-
+        // --- AUTHENTICATION/REDIRECT LOGIC (Cleaned up and path fixed) ---
         function initializeAuth() {
-            // onAuthStateChanged is the standard Firebase way to check login status
             onAuthStateChanged(auth, (user) => {
                 if (!user) {
-                    // No user is logged in, redirect to index (login page)
-                    window.location.href = '../authentication.html'; // Path corrected
+                    // No user is logged in, redirect to authentication.html (path corrected)
+                    window.location.href = '../authentication.html'; 
                 } else {
-                    currentUser = user; // Store the user object globally
-                    
+                    currentUser = user; 
                     // Set initial state to 'General' (or the first tab)
                     switchTab('general'); 
                 }
