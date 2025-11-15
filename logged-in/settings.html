@@ -14,6 +14,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="../navigation.js"></script>
     <script src="../injector.js"></script>
+    <!-- ADDED SCRIPT TAGS -->
+    <script src="../panic-key.js"></script>
+    <script src="../url-changer.js" defer></script> 
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
 
@@ -181,10 +184,114 @@
             outline: none;
             box-shadow: 0 0 0 2px rgba(80, 80, 80, 0.5);
         }
+        
+        /* Style for the Panic Key input (single character) */
+        .input-key-style {
+            width: 4rem; /* Fixed width for a single key */
+            padding: 0.75rem;
+            border: 1px solid #252525; 
+            background-color: #111111; 
+            border-radius: 0.5rem; 
+            color: #c0c0c0; 
+            transition: all 0.2s;
+            font-size: 1.1rem;
+            text-align: center;
+            font-weight: 500;
+            text-transform: uppercase; /* Show the key as uppercase */
+            caret-color: transparent; /* Hide the caret */
+        }
+        .input-key-style::placeholder {
+            font-size: 1rem;
+            text-transform: none;
+        }
+         .input-key-style:focus {
+            border-color: #505050; 
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(80, 80, 80, 0.5);
+         }
+        
+        .input-select-style {
+            width: 100%; 
+            padding: 0.75rem; 
+            border: 1px solid #252525; 
+            background-color: #111111; 
+            border-radius: 0.5rem; 
+            color: #c0c0c0; 
+            transition: all 0.2s;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+        .input-select-style:focus {
+            border-color: #505050; 
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(80, 80, 80, 0.5);
+        }
+        
         .general-message-area { min-height: 20px; margin-top: 1rem; font-weight: 400; }
         .success-message { color: #4ade80; }
         .error-message { color: #f87171; }
         .warning-message { color: #fbbf24; }
+        
+        /* --- NEW: Theme Picker Styles --- */
+        #theme-picker-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 1rem;
+            width: 100%;
+        }
+        .theme-button {
+            border: 2px solid var(--menu-border, #333);
+            background-color: #111;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease-out;
+            opacity: 0.7;
+            position: relative;
+        }
+        .theme-button:hover {
+            opacity: 1;
+            border-color: #666;
+            transform: translateY(-2px);
+        }
+        .theme-button.active {
+            opacity: 1;
+            border-color: var(--tab-active-border, #4f46e5);
+            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
+            box-shadow: 0 0 10px rgba(79, 70, 229, 0.3);
+        }
+        .theme-button.active::after {
+            content: '\f00c'; /* Font Awesome checkmark */
+            font-family: "Font Awesome 6 Pro";
+            font-weight: 900;
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            color: var(--tab-active-text, #4f46e5);
+        }
+        .theme-button-name {
+            font-weight: 500;
+            color: #e0e0e0;
+            margin-top: 0.5rem;
+        }
+        .theme-color-preview {
+            width: 100%;
+            height: 40px;
+            border-radius: 0.5rem;
+            border: 1px solid #444;
+            display: flex;
+            overflow: hidden;
+        }
+        .theme-color-box {
+            height: 100%;
+            width: 100%;
+        }
     </style>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-1D4F692C1Q"></script>
 <script>
@@ -225,7 +332,8 @@
             </nav>
 
             <div id="settings-main-view">
-                </div>
+                <!-- Content injected by JavaScript -->
+            </div>
         </div>
     </div>
     
@@ -316,15 +424,45 @@
             }
         };
 
+        // --- NEW: Constants for Privacy Settings ---
+        
+        // IndexedDB Config for Panic Key
+        const DB_NAME = 'userLocalSettingsDB';
+        const STORE_NAME = 'panicKeyStore';
+        
+        // localStorage Key for URL Changer
+        const URL_CHANGER_KEY = 'selectedUrlPreset';
+        
+        // --- NEW: Constant for Theme Storage ---
+        // (Copied from navigation.js)
+        const THEME_STORAGE_KEY = 'user-navbar-theme';
+
+
+        // Presets copied from url-changer.js
+        const urlChangerPresets = [
+            { id: 'hac', name: 'HAC', title: 'Login', favicon: '../favicons/hac.png', category: 'websites' },
+            { id: 'gmm', name: 'GMM', title: 'Get More Math!', favicon: '../favicons/gmm.png', category: 'websites' },
+            { id: 'kahoot', name: 'Kahoot', title: 'Kahoot! | Learning games | Make learning awesome!', favicon: '../favicons/kahoot.png', category: 'websites' },
+            { id: 'g_classroom', name: 'Google Classroom', title: 'Home', favicon: '../favicons/google-classroom.png', category: 'websites' },
+            { id: 'g_docs', name: 'Google Docs', title: 'Google Docs', favicon: '../favicons/google-docs.png', category: 'websites' },
+            { id: 'g_slides', name: 'Google Slides', title: 'Google Slides', favicon: '../favicons/google-slides.png', category: 'websites' },
+            { id: 'g_drive', name: 'Google Drive', title: 'Home - Google Drive', favicon: '../favicons/google-drive.png', category: 'websites' },
+            { id: 'wikipedia', name: 'Wikipedia', title: 'Wikipedia', favicon: '../favicons/wikipedia.png', category: 'websites' },
+            { id: 'clever', name: 'Clever', title: 'Clever | Connect every student to a world of learning', favicon: '../favicons/clever.png', category: 'websites' },
+            { id: '_LIVE_CURRENT_TIME', name: 'Current Time', title: 'Live Time', favicon: '', category: 'live', live: true }
+        ];
+
         
         // --- Shared Helper Functions ---
         const getUserDocRef = (userId) => doc(db, 'users', userId);
         
         const showMessage = (element, text, type = 'error') => {
             // Prevent clearing a success message if a warning is generated elsewhere
-            if (element.innerHTML.includes('success') && type !== 'error') return;
-            element.innerHTML = text;
-            element.className = `general-message-area text-sm ${type}-message`;
+            if (element && element.innerHTML.includes('success') && type !== 'error') return;
+            if (element) {
+                element.innerHTML = text;
+                element.className = `general-message-area text-sm ${type}-message`;
+            }
         };
         
         const checkProfanity = async (text) => {
@@ -340,14 +478,115 @@
             const querySnapshot = await getDocs(q);
             return !querySnapshot.empty;
         };
+        
+        // --- NEW: IndexedDB Helper Functions ---
+
+        /**
+         * Opens the IndexedDB and creates the object store if needed.
+         */
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME);
+                request.onupgradeneeded = event => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                    }
+                };
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+        
+        /**
+         * Fetches all panic key settings from IndexedDB.
+         */
+        async function getPanicKeySettings() {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(STORE_NAME, 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.getAll();
+                request.onsuccess = () => {
+                    const settingsMap = new Map(request.result.map(item => [item.id, item]));
+                    db.close();
+                    resolve(settingsMap);
+                };
+                request.onerror = () => {
+                     db.close();
+                    reject(request.error);
+                };
+            });
+        }
+        
+        /**
+         * Saves panic key settings to IndexedDB.
+         */
+        async function savePanicKeySettings(settingsArray) {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(STORE_NAME, 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                
+                let completed = 0;
+                const total = settingsArray.length;
+
+                settingsArray.forEach(setting => {
+                    const request = store.put(setting);
+                    request.onsuccess = () => {
+                        completed++;
+                        if (completed === total) {
+                            db.close();
+                            resolve();
+                        }
+                    };
+                    request.onerror = () => {
+                         db.close();
+                        reject(request.error); // Stop on first error
+                    };
+                });
+                
+                // Handle case where array is empty
+                if (total === 0) {
+                     db.close();
+                    resolve();
+                }
+            });
+        }
+
+        // --- NEW: localStorage Helper Functions ---
+        
+        function getSavedUrlChangerSetting() {
+            const savedSettingsJSON = localStorage.getItem(URL_CHANGER_KEY);
+            let savedSettings = { type: 'none' };
+            if (savedSettingsJSON) {
+                try { 
+                    savedSettings = JSON.parse(savedSettingsJSON); 
+                } catch (e) { 
+                    console.error("Failed to parse saved tab settings, reverting to default.", e); 
+                }
+            }
+            return savedSettings;
+        }
+
+        function saveUrlChangerSetting(settings) {
+            try {
+                localStorage.setItem(URL_CHANGER_KEY, JSON.stringify(settings));
+                return true;
+            } catch (e) {
+                console.error("Failed to save URL changer settings:", e);
+                return false;
+            }
+        }
 
         /**
          * Generates the HTML for the "Change Password" section.
+         * MODIFICATION: Removed max-w-2xl
          */
         function getChangePasswordSection() {
             return `
                 <h3 class="text-xl font-bold text-white mb-2 mt-8">Change Password</h3>
-                <div id="passwordChangeSection" class="settings-box w-full max-w-2xl p-4">
+                <div id="passwordChangeSection" class="settings-box w-full p-4">
                     <p class="text-sm font-light text-gray-400 mb-3">
                         Change your password. You must provide your current password for security.
                     </p>
@@ -370,6 +609,7 @@
         
         /**
          * Renders the Linked Providers and Account Deletion section.
+         * MODIFICATION: Removed max-w-2xl
          */
         function getAccountManagementContent(providerData) {
             // Determine the Primary Provider (the first one in the list)
@@ -441,7 +681,7 @@
             if (primaryProviderId === 'password') {
                 deletionContent = `
                     <h3 class="text-xl font-bold text-white mb-2 mt-8">Delete Account</h3>
-                    <div id="deletionSection" class="settings-box w-full max-w-2xl bg-red-900/10 border-red-700/50 p-4">
+                    <div id="deletionSection" class="settings-box w-full bg-red-900/10 border-red-700/50 p-4">
                         <p class="text-sm font-light text-red-300 mb-3">
                             <i class="fa-solid fa-triangle-exclamation mr-1"></i> 
                             WARNING: Deleting your account is permanent and cannot be undone.
@@ -466,7 +706,7 @@
             } else {
                 deletionContent = `
                     <h3 class="text-xl font-bold text-white mb-2 mt-8">Delete Account</h3>
-                    <div id="deletionSection" class="settings-box w-full max-w-2xl bg-red-900/10 border-red-700/50 p-4">
+                    <div id="deletionSection" class="settings-box w-full bg-red-900/10 border-red-700/50 p-4">
                         <p class="text-sm font-light text-red-300 mb-3">
                             <i class="fa-solid fa-triangle-exclamation mr-1"></i> 
                             WARNING: Deleting your account is permanent. You must re-authenticate with ${PROVIDER_CONFIG[primaryProviderId].name} to proceed.
@@ -488,12 +728,12 @@
             // --- Combined HTML for Account Management ---
             return `
                 <h3 class="text-xl font-bold text-white mb-2 mt-8">Linked Providers</h3>
-                <div class="settings-box w-full max-w-2xl mb-4 p-0" data-section="linked-providers">
+                <div class="settings-box w-full mb-4 p-0" data-section="linked-providers">
                     ${linkedProvidersHtml}
                 </div>
                 
                 <h3 class="text-xl font-bold text-white mb-2">Link New Providers</h3>
-                <div class="settings-box w-full max-w-2xl flex flex-col gap-0 p-0">
+                <div class="settings-box w-full flex flex-col gap-0 p-0">
                     ${availableProvidersHtml}
                 </div>
                 
@@ -504,6 +744,7 @@
 
         /**
          * Generates the HTML for the "General Settings" section.
+         * MODIFICATION: Removed max-w-2xl
          */
         function getGeneralContent(currentUsername, changesRemaining, changesThisMonth, currentMonthName, isEmailPasswordUser, providerData) {
              const changesUsed = changesThisMonth;
@@ -517,7 +758,7 @@
              return `
                  <h2 class="text-3xl font-bold text-white mb-6">General Settings</h2>
                  
-                 <div class="w-full max-w-2xl">
+                 <div class="w-full">
                     
                     <div class="flex justify-between items-center mb-4 settings-box p-4">
                         <p class="text-sm font-light text-gray-300">
@@ -573,6 +814,153 @@
                 ${getAccountManagementContent(providerData)}
              `;
          }
+
+        /**
+         * NEW: Generates the HTML for the "Privacy & Security" section.
+         */
+        function getPrivacyContent() {
+            // Generate preset options
+            const presetOptions = urlChangerPresets.map(preset => 
+                `<option value="${preset.id}">${preset.name}</option>`
+            ).join('');
+
+            return `
+                <h2 class="text-3xl font-bold text-white mb-6">Privacy & Security</h2>
+                
+                <div class="w-full">
+                    <!-- Panic Key Settings -->
+                    <h3 class="text-xl font-bold text-white mb-2">Panic Key Settings</h3>
+                    <div id="panicKeySection" class="settings-box transition-all duration-300 p-4">
+                        <p class="text-sm font-light text-gray-400 mb-4">
+                            Configure up to 3 panic keys. Pressing the specified key (without Shift, Ctrl, or Alt) on any page will redirect you to the URL you set.
+                            <br>
+                            <span class="text-yellow-400">Valid keys:</span> a-z, 0-9, and \` - = [ ] \\ ; ' , . /
+                        </p>
+                        
+                        <!-- Headers -->
+                        <div class="flex items-center gap-4 px-2 mb-2">
+                            <label class="block text-gray-400 text-sm font-light" style="width: 4rem; text-align: center;">Key</label>
+                            <label class="block text-gray-400 text-sm font-light flex-grow">Redirect URL</label>
+                        </div>
+
+                        <!-- Panic Key 1 -->
+                        <div class="flex items-center gap-4 mb-3">
+                            <input type="text" id="panicKey1" data-key-id="1" class="input-key-style panic-key-input" placeholder="-" maxlength="1">
+                            <input type="url" id="panicUrl1" class="input-text-style" placeholder="e.g., https://google.com">
+                        </div>
+                        
+                        <!-- Panic Key 2 -->
+                        <div class="flex items-center gap-4 mb-3">
+                            <input type="text" id="panicKey2" data-key-id="2" class="input-key-style panic-key-input" placeholder="-" maxlength="1">
+                            <input type="url" id="panicUrl2" class="input-text-style" placeholder="e.g., https://youtube.com/feed/subscriptions">
+                        </div>
+                        
+                        <!-- Panic Key 3 -->
+                        <div class="flex items-center gap-4 mb-3">
+                            <input type="text" id="panicKey3" data-key-id="3" class="input-key-style panic-key-input" placeholder="-" maxlength="1">
+                            <input type="url" id="panicUrl3" class="input-text-style" placeholder="e.g., https://wikipedia.org">
+                        </div>
+                        
+                        <div class="flex justify-between items-center pt-4 border-t border-[#252525]">
+                            <p id="panicKeyMessage" class="general-message-area text-sm"></p>
+                            <button id="applyPanicKeyBtn" class="btn-toolbar-style btn-primary-override w-36" style="padding: 0.5rem 0.75rem;">
+                                <i class="fa-solid fa-check mr-1"></i> Apply Keys
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="panicKeyGlobalMessage" class="general-message-area text-sm"></div>
+                </div>
+                
+                <div class="w-full mt-8">
+                    <!-- Tab Disguise Settings -->
+                    <h3 class="text-xl font-bold text-white mb-2">Tab Disguise (URL Changer)</h3>
+                    <div id="urlChangerSection" class="settings-box transition-all duration-300 p-4">
+                        <p class="text-sm font-light text-gray-400 mb-4">
+                            Change the title and favicon of the website to disguise it. This setting is saved locally in your browser.
+                        </p>
+                        
+                        <div class="flex flex-col gap-4">
+                            <!-- Mode Selection -->
+                            <div>
+                                <label for="tabDisguiseMode" class="block text-gray-400 text-sm font-light mb-2">Mode</label>
+                                <select id="tabDisguiseMode" class="input-select-style">
+                                    <option value="none">None (Use 4SP Default)</option>
+                                    <option value="preset">Use a Preset</option>
+                                    <option value="custom">Use Custom Title/Favicon</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Preset Selection (hidden by default) -->
+                            <div id="tabDisguisePresetGroup" class="hidden">
+                                <label for="tabDisguisePreset" class="block text-gray-400 text-sm font-light mb-2">Preset</label>
+                                <select id="tabDisguisePreset" class="input-select-style">
+                                    ${presetOptions}
+                                </select>
+                            </div>
+                            
+                            <!-- Custom Inputs (hidden by default) -->
+                            <div id="tabDisguiseCustomGroup" class="hidden flex flex-col gap-4">
+                                <div>
+                                    <label for="customTabTitle" class="block text-gray-400 text-sm font-light mb-2">Custom Title</label>
+                                    <input type="text" id="customTabTitle" class="input-text-style" placeholder="e.g., Google Docs">
+                                </div>
+                                
+                                <!-- Modified Favicon Section -->
+                                <div class="form-group">
+                                    <label for="faviconFetchInput" class="block text-gray-400 text-sm font-light mb-2">Custom Favicon (Fetch from Domain)</label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="text" id="faviconFetchInput" class="input-text-style" placeholder="e.g., google.com">
+                                        <button type="button" id="fetchFaviconBtn" class="btn-toolbar-style btn-primary-override w-28" style="padding: 0.5rem 0.75rem;">Fetch</button>
+                                        <div id="favicon-fetch-preview-container" class="w-10 h-10 border border-[#252525] bg-[#111111] rounded-md flex items-center justify-center p-1 flex-shrink-0">
+                                            <img src="" alt="Preview" class="w-full h-full object-contain" style="display: none;">
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- End Modified Favicon Section -->
+                                
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-center pt-4 mt-4 border-t border-[#252525]">
+                            <p id="urlChangerMessage" class="general-message-area text-sm"></p>
+                            <button id="applyUrlChangerBtn" class="btn-toolbar-style btn-primary-override w-36" style="padding: 0.5rem 0.75rem;">
+                                <i class="fa-solid fa-check mr-1"></i> Apply Tab
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        
+        /**
+         * NEW: Generates the HTML for the "Personalization" section.
+         */
+        function getPersonalizationContent() {
+             return `
+                <h2 class="text-3xl font-bold text-white mb-6">Personalization</h2>
+                
+                <div class="w-full">
+                    <!-- Navigation Bar Theme -->
+                    <h3 class="text-xl font-bold text-white mb-2">Navigation Bar Theme</h3>
+                    <div id="themeSection" class="settings-box transition-all duration-300 p-4">
+                        <p class="text-sm font-light text-gray-400 mb-4">
+                            Select a theme for your navigation bar. This setting is saved locally and will apply a live preview.
+                        </p>
+                        
+                        <div id="theme-picker-container">
+                            <!-- Theme buttons will be injected here by JavaScript -->
+                             <div class="flex items-center justify-center p-8">
+                                <i class="fa-solid fa-spinner fa-spin fa-2x text-gray-500"></i>
+                            </div>
+                        </div>
+                        
+                        <div id="themeMessage" class="general-message-area text-sm"></div>
+                    </div>
+                </div>
+             `;
+        }
 
 
         /**
@@ -713,7 +1101,7 @@
 
             // --- Username UI State Management Functions ---
             const setEditMode = (isEditing) => {
-                messageElement.innerHTML = ''; // Clear message
+                showMessage(messageElement, '', 'success'); // Clear message
                 
                 if (isEditing) {
                     if (changesRemaining <= 0) {
@@ -845,10 +1233,10 @@
                     applyPasswordBtn.disabled = !(isLengthValid && isMatch && isCurrentProvided);
                     
                     // Provide gentle feedback
-                    passwordMessage.innerHTML = '';
+                    showMessage(passwordMessage, '', 'success');
                     if (newPass.length > 0 && newPass.length < MIN_PASS_LENGTH) {
                         showMessage(passwordMessage, `New password must be at least ${MIN_PASS_LENGTH} characters.`, 'warning');
-                    } else if (newPass.length >= MIN_PASS_LENGTH && newPass !== confirmPass) {
+                    } else if (newPass.length >= MIN_PASS_LENGTH && confirmPass.length > 0 && newPass !== confirmPass) {
                          showMessage(passwordMessage, 'New and confirmation passwords do not match.', 'warning');
                     } else if (newPass === currentPass && isLengthValid && isMatch) {
                          showMessage(passwordMessage, 'New password cannot be the same as your current password.', 'warning');
@@ -862,7 +1250,7 @@
                 
                 applyPasswordBtn.addEventListener('click', async () => {
                     applyPasswordBtn.disabled = true;
-                    passwordMessage.innerHTML = ''; // Clear prior message
+                    showMessage(passwordMessage, '', 'success'); // Clear prior message
                     showMessage(passwordMessage, '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Attempting password change...', 'warning');
 
                     const currentPass = currentPasswordInput.value;
@@ -999,7 +1387,7 @@
 
 
             const performAccountDeletion = async () => {
-                deleteMessage.innerHTML = '';
+                showMessage(deleteMessage, '', 'success');
                 showMessage(deleteMessage, '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Deleting account...', 'warning');
 
                 try {
@@ -1043,7 +1431,7 @@
                     if (finalDeleteBtn.disabled) return;
                     
                     finalDeleteBtn.disabled = true;
-                    deleteMessage.innerHTML = '';
+                    showMessage(deleteMessage, '', 'success');
                     showMessage(deleteMessage, '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Re-authenticating...', 'warning');
                     
                     try {
@@ -1072,7 +1460,7 @@
                     const providerInstance = PROVIDER_CONFIG[primaryProviderId].instance();
                     
                     reauthenticateBtn.disabled = true;
-                    deleteMessage.innerHTML = '';
+                    showMessage(deleteMessage, '', 'success');
                     showMessage(deleteMessage, `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Re-authenticating with ${PROVIDER_CONFIG[primaryProviderId].name}...`, 'warning');
                     
                     try {
@@ -1104,6 +1492,378 @@
                 finalDeleteBtn.addEventListener('click', performAccountDeletion);
             }
         }
+        
+        /**
+         * NEW: Loads data and adds event listeners for the Privacy tab.
+         */
+        async function loadPrivacyTab() {
+            // --- 1. Get Element References ---
+            // Panic Key
+            const panicKeyInputs = document.querySelectorAll('.panic-key-input');
+            const panicUrl1 = document.getElementById('panicUrl1');
+            const panicUrl2 = document.getElementById('panicUrl2');
+            const panicUrl3 = document.getElementById('panicUrl3');
+            const applyPanicKeyBtn = document.getElementById('applyPanicKeyBtn');
+            const panicKeyMessage = document.getElementById('panicKeyMessage');
+            
+            // URL Changer
+            const modeSelect = document.getElementById('tabDisguiseMode');
+            const presetGroup = document.getElementById('tabDisguisePresetGroup');
+            const presetSelect = document.getElementById('tabDisguisePreset');
+            const customGroup = document.getElementById('tabDisguiseCustomGroup');
+            const customTitle = document.getElementById('customTabTitle');
+            const applyUrlChangerBtn = document.getElementById('applyUrlChangerBtn');
+            const urlChangerMessage = document.getElementById('urlChangerMessage');
+            
+            // NEW Favicon Fetcher Elements
+            const faviconFetchInput = document.getElementById('faviconFetchInput');
+            const fetchFaviconBtn = document.getElementById('fetchFaviconBtn');
+            const previewContainer = document.getElementById('favicon-fetch-preview-container');
+            const previewImg = previewContainer.querySelector('img');
+
+            
+            // --- 2. Load Panic Key Settings ---
+            try {
+                const settingsMap = await getPanicKeySettings();
+                const key1 = settingsMap.get('panicKey1');
+                const key2 = settingsMap.get('panicKey2');
+                const key3 = settingsMap.get('panicKey3');
+
+                if (key1) {
+                    document.getElementById('panicKey1').value = key1.key || '';
+                    panicUrl1.value = key1.url || '';
+                }
+                if (key2) {
+                    document.getElementById('panicKey2').value = key2.key || '';
+                    panicUrl2.value = key2.url || '';
+                }
+                if (key3) {
+                    document.getElementById('panicKey3').value = key3.key || '';
+                    panicUrl3.value = key3.url || '';
+                }
+            } catch (e) {
+                console.error("Error loading panic key settings:", e);
+                showMessage(panicKeyMessage, 'Error loading panic key settings.', 'error');
+            }
+            
+            // --- 3. Load URL Changer Settings ---
+            const savedUrlSettings = getSavedUrlChangerSetting();
+            modeSelect.value = savedUrlSettings.type;
+            
+            if (savedUrlSettings.type === 'preset') {
+                presetGroup.classList.remove('hidden');
+                presetSelect.value = savedUrlSettings.id;
+            } else if (savedUrlSettings.type === 'custom') {
+                customGroup.classList.remove('hidden');
+                customTitle.value = savedUrlSettings.title || '';
+                
+                // NEW logic to load saved custom favicon into the preview
+                if (savedUrlSettings.favicon) {
+                    previewImg.src = savedUrlSettings.favicon;
+                    previewImg.style.display = 'block';
+                }
+            }
+
+            // --- 4. Add Event Listeners ---
+            
+            // Panic Key Input Validation (Whitelist)
+            const validKeyRegex = /^[a-z0-9`\-=\[\]\\;',\.\/]$/;
+            panicKeyInputs.forEach(input => {
+                input.addEventListener('keydown', e => {
+                    // Allow control keys like Tab, Backspace, Arrow keys
+                    if (e.key.length > 1 && e.key !== 'Backspace' && e.key !== 'Delete' && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'Tab') {
+                        e.preventDefault();
+                        return;
+                    }
+                    
+                    const lowerKey = e.key.toLowerCase();
+                    
+                    if (lowerKey.length === 1 && !validKeyRegex.test(lowerKey)) {
+                         e.preventDefault(); // Block invalid key
+                         showMessage(panicKeyMessage, `Invalid key. Only a-z, 0-9, and \` - = [ ] \\ ; ' , . / are allowed.`, 'warning');
+                    } else if (lowerKey.length === 1) {
+                        e.preventDefault(); // Prevent typing
+                        input.value = lowerKey; // Set value
+                        showMessage(panicKeyMessage, '', 'success'); // Clear message
+                    }
+                });
+            });
+
+            // Panic Key Apply Button
+            applyPanicKeyBtn.addEventListener('click', async () => {
+                showMessage(panicKeyMessage, '', 'success');
+                const keys = [
+                    document.getElementById('panicKey1').value,
+                    document.getElementById('panicKey2').value,
+                    document.getElementById('panicKey3').value
+                ];
+                const urls = [
+                    panicUrl1.value,
+                    panicUrl2.value,
+                    panicUrl3.value
+                ];
+                
+                const settingsToSave = [];
+                let hasError = false;
+
+                for (let i = 0; i < 3; i++) {
+                    const key = keys[i];
+                    let url = urls[i]; // Make it 'let'
+                    const id = `panicKey${i + 1}`;
+                    
+                    // If either is blank, skip (or save as empty)
+                    if (!key && !url) {
+                         settingsToSave.push({ id, key: '', url: '' });
+                        continue;
+                    }
+                    
+                    // If one is filled but not the other
+                    if ( (key && !url) || (!key && url) ) {
+                        showMessage(panicKeyMessage, `Panic Key ${i+1} is incomplete. Both key and URL must be filled, or both must be empty.`, 'error');
+                        hasError = true;
+                        break;
+                    }
+
+                    // NEW: Check for relative paths and block them to avoid confusion
+                    if (url.startsWith('/') || url.startsWith('../') || url.startsWith('./')) {
+                        showMessage(panicKeyMessage, `Panic Key ${i+1} must be a full web address (e.g., google.com), not a relative path.`, 'error');
+                        hasError = true;
+                        break;
+                    }
+
+                    // NEW: Prepend https:// if it's missing
+                    if (!url.startsWith('https://') && !url.startsWith('http://')) {
+                        url = 'https://' + url;
+                    }
+
+                    // NEW: Validate URL
+                    try {
+                        new URL(url); // This will validate "https://google.com" and "https://youtube.com/page.html"
+                    } catch (e) {
+                        showMessage(panicKeyMessage, `Panic Key ${i+1} has an invalid URL. Please enter a valid web address (e.g., google.com).`, 'error');
+                        hasError = true;
+                        break;
+                    }
+                    
+                    // Add valid setting
+                    settingsToSave.push({ id, key, url }); // Push the (potentially modified) URL
+                }
+
+                if (hasError) return;
+
+                // Check for duplicate keys
+                const filledKeys = settingsToSave.map(s => s.key).filter(k => k);
+                if (new Set(filledKeys).size !== filledKeys.length) {
+                    showMessage(panicKeyMessage, 'Duplicate panic keys found. Each key must be unique.', 'error');
+                    return;
+                }
+                
+                // Save to IndexedDB
+                try {
+                    applyPanicKeyBtn.disabled = true;
+                    showMessage(panicKeyMessage, '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Saving...', 'warning');
+                    await savePanicKeySettings(settingsToSave);
+                    showMessage(panicKeyMessage, 'Panic key settings saved successfully!', 'success');
+                    
+                    // ADDED: Refresh page after 1 second
+                    setTimeout(() => location.reload(), 1000); 
+
+                } catch (e) {
+                    console.error("Error saving panic key settings:", e);
+                    showMessage(panicKeyMessage, 'An error occurred while saving.', 'error');
+                } finally {
+                    applyPanicKeyBtn.disabled = false;
+                }
+            });
+
+            // URL Changer Mode Select
+            modeSelect.addEventListener('change', () => {
+                const mode = modeSelect.value;
+                presetGroup.classList.toggle('hidden', mode !== 'preset');
+                customGroup.classList.toggle('hidden', mode !== 'custom');
+            });
+
+            // NEW: Favicon Fetcher Button
+            fetchFaviconBtn.addEventListener('click', async () => {
+                let domain = faviconFetchInput.value.trim();
+                if (!domain) {
+                    showMessage(urlChangerMessage, 'Please enter a domain to fetch from.', 'warning');
+                    return;
+                }
+                if (!domain.startsWith('http')) {
+                    domain = 'https://' + domain;
+                }
+
+                fetchFaviconBtn.disabled = true;
+                fetchFaviconBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                showMessage(urlChangerMessage, 'Fetching favicon...', 'warning');
+
+                try {
+                    if (typeof urlChanger === 'undefined' || !urlChanger.fetchFavicon) {
+                        throw new Error("URL Changer script not loaded correctly.");
+                    }
+                    
+                    const faviconUrl = await urlChanger.fetchFavicon(domain);
+                    
+                    // Show preview
+                    previewImg.src = faviconUrl;
+                    previewImg.style.display = 'block';
+                    
+                    showMessage(urlChangerMessage, 'Favicon found and set as preview.', 'success');
+                    
+                } catch (error) {
+                    console.error("Error fetching favicon:", error);
+                    showMessage(urlChangerMessage, `Failed to find favicon: ${error.message}`, 'error');
+                    previewImg.src = '';
+                    previewImg.style.display = 'none';
+                } finally {
+                    fetchFaviconBtn.disabled = false;
+                    fetchFaviconBtn.textContent = 'Fetch';
+                }
+            });
+
+            // URL Changer Apply Button
+            applyUrlChangerBtn.addEventListener('click', () => {
+                const mode = modeSelect.value;
+                let settingsToSave = { type: 'none' };
+                
+                if (mode === 'preset') {
+                    const presetId = presetSelect.value;
+                    if (!presetId) {
+                         showMessage(urlChangerMessage, 'Please select a preset.', 'error');
+                         return;
+                    }
+                    settingsToSave = { type: 'preset', id: presetId };
+                } 
+                else if (mode === 'custom') {
+                    const title = customTitle.value.trim();
+                    // NEW: Get favicon from preview image
+                    const favicon = (previewImg.src && previewImg.style.display !== 'none') ? previewImg.src : '';
+                    
+                    if (!title && !favicon) { // Check against new favicon variable
+                         showMessage(urlChangerMessage, 'Please provide at least a custom title or fetch a favicon.', 'error'); // Update message
+                        return;
+                    }
+                    settingsToSave = { type: 'custom', title: title, favicon: favicon }; // Use new favicon variable
+                }
+                
+                // Save to localStorage
+                if (saveUrlChangerSetting(settingsToSave)) {
+                    showMessage(urlChangerMessage, 'Tab Disguise settings saved! They will be applied on the next page you load.', 'success');
+                    
+                    // ADDED: Refresh page after 1 second
+                    setTimeout(() => location.reload(), 1000); 
+                    
+                } else {
+                    showMessage(urlChangerMessage, 'An error occurred while saving.', 'error');
+                }
+            });
+        }
+        
+        
+        /**
+         * NEW: Loads data and adds event listeners for the Personalization tab.
+         */
+        async function loadPersonalizationTab() {
+            const themePickerContainer = document.getElementById('theme-picker-container');
+            const themeMessage = document.getElementById('themeMessage');
+            
+            if (!themePickerContainer) return;
+            
+            // From navigation.js
+            const lightThemeNames = ['Light', 'Lavender', 'Rose Gold', 'Mint'];
+
+            try {
+                // 1. Fetch themes
+                const response = await fetch('../themes.json');
+                if (!response.ok) throw new Error('Failed to fetch themes.json');
+                const themes = await response.json();
+                
+                if (!themes || themes.length === 0) {
+                     throw new Error('themes.json is empty or invalid');
+                }
+                
+                // 2. Get currently saved theme to set the active state
+                let savedTheme = null;
+                try {
+                    savedTheme = JSON.parse(localStorage.getItem(THEME_STORAGE_KEY));
+                } catch (e) {
+                    console.warn('Could not parse saved theme.');
+                }
+                
+                // 3. Process and render themes
+                const modifiedThemes = []; // Store themes with correct logo paths
+                let themeButtonsHtml = '';
+                
+                for (const theme of themes) {
+                    // --- This is the logic requested by the user ---
+                    // It modifies the theme object *in memory* before saving/applying
+                    // We use root-relative paths as defined in navigation.js
+                    if (lightThemeNames.includes(theme.name)) {
+                        theme['logo-src'] = '/images/logo-dark.png'; 
+                    } else {
+                        theme['logo-src'] = '/images/logo.png';
+                    }
+                    // --- End of user logic ---
+                    
+                    modifiedThemes.push(theme);
+                    
+                    const isActive = savedTheme && savedTheme.name === theme.name;
+                    
+                    // Create a simple visual preview
+                    // We'll use the navbar-bg and tab-active-border as preview colors
+                    const previewBg = theme['navbar-bg'] || '#000000';
+                    const previewAccent = theme['tab-active-border'] || '#4f46e5';
+
+                    themeButtonsHtml += `
+                        <button class="theme-button ${isActive ? 'active' : ''}" data-theme-name="${theme.name}">
+                            <div class="theme-color-preview">
+                                <div class="theme-color-box" style="background-color: ${previewBg};"></div>
+                                <div class="theme-color-box" style="background-color: ${previewAccent}; width: 30%;"></div>
+                            </div>
+                            <div class="theme-button-name">${theme.name}</div>
+                        </button>
+                    `;
+                }
+                
+                // Inject buttons into the DOM
+                themePickerContainer.innerHTML = themeButtonsHtml;
+                
+                // 4. Add event listeners
+                const themeButtons = themePickerContainer.querySelectorAll('.theme-button');
+                themeButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        const themeName = button.dataset.themeName;
+                        const themeToApply = modifiedThemes.find(t => t.name === themeName);
+                        
+                        if (themeToApply) {
+                            // 1. Save to localStorage
+                            localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(themeToApply));
+                            
+                            // 2. Apply theme for live preview
+                            if (window.applyTheme) {
+                                window.applyTheme(themeToApply);
+                            } else {
+                                console.error('window.applyTheme is not defined. Is navigation.js loaded?');
+                                showMessage(themeMessage, 'Error applying theme preview.', 'error');
+                                return;
+                            }
+                            
+                            // 3. Update active class
+                            themeButtons.forEach(btn => btn.classList.remove('active'));
+                            button.classList.add('active');
+                            
+                            // 4. Show success message
+                            showMessage(themeMessage, `${themeToApply.name} theme applied!`, 'success');
+                        }
+                    });
+                });
+
+            } catch (error) {
+                console.error('Error loading themes:', error);
+                themePickerContainer.innerHTML = `<p class="text-red-400">Error: Could not load themes. (${error.message})</p>`;
+            }
+        }
 
 
         /**
@@ -1122,6 +1882,16 @@
 
             if (tabId === 'general') {
                 await loadGeneralTab(); 
+            }
+            else if (tabId === 'privacy') {
+                // NEW: Load Privacy Tab
+                mainView.innerHTML = getPrivacyContent(); // Render HTML first
+                await loadPrivacyTab(); // Then load data and add listeners
+            }
+            else if (tabId === 'personalization') {
+                // --- NEW: Load Personalization Tab ---
+                mainView.innerHTML = getPersonalizationContent(); // Render HTML
+                await loadPersonalizationTab(); // Load data and add listeners
             }
             else if (tabId === 'about') {
                 mainView.innerHTML = getAboutContent();
