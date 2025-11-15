@@ -11,10 +11,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.1.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="../navigation.js"></script>
-
     <script src="../injector.js"></script>
-    <script src="../notifications.js" defer></script>
+
     <style>
         /* BUBBLY ANIMATIONS: Keyframes for cute/bubbly effects */
         @keyframes popIn {
@@ -536,6 +534,7 @@
         
         // --- CONFIGURATION IMPORT ---
         import { firebaseConfig } from "../firebase-config.js";
+        import { initializeNotifications } from "../notifications.js";
         
         const appId = '4sp-default-app'; 
         const initialAuthToken = null; 
@@ -551,6 +550,7 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         const messaging = getMessaging(app); // 🚀 NEW: Initialize Messaging
+        initializeNotifications(app, db);
         
         // --- Global State & Constants ---
         let CURRENT_FRIENDS = [];

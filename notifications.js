@@ -1,52 +1,29 @@
-
-// Ask for notification permission
-function requestNotificationPermission() {
-    Notification.requestPermission().then((permission) => {
-        if (permission === 'granted') {
-            console.log('Notification permission granted.');
-            // Get the token
-            getFCMToken();
-        } else {
-            console.log('Unable to get permission to notify.');
-        }
-    });
-}
-
-// Get the FCM token
-function getFCMToken() {
-    const messaging = firebase.messaging();
-    messaging.getToken().then((currentToken) => {
-        if (currentToken) {
-            console.log('FCM Token:', currentToken);
-            // Save the token to the user's profile
-            saveTokenToProfile(currentToken);
-        } else {
-            console.log('No Instance ID token available. Request permission to generate one.');
-        }
-    }).catch((err) => {
-        console.log('An error occurred while retrieving token. ', err);
-    });
-}
+import { getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
+import { getFirestore, doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getMessaging } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 
 // Save the token to the user's profile
-function saveTokenToProfile(token) {
-    const user = firebase.auth().currentUser;
+async function saveTokenToProfile(db, token) {
+    const auth = getAuth();
+    const user = auth.currentUser;
     if (user) {
-        const db = firebase.firestore();
-        db.collection('users').doc(user.uid).update({
-            fcmToken: token
-        }).then(() => {
+        const userProfileRef = doc(db, 'users', user.uid);
+        try {
+            await updateDoc(userProfileRef, {
+                fcmToken: token,
+                tokenTimestamp: serverTimestamp()
+            });
             console.log('FCM token saved to profile.');
-        }).catch((error) => {
+        } catch (error) {
             console.error('Error saving FCM token to profile: ', error);
-        });
+        }
     }
 }
 
 // Initialize Firebase Cloud Messaging
-function initializeFCM() {
-    const messaging = firebase.messaging();
-    messaging.onMessage((payload) => {
+function initializeFCM(messaging) {
+    onMessage(messaging, (payload) => {
         console.log('Message received. ', payload);
         // Customize notification here
         const notificationTitle = payload.notification.title;
@@ -58,11 +35,35 @@ function initializeFCM() {
     });
 }
 
-// Check if the user is authenticated and then initialize everything
-firebase.auth().onAuthStateChanged(function(user) {
-    if (user) {
-        // User is signed in.
-        requestNotificationPermission();
-        initializeFCM();
-    }
-});
+
+export function initializeNotifications(app, db) {
+    const VAPID_KEY = 'BHYM9iOhL3KZqDwYo-_Qx9Nh7bksKoZT-XZ0IJa6RN-vqJ0DT-2EM1Y7V0fMpjyseMNszEj-CU0e3pj87z3lcbw';
+    const auth = getAuth(app);
+    const messaging = getMessaging(app);
+
+    auth.onAuthStateChanged(function(user) {
+        if (user) {
+            Notification.requestPermission().then((permission) => {
+                if (permission === 'granted') {
+                    console.log('Notification permission granted.');
+                    // Get the token
+                    getToken(messaging, { vapidKey: VAPID_KEY }).then((currentToken) => {
+                        if (currentToken) {
+                            console.log('FCM Token:', currentToken);
+                            // Save the token to the user's profile
+                            saveTokenToProfile(db, currentToken);
+                        } else {
+                            console.log('No Instance ID token available. Request permission to generate one.');
+                        }
+                    }).catch((err) => {
+                        console.log('An error occurred while retrieving token. ', err);
+                    });
+                } else {
+                    console.log('Unable to get permission to notify.');
+                }
+            });
+
+            initializeFCM(messaging);
+        }
+    });
+}
