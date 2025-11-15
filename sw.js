@@ -33,7 +33,7 @@ messaging.onBackgroundMessage((payload) => {
     // Customize notification options
     const notificationOptions = {
         body: payload.notification?.body || 'You have a new update.',
-        icon: '../images/logo.png', // ⬅️ UPDATED ICON PATH
+        icon: 'https://v5-4simpleproblems.github.io/images/logo.png', // ⬅️ UPDATED ICON PATH
         // Arbitrary data passed with the message, often used for click tracking
         data: payload.data 
     };
@@ -42,4 +42,32 @@ messaging.onBackgroundMessage((payload) => {
     self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    
+    let url = '/dailyphoto.html'; 
+    const action = event.notification.data?.action;
+
+    if (action === 'VIEW_POST' && event.notification.data?.postId) {
+        url = `/dailyphoto.html?view=post&id=${event.notification.data.postId}`;
+    } else if (action === 'VIEW_REQUESTS') {
+        url = `/dailyphoto.html?view=friends`; // Redirects to the page to manage requests
+    } else if (action === 'FRIEND_ACCEPTED') {
+        url = `/dailyphoto.html?view=friends`;
+    }
+    
+    // Look at all the window clients (browser tabs) and focus an existing one or open a new one
+    event.waitUntil(
+        clients.matchAll({ type: 'window' }).then((clientList) => {
+            for (const client of clientList) {
+                if (client.url.includes(url) && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            if (clients.openWindow) {
+                return clients.openWindow(url);
+            }
+        })
+    );
+});
 // [END initialize_firebase_in_sw]

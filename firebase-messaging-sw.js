@@ -1,50 +1,47 @@
-// --- Firebase Messaging Service Worker ---
-// This file must be placed in the ROOT directory of your web app (e.g., your_project_root/firebase-messaging-sw.js)
+// [START initialize_firebase_in_sw]
 
-// Import the Firebase components needed for the Service Worker (compatibility version)
-importScripts('https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/11.6.1/firebase-messaging-compat.js');
+// ⚠️ IMPORTANT: These scripts must use the compatibility version of the Firebase SDK
+// and MUST be accessible via Google's CDN.
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
-// !!! IMPORTANT: You MUST replace these placeholders with your actual Firebase config details.
-// You can copy this from your project settings in the Firebase Console.
+// 🚨 REQUIRED ACTION: As the Service Worker runs in a separate thread and context, 
+// you MUST manually copy the contents of your `firebaseConfig` object from 
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY_HERE",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro",
+  authDomain: "project-zirconium.firebaseapp.com",
+  projectId: "project-zirconium",
+  storageBucket: "project-zirconium.firebasestorage.app",
+  messagingSenderId: "1096564243475",
+  appId: "1:1096564243475:web:6d0956a70125eeea1ad3e6",
+  measurementId: "G-1D4F692C1Q"
 };
 
-// Initialize the Firebase app
+// Initialize Firebase in the service worker.
 firebase.initializeApp(firebaseConfig);
 
-// Retrieve the Firebase Messaging service worker instance
+// Retrieve the messaging module.
 const messaging = firebase.messaging();
 
-/**
- * Handles incoming push messages when the app is in the background or closed.
- * The payload structure matches the one sent from your Cloud Functions.
- */
+// Handle incoming messages in the background (when the app is closed or in a background tab).
 messaging.onBackgroundMessage((payload) => {
     console.log('[firebase-messaging-sw.js] Received background message ', payload);
 
-    const notificationTitle = payload.notification.title;
+    // Default title if not provided by the message payload
+    const notificationTitle = payload.notification?.title || 'New 4SP Notification';
+    
+    // Customize notification options
     const notificationOptions = {
-        body: payload.notification.body,
-        // The icon path must be correct relative to the root (as used in functions/index.js)
-        icon: payload.notification.icon || '/images/logo.png',
-        data: payload.data, // Contains action type ('VIEW_POST', 'VIEW_REQUESTS', etc.)
+        body: payload.notification?.body || 'You have a new update.',
+        icon: 'https://v5-4simpleproblems.github.io/images/logo.png', // ⬅️ UPDATED ICON PATH
+        // Arbitrary data passed with the message, often used for click tracking
+        data: payload.data 
     };
 
-    // Show the notification using the Service Worker's registration
+    // Display the notification
     self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-/**
- * Handles what happens when the user clicks the notification.
- * It uses the 'action' data sent from the Cloud Function to determine the destination URL.
- */
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
     
@@ -73,3 +70,4 @@ self.addEventListener('notificationclick', (event) => {
         })
     );
 });
+// [END initialize_firebase_in_sw]

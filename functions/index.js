@@ -65,7 +65,7 @@ exports.notifyFriendsOfNewPost = functions.firestore
                 title: `${creatorUsername} posted a photo!`,
                 body: postTitle,
                 // Ensure this icon path is relative to the *root* of your domain for the service worker.
-                icon: '/images/logo.png', 
+                icon: 'https://v5-4simpleproblems.github.io/images/logo.png', 
             },
             data: {
                 action: 'VIEW_POST',
@@ -125,7 +125,7 @@ exports.notifyFriendStatusChange = functions.firestore
                     notification: {
                         title: 'New Friend Request!',
                         body: `${requesterUsername} wants to be friends.`,
-                        icon: '/images/logo.png',
+                        icon: 'https://v5-4simpleproblems.github.io/images/logo.png',
                     },
                     data: {
                         action: 'VIEW_REQUESTS',
@@ -152,7 +152,7 @@ exports.notifyFriendStatusChange = functions.firestore
                      notification: {
                          title: 'Friend Request Accepted!',
                          body: `${accepterUsername} accepted your friend request.`,
-                         icon: '/images/logo.png',
+                         icon: 'https://v5-4simpleproblems.github.io/images/logo.png',
                      },
                      data: {
                          action: 'FRIEND_ACCEPTED',
