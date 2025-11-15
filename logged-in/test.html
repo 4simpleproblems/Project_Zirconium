@@ -25,7 +25,6 @@
             color: #c0c0c0; 
             transition: all 0.3s ease;
             font-size: 16px;
-            overflow-x: hidden;
             font-weight: 300;
         }
 
@@ -247,9 +246,10 @@
         const mainView = document.getElementById('settings-main-view');
         let currentUser = null; // To store the authenticated user object
         
-        // Constants for validation
-        const MIN_LENGTH = 6;
-        const MAX_LENGTH = 36;
+        // Constants for validation and limits (UPDATED)
+        const MIN_LENGTH = 5; 
+        const MAX_LENGTH = 30;
+        const MAX_CHANGES = 5; 
 
 
         // Tab Content Data Structure (can be expanded later)
@@ -286,10 +286,9 @@
 
         /**
          * Generates the HTML for the "General Settings" section.
-         * MODIFIED: Uses new structure for username edit/display modes.
          */
         function getGeneralContent(currentUsername, changesRemaining, changesThisMonth, currentMonthName) {
-             const MAX_CHANGES = 3;
+             // Uses global MAX_CHANGES
              const changesUsed = changesThisMonth;
              
              return `
@@ -350,7 +349,7 @@
 
 
         /**
-         * Generates the HTML for the "About 4SP" section. (Unchanged)
+         * Generates the HTML for the "About 4SP" section.
          */
         function getAboutContent() {
             return `
@@ -404,7 +403,7 @@
         }
 
         /**
-         * Generates the HTML for the "Coming Soon" sections. (Unchanged)
+         * Generates the HTML for the "Coming Soon" sections.
          */
         function getComingSoonContent(title) {
             return `
@@ -418,7 +417,6 @@
 
         /**
          * Loads user data, checks rate limit, and renders the General tab.
-         * MODIFIED: Implements the new state management for username editing.
          */
         async function loadGeneralTab() {
             if (!currentUser) return; 
@@ -435,7 +433,8 @@
             const today = new Date();
             const currentMonthNumber = today.getMonth() + 1; 
             const currentMonthName = today.toLocaleDateString('en-US', { month: 'long' }); 
-            const MAX_CHANGES = 3;
+            
+            // MAX_CHANGES is now a global constant
 
             let changesThisMonth = userData.usernameChangesThisMonth || 0;
             let lastChangeMonth = userData.lastUsernameChangeMonth || 0;
@@ -474,7 +473,8 @@
                 
                 if (isEditing) {
                     if (changesRemaining <= 0) {
-                        showMessage(messageElement, `You have reached your limit of ${MAX_CHANGES} username changes for the current month.`, 'error');
+                        // Uses global MAX_CHANGES
+                        showMessage(messageElement, `You have reached your limit of ${MAX_CHANGES} username changes for the current month.`, 'error'); 
                         return;
                     }
                     viewMode.classList.add('hidden');
@@ -495,6 +495,7 @@
                 
                 charCountElement.textContent = count;
                 
+                // Uses global MIN_LENGTH and MAX_LENGTH
                 const isValidLength = count >= MIN_LENGTH && count <= MAX_LENGTH;
                 const isChanged = newUsername !== userData.username;
                 
@@ -584,7 +585,7 @@
 
 
         /**
-         * Handles the switching of tabs and updating the main content view. (Unchanged)
+         * Handles the switching of tabs and updating the main content view.
          */
         async function switchTab(tabId) {
             // 1. Update active class on sidebar tabs
