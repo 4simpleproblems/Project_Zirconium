@@ -10,8 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     
-    <!-- Using Font Awesome Pro for icons, matching messenger-v2.html -->
-    <link rel="stylesheet" href="https://kit-pro.fontawesome.com/releases/v7.0.1/css/pro.min.css" media="all">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" media="all">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="../injector.js"></script>
 
@@ -73,6 +72,11 @@
             height: 100vh;
             display: flex;
             background-color: #070707;
+            /* ** MODIFICATION: Changed padding to 80px top, 0px right, 0px bottom, 0px left 
+             * to double the top spacing and eliminate the bottom spacing.
+             */
+            padding: 32px 0 0 0; 
+            box-sizing: border-box; /* Include padding in the height calculation */
         }
 
         /* Left Column: Fixed steps/navigation */
@@ -85,6 +89,8 @@
             display: flex;
             flex-direction: column;
             justify-content: center;
+            /* Ensures it fills the new padded container area */
+            height: 100%;
         }
 
         /* Right Column: Dynamic content area */
@@ -95,6 +101,9 @@
             justify-content: center;
             align-items: center;
             padding: 40px;
+            /* Ensures it fills the new padded container area */
+            height: 100%;
+            overflow-y: auto; /* Allow scrolling if the content exceeds the new height */
         }
         
         /* Highlight active step text on the left */
@@ -243,17 +252,14 @@
 </head>
 <body class="dark bg-background">
 
-    <!-- Main Fullscreen Container for the Two-Column Layout -->
     <div class="main-tutorial-container">
         
-        <!-- LEFT COLUMN: Steps/Navigation Indicators -->
         <div class="left-column">
             <h2 class="text-3xl font-display text-white mb-10 text-center border-b border-border-strong/50 pb-4">
                 <i class="fa-solid fa-graduation-cap text-indigo-500 mr-2"></i>
                 <span class="font-bold">Setup Guide</span>
             </h2>
 
-            <!-- DOWNLOAD BUTTON: Moved here to be always available -->
             <div class="mb-10 w-full">
                 <a href="./messenger-v2.html" download="messenger-v2.html" id="download-btn-fixed" 
                    class="btn-main-action flex items-center justify-center space-x-2 py-3 px-8 rounded-xl font-semibold text-xl w-full">
@@ -261,12 +267,8 @@
                     <span>Download Here</span>
                 </a>
             </div>
-            <!-- END DOWNLOAD BUTTON -->
-
-            <!-- Step Indicators -->
             <div id="step-indicators" class="space-y-8 flex-grow flex flex-col justify-center">
                 
-                <!-- Step 1 Indicator -->
                 <div class="step-indicator active flex items-start space-x-4 cursor-pointer" data-step="1">
                     <button class="step-dot btn-icon active w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg" data-step="1" title="Go to Step 1">1</button>
                     <div>
@@ -275,7 +277,6 @@
                     </div>
                 </div>
                 
-                <!-- Step 2 Indicator -->
                 <div class="step-indicator flex items-start space-x-4 cursor-pointer" data-step="2">
                     <button class="step-dot btn-icon w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg" data-step="2" title="Go to Step 2">2</button>
                     <div>
@@ -284,7 +285,6 @@
                     </div>
                 </div>
                 
-                <!-- Step 3 Indicator -->
                 <div class="step-indicator flex items-start space-x-4 cursor-pointer" data-step="3">
                     <button class="step-dot btn-icon w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg" data-step="3" title="Go to Step 3">3</button>
                     <div>
@@ -294,7 +294,6 @@
                 </div>
             </div>
             
-            <!-- Navigation Arrows: Using the new btn-nav-action style -->
             <div class="flex justify-between items-center mt-10">
                 <button id="prev-btn" class="btn-nav-action" title="Previous Step">
                     <i class="fa-solid fa-arrow-left fa-lg"></i>
@@ -305,7 +304,6 @@
             </div>
         </div>
 
-        <!-- RIGHT COLUMN: Dynamic Content and Description -->
         <div class="right-column">
             
             <h1 class="text-4xl font-display text-white mb-8 text-center">
@@ -313,7 +311,6 @@
                 <span class="font-bold">Messenger 2.0 Features</span>
             </h1>
             
-            <!-- Description Block (Static) -->
             <div id="description-block" class="bg-card shadow-2xl border border-border-strong/50 w-full max-w-lg mb-8">
                 <h3 class="text-xl font-semibold text-white mb-4 flex items-center">
                     <i class="fa-solid fa-hand-stars text-yellow-400 mr-2"></i>
@@ -327,9 +324,7 @@
                 </ul>
             </div>
             
-            <!-- Dynamic Step Content Area -->
             <div class="step-container">
-                <!-- STEP 1: DOWNLOAD -->
                 <div id="step-1" class="step-content active">
                     <div class="flex flex-col items-center text-center w-full">
                         <i class="fa-solid fa-arrow-down-to-bracket text-6xl text-indigo-500 mb-6"></i>
@@ -337,11 +332,9 @@
                         <p class="text-text-secondary text-lg">
                             Click the <span class="font-accent-bold">"Download Messenger"</span> button in the sidebar to get the <span class="font-accent-bold">single HTML file</span> that holds the entire Messenger application.
                         </p>
-                        <!-- DOWNLOAD BUTTON REMOVED FROM HERE -->
-                    </div>
+                        </div>
                 </div>
 
-                <!-- STEP 2: LOCATE -->
                 <div id="step-2" class="step-content">
                     <div class="flex flex-col items-center text-center w-full">
                         <i class="fa-solid fa-magnifying-glass text-6xl text-blue-400 mb-6"></i>
@@ -352,7 +345,6 @@
                     </div>
                 </div>
 
-                <!-- STEP 3: OPEN -->
                 <div id="step-3" class="step-content">
                     <div class="flex flex-col items-center text-center w-full">
                         <i class="fa-solid fa-browser text-6xl text-green-400 mb-6"></i>
