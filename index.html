@@ -30,7 +30,6 @@
             background-clip: text;
         }
     </style>
-<!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-1D4F692C1Q"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -44,13 +43,13 @@
     <main>
         <section class="text-center py-12 sm:py-20 border-b border-gray-900">
             <div class="mx-auto max-w-4xl px-4">
-                <h1 class="text-3xl sm:text-4xl font-normal text-gray-300 tracking-tighter mb-4 leading-tight">
+                <h1 class="text-3xl sm:text-4xl font-light text-gray-300 tracking-tighter mb-4 leading-tight">
                     Over 190 users, and counting.
                 </h1>
-                <h2 class="text-5xl sm:text-6xl font-semibold tracking-tighter mb-4 leading-tight">
-                    <span class="gradient-text font-bold">The Essential Student Toolkit.</span>
+                <h2 class="text-5xl sm:text-6xl font-light tracking-tighter mb-4 leading-tight">
+                    <span class="gradient-text font-light">The Essential Student Toolkit.</span>
                 </h2>
-                <p class="text-xl text-gray-400 max-w-2xl mx-auto mb-6">
+                <p class="text-xl text-gray-400 max-w-2xl mx-auto mb-6 font-light">
                     4simpleproblems (4SP) is a multi-tool platform offering soundboards, study apps, and essential Quality-of-Life (QOL) features like Tab Disguising and Panic Keys—all designed to make student life easier and more fun.
                 </p>
                 <div id="auth-button-container">
@@ -58,23 +57,25 @@
                         Get Started Instantly <i class="fas fa-arrow-right ml-2"></i>
                     </a>
                 </div>
-                <p id="beta-cta-container" class="text-base text-yellow-300 mt-4 mb-0" style="display: none;">
-                    Beta testing is now open.
-                    <a id="beta-apply-link" href="#" target="_blank" class="underline font-bold text-yellow-300 hover:text-yellow-400 transition">Apply Here.</a>
+                <p id="release-cta-container" class="text-base text-yellow-300 mt-4 mb-0" style="display: block;">
+                    Full release coming in a few weeks!
+                </p>
+                <p id="pronunciation-text" class="text-base text-gray-600 mt-2 mb-0 italic font-light">
+                    4simpleproblems is pronounced: fɔr sɪmpəl pɹɑbləmz
                 </p>
                 </div>
         </section>
 
         <section id="features" class="py-16 mx-auto max-w-7xl px-4 space-y-16">
-             <h2 class="text-4xl font-medium text-center mb-8">Core Features of 4SP</h2>
+             <h2 class="text-4xl font-light text-center mb-8">Core Features of 4SP</h2>
 
             <div class="lg:grid lg:grid-cols-2 lg:gap-12 items-center">
 
                 <div class="lg:pr-4 order-2 lg:order-1 mb-6 lg:mb-0">
-                    <span class="text-sm font-medium text-green-400 uppercase tracking-widest mb-2 block">Toolkit Core</span>
-                    <h3 class="text-4xl font-medium mb-3 mt-2">Soundboard & Playlists</h3>
-                    <p class="text-xl text-gray-400 mb-5">
-                        Access and create custom playlists of sounds. Use our dynamic, low-latency soundboards to focus, meme, or just relax. Save and share your favorite sound sequences with friends.
+                    <span class="text-sm font-light text-green-400 uppercase tracking-widest mb-2 block">Toolkit Core</span>
+                    <h3 class="text-4xl font-light mb-3 mt-2">Soundboard</h3>
+                    <p class="text-xl text-gray-400 mb-5 font-light">
+                        Access our dynamic, low-latency soundboards to focus, meme, or just relax. Save and share your favorite sound sequences with friends.
                     </p>
                     <a href="/logged-in/soundboard.html" class="inline-flex items-center text-green-400 font-normal hover:text-green-300 transition">
                         Explore Soundboard &rarr;
@@ -83,7 +84,7 @@
 
                 <div class="relative p-8 rounded-3xl border border-green-800/50 overflow-hidden shadow-2xl bg-gray-900 h-40 flex items-center justify-center order-1 lg:order-2 mb-6 lg:mb-0">
                     <i class="fas fa-volume-up text-7xl text-green-400 z-10"></i>
-                    <p class="absolute bottom-4 left-4 text-xs text-green-500/50 z-10">Custom Playlists and Low-Latency Audio</p>
+                    <p class="absolute bottom-4 left-4 text-xs text-green-500/50 z-10">Low-Latency Audio</p>
                 </div>
             </div>
 
@@ -95,30 +96,30 @@
                 </div>
 
                 <div class="lg:pl-4 order-2 lg:order-2 mb-6 lg:mb-0">
-                    <span class="text-sm font-medium text-blue-400 uppercase tracking-widest mb-2 block">Productivity Suite</span>
-                    <h3 class="text-4xl font-medium mb-3 mt-2">Essential Apps for Success</h3>
-                    <p class="text-xl text-gray-400 mb-5">
+                    <span class="text-sm font-light text-blue-400 uppercase tracking-widest mb-2 block">Productivity Suite</span>
+                    <h3 class="text-4xl font-light mb-3 mt-2">Essential Apps for Success</h3>
+                    <p class="text-xl text-gray-400 mb-5 font-light">
                         A suite of utilities built for academic success, keeping your notes, deadlines, and schedule organized in one place.
                     </p>
                     <ul class="space-y-2 text-lg text-gray-300">
-                        <li class="flex items-center"><i class="fas fa-sticky-note fa-fw w-5 mr-3 text-blue-500"></i><span class="font-normal mr-2">Notes:</span>Simple, persistent storage for quick thoughts.</li>
-                        <li class="flex items-center"><i class="fas fa-hourglass-half fa-fw w-5 mr-3 text-blue-500"></i><span class="font-normal mr-2">Countdowns:</span>Track due dates and exam times seamlessly.</li>
-                        <li class="flex items-center"><i class="fas fa-book fa-fw w-5 mr-3 text-blue-500"></i><span class="font-normal mr-2">Dictionary:</span>Quickly look up definitions.</li>
+                        <li class="flex items-center"><i class="fas fa-sticky-note fa-fw w-5 mr-3 text-blue-500"></i><span class="font-light mr-2">Notes:</span>Simple, persistent storage for quick thoughts.</li>
+                        <li class="flex items-center"><i class="fas fa-hourglass-half fa-fw w-5 mr-3 text-blue-500"></i><span class="font-light mr-2">Countdowns:</span>Track due dates and exam times seamlessly.</li>
+                        <li class="flex items-center"><i class="fas fa-book fa-fw w-5 mr-3 text-blue-500"></i><span class="font-light mr-2">Dictionary:</span>Quickly look up definitions.</li>
                     </ul>
                 </div>
             </div>
 
             <div class="lg:grid lg:grid-cols-2 lg:gap-12 items-center">
                 <div class="lg:pr-4 order-2 lg:order-1 mb-6 lg:mb-0">
-                    <span class="text-sm font-medium text-purple-400 uppercase tracking-widest mb-2 block">Stealth & Utility</span>
-                    <h3 class="text-4xl font-medium mb-3 mt-2">QOL & Discreet Features</h3>
-                    <p class="text-xl text-gray-400 mb-5">
+                    <span class="text-sm font-light text-purple-400 uppercase tracking-widest mb-2 block">Stealth & Utility</span>
+                    <h3 class="text-4xl font-light mb-3 mt-2">QOL & Discreet Features</h3>
+                    <p class="text-xl text-gray-400 mb-5 font-light">
                         Quality-of-Life tools designed to help you manage distractions instantly and discreetly, without drawing unwanted attention.
                     </p>
                     <ul class="space-y-2 text-lg text-gray-300">
-                        <li class="flex items-center"><i class="fas fa-eye-slash fa-fw w-5 mr-3 text-purple-500"></i><span class="font-normal mr-2">Tab Disguising:</span>Instantly change the tab title/favicon to blend in.</li>
-                        <li class="flex items-center"><i class="fas fa-bolt fa-fw w-5 mr-3 text-purple-500"></i><span class="font-normal mr-2">Panic Keys:</span>A quick key combination to redirect.</li>
-                        <li class="flex items-center"><i class="fas fa-palette fa-fw w-5 mr-3 text-purple-500"></i><span class="font-normal mr-2">Customizable UI:</span>Adjust themes for maximum discretion.</li>
+                        <li class="flex items-center"><i class="fas fa-eye-slash fa-fw w-5 mr-3 text-purple-500"></i><span class="font-light mr-2">Tab Disguising:</span>Instantly change the tab title/favicon to blend in.</li>
+                        <li class="flex items-center"><i class="fas fa-bolt fa-fw w-5 mr-3 text-purple-500"></i><span class="font-light mr-2">Panic Keys:</span>A quick key combination to redirect.</li>
+                        <li class="flex items-center"><i class="fas fa-palette fa-fw w-5 mr-3 text-purple-500"></i><span class="font-light mr-2">Customizable UI:</span>Adjust themes for maximum discretion.</li>
                     </ul>
                 </div>
 
@@ -130,11 +131,11 @@
         </section>
 
         <section class="py-12 mx-auto max-w-7xl px-4 text-center border-t border-gray-900">
-            <h2 class="text-xl font-medium text-gray-400 mb-2">Powered by Modern Cloud Tools</h2>
-            <p class="text-gray-500 text-lg">
-                <strong class="text-white font-medium">Authentication and Backend Infrastructure</strong>
+            <h2 class="text-xl font-light text-gray-400 mb-2">Powered by Modern Cloud Tools</h2>
+            <p class="text-gray-500 text-lg font-light">
+                <strong class="text-white font-normal">Authentication and Backend Infrastructure</strong>
                 are handled robustly using
-                <strong class="text-white font-medium">Firebase</strong>,
+                <strong class="text-white font-normal">Firebase</strong>,
                 ensuring secure, reliable, and scalable user management for all your student tools.
             </p>
         </section>
@@ -147,19 +148,12 @@
         </div>
     </footer>
 
-    <!--
-        COOKIE CONSENT OVERLAY AND BANNER
-        - The overlay (#cookie-overlay) darkens the screen and prevents interaction.
-        - The banner (#cookie-banner) contains the consent information.
-    -->
-    <!-- Updated: Removed 'hidden' class and added initial 'opacity-0' state. Opacity will be controlled by JS. -->
     <div id="cookie-overlay" class="fixed inset-0 bg-black/70 z-[9999] transition-opacity duration-300 opacity-0" style="display: none;">
         <div id="cookie-banner" class="absolute bottom-4 left-1/2 -translate-x-1/2 w-full max-w-7xl px-4">
             <div class="bg-black/95 text-white p-4 sm:p-6 rounded-3xl border border-gray-700 shadow-2xl backdrop-blur-md flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0 md:space-x-6">
-                <!-- Text Content (Left Side) -->
                 <div class="flex-1 min-w-0">
-                    <h3 class="text-xl font-bold mb-1">4SP Uses Cookies</h3>
-                    <p class="text-sm text-gray-300 mb-2">
+                    <h3 class="text-xl font-normal mb-1">4SP Uses Cookies</h3>
+                    <p class="text-sm text-gray-300 mb-2 font-light">
                         We use cookies to ensure the core functionality of authentication (via Firebase) and to analyze site traffic for improvements. This data is non-personal and essential for our services.
                     </p>
                     <div class="space-x-3 text-xs">
@@ -167,16 +161,13 @@
                             Extra (What are cookies?)
                         </a>
                         <a class="text-gray-500 pointer-events-none">|</a>
-                        <!-- UPDATED: Added correct path to legal.html and anchor to #privacy-policy -->
                         <a href="../legal.html#privacy-policy" class="text-blue-400 hover:text-blue-300 underline transition">
                             Privacy Policy
                         </a>
                     </div>
                 </div>
 
-                <!-- Button (Right Side) -->
                 <div class="flex-shrink-0">
-                    <!-- UPDATED: Styled the button to match a prominent purple accented CTA style -->
                     <button id="accept-cookies-button" class="w-full md:w-auto inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-normal rounded-xl text-white bg-purple-500/10 ring-1 ring-purple-500/50 hover:bg-purple-500/20 transition duration-150 transform hover:scale-[1.02]">
                         I Understand
                     </button>
@@ -184,8 +175,6 @@
             </div>
         </div>
     </div>
-    <!-- END COOKIE CONSENT -->
-
     <script type="module" src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
     <script type="module" src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
 
@@ -255,7 +244,7 @@
         const DASHBOARD_HTML = 'Go to Dashboard <i class="fas fa-arrow-right ml-2"></i>';
         const GET_STARTED_HTML = 'Get Started Instantly <i class="fas fa-arrow-right ml-2"></i>';
 
-        // Beta Tester Form URL
+        // NOTE: The BETA_FORM_URL is no longer needed but kept for completeness in the JS structure.
         const BETA_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdWdL4RTE8p7t7gMGYpIHYiYcV__sNa8vOlwOCQyoolKuQimQ/viewform?usp=publish-editor";
 
 
@@ -274,37 +263,34 @@
 
         // 3. Reference to the button and new elements
         const authButton = document.getElementById('auth-button');
-        const betaCtaContainer = document.getElementById('beta-cta-container');
+        // NOTE: Renamed betaCtaContainer to releaseCtaContainer in HTML, updating variable name here.
+        const releaseCtaContainer = document.getElementById('release-cta-container');
+        // NOTE: betaApplyLink is no longer needed but kept for completeness in the JS structure.
         const betaApplyLink = document.getElementById('beta-apply-link');
 
-        // Set the form URL for the beta link
-        if (betaApplyLink) {
-            betaApplyLink.href = BETA_FORM_URL;
-        }
 
         /**
          * Listens for changes in the user's sign-in state.
-         * If a user is logged in, it updates the button to "Go to dashboard" and hides the beta CTA.
+         * If a user is logged in, it updates the button to "Go to dashboard".
+         * The release CTA is always shown now, regardless of auth state, so no need to hide/show it.
          */
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // User is signed in. Change the button to "Go to dashboard" and HIDE the beta CTA.
+                // User is signed in. Change the button to "Go to dashboard".
                 if (authButton) {
                     authButton.href = '../logged-in/dashboard.html';
                     authButton.innerHTML = DASHBOARD_HTML; // Use Font Awesome content
                 }
-                if (betaCtaContainer) {
-                    betaCtaContainer.style.display = 'none';
-                }
             } else {
-                // User is signed out. Ensure the button is set to "Get Started Instantly" and SHOW the beta CTA.
+                // User is signed out. Ensure the button is set to "Get Started Instantly".
                 if (authButton) {
                     authButton.href = '../authentication.html';
                     authButton.innerHTML = GET_STARTED_HTML; // Use Font Awesome content
                 }
-                if (betaCtaContainer) {
-                    betaCtaContainer.style.display = 'block'; // Show the beta CTA
-                }
+            }
+            // Release CTA remains visible in both states as per the new requirement.
+            if (releaseCtaContainer) {
+                releaseCtaContainer.style.display = 'block';
             }
         });
     </script>
