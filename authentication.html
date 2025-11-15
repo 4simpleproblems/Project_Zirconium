@@ -130,7 +130,7 @@
                     <form id="usernameForm" novalidate class="w-full max-w-md"> 
                         <div class="mb-5">
                             <label for="signupUsername" class="block mb-2 text-custom-light-gray text-sm font-light text-left">Username</label>
-                            <input type="text" id="signupUsername" placeholder="4-24 characters, including symbols" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-xl text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
+                            <input type="text" id="signupUsername" placeholder="6-24 characters, including symbols" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-xl text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
                             <p class="text-xs text-custom-lighter-gray mt-2 text-left font-light">Allowed symbols: .,-+\_!?$</p>
                         </div>
                         <button type="submit" class="w-full p-3 text-lg rounded-xl font-normal ring-1 ring-white/20 text-white bg-white/5 hover:bg-white/10 transition">NEXT</button>
@@ -452,7 +452,7 @@
             document.getElementById('usernameForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const username = document.getElementById('signupUsername').value.trim();
-                if (username.length < 4 || username.length > 24) { showMessage(messageDivs.username, 'Username must be 4-24 characters.'); return; }
+                if (username.length < 6 || username.length > 24) { showMessage(messageDivs.username, 'Username must be 6-24 characters.'); return; }
                 if (!/^[a-zA-Z0-9.,\-+_\!\?\$\\]+$/.test(username)) { showMessage(messageDivs.username, 'Username contains invalid characters.'); return; }
 
                 showMessage(messageDivs.username, 'Checking username...', 'warning');
@@ -540,7 +540,7 @@
                         
                         let username = (user.displayName || user.email.split('@')[0] || 'User')
                             .replace(/[^a-zA-Z0-9]/g, '').slice(0, 16);
-                        if (username.length < 4) username = `User${user.uid.substring(0, 8)}`;
+                        if (username.length < 6) username = `User${user.uid.substring(0, 8)}`;
                         if (await checkProfanity(username)) username = `User${user.uid.substring(0, 8)}`;
                         
                         let finalUsername = username;
