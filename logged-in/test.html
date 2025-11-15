@@ -3,483 +3,574 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - MESSENGER TUTORIAL</title>
-    <meta name="description" content="A tutorial on how to install and open the Messenger app.">
+    <title>4SP - Settings</title>
+    <meta name="description" content="Settings and configuration for the 4SP website.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" media="all">
+    <link rel="stylesheet" href="https://kit-pro.fontawesome.com/releases/v7.0.1/css/pro.min.css" media="all">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../navigation.js"></script>
     <script src="../injector.js"></script>
 
-    <script>
-        // Customizing Tailwind to use the Geist font and dark mode settings
-        tailwind.config = {
-            darkMode: 'class', 
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Geist', 'sans-serif'],
-                        display: ['Geist', 'sans-serif'],
-                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', '"Liberation Mono"', '"Courier New"', 'monospace'],
-                    },
-                    colors: {
-                        'background': '#070707',
-                        'card': '#1a1a1a',
-                        'border-strong': '#374151',
-                        'text-primary': '#c0c0c0',
-                        'text-secondary': '#9ca3af',
-                    }
-                }
-            }
-        }
-    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
 
     <style>
-        html, body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden; /* Prevent scrolling for true fullscreen experience */
-        }
+        /* --- FONT & BASE STYLING (MATCHING template) --- */
         body { 
             font-family: 'Geist', sans-serif; 
             background-color: #070707; 
             color: #c0c0c0; 
-            font-weight: 300; /* Base font weight */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100vw; /* Full viewport width */
-            height: 100vh; /* Full viewport height */
+            transition: all 0.3s ease;
+            font-size: 16px;
+            overflow-x: hidden;
+            font-weight: 300;
         }
 
-        /* Use font-weight 400 for headers and defined bold styles */
-        h1, h2, h3, .font-bold, .font-semibold {
+        h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
             font-weight: 400 !important;
         }
-
-        /* Custom class for slightly bolder text (+100 weight from base 300) */
-        .font-accent-bold {
-            font-weight: 400; 
-            color: #ffffff; /* Make the highlighted text stand out */
-        }
         
-        /* Main Fullscreen Container for the Two-Column Layout */
-        .main-tutorial-container {
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            background-color: #070707;
-            /* ** MODIFICATION: Changed padding to 80px top, 0px right, 0px bottom, 0px left 
-             * to double the top spacing and eliminate the bottom spacing.
-             */
-            padding: 32px 0 0 0; 
-            box-sizing: border-box; /* Include padding in the height calculation */
+        /* Emphasis class for slightly bolder text */
+        .text-emphasis {
+            font-weight: 500 !important; 
+            color: #ffffff;
         }
 
-        /* Left Column: Fixed steps/navigation */
-        .left-column {
-            width: 350px; /* Fixed width for steps/navigation */
-            flex-shrink: 0;
-            background-color: #111111;
-            border-right: 1px solid #374151;
-            padding: 40px 30px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            /* Ensures it fills the new padded container area */
-            height: 100%;
-        }
-
-        /* Right Column: Dynamic content area */
-        .right-column {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 40px;
-            /* Ensures it fills the new padded container area */
-            height: 100%;
-            overflow-y: auto; /* Allow scrolling if the content exceeds the new height */
-        }
+        /* --- THEME-AWARE STYLES --- */
         
-        /* Highlight active step text on the left */
-        .step-indicator.active .step-title {
-            color: white;
-            /* Note: font-weight 600 in Tailwind config is 400 here, but we use it for visual distinction */
-            font-weight: 600; 
-        }
-        .step-indicator.active .step-subtitle {
-            color: #d1d5db; /* Gray-300 */
-        }
-
-        /* ------------------------------------------- */
-        /* --- CUSTOMIZABLE BUTTON & STEP DOT STYLES --- */
-        /* ------------------------------------------- */
-
-        /* 1. Icon Button Styles (for Step Dots) */
-        .btn-icon {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            /* Tailwinds are used for w/h of step dots (w-10 h-10) - override the 2.25rem size for uniformity here */
-            border-radius: 0.5rem;
-            background-color: transparent;
-            border: 1px solid #374151; /* gray-700 */
-            color: #9ca3af; 
+        .btn-toolbar-style {
+            background: var(--menu-bg, #0000000);
+            border: 1px solid var(--menu-border, #333);
+            border-radius: 0.75rem;
+            color: var(--menu-text, #d1d5db);
+            padding: 0.5rem 1rem;
+            font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
-            line-height: 1; /* Fix vertical alignment for the number */
-            font-weight: 400;
-        }
-        .btn-icon:hover {
-            background-color: #374151; /* gray-700 */
-            color: #f3f4f6; /* gray-100 */
-            border-color: #374151; /* gray-700 */
-        }
-        .btn-icon.active {
-            /* Active style (subtle purple/indigo) */
-            background-color: rgba(79, 70, 229, 0.1);
-            color: #4f46e5;
-            border-color: #4f46e5;
-        }
-        .btn-icon:disabled {
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-
-
-        /* 2. Main Action Button Style (for Download Button) */
-        .btn-main-action {
-            /* Match .btn-icon.active colors */
-            background-color: rgba(79, 70, 229, 0.15); /* Slightly stronger transparent background */
-            color: #4f46e5; /* Strong blue text color */
-            border: 1px solid #4f46e5; /* Strong blue border color */
-            transition: all 0.3s ease;
-            box-shadow: none; /* Removed the glow effect */
-            font-weight: 600;
-        }
-        .btn-main-action:hover {
-            background-color: rgba(79, 70, 229, 0.3); /* Darker hover */
-            color: #ffffff; /* White text on hover for contrast */
-        }
-
-        /* 3. Navigation Action Button Style (for Prev/Next) */
-        .btn-nav-action {
-            /* Base style: Match .btn-main-action's colors */
-            background-color: rgba(79, 70, 229, 0.15); /* Indigo 500 @ 15% */
-            color: #4f46e5; /* Indigo 500 */
-            border: 1px solid #4f46e5; /* Indigo 500 */
-            transition: all 0.2s ease;
-            box-shadow: none;
-            font-weight: 600;
-            
-            /* Shape and size: Match btn-icon size (w-10 h-10 = 2.5rem), but rounded-xl (0.75rem) */
             display: inline-flex;
             align-items: center;
-            justify-content: center;
-            width: 2.5rem; /* w-10 */
-            height: 2.5rem; /* h-10 */
-            border-radius: 0.75rem; /* rounded-xl */
-            cursor: pointer;
+            gap: 0.5rem;
         }
-        .btn-nav-action:hover:not(:disabled) {
-            background-color: rgba(79, 70, 229, 0.3); /* Darker hover */
-            color: #ffffff; /* White text on hover for contrast */
+        .btn-toolbar-style:hover {
+            background-color: var(--menu-bg, #000000);
+            border-color: var(--menu-border, #fff);
+            color: var(--tab-hover-text, #ffffff);
         }
-        .btn-nav-action:disabled {
-            opacity: 0.4; /* Stronger disabled look */
-            cursor: not-allowed;
-            background-color: transparent; /* Makes the disabled look cleaner */
-            border-color: #374151; /* gray-700 for disabled border */
-            color: #9ca3af; /* gray-400 for disabled icon */
+        
+        .btn-toolbar-style.btn-primary-override {
+            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
+            border: 1px solid var(--tab-active-border, #4f46e5);
+            color: var(--tab-active-text, #4f46e5);
         }
-
-        /* 4. Description Block Custom Styling */
-        #description-block {
-            /* Slightly more rounded (1rem is rounded-2xl) */
-            border-radius: 1rem;
-            /* Less side padding (p-6 was 1.5rem, px-4 is 1rem) */
-            padding: 1.5rem 1rem; /* 24px top/bottom, 16px left/right */
+        .btn-toolbar-style.btn-primary-override:hover {
+            background-color: var(--tab-active-hover-bg, rgba(79, 70, 229, 0.15));
+            border-color: var(--tab-active-hover-border, #6366f1);
+            color: var(--tab-active-hover-text, #6366f1);
         }
 
-        /* Smaller font size for list items within the block */
-        #description-block ul li {
-            /* text-sm equivalent (0.875rem / 14px) */
-            font-size: 0.875rem; 
-        }
-
-        /* Step Animation CSS for the Right Column */
-        .step-container {
-            position: relative;
-            overflow: hidden;
-            height: 500px; /* Increased height for better visibility on non-fullscreen views */
+        .settings-tab {
             width: 100%;
-            max-width: 600px;
+            justify-content: flex-start;
         }
-        .step-content {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+        .settings-tab.active {
+            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
+            border: 1px solid var(--tab-active-border, #4f46e5);
+            color: var(--tab-active-text, #4f46e5);
+        }
+        .settings-tab.active:hover {
+             background-color: var(--tab-active-hover-bg, rgba(79, 70, 229, 0.15));
+            border-color: var(--tab-active-hover-border, #6366f1);
+            color: var(--tab-active-hover-text, #6366f1);
+        }
+        
+        /* --- Page Content Layout --- */
+        #page-content {
+            min-height: calc(100vh - 4rem);
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-        .step-content.active {
-            opacity: 1;
-            pointer-events: all;
-            transform: translateX(0);
-        }
-        /* State when sliding out to the left (next step) */
-        .step-content.slide-left {
-            transform: translateX(-100%);
-        }
-        /* State when sliding out to the right (previous step) */
-        .step-content.slide-right {
-            transform: translateX(100%);
         }
 
-    </style>
-</head>
-<body class="dark bg-background">
+        /* NEW: Main Settings Container - Takes all remaining height */
+        #settings-container {
+            display: flex;
+            flex-grow: 1;
+            padding: 20px;
+            /* Added min-height to ensure it respects the full viewport minus header */
+            min-height: calc(100vh - 4rem - 40px); 
+        }
 
-    <div class="main-tutorial-container">
+        /* NEW: Sidebar Styling - MADE STICKY */
+        #settings-sidebar {
+            width: 250px;
+            padding-right: 20px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            /* New properties for sticky behavior */
+            position: sticky; 
+            top: 4.5rem; /* Increased from 1rem to 4.5rem to clear the injected navigation bar */
+            align-self: flex-start; /* Important for sticky behavior inside a flex container */
+        }
+
+        /* MODIFIED: Main View Styling */
+        #settings-main-view {
+            flex-grow: 1;
+            padding: 20px;
+            background-color: #0d0d0d;
+            border: 1px solid #1a1a1a;
+            border-radius: 0.75rem;
+            min-height: 100%; 
+            display: flex;
+            flex-direction: column; 
+            align-items: flex-start;
+        }
         
-        <div class="left-column">
-            <h2 class="text-3xl font-display text-white mb-10 text-center border-b border-border-strong/50 pb-4">
-                <i class="fa-solid fa-graduation-cap text-indigo-500 mr-2"></i>
-                <span class="font-bold">Setup Guide</span>
-            </h2>
+        /* MODIFIED: About Section specific styles - REMOVED max-width */
+        .about-section-content {
+            width: 100%;
+            margin-top: 1rem;
+        }
+        /* Grouping container for social links - styling is minimal now */
+        .social-link-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            margin-bottom: 20px;
+        }
+        
+        /* Grouping container for legal links - styling is minimal now */
+        .legal-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        /* Utility styles for form elements */
+        .input-text-style {
+            width: 100%; 
+            padding: 0.75rem; 
+            border: 1px solid #252525; 
+            background-color: #111111; 
+            border-radius: 0.5rem; 
+            color: #c0c0c0; 
+            transition: all 0.2s;
+            max-width: 400px; /* Limit input width */
+        }
+        .input-text-style:focus {
+            border-color: #505050; 
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(80, 80, 80, 0.5);
+        }
+        .general-message-area { min-height: 20px; margin-top: 1rem; font-weight: 400; }
+        .success-message { color: #4ade80; }
+        .error-message { color: #f87171; }
+        .warning-message { color: #fbbf24; }
+    </style>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-1D4F692C1Q"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
 
-            <div class="mb-10 w-full">
-                <a href="./messenger-v2.html" download="messenger-v2.html" id="download-btn-fixed" 
-                   class="btn-main-action flex items-center justify-center space-x-2 py-3 px-8 rounded-xl font-semibold text-xl w-full">
-                    <i class="fa-solid fa-download"></i>
-                    <span>Download Here</span>
-                </a>
-            </div>
-            <div id="step-indicators" class="space-y-8 flex-grow flex flex-col justify-center">
-                
-                <div class="step-indicator active flex items-start space-x-4 cursor-pointer" data-step="1">
-                    <button class="step-dot btn-icon active w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg" data-step="1" title="Go to Step 1">1</button>
-                    <div>
-                        <p class="text-white font-semibold text-xl step-title">Download App</p>
-                        <p class="text-text-secondary text-sm step-subtitle">Get the file onto your device.</p>
-                    </div>
-                </div>
-                
-                <div class="step-indicator flex items-start space-x-4 cursor-pointer" data-step="2">
-                    <button class="step-dot btn-icon w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg" data-step="2" title="Go to Step 2">2</button>
-                    <div>
-                        <p class="text-text-primary font-semibold text-xl step-title">Locate File</p>
-                        <p class="text-text-secondary text-sm step-subtitle">Find it in your downloads folder.</p>
-                    </div>
-                </div>
-                
-                <div class="step-indicator flex items-start space-x-4 cursor-pointer" data-step="3">
-                    <button class="step-dot btn-icon w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg" data-step="3" title="Go to Step 3">3</button>
-                    <div>
-                        <p class="text-text-primary font-semibold text-xl step-title">Open & Launch</p>
-                        <p class="text-text-secondary text-sm step-subtitle">Double-click to start chatting.</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="flex justify-between items-center mt-10">
-                <button id="prev-btn" class="btn-nav-action" title="Previous Step">
-                    <i class="fa-solid fa-arrow-left fa-lg"></i>
-                </button>
-                <button id="next-btn" class="btn-nav-action" title="Next Step">
-                    <i class="fa-solid fa-arrow-right fa-lg"></i>
-                </button>
-            </div>
-        </div>
-
-        <div class="right-column">
-            
-            <h1 class="text-4xl font-display text-white mb-8 text-center">
-                <i class="fa-solid fa-message-code text-indigo-500 mr-2"></i>
-                <span class="font-bold">Messenger 2.0 Features</span>
-            </h1>
-            
-            <div id="description-block" class="bg-card shadow-2xl border border-border-strong/50 w-full max-w-lg mb-8">
-                <h3 class="text-xl font-semibold text-white mb-4 flex items-center">
-                    <i class="fa-solid fa-hand-stars text-yellow-400 mr-2"></i>
-                    What you can do:
-                </h3>
-                <ul class="text-text-secondary space-y-3 list-disc list-inside">
-                    <li>Add new <span class="font-accent-bold">friends using their 8-digit unique code</span>.</li>
-                    <li>See <span class="font-accent-bold">read receipts</span> instantly to know when your message was viewed.</li>
-                    <li>Easily clear your <span class="font-accent-bold">local chat history</span> (the last 5 messages are permanently saved in the database).</li>
-                    <li><span class="font-accent-bold">Attach images</span> to your messages (Note: GIFs and videos are currently not supported).</li>
-                </ul>
-            </div>
-            
-            <div class="step-container">
-                <div id="step-1" class="step-content active">
-                    <div class="flex flex-col items-center text-center w-full">
-                        <i class="fa-solid fa-arrow-down-to-bracket text-6xl text-indigo-500 mb-6"></i>
-                        <h2 class="text-2xl font-semibold text-white mb-3">1. Download the App File</h2>
-                        <p class="text-text-secondary text-lg">
-                            Click the <span class="font-accent-bold">"Download Messenger"</span> button in the sidebar to get the <span class="font-accent-bold">single HTML file</span> that holds the entire Messenger application.
-                        </p>
-                        </div>
-                </div>
-
-                <div id="step-2" class="step-content">
-                    <div class="flex flex-col items-center text-center w-full">
-                        <i class="fa-solid fa-magnifying-glass text-6xl text-blue-400 mb-6"></i>
-                        <h2 class="text-2xl font-semibold text-white mb-3">2. Locate the Download</h2>
-                        <p class="text-text-secondary text-lg">
-                            Find the file named <code class="bg-gray-800 text-yellow-300 px-2 py-1 rounded-md text-sm font-mono tracking-wider shadow-inner">messenger-v2.html</code>, usually in your Downloads folder.
-                        </p>
-                    </div>
-                </div>
-
-                <div id="step-3" class="step-content">
-                    <div class="flex flex-col items-center text-center w-full">
-                        <i class="fa-solid fa-browser text-6xl text-green-400 mb-6"></i>
-                        <h2 class="text-2xl font-semibold text-white mb-3">3. Launch the Application</h2>
-                        <p class="text-text-secondary text-lg">
-                            <span class="font-accent-bold">Double-click</span> the file to open it in your web browser. That's it—the app is now running!
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
+  gtag('config', 'G-1D4F692C1Q');
+</script>
+</head>
+<body class="min-h-screen">
+    <div id="loading-screen" class="fixed inset-0 bg-[#070707] flex items-center justify-center z-50">
+        <i class="fa-duotone fa-spinner fa-spin fa-2x"></i>
     </div>
 
+    <div id="page-content" class="hidden">
+        
+        <header class="flex justify-between items-center p-4 border-b border-[#1a1a1a]">
+            <h1 class="text-2xl font-bold text-white">4SP Settings</h1>
+            
+            <div class="flex items-center gap-2">
+                 </div>
+        </header>
 
-    <script>
-        const dom = {
-            stepContents: document.querySelectorAll('.step-content'),
-            stepIndicators: document.querySelectorAll('.step-indicator'), 
-            stepDots: document.querySelectorAll('.step-dot'),
-            prevBtn: document.getElementById('prev-btn'),
-            nextBtn: document.getElementById('next-btn'),
+        <div id="settings-container">
+            <nav id="settings-sidebar">
+                <button id="tab-general" class="btn-toolbar-style settings-tab active" data-tab="general">
+                    <i class="fa-solid fa-gear w-5"></i> <span>General</span>
+                </button>
+                <button id="tab-privacy" class="btn-toolbar-style settings-tab" data-tab="privacy">
+                    <i class="fa-solid fa-shield-halved w-5"></i> <span>Privacy & Security</span>
+                </button>
+                <button id="tab-personalization" class="btn-toolbar-style settings-tab" data-tab="personalization">
+                    <i class="fa-solid fa-palette w-5"></i> <span>Personalization</span>
+                </button>
+                <button id="tab-data" class="btn-toolbar-style settings-tab" data-tab="data">
+                    <i class="fa-solid fa-database w-5"></i> <span>Data Management</span>
+                </button>
+                <button id="tab-about" class="btn-toolbar-style settings-tab" data-tab="about">
+                    <i class="fa-solid fa-circle-info w-5"></i> <span>About 4SP</span>
+                </button>
+            </nav>
+
+            <div id="settings-main-view">
+                </div>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            getDoc, 
+            updateDoc, 
+            collection,
+            query,
+            where,
+            getDocs,
+            serverTimestamp
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        
+        // --- Import Firebase Config (Assumed to exist in a relative file) ---
+        import { firebaseConfig } from "../authentication/firebase-config.js"; 
+
+        if (!firebaseConfig || !firebaseConfig.apiKey) {
+            console.error("FATAL ERROR: Firebase configuration is missing or invalid.");
+        }
+
+        // --- Firebase Initialization ---
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // --- Global State and Element References ---
+        const sidebarTabs = document.querySelectorAll('.settings-tab');
+        const mainView = document.getElementById('settings-main-view');
+        let currentUser = null; // To store the authenticated user object
+
+        // Tab Content Data Structure (can be expanded later)
+        const tabContent = {
+            'general': { title: 'General Settings', icon: 'fa-gear' },
+            'privacy': { title: 'Privacy & Security', icon: 'fa-shield-halved' },
+            'personalization': { title: 'Personalization', icon: 'fa-palette' },
+            'data': { title: 'Data Management', icon: 'fa-database' },
+            'about': { title: 'About 4SP', icon: 'fa-circle-info' },
+        };
+        
+        // --- Shared Helper Functions ---
+        const getUserDocRef = (userId) => doc(db, 'users', userId);
+        
+        const showMessage = (element, text, type = 'error') => {
+            element.innerHTML = text;
+            element.className = `general-message-area text-sm ${type}-message`;
+        };
+        
+        const checkProfanity = async (text) => {
+            try {
+                const response = await fetch(`https://www.purgomalum.com/service/containsprofanity?text=${encodeURIComponent(text)}`);
+                const result = await response.text();
+                return result.toLowerCase() === 'true';
+            } catch (error) { console.error('Profanity API error:', error); return false; }
         };
 
-        let currentStep = 1;
-        const totalSteps = dom.stepContents.length;
-        let isAnimating = false;
+        const isUsernameTaken = async (username) => {
+            // New function, similar to the one in authentication.html
+            const q = query(collection(db, 'users'), where('username', '==', username));
+            const querySnapshot = await getDocs(q);
+            return !querySnapshot.empty;
+        };
+
 
         /**
-         * Updates the tutorial step with a fade and slide animation.
-         * @param {number} newStep - The step number to navigate to (1, 2, or 3).
+         * Generates the HTML for the "General Settings" section, including Username Change.
          */
-        function updateStep(newStep) {
-            if (isAnimating || newStep < 1 || newStep > totalSteps || newStep === currentStep) return;
-            isAnimating = true;
-
-            const direction = newStep > currentStep ? 'next' : 'prev';
-            const oldStepElement = document.getElementById(`step-${currentStep}`);
-            const newStepElement = document.getElementById(`step-${newStep}`);
-            const directionClass = direction === 'next' ? 'slide-left' : 'slide-right';
-
-            // 1. Start transition: Make old step slide out
-            if (oldStepElement) {
-                oldStepElement.classList.add(directionClass);
-                oldStepElement.classList.remove('active');
-            }
-            
-            // 2. Prepare new step: position it off-screen on the opposite side
-            if (newStepElement) {
-                const resetClass = direction === 'next' ? 'slide-right' : 'slide-left';
-                newStepElement.classList.add(resetClass);
-            }
-            
-            // Short timeout to ensure CSS registers the slide-out and off-screen prep before slide-in starts
-            setTimeout(() => {
-                // 3. Activate new step and remove off-screen class to trigger slide-in
-                if (newStepElement) {
-                    newStepElement.classList.remove('slide-left', 'slide-right');
-                    newStepElement.classList.add('active');
-                }
-                
-                // 4. Update state and UI
-                currentStep = newStep;
-                updateUI();
-
-                // 5. Clean up old step and finish animation flag
-                setTimeout(() => {
-                    if (oldStepElement) {
-                        oldStepElement.classList.remove('slide-left', 'slide-right');
-                    }
-                    isAnimating = false;
-                }, 500); // Matches CSS transition duration
-            }, 10); 
-        }
-
-        /**
-         * Updates the visual state of navigation buttons and step dots/indicators.
-         */
-        function updateUI() {
-            // Update dots and indicator styling
-            dom.stepIndicators.forEach(indicator => {
-                const stepDot = indicator.querySelector('.step-dot');
-                const stepTitle = indicator.querySelector('.step-title');
-                const stepSubtitle = indicator.querySelector('.step-subtitle');
-                const stepNum = parseInt(indicator.dataset.step, 10);
-                
-                const isActive = stepNum === currentStep;
-                indicator.classList.toggle('active', isActive);
-                
-                // Dot styling: Toggle 'active' class for the new .btn-icon styling
-                stepDot.classList.toggle('active', isActive);
-
-                // Text styling (Ensures inactive text remains secondary)
-                if (!isActive) {
-                    stepTitle.classList.remove('text-white', 'font-semibold');
-                    stepTitle.classList.add('text-text-primary');
-                    stepSubtitle.classList.add('text-text-secondary');
-                }
-            });
-
-            // Update navigation buttons (disabled states)
-            // The visual disabled state is now handled by the .btn-nav-action:disabled CSS rule
-            dom.prevBtn.disabled = currentStep === 1;
-            dom.nextBtn.disabled = currentStep === totalSteps;
-        }
-
-        /**
-         * Initializes event listeners for navigation.
-         */
-        function initListeners() {
-            dom.prevBtn.addEventListener('click', () => updateStep(currentStep - 1));
-            dom.nextBtn.addEventListener('click', () => updateStep(currentStep + 1));
-            
-            // Use the whole indicator div to trigger the step change
-            dom.stepIndicators.forEach(indicator => {
-                indicator.addEventListener('click', (e) => {
-                    // Find the step number, prioritizing the button's data-step if clicked, otherwise the indicator's.
-                    let stepNum = parseInt(e.currentTarget.dataset.step, 10);
-
-                    // If a button inside was clicked, use its data-step
-                    const dot = e.target.closest('.step-dot');
-                    if (dot) {
-                        stepNum = parseInt(dot.dataset.step, 10);
-                    }
+        function getGeneralContent(currentUsername, changesRemaining) {
+             const isDisabled = changesRemaining <= 0;
+             const buttonText = isDisabled ? 'Limit Reached' : 'Change Username';
+             
+             return `
+                 <h2 class="text-3xl font-bold text-white mb-6">General Settings</h2>
+                 
+                 <div class="w-full max-w-xl">
+                    <h3 class="text-xl font-bold text-white mb-2">Account Username</h3>
+                    <p class="text-lg text-gray-400 leading-relaxed mb-4">
+                        Your current 4SP username is: <span class="text-emphasis text-blue-400">${currentUsername}</span>
+                    </p>
                     
-                    updateStep(stepNum);
+                    <form id="usernameChangeForm" novalidate class="flex flex-col gap-4"> 
+                        <div>
+                            <label for="newUsername" class="block mb-2 text-gray-400 text-sm font-light">New Username</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="newUsername" placeholder="4-24 characters, only allowed symbols" required 
+                                    class="input-text-style flex-grow" ${isDisabled ? 'disabled' : ''}>
+                                <button type="submit" id="changeUsernameBtn" 
+                                    class="p-3 text-lg rounded-xl font-normal transition min-w-[150px] 
+                                    ${isDisabled ? 'ring-1 ring-gray-600 text-gray-600 bg-gray-900/50 cursor-not-allowed' : 'ring-1 ring-white/20 text-white bg-white/5 hover:bg-white/10'}"
+                                    ${isDisabled ? 'disabled' : ''}>
+                                    ${buttonText}
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-2 font-light">
+                                Allowed symbols: .,-+\_!?$
+                            </p>
+                        </div>
+                        
+                        <div id="usernameChangeMessage" class="general-message-area text-sm"></div>
+                        
+                        <p class="text-sm text-gray-400 mt-2 font-light">
+                            You have <span class="text-emphasis ${changesRemaining > 0 ? 'text-green-400' : 'text-red-400'}">${changesRemaining}</span> username change${changesRemaining === 1 ? '' : 's'} remaining this month. 
+                            Limit resets on the 1st of every month.
+                        </p>
+                    </form>
+                    
+                 </div>
+             `;
+         }
+
+
+        /**
+         * Generates the HTML for the "About 4SP" section.
+         */
+        function getAboutContent() {
+            return `
+                <h2 class="text-3xl font-bold text-white mb-4">About 4SP (4simpleproblems)</h2>
+                
+                <div class="about-section-content">
+                    <p class="text-lg text-gray-400 leading-relaxed">
+                        <span class="text-emphasis">4SP (4simpleproblems)</span> is a <span class="text-emphasis">Student Toolkit and Entertainment website</span> designed to boost student productivity and provide useful resources. We aim to solve four core challenges that students face every day by integrating essential tools and engaging digital content into one seamless platform.
+                    </p>
+                    
+                    <h3 class="text-xl font-bold text-white mt-6 mb-2">The Four Simple Challenges We Address</h3>
+                    <ul class="list-disc list-inside ml-4 text-lg text-gray-400 leading-relaxed">
+                        <li>Providing a <span class="text-emphasis">digital leisure platform free of  advertisements</span>.</li>
+                        <li>Delivering a <span class="text-emphasis">student toolkit designed for accessibility and consistent availability</span>, bypassing typical institutional network restrictions.</li>
+                        <li>Establishing a <span class="text-emphasis">free, comprehensive, and reliable entertainment and resource hub</span>.</li>
+                        <li>Enforcing <span class="text-emphasis">internal governance and balance of power</span>: Administrative authority is strictly limited to necessary website management functions, and only the creator holds full administrative power, ensuring neutrality.</li>
+                    </ul>
+
+                    <p class="text-lg text-gray-400 mt-4 leading-relaxed">
+                        Features currently include an <span class="text-emphasis">online notebook</span> in the Notes App for secure organization, a <span class="text-emphasis">live clock</span> on the dashboard, a <span class="text-emphasis">dictionary</span> for quick lookups, and more tools.
+                    </p>
+                    
+                    <h3 class="text-xl font-bold text-white mt-6 mb-2">Version</h3>
+                    <p class="text-gray-400">
+                        Current Version: <span class="text-blue-400 text-emphasis">5.0 Beta 9</span>
+                    </p>
+
+                    <h3 class="text-xl font-bold text-white mt-6 mb-3">Connect & Support</h3>
+                    <div class="social-link-group">
+                        <a href="https://www.youtube.com/@4simpleproblems" target="_blank" class="btn-toolbar-style" title="YouTube">
+                            <i class="fa-brands fa-youtube fa-lg mr-2"></i> YouTube
+                        </a>
+                        <a href="https://x.com/4simpleproblems" target="_blank" class="btn-toolbar-style" title="X (Twitter)">
+                            <i class="fa-brands fa-x-twitter fa-lg mr-2"></i>X
+                        </a>
+                        <a href="https://buymeacoffee.com/4simpleproblems" target="_blank" class="btn-toolbar-style" title="Buy Me a Coffee">
+                            <i class="fa-solid fa-mug-hot fa-lg mr-2"></i> Buy Me a Coffee
+                        </a>
+                        <a href="https://github.com/v5-4simpleproblems" target="_blank" class="btn-toolbar-style" title="GitHub">
+                            <i class="fa-brands fa-github fa-lg mr-2"></i> Github
+                        </a>
+                    </div>
+                    
+                    <h3 class="text-xl font-bold text-white mt-6 mb-3">Legal Information</h3>
+                    <div class="legal-buttons">
+                        <a href="../legal.html#terms-of-service" class="btn-toolbar-style">Terms of Service</a>
+                        <a href="../legal.html#privacy-policy" class="btn-toolbar-style">Privacy Policy</a>
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+         * Generates the HTML for the "Coming Soon" sections.
+         */
+        function getComingSoonContent(title) {
+            return `
+                <h2 class="text-3xl font-bold text-white mb-2">${title}</h2>
+                <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%;">
+                    <p class="text-xl text-gray-500 italic">...Coming Soon...</p>
+                    <i class="fa-solid fa-hourglass-start fa-5x text-gray-700 mt-4"></i>
+                </div>
+            `;
+        }
+
+
+        /**
+         * Loads user data, checks rate limit, and renders the General tab.
+         */
+        async function loadGeneralTab() {
+            if (!currentUser) return; // Should not happen if auth check passes
+
+            const userDocRef = getUserDocRef(currentUser.uid);
+            let userDocSnap = await getDoc(userDocRef);
+
+            if (!userDocSnap.exists()) {
+                mainView.innerHTML = `<h2 class="text-3xl font-bold text-white mb-6">General Settings</h2><p class="text-red-400">Error: User data not found. Please log out and back in.</p>`;
+                return;
+            }
+
+            let userData = userDocSnap.data();
+            const today = new Date();
+            const currentMonth = today.getMonth() + 1; // 1-12
+            const MAX_CHANGES = 3;
+
+            let changesThisMonth = userData.usernameChangesThisMonth || 0;
+            let lastChangeMonth = userData.lastUsernameChangeMonth || 0;
+
+            // --- Monthly Reset Logic ---
+            if (currentMonth !== lastChangeMonth) {
+                // It's a new month, reset the counter
+                changesThisMonth = 0;
+                await updateDoc(userDocRef, {
+                    usernameChangesThisMonth: 0,
+                    lastUsernameChangeMonth: currentMonth
                 });
+                // Re-fetch or update data structure after reset
+                userDocSnap = await getDoc(userDocRef);
+                userData = userDocSnap.data(); 
+            }
+            
+            const changesRemaining = MAX_CHANGES - changesThisMonth;
+
+            // 1. Render the General Content
+            mainView.innerHTML = getGeneralContent(userData.username, changesRemaining);
+            
+            // 2. Attach Event Listener for Username Change
+            const usernameChangeForm = document.getElementById('usernameChangeForm');
+            const messageElement = document.getElementById('usernameChangeMessage');
+            
+            if (usernameChangeForm && changesRemaining > 0) {
+                usernameChangeForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const newUsername = document.getElementById('newUsername').value.trim();
+                    const changeBtn = document.getElementById('changeUsernameBtn');
+                    
+                    changeBtn.disabled = true;
+                    showMessage(messageElement, '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Processing...', 'warning');
+
+                    try {
+                        // --- Validation ---
+                        if (newUsername === userData.username) { 
+                            showMessage(messageElement, 'New username is the same as your current username.', 'warning');
+                            return;
+                        }
+                        if (newUsername.length < 4 || newUsername.length > 24) { 
+                            showMessage(messageElement, 'Username must be 4-24 characters.', 'error'); 
+                            return; 
+                        }
+                        if (!/^[a-zA-Z0-9.,\-+_\!\?\$\\]+$/.test(newUsername)) { 
+                            showMessage(messageElement, 'Username contains invalid characters (Allowed symbols: .,-+\\_!?$).', 'error'); 
+                            return; 
+                        }
+                        
+                        // --- Checks ---
+                        if (await checkProfanity(newUsername)) { 
+                            showMessage(messageElement, 'This username is not allowed.', 'error'); 
+                            return; 
+                        }
+                        if (await isUsernameTaken(newUsername)) { 
+                            showMessage(messageElement, 'This username is already taken.', 'error'); 
+                            return; 
+                        }
+                        
+                        // --- Update Logic ---
+                        const newChangesCount = changesThisMonth + 1;
+                        await updateDoc(userDocRef, {
+                            username: newUsername,
+                            usernameChangesThisMonth: newChangesCount,
+                            lastUsernameChangeMonth: currentMonth // Ensure month is current even if it was reset
+                        });
+
+                        showMessage(messageElement, `Username successfully changed to ${newUsername}!`, 'success');
+                        
+                        // Re-render the tab content to update the display and counter
+                        // A short delay before re-load gives the user time to read the success message
+                        setTimeout(() => { switchTab('general'); }, 1500);
+
+                    } catch (error) {
+                        console.error("Error updating username:", error);
+                        showMessage(messageElement, `An unexpected error occurred: ${error.message}`, 'error');
+                    } finally {
+                        // The button will be re-enabled/disabled by the re-render in the success path
+                        // If there was an error, re-enable it immediately for the user to try again
+                        if (messageElement.innerHTML.includes('Error') || messageElement.innerHTML.includes('not allowed') || messageElement.innerHTML.includes('taken')) {
+                            changeBtn.disabled = false;
+                        }
+                    }
+                });
+            }
+        }
+
+
+        /**
+         * Handles the switching of tabs and updating the main content view.
+         */
+        async function switchTab(tabId) {
+            // 1. Update active class on sidebar tabs
+            sidebarTabs.forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+
+            // 2. Update the main view content and alignment
+            mainView.style.justifyContent = 'flex-start';
+            mainView.style.alignItems = 'flex-start';
+
+            if (tabId === 'general') {
+                // NEW: Call the function that handles data fetching and rendering for General
+                await loadGeneralTab(); 
+            }
+            else if (tabId === 'about') {
+                mainView.innerHTML = getAboutContent();
+            } else {
+                const content = tabContent[tabId];
+                mainView.innerHTML = getComingSoonContent(content.title);
+            }
+
+            // 3. New: Smoothly scroll the window back to the top (y=0)
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
             });
         }
 
-        // --- Start the Tutorial App ---
-        window.onload = function() {
-            initListeners();
-            updateUI(); // Set initial state
+        // --- Initialization on Load ---
+        
+        // Add listener to each sidebar button
+        sidebarTabs.forEach(tab => {
+            tab.addEventListener('click', async () => {
+                // Must be async to handle data fetching for 'general' tab
+                await switchTab(tab.dataset.tab);
+            });
+        });
+
+
+        // --- AUTHENTICATION/REDIRECT LOGIC (Retained and Modified) ---
+        const loadingScreen = document.getElementById('loading-screen');
+        const pageContent = document.getElementById('page-content');
+
+        function initializeAuth() {
+            // onAuthStateChanged is the standard Firebase way to check login status
+            onAuthStateChanged(auth, (user) => {
+                if (!user) {
+                    // No user is logged in, redirect to index (login page)
+                    window.location.href = '../authentication/authentication.html'; 
+                } else {
+                    currentUser = user; // Store the user object globally
+                    loadingScreen.style.display = 'none';
+                    pageContent.classList.remove('hidden');
+                    pageContent.style.display = 'flex';
+                    
+                    // Set initial state to 'General' (or the first tab)
+                    switchTab('general'); 
+                }
+            });
         }
+        
+        // Use a short timeout to allow the rest of the script to run before auth check
+        setTimeout(() => { initializeAuth(); }, 100); 
     </script>
 </body>
 </html>
