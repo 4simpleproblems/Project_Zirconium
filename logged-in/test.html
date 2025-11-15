@@ -1574,6 +1574,10 @@
                     showMessage(panicKeyMessage, '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Saving...', 'warning');
                     await savePanicKeySettings(settingsToSave);
                     showMessage(panicKeyMessage, 'Panic key settings saved successfully!', 'success');
+                    
+                    // ADDED: Refresh page after 1 second
+                    setTimeout(() => location.reload(), 1000); 
+
                 } catch (e) {
                     console.error("Error saving panic key settings:", e);
                     showMessage(panicKeyMessage, 'An error occurred while saving.', 'error');
@@ -1656,6 +1660,10 @@
                 // Save to localStorage
                 if (saveUrlChangerSetting(settingsToSave)) {
                     showMessage(urlChangerMessage, 'Tab Disguise settings saved! They will be applied on the next page you load.', 'success');
+                    
+                    // ADDED: Refresh page after 1 second
+                    setTimeout(() => location.reload(), 1000); 
+                    
                 } else {
                     showMessage(urlChangerMessage, 'An error occurred while saving.', 'error');
                 }
