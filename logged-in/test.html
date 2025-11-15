@@ -247,8 +247,8 @@
         let currentUser = null; // To store the authenticated user object
         
         // Constants for validation and limits (UPDATED)
-        const MIN_LENGTH = 5; 
-        const MAX_LENGTH = 30;
+        const MIN_LENGTH = 6; 
+        const MAX_LENGTH = 24;
         const MAX_CHANGES = 5; 
 
 
@@ -434,7 +434,7 @@
             const currentMonthNumber = today.getMonth() + 1; 
             const currentMonthName = today.toLocaleDateString('en-US', { month: 'long' }); 
             
-            // MAX_CHANGES is now a global constant
+            // MAX_CHANGES is a global constant
 
             let changesThisMonth = userData.usernameChangesThisMonth || 0;
             let lastChangeMonth = userData.lastUsernameChangeMonth || 0;
