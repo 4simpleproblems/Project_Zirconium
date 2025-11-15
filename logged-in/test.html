@@ -10,9 +10,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="https://kit-pro.fontawesome.com/releases/v7.0.1/css/pro.min.css" media="all">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" media="all">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="../navigation.js"></script>
     <script src="../injector.js"></script>
 
     <script>
@@ -39,20 +38,23 @@
     </script>
 
     <style>
-        /* FIX: Ensure scrollability, remove fixed vh/vw */
         html, body {
             margin: 0;
             padding: 0;
-            overflow-x: hidden; /* Prevent horizontal scroll */
+            overflow: hidden; /* Prevent scrolling for true fullscreen experience */
         }
         body { 
             font-family: 'Geist', sans-serif; 
             background-color: #070707; 
             color: #c0c0c0; 
-            font-weight: 300; 
-            min-height: 100vh; /* Allow vertical growth */
+            font-weight: 300; /* Base font weight */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100vw; /* Full viewport width */
+            height: 100vh; /* Full viewport height */
         }
-        
+
         /* Use font-weight 400 for headers and defined bold styles */
         h1, h2, h3, .font-bold, .font-semibold {
             font-weight: 400 !important;
@@ -64,20 +66,22 @@
             color: #ffffff; /* Make the highlighted text stand out */
         }
         
-        /* Main Container: FIXED SPACING BUG by using calc(100vh - 4rem) for min-height, like notes.html */
+        /* Main Fullscreen Container for the Two-Column Layout */
         .main-tutorial-container {
-            /* Full width */
-            width: 100%; 
-            /* Min-height from notes.html to correctly position content below injected header */
-            min-height: calc(100vh - 4rem); 
+            width: 100vw;
+            height: 100vh;
             display: flex;
             background-color: #070707;
-            /* REMOVED: margin-top: 4rem; The min-height should handle spacing, not a margin. */
+            /* ** MODIFICATION: Changed padding to 80px top, 0px right, 0px bottom, 0px left 
+             * to double the top spacing and eliminate the bottom spacing.
+             */
+            padding: 80px 0 0 0; 
+            box-sizing: border-box; /* Include padding in the height calculation */
         }
 
         /* Left Column: Fixed steps/navigation */
         .left-column {
-            width: 350px; 
+            width: 350px; /* Fixed width for steps/navigation */
             flex-shrink: 0;
             background-color: #111111;
             border-right: 1px solid #374151;
@@ -85,9 +89,8 @@
             display: flex;
             flex-direction: column;
             justify-content: center;
-            /* REMOVED: Fixed min-height: 90vh; to allow the content to drive the height */
-            /* ADDED: Use min-height: 100% to fill the main-tutorial-container */
-            min-height: 100%;
+            /* Ensures it fills the new padded container area */
+            height: 100%;
         }
 
         /* Right Column: Dynamic content area */
@@ -98,13 +101,15 @@
             justify-content: center;
             align-items: center;
             padding: 40px;
-            /* ADDED: Use min-height: 100% to fill the main-tutorial-container */
-            min-height: 100%;
+            /* Ensures it fills the new padded container area */
+            height: 100%;
+            overflow-y: auto; /* Allow scrolling if the content exceeds the new height */
         }
         
         /* Highlight active step text on the left */
         .step-indicator.active .step-title {
             color: white;
+            /* Note: font-weight 600 in Tailwind config is 400 here, but we use it for visual distinction */
             font-weight: 600; 
         }
         .step-indicator.active .step-subtitle {
@@ -120,13 +125,14 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            /* Tailwinds are used for w/h of step dots (w-10 h-10) - override the 2.25rem size for uniformity here */
             border-radius: 0.5rem;
             background-color: transparent;
             border: 1px solid #374151; /* gray-700 */
             color: #9ca3af; 
             cursor: pointer;
             transition: all 0.2s;
-            line-height: 1; 
+            line-height: 1; /* Fix vertical alignment for the number */
             font-weight: 400;
         }
         .btn-icon:hover {
@@ -135,6 +141,7 @@
             border-color: #374151; /* gray-700 */
         }
         .btn-icon.active {
+            /* Active style (subtle purple/indigo) */
             background-color: rgba(79, 70, 229, 0.1);
             color: #4f46e5;
             border-color: #4f46e5;
@@ -147,55 +154,61 @@
 
         /* 2. Main Action Button Style (for Download Button) */
         .btn-main-action {
-            background-color: rgba(79, 70, 229, 0.15); 
-            color: #4f46e5; 
-            border: 1px solid #4f46e5; 
+            /* Match .btn-icon.active colors */
+            background-color: rgba(79, 70, 229, 0.15); /* Slightly stronger transparent background */
+            color: #4f46e5; /* Strong blue text color */
+            border: 1px solid #4f46e5; /* Strong blue border color */
             transition: all 0.3s ease;
-            box-shadow: none; 
+            box-shadow: none; /* Removed the glow effect */
             font-weight: 600;
         }
         .btn-main-action:hover {
-            background-color: rgba(79, 70, 229, 0.3); 
-            color: #ffffff; 
+            background-color: rgba(79, 70, 229, 0.3); /* Darker hover */
+            color: #ffffff; /* White text on hover for contrast */
         }
 
         /* 3. Navigation Action Button Style (for Prev/Next) */
         .btn-nav-action {
-            background-color: rgba(79, 70, 229, 0.15); 
-            color: #4f46e5; 
-            border: 1px solid #4f46e5; 
+            /* Base style: Match .btn-main-action's colors */
+            background-color: rgba(79, 70, 229, 0.15); /* Indigo 500 @ 15% */
+            color: #4f46e5; /* Indigo 500 */
+            border: 1px solid #4f46e5; /* Indigo 500 */
             transition: all 0.2s ease;
             box-shadow: none;
             font-weight: 600;
             
+            /* Shape and size: Match btn-icon size (w-10 h-10 = 2.5rem), but rounded-xl (0.75rem) */
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 2.5rem; 
-            height: 2.5rem; 
-            border-radius: 0.75rem; 
+            width: 2.5rem; /* w-10 */
+            height: 2.5rem; /* h-10 */
+            border-radius: 0.75rem; /* rounded-xl */
             cursor: pointer;
         }
         .btn-nav-action:hover:not(:disabled) {
-            background-color: rgba(79, 70, 229, 0.3); 
-            color: #ffffff; 
+            background-color: rgba(79, 70, 229, 0.3); /* Darker hover */
+            color: #ffffff; /* White text on hover for contrast */
         }
         .btn-nav-action:disabled {
-            opacity: 0.4; 
+            opacity: 0.4; /* Stronger disabled look */
             cursor: not-allowed;
-            background-color: transparent; 
-            border-color: #374151; 
-            color: #9ca3af; 
+            background-color: transparent; /* Makes the disabled look cleaner */
+            border-color: #374151; /* gray-700 for disabled border */
+            color: #9ca3af; /* gray-400 for disabled icon */
         }
 
         /* 4. Description Block Custom Styling */
         #description-block {
+            /* Slightly more rounded (1rem is rounded-2xl) */
             border-radius: 1rem;
-            padding: 1.5rem 1rem; 
+            /* Less side padding (p-6 was 1.5rem, px-4 is 1rem) */
+            padding: 1.5rem 1rem; /* 24px top/bottom, 16px left/right */
         }
 
         /* Smaller font size for list items within the block */
         #description-block ul li {
+            /* text-sm equivalent (0.875rem / 14px) */
             font-size: 0.875rem; 
         }
 
@@ -203,7 +216,7 @@
         .step-container {
             position: relative;
             overflow: hidden;
-            height: 500px; 
+            height: 500px; /* Increased height for better visibility on non-fullscreen views */
             width: 100%;
             max-width: 600px;
         }
@@ -239,7 +252,7 @@
 </head>
 <body class="dark bg-background">
 
-    <div class="main-tutorial-container" id="page-content">
+    <div class="main-tutorial-container">
         
         <div class="left-column">
             <h2 class="text-3xl font-display text-white mb-10 text-center border-b border-border-strong/50 pb-4">
@@ -319,7 +332,7 @@
                         <p class="text-text-secondary text-lg">
                             Click the <span class="font-accent-bold">"Download Messenger"</span> button in the sidebar to get the <span class="font-accent-bold">single HTML file</span> that holds the entire Messenger application.
                         </p>
-                    </div>
+                        </div>
                 </div>
 
                 <div id="step-2" class="step-content">
