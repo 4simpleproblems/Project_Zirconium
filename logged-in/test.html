@@ -12,11 +12,7 @@
     
     <link rel="stylesheet" href="https://kit-pro.fontawesome.com/releases/v7.0.1/css/pro.min.css" media="all">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="../navigation.js"></script>
-    <script src="../injector.js"></script>
-    <script src="../panic-key.js"></script>
-    <script src="../url-changer.js" defer></script> 
-
+    <script src="../injector.js"></script> 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
 
     <style>
@@ -442,9 +438,9 @@
     
     <script src="../firebase-config.js"></script> 
     <script>
-        // --- Firebase Imports ---
-        const auth = firebase.auth();
-        const db = firebase.firestore();
+        // --- Firebase Imports (Changed to 'var' to prevent redeclaration errors if external scripts define them globally) ---
+        var auth = firebase.auth();
+        var db = firebase.firestore();
         const { 
             onAuthStateChanged, 
             signOut, 
@@ -482,12 +478,12 @@
         const PROVIDER_CONFIG = {
             'google.com': { name: 'Google', icon: '../images/google.png', instance: () => new GoogleAuthProvider() },
             'github.com': { name: 'GitHub', icon: '../images/github.png', instance: () => new GithubAuthProvider() },
-            'microsoft.com': { name: 'Microsoft', icon: '../images/microsoft.png', instance: () => new OAuthProvider('microsoft.com') },
+            'microsoft.com': { name: 'Microsoft', icon: '<i class="fa-solid fa-at fa-lg mr-3"></i>', instance: () => new OAuthProvider('microsoft.com') },
             'password': { name: 'Email & Password', icon: '<i class="fa-solid fa-at fa-lg mr-3"></i>', isCredential: true }
         };
 
         // --- NEW: Constants for Privacy Settings ---
-        // IndexedDB Config for Panic Key
+        // IndexedDB Config for Panic Key (These constants are often also in external scripts, keeping them here as the central control for the settings page)
         const DB_NAME = 'userLocalSettingsDB';
         const STORE_NAME = 'panicKeyStore';
         // localStorage Key for URL Changer
