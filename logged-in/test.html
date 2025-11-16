@@ -2084,8 +2084,8 @@
             });
         }
         
-        // Use a short timeout to allow the rest of the script to run before auth check
-        setTimeout(() => { initializeAuth(); }, 100); 
+        // FIX: Remove setTimeout to prevent race condition on session load.
+        initializeAuth();
     </script>
 </body>
 </html>
