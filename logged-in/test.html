@@ -14,7 +14,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="../navigation.js"></script>
     <script src="../injector.js"></script>
-    <!-- ADDED SCRIPT TAGS -->
     <script src="../panic-key.js"></script>
     <script src="../url-changer.js" defer></script> 
 
@@ -42,12 +41,13 @@
         }
 
         /* --- THEME-AWARE STYLES --- */
+        /* MODIFICATION: These styles are now HARD-CODED to the default theme */
         
         .btn-toolbar-style {
-            background: var(--menu-bg, #0000000);
-            border: 1px solid var(--menu-border, #333);
+            background: #0000000;
+            border: 1px solid #333;
             border-radius: 0.75rem;
-            color: var(--menu-text, #d1d5db);
+            color: #d1d5db;
             padding: 0.5rem 1rem;
             font-weight: 500;
             cursor: pointer;
@@ -57,23 +57,22 @@
             gap: 0.5rem;
         }
         .btn-toolbar-style:hover {
-            background-color: var(--menu-bg, #000000);
-            border-color: var(--menu-border, #fff);
-            color: var(--tab-hover-text, #ffffff);
+            background-color: #000000;
+            border-color: #fff;
+            color: #ffffff;
         }
         
         .btn-toolbar-style.btn-primary-override {
             /* For the Apply button (Blue) */
             justify-content: center;
-            
-            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
-            border: 1px solid var(--tab-active-border, #4f46e5);
-            color: var(--tab-active-text, #4f46e5);
+            background-color: rgba(79, 70, 229, 0.1);
+            border: 1px solid #4f46e5;
+            color: #4f46e5;
         }
         .btn-toolbar-style.btn-primary-override:hover {
-            background-color: var(--tab-active-hover-bg, rgba(79, 70, 229, 0.15));
-            border-color: var(--tab-active-hover-border, #6366f1);
-            color: var(--tab-active-hover-text, #6366f1);
+            background-color: rgba(79, 70, 229, 0.15);
+            border-color: #6366f1;
+            color: #6366f1;
         }
         
         /* NEW DANGER STYLE - Based on primary style but with red colors */
@@ -96,14 +95,14 @@
             justify-content: flex-start;
         }
         .settings-tab.active {
-            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
-            border: 1px solid var(--tab-active-border, #4f46e5);
-            color: var(--tab-active-text, #4f46e5);
+            background-color: rgba(79, 70, 229, 0.1);
+            border: 1px solid #4f46e5;
+            color: #4f46e5;
         }
         .settings-tab.active:hover {
-             background-color: var(--tab-active-hover-bg, rgba(79, 70, 229, 0.15));
-            border-color: var(--tab-active-hover-border, #6366f1);
-            color: var(--tab-active-hover-text, #6366f1);
+             background-color: rgba(79, 70, 229, 0.15);
+            border-color: #6366f1;
+            color: #6366f1;
         }
         
         /* --- Page Content Layout --- */
@@ -161,11 +160,11 @@
         }
         
         /* Container style to match tab look (used for rate limit and input wrapper) */
+        /* MODIFICATION: Hard-coded default theme */
         .settings-box { 
-            border: 1px solid var(--menu-border, #333); 
+            border: 1px solid #333; 
             border-radius: 1rem; 
-            background-color: var(--menu-bg, #0000000); 
-            /* MODIFICATION: Removed explicit padding here to rely on p-X classes for precise control */
+            background-color: #0000000; 
             transition: all 0.2s;
         }
         
@@ -236,6 +235,144 @@
         .success-message { color: #4ade80; }
         .error-message { color: #f87171; }
         .warning-message { color: #fbbf24; }
+        
+        /* --- NEW: Theme Picker Styles --- */
+        /* MODIFICATION: These styles ARE theme-aware */
+        #theme-picker-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 1rem;
+            width: 100%;
+        }
+        .theme-button {
+            /* MODIFICATION: Border color is now theme-aware */
+            border: 2px solid var(--tab-active-border, #4f46e5); 
+            background-color: #111; /* This will be overridden by inline style */
+            border-radius: 0.75rem; 
+            padding: 0.75rem; /* MODIFICATION: Reduced padding */
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease-out;
+            opacity: 0.7;
+            position: relative;
+        }
+        .theme-button:hover {
+            opacity: 1;
+            /* MODIFICATION: Use a consistent hover border */
+            border-color: var(--tab-active-hover-border, #6366f1);
+            transform: translateY(-2px);
+        }
+        .theme-button.active {
+            opacity: 1;
+            /* MODIFICATION: Removed redundant border-color */
+            box-shadow: 0 0 10px rgba(79, 70, 229, 0.3); /* Will use variable shadow */
+            box-shadow: 0 0 10px var(--tab-active-shadow, rgba(79, 70, 229, 0.3));
+        }
+        
+        .theme-button-name {
+            font-weight: 500;
+            color: #e0e0e0; /* This will be overridden by inline style */
+        }
+        
+        /* --- NEW: Modal and Loading Styles (from index.html) --- */
+        .modal {
+          display: none;
+          position: fixed;
+          z-index: 2000;
+          left: 0;
+          top: 0;
+          width: 100%;
+          height: 100%;
+          background-color: rgba(0, 0, 0, 0.7);
+          justify-content: center;
+          align-items: center;
+        }
+        .modal-content {
+          background-color: #1a1a1a; /* Darker modal */
+          padding: 20px;
+          border-radius: 10px;
+          border: 1px solid #333;
+          width: 90%;
+          max-width: 400px;
+          text-align: center;
+          color: white;
+          position: relative;
+        }
+        .modal-close {
+          color: #aaa;
+          position: absolute;
+          top: 10px;
+          right: 15px;
+          font-size: 28px;
+          font-weight: bold;
+          cursor: pointer;
+        }
+        .modal-close:hover {
+          color: #fff;
+        }
+        .modal-buttons {
+          display: flex;
+          gap: 10px;
+          justify-content: center;
+          margin-top: 20px;
+        }
+        /* Style modal buttons to match settings buttons */
+        .modal-buttons button { 
+            /* This will be styled by btn-toolbar-style */
+        }
+
+        .loading-overlay {
+          display: none;
+          position: fixed;
+          z-index: 3000;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.8);
+          justify-content: center;
+          align-items: center;
+          flex-direction: column;
+          color: white;
+        }
+        .loading-overlay.active {
+          display: flex;
+        }
+        .loading-animation {
+          display: flex;
+          align-items: center;
+          margin-bottom: 20px;
+        }
+        .loading-bar {
+          background-color: rgba(255, 255, 255, 0.3);
+          width: 20px;
+          height: 40px;
+          margin-right: 5px;
+          border-radius: 10px;
+          animation: load ease infinite 5s;
+        }
+        .loading-bar:nth-child(2) {
+          animation-delay: 0.1s;
+        }
+        .loading-bar:nth-child(3) {
+          animation-delay: 0.2s;
+        }
+        .loading-bar:nth-child(4) {
+          animation-delay: 0.3s;
+        }
+        .loading-bar:nth-child(5) {
+          animation-delay: 0.4s;
+        }
+        @keyframes load {
+          0%,
+          100% {
+            transform: rotate(0deg);
+          }
+          50% {
+            transform: rotate(720deg) rotateX(180deg);
+          }
+        }
+        
     </style>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-1D4F692C1Q"></script>
 <script>
@@ -276,10 +413,28 @@
             </nav>
 
             <div id="settings-main-view">
-                <!-- Content injected by JavaScript -->
-            </div>
+                </div>
         </div>
     </div>
+    
+    <div class="modal" id="modalPrompt">
+        <div class="modal-content" id="modalContent">
+            <span class="modal-close" id="modalClose">&times;</span>
+            <p id="modalText">Modal Text</p>
+            <div class="modal-buttons" id="modalButtons"></div>
+        </div>
+    </div>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-animation">
+            <div class="loading-bar"></div>
+            <div class="loading-bar"></div>
+            <div class="loading-bar"></div>
+            <div class="loading-bar"></div>
+            <div class="loading-bar"></div>
+        </div>
+        <p id="loadingText">Loading...</p>
+    </div>
+    
     
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -314,6 +469,11 @@
         
         // --- Import Firebase Config (Assumed to exist in a relative file) ---
         import { firebaseConfig } from "../firebase-config.js"; 
+        
+        // --- NEW: Import Site Mapping (from index.html logic) ---
+        // This file MUST exist at ../site-mapping.js for import/export to work
+        import { siteMapping } from "../site-mapping.js";
+
 
         if (!firebaseConfig || !firebaseConfig.apiKey) {
             console.error("FATAL ERROR: Firebase configuration is missing or invalid.");
@@ -328,6 +488,9 @@
         const sidebarTabs = document.querySelectorAll('.settings-tab');
         const mainView = document.getElementById('settings-main-view');
         let currentUser = null; // To store the authenticated user object
+        
+        // --- NEW: Global var for loading overlay (from index.html) ---
+        let loadingTimeout = null;
         
         // Constants for validation and limits
         const MIN_LENGTH = 6; 
@@ -376,6 +539,11 @@
         
         // localStorage Key for URL Changer
         const URL_CHANGER_KEY = 'selectedUrlPreset';
+        
+        // --- NEW: Constant for Theme Storage ---
+        // (Copied from navigation.js)
+        const THEME_STORAGE_KEY = 'user-navbar-theme';
+
 
         // Presets copied from url-changer.js
         const urlChangerPresets = [
@@ -517,10 +685,339 @@
                 return false;
             }
         }
+        
+        // --- NEW: Modal and Loading Functions (from index.html) ---
+        
+        function openModal(text, buttons = []) {
+            const modal = document.getElementById('modalPrompt');
+            const modalText = document.getElementById('modalText');
+            const modalButtons = document.getElementById('modalButtons');
+            
+            modalText.textContent = text;
+            modalButtons.innerHTML = "";
+            buttons.forEach(btn => {
+                const buttonEl = document.createElement("button");
+                // MODIFICATION: Use settings page button styles
+                buttonEl.className = "btn-toolbar-style";
+                if (btn.text.toLowerCase() === 'yes') {
+                    buttonEl.classList.add('btn-primary-override-danger'); // Make 'Yes' destructive
+                } else {
+                    buttonEl.classList.add('btn-primary-override');
+                }
+                buttonEl.textContent = btn.text;
+                buttonEl.onclick = btn.onclick;
+                modalButtons.appendChild(buttonEl);
+            });
+            modal.style.display = "flex";
+        }
+        
+        function showLoading(text = "Loading...") {
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const loadingText = document.getElementById('loadingText');
+            
+            loadingText.textContent = text;
+            loadingOverlay.style.display = "flex";
+            loadingOverlay.classList.add("active");
+            if (loadingTimeout) clearTimeout(loadingTimeout);
+            loadingTimeout = setTimeout(() => {
+                hideLoading();
+            }, 5000); // 5 second timeout
+        }
+
+        function hideLoading() {
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            if (loadingTimeout) {
+                clearTimeout(loadingTimeout);
+                loadingTimeout = null;
+            }
+            loadingOverlay.classList.remove("active");
+            loadingOverlay.style.display = "none";
+        }
+        
+        // --- NEW: Core Data Functions (from index.html) ---
+        
+        function getAllLocalStorageData() {
+            const data = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                // Skip theme key
+                if (key === THEME_STORAGE_KEY) continue;
+                // Skip URL changer key
+                if (key === URL_CHANGER_KEY) continue;
+                
+                const value = localStorage.getItem(key);
+                data[key] = value;
+            }
+            return data;
+        }
+
+        function setAllLocalStorageData(data) {
+            // Don't clear *everything*, just the keys in the data
+            // This avoids wiping the user's theme setting
+            for (const [key, value] of Object.entries(data)) {
+                localStorage.setItem(key, value);
+            }
+        }
+
+        async function getAllIndexedDBData() {
+            if (!indexedDB.databases) return {};
+            let dbList = [];
+            try {
+                dbList = await indexedDB.databases();
+            } catch (error) {
+                console.error("Error fetching IndexedDB databases:", error);
+                return {};
+            }
+            const result = {};
+            for (const dbInfo of dbList) {
+                if (!dbInfo.name) continue;
+                // Skip our own settings DB
+                if (dbInfo.name === DB_NAME) continue; 
+                
+                result[dbInfo.name] = await getDataFromDatabase(dbInfo.name);
+            }
+            return result;
+        }
+
+        function getDataFromDatabase(dbName) {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(dbName);
+                request.onsuccess = event => {
+                    const db = event.target.result;
+                    const storeNames = Array.from(db.objectStoreNames);
+                    const dbData = {};
+                    let pending = storeNames.length;
+                    if (pending === 0) {
+                        db.close();
+                        resolve(dbData);
+                        return;
+                    }
+                    storeNames.forEach(storeName => {
+                        const transaction = db.transaction(storeName, "readonly");
+                        const store = transaction.objectStore(storeName);
+                        const items = [];
+                        const cursorRequest = store.openCursor();
+                        cursorRequest.onsuccess = evt => {
+                            const cursor = evt.target.result;
+                            if (cursor) {
+                                items.push({ key: cursor.key, value: cursor.value });
+                                cursor.continue();
+                            } else {
+                                dbData[storeName] = items;
+                                pending--;
+                                if (pending === 0) {
+                                    db.close();
+                                    resolve(dbData);
+                                }
+                            }
+                        };
+                        cursorRequest.onerror = evt => {
+                            pending--;
+                            if (pending === 0) {
+                                db.close();
+                                resolve(dbData);
+                            }
+                        };
+                    });
+                };
+                request.onerror = event => {
+                    reject(event.target.error);
+                };
+            });
+        }
+
+        async function setAllIndexedDBData(indexedData) {
+            for (const dbName in indexedData) {
+                const storesData = indexedData[dbName];
+                await new Promise(resolve => {
+                    const deleteRequest = indexedDB.deleteDatabase(dbName);
+                    deleteRequest.onsuccess = () => resolve();
+                    deleteRequest.onerror = () => resolve();
+                    deleteRequest.onblocked = () => resolve();
+                });
+                const openRequest = indexedDB.open(dbName, 1);
+                openRequest.onupgradeneeded = function (event) {
+                    const db = event.target.result;
+                    for (const storeName in storesData) {
+                        if (!db.objectStoreNames.contains(storeName)) {
+                            db.createObjectStore(storeName, { autoIncrement: false });
+                        }
+                    }
+                };
+                const dbInstance = await new Promise((resolve, reject) => {
+                    openRequest.onsuccess = event => {
+                        resolve(event.target.result);
+                    };
+                    openRequest.onerror = event => {
+                        reject(event.target.error);
+                    };
+                });
+                for (const storeName in storesData) {
+                    await new Promise(resolve => {
+                        const transaction = dbInstance.transaction(storeName, "readwrite");
+                        transaction.oncomplete = () => resolve();
+                        transaction.onerror = () => resolve();
+                        const store = transaction.objectStore(storeName);
+                        const clearRequest = store.clear();
+                        clearRequest.onsuccess = async () => {
+                            for (const record of storesData[storeName]) {
+                                await new Promise(r => {
+                                    const putRequest = store.put(record.value, record.key);
+                                    putRequest.onsuccess = () => r();
+                                    putRequest.onerror = () => r();
+                                });
+                            }
+                        };
+                    });
+                }
+                dbInstance.close();
+            }
+        }
+        
+        // --- NEW: Domain Key Functions (from index.html) ---
+        
+        function getCurrentSiteKey() {
+            const currentURL = window.location.href;
+            const keys = Object.keys(siteMapping);
+            keys.sort((a, b) => b.length - a.length);
+            for (const key of keys) {
+                const normalizedKey = key.replace(/^https?:\/\//, "");
+                if (currentURL.includes(normalizedKey)) {
+                    return normalizedKey;
+                }
+            }
+            return window.location.host + window.location.pathname.replace(/\/$/, "");
+        }
+        
+        function normalizeDomainKey(str) {
+            return str.replace(/^https?:\/\//, "").replace(/\/$/, "");
+        }
+        
+        function replaceDomainsInData(dataObj, currentDomain) {
+            const currentDomainKey = getCurrentSiteKey(); // Get current domain
+            const keysToCheck = Object.keys(siteMapping).map(k => normalizeDomainKey(k));
+            const normalizedCurrentDomain = normalizeDomainKey(currentDomainKey);
+
+            function replaceInString(str) {
+                for (const oldDomain of keysToCheck) {
+                    if (str.includes(oldDomain)) {
+                        const idx = str.indexOf(oldDomain);
+                        if (idx === 0) {
+                            return normalizedCurrentDomain + str.substring(oldDomain.length);
+                        } else {
+                            return str.replace(oldDomain, normalizedCurrentDomain);
+                        }
+                    }
+                }
+                return str;
+            }
+            
+            // Check if dataObj is the root object {localStorageBackup: ..., indexedDBBackup: ...}
+            if (dataObj.localStorageBackup || dataObj.indexedDBBackup) {
+                 if (dataObj.localStorageBackup) {
+                    const localObj = dataObj.localStorageBackup;
+                     for (const k in localObj) {
+                        const newKey = replaceInString(k);
+                        let newVal = localObj[k];
+                        if (typeof newVal === "string") {
+                            newVal = replaceInString(newVal);
+                        }
+                        if (newKey !== k) {
+                            delete localObj[k];
+                            localObj[newKey] = newVal;
+                        } else {
+                            localObj[k] = newVal;
+                        }
+                    }
+                 }
+                 // Note: IndexedDB data is less likely to contain domain keys in its structure
+                 // so we primarily focus on localStorage keys and values.
+            }
+        }
+        
+        // --- NEW: Import/Export Handlers (from index.html) ---
+        
+        async function downloadAllSaves() {
+            showLoading("Preparing download...");
+            const localData = getAllLocalStorageData();
+            const indexedData = await getAllIndexedDBData();
+            const dataToDownload = {
+                localStorageBackup: localData,
+                indexedDBBackup: indexedData,
+            };
+            hideLoading();
+            const blob = new Blob([JSON.stringify(dataToDownload, null, 2)], {
+                type: "application/json",
+            });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "4sp_saves.json"; // Changed name
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        }
+
+        function handleFileUpload() {
+            const input = document.createElement("input");
+            input.type = "file";
+            input.accept = ".json";
+            input.onchange = async e => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = async evt => {
+                    const content = evt.target.result;
+                    let parsed;
+                    try {
+                        parsed = JSON.parse(content);
+                    } catch (err) {
+                        alert("Invalid file format");
+                        return;
+                    }
+                    
+                    // This is the domain key logic from index.html
+                    replaceDomainsInData(parsed, ""); // Pass empty string, replaceDomainsInData will get it
+
+                    openModal(
+                        "Are you sure you would like to upload this save? It will overwrite all current local data.",
+                        [
+                            {
+                                text: "Yes",
+                                onclick: async () => {
+                                    modal.style.display = "none";
+                                    showLoading("Uploading save...");
+                                    
+                                    let loadedLocalData = parsed.localStorageBackup;
+                                    let loadedIndexedData = parsed.indexedDBBackup;
+
+                                    if (loadedLocalData)
+                                        setAllLocalStorageData(loadedLocalData);
+                                    if (loadedIndexedData)
+                                        await setAllIndexedDBData(loadedIndexedData);
+                                        
+                                    hideLoading();
+                                    alert("Upload complete! Refreshing the page...");
+                                    setTimeout(() => location.reload(), 1000);
+                                },
+                            },
+                            {
+                                text: "No",
+                                onclick: () => {
+                                    modal.style.display = "none";
+                                },
+                            },
+                        ]
+                    );
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
 
         /**
          * Generates the HTML for the "Change Password" section.
-         * MODIFICATION: Removed max-w-2xl
          */
         function getChangePasswordSection() {
             return `
@@ -548,7 +1045,6 @@
         
         /**
          * Renders the Linked Providers and Account Deletion section.
-         * MODIFICATION: Removed max-w-2xl
          */
         function getAccountManagementContent(providerData) {
             // Determine the Primary Provider (the first one in the list)
@@ -564,7 +1060,6 @@
                 // Determine if icon is an image or a FontAwesome icon
                 let iconHtml = config.icon.startsWith('<i') ? config.icon : `<img src="${config.icon}" alt="${config.name} Icon" class="w-5 h-5 mr-3">`;
 
-                // MODIFICATION: Used px-4 py-4 for equal padding, border-b for separator line
                 return `
                     <div class="flex justify-between items-center px-4 py-4 border-b border-[#252525] last:border-b-0">
                         <div class="flex items-center text-lg text-white">
@@ -590,7 +1085,6 @@
                     const config = PROVIDER_CONFIG[id];
                     let iconHtml = config.icon.startsWith('<i') ? config.icon : `<img src="${config.icon}" alt="${config.name} Icon" class="w-5 h-5 mr-3">`;
 
-                    // MODIFICATION: Used px-4 py-4 for equal padding, border-b for separator line, and Link Provider button
                     return `
                         <div class="flex justify-between items-center px-4 py-4 border-b border-[#252525] last:border-b-0">
                             <div class="flex items-center text-lg text-white">
@@ -605,7 +1099,6 @@
                 }).join('');
                 
             if (availableProvidersHtml === '') {
-                // MODIFICATION: Updated text to be wrapped in px-4 py-4 to match padding style
                 availableProvidersHtml = `
                     <div class="px-4 py-4">
                         <p class="text-sm text-gray-500 text-center">All available social providers are linked.</p>
@@ -683,7 +1176,6 @@
 
         /**
          * Generates the HTML for the "General Settings" section.
-         * MODIFICATION: Removed max-w-2xl
          */
         function getGeneralContent(currentUsername, changesRemaining, changesThisMonth, currentMonthName, isEmailPasswordUser, providerData) {
              const changesUsed = changesThisMonth;
@@ -767,7 +1259,6 @@
                 <h2 class="text-3xl font-bold text-white mb-6">Privacy & Security</h2>
                 
                 <div class="w-full">
-                    <!-- Panic Key Settings -->
                     <h3 class="text-xl font-bold text-white mb-2">Panic Key Settings</h3>
                     <div id="panicKeySection" class="settings-box transition-all duration-300 p-4">
                         <p class="text-sm font-light text-gray-400 mb-4">
@@ -776,25 +1267,21 @@
                             <span class="text-yellow-400">Valid keys:</span> a-z, 0-9, and \` - = [ ] \\ ; ' , . /
                         </p>
                         
-                        <!-- Headers -->
                         <div class="flex items-center gap-4 px-2 mb-2">
                             <label class="block text-gray-400 text-sm font-light" style="width: 4rem; text-align: center;">Key</label>
                             <label class="block text-gray-400 text-sm font-light flex-grow">Redirect URL</label>
                         </div>
 
-                        <!-- Panic Key 1 -->
                         <div class="flex items-center gap-4 mb-3">
                             <input type="text" id="panicKey1" data-key-id="1" class="input-key-style panic-key-input" placeholder="-" maxlength="1">
                             <input type="url" id="panicUrl1" class="input-text-style" placeholder="e.g., https://google.com">
                         </div>
                         
-                        <!-- Panic Key 2 -->
                         <div class="flex items-center gap-4 mb-3">
                             <input type="text" id="panicKey2" data-key-id="2" class="input-key-style panic-key-input" placeholder="-" maxlength="1">
                             <input type="url" id="panicUrl2" class="input-text-style" placeholder="e.g., https://youtube.com/feed/subscriptions">
                         </div>
                         
-                        <!-- Panic Key 3 -->
                         <div class="flex items-center gap-4 mb-3">
                             <input type="text" id="panicKey3" data-key-id="3" class="input-key-style panic-key-input" placeholder="-" maxlength="1">
                             <input type="url" id="panicUrl3" class="input-text-style" placeholder="e.g., https://wikipedia.org">
@@ -812,7 +1299,6 @@
                 </div>
                 
                 <div class="w-full mt-8">
-                    <!-- Tab Disguise Settings -->
                     <h3 class="text-xl font-bold text-white mb-2">Tab Disguise (URL Changer)</h3>
                     <div id="urlChangerSection" class="settings-box transition-all duration-300 p-4">
                         <p class="text-sm font-light text-gray-400 mb-4">
@@ -820,7 +1306,6 @@
                         </p>
                         
                         <div class="flex flex-col gap-4">
-                            <!-- Mode Selection -->
                             <div>
                                 <label for="tabDisguiseMode" class="block text-gray-400 text-sm font-light mb-2">Mode</label>
                                 <select id="tabDisguiseMode" class="input-select-style">
@@ -830,7 +1315,6 @@
                                 </select>
                             </div>
                             
-                            <!-- Preset Selection (hidden by default) -->
                             <div id="tabDisguisePresetGroup" class="hidden">
                                 <label for="tabDisguisePreset" class="block text-gray-400 text-sm font-light mb-2">Preset</label>
                                 <select id="tabDisguisePreset" class="input-select-style">
@@ -838,14 +1322,12 @@
                                 </select>
                             </div>
                             
-                            <!-- Custom Inputs (hidden by default) -->
                             <div id="tabDisguiseCustomGroup" class="hidden flex flex-col gap-4">
                                 <div>
                                     <label for="customTabTitle" class="block text-gray-400 text-sm font-light mb-2">Custom Title</label>
                                     <input type="text" id="customTabTitle" class="input-text-style" placeholder="e.g., Google Docs">
                                 </div>
                                 
-                                <!-- Modified Favicon Section -->
                                 <div class="form-group">
                                     <label for="faviconFetchInput" class="block text-gray-400 text-sm font-light mb-2">Custom Favicon (Fetch from Domain)</label>
                                     <div class="flex items-center gap-2">
@@ -856,9 +1338,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <!-- End Modified Favicon Section -->
-                                
-                            </div>
+                                </div>
                         </div>
 
                         <div class="flex justify-between items-center pt-4 mt-4 border-t border-[#252525]">
@@ -867,6 +1347,64 @@
                                 <i class="fa-solid fa-check mr-1"></i> Apply Tab
                             </button>
                         </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        
+        /**
+         * NEW: Generates the HTML for the "Personalization" section.
+         */
+        function getPersonalizationContent() {
+             return `
+                <h2 class="text-3xl font-bold text-white mb-6">Personalization</h2>
+                
+                <div class="w-full">
+                    <h3 class="text-xl font-bold text-white mb-2">Navigation Bar Theme</h3>
+                    <div id="themeSection" class="settings-box transition-all duration-300 p-4">
+                        <p class="text-sm font-light text-gray-400 mb-4">
+                            Select a theme for your navigation bar. This setting is saved locally and will apply a live preview.
+                        </p>
+                        
+                        <div id="theme-picker-container">
+                            <div class="flex items-center justify-center p-8">
+                                <i class="fa-solid fa-spinner fa-spin fa-2x text-gray-500"></i>
+                            </div>
+                        </div>
+                        
+                        <div id="themeMessage" class="general-message-area text-sm"></div>
+                    </div>
+                </div>
+             `;
+        }
+        
+        // --- NEW: Generates the HTML for the "Data Management" section ---
+        function getDataManagementContent() {
+            return `
+                <h2 class="text-3xl font-bold text-white mb-6">Data Management</h2>
+                <div class="w-full">
+                    <h3 class="text-xl font-bold text-white mb-2">Export Data</h3>
+                    <div class="settings-box transition-all duration-300 p-4 mb-8">
+                        <p class="text-sm font-light text-gray-400 mb-4">
+                            Export all your local game data (from LocalStorage and IndexedDB) into a single JSON file.
+                            This file can be used as a backup or to transfer your data to another browser.
+                        </p>
+                        <button id="exportDataBtn" class="btn-toolbar-style btn-primary-override w-48">
+                            <i class="fa-solid fa-download mr-2"></i> Export Data
+                        </button>
+                    </div>
+
+                    <h3 class="text-xl font-bold text-white mb-2">Import Data</h3>
+                    <div class="settings-box transition-all duration-300 p-4 bg-red-900/10 border-red-700/50">
+                        <p class="text-sm font-light text-red-300 mb-4">
+                            <i class="fa-solid fa-triangle-exclamation mr-1"></i> 
+                            **WARNING:** Importing data will overwrite all existing local game data. This action cannot be undone.
+                            Only import a file you have previously exported from this site.
+                        </p>
+                        <button id="importDataBtn" class="btn-toolbar-style btn-primary-override-danger w-48">
+                            <i class="fa-solid fa-upload mr-2"></i> Import Data
+                        </button>
                     </div>
                 </div>
             `;
@@ -1669,6 +2207,146 @@
                 }
             });
         }
+        
+        
+        /**
+         * NEW: Loads data and adds event listeners for the Personalization tab.
+         */
+        async function loadPersonalizationTab() {
+            const themePickerContainer = document.getElementById('theme-picker-container');
+            const themeMessage = document.getElementById('themeMessage');
+            
+            if (!themePickerContainer) return;
+            
+            // From navigation.js
+            const lightThemeNames = ['Light', 'Lavender', 'Rose Gold', 'Mint'];
+
+            try {
+                // 1. Fetch themes
+                const response = await fetch('../themes.json');
+                if (!response.ok) throw new Error('Failed to fetch themes.json');
+                const themes = await response.json();
+                
+                if (!themes || themes.length === 0) {
+                     throw new Error('themes.json is empty or invalid');
+                }
+                
+                // 2. Get currently saved theme to set the active state
+                let savedTheme = null;
+                try {
+                    savedTheme = JSON.parse(localStorage.getItem(THEME_STORAGE_KEY));
+                } catch (e) {
+                    console.warn('Could not parse saved theme.');
+                }
+                
+                // 3. Process and render themes
+                const modifiedThemes = []; // Store themes with correct logo paths
+                let themeButtonsHtml = '';
+                
+                for (const theme of themes) {
+                    // --- This is the logic requested by the user ---
+                    // It modifies the theme object *in memory* before saving/applying
+                    // We use root-relative paths as defined in navigation.js
+                    if (lightThemeNames.includes(theme.name)) {
+                        theme['logo-src'] = '/images/logo-dark.png'; 
+                    } else {
+                        theme['logo-src'] = '/images/logo.png';
+                    }
+                    // --- End of user logic ---
+                    
+                    modifiedThemes.push(theme);
+                    
+                    const isActive = savedTheme && savedTheme.name === theme.name;
+                    
+                    // === MODIFICATION START ===
+                    // Get the theme's main background and text colors for the button
+                    const previewBg = theme['navbar-bg'] || '#000000';
+                    const previewText = theme['navbar-text'] || '#c0c0c0';
+                    // Get the theme's accent border color
+                    const previewBorder = theme['tab-active-border'] || '#4f46e5';
+
+
+                    themeButtonsHtml += `
+                        <button 
+                            class="theme-button ${isActive ? 'active' : ''}" 
+                            data-theme-name="${theme.name}" 
+                            style="background-color: ${previewBg}; border-color: ${previewBorder};"
+                        >
+                            <div class="theme-button-name" style="color: ${previewText};">${theme.name}</div>
+                        </button>
+                    `;
+                    // === MODIFICATION END ===
+                }
+                
+                // Inject buttons into the DOM
+                themePickerContainer.innerHTML = themeButtonsHtml;
+                
+                // 4. Add event listeners
+                const themeButtons = themePickerContainer.querySelectorAll('.theme-button');
+                themeButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        const themeName = button.dataset.themeName;
+                        const themeToApply = modifiedThemes.find(t => t.name === themeName);
+                        
+                        if (themeToApply) {
+                            // 1. Save to localStorage
+                            localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(themeToApply));
+                            
+                            // === MODIFICATION START ===
+                            // 2. Apply theme for live preview (ENABLED per user request)
+                            if (window.applyTheme) {
+                                window.applyTheme(themeToApply);
+                            } else {
+                                console.error('window.applyTheme is not defined. Is navigation.js loaded?');
+                                showMessage(themeMessage, 'Error applying theme preview.', 'error');
+                                return;
+                            }
+                            // === MODIFICATION END ===
+                            
+                            // 3. Update active class
+                            themeButtons.forEach(btn => btn.classList.remove('active'));
+                            button.classList.add('active');
+                            
+                            // 4. Show success message
+                            showMessage(themeMessage, `${themeToApply.name} theme applied!`, 'success');
+                        }
+                    });
+                });
+
+            } catch (error) {
+                console.error('Error loading themes:', error);
+                themePickerContainer.innerHTML = `<p class="text-red-400">Error: Could not load themes. (${error.message})</p>`;
+            }
+        }
+        
+        // --- NEW: Loads data and adds event listeners for the Data tab ---
+        async function loadDataTab() {
+            // Get elements (buttons, modal)
+            const exportBtn = document.getElementById('exportDataBtn');
+            const importBtn = document.getElementById('importDataBtn');
+            const modal = document.getElementById('modalPrompt');
+            const modalClose = document.getElementById('modalClose');
+            
+            // Wire up buttons
+            if (exportBtn) exportBtn.addEventListener('click', downloadAllSaves);
+            if (importBtn) importBtn.addEventListener('click', handleFileUpload);
+            
+            // Wire up modal close events
+            if (modalClose) {
+                modalClose.addEventListener('click', () => {
+                    modal.style.display = "none";
+                });
+            }
+            // Use a new listener specific to this page
+            const modalBackground = document.getElementById('modalPrompt');
+            if (modalBackground) {
+                modalBackground.addEventListener('click', event => {
+                    if (event.target === modalBackground) {
+                        modal.style.display = "none";
+                    }
+                });
+            }
+        }
 
 
         /**
@@ -1692,6 +2370,16 @@
                 // NEW: Load Privacy Tab
                 mainView.innerHTML = getPrivacyContent(); // Render HTML first
                 await loadPrivacyTab(); // Then load data and add listeners
+            }
+            else if (tabId === 'personalization') {
+                // --- NEW: Load Personalization Tab ---
+                mainView.innerHTML = getPersonalizationContent(); // Render HTML
+                await loadPersonalizationTab(); // Load data and add listeners
+            }
+            else if (tabId === 'data') {
+                // --- NEW: Load Data Management Tab ---
+                mainView.innerHTML = getDataManagementContent(); // Render HTML
+                await loadDataTab(); // Load data and add listeners
             }
             else if (tabId === 'about') {
                 mainView.innerHTML = getAboutContent();
