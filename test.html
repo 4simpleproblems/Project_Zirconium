@@ -486,6 +486,7 @@
                 // on a secure backend server using Google's API to prevent bots.
                 // This front-end-only check is for UI compliance only and is INSECURE.
 
+
                 // --- NEW: BETA TESTER CHECK (for New Email Signup) ---
                 const isBetaTester = await isUserBetaTester(email);
                 if (!isBetaTester) {
@@ -514,6 +515,7 @@
                     } else {
                         await userCredential.user.delete();
                         showMessage(messageDivs.signup, 'Failed to create user record. Please try again.');
+                        grecaptcha.reset(); // Reset reCAPTCHA after internal error
                     }
                 } catch (error) {
                     let msg = 'An unknown error occurred.';
