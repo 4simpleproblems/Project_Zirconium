@@ -268,15 +268,11 @@
             box-shadow: 0 0 10px rgba(79, 70, 229, 0.3); /* Will use variable shadow */
             box-shadow: 0 0 10px var(--tab-active-shadow, rgba(79, 70, 229, 0.3));
         }
-        .theme-button.active::after {
-            content: '\f00c'; /* Font Awesome checkmark */
-            font-family: "Font Awesome 6 Pro";
-            font-weight: 900;
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            color: var(--tab-active-text, #4f46e5);
-        }
+        
+        /* === MODIFICATION START === */
+        /* The .theme-button.active::after rule has been REMOVED. */
+        /* === MODIFICATION END === */
+
         .theme-button-name {
             font-weight: 500;
             color: #e0e0e0; /* This will be overridden by inline style */
