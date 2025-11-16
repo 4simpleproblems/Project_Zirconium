@@ -30,6 +30,7 @@
  * 22. **(NEW)** LOGO THEME CHANGING: Added support for logo color tinting based on the `logo-tint-color` property in themes.json. The logo can now be dynamically colored to match the theme using CSS filters.
  * 23. **(NEW)** TAB CENTERING: If 9 or fewer tabs are loaded, the scroll menu is hidden, and the tabs are centered.
  * 24. **(NEW)** FIXED NAVBAR SIZING: Changed navbar height, padding, and tab dimensions from `rem` to `px` to prevent scaling with browser font-size settings.
+ * 25. **(FIXED)** INITIAL AVATAR CENTERING: Changed `w-8 h-8` to `w-full h-full` on the `initial-avatar` div to ensure perfect centering of the user's initial letter inside the button.
  */
 
 // =========================================================================
@@ -723,9 +724,12 @@ let db;
                 const email = user.email || 'No email';
                 const initial = username.charAt(0).toUpperCase();
 
+                // 🌟 FIX: Changed 'w-8 h-8' to 'w-full h-full' to make the avatar div fill the button,
+                // which, combined with the CSS 'display: flex; align-items: center; justify-content: center;',
+                // will perfectly center the letter.
                 const avatar = photoURL ?
                     `<img src="${photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">` :
-                    `<div class="initial-avatar w-8 h-8 rounded-full text-sm font-semibold">${initial}</div>`;
+                    `<div class="initial-avatar w-full h-full rounded-full text-sm font-semibold">${initial}</div>`;
                 
                 const isPinHidden = localStorage.getItem(PIN_BUTTON_HIDDEN_KEY) === 'true';
                 const showPinOption = isPinHidden 
