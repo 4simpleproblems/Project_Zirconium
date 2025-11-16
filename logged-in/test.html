@@ -12,7 +12,11 @@
     
     <link rel="stylesheet" href="https://kit-pro.fontawesome.com/releases/v7.0.1/css/pro.min.css" media="all">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="../injector.js"></script> 
+    <script src="../navigation.js"></script>
+    <script src="../injector.js"></script>
+    <script src="../panic-key.js"></script>
+    <script src="../url-changer.js" defer></script> 
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
 
     <style>
@@ -428,64 +432,111 @@
             <div class="loading-bar"></div>
             <div class="loading-bar"></div>
         </div>
-        <p id="loadingText" class="text-lg font-normal">Loading...</p>
+        <p id="loadingText">Loading...</p>
     </div>
     
-
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
     
-    <script src="../firebase-config.js"></script> 
-    <script>
-        // --- Firebase Imports (Changed to 'var' to prevent redeclaration errors if external scripts define them globally) ---
-        var auth = firebase.auth();
-        var db = firebase.firestore();
-        const { 
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { 
+            getAuth, 
             onAuthStateChanged, 
-            signOut, 
-            EmailAuthProvider,
-            reauthenticateWithCredential,
+            signOut,
+            EmailAuthProvider, 
+            reauthenticateWithCredential, 
             updatePassword,
-            updateEmail,
-            linkWithPopup,
-            unlink,
-            deleteUser,
+            // NEW AUTH IMPORTS
             GoogleAuthProvider,
             GithubAuthProvider,
-            OAuthProvider 
-        } = firebase.auth;
-
-        const { doc, getDoc, updateDoc, collection, query, where, getDocs, writeBatch } = firebase.firestore;
-
-
-        // --- CONSTANTS ---
-        const MIN_LENGTH = 3; 
-        const MAX_LENGTH = 15;
-        const MAX_CHANGES = 3;
+            OAuthProvider,
+            linkWithPopup,
+            unlink,
+            reauthenticateWithPopup,
+            deleteUser
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            getDoc, 
+            updateDoc, 
+            collection,
+            query,
+            where,
+            getDocs,
+            serverTimestamp,
+            deleteDoc // NEW FIREBASE IMPORT
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
-        // --- DOM Elements ---
-        const mainView = document.getElementById('settings-main-view');
+        // --- Import Firebase Config (Assumed to exist in a relative file) ---
+        import { firebaseConfig } from "../firebase-config.js"; 
+        
+        // --- NEW: Import Site Mapping (from index.html logic) ---
+        // This file MUST exist at ../site-mapping.js for import/export to work
+        import { siteMapping } from "../site-mapping.js";
+
+
+        if (!firebaseConfig || !firebaseConfig.apiKey) {
+            console.error("FATAL ERROR: Firebase configuration is missing or invalid.");
+        }
+
+        // --- Firebase Initialization ---
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // --- Global State and Element References ---
         const sidebarTabs = document.querySelectorAll('.settings-tab');
+        const mainView = document.getElementById('settings-main-view');
+        let currentUser = null; // To store the authenticated user object
         
-        // --- Global State ---
-        let currentUser = null; 
+        // --- NEW: Global var for loading overlay (from index.html) ---
         let loadingTimeout = null;
-        let authPopup = null; 
         
-        // Provider configuration
-        // NOTE: 'google.com' and 'github.com' are standard Firebase provider IDs.
+        // Constants for validation and limits
+        const MIN_LENGTH = 6; 
+        const MAX_LENGTH = 24;
+        const MAX_CHANGES = 5; 
+
+
+        // Tab Content Data Structure (can be expanded later)
+        const tabContent = {
+            'general': { title: 'General Settings', icon: 'fa-gear' },
+            'privacy': { title: 'Privacy & Security', icon: 'fa-shield-halved' },
+            'personalization': { title: 'Personalization', icon: 'fa-palette' },
+            'data': { title: 'Data Management', icon: 'fa-database' },
+            'about': { title: 'About 4SP', icon: 'fa-circle-info' },
+        };
+        
+        // Constants for providers (NEW)
         const PROVIDER_CONFIG = {
-            'google.com': { name: 'Google', icon: '../images/google.png', instance: () => new GoogleAuthProvider() },
-            'github.com': { name: 'GitHub', icon: '../images/github.png', instance: () => new GithubAuthProvider() },
-            'microsoft.com': { name: 'Microsoft', icon: '<i class="fa-solid fa-at fa-lg mr-3"></i>', instance: () => new OAuthProvider('microsoft.com') },
-            'password': { name: 'Email & Password', icon: '<i class="fa-solid fa-at fa-lg mr-3"></i>', isCredential: true }
+            'google.com': { 
+                name: 'Google', 
+                icon: '../images/google-icon.png', 
+                instance: () => new GoogleAuthProvider() 
+            },
+            'github.com': { 
+                name: 'GitHub', 
+                icon: '../images/github-mark-white.png', 
+                instance: () => new GithubAuthProvider() 
+            },
+            'microsoft.com': { 
+                name: 'Microsoft', 
+                icon: '../images/microsoft.png', 
+                instance: () => new OAuthProvider('microsoft.com') 
+            },
+            'password': { 
+                name: 'Email & Password', 
+                icon: '<i class="fa-solid fa-at fa-lg mr-3"></i>', 
+                isCredential: true
+            }
         };
 
         // --- NEW: Constants for Privacy Settings ---
-        // IndexedDB Config for Panic Key (These constants are often also in external scripts, keeping them here as the central control for the settings page)
+        
+        // IndexedDB Config for Panic Key
         const DB_NAME = 'userLocalSettingsDB';
         const STORE_NAME = 'panicKeyStore';
+        
         // localStorage Key for URL Changer
         const URL_CHANGER_KEY = 'selectedUrlPreset';
         
@@ -493,98 +544,177 @@
         // (Copied from navigation.js)
         const THEME_STORAGE_KEY = 'user-navbar-theme';
 
+
         // Presets copied from url-changer.js
         const urlChangerPresets = [
             { id: 'hac', name: 'HAC', title: 'Login', favicon: '../favicons/hac.png', category: 'websites' },
-            { id: 'google_doc', name: 'Google Doc', title: 'Untitled document', favicon: '../favicons/google_doc.png', category: 'websites' },
-            { id: 'wikipedia', name: 'Wikipedia', title: 'Wikipedia, the free encyclopedia', favicon: '../favicons/wikipedia.png', category: 'websites' },
-            { id: 'gn', name: 'GN-Math', title: 'Sign in to your account', favicon: '../favicons/gn.png', category: 'games' },
-            { id: 'strongdogxp', name: 'StrongdogXP', title: 'Welcome Back!', favicon: '../favicons/strongdogxp.png', category: 'games' },
-            { id: 'blank', name: 'Blank', title: '', favicon: '' },
+            { id: 'gmm', name: 'GMM', title: 'Get More Math!', favicon: '../favicons/gmm.png', category: 'websites' },
+            { id: 'kahoot', name: 'Kahoot', title: 'Kahoot! | Learning games | Make learning awesome!', favicon: '../favicons/kahoot.png', category: 'websites' },
+            { id: 'g_classroom', name: 'Google Classroom', title: 'Home', favicon: '../favicons/google-classroom.png', category: 'websites' },
+            { id: 'g_docs', name: 'Google Docs', title: 'Google Docs', favicon: '../favicons/google-docs.png', category: 'websites' },
+            { id: 'g_slides', name: 'Google Slides', title: 'Google Slides', favicon: '../favicons/google-slides.png', category: 'websites' },
+            { id: 'g_drive', name: 'Google Drive', title: 'Home - Google Drive', favicon: '../favicons/google-drive.png', category: 'websites' },
+            { id: 'wikipedia', name: 'Wikipedia', title: 'Wikipedia', favicon: '../favicons/wikipedia.png', category: 'websites' },
+            { id: 'clever', name: 'Clever', title: 'Clever | Connect every student to a world of learning', favicon: '../favicons/clever.png', category: 'websites' },
+            { id: '_LIVE_CURRENT_TIME', name: 'Current Time', title: 'Live Time', favicon: '', category: 'live', live: true }
         ];
 
-
-        // --- UTILITY FUNCTIONS ---
         
-        function showMessage(element, text, type) {
-            element.textContent = text;
-            element.className = 'general-message-area text-sm';
-            if (type === 'success') {
-                element.classList.add('success-message');
-            } else if (type === 'error') {
-                element.classList.add('error-message');
-            } else if (type === 'warning') {
-                element.classList.add('warning-message');
+        // --- Shared Helper Functions ---
+        const getUserDocRef = (userId) => doc(db, 'users', userId);
+        
+        const showMessage = (element, text, type = 'error') => {
+            // Prevent clearing a success message if a warning is generated elsewhere
+            if (element && element.innerHTML.includes('success') && type !== 'error') return;
+            if (element) {
+                element.innerHTML = text;
+                element.className = `general-message-area text-sm ${type}-message`;
             }
-        }
+        };
+        
+        const checkProfanity = async (text) => {
+            try {
+                const response = await fetch(`https://www.purgomalum.com/service/containsprofanity?text=${encodeURIComponent(text)}`);
+                const result = await response.text();
+                return result.toLowerCase() === 'true';
+            } catch (error) { console.error('Profanity API error:', error); return false; }
+        };
 
-        // --- Firebase Utility ---
-
-        function getUserDocRef(uid) {
-            return db.collection('users').doc(uid);
-        }
-
-        async function isUsernameTaken(username) {
-            const usersRef = db.collection('users');
-            // Case-insensitive query (requires Firestore indexes)
-            const q = usersRef.where('username', '==', username); 
+        const isUsernameTaken = async (username) => {
+            const q = query(collection(db, 'users'), where('username', '==', username));
             const querySnapshot = await getDocs(q);
             return !querySnapshot.empty;
-        }
-
-        // --- Simple Profanity Check (Client-Side) ---
-        // Note: For a real app, this should be server-side or use a comprehensive library.
-        const simpleProfanityList = ['fuck', 'shit', 'cunt', 'piss', 'asshole', 'bitch', 'cock', 'dick', 'fag', 'retard'];
-        async function checkProfanity(text) {
-            const lowerText = text.toLowerCase();
-            return simpleProfanityList.some(word => lowerText.includes(word));
-        }
+        };
         
-        // --- Modal Functions (Copied from index.html) ---
-        let modalResolve = null; 
+        // --- NEW: IndexedDB Helper Functions ---
 
-        function showModal(text, buttons) {
-          const modalPrompt = document.getElementById('modalPrompt');
-          const modalText = document.getElementById('modalText');
-          const modalButtons = document.getElementById('modalButtons');
-          const modalClose = document.getElementById('modalClose');
-
-          modalText.textContent = text;
-          modalButtons.innerHTML = ''; 
-
-          return new Promise(resolve => {
-            modalResolve = resolve;
-
-            // Handle close button click
-            modalClose.onclick = () => {
-              hideModal();
-              modalResolve(false); // Resolve with false if closed without a button
-            };
-
-            // Handle button clicks
-            buttons.forEach(btn => {
-              const buttonElement = document.createElement('button');
-              buttonElement.textContent = btn.text;
-              buttonElement.className = `btn-toolbar-style ${btn.style || ''}`;
-              buttonElement.onclick = () => {
-                hideModal();
-                modalResolve(btn.value);
-              };
-              modalButtons.appendChild(buttonElement);
+        /**
+         * Opens the IndexedDB and creates the object store if needed.
+         */
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME);
+                request.onupgradeneeded = event => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                    }
+                };
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
             });
-
-            modalPrompt.style.display = "flex";
-          });
-        }
-
-        function hideModal() {
-          document.getElementById('modalPrompt').style.display = "none";
         }
         
-        // --- Loading Overlay Functions (Copied from index.html) ---
+        /**
+         * Fetches all panic key settings from IndexedDB.
+         */
+        async function getPanicKeySettings() {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(STORE_NAME, 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.getAll();
+                request.onsuccess = () => {
+                    const settingsMap = new Map(request.result.map(item => [item.id, item]));
+                    db.close();
+                    resolve(settingsMap);
+                };
+                request.onerror = () => {
+                     db.close();
+                    reject(request.error);
+                };
+            });
+        }
+        
+        /**
+         * Saves panic key settings to IndexedDB.
+         */
+        async function savePanicKeySettings(settingsArray) {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(STORE_NAME, 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                
+                let completed = 0;
+                const total = settingsArray.length;
+
+                settingsArray.forEach(setting => {
+                    const request = store.put(setting);
+                    request.onsuccess = () => {
+                        completed++;
+                        if (completed === total) {
+                            db.close();
+                            resolve();
+                        }
+                    };
+                    request.onerror = () => {
+                         db.close();
+                        reject(request.error); // Stop on first error
+                    };
+                });
+                
+                // Handle case where array is empty
+                if (total === 0) {
+                     db.close();
+                    resolve();
+                }
+            });
+        }
+
+        // --- NEW: localStorage Helper Functions ---
+        
+        function getSavedUrlChangerSetting() {
+            const savedSettingsJSON = localStorage.getItem(URL_CHANGER_KEY);
+            let savedSettings = { type: 'none' };
+            if (savedSettingsJSON) {
+                try { 
+                    savedSettings = JSON.parse(savedSettingsJSON); 
+                } catch (e) { 
+                    console.error("Failed to parse saved tab settings, reverting to default.", e); 
+                }
+            }
+            return savedSettings;
+        }
+
+        function saveUrlChangerSetting(settings) {
+            try {
+                localStorage.setItem(URL_CHANGER_KEY, JSON.stringify(settings));
+                return true;
+            } catch (e) {
+                console.error("Failed to save URL changer settings:", e);
+                return false;
+            }
+        }
+        
+        // --- NEW: Modal and Loading Functions (from index.html) ---
+        
+        function openModal(text, buttons = []) {
+            const modal = document.getElementById('modalPrompt');
+            const modalText = document.getElementById('modalText');
+            const modalButtons = document.getElementById('modalButtons');
+            
+            modalText.textContent = text;
+            modalButtons.innerHTML = "";
+            buttons.forEach(btn => {
+                const buttonEl = document.createElement("button");
+                // MODIFICATION: Use settings page button styles
+                buttonEl.className = "btn-toolbar-style";
+                if (btn.text.toLowerCase() === 'yes') {
+                    buttonEl.classList.add('btn-primary-override-danger'); // Make 'Yes' destructive
+                } else {
+                    buttonEl.classList.add('btn-primary-override');
+                }
+                buttonEl.textContent = btn.text;
+                buttonEl.onclick = btn.onclick;
+                modalButtons.appendChild(buttonEl);
+            });
+            modal.style.display = "flex";
+        }
+        
         function showLoading(text = "Loading...") {
             const loadingOverlay = document.getElementById('loadingOverlay');
             const loadingText = document.getElementById('loadingText');
+            
             loadingText.textContent = text;
             loadingOverlay.style.display = "flex";
             loadingOverlay.classList.add("active");
@@ -603,87 +733,117 @@
             loadingOverlay.classList.remove("active");
             loadingOverlay.style.display = "none";
         }
-
+        
         // --- NEW: Core Data Functions (from index.html) ---
-
+        
         function getAllLocalStorageData() {
             const data = {};
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
-                // Skip navigation/theme/url-changer settings
-                if (key !== THEME_STORAGE_KEY && key !== URL_CHANGER_KEY) { 
-                    try {
-                        data[key] = localStorage.getItem(key);
-                    } catch (e) {
-                        console.warn(`Could not read localStorage key ${key}:`, e);
-                    }
-                }
+                // Skip theme key
+                if (key === THEME_STORAGE_KEY) continue;
+                // Skip URL changer key
+                if (key === URL_CHANGER_KEY) continue;
+                
+                const value = localStorage.getItem(key);
+                data[key] = value;
             }
             return data;
+        }
+
+        function setAllLocalStorageData(data) {
+            // Don't clear *everything*, just the keys in the data
+            // This avoids wiping the user's theme setting
+            for (const [key, value] of Object.entries(data)) {
+                localStorage.setItem(key, value);
+            }
         }
 
         async function getAllIndexedDBData() {
-            const data = {};
-            const databases = await indexedDB.databases();
-            for (const dbInfo of databases) {
-                // Skip our own settings DB
-                if (dbInfo.name && dbInfo.name !== DB_NAME) { 
-                    try {
-                        const dbName = dbInfo.name;
-                        const openRequest = indexedDB.open(dbName);
-                        
-                        // We need to wait for the DB to open
-                        const dbInstance = await new Promise((resolve, reject) => {
-                            openRequest.onsuccess = event => resolve(event.target.result);
-                            openRequest.onerror = event => reject(event.target.error);
-                        });
-
-                        const storeNames = Array.from(dbInstance.objectStoreNames);
-                        data[dbName] = {};
-
-                        for (const storeName of storeNames) {
-                            // Read all objects from the store
-                            const storeData = await new Promise((resolve, reject) => {
-                                const transaction = dbInstance.transaction(storeName, "readonly");
-                                const store = transaction.objectStore(storeName);
-                                const request = store.getAll();
-                                
-                                request.onsuccess = () => resolve(request.result);
-                                request.onerror = event => reject(event.target.error);
-                            });
-
-                            data[dbName][storeName] = storeData;
-                        }
-                        
-                        dbInstance.close();
-
-                    } catch (e) {
-                        console.error(`Error reading IndexedDB ${dbInfo.name}:`, e);
-                    }
-                }
+            if (!indexedDB.databases) return {};
+            let dbList = [];
+            try {
+                dbList = await indexedDB.databases();
+            } catch (error) {
+                console.error("Error fetching IndexedDB databases:", error);
+                return {};
             }
-            return data;
+            const result = {};
+            for (const dbInfo of dbList) {
+                if (!dbInfo.name) continue;
+                // Skip our own settings DB
+                if (dbInfo.name === DB_NAME) continue; 
+                
+                result[dbInfo.name] = await getDataFromDatabase(dbInfo.name);
+            }
+            return result;
         }
-        
-        async function setAllIndexedDBData(storesData) {
-            for (const dbName in storesData) {
+
+        function getDataFromDatabase(dbName) {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(dbName);
+                request.onsuccess = event => {
+                    const db = event.target.result;
+                    const storeNames = Array.from(db.objectStoreNames);
+                    const dbData = {};
+                    let pending = storeNames.length;
+                    if (pending === 0) {
+                        db.close();
+                        resolve(dbData);
+                        return;
+                    }
+                    storeNames.forEach(storeName => {
+                        const transaction = db.transaction(storeName, "readonly");
+                        const store = transaction.objectStore(storeName);
+                        const items = [];
+                        const cursorRequest = store.openCursor();
+                        cursorRequest.onsuccess = evt => {
+                            const cursor = evt.target.result;
+                            if (cursor) {
+                                items.push({ key: cursor.key, value: cursor.value });
+                                cursor.continue();
+                            } else {
+                                dbData[storeName] = items;
+                                pending--;
+                                if (pending === 0) {
+                                    db.close();
+                                    resolve(dbData);
+                                }
+                            }
+                        };
+                        cursorRequest.onerror = evt => {
+                            pending--;
+                            if (pending === 0) {
+                                db.close();
+                                resolve(dbData);
+                            }
+                        };
+                    });
+                };
+                request.onerror = event => {
+                    reject(event.target.error);
+                };
+            });
+        }
+
+        async function setAllIndexedDBData(indexedData) {
+            for (const dbName in indexedData) {
+                const storesData = indexedData[dbName];
                 await new Promise(resolve => {
                     const deleteRequest = indexedDB.deleteDatabase(dbName);
                     deleteRequest.onsuccess = () => resolve();
                     deleteRequest.onerror = () => resolve();
                     deleteRequest.onblocked = () => resolve();
                 });
-                
                 const openRequest = indexedDB.open(dbName, 1);
                 openRequest.onupgradeneeded = function (event) {
                     const db = event.target.result;
-                    for (const storeName in storesData[dbName]) {
+                    for (const storeName in storesData) {
                         if (!db.objectStoreNames.contains(storeName)) {
                             db.createObjectStore(storeName, { autoIncrement: false });
                         }
                     }
                 };
-
                 const dbInstance = await new Promise((resolve, reject) => {
                     openRequest.onsuccess = event => {
                         resolve(event.target.result);
@@ -692,49 +852,100 @@
                         reject(event.target.error);
                     };
                 });
-
-                for (const storeName in storesData[dbName]) {
+                for (const storeName in storesData) {
                     await new Promise(resolve => {
                         const transaction = dbInstance.transaction(storeName, "readwrite");
                         transaction.oncomplete = () => resolve();
-                        transaction.onerror = (event) => {
-                             console.error(`Transaction failed for store ${storeName}:`, event.target.error);
-                            resolve(); // Resolve anyway to proceed
-                        };
+                        transaction.onerror = () => resolve();
                         const store = transaction.objectStore(storeName);
-                        
-                        storesData[dbName][storeName].forEach(item => {
-                            // Note: IndexedDB doesn't allow keys on put/add if using autoIncrement
-                            // We are assuming the stores are simple key/value or have a known keyPath (which we assume to be the object itself if no key is provided)
-                            if (item && item.key) { 
-                                store.put(item.value, item.key);
-                            } else if (item && item.id) { // Assume 'id' is a keyPath for simplicity
-                                store.put(item);
-                            } else {
-                                store.put(item);
+                        const clearRequest = store.clear();
+                        clearRequest.onsuccess = async () => {
+                            for (const record of storesData[storeName]) {
+                                await new Promise(r => {
+                                    const putRequest = store.put(record.value, record.key);
+                                    putRequest.onsuccess = () => r();
+                                    putRequest.onerror = () => r();
+                                });
                             }
-                        });
+                        };
                     });
                 }
-                
                 dbInstance.close();
             }
         }
         
-        // --- Data Management Handlers (from index.html) ---
+        // --- NEW: Domain Key Functions (from index.html) ---
+        
+        function getCurrentSiteKey() {
+            const currentURL = window.location.href;
+            const keys = Object.keys(siteMapping);
+            keys.sort((a, b) => b.length - a.length);
+            for (const key of keys) {
+                const normalizedKey = key.replace(/^https?:\/\//, "");
+                if (currentURL.includes(normalizedKey)) {
+                    return normalizedKey;
+                }
+            }
+            return window.location.host + window.location.pathname.replace(/\/$/, "");
+        }
+        
+        function normalizeDomainKey(str) {
+            return str.replace(/^https?:\/\//, "").replace(/\/$/, "");
+        }
+        
+        function replaceDomainsInData(dataObj, currentDomain) {
+            const currentDomainKey = getCurrentSiteKey(); // Get current domain
+            const keysToCheck = Object.keys(siteMapping).map(k => normalizeDomainKey(k));
+            const normalizedCurrentDomain = normalizeDomainKey(currentDomainKey);
 
+            function replaceInString(str) {
+                for (const oldDomain of keysToCheck) {
+                    if (str.includes(oldDomain)) {
+                        const idx = str.indexOf(oldDomain);
+                        if (idx === 0) {
+                            return normalizedCurrentDomain + str.substring(oldDomain.length);
+                        } else {
+                            return str.replace(oldDomain, normalizedCurrentDomain);
+                        }
+                    }
+                }
+                return str;
+            }
+            
+            // Check if dataObj is the root object {localStorageBackup: ..., indexedDBBackup: ...}
+            if (dataObj.localStorageBackup || dataObj.indexedDBBackup) {
+                 if (dataObj.localStorageBackup) {
+                    const localObj = dataObj.localStorageBackup;
+                     for (const k in localObj) {
+                        const newKey = replaceInString(k);
+                        let newVal = localObj[k];
+                        if (typeof newVal === "string") {
+                            newVal = replaceInString(newVal);
+                        }
+                        if (newKey !== k) {
+                            delete localObj[k];
+                            localObj[newKey] = newVal;
+                        } else {
+                            localObj[k] = newVal;
+                        }
+                    }
+                 }
+                 // Note: IndexedDB data is less likely to contain domain keys in its structure
+                 // so we primarily focus on localStorage keys and values.
+            }
+        }
+        
+        // --- NEW: Import/Export Handlers (from index.html) ---
+        
         async function downloadAllSaves() {
             showLoading("Preparing download...");
             const localData = getAllLocalStorageData();
             const indexedData = await getAllIndexedDBData();
-            
             const dataToDownload = {
                 localStorageBackup: localData,
                 indexedDBBackup: indexedData,
             };
-            
             hideLoading();
-            
             const blob = new Blob([JSON.stringify(dataToDownload, null, 2)], {
                 type: "application/json",
             });
@@ -749,339 +960,304 @@
         }
 
         function handleFileUpload() {
-            const uploadMessage = document.getElementById('uploadMessage');
             const input = document.createElement("input");
             input.type = "file";
             input.accept = ".json";
-            
             input.onchange = async e => {
                 const file = e.target.files[0];
                 if (!file) return;
-
                 const reader = new FileReader();
                 reader.onload = async evt => {
                     const content = evt.target.result;
-                    let parsedData;
+                    let parsed;
                     try {
-                        parsedData = JSON.parse(content);
-                    } catch (error) {
-                        showMessage(uploadMessage, 'Invalid JSON file.', 'error');
+                        parsed = JSON.parse(content);
+                    } catch (err) {
+                        alert("Invalid file format");
                         return;
                     }
+                    
+                    // This is the domain key logic from index.html
+                    replaceDomainsInData(parsed, ""); // Pass empty string, replaceDomainsInData will get it
 
-                    if (!parsedData || (!parsedData.localStorageBackup && !parsedData.indexedDBBackup)) {
-                        showMessage(uploadMessage, 'Invalid save file format.', 'error');
-                        return;
-                    }
-
-                    const confirm = await showModal(
-                        'This will overwrite all your current local data (games saves, etc.). Are you sure you want to proceed?', 
+                    openModal(
+                        "Are you sure you would like to upload this save? It will overwrite all current local data.",
                         [
-                            { text: 'Cancel', value: false, style: '' },
-                            { text: 'Overwrite', value: true, style: 'btn-primary-override-danger' }
+                            {
+                                text: "Yes",
+                                onclick: async () => {
+                                    modal.style.display = "none";
+                                    showLoading("Uploading save...");
+                                    
+                                    let loadedLocalData = parsed.localStorageBackup;
+                                    let loadedIndexedData = parsed.indexedDBBackup;
+
+                                    if (loadedLocalData)
+                                        setAllLocalStorageData(loadedLocalData);
+                                    if (loadedIndexedData)
+                                        await setAllIndexedDBData(loadedIndexedData);
+                                        
+                                    hideLoading();
+                                    alert("Upload complete! Refreshing the page...");
+                                    setTimeout(() => location.reload(), 1000);
+                                },
+                            },
+                            {
+                                text: "No",
+                                onclick: () => {
+                                    modal.style.display = "none";
+                                },
+                            },
                         ]
                     );
-
-                    if (!confirm) return;
-
-                    showLoading("Importing data...");
-                    try {
-                        const localBackup = parsedData.localStorageBackup || {};
-                        const indexedBackup = parsedData.indexedDBBackup || {};
-
-                        // 1. Import localStorage data
-                        for (const key in localBackup) {
-                            if (key !== THEME_STORAGE_KEY && key !== URL_CHANGER_KEY) { 
-                                localStorage.setItem(key, localBackup[key]);
-                            }
-                        }
-
-                        // 2. Import IndexedDB data
-                        await setAllIndexedDBData(indexedBackup);
-
-                        hideLoading();
-                        showMessage(uploadMessage, 'Data successfully imported! Refreshing page...', 'success');
-                        // ADDED: Refresh page after 1.5 seconds
-                        setTimeout(() => location.reload(), 1500); 
-
-                    } catch (e) {
-                        console.error("Data import failed:", e);
-                        hideLoading();
-                        showMessage(uploadMessage, 'An unexpected error occurred during import.', 'error');
-                    }
                 };
                 reader.readAsText(file);
             };
             input.click();
         }
 
-        async function deleteAllLocalData() {
-            const deleteDataMessage = document.getElementById('deleteDataMessage');
-            
-            const confirm = await showModal(
-                'This will permanently delete ALL your local data, including game saves and preferences, except for your theme and tab disguise settings. Are you absolutely sure?', 
-                [
-                    { text: 'Cancel', value: false, style: '' },
-                    { text: 'DELETE ALL', value: true, style: 'btn-primary-override-danger' }
-                ]
-            );
-
-            if (!confirm) return;
-
-            showLoading("Deleting all local data...");
-            
-            try {
-                // 1. Clear localStorage keys (excluding theme/url changer settings)
-                const keysToRemove = Object.keys(getAllLocalStorageData());
-                keysToRemove.forEach(key => localStorage.removeItem(key));
-
-                // 2. Delete IndexedDB databases
-                if (indexedDB.databases) {
-                    const dbList = await indexedDB.databases();
-                    for (const dbInfo of dbList) {
-                        if (dbInfo.name && dbInfo.name !== DB_NAME) { // Skip our own settings DB
-                            await new Promise(resolve => {
-                                const deleteRequest = indexedDB.deleteDatabase(dbInfo.name);
-                                deleteRequest.onsuccess = () => resolve();
-                                deleteRequest.onerror = () => resolve();
-                                deleteRequest.onblocked = () => resolve();
-                            });
-                        }
-                    }
-                }
-                
-                hideLoading();
-                showMessage(deleteDataMessage, 'All local data successfully deleted!', 'success');
-                setTimeout(() => location.reload(), 1500);
-            
-            } catch (e) {
-                console.error("Data deletion failed:", e);
-                hideLoading();
-                showMessage(deleteDataMessage, 'An unexpected error occurred during deletion.', 'error');
-            }
-        }
-
-
-        // --- HTML Content Generation Functions ---
-
         /**
-         * Generates the HTML for the General section.
-         * @param {string} currentUsername - The user's current display name.
-         * @param {number} changesRemaining - The number of username changes remaining.
-         * @param {number} changesThisMonth - The number of changes this month.
-         * @param {string} currentMonthName - The current month name.
-         * @param {boolean} isEmailPasswordUser - True if the user has an Email/Password account.
-         * @param {Array} providerData - Array of linked providers.
-         * @returns {string} The HTML string.
+         * Generates the HTML for the "Change Password" section.
          */
-        function getGeneralContent(currentUsername, changesRemaining, changesThisMonth, currentMonthName, isEmailPasswordUser, providerData) {
-            
-            // --- Username Section ---
-            const usernameSectionHtml = `
-            <h3 class="text-xl font-bold text-white mb-2">Username</h3>
-            <div id="usernameSection" class="settings-box transition-all duration-300">
-                <div id="viewMode" class="flex justify-between items-center p-4">
-                    <p class="text-lg text-white font-medium">${currentUsername}</p>
-                    <button id="editUsernameBtn" class="btn-toolbar-style" style="padding: 0.5rem 0.75rem;">
-                        <i class="fa-solid fa-pen-to-square mr-1"></i> Edit
-                    </button>
-                </div>
-                <div id="editMode" class="hidden flex-col p-4">
-                    <input type="text" id="newUsernameInput" class="input-text-style" value="${currentUsername}" placeholder="Enter new username">
-                    <div class="flex justify-between items-center text-xs text-gray-500 font-light px-1">
-                        <p>Length: <span id="charCount">${currentUsername.length}</span> (Min: <span id="minLength">${MIN_LENGTH}</span>, Max: <span id="maxLength">${MAX_LENGTH}</span>)</p>
-                        <p>Allowed Symbols: .,-+\\_!?$</p>
-                    </div>
-                    <div class="flex justify-between items-center pt-4 mt-4 border-t border-[#252525]">
-                        <p id="usernameChangeMessage" class="general-message-area text-sm"></p>
-                        <div>
-                            <button id="cancelEditBtn" class="btn-toolbar-style mr-3"> Cancel </button>
-                            <button id="applyUsernameBtn" class="btn-toolbar-style btn-primary-override w-36" disabled>
-                                <i class="fa-solid fa-check mr-1"></i> Apply
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <p class="text-sm font-light text-gray-400 mt-2">
-                You have <span id="changesRemaining" class="text-emphasis">${changesRemaining}</span> of ${MAX_CHANGES} username changes remaining for ${currentMonthName}.
-            </p>
-            `;
-
-            // --- Password Section (Only for Email/Password users) ---
-            let passwordSectionHtml = '';
-            if (isEmailPasswordUser) {
-                passwordSectionHtml = `
+        function getChangePasswordSection() {
+            return `
                 <h3 class="text-xl font-bold text-white mb-2 mt-8">Change Password</h3>
-                <div id="passwordSection" class="settings-box p-4">
-                    <p class="text-sm font-light text-gray-400 mb-4">You can change your password here. Must be at least 6 characters.</p>
+                <div id="passwordChangeSection" class="settings-box w-full p-4">
+                    <p class="text-sm font-light text-gray-400 mb-3">
+                        Change your password. You must provide your current password for security.
+                    </p>
+                    
                     <div class="flex flex-col gap-3">
-                        <div>
-                            <label for="currentPassword" class="block text-sm font-light text-gray-400 mb-1">Current Password</label>
-                            <input type="password" id="currentPassword" class="input-text-style" placeholder="Enter current password">
-                        </div>
-                        <div>
-                            <label for="newPassword" class="block text-sm font-light text-gray-400 mb-1">New Password</label>
-                            <input type="password" id="newPassword" class="input-text-style" placeholder="Enter new password">
-                        </div>
-                        <div>
-                            <label for="confirmPassword" class="block text-sm font-light text-gray-400 mb-1">Confirm New Password</label>
-                            <input type="password" id="confirmPassword" class="input-text-style" placeholder="Confirm new password">
-                        </div>
+                        <input type="password" id="currentPasswordInput" placeholder="Current Password" class="input-text-style">
+                        <input type="password" id="newPasswordInput" placeholder="New Password (min 6 characters)" class="input-text-style">
+                        <input type="password" id="confirmPasswordInput" placeholder="Confirm New Password" class="input-text-style">
                     </div>
-                    <div class="flex justify-between items-center pt-4 mt-4 border-t border-[#252525]">
+                    
+                    <div class="flex justify-between items-center pt-4">
                         <p id="passwordMessage" class="general-message-area text-sm"></p>
-                        <button id="applyPasswordBtn" class="btn-toolbar-style btn-primary-override w-48" disabled style="padding: 0.5rem 0.75rem;">
-                            <i class="fa-solid fa-key mr-1"></i> Change Password
+                        <button id="applyPasswordBtn" class="btn-toolbar-style btn-primary-override w-32" disabled style="padding: 0.5rem 0.75rem;">
+                            <i class="fa-solid fa-lock mr-1"></i> Apply
                         </button>
                     </div>
                 </div>
-                `;
-            }
-
-            // --- Account Management Section (Provider Linking) ---
-            const getAccountManagementContent = (providerData) => {
-                const primaryProviderId = auth.currentUser.providerData[0].providerId;
+            `;
+        }
+        
+        /**
+         * Renders the Linked Providers and Account Deletion section.
+         */
+        function getAccountManagementContent(providerData) {
+            // Determine the Primary Provider (the first one in the list)
+            const primaryProviderId = providerData[0].providerId;
+            
+            let linkedProvidersHtml = providerData.map(info => {
+                const id = info.providerId;
+                const config = PROVIDER_CONFIG[id] || { name: id, icon: '<i class="fa-solid fa-puzzle-piece fa-lg mr-3"></i>' };
                 
-                // Linked Accounts
-                const linkedAccountsHtml = providerData.map(p => {
-                    const id = p.providerId;
-                    const config = PROVIDER_CONFIG[id] || { name: id, icon: '<i class="fa-solid fa-puzzle-piece fa-lg mr-3"></i>' };
-                    
-                    // Determine if this provider can be unlinked
-                    const canUnlink = providerData.length > 1 && !(id === 'password' && primaryProviderId === 'password');
+                // Determine if this provider can be unlinked
+                const canUnlink = providerData.length > 1 && !(id === 'password' && primaryProviderId === 'password');
+                
+                // Determine if icon is an image or a FontAwesome icon
+                let iconHtml = config.icon.startsWith('<i') ? config.icon : `<img src="${config.icon}" alt="${config.name} Icon" class="w-5 h-5 mr-3">`;
 
-                    // Determine if icon is an image or a FontAwesome icon
+                return `
+                    <div class="flex justify-between items-center px-4 py-4 border-b border-[#252525] last:border-b-0">
+                        <div class="flex items-center text-lg text-white">
+                            ${iconHtml}
+                            ${config.name}
+                            ${id === primaryProviderId ? '<span class="text-xs text-yellow-400 ml-2 font-normal">(Primary)</span>' : ''}
+                        </div>
+                        ${canUnlink ? 
+                            `<button class="btn-toolbar-style text-red-400 hover:border-red-600 hover:text-red-600" data-provider-id="${id}" data-action="unlink" style="padding: 0.5rem 0.75rem;">
+                                <i class="fa-solid fa-unlink mr-1"></i> Unlink
+                            </button>` : 
+                            `<span class="text-xs text-custom-light-gray font-light ml-4">Cannot Unlink</span>`
+                        }
+                    </div>
+                `;
+            }).join('');
+
+            // Filter out already linked social providers for the linking list
+            const linkedIds = providerData.map(p => p.providerId);
+            let availableProvidersHtml = Object.keys(PROVIDER_CONFIG)
+                .filter(id => id !== 'password' && !linkedIds.includes(id))
+                .map(id => {
+                    const config = PROVIDER_CONFIG[id];
                     let iconHtml = config.icon.startsWith('<i') ? config.icon : `<img src="${config.icon}" alt="${config.name} Icon" class="w-5 h-5 mr-3">`;
-                    
-                    let linkButton = '';
-                    if (canUnlink) {
-                        linkButton = `<button class="btn-toolbar-style text-red-400 hover:border-red-600 hover:text-red-600 unlink-btn" data-provider-id="${id}" style="padding: 0.5rem 0.75rem;">
-                            <i class="fa-solid fa-unlink mr-1"></i> Unlink
-                        </button>`;
-                    } else if (id === 'password' && primaryProviderId !== 'password') {
-                        // For a password account that is not primary, we don't allow unlinking
-                        linkButton = `<p class="text-sm text-gray-500">Unlink other accounts first</p>`;
-                    } else if (id === primaryProviderId && providerData.length > 1) {
-                         linkButton = `<p class="text-sm text-gray-500">Primary account</p>`;
-                    } else if (id === primaryProviderId && providerData.length === 1) {
-                         linkButton = `<p class="text-sm text-gray-500">Must keep one linked account</p>`;
-                    }
-                    
+
                     return `
                         <div class="flex justify-between items-center px-4 py-4 border-b border-[#252525] last:border-b-0">
                             <div class="flex items-center text-lg text-white">
                                 ${iconHtml}
                                 ${config.name}
-                                ${id === primaryProviderId ? '<span class="text-xs text-yellow-400 ml-2 font-normal">(Primary)</span>' : ''}
                             </div>
-                            ${linkButton}
+                            <button class="btn-toolbar-style btn-primary-override" data-provider-id="${id}" data-action="link" style="padding: 0.5rem 0.75rem;">
+                                <i class="fa-solid fa-link mr-1"></i> Link Provider
+                            </button>
                         </div>
                     `;
                 }).join('');
-
-                // Get a list of providers that are *not* currently linked
-                const linkedProviderIds = providerData.map(p => p.providerId);
-                const availableProvidersHtml = Object.keys(PROVIDER_CONFIG)
-                    .filter(id => id !== primaryProviderId && !linkedProviderIds.includes(id))
-                    .filter(id => id !== 'password') // Don't show "Link Email/Password" here
-                    .map(id => {
-                        const config = PROVIDER_CONFIG[id];
-                        return `
-                            <button class="btn-toolbar-style settings-tab w-full link-btn" data-provider-id="${id}">
-                                ${config.isCredential ? config.icon : `<img src="${config.icon}" alt="${config.name} icon" class="w-5 h-5 mr-3">`}
-                                <span class="flex-grow text-left">Link with ${config.name}</span>
-                            </button>
-                        `;
-                    }).join('');
                 
-                // Deletion Content
-                let deletionContent = '';
-                // Only show deletion section if user is logged in
-                if (auth.currentUser) {
-                    deletionContent = `
+            if (availableProvidersHtml === '') {
+                availableProvidersHtml = `
+                    <div class="px-4 py-4">
+                        <p class="text-sm text-gray-500 text-center">All available social providers are linked.</p>
+                    </div>
+                `;
+            }
+
+
+            // --- Account Deletion Section ---
+            let deletionContent = '';
+            
+            if (primaryProviderId === 'password') {
+                deletionContent = `
                     <h3 class="text-xl font-bold text-white mb-2 mt-8">Delete Account</h3>
                     <div id="deletionSection" class="settings-box w-full bg-red-900/10 border-red-700/50 p-4">
                         <p class="text-sm font-light text-red-300 mb-3">
-                            <i class="fa-solid fa-triangle-exclamation mr-1"></i> WARNING: Deleting your account is permanent. You must re-authenticate with ${PROVIDER_CONFIG[primaryProviderId].name} to proceed.
+                            <i class="fa-solid fa-triangle-exclamation mr-1"></i> 
+                            WARNING: Deleting your account is permanent and cannot be undone.
                         </p>
+                        
+                        <div id="passwordDeletionStep1">
+                            <label for="deletePasswordInput" class="block text-red-300 text-sm font-light mb-2">Confirm Current Password</label>
+                            <input type="password" id="deletePasswordInput" placeholder="Current Password" class="input-text-style w-full bg-red-900/20 border-red-700/50 mb-3">
+                            
+                            <label for="deleteConfirmText" class="block text-red-300 text-sm font-light mb-2">Type "Delete My Account" to confirm (Case-insensitive)</label>
+                            <input type="text" id="deleteConfirmText" placeholder="Delete My Account" class="input-text-style w-full bg-red-900/20 border-red-700/50">
+                            
+                            <div class="flex justify-between items-center pt-4">
+                                <p id="deleteMessage" class="general-message-area text-sm"></p>
+                                <button id="finalDeleteBtn" class="btn-toolbar-style btn-primary-override-danger w-48" disabled style="padding: 0.5rem 0.75rem;">
+                                     <i class="fa-solid fa-trash mr-1"></i> Delete Account
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                deletionContent = `
+                    <h3 class="text-xl font-bold text-white mb-2 mt-8">Delete Account</h3>
+                    <div id="deletionSection" class="settings-box w-full bg-red-900/10 border-red-700/50 p-4">
+                        <p class="text-sm font-light text-red-300 mb-3">
+                            <i class="fa-solid fa-triangle-exclamation mr-1"></i> 
+                            WARNING: Deleting your account is permanent. You must re-authenticate with ${PROVIDER_CONFIG[primaryProviderId].name} to proceed.
+                        </p>
+                        
                         <div class="flex justify-between items-center pt-2">
                             <p id="deleteMessage" class="general-message-area text-sm"></p>
                             <button id="reauthenticateBtn" class="btn-toolbar-style w-48 btn-primary-override" data-provider-id="${primaryProviderId}" style="padding: 0.5rem 0.75rem;">
-                                <i class="fa-solid fa-key mr-1"></i> Re-authenticate
+                                 <i class="fa-solid fa-key mr-1"></i> Re-authenticate
                             </button>
                             <button id="finalDeleteBtn" class="btn-toolbar-style btn-primary-override-danger w-48 hidden" style="padding: 0.5rem 0.75rem;">
-                                <i class="fa-solid fa-trash mr-1"></i> Permanently Delete
+                                 <i class="fa-solid fa-trash mr-1"></i> Delete Account
                             </button>
                         </div>
                     </div>
-                    `;
-                }
+                `;
+            }
 
-
-                return `
-                <h3 class="text-xl font-bold text-white mb-2 mt-8">Linked Accounts</h3>
-                <div id="linkedAccountsSection" class="settings-box w-full mb-8">
-                    ${linkedAccountsHtml}
+            // --- Combined HTML for Account Management ---
+            return `
+                <h3 class="text-xl font-bold text-white mb-2 mt-8">Linked Providers</h3>
+                <div class="settings-box w-full mb-4 p-0" data-section="linked-providers">
+                    ${linkedProvidersHtml}
                 </div>
-
-                ${availableProvidersHtml.length > 0 ? `
-                <h3 class="text-xl font-bold text-white mb-2">Link New Accounts</h3>
-                <div id="availableAccountsSection" class="flex flex-col gap-3">
+                
+                <h3 class="text-xl font-bold text-white mb-2">Link New Providers</h3>
+                <div class="settings-box w-full flex flex-col gap-0 p-0">
                     ${availableProvidersHtml}
                 </div>
-                ` : ''}
-
+                
                 ${deletionContent}
-                `;
-            };
-            
-
-            return `
-                <h2 class="text-3xl font-bold text-white mb-6">General Account Settings</h2>
-                <div class="w-full">
-                    ${usernameSectionHtml}
-                    ${passwordSectionHtml}
-                    ${getAccountManagementContent(providerData)}
-                </div>
             `;
         }
 
+
+        /**
+         * Generates the HTML for the "General Settings" section.
+         */
+        function getGeneralContent(currentUsername, changesRemaining, changesThisMonth, currentMonthName, isEmailPasswordUser, providerData) {
+             const changesUsed = changesThisMonth;
+             
+             // Conditionally generate the password section HTML
+             let passwordSectionHtml = '';
+             if (isEmailPasswordUser) {
+                 passwordSectionHtml = getChangePasswordSection();
+             }
+
+             return `
+                 <h2 class="text-3xl font-bold text-white mb-6">General Settings</h2>
+                 
+                 <div class="w-full">
+                    
+                    <div class="flex justify-between items-center mb-4 settings-box p-4">
+                        <p class="text-sm font-light text-gray-300">
+                           <i class="fa-solid fa-calendar-alt mr-2 text-yellow-500"></i>
+                           Changes this month (<span class="text-emphasis text-yellow-300">${currentMonthName}</span>):
+                        </p>
+                        <span class="text-lg font-semibold ${changesRemaining > 0 ? 'text-green-400' : 'text-red-400'}">
+                            ${changesUsed}/${MAX_CHANGES} used
+                        </span>
+                    </div>
+
+                    <h3 class="text-xl font-bold text-white mb-2">Account Username</h3>
+                    
+                    <div id="usernameSection" class="settings-box transition-all duration-300 p-4">
+                        
+                        <div id="viewMode" class="flex justify-between items-center">
+                            <p class="text-lg text-gray-400 leading-relaxed">
+                                Current: <span id="currentUsernameText" class="text-emphasis text-blue-400">${currentUsername}</span>
+                            </p>
+                            <button id="enterEditModeBtn" class="btn-toolbar-style" style="padding: 0.5rem 0.75rem;">
+                                 <i class="fa-solid fa-pen-to-square mr-1"></i> Change
+                            </button>
+                        </div>
+
+                        <div id="editMode" class="hidden flex-col gap-3 pt-4 border-t border-[#252525]">
+                            <label for="newUsernameInput" class="block text-gray-400 text-sm font-light">New Username</label>
+                            <input type="text" id="newUsernameInput" value="${currentUsername}" maxlength="${MAX_LENGTH}"
+                                   class="input-text-style w-full" 
+                                   placeholder="${MIN_LENGTH}-${MAX_LENGTH} characters, only allowed symbols">
+                            
+                            <div class="flex justify-between items-center pt-2">
+                                <p class="text-xs text-gray-500 font-light whitespace-nowrap">
+                                    Length: <span id="minLength" class="font-semibold text-gray-400">${MIN_LENGTH}</span>/<span id="charCount" class="font-semibold text-gray-400">${currentUsername.length}</span>/<span id="maxLength" class="font-semibold text-gray-400">${MAX_LENGTH}</span>
+                                </p>
+                                
+                                <div class="flex gap-2">
+                                    <button id="applyUsernameBtn" class="btn-toolbar-style btn-primary-override w-24 transition-opacity duration-300" disabled style="padding: 0.5rem 0.75rem;">
+                                        <i class="fa-solid fa-check"></i> Apply
+                                    </button>
+                                    <button id="cancelEditBtn" class="btn-toolbar-style w-24 transition-opacity duration-300" style="padding: 0.5rem 0.75rem;">
+                                        <i class="fa-solid fa-xmark"></i> Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="usernameChangeMessage" class="general-message-area text-sm"></div>
+                </div>
+                
+                ${passwordSectionHtml}
+                
+                ${getAccountManagementContent(providerData)}
+             `;
+         }
+
         /**
          * NEW: Generates the HTML for the "Privacy & Security" section.
-         * @returns {string} The HTML string.
          */
-        function getPrivacySecurityContent(panicKeySettings, urlChangerSetting) {
-            // Generate panic key input groups (up to 3)
-            const panicKeyInputs = Array(3).fill(null).map((_, index) => {
-                const setting = panicKeySettings[index] || { key: '', url: '' };
-                const keyId = `panicKey-${index}`;
-                const urlId = `panicUrl-${index}`;
-                
-                return `
-                    <div class="flex items-center gap-4 px-2 mb-2">
-                        <label class="block text-gray-400 text-sm font-light w-12 text-center">Key ${index + 1}</label>
-                        <input type="text" id="${keyId}" class="input-key-style" maxlength="1" placeholder="N/A" value="${setting.key}" data-index="${index}">
-                        <input type="url" id="${urlId}" class="input-text-style flex-grow" placeholder="Enter URL to redirect to (e.g., https://www.google.com)" value="${setting.url}" data-index="${index}">
-                    </div>
-                `;
-            }).join('');
-            
+        function getPrivacyContent() {
             // Generate preset options
             const presetOptions = urlChangerPresets.map(preset => 
-                `<option value="${preset.id}" ${urlChangerSetting.type === 'preset' && urlChangerSetting.id === preset.id ? 'selected' : ''}>${preset.name}</option>`
+                `<option value="${preset.id}">${preset.name}</option>`
             ).join('');
-
-            // Set initial state for URL changer
-            const isCustom = urlChangerSetting.type === 'custom';
-            const presetHidden = isCustom ? 'hidden' : '';
-            const customHidden = !isCustom ? 'hidden' : '';
-            const customTitleValue = isCustom ? urlChangerSetting.title : '';
-            const customFaviconUrl = isCustom && urlChangerSetting.favicon ? urlChangerSetting.favicon : '';
-            const customFaviconDisplay = customFaviconUrl ? 'block' : 'none';
 
             return `
                 <h2 class="text-3xl font-bold text-white mb-6">Privacy & Security</h2>
+                
                 <div class="w-full">
                     <h3 class="text-xl font-bold text-white mb-2">Panic Key Settings</h3>
                     <div id="panicKeySection" class="settings-box transition-all duration-300 p-4">
@@ -1090,62 +1266,81 @@
                             <br>
                             <span class="text-yellow-400">Valid keys:</span> a-z, 0-9, and \` - = [ ] \\ ; ' , . /
                         </p>
-                        ${panicKeyInputs}
-                        <div class="flex justify-between items-center pt-4 mt-4 border-t border-[#252525]">
+                        
+                        <div class="flex items-center gap-4 px-2 mb-2">
+                            <label class="block text-gray-400 text-sm font-light" style="width: 4rem; text-align: center;">Key</label>
+                            <label class="block text-gray-400 text-sm font-light flex-grow">Redirect URL</label>
+                        </div>
+
+                        <div class="flex items-center gap-4 mb-3">
+                            <input type="text" id="panicKey1" data-key-id="1" class="input-key-style panic-key-input" placeholder="-" maxlength="1">
+                            <input type="url" id="panicUrl1" class="input-text-style" placeholder="e.g., https://google.com">
+                        </div>
+                        
+                        <div class="flex items-center gap-4 mb-3">
+                            <input type="text" id="panicKey2" data-key-id="2" class="input-key-style panic-key-input" placeholder="-" maxlength="1">
+                            <input type="url" id="panicUrl2" class="input-text-style" placeholder="e.g., https://youtube.com/feed/subscriptions">
+                        </div>
+                        
+                        <div class="flex items-center gap-4 mb-3">
+                            <input type="text" id="panicKey3" data-key-id="3" class="input-key-style panic-key-input" placeholder="-" maxlength="1">
+                            <input type="url" id="panicUrl3" class="input-text-style" placeholder="e.g., https://wikipedia.org">
+                        </div>
+                        
+                        <div class="flex justify-between items-center pt-4 border-t border-[#252525]">
                             <p id="panicKeyMessage" class="general-message-area text-sm"></p>
-                            <button id="applyPanicKeyBtn" class="btn-toolbar-style btn-primary-override w-48" style="padding: 0.5rem 0.75rem;">
+                            <button id="applyPanicKeyBtn" class="btn-toolbar-style btn-primary-override w-36" style="padding: 0.5rem 0.75rem;">
                                 <i class="fa-solid fa-check mr-1"></i> Apply Keys
                             </button>
                         </div>
                     </div>
                     
-                    <h3 class="text-xl font-bold text-white mb-2 mt-8">Tab Disguise (URL Changer)</h3>
+                    <div id="panicKeyGlobalMessage" class="general-message-area text-sm"></div>
+                </div>
+                
+                <div class="w-full mt-8">
+                    <h3 class="text-xl font-bold text-white mb-2">Tab Disguise (URL Changer)</h3>
                     <div id="urlChangerSection" class="settings-box transition-all duration-300 p-4">
                         <p class="text-sm font-light text-gray-400 mb-4">
-                            Disguise the current tab with a new title and favicon to appear as another website or document (e.g., Google Classroom). 
-                            <br>
-                            <span class="text-yellow-400">Note:</span> This takes effect on the next page load.
+                            Change the title and favicon of the website to disguise it. This setting is saved locally in your browser.
                         </p>
                         
-                        <div class="flex items-center justify-between p-2 mb-4 bg-[#111] rounded-lg border border-[#252525]">
-                            <p class="text-white font-medium">Mode:</p>
-                            <div class="flex gap-4">
-                                <button id="modePreset" class="btn-toolbar-style w-28 ${isCustom ? '' : 'active'}" data-mode="preset">Preset</button>
-                                <button id="modeCustom" class="btn-toolbar-style w-28 ${isCustom ? 'active' : ''}" data-mode="custom">Custom</button>
+                        <div class="flex flex-col gap-4">
+                            <div>
+                                <label for="tabDisguiseMode" class="block text-gray-400 text-sm font-light mb-2">Mode</label>
+                                <select id="tabDisguiseMode" class="input-select-style">
+                                    <option value="none">None (Use 4SP Default)</option>
+                                    <option value="preset">Use a Preset</option>
+                                    <option value="custom">Use Custom Title/Favicon</option>
+                                </select>
                             </div>
+                            
+                            <div id="tabDisguisePresetGroup" class="hidden">
+                                <label for="tabDisguisePreset" class="block text-gray-400 text-sm font-light mb-2">Preset</label>
+                                <select id="tabDisguisePreset" class="input-select-style">
+                                    ${presetOptions}
+                                </select>
+                            </div>
+                            
+                            <div id="tabDisguiseCustomGroup" class="hidden flex flex-col gap-4">
+                                <div>
+                                    <label for="customTabTitle" class="block text-gray-400 text-sm font-light mb-2">Custom Title</label>
+                                    <input type="text" id="customTabTitle" class="input-text-style" placeholder="e.g., Google Docs">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="faviconFetchInput" class="block text-gray-400 text-sm font-light mb-2">Custom Favicon (Fetch from Domain)</label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="text" id="faviconFetchInput" class="input-text-style" placeholder="e.g., google.com">
+                                        <button type="button" id="fetchFaviconBtn" class="btn-toolbar-style btn-primary-override w-28" style="padding: 0.5rem 0.75rem;">Fetch</button>
+                                        <div id="favicon-fetch-preview-container" class="w-10 h-10 border border-[#252525] bg-[#111111] rounded-md flex items-center justify-center p-1 flex-shrink-0">
+                                            <img src="" alt="Preview" class="w-full h-full object-contain" style="display: none;">
+                                        </div>
+                                    </div>
+                                </div>
+                                </div>
                         </div>
 
-                        <div id="presetGroup" class="transition-all duration-300 ${presetHidden} settings-box p-4 border-[#4f46e5]/20">
-                            <label for="presetSelect" class="block text-sm font-light text-gray-400 mb-1">Select Preset</label>
-                            <select id="presetSelect" class="input-select-style">
-                                ${presetOptions}
-                            </select>
-                        </div>
-                        
-                        <div id="customGroup" class="transition-all duration-300 ${customHidden} settings-box p-4 border-[#4f46e5]/20">
-                            <h4 class="text-lg font-bold text-white mb-3">Custom Tab Details</h4>
-                            <div class="flex flex-col gap-3">
-                                <div>
-                                    <label for="customTitle" class="block text-sm font-light text-gray-400 mb-1">Custom Tab Title</label>
-                                    <input type="text" id="customTitle" class="input-text-style" placeholder="e.g., Google Classroom" value="${customTitleValue}">
-                                </div>
-                                <div class="flex items-center gap-4">
-                                    <label for="faviconFile" class="block text-sm font-light text-gray-400 flex-grow">Favicon (Optional)</label>
-                                    <input type="file" id="faviconFile" accept="image/*" class="hidden">
-                                    <button id="uploadFaviconBtn" class="btn-toolbar-style w-48">
-                                        <i class="fa-solid fa-upload mr-1"></i> Upload Image
-                                    </button>
-                                    <button id="clearFaviconBtn" class="btn-toolbar-style w-24 text-red-400 hover:border-red-600 hover:text-red-600" style="${customFaviconUrl ? '' : 'display: none;'}">
-                                        <i class="fa-solid fa-xmark mr-1"></i> Clear
-                                    </button>
-                                </div>
-                                <div class="flex justify-center items-center h-20 border border-[#252525] rounded-lg mt-2">
-                                    <p id="previewText" class="text-gray-500 ${customFaviconUrl ? 'hidden' : ''}">Favicon Preview</p>
-                                    <img id="faviconPreview" src="${customFaviconUrl}" alt="Preview" class="w-full h-full object-contain" style="display: ${customFaviconDisplay};">
-                                </div>
-                            </div>
-                        </div>
-                        
                         <div class="flex justify-between items-center pt-4 mt-4 border-t border-[#252525]">
                             <p id="urlChangerMessage" class="general-message-area text-sm"></p>
                             <button id="applyUrlChangerBtn" class="btn-toolbar-style btn-primary-override w-36" style="padding: 0.5rem 0.75rem;">
@@ -1157,97 +1352,78 @@
             `;
         }
 
+        
         /**
          * NEW: Generates the HTML for the "Personalization" section.
          */
         function getPersonalizationContent() {
-            return `
+             return `
                 <h2 class="text-3xl font-bold text-white mb-6">Personalization</h2>
+                
                 <div class="w-full">
                     <h3 class="text-xl font-bold text-white mb-2">Navigation Bar Theme</h3>
-                    <div id="themePickerContainer" class="settings-box p-4">
+                    <div id="themeSection" class="settings-box transition-all duration-300 p-4">
+                        <p class="text-sm font-light text-gray-400 mb-4">
+                            Select a theme for your navigation bar. This setting is saved locally and will apply a live preview.
+                        </p>
+                        
+                        <div id="theme-picker-container">
+                            <div class="flex items-center justify-center p-8">
+                                <i class="fa-solid fa-spinner fa-spin fa-2x text-gray-500"></i>
+                            </div>
                         </div>
-                    <p id="themeMessage" class="general-message-area text-sm mt-4"></p>
-                    
-                    <h3 class="text-xl font-bold text-white mb-2 mt-8">Coming Soon</h3>
-                    <div class="settings-box p-4">
-                        <p class="text-sm font-light text-gray-400">More personalization options will be available soon!</p>
+                        
+                        <div id="themeMessage" class="general-message-area text-sm"></div>
                     </div>
                 </div>
-            `;
+             `;
         }
-
-
-        /**
-         * NEW: Generates the HTML for the "Data Management" section.
-         */
+        
+        // --- NEW: Generates the HTML for the "Data Management" section ---
         function getDataManagementContent() {
             return `
                 <h2 class="text-3xl font-bold text-white mb-6">Data Management</h2>
                 <div class="w-full">
-                    <h3 class="text-xl font-bold text-white mb-2">Backup and Restore Local Data</h3>
-                    <div class="settings-box p-4 mb-4">
+                    <h3 class="text-xl font-bold text-white mb-2">Export Data</h3>
+                    <div class="settings-box transition-all duration-300 p-4 mb-8">
                         <p class="text-sm font-light text-gray-400 mb-4">
-                            Download a JSON file containing all your local data, primarily game saves. This is useful for backing up data when switching browsers or computers. 
-                            <br>
-                            Data covered by this includes:
-                            <ul class="list-disc list-inside ml-4 mt-2 text-sm text-gray-300">
-                                <li>StrongdogXP Games data</li>
-                                <li>GN-Math games data (for saving compatibility)</li>
-                            </ul>
+                            Export all your local game data (from LocalStorage and IndexedDB) into a single JSON file.
+                            This file can be used as a backup or to transfer your data to another browser.
                         </p>
-                        <div class="flex justify-end">
-                            <button id="downloadSavesBtn" class="btn-toolbar-style btn-primary-override w-48">
-                                <i class="fa-solid fa-download mr-1"></i> Download Save
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="settings-box p-4">
-                        <p class="text-sm font-light text-gray-400 mb-4">
-                            Upload a previously downloaded save file to restore your local data. This will overwrite existing local data.
-                            <br>
-                            Data covered by this import includes:
-                            <ul class="list-disc list-inside ml-4 mt-2 text-sm text-gray-300">
-                                <li>StrongdogXP Games data</li>
-                                <li>GN-Math games data (for saving compatibility)</li>
-                            </ul>
-                        </p>
-                        <div class="flex justify-end">
-                            <button id="uploadSavesBtn" class="btn-toolbar-style btn-primary-override w-48">
-                                <i class="fa-solid fa-upload mr-1"></i> Upload Save
-                            </button>
-                        </div>
+                        <button id="exportDataBtn" class="btn-toolbar-style btn-primary-override w-48">
+                            <i class="fa-solid fa-download mr-2"></i> Export Data
+                        </button>
                     </div>
 
-                    <h3 class="text-xl font-bold text-white mb-2 mt-8">Delete All Local Data</h3>
-                    <div id="deleteDataSection" class="settings-box w-full bg-red-900/10 border-red-700/50 p-4">
+                    <h3 class="text-xl font-bold text-white mb-2">Import Data</h3>
+                    <div class="settings-box transition-all duration-300 p-4 bg-red-900/10 border-red-700/50">
                         <p class="text-sm font-light text-red-300 mb-4">
-                            <i class="fa-solid fa-triangle-exclamation mr-1"></i> DANGER: This action is irreversible. It will clear all local data (game saves, etc.) stored in your browser for this website, but it will NOT delete your user account or your settings for this page (theme/tab disguise).
+                            <i class="fa-solid fa-triangle-exclamation mr-1"></i> 
+                            **WARNING:** Importing data will overwrite all existing local game data. This action cannot be undone.
+                            Only import a file you have previously exported from this site.
                         </p>
-                        <div class="flex justify-between items-center pt-2">
-                            <p id="deleteDataMessage" class="general-message-area text-sm"></p>
-                            <button id="deleteAllDataBtn" class="btn-toolbar-style btn-primary-override-danger w-48" style="padding: 0.5rem 0.75rem;">
-                                <i class="fa-solid fa-trash mr-1"></i> Delete Local Data
-                            </button>
-                        </div>
+                        <button id="importDataBtn" class="btn-toolbar-style btn-primary-override-danger w-48">
+                            <i class="fa-solid fa-upload mr-2"></i> Import Data
+                        </button>
                     </div>
                 </div>
             `;
         }
+
 
         /**
          * Generates the HTML for the "About 4SP" section.
          */
         function getAboutContent() {
             return `
-                <h2 class="text-3xl font-bold text-white mb-6">About 4 Simple Problems (4SP)</h2>
+                <h2 class="text-3xl font-bold text-white mb-4">About 4SP (4simpleproblems)</h2>
+                
                 <div class="about-section-content">
                     <p class="text-lg text-gray-400 leading-relaxed">
-                        4SP is a student-focused, secure, and private online utility and leisure platform created in 2024 to provide unrestricted access to educational resources and entertainment, primarily addressing school network limitations.
+                        <span class="text-emphasis">4SP (4simpleproblems)</span> is a <span class="text-emphasis">Student Toolkit and Entertainment website</span> designed to boost student productivity and provide useful resources. We aim to solve four core challenges that students face every day by integrating essential tools and engaging digital content into one seamless platform.
                     </p>
                     
-                    <h3 class="text-xl font-bold text-white mt-6 mb-3">Challenges We Address</h3>
+                    <h3 class="text-xl font-bold text-white mt-6 mb-2">The Four Simple Challenges We Address</h3>
                     <ul class="list-disc list-inside ml-4 text-lg text-gray-400 leading-relaxed">
                         <li>Providing a <span class="text-emphasis">digital leisure platform free of advertisements</span>.</li>
                         <li>Delivering a <span class="text-emphasis">student toolkit designed for accessibility and consistent availability</span>, bypassing typical institutional network restrictions.</li>
@@ -1258,79 +1434,84 @@
                     <p class="text-lg text-gray-400 mt-4 leading-relaxed">
                         Features currently include an <span class="text-emphasis">online notebook</span> in the Notes App for secure organization, a <span class="text-emphasis">live clock</span> on the dashboard, a <span class="text-emphasis">dictionary</span> for quick lookups, and more tools.
                     </p>
+                    
+                    <h3 class="text-xl font-bold text-white mt-6 mb-2">Version</h3>
+                    <p class="text-gray-400">
+                        Current Version: <span class="text-blue-400 text-emphasis">5.0 Beta 9</span>
+                    </p>
 
-                    <h3 class="text-xl font-bold text-white mt-6 mb-3">Connect</h3>
+                    <h3 class="text-xl font-bold text-white mt-6 mb-3">Connect & Support</h3>
                     <div class="social-link-group">
-                        <a href="https://www.buymeacoffee.com/v54simpleproblems" target="_blank" class="btn-toolbar-style" title="Buy Me a Coffee">
+                        <a href="https://www.youtube.com/@4simpleproblems" target="_blank" class="btn-toolbar-style" title="YouTube">
+                            <i class="fa-brands fa-youtube fa-lg mr-2"></i> YouTube
+                        </a>
+                        <a href="https://x.com/4simpleproblems" target="_blank" class="btn-toolbar-style" title="X (Twitter)">
+                            <i class="fa-brands fa-x-twitter fa-lg mr-2"></i>X
+                        </a>
+                        <a href="https://buymeacoffee.com/4simpleproblems" target="_blank" class="btn-toolbar-style" title="Buy Me a Coffee">
                             <i class="fa-solid fa-mug-hot fa-lg mr-2"></i> Buy Me a Coffee
                         </a>
                         <a href="https://github.com/v5-4simpleproblems" target="_blank" class="btn-toolbar-style" title="GitHub">
-                            <i class="fa-brands fa-github fa-lg mr-2"></i> GitHub
+                            <i class="fa-brands fa-github fa-lg mr-2"></i> Github
                         </a>
                     </div>
                     
-                    <h3 class="text-xl font-bold text-white mt-6 mb-3">Legal</h3>
+                    <h3 class="text-xl font-bold text-white mt-6 mb-3">Legal Information</h3>
                     <div class="legal-buttons">
-                        <a href="../privacy.html" target="_blank" class="btn-toolbar-style">Privacy Policy</a>
-                        <a href="../terms.html" target="_blank" class="btn-toolbar-style">Terms of Service</a>
-                        <a href="../dmca.html" target="_blank" class="btn-toolbar-style">DMCA</a>
+                        <a href="../legal.html#terms-of-service" class="btn-toolbar-style">Terms of Service</a>
+                        <a href="../legal.html#privacy-policy" class="btn-toolbar-style">Privacy Policy</a>
                     </div>
                 </div>
             `;
         }
 
         /**
-         * Generates the HTML for a "Coming Soon" section.
+         * Generates the HTML for the "Coming Soon" sections.
          */
         function getComingSoonContent(title) {
             return `
-                <h2 class="text-3xl font-bold text-white mb-6">${title}</h2>
-                <div class="w-full">
-                    <div class="settings-box p-8 text-center">
-                        <i class="fa-solid fa-hourglass-half fa-4x text-gray-600 mb-4"></i>
-                        <h3 class="text-2xl font-bold text-white mb-2">Coming Soon!</h3>
-                        <p class="text-lg text-gray-400">This feature is currently under development. Please check back later.</p>
-                    </div>
+                <h2 class="text-3xl font-bold text-white mb-2">${title}</h2>
+                <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%;">
+                    <p class="text-xl text-gray-500 italic">...Coming Soon...</p>
+                    <i class="fa-solid fa-hourglass-start fa-5x text-gray-700 mt-4"></i>
                 </div>
             `;
         }
-
-        // --- Tab Content Mapping ---
-
-        const tabContent = {
-            'general': { title: 'General Account Settings' },
-            'privacy': { title: 'Privacy & Security' },
-            'personalization': { title: 'Personalization' },
-            'data': { title: 'Data Management' },
-            'about': { title: 'About 4SP' }
+        
+        // Helper for refreshing the General Tab
+        const refreshGeneralTab = () => {
+            // Clear the current view state and re-render the General tab
+            // This is necessary because currentUser.providerData needs to be fresh
+            switchTab('general');
         };
 
-        // --- Logic Handlers for Specific Tabs ---
-
         /**
-         * Loads data and adds event listeners for the General tab.
+         * Loads user data, checks rate limit, and renders the General tab.
          */
         async function loadGeneralTab() {
-            if (!currentUser) return;
+            if (!currentUser) return; 
+
+            // Check if user is using email/password authentication (providerId 'password')
+            const isEmailPasswordUser = currentUser.providerData.some(
+                (info) => info.providerId === 'password'
+            );
             
-            // --- Fetch User Data from Firestore ---
             const userDocRef = getUserDocRef(currentUser.uid);
             let userDocSnap = await getDoc(userDocRef);
-            
+
             if (!userDocSnap.exists()) {
-                mainView.innerHTML = `<p class="error-message">User data not found. Please log out and back in.</p>`;
+                mainView.innerHTML = `<h2 class="text-3xl font-bold text-white mb-6">General Settings</h2><p class="text-red-400">Error: User data not found. Please log out and back in.</p>`;
                 return;
             }
-            
-            let userData = userDocSnap.data();
 
+            let userData = userDocSnap.data();
             const today = new Date();
-            const currentMonthNumber = today.getMonth() + 1;
-            const currentMonthName = today.toLocaleDateString('en-US', { month: 'long' });
+            const currentMonthNumber = today.getMonth() + 1; 
+            const currentMonthName = today.toLocaleDateString('en-US', { month: 'long' }); 
             
             let changesThisMonth = userData.usernameChangesThisMonth || 0;
             let lastChangeMonth = userData.lastUsernameChangeMonth || 0;
-            
+
             // --- Monthly Reset Logic ---
             if (currentMonthNumber !== lastChangeMonth) {
                 changesThisMonth = 0;
@@ -1339,636 +1520,585 @@
                     lastUsernameChangeMonth: currentMonthNumber
                 });
                 userDocSnap = await getDoc(userDocRef);
-                userData = userDocSnap.data();
+                userData = userDocSnap.data(); 
             }
-
+            
             const changesRemaining = MAX_CHANGES - changesThisMonth;
-            const isEmailPasswordUser = currentUser.providerData.some(p => p.providerId === 'password');
 
             // 1. Render the General Content
             mainView.innerHTML = getGeneralContent(
                 userData.username, 
                 changesRemaining, 
                 changesThisMonth, 
-                currentMonthName, 
+                currentMonthName,
                 isEmailPasswordUser, 
                 currentUser.providerData // Pass provider info
             );
-
+            
             // 2. Element References (Username Section)
             const viewMode = document.getElementById('viewMode');
             const editMode = document.getElementById('editMode');
-            const editUsernameBtn = document.getElementById('editUsernameBtn');
+            const enterEditModeBtn = document.getElementById('enterEditModeBtn');
             const cancelEditBtn = document.getElementById('cancelEditBtn');
-            const newUsernameInput = document.getElementById('newUsernameInput');
             const applyUsernameBtn = document.getElementById('applyUsernameBtn');
-            const charCount = document.getElementById('charCount');
-            const usernameChangeMessage = document.getElementById('usernameChangeMessage');
-            const changesRemainingDisplay = document.getElementById('changesRemaining');
-            const usernameSection = document.getElementById('usernameSection');
-            
-            // --- Username Event Handlers ---
+            const newUsernameInput = document.getElementById('newUsernameInput');
+            const messageElement = document.getElementById('usernameChangeMessage');
+            const charCountElement = document.getElementById('charCount');
+            const minLengthElement = document.getElementById('minLength');
+            const maxLengthElement = document.getElementById('maxLength');
 
-            editUsernameBtn.addEventListener('click', () => {
-                if (changesRemaining <= 0) {
-                    showMessage(usernameChangeMessage, `You have used all ${MAX_CHANGES} changes for ${currentMonthName}.`, 'error');
-                    return;
-                }
-                viewMode.classList.add('hidden');
-                editMode.classList.remove('hidden');
-                newUsernameInput.focus();
-                usernameSection.classList.add('p-4');
-                newUsernameInput.value = userData.username; // Reset to current username on edit
-                charCount.textContent = newUsernameInput.value.length;
-                applyUsernameBtn.disabled = true;
-                showMessage(usernameChangeMessage, '', 'warning'); // Clear previous message
-            });
-
-            cancelEditBtn.addEventListener('click', () => {
-                editMode.classList.add('hidden');
-                viewMode.classList.remove('hidden');
-                usernameSection.classList.remove('p-4');
-                showMessage(usernameChangeMessage, '', 'warning');
-            });
-            
-            newUsernameInput.addEventListener('input', () => {
-                const newUsername = newUsernameInput.value.trim();
-                charCount.textContent = newUsername.length;
+            // --- Username UI State Management Functions ---
+            const setEditMode = (isEditing) => {
+                showMessage(messageElement, '', 'success'); // Clear message
                 
-                let valid = true;
-                showMessage(usernameChangeMessage, '', 'warning');
-
-                if (newUsername === userData.username) {
+                if (isEditing) {
+                    if (changesRemaining <= 0) {
+                        showMessage(messageElement, `You have reached your limit of ${MAX_CHANGES} username changes for the current month.`, 'error'); 
+                        return;
+                    }
+                    viewMode.classList.add('hidden');
+                    editMode.classList.remove('hidden');
+                    newUsernameInput.focus();
+                    updateCounterAndValidation(); 
+                } else {
+                    editMode.classList.add('hidden');
+                    viewMode.classList.remove('hidden');
+                    newUsernameInput.value = userData.username; // Reset input value
                     applyUsernameBtn.disabled = true;
-                    return;
                 }
+            };
 
-                if (newUsername.length < MIN_LENGTH || newUsername.length > MAX_LENGTH) {
-                    showMessage(usernameChangeMessage, `Username must be between ${MIN_LENGTH} and ${MAX_LENGTH} characters.`, 'warning');
-                    valid = false;
-                } else if (!/^[a-zA-Z0-9.,\-+_\!\?\$\\]+$/.test(newUsername)) {
-                    showMessage(usernameChangeMessage, 'Username contains invalid characters.', 'warning');
-                    valid = false;
-                }
+            const updateCounterAndValidation = () => {
+                const newUsername = newUsernameInput.value.trim();
+                const count = newUsername.length;
                 
-                applyUsernameBtn.disabled = !valid;
-            });
-            
-            applyUsernameBtn.addEventListener('click', async () => {
-                applyUsernameBtn.disabled = true;
+                charCountElement.textContent = count;
+                
+                const isValidLength = count >= MIN_LENGTH && count <= MAX_LENGTH;
+                const isChanged = newUsername !== userData.username;
+                
+                // 1. Update counter colors
+                minLengthElement.classList.toggle('text-red-400', count < MIN_LENGTH);
+                maxLengthElement.classList.toggle('text-red-400', count > MAX_LENGTH);
+                
+                minLengthElement.classList.toggle('text-gray-400', count >= MIN_LENGTH);
+                maxLengthElement.classList.toggle('text-gray-400', count <= MAX_LENGTH);
+                
+                charCountElement.classList.toggle('text-red-400', !isValidLength);
+                charCountElement.classList.toggle('text-gray-400', isValidLength);
+
+
+                // 2. Update button state
+                applyUsernameBtn.disabled = !isChanged || !isValidLength || changesRemaining <= 0;
+            };
+
+            // --- Username Event Listeners ---
+            enterEditModeBtn.addEventListener('click', () => setEditMode(true));
+            cancelEditBtn.addEventListener('click', () => setEditMode(false));
+            newUsernameInput.addEventListener('input', updateCounterAndValidation);
+
+
+            applyUsernameBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
                 const newUsername = newUsernameInput.value.trim();
                 
-                if (changesRemaining <= 0) {
-                    showMessage(usernameChangeMessage, `You have used all ${MAX_CHANGES} changes for ${currentMonthName}.`, 'error');
-                    applyUsernameBtn.disabled = false;
-                    return;
-                }
-                
-                if (newUsername === userData.username) {
-                    showMessage(usernameChangeMessage, 'New username is the same as the current one.', 'warning');
-                    applyUsernameBtn.disabled = false;
+                if (applyUsernameBtn.disabled || changesRemaining <= 0) {
+                    showMessage(messageElement, 'Cannot apply changes due to validation errors, rate limit, or no change was made.', 'error');
                     return;
                 }
 
-                // Final client-side validation check
-                if (newUsername.length < MIN_LENGTH || newUsername.length > MAX_LENGTH) {
-                    showMessage(usernameChangeMessage, `Username must be between ${MIN_LENGTH} and ${MAX_LENGTH} characters.`, 'error');
-                    return;
-                }
-                if (!/^[a-zA-Z0-9.,\-+_\!\?\$\\]+$/.test(newUsername)) {
-                    showMessage(usernameChangeMessage, 'Username contains invalid characters (Allowed symbols: .,-+\\_!?$).', 'error');
-                    return;
-                }
-
-                showMessage(usernameChangeMessage, '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Checking username...', 'warning');
+                applyUsernameBtn.disabled = true;
+                showMessage(messageElement, '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Checking availability and profanity...', 'warning');
 
                 try {
+                    // --- Validation ---
+                    if (newUsername.length < MIN_LENGTH || newUsername.length > MAX_LENGTH) { 
+                        showMessage(messageElement, `Username must be between ${MIN_LENGTH} and ${MAX_LENGTH} characters.`, 'error'); 
+                        return; 
+                    }
+                    if (!/^[a-zA-Z0-9.,\-+_\!\?\$\\]+$/.test(newUsername)) { 
+                        showMessage(messageElement, 'Username contains invalid characters (Allowed symbols: .,-+\\_!?$).', 'error'); 
+                        return; 
+                    }
+                    
                     // --- Checks ---
-                    if (await checkProfanity(newUsername)) {
-                        showMessage(usernameChangeMessage, 'This username is not allowed (Profanity filter triggered).', 'error');
-                        applyUsernameBtn.disabled = false;
-                        return;
+                    if (await checkProfanity(newUsername)) { 
+                        showMessage(messageElement, 'This username is not allowed (Profanity filter triggered).', 'error'); 
+                        return; 
                     }
-                    if (await isUsernameTaken(newUsername)) {
-                        showMessage(usernameChangeMessage, 'This username is already taken.', 'error');
-                        applyUsernameBtn.disabled = false;
-                        return;
+                    if (await isUsernameTaken(newUsername)) { 
+                        showMessage(messageElement, 'This username is already taken.', 'error'); 
+                        return; 
                     }
-
+                    
                     // --- Update Logic ---
                     const newChangesCount = changesThisMonth + 1;
                     await updateDoc(userDocRef, {
                         username: newUsername,
                         usernameChangesThisMonth: newChangesCount,
-                        lastUsernameChangeMonth: currentMonthNumber
+                        lastUsernameChangeMonth: currentMonthNumber 
                     });
 
-                    // Update local state and UI
-                    userData.username = newUsername;
-                    changesThisMonth = newChangesCount;
-                    const newChangesRemaining = MAX_CHANGES - newChangesCount;
+                    showMessage(messageElement, `Username successfully changed to ${newUsername}!`, 'success');
                     
-                    document.querySelector('#viewMode p').textContent = newUsername;
-                    changesRemainingDisplay.textContent = newChangesRemaining;
+                    // Re-render the tab content to update the display, counter, and state
+                    setTimeout(() => { switchTab('general'); }, 1500);
 
-                    // Switch back to view mode
-                    editMode.classList.add('hidden');
-                    viewMode.classList.remove('hidden');
-                    usernameSection.classList.remove('p-4');
-                    
-                    showMessage(usernameChangeMessage, `Username successfully changed to ${newUsername}! (${newChangesRemaining} changes remaining)`, 'success');
-
-                } catch (e) {
-                    console.error("Error updating username:", e);
-                    showMessage(usernameChangeMessage, 'Failed to update username. Please try again.', 'error');
+                } catch (error) {
+                    console.error("Error updating username:", error);
+                    showMessage(messageElement, `An unexpected error occurred: ${error.message}`, 'error');
                 } finally {
-                    applyUsernameBtn.disabled = true; // Still disable because it's set to the new name now
+                    if (messageElement.innerHTML.includes('Error') || messageElement.innerHTML.includes('not allowed') || messageElement.innerHTML.includes('taken')) {
+                        applyUsernameBtn.disabled = false;
+                    }
                 }
             });
-
-
-            // 3. Element References (Password Section - only for email/password users)
+            
+            
+            // =================================================================
+            // --- PASSWORD CHANGE LOGIC (Conditional) ---
+            // =================================================================
             if (isEmailPasswordUser) {
-                const currentPasswordInput = document.getElementById('currentPassword');
-                const newPasswordInput = document.getElementById('newPassword');
-                const confirmPasswordInput = document.getElementById('confirmPassword');
+                const currentPasswordInput = document.getElementById('currentPasswordInput');
+                const newPasswordInput = document.getElementById('newPasswordInput');
+                const confirmPasswordInput = document.getElementById('confirmPasswordInput');
                 const applyPasswordBtn = document.getElementById('applyPasswordBtn');
                 const passwordMessage = document.getElementById('passwordMessage');
                 
-                // --- Password Input Validation ---
-                const validatePasswordInputs = () => {
+                // Input handler for enabling/disabling apply button
+                const checkPasswordFields = () => {
                     const currentPass = currentPasswordInput.value;
                     const newPass = newPasswordInput.value;
                     const confirmPass = confirmPasswordInput.value;
                     
-                    let valid = true;
-                    showMessage(passwordMessage, '', 'warning');
-
-                    if (!currentPass || !newPass || !confirmPass) {
-                        valid = false;
-                    } else if (newPass.length < 6) {
-                        showMessage(passwordMessage, 'New password must be at least 6 characters.', 'warning');
-                        valid = false;
-                    } else if (newPass !== confirmPass) {
-                        showMessage(passwordMessage, 'New passwords do not match.', 'warning');
-                        valid = false;
-                    } else if (newPass === currentPass) {
+                    const MIN_PASS_LENGTH = 6;
+                    
+                    const isLengthValid = newPass.length >= MIN_PASS_LENGTH;
+                    const isMatch = newPass === confirmPass;
+                    const isCurrentProvided = currentPass.length > 0;
+                    
+                    // Enable if all requirements are met
+                    applyPasswordBtn.disabled = !(isLengthValid && isMatch && isCurrentProvided);
+                    
+                    // Provide gentle feedback
+                    showMessage(passwordMessage, '', 'success');
+                    if (newPass.length > 0 && newPass.length < MIN_PASS_LENGTH) {
+                        showMessage(passwordMessage, `New password must be at least ${MIN_PASS_LENGTH} characters.`, 'warning');
+                    } else if (newPass.length >= MIN_PASS_LENGTH && confirmPass.length > 0 && newPass !== confirmPass) {
+                         showMessage(passwordMessage, 'New and confirmation passwords do not match.', 'warning');
+                    } else if (newPass === currentPass && isLengthValid && isMatch) {
                          showMessage(passwordMessage, 'New password cannot be the same as your current password.', 'warning');
-                        valid = false;
+                         applyPasswordBtn.disabled = true;
                     }
-
-                    applyPasswordBtn.disabled = !valid;
                 };
 
-                currentPasswordInput.addEventListener('input', validatePasswordInputs);
-                newPasswordInput.addEventListener('input', validatePasswordInputs);
-                confirmPasswordInput.addEventListener('input', validatePasswordInputs);
+                currentPasswordInput.addEventListener('input', checkPasswordFields);
+                newPasswordInput.addEventListener('input', checkPasswordFields);
+                confirmPasswordInput.addEventListener('input', checkPasswordFields);
                 
-                // --- Change Password Handler ---
                 applyPasswordBtn.addEventListener('click', async () => {
                     applyPasswordBtn.disabled = true;
+                    showMessage(passwordMessage, '', 'success'); // Clear prior message
+                    showMessage(passwordMessage, '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Attempting password change...', 'warning');
+
                     const currentPass = currentPasswordInput.value;
                     const newPass = newPasswordInput.value;
                     
                     if (newPass.length < 6) {
-                        showMessage(passwordMessage, 'New password must be at least 6 characters.', 'error');
-                        applyPasswordBtn.disabled = false;
-                        return;
+                         showMessage(passwordMessage, 'New password must be at least 6 characters.', 'error');
+                         applyPasswordBtn.disabled = false;
+                         return;
                     }
                     if (newPass === currentPass) {
                         showMessage(passwordMessage, 'New password cannot be the same as your current password.', 'error');
                         applyPasswordBtn.disabled = false;
                         return;
                     }
-                    
-                    showMessage(passwordMessage, '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Changing password...', 'warning');
 
                     try {
                         // 1. Re-authenticate the user
                         const credential = EmailAuthProvider.credential(currentUser.email, currentPass);
                         await reauthenticateWithCredential(currentUser, credential);
-                        
+
                         // 2. Update the password
                         await updatePassword(currentUser, newPass);
 
-                        showMessage(passwordMessage, 'Password successfully changed!', 'success');
+                        showMessage(passwordMessage, 'Password successfully updated!', 'success');
                         
-                        // Clear inputs
+                        // Clear fields on success
                         currentPasswordInput.value = '';
                         newPasswordInput.value = '';
                         confirmPasswordInput.value = '';
-                        applyPasswordBtn.disabled = true; // Re-disable
-                        
+                        // Re-check fields to disable the button
+                        checkPasswordFields(); 
+
                     } catch (error) {
                         console.error("Error changing password:", error);
-                        let msg = 'Failed to change password. Please ensure your current password is correct.';
-                        if (error.code === 'auth/wrong-password') {
-                            msg = 'Incorrect current password.';
-                        } else if (error.code === 'auth/weak-password') {
-                             msg = 'New password is too weak (must be at least 6 characters).';
+                        let errorMessage = "An unknown error occurred.";
+                        
+                        switch (error.code) {
+                            case 'auth/requires-recent-login':
+                                errorMessage = 'Password change failed. Please sign out and sign in again to change your password.';
+                                break;
+                            case 'auth/wrong-password':
+                                errorMessage = 'The current password you provided is incorrect.';
+                                break;
+                            case 'auth/weak-password':
+                                errorMessage = 'The new password is too weak. Please use a stronger one (min 6 characters).';
+                                break;
+                            default:
+                                errorMessage = `Password change failed. (${error.message})`;
                         }
-                        showMessage(passwordMessage, msg, 'error');
-                        applyPasswordBtn.disabled = false;
+                        showMessage(passwordMessage, errorMessage, 'error');
+                    } finally {
+                        // Re-enable button if there was an error
+                        if (!passwordMessage.innerHTML.includes('success')) {
+                            applyPasswordBtn.disabled = false;
+                        }
                     }
                 });
             }
+            
+            // =================================================================
+            // --- LINKING / UNLINKING PROVIDERS LOGIC (NEW) ---
+            // =================================================================
 
-            // 4. Element References (Account Management/Linking)
-            const unlinkButtons = document.querySelectorAll('.unlink-btn');
-            const linkButtons = document.querySelectorAll('.link-btn');
-            const primaryProviderId = auth.currentUser.providerData[0].providerId;
+            const linkProviderButtons = mainView.querySelectorAll('button[data-action="link"]');
+            const unlinkProviderButtons = mainView.querySelectorAll('button[data-action="unlink"]');
 
-            // --- Unlink Handler ---
-            unlinkButtons.forEach(button => {
+            // --- LINKING Providers ---
+            linkProviderButtons.forEach(button => {
                 button.addEventListener('click', async () => {
                     const providerId = button.dataset.providerId;
+                    const config = PROVIDER_CONFIG[providerId];
+                    const providerInstance = config.instance();
                     
-                    const confirm = await showModal(
-                        `Are you sure you want to unlink your ${PROVIDER_CONFIG[providerId].name} account? You will still be able to log in with your other linked accounts.`, 
-                        [
-                            { text: 'Cancel', value: false, style: '' },
-                            { text: 'Unlink', value: true, style: 'btn-primary-override-danger' }
-                        ]
-                    );
-                    
-                    if (!confirm) return;
-
-                    showLoading("Unlinking account...");
+                    showMessage(messageElement, `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Attempting to link with ${config.name}...`, 'warning');
                     
                     try {
-                        await unlink(currentUser, providerId);
-                        hideLoading();
-                        // Reload the tab to reflect the change
-                        await switchTab('general'); 
+                        await linkWithPopup(auth.currentUser, providerInstance);
+                        showMessage(messageElement, `${config.name} successfully linked to your account!`, 'success');
+                        setTimeout(refreshGeneralTab, 1500); // Refresh UI
                     } catch (error) {
-                        hideLoading();
-                        console.error("Error unlinking account:", error);
-                        // auth/no-linked-account is a common one if it's the last non-password account
-                        let msg = 'Failed to unlink account.';
-                        if (error.code === 'auth/requires-recent-login') {
-                            msg = 'Please log out and log back in to perform this action.';
-                        } else if (error.code === 'auth/no-linked-account') {
-                            msg = 'You must have at least one authentication method linked to your account.';
-                        } else if (error.code === 'auth/unauthorized-domain') {
-                            // This might happen if a browser extension is messing with things, or a setup issue
-                             msg = 'Authentication domain error. Please try again.';
-                        }
-                        
-                        showModal(msg, [{ text: 'OK', value: true }]);
-                    }
-                });
-            });
-
-            // --- Link Handler ---
-            linkButtons.forEach(button => {
-                button.addEventListener('click', async () => {
-                    const providerId = button.dataset.providerId;
-                    const provider = PROVIDER_CONFIG[providerId].instance();
-                    
-                    showLoading(`Linking with ${PROVIDER_CONFIG[providerId].name}...`);
-
-                    try {
-                        // Use linkWithPopup for linking new providers
-                        await linkWithPopup(currentUser, provider); 
-                        hideLoading();
-                        // Reload the tab to reflect the change
-                        await switchTab('general');
-                    } catch (error) {
-                        hideLoading();
-                        console.error("Error linking account:", error);
-                        let msg = 'Failed to link account. This can happen if the account is already linked to another 4SP user.';
-                        
-                        if (error.code === 'auth/popup-closed-by-user') {
-                            msg = 'Account linking was canceled.';
-                        } else if (error.code === 'auth/credential-already-in-use') {
-                            msg = 'This account is already linked to another 4SP user.';
+                        console.error("Error linking provider:", error);
+                        let msg = `Failed to link ${config.name}.`;
+                        if (error.code === 'auth/credential-already-in-use') {
+                            msg = `This ${config.name} account is already linked to another user.`;
+                        } else if (error.code === 'auth/popup-closed-by-user') {
+                            msg = 'Link cancelled by user.';
                         } else if (error.code === 'auth/requires-recent-login') {
-                            msg = 'Please log out and log back in to perform this action.';
-                        } else if (error.code === 'auth/account-exists-with-different-credential') {
-                            msg = 'An account already exists with this email address using a different login method.';
+                            msg = 'Please sign out and sign in again to link a new provider.';
                         }
-                        
-                        showModal(msg, [{ text: 'OK', value: true }]);
+                        showMessage(messageElement, msg, 'error');
                     }
                 });
             });
 
+            // --- UNLINKING Providers ---
+            unlinkProviderButtons.forEach(button => {
+                button.addEventListener('click', async () => {
+                    const providerId = button.dataset.providerId;
+                    const config = PROVIDER_CONFIG[providerId];
+                    
+                    showMessage(messageElement, `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Unlinking ${config.name}...`, 'warning');
+                    
+                    try {
+                        await unlink(auth.currentUser, providerId);
+                        showMessage(messageElement, `${config.name} successfully unlinked.`, 'success');
+                        setTimeout(refreshGeneralTab, 1500); // Refresh UI
+                    } catch (error) {
+                        console.error("Error unlinking provider:", error);
+                        let msg = `Failed to unlink ${config.name}.`;
+                        if (error.code === 'auth/no-such-provider') {
+                            msg = 'Provider not found on this account.';
+                        } else if (error.code === 'auth/requires-recent-login') {
+                             msg = 'Please sign out and sign in again to unlink this provider.';
+                        } else if (error.code === 'auth/provider-already-linked') {
+                            // This can happen if attempting to unlink the last provider
+                            msg = "Cannot unlink the last remaining sign-in method.";
+                        }
+                        
+                        showMessage(messageElement, msg, 'error');
+                    }
+                });
+            });
 
-            // 5. Element References (Account Deletion)
+            // =================================================================
+            // --- ACCOUNT DELETION LOGIC (NEW) ---
+            // =================================================================
+            const deletePasswordInput = document.getElementById('deletePasswordInput');
+            const deleteConfirmText = document.getElementById('deleteConfirmText');
             const reauthenticateBtn = document.getElementById('reauthenticateBtn');
             const finalDeleteBtn = document.getElementById('finalDeleteBtn');
             const deleteMessage = document.getElementById('deleteMessage');
-            
-            let reauthenticated = false;
+            const primaryProviderId = currentUser.providerData[0].providerId;
 
-            // --- Re-authenticate Handler ---
-            reauthenticateBtn.addEventListener('click', async () => {
-                const providerId = reauthenticateBtn.dataset.providerId;
-                const config = PROVIDER_CONFIG[providerId];
-                
-                // For password-based auth, we use a modal prompt instead of a popup
-                if (providerId === 'password') {
-                    const password = await showModal(
-                        'Please enter your current password to re-authenticate for account deletion.', 
-                        [
-                            { text: 'Cancel', value: false },
-                            { text: 'Verify', value: true, style: 'btn-primary-override' }
-                        ]
-                    );
 
-                    if (password) {
-                        showLoading("Verifying credentials...");
-                        try {
-                            const credential = EmailAuthProvider.credential(currentUser.email, password);
-                            await reauthenticateWithCredential(currentUser, credential);
-                            reauthenticated = true;
-                            hideLoading();
-                            showMessage(deleteMessage, 'Re-authentication successful. Click "Permanently Delete" to continue.', 'success');
-                            reauthenticateBtn.classList.add('hidden');
-                            finalDeleteBtn.classList.remove('hidden');
-                        } catch (error) {
-                            hideLoading();
-                            console.error("Password re-auth failed:", error);
-                            showMessage(deleteMessage, 'Verification failed. Incorrect password or account state.', 'error');
-                        }
-                    }
-                    return; // Exit after handling password auth
-                }
+            const performAccountDeletion = async () => {
+                showMessage(deleteMessage, '', 'success');
+                showMessage(deleteMessage, '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Deleting account...', 'warning');
 
-                // For OAuth providers (Google, GitHub, Microsoft)
-                const provider = config.instance();
-                showLoading(`Re-authenticating with ${config.name}...`);
-                
                 try {
-                    // This uses a fresh login to update the user's re-authentication time
-                    await reauthenticateWithCredential(currentUser, provider); 
-                    reauthenticated = true;
-                    hideLoading();
-                    showMessage(deleteMessage, 'Re-authentication successful. Click "Permanently Delete" to continue.', 'success');
-                    reauthenticateBtn.classList.add('hidden');
-                    finalDeleteBtn.classList.remove('hidden');
-                } catch (error) {
-                    hideLoading();
-                    console.error("Re-authentication failed:", error);
-                    let msg = 'Re-authentication failed. Please try again.';
-                    if (error.code === 'auth/popup-closed-by-user') {
-                        msg = 'Re-authentication was canceled.';
-                    } else if (error.code === 'auth/requires-recent-login') {
-                         msg = 'Please try re-authenticating again.';
-                    }
-                    showModal(msg, [{ text: 'OK', value: true }]);
-                }
-            });
-
-            // --- Final Delete Handler ---
-            finalDeleteBtn.addEventListener('click', async () => {
-                if (!reauthenticated) {
-                    showMessage(deleteMessage, 'Please re-authenticate first.', 'error');
-                    return;
-                }
-
-                const confirm = await showModal(
-                    'This is your last chance. Account deletion is permanent and cannot be reversed. ALL your data will be wiped (account, settings, game saves, etc.). Are you absolutely sure?', 
-                    [
-                        { text: 'Cancel', value: false, style: '' },
-                        { text: 'WIPE DATA & DELETE', value: true, style: 'btn-primary-override-danger' }
-                    ]
-                );
-
-                if (!confirm) return;
-
-                showLoading("Permanently deleting account...");
-                
-                try {
-                    // 1. Delete user's Firestore document
-                    await userDocRef.delete();
+                    // Delete user's Firestore document first (to prevent orphaned data)
+                    await deleteDoc(userDocRef); 
                     
-                    // 2. Delete the user (this will sign them out)
-                    await deleteUser(currentUser);
-                    
-                    hideLoading();
-                    // Firebase Auth will handle the redirect after deletion (via onAuthStateChanged listener)
+                    // Delete Firebase Auth user
+                    await deleteUser(auth.currentUser);
+
+                    // Sign out and redirect to authentication page
+                    await signOut(auth);
+                    window.location.href = '../authentication.html';
+
                 } catch (error) {
-                    hideLoading();
-                    console.error("Account deletion failed:", error);
-                    let msg = 'Failed to delete account. You may need to re-authenticate again.';
+                    console.error("Error deleting account:", error);
+                    let msg = "Failed to delete account. Please try again or sign in again.";
                     if (error.code === 'auth/requires-recent-login') {
-                        msg = 'Account deletion failed. Please click "Re-authenticate" again and try immediately after.';
+                        msg = 'Deletion failed: Please sign out and sign in again immediately to proceed with deletion.';
                     }
-                    showModal(msg, [{ text: 'OK', value: true }]);
+                    showMessage(deleteMessage, msg, 'error');
+                    // Re-enable/reset UI elements
+                    if (reauthenticateBtn) reauthenticateBtn.classList.remove('hidden');
+                    if (finalDeleteBtn) finalDeleteBtn.classList.add('hidden');
                 }
-            });
-        }
+            };
 
 
-        // --- IndexedDB for Panic Key Functions ---
-
-        /** Opens the IndexedDB and creates the object store if needed. */
-        function openDB() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open(DB_NAME);
-
-                request.onupgradeneeded = event => {
-                    const db = event.target.result;
-                    if (!db.objectStoreNames.contains(STORE_NAME)) {
-                        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-                    }
+            // --- Email/Password Primary Deletion Logic ---
+            if (primaryProviderId === 'password' && deletePasswordInput) {
+                const checkDeletionInputs = () => {
+                    const passwordMatch = deletePasswordInput.value.length > 0;
+                    const textConfirmed = deleteConfirmText.value.trim().toLowerCase() === 'delete my account';
+                    
+                    finalDeleteBtn.disabled = !(passwordMatch && textConfirmed);
                 };
 
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = () => reject(request.error);
-            });
-        }
-
-        /** Fetches all panic key settings from IndexedDB. */
-        async function getPanicKeySettings() {
-            try {
-                const db = await openDB();
-                return new Promise((resolve, reject) => {
-                    const transaction = db.transaction(STORE_NAME, 'readonly');
-                    const store = transaction.objectStore(STORE_NAME);
-                    const request = store.getAll();
-
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
-                });
-            } catch (e) {
-                console.error("Error fetching panic key settings:", e);
-                return [];
-            }
-        }
-
-        /** Saves the panic key settings to IndexedDB. */
-        async function savePanicKeySettings(settingsArray) {
-            const db = await openDB();
-            return new Promise((resolve, reject) => {
-                // Use a write transaction
-                const transaction = db.transaction(STORE_NAME, 'readwrite');
-                const store = transaction.objectStore(STORE_NAME);
+                deletePasswordInput.addEventListener('input', checkDeletionInputs);
+                deleteConfirmText.addEventListener('input', checkDeletionInputs);
                 
-                // Clear existing data
-                store.clear(); 
+                finalDeleteBtn.addEventListener('click', async () => {
+                    if (finalDeleteBtn.disabled) return;
+                    
+                    finalDeleteBtn.disabled = true;
+                    showMessage(deleteMessage, '', 'success');
+                    showMessage(deleteMessage, '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Re-authenticating...', 'warning');
+                    
+                    try {
+                        // Re-authenticate using email/password credential
+                        const credential = EmailAuthProvider.credential(auth.currentUser.email, deletePasswordInput.value);
+                        await reauthenticateWithCredential(auth.currentUser, credential);
 
-                // Add new settings
-                settingsArray.forEach((setting, index) => {
-                    if (setting.key || setting.url) { // Only store non-empty settings
-                        store.put({ 
-                            id: index, // Use index as keyPath
-                            key: setting.key, 
-                            url: setting.url
-                        });
+                        // If re-auth is successful, proceed to final deletion
+                        await performAccountDeletion();
+
+                    } catch (error) {
+                        console.error("Error during password re-authentication for deletion:", error);
+                        let msg = 'Re-authentication failed. Incorrect password.';
+                        if (error.code === 'auth/requires-recent-login') {
+                             msg = 'Please sign out and sign in again immediately to proceed with deletion.';
+                        }
+                        showMessage(deleteMessage, msg, 'error');
+                        finalDeleteBtn.disabled = false;
                     }
                 });
+            } 
+            // --- Social Provider Primary Deletion Logic ---
+            else if (reauthenticateBtn) {
+                
+                reauthenticateBtn.addEventListener('click', async () => {
+                    const providerInstance = PROVIDER_CONFIG[primaryProviderId].instance();
+                    
+                    reauthenticateBtn.disabled = true;
+                    showMessage(deleteMessage, '', 'success');
+                    showMessage(deleteMessage, `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Re-authenticating with ${PROVIDER_CONFIG[primaryProviderId].name}...`, 'warning');
+                    
+                    try {
+                        // Re-authenticate using the social provider popup
+                        await reauthenticateWithPopup(auth.currentUser, providerInstance);
+                        
+                        // Re-authentication successful: change button to final delete button
+                        reauthenticateBtn.classList.add('hidden');
+                        finalDeleteBtn.classList.remove('hidden');
+                        showMessage(deleteMessage, 'Authentication successful. Click "Delete Account" one last time to confirm.', 'success');
 
-                transaction.oncomplete = () => resolve(true);
-                transaction.onerror = () => reject(transaction.error);
-            });
-        }
-
-        // --- LocalStorage for URL Changer Functions ---
-
-        function getUrlChangerSetting() {
-            try {
-                const stored = localStorage.getItem(URL_CHANGER_KEY);
-                if (stored) {
-                    const setting = JSON.parse(stored);
-                    if (setting.type === 'preset' && urlChangerPresets.some(p => p.id === setting.id)) {
-                        return setting; // Valid preset
+                    } catch (error) {
+                        console.error("Error during social re-authentication for deletion:", error);
+                        let msg = 'Re-authentication failed. Please try again.';
+                         if (error.code === 'auth/popup-closed-by-user') {
+                            msg = 'Re-authentication cancelled by user.';
+                        } else if (error.code === 'auth/requires-recent-login') {
+                             msg = 'Please sign out and sign in again immediately to proceed with deletion.';
+                        }
+                        showMessage(deleteMessage, msg, 'error');
+                        reauthenticateBtn.disabled = false;
                     }
-                    if (setting.type === 'custom' && (setting.title || setting.favicon)) {
-                         return setting; // Valid custom setting
+                    if (reauthenticateBtn.classList.contains('hidden') === false) {
+                        reauthenticateBtn.disabled = false;
                     }
-                }
-            } catch (e) {
-                console.error("Error reading URL Changer setting:", e);
-                localStorage.removeItem(URL_CHANGER_KEY);
-            }
-            // Default to HAC preset if no valid setting is found
-            return { type: 'preset', id: 'hac' }; 
-        }
-
-        function saveUrlChangerSetting(setting) {
-            try {
-                localStorage.setItem(URL_CHANGER_KEY, JSON.stringify(setting));
-                return true;
-            } catch (e) {
-                console.error("Error saving URL Changer setting:", e);
-                return false;
+                });
+                
+                // Final Delete button click
+                finalDeleteBtn.addEventListener('click', performAccountDeletion);
             }
         }
         
-        // --- Favicon Utility ---
-
-        /** Converts a file to a data URL (Base64). */
-        function fileToDataUrl(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = () => reject(reader.error);
-                reader.readAsDataURL(file);
-            });
-        }
-
-
         /**
          * NEW: Loads data and adds event listeners for the Privacy tab.
          */
         async function loadPrivacyTab() {
-            // 1. Load Panic Key Settings
-            let panicKeySettings = await getPanicKeySettings();
-            // Ensure we have an array of up to 3 settings objects
-            panicKeySettings = Array(3).fill(null).map((_, index) => panicKeySettings.find(s => s.id === index) || { key: '', url: '' });
-
-            // 2. Load URL Changer Settings
-            const urlChangerSetting = getUrlChangerSetting();
-
-            // 3. Render HTML
-            mainView.innerHTML = getPrivacySecurityContent(panicKeySettings, urlChangerSetting);
-
-            // 4. Element References (Panic Key)
-            const panicKeyMessage = document.getElementById('panicKeyMessage');
+            // --- 1. Get Element References ---
+            // Panic Key
+            const panicKeyInputs = document.querySelectorAll('.panic-key-input');
+            const panicUrl1 = document.getElementById('panicUrl1');
+            const panicUrl2 = document.getElementById('panicUrl2');
+            const panicUrl3 = document.getElementById('panicUrl3');
             const applyPanicKeyBtn = document.getElementById('applyPanicKeyBtn');
-            const keyInputs = Array.from(document.querySelectorAll('.input-key-style'));
-            const urlInputs = Array.from(document.querySelectorAll('[id^="panicUrl-"]'));
+            const panicKeyMessage = document.getElementById('panicKeyMessage');
+            
+            // URL Changer
+            const modeSelect = document.getElementById('tabDisguiseMode');
+            const presetGroup = document.getElementById('tabDisguisePresetGroup');
+            const presetSelect = document.getElementById('tabDisguisePreset');
+            const customGroup = document.getElementById('tabDisguiseCustomGroup');
+            const customTitle = document.getElementById('customTabTitle');
+            const applyUrlChangerBtn = document.getElementById('applyUrlChangerBtn');
+            const urlChangerMessage = document.getElementById('urlChangerMessage');
+            
+            // NEW Favicon Fetcher Elements
+            const faviconFetchInput = document.getElementById('faviconFetchInput');
+            const fetchFaviconBtn = document.getElementById('fetchFaviconBtn');
+            const previewContainer = document.getElementById('favicon-fetch-preview-container');
+            const previewImg = previewContainer.querySelector('img');
 
-            // --- Panic Key Input Logic ---
-            keyInputs.forEach(input => {
-                input.addEventListener('keydown', (e) => {
-                    // Prevent default for all keys except Backspace, Delete, Tab, Arrow keys
-                    if (e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey) {
-                        // Prevent all input except for allowed single keys
-                        const allowedChars = /^[a-z0-9\-\=\[\]\\\;\',\.\/\`]$/i;
-                        if (!allowedChars.test(e.key)) {
-                            e.preventDefault();
-                            return;
-                        }
-                        
-                        // Set the input value to the pressed key (always uppercase in display)
-                        input.value = e.key.toUpperCase();
-                        e.preventDefault(); 
-                        
-                        // Move focus to the corresponding URL input
-                        const index = input.dataset.index;
-                        document.getElementById(`panicUrl-${index}`).focus();
-                    } else if (e.key === 'Backspace' || e.key === 'Delete') {
-                        // Clear on backspace/delete
-                        input.value = '';
-                    } else if (e.key === 'Tab' || e.key.startsWith('Arrow')) {
-                        // Allow navigation
-                        return;
-                    } else {
-                        // Prevent other modifier keys
-                        e.preventDefault();
-                    }
-                });
+            
+            // --- 2. Load Panic Key Settings ---
+            try {
+                const settingsMap = await getPanicKeySettings();
+                const key1 = settingsMap.get('panicKey1');
+                const key2 = settingsMap.get('panicKey2');
+                const key3 = settingsMap.get('panicKey3');
+
+                if (key1) {
+                    document.getElementById('panicKey1').value = key1.key || '';
+                    panicUrl1.value = key1.url || '';
+                }
+                if (key2) {
+                    document.getElementById('panicKey2').value = key2.key || '';
+                    panicUrl2.value = key2.url || '';
+                }
+                if (key3) {
+                    document.getElementById('panicKey3').value = key3.key || '';
+                    panicUrl3.value = key3.url || '';
+                }
+            } catch (e) {
+                console.error("Error loading panic key settings:", e);
+                showMessage(panicKeyMessage, 'Error loading panic key settings.', 'error');
+            }
+            
+            // --- 3. Load URL Changer Settings ---
+            const savedUrlSettings = getSavedUrlChangerSetting();
+            modeSelect.value = savedUrlSettings.type;
+            
+            if (savedUrlSettings.type === 'preset') {
+                presetGroup.classList.remove('hidden');
+                presetSelect.value = savedUrlSettings.id;
+            } else if (savedUrlSettings.type === 'custom') {
+                customGroup.classList.remove('hidden');
+                customTitle.value = savedUrlSettings.title || '';
                 
-                // Ensure only one character is saved
-                input.addEventListener('input', () => {
-                    input.value = input.value.slice(-1).toUpperCase();
+                // NEW logic to load saved custom favicon into the preview
+                if (savedUrlSettings.favicon) {
+                    previewImg.src = savedUrlSettings.favicon;
+                    previewImg.style.display = 'block';
+                }
+            }
+
+            // --- 4. Add Event Listeners ---
+            
+            // Panic Key Input Validation (Whitelist)
+            const validKeyRegex = /^[a-z0-9`\-=\[\]\\;',\.\/]$/;
+            panicKeyInputs.forEach(input => {
+                input.addEventListener('keydown', e => {
+                    // Allow control keys like Tab, Backspace, Arrow keys
+                    if (e.key.length > 1 && e.key !== 'Backspace' && e.key !== 'Delete' && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'Tab') {
+                        e.preventDefault();
+                        return;
+                    }
+                    
+                    const lowerKey = e.key.toLowerCase();
+                    
+                    if (lowerKey.length === 1 && !validKeyRegex.test(lowerKey)) {
+                         e.preventDefault(); // Block invalid key
+                         showMessage(panicKeyMessage, `Invalid key. Only a-z, 0-9, and \` - = [ ] \\ ; ' , . / are allowed.`, 'warning');
+                    } else if (lowerKey.length === 1) {
+                        e.preventDefault(); // Prevent typing
+                        input.value = lowerKey; // Set value
+                        showMessage(panicKeyMessage, '', 'success'); // Clear message
+                    }
                 });
             });
 
-            // --- Apply Panic Key Handler ---
+            // Panic Key Apply Button
             applyPanicKeyBtn.addEventListener('click', async () => {
+                showMessage(panicKeyMessage, '', 'success');
+                const keys = [
+                    document.getElementById('panicKey1').value,
+                    document.getElementById('panicKey2').value,
+                    document.getElementById('panicKey3').value
+                ];
+                const urls = [
+                    panicUrl1.value,
+                    panicUrl2.value,
+                    panicUrl3.value
+                ];
+                
                 const settingsToSave = [];
                 let hasError = false;
-                
-                showMessage(panicKeyMessage, '', 'warning');
-                
-                keyInputs.forEach((keyInput, index) => {
-                    const urlInput = urlInputs[index];
-                    const key = keyInput.value.trim().toLowerCase();
-                    const url = urlInput.value.trim();
-                    
-                    if (key || url) {
-                        // Validate key format (must be a single allowed character)
-                        const allowedChars = /^[a-z0-9\-\=\[\]\\\;\',\.\/\`]$/;
-                        if (key && !allowedChars.test(key)) {
-                            showMessage(panicKeyMessage, `Key ${index + 1} (${keyInput.value}) is not a valid panic key.`, 'error');
-                            hasError = true;
-                            return;
-                        }
-                        
-                        // Validate URL format (must be a non-empty, valid URL if key is set)
-                        if (key && !url) {
-                            showMessage(panicKeyMessage, `Key ${index + 1} is set, but the URL is missing.`, 'error');
-                            hasError = true;
-                            return;
-                        }
 
-                        // Validate URL structure (simple check)
-                        if (url && !url.startsWith('http')) {
-                            showMessage(panicKeyMessage, `URL for Key ${index + 1} must start with http:// or https://.`, 'error');
-                            hasError = true;
-                            return;
-                        }
-                        
-                        settingsToSave.push({ id: index, key: key, url: url });
+                for (let i = 0; i < 3; i++) {
+                    const key = keys[i];
+                    let url = urls[i]; // Make it 'let'
+                    const id = `panicKey${i + 1}`;
+                    
+                    // If either is blank, skip (or save as empty)
+                    if (!key && !url) {
+                         settingsToSave.push({ id, key: '', url: '' });
+                        continue;
                     }
-                });
-                
+                    
+                    // If one is filled but not the other
+                    if ( (key && !url) || (!key && url) ) {
+                        showMessage(panicKeyMessage, `Panic Key ${i+1} is incomplete. Both key and URL must be filled, or both must be empty.`, 'error');
+                        hasError = true;
+                        break;
+                    }
+
+                    // NEW: Check for relative paths and block them to avoid confusion
+                    if (url.startsWith('/') || url.startsWith('../') || url.startsWith('./')) {
+                        showMessage(panicKeyMessage, `Panic Key ${i+1} must be a full web address (e.g., google.com), not a relative path.`, 'error');
+                        hasError = true;
+                        break;
+                    }
+
+                    // NEW: Prepend https:// if it's missing
+                    if (!url.startsWith('https://') && !url.startsWith('http://')) {
+                        url = 'https://' + url;
+                    }
+
+                    // NEW: Validate URL
+                    try {
+                        new URL(url); // This will validate "https://google.com" and "https://youtube.com/page.html"
+                    } catch (e) {
+                        showMessage(panicKeyMessage, `Panic Key ${i+1} has an invalid URL. Please enter a valid web address (e.g., google.com).`, 'error');
+                        hasError = true;
+                        break;
+                    }
+                    
+                    // Add valid setting
+                    settingsToSave.push({ id, key, url }); // Push the (potentially modified) URL
+                }
+
                 if (hasError) return;
-                
+
                 // Check for duplicate keys
                 const filledKeys = settingsToSave.map(s => s.key).filter(k => k);
                 if (new Set(filledKeys).size !== filledKeys.length) {
@@ -1982,257 +2112,274 @@
                     showMessage(panicKeyMessage, '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Saving...', 'warning');
                     await savePanicKeySettings(settingsToSave);
                     showMessage(panicKeyMessage, 'Panic key settings saved successfully!', 'success');
+                    
                     // ADDED: Refresh page after 1 second
                     setTimeout(() => location.reload(), 1000); 
+
                 } catch (e) {
                     console.error("Error saving panic key settings:", e);
-                    showMessage(panicKeyMessage, 'An unexpected error occurred while saving.', 'error');
+                    showMessage(panicKeyMessage, 'An error occurred while saving.', 'error');
                 } finally {
                     applyPanicKeyBtn.disabled = false;
                 }
             });
 
+            // URL Changer Mode Select
+            modeSelect.addEventListener('change', () => {
+                const mode = modeSelect.value;
+                presetGroup.classList.toggle('hidden', mode !== 'preset');
+                customGroup.classList.toggle('hidden', mode !== 'custom');
+            });
 
-            // 5. Element References (URL Changer)
-            const modePresetBtn = document.getElementById('modePreset');
-            const modeCustomBtn = document.getElementById('modeCustom');
-            const presetGroup = document.getElementById('presetGroup');
-            const customGroup = document.getElementById('customGroup');
-            const presetSelect = document.getElementById('presetSelect');
-            const customTitle = document.getElementById('customTitle');
-            const uploadFaviconBtn = document.getElementById('uploadFaviconBtn');
-            const faviconFile = document.getElementById('faviconFile');
-            const faviconPreview = document.getElementById('faviconPreview');
-            const previewText = document.getElementById('previewText');
-            const clearFaviconBtn = document.getElementById('clearFaviconBtn');
-            const applyUrlChangerBtn = document.getElementById('applyUrlChangerBtn');
-            const urlChangerMessage = document.getElementById('urlChangerMessage');
-            
-            let currentMode = urlChangerSetting.type;
-
-            // --- Mode Toggle Handler ---
-            const switchMode = (mode) => {
-                currentMode = mode;
-                
-                modePresetBtn.classList.remove('active');
-                modeCustomBtn.classList.remove('active');
-                
-                if (mode === 'preset') {
-                    modePresetBtn.classList.add('active');
-                    presetGroup.classList.remove('hidden');
-                    customGroup.classList.add('hidden');
-                } else {
-                    modeCustomBtn.classList.add('active');
-                    customGroup.classList.remove('hidden');
-                    presetGroup.classList.add('hidden');
-                }
-                
-                showMessage(urlChangerMessage, '', 'warning');
-            };
-            
-            modePresetBtn.addEventListener('click', () => switchMode('preset'));
-            modeCustomBtn.addEventListener('click', () => switchMode('custom'));
-            
-
-            // --- Favicon Upload Handler ---
-            uploadFaviconBtn.addEventListener('click', () => faviconFile.click());
-
-            faviconFile.addEventListener('change', async (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-
-                if (!file.type.startsWith('image/')) {
-                    showMessage(urlChangerMessage, 'Invalid file type. Please select an image.', 'error');
+            // NEW: Favicon Fetcher Button
+            fetchFaviconBtn.addEventListener('click', async () => {
+                let domain = faviconFetchInput.value.trim();
+                if (!domain) {
+                    showMessage(urlChangerMessage, 'Please enter a domain to fetch from.', 'warning');
                     return;
                 }
-                
-                if (file.size > 500 * 1024) { // Max 500KB
-                    showMessage(urlChangerMessage, 'Image is too large (max 500KB).', 'error');
-                    return;
+                if (!domain.startsWith('http')) {
+                    domain = 'https://' + domain;
                 }
+
+                fetchFaviconBtn.disabled = true;
+                fetchFaviconBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                showMessage(urlChangerMessage, 'Fetching favicon...', 'warning');
 
                 try {
-                    showLoading("Processing image...");
-                    const dataUrl = await fileToDataUrl(file);
+                    if (typeof urlChanger === 'undefined' || !urlChanger.fetchFavicon) {
+                        throw new Error("URL Changer script not loaded correctly.");
+                    }
                     
-                    faviconPreview.src = dataUrl;
-                    faviconPreview.style.display = 'block';
-                    previewText.classList.add('hidden');
-                    clearFaviconBtn.style.display = 'inline-flex';
-                    hideLoading();
+                    const faviconUrl = await urlChanger.fetchFavicon(domain);
+                    
+                    // Show preview
+                    previewImg.src = faviconUrl;
+                    previewImg.style.display = 'block';
+                    
+                    showMessage(urlChangerMessage, 'Favicon found and set as preview.', 'success');
+                    
                 } catch (error) {
-                    console.error("Favicon processing failed:", error);
-                    showMessage(urlChangerMessage, 'Failed to process image.', 'error');
-                    hideLoading();
+                    console.error("Error fetching favicon:", error);
+                    showMessage(urlChangerMessage, `Failed to find favicon: ${error.message}`, 'error');
+                    previewImg.src = '';
+                    previewImg.style.display = 'none';
+                } finally {
+                    fetchFaviconBtn.disabled = false;
+                    fetchFaviconBtn.textContent = 'Fetch';
                 }
             });
-            
-            // --- Clear Favicon Handler ---
-            clearFaviconBtn.addEventListener('click', () => {
-                faviconPreview.src = '';
-                faviconPreview.style.display = 'none';
-                previewText.classList.remove('hidden');
-                clearFaviconBtn.style.display = 'none';
-                faviconFile.value = ''; // Clear file input
-            });
 
-            // --- Apply URL Changer Handler ---
+            // URL Changer Apply Button
             applyUrlChangerBtn.addEventListener('click', () => {
-                let settingsToSave = null;
-                showMessage(urlChangerMessage, '', 'warning');
-
-                if (currentMode === 'preset') {
+                const mode = modeSelect.value;
+                let settingsToSave = { type: 'none' };
+                
+                if (mode === 'preset') {
                     const presetId = presetSelect.value;
                     if (!presetId) {
-                        showMessage(urlChangerMessage, 'Please select a preset.', 'error');
-                        return;
+                         showMessage(urlChangerMessage, 'Please select a preset.', 'error');
+                         return;
                     }
                     settingsToSave = { type: 'preset', id: presetId };
-                } else if (currentMode === 'custom') {
+                } 
+                else if (mode === 'custom') {
                     const title = customTitle.value.trim();
                     // NEW: Get favicon from preview image
-                    const favicon = (faviconPreview.src && faviconPreview.style.display !== 'none') ? faviconPreview.src : '';
-
-                    if (!title && !favicon) {
-                        // Check against new favicon variable
-                        showMessage(urlChangerMessage, 'Please provide at least a custom title or fetch a favicon.', 'error');
-                        // Update message
+                    const favicon = (previewImg.src && previewImg.style.display !== 'none') ? previewImg.src : '';
+                    
+                    if (!title && !favicon) { // Check against new favicon variable
+                         showMessage(urlChangerMessage, 'Please provide at least a custom title or fetch a favicon.', 'error'); // Update message
                         return;
                     }
-
                     settingsToSave = { type: 'custom', title: title, favicon: favicon }; // Use new favicon variable
                 }
-
+                
                 // Save to localStorage
                 if (saveUrlChangerSetting(settingsToSave)) {
                     showMessage(urlChangerMessage, 'Tab Disguise settings saved! They will be applied on the next page you load.', 'success');
+                    
                     // ADDED: Refresh page after 1 second
-                    setTimeout(() => location.reload(), 1000);
+                    setTimeout(() => location.reload(), 1000); 
+                    
                 } else {
                     showMessage(urlChangerMessage, 'An error occurred while saving.', 'error');
                 }
             });
         }
-
-
+        
+        
         /**
          * NEW: Loads data and adds event listeners for the Personalization tab.
          */
         async function loadPersonalizationTab() {
             const themePickerContainer = document.getElementById('theme-picker-container');
             const themeMessage = document.getElementById('themeMessage');
+            
             if (!themePickerContainer) return;
-
+            
             // From navigation.js
             const lightThemeNames = ['Light', 'Lavender', 'Rose Gold', 'Mint'];
 
             try {
                 // 1. Fetch themes
                 const response = await fetch('../themes.json');
-                if (!response.ok) {
-                    throw new Error("Failed to fetch themes.json");
-                }
+                if (!response.ok) throw new Error('Failed to fetch themes.json');
                 const themes = await response.json();
-
-                // 2. Get current theme from storage
-                const currentThemeName = localStorage.getItem(THEME_STORAGE_KEY) || 'Default'; 
-
-                // 3. Generate HTML for theme buttons
+                
+                if (!themes || themes.length === 0) {
+                     throw new Error('themes.json is empty or invalid');
+                }
+                
+                // 2. Get currently saved theme to set the active state
+                let savedTheme = null;
+                try {
+                    savedTheme = JSON.parse(localStorage.getItem(THEME_STORAGE_KEY));
+                } catch (e) {
+                    console.warn('Could not parse saved theme.');
+                }
+                
+                // 3. Process and render themes
+                const modifiedThemes = []; // Store themes with correct logo paths
                 let themeButtonsHtml = '';
-                for (const themeName in themes) {
-                    const theme = themes[themeName];
-                    const isActive = themeName === currentThemeName;
+                
+                for (const theme of themes) {
+                    // --- This is the logic requested by the user ---
+                    // It modifies the theme object *in memory* before saving/applying
+                    // We use root-relative paths as defined in navigation.js
+                    if (lightThemeNames.includes(theme.name)) {
+                        theme['logo-src'] = '/images/logo-dark.png'; 
+                    } else {
+                        theme['logo-src'] = '/images/logo.png';
+                    }
+                    // --- End of user logic ---
                     
-                    // === MODIFICATION START: Use theme variables for preview ===
-                    // Determine text color for preview (based on if it's a "light" theme)
-                    const previewText = lightThemeNames.includes(themeName) ? '#0f0f0f' : '#e0e0e0'; 
-                    // Get the theme's background color (fallback to black/dark gray)
-                    const previewBg = theme['body-background'] || '#070707'; 
+                    modifiedThemes.push(theme);
+                    
+                    const isActive = savedTheme && savedTheme.name === theme.name;
+                    
+                    // === MODIFICATION START ===
+                    // Get the theme's main background and text colors for the button
+                    const previewBg = theme['navbar-bg'] || '#000000';
+                    const previewText = theme['navbar-text'] || '#c0c0c0';
                     // Get the theme's accent border color
-                    const previewBorder = theme['tab-active-border'] || '#4f46e5'; 
+                    const previewBorder = theme['tab-active-border'] || '#4f46e5';
+
 
                     themeButtonsHtml += `
-                        <button class="theme-button ${isActive ? 'active' : ''}" data-theme-name="${theme.name}" style="background-color: ${previewBg}; border-color: ${previewBorder};" >
+                        <button 
+                            class="theme-button ${isActive ? 'active' : ''}" 
+                            data-theme-name="${theme.name}" 
+                            style="background-color: ${previewBg}; border-color: ${previewBorder};"
+                        >
                             <div class="theme-button-name" style="color: ${previewText};">${theme.name}</div>
                         </button>
                     `;
                     // === MODIFICATION END ===
                 }
-
+                
                 // Inject buttons into the DOM
                 themePickerContainer.innerHTML = themeButtonsHtml;
-
+                
                 // 4. Add event listeners
                 const themeButtons = themePickerContainer.querySelectorAll('.theme-button');
                 themeButtons.forEach(button => {
-                    button.addEventListener('click', (e) => {
+                    button.addEventListener('click', () => {
                         const themeName = button.dataset.themeName;
+                        const themeToApply = modifiedThemes.find(t => t.name === themeName);
                         
-                        // 1. Save to localStorage
-                        localStorage.setItem(THEME_STORAGE_KEY, themeName);
-                        
-                        // 2. Apply the change immediately by setting the class on <html>
-                        const htmlElement = document.documentElement;
-                        // Assuming theme is 'Default' or matches the key in the JSON
-                        // Note: The navigation.js script typically handles injecting the CSS variables
-                        // We will rely on a full page reload or the external script to fully apply the theme. 
-                        // For a quick visual change, we can just update the active state.
-                        
-                        // 3. Update button active state
-                        themeButtons.forEach(b => b.classList.remove('active'));
-                        button.classList.add('active');
-                        
-                        showMessage(themeMessage, `Theme set to ${themeName}! Refreshing page to fully apply...`, 'success');
-                        
-                        // Reload the page to load the new theme variables via navigation.js
-                        setTimeout(() => location.reload(), 1000);
+                        if (themeToApply) {
+                            // 1. Save to localStorage
+                            localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(themeToApply));
+                            
+                            // === MODIFICATION START ===
+                            // 2. Apply theme for live preview (ENABLED per user request)
+                            if (window.applyTheme) {
+                                window.applyTheme(themeToApply);
+                            } else {
+                                console.error('window.applyTheme is not defined. Is navigation.js loaded?');
+                                showMessage(themeMessage, 'Error applying theme preview.', 'error');
+                                return;
+                            }
+                            // === MODIFICATION END ===
+                            
+                            // 3. Update active class
+                            themeButtons.forEach(btn => btn.classList.remove('active'));
+                            button.classList.add('active');
+                            
+                            // 4. Show success message
+                            showMessage(themeMessage, `${themeToApply.name} theme applied!`, 'success');
+                        }
                     });
                 });
 
-            } catch (e) {
-                console.error("Error loading personalization tab:", e);
-                themePickerContainer.innerHTML = `<p class="error-message">Failed to load theme options.</p>`;
+            } catch (error) {
+                console.error('Error loading themes:', error);
+                themePickerContainer.innerHTML = `<p class="text-red-400">Error: Could not load themes. (${error.message})</p>`;
+            }
+        }
+        
+        // --- NEW: Loads data and adds event listeners for the Data tab ---
+        async function loadDataTab() {
+            // Get elements (buttons, modal)
+            const exportBtn = document.getElementById('exportDataBtn');
+            const importBtn = document.getElementById('importDataBtn');
+            const modal = document.getElementById('modalPrompt');
+            const modalClose = document.getElementById('modalClose');
+            
+            // Wire up buttons
+            if (exportBtn) exportBtn.addEventListener('click', downloadAllSaves);
+            if (importBtn) importBtn.addEventListener('click', handleFileUpload);
+            
+            // Wire up modal close events
+            if (modalClose) {
+                modalClose.addEventListener('click', () => {
+                    modal.style.display = "none";
+                });
+            }
+            // Use a new listener specific to this page
+            const modalBackground = document.getElementById('modalPrompt');
+            if (modalBackground) {
+                modalBackground.addEventListener('click', event => {
+                    if (event.target === modalBackground) {
+                        modal.style.display = "none";
+                    }
+                });
             }
         }
 
 
         /**
-         * NEW: Loads data and adds event listeners for the Data tab.
+         * Handles the switching of tabs and updating the main content view.
          */
-        async function loadDataTab() {
-            // 1. Element References
-            const downloadSavesBtn = document.getElementById('downloadSavesBtn');
-            const uploadSavesBtn = document.getElementById('uploadSavesBtn');
-            const deleteAllDataBtn = document.getElementById('deleteAllDataBtn');
-            
-            // 2. Add Listeners
-            downloadSavesBtn.addEventListener('click', downloadAllSaves);
-            uploadSavesBtn.addEventListener('click', handleFileUpload);
-            deleteAllDataBtn.addEventListener('click', deleteAllLocalData);
-        }
-
-
-        // --- Main Tab Switching Logic ---
-
         async function switchTab(tabId) {
-            // 1. Update UI (Active state)
-            sidebarTabs.forEach(tab => tab.classList.remove('active'));
-            const activeTab = document.getElementById(`tab-${tabId}`);
-            if (activeTab) {
-                activeTab.classList.add('active');
-            }
+            // 1. Update active class on sidebar tabs
+            sidebarTabs.forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(`tab-${tabId}`).classList.add('active');
 
-            // 2. Render content and add listeners
+            // 2. Update the main view content and alignment
+            mainView.style.justifyContent = 'flex-start';
+            mainView.style.alignItems = 'flex-start';
+
             if (tabId === 'general') {
-                await loadGeneralTab();
-            } else if (tabId === 'privacy') {
-                await loadPrivacyTab();
-            } else if (tabId === 'personalization') {
+                await loadGeneralTab(); 
+            }
+            else if (tabId === 'privacy') {
+                // NEW: Load Privacy Tab
+                mainView.innerHTML = getPrivacyContent(); // Render HTML first
+                await loadPrivacyTab(); // Then load data and add listeners
+            }
+            else if (tabId === 'personalization') {
+                // --- NEW: Load Personalization Tab ---
                 mainView.innerHTML = getPersonalizationContent(); // Render HTML
                 await loadPersonalizationTab(); // Load data and add listeners
-            } else if (tabId === 'data') {
-                mainView.innerHTML = getDataManagementContent();
-                await loadDataTab();
+            }
+            else if (tabId === 'data') {
+                // --- NEW: Load Data Management Tab ---
+                mainView.innerHTML = getDataManagementContent(); // Render HTML
+                await loadDataTab(); // Load data and add listeners
             }
             else if (tabId === 'about') {
                 mainView.innerHTML = getAboutContent();
