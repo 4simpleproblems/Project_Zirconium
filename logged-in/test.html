@@ -1016,6 +1016,48 @@
             input.click();
         }
 
+        async function deleteAllLocalData() {
+            // Confirmation via modal
+             openModal("Are you absolutely sure you want to delete ALL your local data (progress, settings, etc.) for this site? This action is irreversible.", [
+                { text: "Cancel", onclick: () => document.getElementById('modalPrompt').style.display = "none" },
+                { text: "Yes", onclick: async () => {
+                    document.getElementById('modalPrompt').style.display = "none";
+                    showLoading("Deleting data. Please wait...");
+                    showMessage(document.getElementById('deleteDataMessage'), '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Deleting...', 'warning');
+                    
+                    try {
+                        // 1. Clear localStorage keys (excluding theme/url changer settings)
+                        const keysToRemove = Object.keys(getAllLocalStorageData());
+                        keysToRemove.forEach(key => localStorage.removeItem(key));
+
+                        // 2. Delete IndexedDB databases
+                        if (indexedDB.databases) {
+                            const dbList = await indexedDB.databases();
+                             for (const dbInfo of dbList) {
+                                if (dbInfo.name && dbInfo.name !== DB_NAME) { // Skip our own settings DB
+                                    await new Promise(resolve => {
+                                        const deleteRequest = indexedDB.deleteDatabase(dbInfo.name);
+                                        deleteRequest.onsuccess = () => resolve();
+                                        deleteRequest.onerror = () => resolve();
+                                        deleteRequest.onblocked = () => resolve();
+                                    });
+                                }
+                            }
+                        }
+                        
+                        hideLoading();
+                        showMessage(document.getElementById('deleteDataMessage'), 'All local data successfully deleted!', 'success');
+                        setTimeout(() => location.reload(), 1500);
+
+                    } catch (e) {
+                        console.error("Data deletion failed:", e);
+                        hideLoading();
+                        showMessage(document.getElementById('deleteDataMessage'), 'An unexpected error occurred during deletion.', 'error');
+                    }
+                }}
+            ]);
+        }
+
         /**
          * Generates the HTML for the "Change Password" section.
          */
@@ -1385,27 +1427,49 @@
                 <h2 class="text-3xl font-bold text-white mb-6">Data Management</h2>
                 <div class="w-full">
                     <h3 class="text-xl font-bold text-white mb-2">Export Data</h3>
-                    <div class="settings-box transition-all duration-300 p-4 mb-8">
+                    <div id="exportSection" class="settings-box transition-all duration-300 p-4 mb-8">
                         <p class="text-sm font-light text-gray-400 mb-4">
-                            Export all your local game data (from LocalStorage and IndexedDB) into a single JSON file.
-                            This file can be used as a backup or to transfer your data to another browser.
+                            Download all your locally saved data (Progress, Settings, etc.) into a single JSON file. This includes:
+                            <ul class="list-disc list-inside ml-4 mt-2 text-sm text-gray-300">
+                                <li>StrongdogXP Games data</li>
+                                <li>GN-Math games data (for saving compatibility)</li>
+                            </ul>
                         </p>
-                        <button id="exportDataBtn" class="btn-toolbar-style btn-primary-override w-48">
-                            <i class="fa-solid fa-download mr-2"></i> Export Data
-                        </button>
+                        <div class="flex justify-end">
+                            <button id="downloadSavesBtn" class="btn-toolbar-style btn-primary-override w-48">
+                                <i class="fa-solid fa-download mr-1"></i> Download Saves
+                            </button>
+                        </div>
                     </div>
 
-                    <h3 class="text-xl font-bold text-white mb-2">Import Data</h3>
-                    <div class="settings-box transition-all duration-300 p-4 bg-red-900/10 border-red-700/50">
-                        <p class="text-sm font-light text-red-300 mb-4">
-                            <i class="fa-solid fa-triangle-exclamation mr-1"></i> 
-                            **WARNING:** Importing data will overwrite all existing local game data. This action cannot be undone.
-                            Only import a file you have previously exported from this site.
+                    <h3 class="text-xl font-bold text-white mb-2 mt-8">Import Data</h3>
+                    <div id="importSection" class="settings-box transition-all duration-300 p-4 mb-8">
+                        <p class="text-sm font-light text-gray-400 mb-4">
+                            Upload a save file (JSON) to restore your local progress and settings. This will overwrite all current local data. Data covered by this import includes:
+                            <ul class="list-disc list-inside ml-4 mt-2 text-sm text-gray-300">
+                                <li>StrongdogXP Games data</li>
+                                <li>GN-Math games data (for saving compatibility)</li>
+                            </ul>
                         </p>
-                        <button id="importDataBtn" class="btn-toolbar-style btn-primary-override-danger w-48">
-                            <i class="fa-solid fa-upload mr-2"></i> Import Data
-                        </button>
+                        <div class="flex justify-end">
+                            <button id="uploadSavesBtn" class="btn-toolbar-style btn-primary-override w-48">
+                                <i class="fa-solid fa-upload mr-1"></i> Upload Save
+                            </button>
+                        </div>
                     </div>
+                    
+                    <h3 class="text-xl font-bold text-white mb-2 mt-8">Delete All Local Data</h3>
+                    <div id="deleteDataSection" class="settings-box w-full bg-red-900/10 border-red-700/50 p-4">
+                        <p class="text-sm font-light text-red-300 mb-4">
+                            <i class="fa-solid fa-triangle-exclamation mr-1"></i> WARNING: This action is irreversible and will delete all local progress, including saved game data and settings.
+                        </p>
+                        <div class="flex justify-end">
+                            <button id="deleteAllDataBtn" class="btn-toolbar-style btn-primary-override-danger w-48">
+                                <i class="fa-solid fa-trash-can mr-1"></i> Delete All Data
+                            </button>
+                        </div>
+                    </div>
+                    
                 </div>
             `;
         }
@@ -2319,33 +2383,19 @@
             }
         }
         
-        // --- NEW: Loads data and adds event listeners for the Data tab ---
+        /**
+         * Loads data and adds event listeners for the Data Management tab.
+         */
         async function loadDataTab() {
-            // Get elements (buttons, modal)
-            const exportBtn = document.getElementById('exportDataBtn');
-            const importBtn = document.getElementById('importDataBtn');
-            const modal = document.getElementById('modalPrompt');
-            const modalClose = document.getElementById('modalClose');
+            // 1. Get Element References
+            const downloadSavesBtn = document.getElementById('downloadSavesBtn');
+            const uploadSavesBtn = document.getElementById('uploadSavesBtn');
+            const deleteAllDataBtn = document.getElementById('deleteAllDataBtn');
             
-            // Wire up buttons
-            if (exportBtn) exportBtn.addEventListener('click', downloadAllSaves);
-            if (importBtn) importBtn.addEventListener('click', handleFileUpload);
-            
-            // Wire up modal close events
-            if (modalClose) {
-                modalClose.addEventListener('click', () => {
-                    modal.style.display = "none";
-                });
-            }
-            // Use a new listener specific to this page
-            const modalBackground = document.getElementById('modalPrompt');
-            if (modalBackground) {
-                modalBackground.addEventListener('click', event => {
-                    if (event.target === modalBackground) {
-                        modal.style.display = "none";
-                    }
-                });
-            }
+            // 2. Add Listeners
+            downloadSavesBtn.addEventListener('click', downloadAllSaves);
+            uploadSavesBtn.addEventListener('click', handleFileUpload);
+            deleteAllDataBtn.addEventListener('click', deleteAllLocalData);
         }
 
 
