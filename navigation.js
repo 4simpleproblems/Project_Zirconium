@@ -59,7 +59,7 @@ const THEME_STORAGE_KEY = 'user-navbar-theme';
 // This object defines the default "Dark" theme.
 // It must contain ALL CSS variables used in injectStyles.
 const DEFAULT_THEME = {
-    'logo-src': '/images/logo.png', // UPDATED: Reverted to true Dark theme logo
+    'logo-src': '/images/logo-christmas.png', // UPDATED: Reverted to true Dark theme logo
     'navbar-bg': '#000000',
     'navbar-border': 'rgb(31 41 55)',
     'avatar-gradient': 'linear-gradient(135deg, #374151 0%, #111827 100%)',
