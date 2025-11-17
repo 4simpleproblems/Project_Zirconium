@@ -1204,7 +1204,7 @@ let db;
             if (!user) {
                 // User is signed out.
                 // KICK USER TO INDEX: If the user is logged out, redirect them to /index.html
-                const targetUrl = '/index.html'; // <--- UPDATED TO ABSOLUTE PATH
+                const targetUrl = '../index.html'; // <--- UPDATED TO ABSOLUTE PATH
                 const currentPathname = window.location.pathname;
                 
                 // Determine if the current page is one of the designated entry points 
