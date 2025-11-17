@@ -247,10 +247,11 @@ const FIREBASE_CONFIG = {
                             <p class="text-sm font-semibold text-white truncate">${username}</p>
                             <p class="text-xs text-gray-400 truncate">${email}</p>
                         </div>
-                        <button id="logout-button" class="auth-menu-button text-red-400 hover:bg-red-900/50 hover:text-red-300"><i class="fa-solid fa-right-from-bracket w-5"></i>Log Out</button>
-                        <a href="/legal.html" class="auth-menu-link"><i class="fa-solid fa-gavel w-5"></i>Terms & Policies</a>
                         <a href="/logged-in/dashboard.html" class="auth-menu-link"><i class="fa-solid fa-house-chimney-user w-5"></i>Dashboard</a>
                         <a href="/logged-in/settings.html" class="auth-menu-link"><i class="fa-solid fa-gear w-5"></i>Settings</a>
+                        <button id="logout-button" class="auth-menu-button text-red-400 hover:bg-red-900/50 hover:text-red-300"><i class="fa-solid fa-right-from-bracket w-5"></i>Log Out</button>
+                        <a href="/legal.html" class="auth-menu-link"><i class="fa-solid fa-gavel w-5"></i>Terms & Policies</a>
+
                     </div>
                 </div>
             `;
