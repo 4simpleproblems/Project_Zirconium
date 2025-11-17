@@ -27,12 +27,10 @@
  * 19. (FIXED) GLOBAL CLICK LISTENER: The global click listener now fetches button references on every click, preventing stale references after a navbar re-render.
  * 20. (FIXED) SCROLL GLIDER LOGIC: Updated scroll arrow logic to be explicit, ensuring arrows hide/show correctly at scroll edges.
  * 21. **(FIXED)** USERNAME COLOR: Replaced hardcoded `text-white` on username with a CSS variable (`--menu-username-text`) and updated `window.applyTheme` to set this to black for specific light themes.
- * 22. **(NEW)** LOGO THEME CHANGING: Added support for logo color tinting based on the `logo-tint-color` property in themes.json. The logo can now be dynamically colored to match the theme using CSS filters.
- * 23. **(NEW)** TAB CENTERING: If 9 or fewer tabs are loaded, the scroll menu is hidden, and the tabs are centered.
- * 24. **(NEW)** FIXED NAVBAR SIZING: Changed navbar height, padding, and tab dimensions from `rem` to `px` to prevent scaling with browser font-size settings.
- * 25. **(FIXED)** INITIAL AVATAR CENTERING: Changed `w-8 h-8` to `w-full h-full` on the `initial-avatar` div to ensure perfect centering of the user's initial letter inside the button.
- * 26. **(NEW)** DROPDOWN STYLING: Updated dropdown buttons to match the "Notes" app style (gap, darker hover).
- * 27. **(NEW)** CHRISTMAS LOGO: Updated default logo to `logo-christmas.png`.
+ * 22. **(NEW)** TAB CENTERING: If 9 or fewer tabs are loaded, the scroll menu is hidden, and the tabs are centered.
+ * 23. **(NEW)** FIXED NAVBAR SIZING: Changed navbar height, padding, and tab dimensions from `rem` to `px` to prevent scaling with browser font-size settings.
+ * 24. **(FIXED)** INITIAL AVATAR CENTERING: Changed `w-8 h-8` to `w-full h-full` on the `initial-avatar` div to ensure perfect centering of the user's initial letter inside the button.
+ * 25. **(NEW)** DROPDOWN STYLING: Updated dropdown buttons to match the "Notes" app style (gap, darker hover).
  */
 
 // =========================================================================
@@ -60,10 +58,8 @@ const THEME_STORAGE_KEY = 'user-navbar-theme';
 
 // This object defines the default "Dark" theme.
 // It must contain ALL CSS variables used in injectStyles.
-// Optional: 'logo-tint-color' can be added to tint the logo to a specific color
 const DEFAULT_THEME = {
-    'logo-src': '/images/logo-christmas.png', // UPDATED to Christmas logo
-    // 'logo-tint-color': '#ffffff', // Optional: hex color to tint the logo
+    'logo-src': '/images/logo.png', // UPDATED: Reverted to true Dark theme logo
     'navbar-bg': '#000000',
     'navbar-border': 'rgb(31 41 55)',
     'avatar-gradient': 'linear-gradient(135deg, #374151 0%, #111827 100%)',
@@ -116,8 +112,8 @@ window.applyTheme = (theme) => {
 
     // Set all CSS variables
     for (const [key, value] of Object.entries(themeToApply)) {
-        // Don't try to set 'name', 'logo-src', or 'logo-tint-color' as CSS variables
-        if (key !== 'logo-src' && key !== 'name' && key !== 'logo-tint-color') {
+        // Don't try to set 'name' or 'logo-src' as CSS variables
+        if (key !== 'logo-src' && key !== 'name') {
             root.style.setProperty(`--${key}`, value);
         }
     }
@@ -135,7 +131,7 @@ window.applyTheme = (theme) => {
     root.style.setProperty('--menu-username-text', usernameColor);
     // --- END FIX ---
 
-    // Handle logo swap and color tinting
+    // Handle logo swap
     const logoImg = document.getElementById('navbar-logo');
     if (logoImg) {
         const newLogoSrc = themeToApply['logo-src'] || DEFAULT_THEME['logo-src'];
@@ -146,95 +142,10 @@ window.applyTheme = (theme) => {
         if (currentSrc !== expectedSrc) {
             logoImg.src = newLogoSrc;
         }
-
-        // Handle logo color tinting
-        const logoTintColor = themeToApply['logo-tint-color'];
-        if (logoTintColor) {
-            // Apply color tint using CSS filter
-            const filterValue = hexToFilter(logoTintColor);
-            if (filterValue) {
-                logoImg.style.filter = `brightness(0) saturate(100%) ${filterValue}`;
-                console.log(`Applied logo tint: ${logoTintColor} -> ${filterValue}`);
-            }
-        } else {
-            // Remove any existing filter if no tint color is specified
-            logoImg.style.filter = '';
-            console.log('Removed logo tint filter');
-        }
     }
 };
 
-/**
- * Helper function to convert hex color to CSS filter
- * This creates a filter that tints the logo to the specified color
- * @param {string} hex - Hex color code (e.g., "#ff0000")
- * @returns {string} CSS filter string
- */
-function hexToFilter(hex) {
-    if (!hex) return '';
-
-    // Remove # if present
-    hex = hex.replace('#', '');
-
-    // Ensure we have a valid 6-character hex string
-    if (hex.length !== 6) {
-        console.warn('Invalid hex color:', hex);
-        return '';
-    }
-
-    // Convert hex to RGB using substring instead of deprecated substr
-    const r = parseInt(hex.substring(0, 2), 16);
-    const g = parseInt(hex.substring(2, 4), 16);
-    const b = parseInt(hex.substring(4, 6), 16);
-
-    // Convert RGB to HSL for better filter control
-    const hsl = rgbToHsl(r, g, b);
-
-    // Create filter string
-    // brightness(0) saturate(100%) makes the image black
-    // Then we apply hue-rotate and other filters to achieve the target color
-    const hue = Math.round(hsl[0] * 360);
-    const saturation = Math.round(hsl[1] * 100);
-    const lightness = Math.round(hsl[2] * 100);
-
-    // Improved brightness calculation for better visibility
-    const brightness = Math.max(80, Math.min(150, lightness + 30));
-
-    return `hue-rotate(${hue}deg) saturate(${Math.max(150, saturation * 1.5)}%) brightness(${brightness}%)`;
-}
-
-/**
- * Helper function to convert RGB to HSL
- * @param {number} r - Red value (0-255)
- * @param {number} g - Green value (0-255)
- * @param {number} b - Blue value (0-255)
- * @returns {Array} [h, s, l] values where h is 0-1, s is 0-1, l is 0-1
- */
-function rgbToHsl(r, g, b) {
-    r /= 255;
-    g /= 255;
-    b /= 255;
-
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    let h, s, l = (max + min) / 2;
-
-    if (max === min) {
-        h = s = 0; // achromatic
-    } else {
-        const d = max - min;
-        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-
-        switch (max) {
-            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-            case g: h = (b - r) / d + 2; break;
-            case b: h = (r - g) / d + 4; break;
-        }
-        h /= 6;
-    }
-
-    return [h, s, l];
-}
+// --- REMOVED hexToFilter and rgbToHsl functions ---
 // --- End Theming Configuration ---
 
 
@@ -857,10 +768,9 @@ let db;
             const container = document.getElementById('navbar-container');
             if (!container) return; 
 
-            // Logo path is now handled by the applyTheme function,
-            // but we need a default src for the img tag itself.
-            // UPDATED TO CHRISTMAS LOGO
-            const logoPath = "/images/logo-christmas.png"; 
+            // UPDATED: Use the logo from the default theme as the initial src.
+            // window.applyTheme will correct this to the user's saved theme after render.
+            const logoPath = DEFAULT_THEME['logo-src']; 
             
             // Filter and map pages for tabs, applying adminOnly filter
             const tabsHtml = Object.values(pages || {})
