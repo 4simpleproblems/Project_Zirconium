@@ -128,6 +128,11 @@ window.applyTheme = (theme) => {
         usernameColor = '#000000'; // Force black
     }
 
+    const ChristmasThemeName = ['Christmas'];
+    if (themeToApply.name && ChristmasThemeName.includes(themeToApply.name)) {
+        usernameColor = '#FFFFFF'; // Force white
+    }
+
     root.style.setProperty('--menu-username-text', usernameColor);
     // --- END FIX ---
 
