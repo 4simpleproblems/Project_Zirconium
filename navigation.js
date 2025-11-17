@@ -31,6 +31,7 @@
  * 23. **(NEW)** FIXED NAVBAR SIZING: Changed navbar height, padding, and tab dimensions from `rem` to `px` to prevent scaling with browser font-size settings.
  * 24. **(FIXED)** INITIAL AVATAR CENTERING: Changed `w-8 h-8` to `w-full h-full` on the `initial-avatar` div to ensure perfect centering of the user's initial letter inside the button.
  * 25. **(NEW)** DROPDOWN STYLING: Updated dropdown buttons to match the "Notes" app style (gap, darker hover).
+ * 26. **(UPDATED)** THEME LOGIC: Removed hardcoded theme name checks from `window.applyTheme`. Theme properties (like logo and colors) are now pulled *only* from the theme object, falling back to `DEFAULT_THEME`.
  */
 
 // =========================================================================
@@ -58,8 +59,9 @@ const THEME_STORAGE_KEY = 'user-navbar-theme';
 
 // This object defines the default "Dark" theme.
 // It must contain ALL CSS variables used in injectStyles.
+// UPDATED: This now matches the "Dark" theme from themes.json
 const DEFAULT_THEME = {
-    'logo-src': '/images/logo-christmas.png', // UPDATED: Reverted to true Dark theme logo
+    'logo-src': '/images/logo.png', // UPDATED: Matched to Dark theme from themes.json
     'navbar-bg': '#000000',
     'navbar-border': 'rgb(31 41 55)',
     'avatar-gradient': 'linear-gradient(135deg, #374151 0%, #111827 100%)',
@@ -69,7 +71,7 @@ const DEFAULT_THEME = {
     'menu-divider': '#374151',
     'menu-text': '#d1d5db',
     'menu-username-text': '#ffffff', 
-    'menu-item-hover-bg': '#2a2a2a', // UPDATED to match notes.html
+    'menu-item-hover-bg': 'rgb(55 65 81)', // UPDATED: Matched to Dark theme from themes.json
     'menu-item-hover-text': '#ffffff',
     'glass-menu-bg': 'rgba(10, 10, 10, 0.8)',
     'glass-menu-border': 'rgba(55, 65, 81, 0.8)',
@@ -118,23 +120,11 @@ window.applyTheme = (theme) => {
         }
     }
 
-    // --- FIX: Handle username color for light themes ---
-    // Get the default from the theme object, or the hardcoded default
-    let usernameColor = themeToApply['menu-username-text'] || DEFAULT_THEME['menu-username-text'];
-
-    // Check if the theme name matches one of the light themes
-    const lightThemeNames = ['Light', 'Lavender', 'Rose Gold', 'Mint'];
-    if (themeToApply.name && lightThemeNames.includes(themeToApply.name)) {
-        usernameColor = '#000000'; // Force black
-    }
-
-    const ChristmasThemeName = ['Christmas'];
-    if (themeToApply.name && ChristmasThemeName.includes(themeToApply.name)) {
-        usernameColor = '#FFFFFF'; // Force white
-    }
-
+    // --- UPDATED: Simplified username color logic ---
+    // Get the color from the theme object, or fall back to the default theme's color
+    const usernameColor = themeToApply['menu-username-text'] || DEFAULT_THEME['menu-username-text'];
     root.style.setProperty('--menu-username-text', usernameColor);
-    // --- END FIX ---
+    // --- END UPDATE ---
 
     // Handle logo swap
     const logoImg = document.getElementById('navbar-logo');
