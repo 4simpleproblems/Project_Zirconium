@@ -9,6 +9,7 @@
  * 2. Icons: Added dynamic loading for Font Awesome.
  * 3. Logo: Increased size to h-10.
  * 4. Dropdown Buttons: Styled exactly like notes.html (darker hover, gap spacing).
+ * 5. NEW: Added a 5-second reload loop if the navbar fails to inject, to force a fix.
  */
 
 // =========================================================================
@@ -300,7 +301,7 @@ const FIREBASE_CONFIG = {
         }
     };
 
-    // --- 6. AUTH STATE LISTENER ---
+    // --- 6. AUTH STATE LISTENER (MODIFIED) ---
     const setupAuthListener = () => {
         auth.onAuthStateChanged(async (user) => {
             if (user) {
@@ -327,6 +328,42 @@ const FIREBASE_CONFIG = {
                     }
                 });
             }
+
+            // --- START: Injection failure retry logic ---
+            // Give the DOM a moment to update after renderNavbar
+            setTimeout(() => {
+                const container = document.getElementById('navbar-container');
+                // Check if rendering failed (container is empty or only has whitespace)
+                if (!container || !container.innerHTML.trim()) {
+                    console.warn("Navbar injection failed. Starting 5-second retry loop...");
+                    const startTime = Date.now();
+                    
+                    const retryInterval = setInterval(() => {
+                        const containerNow = document.getElementById('navbar-container');
+                        
+                        // Stop if 5 seconds have passed
+                        if (Date.now() - startTime > 5000) {
+                            clearInterval(retryInterval);
+                            console.error("Navbar retry failed after 5 seconds. Stopping.");
+                            return;
+                        }
+                        
+                        // Stop if injection succeeded
+                        if (containerNow && containerNow.innerHTML.trim()) {
+                             clearInterval(retryInterval);
+                             console.log("Navbar injection succeeded on retry.");
+                             return;
+                        }
+                        
+                        // If still failed, "spam reload"
+                        console.log("Retrying navbar load...");
+                        location.reload(true); // Force reload from server
+
+                    }, 500); // Retry every 500ms
+                }
+            }, 250); // Wait 250ms for render to complete
+            // --- END: Injection failure retry logic ---
+
         });
     }
 
