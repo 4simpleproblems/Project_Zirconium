@@ -31,6 +31,8 @@
  * 23. **(NEW)** TAB CENTERING: If 9 or fewer tabs are loaded, the scroll menu is hidden, and the tabs are centered.
  * 24. **(NEW)** FIXED NAVBAR SIZING: Changed navbar height, padding, and tab dimensions from `rem` to `px` to prevent scaling with browser font-size settings.
  * 25. **(FIXED)** INITIAL AVATAR CENTERING: Changed `w-8 h-8` to `w-full h-full` on the `initial-avatar` div to ensure perfect centering of the user's initial letter inside the button.
+ * 26. **(NEW)** DROPDOWN STYLING: Updated dropdown buttons to match the "Notes" app style (gap, darker hover).
+ * 27. **(NEW)** CHRISTMAS LOGO: Updated default logo to `logo-christmas.png`.
  */
 
 // =========================================================================
@@ -60,7 +62,7 @@ const THEME_STORAGE_KEY = 'user-navbar-theme';
 // It must contain ALL CSS variables used in injectStyles.
 // Optional: 'logo-tint-color' can be added to tint the logo to a specific color
 const DEFAULT_THEME = {
-    'logo-src': '/images/logo.png',
+    'logo-src': '/images/logo-christmas.png', // UPDATED to Christmas logo
     // 'logo-tint-color': '#ffffff', // Optional: hex color to tint the logo
     'navbar-bg': '#000000',
     'navbar-border': 'rgb(31 41 55)',
@@ -70,8 +72,8 @@ const DEFAULT_THEME = {
     'menu-border': 'rgb(55 65 81)',
     'menu-divider': '#374151',
     'menu-text': '#d1d5db',
-    'menu-username-text': '#ffffff', // --- USERNAME COLOR FIX --- (1/3) Added new variable
-    'menu-item-hover-bg': 'rgb(55 65 81)',
+    'menu-username-text': '#ffffff', 
+    'menu-item-hover-bg': '#2a2a2a', // UPDATED to match notes.html
     'menu-item-hover-text': '#ffffff',
     'glass-menu-bg': 'rgba(10, 10, 10, 0.8)',
     'glass-menu-border': 'rgba(55, 65, 81, 0.8)',
@@ -105,7 +107,6 @@ const DEFAULT_THEME = {
  * This is exposed on `window` so settings.html can call it for live preview.
  * @param {object} theme - A theme object (like DEFAULT_THEME)
  */
-// --- USERNAME COLOR FIX --- (2/3) Modified this function
 window.applyTheme = (theme) => {
     const root = document.documentElement;
     if (!root) return;
@@ -425,15 +426,20 @@ let db;
             }
             .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
             .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
+
+            /* UPDATED: Dropdown button styling to match notes.html */
             .auth-menu-link, .auth-menu-button { 
-                display: flex; align-items: center; gap: 0.75rem; width: 100%; text-align: left; 
+                display: flex; align-items: center; 
+                gap: 10px; /* Replaces margin on icons */
+                width: 100%; text-align: left; 
                 padding: 0.5rem 0.75rem; font-size: 0.875rem; color: var(--menu-text); border-radius: 0.375rem; 
-                transition: background-color 0.2s, color 0.3s; border: none; cursor: pointer;
+                transition: background-color 0.15s, color 0.15s; border: none; cursor: pointer;
             }
             .auth-menu-link:hover, .auth-menu-button:hover { 
                 background-color: var(--menu-item-hover-bg); 
                 color: var(--menu-item-hover-text); 
             }
+
             .logged-out-auth-toggle { 
                 background: var(--logged-out-icon-bg); 
                 border: 1px solid var(--logged-out-icon-border); 
@@ -853,7 +859,8 @@ let db;
 
             // Logo path is now handled by the applyTheme function,
             // but we need a default src for the img tag itself.
-            const logoPath = "/images/logo.png"; 
+            // UPDATED TO CHRISTMAS LOGO
+            const logoPath = "/images/logo-christmas.png"; 
             
             // Filter and map pages for tabs, applying adminOnly filter
             const tabsHtml = Object.values(pages || {})
@@ -874,11 +881,12 @@ let db;
             const authControlsHtml = getAuthControlsHtml();
 
             // --- Assemble Final Navbar HTML ---
+            // UPDATED: Logo image class changed from h-8 to h-10
             container.innerHTML = `
                 <header class="auth-navbar">
                     <nav>
                         <a href="/" class="flex items-center space-x-2 flex-shrink-0">
-                            <img src="${logoPath}" alt="4SP Logo" class="h-8 w-auto" id="navbar-logo">
+                            <img src="${logoPath}" alt="4SP Logo" class="h-10 w-auto" id="navbar-logo">
                         </a>
 
                         <div class="tab-wrapper">
