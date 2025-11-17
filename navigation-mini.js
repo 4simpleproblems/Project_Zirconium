@@ -5,29 +5,10 @@
  * to rendering user-specific information.
  *
  * --- FIXES/UPDATES ---
- * 1. Styling: Updated CSS to use pure black (#000000) for the navbar and dropdown menu, removing the blur effect to match navigation.js.
- * 2. Icons: Added dynamic loading for Font Awesome 7.1.0 (fa-solid) and implemented icons (with the correct 'fa-solid' prefix) next to all menu links.
- * 3. FIX: **Font Awesome Loading:** Ensured the Font Awesome CSS is fully loaded and applied BEFORE the navbar HTML, which contains the <i> tags, is rendered.
- * 4. USER REQUEST: Replaced Login/Signup links with a single "Authenticate" link pointing to /authentication.html.
- * 5. USER REQUEST: Updated logged-out button background to #010101 and icon color to #DADADA, using 'fa-solid fa-user'.
- * 6. WIDESCREEN UPDATE: Removed max-width from the 'nav' element to allow it to fill the screen.
- * 7. NEW FEATURE: Added conditional "Documentation," "Terms & Policies," and "Donate" links to the logged-out menu.
- * 8. NEW FEATURE: Links are hidden if the user is currently on the destination page (e.g., "Authenticate" is hidden on /authentication.html).
- *
- * --- INSTRUCTIONS ---
- * 1. ACTION REQUIRED: Paste your own Firebase project configuration into the `FIREBASE_CONFIG` object below.
- * 2. Place this script in the root directory of your website.
- * 3. Add `<script src="/navigation.js" defer></script>` to the <head> of any HTML file where you want the navbar.
- * 4. Ensure your file paths for images and links are root-relative (e.g., "/images/logo.png", "/login.html").
- * * --- HOW IT WORKS ---
- * - It runs automatically once the HTML document is loaded.
- * - It injects its own CSS for styling the navbar and dropdown menu.
- * - It creates a placeholder div and then renders the navbar inside it.
- * - It initializes Firebase using the configuration you provide.
- * - It listens for authentication state changes (logins/logouts) in real-time.
- * - If a user is logged in, it fetches their username from Firestore and displays it.
- * - It automatically tries to sign in the user anonymously if they are not logged in.
- * (NOTE: This requires "Anonymous" sign-in to be enabled in your Firebase console).
+ * 1. Styling: Updated CSS to use pure black (#000000) for the navbar and dropdown menu.
+ * 2. Icons: Added dynamic loading for Font Awesome.
+ * 3. Logo: Increased size to h-10.
+ * 4. Dropdown Buttons: Styled exactly like notes.html (darker hover, gap spacing).
  */
 
 // =========================================================================
@@ -124,55 +105,65 @@ const FIREBASE_CONFIG = {
         setupAuthListener();
     };
 
-    // --- 3. INJECT CSS STYLES (UPDATED for black theme/no blur) ---
+    // --- 3. INJECT CSS STYLES (UPDATED) ---
     const injectStyles = () => {
         const style = document.createElement('style');
         style.textContent = `
             body { padding-top: 4rem; /* 64px, equal to navbar height */ }
-            /* Updated to pure black and removed backdrop filter */
+            
             .auth-navbar { 
                 position: fixed; top: 0; left: 0; right: 0; z-index: 1000; 
                 background: #000000; /* Pure Black */
                 border-bottom: 1px solid rgb(31 41 55); height: 4rem; 
             }
-            /* WIDESCREEN UPDATE: Removed 'max-width: 80rem;' and 'margin: auto;' */
+            
             .auth-navbar nav { padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; }
             
-            /* Updated to pure black and removed backdrop filter */
             .auth-menu-container { 
                 position: absolute; right: 0; top: 50px; width: 16rem; 
                 background: #000000; /* Pure Black */
-                backdrop-filter: none; /* Removed blur */
+                backdrop-filter: none;
                 -webkit-backdrop-filter: none;
                 border: 1px solid rgb(55 65 81); border-radius: 0.75rem; padding: 0.5rem; 
-                box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); /* Darker shadow */
+                box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2);
                 transition: transform 0.2s ease-out, opacity 0.2s ease-out; transform-origin: top right; 
             }
             .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
             .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
+            
             .initial-avatar { background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: 'Geist', sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; }
             
-            /* Icon/Text Styling for Links */
+            /* * UPDATED STYLE: Matches 'dropdown-item' from notes.html 
+             * Using flex gap instead of margin-right on icons.
+             * Darker hover background (#2a2a2a).
+             */
             .auth-menu-link, .auth-menu-button { 
-                display: flex; /* Changed to flex for icon alignment */
-                align-items: center; /* Vertically center icon and text */
-                width: 100%; text-align: left; padding: 0.5rem 0.75rem; font-size: 0.875rem; 
-                color: #d1d5db; border-radius: 0.375rem; transition: background-color 0.2s, color 0.2s; 
-                /* Ensure buttons look like links */
+                display: flex;
+                align-items: center; 
+                gap: 10px; /* Matches notes.html */
+                width: 100%; text-align: left; 
+                padding: 0.5rem 0.75rem; 
+                font-size: 0.875rem; 
+                color: #d1d5db; 
+                border-radius: 0.375rem; 
+                transition: background-color 0.15s, color 0.15s; 
                 border: none;
                 cursor: pointer;
+                text-decoration: none;
             }
-            .auth-menu-link:hover, .auth-menu-button:hover { background-color: rgb(55 65 81); color: white; }
-            /* Margin for icons */
-            .auth-menu-link i, .auth-menu-button i { margin-right: 0.5rem; }
+            
+            .auth-menu-link:hover, .auth-menu-button:hover { 
+                background-color: #2a2a2a; /* Matches notes.html hover */
+                color: #ffffff; 
+            }
 
             /* New custom style for the logged out button's icon and background */
             .logged-out-auth-toggle {
-                background: #010101; /* Requested dark background */
-                border: 1px solid #374151; /* Keep a subtle border */
+                background: #010101; 
+                border: 1px solid #374151; 
             }
             .logged-out-auth-toggle i {
-                color: #DADADA; /* Requested icon color */
+                color: #DADADA; 
             }
         `;
         document.head.appendChild(style);
@@ -191,27 +182,27 @@ const FIREBASE_CONFIG = {
 
         // 1. Authenticate Link
         if (!currentPath.includes('authentication.html')) {
-             links += `<a href="/authentication.html" class="auth-menu-link"><i class="fa-solid fa-lock"></i>Authenticate</a>`;
+             links += `<a href="/authentication.html" class="auth-menu-link"><i class="fa-solid fa-lock w-5"></i>Authenticate</a>`;
         }
 
         // 2. Documentation Link
         if (!currentPath.includes('documentation.html')) {
-            links += `<a href="/documentation.html" class="auth-menu-link"><i class="fa-solid fa-book"></i>Documentation</a>`;
+            links += `<a href="/documentation.html" class="auth-menu-link"><i class="fa-solid fa-book w-5"></i>Documentation</a>`;
         }
         
         // 3. Terms & Policies Link (Assumes file is named legal.html)
         if (!currentPath.includes('legal.html')) {
-            links += `<a href="/legal.html" class="auth-menu-link"><i class="fa-solid fa-gavel"></i>Terms & Policies</a>`;
+            links += `<a href="/legal.html" class="auth-menu-link"><i class="fa-solid fa-gavel w-5"></i>Terms & Policies</a>`;
         }
 
         // 4. Donate Link (Always visible, opens in new tab)
-        links += `<a href="https://buymeacoffee.com/4simpleproblems" target="_blank" class="auth-menu-link"><i class="fa-solid fa-mug-hot"></i>Donate</a>`;
+        links += `<a href="https://buymeacoffee.com/4simpleproblems" target="_blank" class="auth-menu-link"><i class="fa-solid fa-mug-hot w-5"></i>Donate</a>`;
         
         return links;
     }
 
 
-    // --- 4. RENDER THE NAVBAR HTML (UPDATED with Icons and Authenticate link) ---
+    // --- 4. RENDER THE NAVBAR HTML (UPDATED) ---
     const renderNavbar = (user, userData) => {
         const container = document.getElementById('navbar-container');
         if (!container) return; // Should not happen if setupContainer runs
@@ -243,7 +234,7 @@ const FIREBASE_CONFIG = {
 
             const avatar = photoURL ?
                 `<img src="${photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">` :
-                `<div class="initial-avatar w-full h-8 rounded-full text-sm font-semibold">${initial}</div>`; // Note: w-8 h-8 is defined by the button, but added w-full h-full to inner div
+                `<div class="initial-avatar w-full h-8 rounded-full text-sm font-semibold">${initial}</div>`; 
 
             return `
                 <div class="relative">
@@ -255,19 +246,20 @@ const FIREBASE_CONFIG = {
                             <p class="text-sm font-semibold text-white truncate">${username}</p>
                             <p class="text-xs text-gray-400 truncate">${email}</p>
                         </div>
-                        <a href="/logged-in/dashboard.html" class="auth-menu-link"><i class="fa-solid fa-house-chimney-user"></i>Dashboard</a>
-                        <a href="/logged-in/settings.html" class="auth-menu-link"><i class="fa-solid fa-gear"></i>Settings</a>
-                        <button id="logout-button" class="auth-menu-button text-red-400 hover:bg-red-900/50 hover:text-red-300"><i class="fa-solid fa-right-from-bracket"></i>Log Out</button>
+                        <a href="/logged-in/dashboard.html" class="auth-menu-link"><i class="fa-solid fa-house-chimney-user w-5"></i>Dashboard</a>
+                        <a href="/logged-in/settings.html" class="auth-menu-link"><i class="fa-solid fa-gear w-5"></i>Settings</a>
+                        <button id="logout-button" class="auth-menu-button text-red-400 hover:bg-red-900/50 hover:text-red-300"><i class="fa-solid fa-right-from-bracket w-5"></i>Log Out</button>
                     </div>
                 </div>
             `;
         };
 
+        // UPDATED: Logo image class changed from h-8 to h-10 for slightly larger size
         container.innerHTML = `
             <header class="auth-navbar">
                 <nav>
                     <a href="/" class="flex items-center space-x-2">
-                        <img src="${logoPath}" alt="4SP Logo" class="h-8 w-auto">
+                        <img src="${logoPath}" alt="4SP Logo" class="h-10 w-auto">
                     </a>
                     ${user ? loggedInView(user, userData) : loggedOutView(currentPagePath)}
                 </nav>
