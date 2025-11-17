@@ -216,7 +216,7 @@ const FIREBASE_CONFIG = {
         const container = document.getElementById('navbar-container');
         if (!container) return; // Should not happen if setupContainer runs
 
-        const logoPath = "/images/logo.png"; // Using root-relative path
+        const logoPath = "/images/christmas-logo.png"; // Using root-relative path
         const currentPagePath = window.location.pathname; // Get current path for conditional links
 
         // UPDATED: Use a function to render the conditional links
