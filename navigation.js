@@ -129,7 +129,12 @@ window.applyTheme = (theme) => {
     // Handle logo swap
     const logoImg = document.getElementById('navbar-logo');
     if (logoImg) {
-        const newLogoSrc = themeToApply['logo-src'] || DEFAULT_THEME['logo-src'];
+        let newLogoSrc;
+        if (themeToApply.name === 'Christmas') {
+            newLogoSrc = '/images/logo-christmas.png';
+        } else {
+            newLogoSrc = themeToApply['logo-src'] || DEFAULT_THEME['logo-src'];
+        }
 
         // Update logo source if different
         const currentSrc = logoImg.src;
