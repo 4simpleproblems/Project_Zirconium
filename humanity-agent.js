@@ -404,7 +404,10 @@
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         const layout = graphData.layout || {};
-        const data = graphData.data || [];
+        let data = graphData.data || [];
+        if (!Array.isArray(data)) {
+            data = [data];
+        }
 
         const padding = {
             top: 50,
