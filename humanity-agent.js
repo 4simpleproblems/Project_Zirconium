@@ -416,28 +416,30 @@
         const graphHeight = rect.height - padding.top - padding.bottom;
 
         // Determine data range
-        let minX = Infinity,
-            maxX = -Infinity,
-            minY = Infinity,
-            maxY = -Infinity;
-        data.forEach(trace => {
-            trace.x.forEach(val => {
-                minX = Math.min(minX, val);
-                maxX = Math.max(maxX, val);
-            });
-            trace.y.forEach(val => {
-                minY = Math.min(minY, val);
-                maxY = Math.max(maxY, val);
-            });
-        });
+        let minX = layout.zoom?.minX ?? Infinity,
+            maxX = layout.zoom?.maxX ?? -Infinity,
+            minY = layout.zoom?.minY ?? Infinity,
+            maxY = layout.zoom?.maxY ?? -Infinity;
 
-        // Add buffer to range
-        const xRange = maxX - minX || 1;
-        const yRange = maxY - minY || 1;
-        minX -= xRange * 0.1;
-        maxX += xRange * 0.1;
-        minY -= yRange * 0.1;
-        maxY += yRange * 0.1;
+        if (!layout.zoom) {
+            data.forEach(trace => {
+                trace.x.forEach(val => {
+                    minX = Math.min(minX, val);
+                    maxX = Math.max(maxX, val);
+                });
+                trace.y.forEach(val => {
+                    minY = Math.min(minY, val);
+                    maxY = Math.max(maxY, val);
+                });
+            });
+            const xRange = maxX - minX || 1;
+            const yRange = maxY - minY || 1;
+            minX -= xRange * 0.1;
+            maxX += xRange * 0.1;
+            minY -= yRange * 0.1;
+            maxY += yRange * 0.1;
+        }
+
 
         const mapX = x => padding.left + ((x - minX) / (maxX - minX)) * graphWidth;
         const mapY = y => padding.top + graphHeight - ((y - minY) / (maxY - minY)) * graphHeight;
@@ -466,7 +468,7 @@
 
         // Draw axes and labels
         ctx.fillStyle = '#ccc';
-        ctx.font = '12px Lora';
+        ctx.font = '12px Geist';
         for (let i = 0; i <= xTickCount; i++) {
             const val = minX + (i / xTickCount) * (maxX - minX);
             ctx.fillText(val.toFixed(1), mapX(val), padding.top + graphHeight + 20);
@@ -476,7 +478,7 @@
             ctx.fillText(val.toFixed(1), padding.left - 35, mapY(val) + 4);
         }
 
-        ctx.font = 'bold 14px Lora';
+        ctx.font = 'bold 14px Geist';
         ctx.textAlign = 'center';
         if (layout.xaxis?.title) ctx.fillText(layout.xaxis.title, padding.left + graphWidth / 2, rect.height - 10);
         ctx.save();
@@ -550,13 +552,84 @@
             }
         });
 
+        // Draw intercepts
+        data.forEach(trace => {
+            if (trace.x.length < 2) return;
+            for (let i = 0; i < trace.x.length - 1; i++) {
+                const x1 = trace.x[i];
+                const y1 = trace.y[i];
+                const x2 = trace.x[i+1];
+                const y2 = trace.y[i+1];
+
+                // y-intercept
+                if ((x1 <= 0 && x2 >= 0) || (x1 >= 0 && x2 <= 0)) {
+                    const yIntercept = y1 - x1 * (y2 - y1) / (x2 - x1);
+                    if (yIntercept >= minY && yIntercept <= maxY) {
+                        ctx.fillStyle = '#4285f4';
+                        ctx.beginPath();
+                        ctx.arc(mapX(0), mapY(yIntercept), 5, 0, 2 * Math.PI);
+                        ctx.fill();
+                    }
+                }
+
+                // x-intercept
+                if ((y1 <= 0 && y2 >= 0) || (y1 >= 0 && y2 <= 0)) {
+                    const xIntercept = x1 - y1 * (x2 - x1) / (y2 - y1);
+                    if (xIntercept >= minX && xIntercept <= maxX) {
+                        ctx.fillStyle = '#4285f4';
+                        ctx.beginPath();
+                        ctx.arc(mapX(xIntercept), mapY(0), 5, 0, 2 * Math.PI);
+                        ctx.fill();
+                    }
+                }
+            }
+        });
+
+
         // Draw title
         if (layout.title) {
             ctx.fillStyle = '#fff';
-            ctx.font = '18px Merriweather';
+            ctx.font = '18px Geist';
             ctx.textAlign = 'center';
             ctx.fillText(layout.title, rect.width / 2, padding.top / 2 + 5);
         }
+
+        // Hover tooltip
+        const tooltip = document.createElement('div');
+        tooltip.style.position = 'absolute';
+        tooltip.style.display = 'none';
+        tooltip.style.background = 'rgba(0, 0, 0, 0.8)';
+        tooltip.style.color = 'white';
+        tooltip.style.padding = '5px';
+        tooltip.style.borderRadius = '5px';
+        canvas.parentElement.appendChild(tooltip);
+
+        canvas.addEventListener('mousemove', (e) => {
+            const mouseX = e.offsetX;
+            const mouseY = e.offsetY;
+            let foundPoint = false;
+
+            for (const trace of data) {
+                for (let i = 0; i < trace.x.length; i++) {
+                    const x = mapX(trace.x[i]);
+                    const y = mapY(trace.y[i]);
+                    const distance = Math.sqrt(Math.pow(mouseX - x, 2) + Math.pow(mouseY - y, 2));
+
+                    if (distance < 10) {
+                        tooltip.style.display = 'block';
+                        tooltip.style.left = `${e.pageX + 10}px`;
+                        tooltip.style.top = `${e.pageY + 10}px`;
+                        tooltip.textContent = `(${trace.x[i].toFixed(2)}, ${trace.y[i].toFixed(2)})`;
+                        foundPoint = true;
+                        break;
+                    }
+                }
+                if(foundPoint) break;
+            }
+            if (!foundPoint) {
+                tooltip.style.display = 'none';
+            }
+        });
     }
 
     /**
@@ -2502,7 +2575,7 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
         if (!document.getElementById('ai-google-fonts')) {
             const googleFonts = document.createElement('link');
             googleFonts.id = 'ai-google-fonts';
-            googleFonts.href = 'https://fonts.googleapis.com/css2?family=Lora:wght@400;700&family=Merriweather:wght@400;700&display=swap';
+            googleFonts.href = 'https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap';
             googleFonts.rel = 'stylesheet';
             document.head.appendChild(googleFonts);
         }
@@ -2515,39 +2588,44 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
         style.id = "ai-dynamic-styles";
         style.innerHTML = `
             :root { --ai-red: #ea4335; --ai-blue: #4285f4; --ai-green: #34a853; --ai-yellow: #fbbc05; }
-            #ai-container { 
-                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-                background-color: rgba(10, 10, 15, 0.95);
-                backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); 
-                z-index: 2147483647; opacity: 0; transition: opacity 0.5s, background 0.5s; 
-                font-family: 'Lora', serif; display: flex; flex-direction: column; 
-                justify-content: flex-end; padding: 0; box-sizing: border-box; overflow: hidden; 
+            #ai-container {
+                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+                background-color: #070707;
+                backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+                z-index: 2147483647; opacity: 0; transition: opacity 0.5s, background 0.5s;
+                font-family: 'Geist', sans-serif; font-weight: 300;
+                display: flex; flex-direction: column;
+                justify-content: flex-end; padding: 0; box-sizing: border-box; overflow: hidden;
+                color: #c0c0c0;
+            }
+            h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
+                    font-weight: 400 !important;
             }
             #ai-container.active { opacity: 1; }
             #ai-container.deactivating, #ai-container.deactivating > * { transition: opacity 0.4s, transform 0.4s; }
             #ai-container.deactivating { opacity: 0 !important; background-color: rgba(0,0,0,0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); }
-            #ai-persistent-title, #ai-brand-title { 
-                position: absolute; top: 28px; left: 30px; font-family: 'Lora', serif; 
+            #ai-persistent-title, #ai-brand-title {
+                position: absolute; top: 28px; left: 30px; font-family: 'Geist', sans-serif;
                 font-size: 18px; font-weight: bold; color: #FFFFFF;
-                opacity: 0; transition: opacity 0.5s 0.2s, color 0.5s; 
+                opacity: 0; transition: opacity 0.5s 0.2s, color 0.5s;
             }
             #ai-container.chat-active #ai-persistent-title { opacity: 1; }
             #ai-container:not(.chat-active) #ai-brand-title { opacity: 1; }
             #ai-brand-title span { animation: brand-title-pulse 4s linear infinite; }
             #ai-welcome-message { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; color: rgba(255,255,255,.5); opacity: 1; transition: opacity .5s, transform .5s; width: 100%; }
             #ai-container.chat-active #ai-welcome-message { opacity: 0; pointer-events: none; transform: translate(-50%,-50%) scale(0.95); }
-            #ai-welcome-message h2 { font-family: 'Merriweather', serif; font-size: 2.2em; margin: 0; color: #fff; }
+            #ai-welcome-message h2 { font-family: 'Geist', sans-serif; font-weight: 400; font-size: 2.2em; margin: 0; color: #fff; }
             #ai-welcome-message p { font-size: .9em; margin-top: 10px; max-width: 400px; line-height: 1.5; margin-left: auto; margin-right: auto; }
             .shortcut-tip { font-size: 0.8em; color: rgba(255,255,255,.7); margin-top: 20px; }
             #ai-close-button { position: absolute; top: 20px; right: 30px; color: rgba(255,255,255,.7); font-size: 40px; cursor: pointer; transition: color .2s ease,transform .3s ease, opacity 0.4s; }
             #ai-char-counter { position: fixed; bottom: 15px; right: 30px; font-size: 0.9em; font-family: monospace; color: #aaa; transition: color 0.2s; z-index: 2147483647; }
             #ai-char-counter.limit-exceeded { color: #e57373; font-weight: bold; }
             #ai-response-container { flex: 1 1 auto; overflow-y: auto; width: 100%; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; padding: 20px; -webkit-mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%); mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%);}
-            .ai-message-bubble { background: rgba(15,15,18,.8); border: 1px solid rgba(255,255,255,.1); border-radius: 16px; padding: 12px 18px; color: #e0e0e0; backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); animation: message-pop-in .5s cubic-bezier(.4,0,.2,1) forwards; max-width: 90%; line-height: 1.6; overflow-wrap: break-word; transition: opacity 0.3s ease-in-out; align-self: flex-start; text-align: left; }
+            .ai-message-bubble { background: #0d0d0d; border: 1px solid #1a1a1a; border-radius: 16px; padding: 12px 18px; color: #e0e0e0; backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); animation: message-pop-in .5s cubic-bezier(.4,0,.2,1) forwards; max-width: 90%; line-height: 1.6; overflow-wrap: break-word; transition: opacity 0.3s ease-in-out; align-self: flex-start; text-align: left; }
             .gemini-response .ai-message-bubble { padding-top: 0; }
-            .user-message { background: rgba(40,45,50,.8); align-self: flex-end; }
+            .user-message { background: #1a1a1a; align-self: flex-end; }
             .gemini-response { animation: glow 4s infinite; display: flex; flex-direction: column; }
-            .gemini-response.loading { display: flex; justify-content: center; align-items: center; min-height: 60px; max-width: 100px; padding: 15px; background: rgba(15,15,18,.8); animation: gemini-glow 4s linear infinite; }
+            .gemini-response.loading { display: flex; justify-content: center; align-items: center; min-height: 60px; max-width: 100px; padding: 15px; background: #0d0d0d; animation: gemini-glow 4s linear infinite; }
 
             /* Terminal-Style Typing Animation */
             .typing-animation.terminal-typing {
@@ -2561,49 +2639,49 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
                 right: 0;
                 bottom: 0;
                 left: 0;
-                background: linear-gradient(90deg, transparent 0%, rgba(15,15,18,.8) 50%, transparent 100%);
+                background: linear-gradient(90deg, transparent 0%, #0d0d0d 50%, transparent 100%);
                 animation: terminal-reveal 1.5s ease-out forwards;
             }
             .typing-animation {
                 animation: terminal-type-in 1.5s steps(40, end) forwards;
             }
-            
+
             /* UPDATED STYLES for Sources (Top) and Collapsible Monologue (Bottom) */
-            
+
             /* CSS FIX: Reduced margin-top and padding-top */
-            .ai-sources-list { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px; margin-top: 8px; }
-            .ai-sources-list h4 { color: #ccc; margin: 0 0 10px 0; font-family: 'Merriweather', serif; font-size: 1em; }
+            .ai-sources-list { border-top: 1px solid #1a1a1a; padding-top: 8px; margin-top: 8px; }
+            .ai-sources-list h4 { color: #ccc; margin: 0 0 10px 0; font-family: 'Geist', sans-serif; font-weight: 400; font-size: 1em; }
             .ai-sources-list ul { list-style: none; padding: 0; margin: 0; }
             .ai-sources-list li { display: flex; align-items: center; margin-bottom: 5px; }
             .ai-sources-list li a { color: #4285f4; text-decoration: none; font-size: 0.9em; transition: color 0.2s; }
             .ai-sources-list li a:hover { color: #6a9cf6; }
             .ai-sources-list li img.favicon { width: 16px; height: 16px; margin-right: 8px; border-radius: 2px; flex-shrink: 0; }
-            
+
             /* NEW: Scrollable source list for > 5 items */
             .ai-sources-list ul.scrollable {
                 max-height: 170px; /* Approx 5.5 items */
                 overflow-y: auto;
-                padding-right: 5px; 
+                padding-right: 5px;
                 scrollbar-width: thin;
                 scrollbar-color: #555 #333;
             }
             .ai-sources-list ul.scrollable::-webkit-scrollbar { width: 8px; }
             .ai-sources-list ul.scrollable::-webkit-scrollbar-track { background: #333; border-radius: 4px; }
             .ai-sources-list ul.scrollable::-webkit-scrollbar-thumb { background-color: #555; border-radius: 4px; }
-            
+
             /* MODIFIED: Thought process colors and transitions */
-            .ai-thought-process { 
-                border-radius: 12px; 
-                padding: 0; 
-                margin-top: 10px; 
-                font-size: 0.9em; 
-                max-width: 100%; 
+            .ai-thought-process {
+                border-radius: 12px;
+                padding: 0;
+                margin-top: 10px;
+                font-size: 0.9em;
+                max-width: 100%;
                 /* MODIFIED: Faster transition, added background/border */
                 transition: background-color 0.3s ease, border-color 0.3s ease;
-                
+
                 /* Default OPEN state */
-                background-color: rgba(66, 133, 244, 0.1); 
-                border: 1px solid rgba(66, 133, 244, 0.3); 
+                background-color: rgba(66, 133, 244, 0.1);
+                border: 1px solid rgba(66, 133, 244, 0.3);
             }
             .ai-thought-process.collapsed {
                 /* COLLAPSED state */
@@ -2612,10 +2690,10 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
             }
 
             .monologue-header { display: flex; justify-content: space-between; align-items: center; padding: 10px; cursor: pointer; }
-            
-            .monologue-title { 
-                margin: 0; 
-                font-family: 'Merriweather', serif; 
+
+            .monologue-title {
+                margin: 0;
+                font-family: 'Geist', sans-serif; font-weight: 400;
                 font-size: 1em;
                 transition: color 0.3s ease;
                 color: #4285f4; /* OPEN state color */
@@ -2624,22 +2702,22 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
                 color: #ccc; /* COLLAPSED state color */
             }
 
-            .monologue-toggle-btn { 
-                background: none; 
-                border-radius: 6px; 
-                padding: 4px 8px; 
-                font-size: 0.8em; 
-                cursor: pointer; 
+            .monologue-toggle-btn {
+                background: none;
+                border-radius: 6px;
+                padding: 4px 8px;
+                font-size: 0.8em;
+                cursor: pointer;
                 transition: background-color 0.2s, border-color 0.3s ease, color 0.3s ease;
-                
+
                 /* OPEN state */
-                border: 1px solid rgba(66, 133, 244, 0.5); 
+                border: 1px solid rgba(66, 133, 244, 0.5);
                 color: #4285f4;
             }
-            .ai-thought-process:not(.collapsed) .monologue-toggle-btn:hover { 
-                background-color: rgba(66, 133, 244, 0.2); 
+            .ai-thought-process:not(.collapsed) .monologue-toggle-btn:hover {
+                background-color: rgba(66, 133, 244, 0.2);
             }
-            
+
             .ai-thought-process.collapsed .monologue-toggle-btn {
                 /* COLLAPSED state */
                 border-color: rgba(255, 255, 255, 0.2);
@@ -2648,38 +2726,38 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
             .ai-thought-process.collapsed .monologue-toggle-btn:hover {
                 background-color: rgba(255, 255, 255, 0.1);
             }
-            
+
             /* MODIFIED: Faster animation, no fade */
-            .monologue-content { 
-                max-height: 0; 
+            .monologue-content {
+                max-height: 0;
                 opacity: 1; /* No fade */
-                overflow: hidden; 
+                overflow: hidden;
                 padding: 0 10px; /* Only horizontal padding when collapsed */
-                transition: max-height 0.2s ease-out, padding 0.2s ease-out; 
+                transition: max-height 0.2s ease-out, padding 0.2s ease-out;
             }
             .ai-thought-process:not(.collapsed) .monologue-content {
                 max-height: 500px; /* Arbitrarily large value */
                 padding: 0 10px 10px 10px; /* Final padding with bottom */
             }
 
-            .ai-thought-process pre { 
-                white-space: pre-wrap; 
-                word-break: break-word; 
-                margin: 0; color: #ccc; 
-                font-family: monospace; font-size: 0.85em; 
-                background: none; 
+            .ai-thought-process pre {
+                white-space: pre-wrap;
+                word-break: break-word;
+                margin: 0; color: #ccc;
+                font-family: monospace; font-size: 0.85em;
+                background: none;
             }
             /* END UPDATED STYLES */
-            
+
             #ai-compose-area { position: relative; flex-shrink: 0; z-index: 2; margin: 15px auto; width: 90%; max-width: 720px; }
-            #ai-input-wrapper { position: relative; z-index: 2; width: 100%; display: flex; flex-direction: column; border-radius: 20px; background: rgba(10,10,10,.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,.2); transition: all .4s cubic-bezier(.4,0,.2,1); }
+            #ai-input-wrapper { position: relative; z-index: 2; width: 100%; display: flex; flex-direction: column; border-radius: 20px; background: #0d0d0d; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid #1a1a1a; transition: all .4s cubic-bezier(.4,0,.2,1); }
             #ai-input-wrapper::before, #ai-input-wrapper::after { content: ''; position: absolute; top: -1px; left: -1px; right: -1px; bottom: -1px; border-radius: 21px; z-index: -1; transition: opacity 0.5s ease-in-out; }
             #ai-input-wrapper::before { animation: glow 3s infinite; opacity: 1; }
             #ai-input-wrapper.waiting::before { opacity: 0; }
             #ai-input-wrapper.waiting::after { opacity: 1; }
             #ai-input { min-height: 48px; max-height: ${MAX_INPUT_HEIGHT}px; overflow-y: hidden; color: #fff; font-size: 1.1em; padding: 13px 60px 13px 15px; box-sizing: border-box; word-wrap: break-word; outline: 0; text-align: left; }
             #ai-input:empty::before { content: 'Ask a question or describe your files...'; color: rgba(255, 255, 255, 0.4); pointer-events: none; }
-            
+
             /* NEW: Single menu button replacing attachment and settings buttons */
             #ai-menu-button {
                 position: absolute; bottom: 7px; right: 10px;
@@ -2731,11 +2809,11 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
                 margin-right: 15px;
             }
             .setting-label label {
-                display: block; color: #ccc; font-size: 0.95em; 
+                display: block; color: #ccc; font-size: 0.95em;
                 margin-bottom: 3px; font-weight: bold;
             }
             .setting-note { font-size: 0.75em; color: #888; margin-top: 0; }
-            
+
             /* NEW Toggle Switch CSS */
             .ai-toggle-switch {
                 position: relative;
@@ -3059,8 +3137,8 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
 
             /* Enhanced Code Blocks, Graphs, Tables, Charts */
             .code-block-wrapper, .graph-block-wrapper, .table-block-wrapper, .chart-block-wrapper, .advanced-graph-block-wrapper {
-                background-color: rgba(42, 42, 48, 0.8); border-radius: 12px; margin: 15px 0;
-                overflow: hidden; border: 1px solid rgba(255,255,255,0.1);
+                background-color: #0d0d0d; border-radius: 12px; margin: 15px 0;
+                overflow: hidden; border: 1px solid #1a1a1a;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.2);
                 transition: all 0.3s ease;
             }
@@ -3073,7 +3151,7 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
             .table-block-header, .chart-block-header, .advanced-graph-block-header {
                 display: flex; justify-content: flex-end; align-items: center;
                 padding: 8px 16px; background-color: rgba(0,0,0,0.3);
-                border-bottom: 1px solid rgba(255,255,255,0.1);
+                border-bottom: 1px solid #1a1a1a;
             }
             .table-metadata, .chart-metadata, .advanced-graph-metadata {
                 font-size: 0.8em; color: #aaa; margin-right: auto;
@@ -3085,7 +3163,7 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
             }
             .custom-data-table th, .custom-data-table td {
                 padding: 12px 16px; text-align: left;
-                border-bottom: 1px solid rgba(255,255,255,0.1);
+                border-bottom: 1px solid #1a1a1a;
             }
             .custom-data-table th {
                 background-color: rgba(66, 133, 244, 0.2);
@@ -3102,7 +3180,7 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
             }
             .table-title {
                 color: #fff; margin: 0 0 15px 0; padding: 0 16px;
-                font-family: 'Merriweather', serif; font-size: 1.1em;
+                font-family: 'Geist', sans-serif; font-weight: 400; font-size: 1.1em;
             }
             .table-container {
                 padding: 16px; max-height: 400px; overflow-y: auto;
