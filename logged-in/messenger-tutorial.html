@@ -72,9 +72,6 @@
             height: 100vh;
             display: flex;
             background-color: #070707;
-            /* ** MODIFICATION: Changed padding to 80px top, 0px right, 0px bottom, 0px left 
-             * to double the top spacing and eliminate the bottom spacing.
-             */
             padding: 32px 0 0 0; 
             box-sizing: border-box; /* Include padding in the height calculation */
         }
@@ -89,7 +86,6 @@
             display: flex;
             flex-direction: column;
             justify-content: center;
-            /* Ensures it fills the new padded container area */
             height: 100%;
         }
 
@@ -101,7 +97,6 @@
             justify-content: center;
             align-items: center;
             padding: 40px;
-            /* Ensures it fills the new padded container area */
             height: 100%;
             overflow-y: auto; /* Allow scrolling if the content exceeds the new height */
         }
@@ -109,7 +104,6 @@
         /* Highlight active step text on the left */
         .step-indicator.active .step-title {
             color: white;
-            /* Note: font-weight 600 in Tailwind config is 400 here, but we use it for visual distinction */
             font-weight: 600; 
         }
         .step-indicator.active .step-subtitle {
@@ -125,7 +119,6 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            /* Tailwinds are used for w/h of step dots (w-10 h-10) - override the 2.25rem size for uniformity here */
             border-radius: 0.5rem;
             background-color: transparent;
             border: 1px solid #374151; /* gray-700 */
@@ -247,7 +240,139 @@
         .step-content.slide-right {
             transform: translateX(100%);
         }
+        
+        /* ------------------------------------------- */
+        /* --- MODAL STYLING (Full Width & Custom Highlight) --- */
+        /* ------------------------------------------- */
+        .disclaimer-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.7); /* bg-black/70 */
+            z-index: 9999; /* z-[9999] */
+            transition: opacity 0.3s ease-in-out; /* transition-opacity duration-300 */
+            opacity: 0;
+            display: none;
+        }
+        
+        /* FULL WIDTH BANNER STYLES - Added bottom spacing and horizontal padding */
+        .disclaimer-banner {
+            position: absolute;
+            bottom: 1rem; /* Spacing from the bottom of the screen */
+            left: 0;
+            width: 100%;
+            padding: 0 1rem; /* Horizontal spacing for content box from screen edge */
+            box-sizing: border-box;
+            transform: none;
+        }
+        
+        /* CONTENT BOX STYLES */
+        .disclaimer-content-box {
+            background-color: rgba(0, 0, 0, 0.95); /* bg-black/95 */
+            color: white;
+            padding: 1rem; /* p-4 */
+            border-radius: 1.5rem; /* rounded-3xl */
+            border: 1px solid #4b5563; /* border-gray-700 */
+            box-shadow: 0 0 25px rgba(0,0,0,0.5); /* shadow for depth */
+            -webkit-backdrop-filter: blur(8px); /* backdrop-blur-md */
+            backdrop-filter: blur(8px); /* backdrop-blur-md */
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start; /* items-start */
+            justify-content: space-between;
+            gap: 1rem; /* space-y-4 md:space-x-6 */
+        }
+        
+        /* CUSTOM BOLD HIGHLIGHT STYLING */
+        .disclaimer-highlight {
+            font-weight: 400; /* Medium weight */
+            color: #ffffff; /* White for strong emphasis */
+        }
 
+        @media (min-width: 768px) {
+            .disclaimer-content-box {
+                flex-direction: row;
+                align-items: center; /* md:items-center */
+                gap: 1.5rem; /* md:space-x-6 */
+                padding: 1.5rem; /* sm:p-6 */
+            }
+            .disclaimer-banner {
+                padding: 0 2rem; /* Increased horizontal padding on desktop */
+            }
+        }
+        .disclaimer-text-area {
+            flex: 1 1 0%; /* flex-1 */
+            min-width: 0;
+        }
+        .disclaimer-title {
+            font-size: 1.25rem; /* text-xl */
+            font-weight: 400; /* font-normal */
+            margin-bottom: 0.25rem; /* mb-1 */
+            display: flex;
+            align-items: center;
+        }
+        .disclaimer-icon {
+            color: #f59e0b; /* Caution logo color (Amber-500) */
+            margin-right: 0.5rem; /* mr-2 */
+            font-size: 1.5rem;
+        }
+        .disclaimer-message {
+            font-size: 0.875rem; /* text-sm */
+            color: #d1d5db; /* text-gray-300 */
+            margin-bottom: 0.5rem; /* mb-2 */
+            font-weight: 300; /* font-light */
+        }
+        
+        /* Button Centering Logic - Adjusted for full centering */
+        .disclaimer-action-container {
+            flex-shrink: 0;
+            width: 100%; 
+            display: flex;
+            justify-content: center; /* Centers the button horizontally in its container */
+        }
+
+        /* UPDATED BUTTON STYLING: Centered text is handled by 'justify-content: center' on the button's flex properties */
+        .disclaimer-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center; /* Ensures text and content are centered within the button */
+            
+            /* Sizing */
+            width: 100%; /* Default to full width on mobile */
+            max-width: 350px; /* Constraint width on mobile to make centering visible */
+            
+            /* Padding and Styling */
+            padding-left: 1.5rem; 
+            padding-right: 1.5rem; 
+            padding-top: 0.75rem; 
+            padding-bottom: 0.75rem; /* Explicit bottom padding */
+            font-size: 1rem; 
+            font-weight: 400; 
+            border-radius: 0.75rem; 
+            
+            /* Color and Border */
+            background-color: #000000; /* Black background */
+            color: white;
+            border: 1px solid #ffffff; /* White border */
+            
+            box-shadow: none;
+            transition: all 0.15s ease-in-out;
+            cursor: pointer; /* Ensure cursor is correct */
+        }
+        .disclaimer-button:hover {
+            background-color: #1a1a1a; /* Dark gray hover */
+            transform: scale(1.02);
+        }
+        
+        @media (min-width: 768px) {
+             .disclaimer-action-container {
+                width: auto; /* Revert width back for row layout on desktop */
+                justify-content: flex-start; /* Align button to start in desktop row layout */
+            }
+             .disclaimer-button {
+                width: auto; /* Allow button to size based on content on desktop */
+                max-width: none; /* Remove max-width constraint on desktop */
+            }
+        }
     </style>
 </head>
 <body class="dark bg-background">
@@ -359,7 +484,29 @@
 
     </div>
 
+    <div id="disclaimer-overlay" class="disclaimer-overlay">
+        <div id="disclaimer-banner" class="disclaimer-banner">
+            <div class="disclaimer-content-box">
+                <div class="disclaimer-text-area">
+                    <h3 class="disclaimer-title">
+                        <i class="fa-solid fa-triangle-exclamation disclaimer-icon"></i> 
+                        <span class="font-semibold">Important Messenger V2.0 Upgrade Notice</span>
+                    </h3>
+                    <p class="disclaimer-message">
+                        Messenger 2.0 introduces a revised messaging format in our database. While <span class="disclaimer-highlight">user contacts will be seamlessly transferred</span>, existing text history from Messenger 1.0 will not be properly displayed in the new version.
+                        <br><br>
+                        This means <span class="disclaimer-highlight">users running Messenger 1.0 will be unable to communicate effectively with users on Messenger 2.0</span>. For uninterrupted chat functionality, please ensure all your contacts also download and use the new 2.0 version.
+                    </p>
+                </div>
 
+                <div class="disclaimer-action-container">
+                    <button id="accept-disclaimer-button" class="disclaimer-button">
+                        I Understand and Proceed
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     <script>
         const dom = {
             stepContents: document.querySelectorAll('.step-content'),
@@ -367,11 +514,55 @@
             stepDots: document.querySelectorAll('.step-dot'),
             prevBtn: document.getElementById('prev-btn'),
             nextBtn: document.getElementById('next-btn'),
+            // New modal DOM elements
+            disclaimerOverlay: document.getElementById('disclaimer-overlay'),
+            acceptDisclaimerButton: document.getElementById('accept-disclaimer-button'),
         };
 
         let currentStep = 1;
         const totalSteps = dom.stepContents.length;
         let isAnimating = false;
+
+        // Define transition duration in MS to match Tailwind's 'duration-300'
+        const TRANSITION_DURATION_MS = 300; 
+
+        // --- START DISCLAIMER MODAL LOGIC (New) ---
+        const DISCLAIMER_KEY = '4sp-messenger-v2-disclaimer';
+        
+        /**
+         * Function to hide the disclaimer modal with fade-out
+         */
+        const hideDisclaimerModal = () => {
+            // 1. Start the fade-out (opacity 1 -> 0)
+            dom.disclaimerOverlay.style.opacity = '0';
+
+            // 2. Wait for the transition to finish before setting display: none
+            setTimeout(() => {
+                dom.disclaimerOverlay.style.display = 'none';
+                // Set consent in localStorage so the banner doesn't show on future visits
+                localStorage.setItem(DISCLAIMER_KEY, 'understood');
+                // Allow scrolling on the body (if it was restricted)
+                document.body.style.overflow = '';
+            }, TRANSITION_DURATION_MS);
+        };
+
+        /**
+         * Function to show the disclaimer modal with fade-in
+         */
+        const showDisclaimerModal = () => {
+            // 1. Set display: block instantly
+            dom.disclaimerOverlay.style.display = 'block';
+            // Prevent scrolling on the body
+            document.body.style.overflow = 'hidden';
+
+            // 2. Schedule the opacity change to trigger the transition
+            // Use a small timeout (10ms) to ensure display:block is rendered first
+            setTimeout(() => {
+                dom.disclaimerOverlay.style.opacity = '1';
+            }, 10); 
+        };
+        // --- END DISCLAIMER MODAL LOGIC ---
+
 
         /**
          * Updates the tutorial step with a fade and slide animation.
@@ -452,13 +643,13 @@
         }
 
         /**
-         * Initializes event listeners for navigation.
+         * Initializes event listeners for navigation and the disclaimer modal.
          */
         function initListeners() {
             dom.prevBtn.addEventListener('click', () => updateStep(currentStep - 1));
             dom.nextBtn.addEventListener('click', () => updateStep(currentStep + 1));
             
-            // Use the whole indicator div to trigger the step change
+            // Step indicator click handlers
             dom.stepIndicators.forEach(indicator => {
                 indicator.addEventListener('click', (e) => {
                     // Find the step number, prioritizing the button's data-step if clicked, otherwise the indicator's.
@@ -473,12 +664,27 @@
                     updateStep(stepNum);
                 });
             });
+
+            // Disclaimer Modal button handler
+            if (dom.acceptDisclaimerButton) {
+                dom.acceptDisclaimerButton.addEventListener('click', hideDisclaimerModal);
+            }
         }
 
         // --- Start the Tutorial App ---
         window.onload = function() {
             initListeners();
             updateUI(); // Set initial state
+
+            // Check for existing disclaimer consent when the window loads
+            if (localStorage.getItem(DISCLAIMER_KEY) !== 'understood') {
+                showDisclaimerModal();
+            } else {
+                 // If consent is found, ensure the overlay remains hidden and opacity is zero
+                 dom.disclaimerOverlay.style.display = 'none';
+                 dom.disclaimerOverlay.style.opacity = '0';
+                 document.body.style.overflow = '';
+            }
         }
     </script>
 </body>
