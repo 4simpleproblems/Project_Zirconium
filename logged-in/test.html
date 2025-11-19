@@ -72,9 +72,6 @@
             height: 100vh;
             display: flex;
             background-color: #070707;
-            /* ** MODIFICATION: Changed padding to 80px top, 0px right, 0px bottom, 0px left 
-             * to double the top spacing and eliminate the bottom spacing.
-             */
             padding: 32px 0 0 0; 
             box-sizing: border-box; /* Include padding in the height calculation */
         }
@@ -89,7 +86,6 @@
             display: flex;
             flex-direction: column;
             justify-content: center;
-            /* Ensures it fills the new padded container area */
             height: 100%;
         }
 
@@ -101,7 +97,6 @@
             justify-content: center;
             align-items: center;
             padding: 40px;
-            /* Ensures it fills the new padded container area */
             height: 100%;
             overflow-y: auto; /* Allow scrolling if the content exceeds the new height */
         }
@@ -109,7 +104,6 @@
         /* Highlight active step text on the left */
         .step-indicator.active .step-title {
             color: white;
-            /* Note: font-weight 600 in Tailwind config is 400 here, but we use it for visual distinction */
             font-weight: 600; 
         }
         .step-indicator.active .step-subtitle {
@@ -125,14 +119,13 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            /* Tailwinds are used for w/h of step dots (w-10 h-10) - override the 2.25rem size for uniformity here */
             border-radius: 0.5rem;
             background-color: transparent;
             border: 1px solid #374151; /* gray-700 */
             color: #9ca3af; 
             cursor: pointer;
             transition: all 0.2s;
-            line-height: 1; /* Fix vertical alignment for the number */
+            line-height: 1; 
             font-weight: 400;
         }
         .btn-icon:hover {
@@ -159,7 +152,7 @@
             color: #4f46e5; /* Strong blue text color */
             border: 1px solid #4f46e5; /* Strong blue border color */
             transition: all 0.3s ease;
-            box-shadow: none; /* Removed the glow effect */
+            box-shadow: none; 
             font-weight: 600;
         }
         .btn-main-action:hover {
@@ -177,7 +170,7 @@
             box-shadow: none;
             font-weight: 600;
             
-            /* Shape and size: Match btn-icon size (w-10 h-10 = 2.5rem), but rounded-xl (0.75rem) */
+            /* Shape and size */
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -191,24 +184,21 @@
             color: #ffffff; /* White text on hover for contrast */
         }
         .btn-nav-action:disabled {
-            opacity: 0.4; /* Stronger disabled look */
+            opacity: 0.4; 
             cursor: not-allowed;
-            background-color: transparent; /* Makes the disabled look cleaner */
+            background-color: transparent; 
             border-color: #374151; /* gray-700 for disabled border */
             color: #9ca3af; /* gray-400 for disabled icon */
         }
 
         /* 4. Description Block Custom Styling */
         #description-block {
-            /* Slightly more rounded (1rem is rounded-2xl) */
             border-radius: 1rem;
-            /* Less side padding (p-6 was 1.5rem, px-4 is 1rem) */
-            padding: 1.5rem 1rem; /* 24px top/bottom, 16px left/right */
+            padding: 1.5rem 1rem; 
         }
 
         /* Smaller font size for list items within the block */
         #description-block ul li {
-            /* text-sm equivalent (0.875rem / 14px) */
             font-size: 0.875rem; 
         }
 
@@ -216,7 +206,7 @@
         .step-container {
             position: relative;
             overflow: hidden;
-            height: 500px; /* Increased height for better visibility on non-fullscreen views */
+            height: 500px;
             width: 100%;
             max-width: 600px;
         }
@@ -277,17 +267,15 @@
         }
         
         #migration-banner > div {
-             /* Matches inner div from index.html (bg-black/95, text-white, p-4 sm:p-6, rounded-3xl, border border-gray-700, shadow-2xl, backdrop-blur-md) */
+             /* Matches inner div from index.html */
             background-color: rgba(0, 0, 0, 0.95);
             color: white;
             padding: 1rem; /* p-4 */
-            /* Add responsive padding for small screens */
             padding-top: 1.5rem; 
             padding-bottom: 1.5rem; 
             border-radius: 1.5rem; /* rounded-3xl */
             border: 1px solid rgb(55 65 81); /* border-gray-700 */
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); /* shadow-2xl */
-            /* Tailwind flex and spacing properties */
             display: flex;
             flex-direction: column;
             align-items: flex-start;
@@ -455,65 +443,14 @@
         const totalSteps = dom.stepContents.length;
         let isAnimating = false;
 
-        // --- START MIGRATION MODAL LOGIC (New addition) ---
+        // --- MIGRATION MODAL LOGIC VARIABLES ---
 
         const MIGRATION_KEY = '4sp-migration-accepted-v2';
         const migrationOverlay = document.getElementById('migration-overlay');
         const acknowledgeButton = document.getElementById('acknowledge-migration-button');
         const TRANSITION_DURATION_MS = 300; 
         
-        /**
-         * Hides the migration notice overlay with a fade-out effect.
-         */
-        const hideMigrationNotice = () => {
-            // 1. Start the fade-out (opacity 1 -> 0)
-            migrationOverlay.classList.remove('opacity-100');
-            migrationOverlay.classList.add('opacity-0');
-
-            // 2. Wait for the transition to finish before setting display: none
-            setTimeout(() => {
-                migrationOverlay.style.display = 'none';
-                // Set consent in localStorage so the banner doesn't show on future visits
-                localStorage.setItem(MIGRATION_KEY, 'accepted');
-                // Re-enable scrolling on the body (disabled by show function)
-                document.body.style.overflow = ''; 
-            }, TRANSITION_DURATION_MS);
-        };
-
-        /**
-         * Shows the migration notice overlay with a fade-in effect.
-         */
-        const showMigrationNotice = () => {
-            // 1. Set display: block instantly
-            migrationOverlay.style.display = 'block';
-            // Prevent scrolling on the body while the modal is active
-            document.body.style.overflow = 'hidden'; 
-
-            // 2. Schedule the opacity change to trigger the transition
-            setTimeout(() => {
-                migrationOverlay.classList.remove('opacity-0');
-                migrationOverlay.classList.add('opacity-100');
-            }, 10); 
-        };
-
-        // Check for existing acknowledgment when the script loads
-        if (localStorage.getItem(MIGRATION_KEY) !== 'accepted') {
-            // If consent is not found, wait for the window to load, then show the banner
-            window.addEventListener('load', showMigrationNotice);
-        } else {
-             // If consent is found, ensure the overlay remains hidden and opacity is zero
-             migrationOverlay.style.display = 'none';
-             migrationOverlay.classList.remove('opacity-100');
-             migrationOverlay.classList.add('opacity-0');
-             document.body.style.overflow = '';
-        }
-
-        // Add event listener to the "I Understand and Accept" button
-        if (acknowledgeButton) {
-            acknowledgeButton.addEventListener('click', hideMigrationNotice);
-        }
-
-        // --- END MIGRATION MODAL LOGIC ---
+        // --- TUTORIAL LOGIC FUNCTIONS (RETAINED) ---
 
         /**
          * Updates the tutorial step with a fade and slide animation.
@@ -588,7 +525,6 @@
             });
 
             // Update navigation buttons (disabled states)
-            // The visual disabled state is now handled by the .btn-nav-action:disabled CSS rule
             dom.prevBtn.disabled = currentStep === 1;
             dom.nextBtn.disabled = currentStep === totalSteps;
         }
@@ -615,22 +551,64 @@
                     updateStep(stepNum);
                 });
             });
+            // Set initial state after listeners are attached
+            updateUI(); 
         }
 
-        // --- Start the Tutorial App ---
-        // Changed window.onload to DOMContentLoaded to potentially run faster, 
-        // but kept it as a function that runs *after* the modal logic for safety.
-        window.addEventListener('load', function() {
-            // Only initialize the tutorial functionality if the migration notice is accepted/not needed
-            if (localStorage.getItem(MIGRATION_KEY) === 'accepted' || migrationOverlay.style.display === 'none') {
-                 initListeners();
-                 updateUI(); // Set initial state
+        // --- MIGRATION MODAL LOGIC FUNCTIONS ---
+
+        /**
+         * Hides the migration notice overlay with a fade-out effect and starts the tutorial.
+         */
+        const hideMigrationNotice = () => {
+            // 1. Start the fade-out (opacity 1 -> 0)
+            migrationOverlay.classList.remove('opacity-100');
+            migrationOverlay.classList.add('opacity-0');
+
+            // 2. Wait for the transition to finish before setting display: none
+            setTimeout(() => {
+                migrationOverlay.style.display = 'none';
+                localStorage.setItem(MIGRATION_KEY, 'accepted');
+                document.body.style.overflow = ''; 
+                // CRUCIAL: Start the tutorial listeners here after user acknowledgement
+                initListeners();
+            }, TRANSITION_DURATION_MS);
+        };
+
+        /**
+         * Shows the migration notice overlay with a fade-in effect.
+         */
+        const showMigrationNotice = () => {
+            migrationOverlay.style.display = 'block';
+            document.body.style.overflow = 'hidden'; 
+
+            // Schedule the opacity change to trigger the transition
+            setTimeout(() => {
+                migrationOverlay.classList.remove('opacity-0');
+                migrationOverlay.classList.add('opacity-100');
+            }, 10); 
+        };
+
+        // --- MAIN INITIALIZATION ONCE ALL HTML IS PARSED ---
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Add event listener to the "I Understand and Accept" button immediately
+            if (acknowledgeButton) {
+                acknowledgeButton.addEventListener('click', hideMigrationNotice);
+            }
+
+            // Check for existing acknowledgment
+            if (localStorage.getItem(MIGRATION_KEY) === 'accepted') {
+                // If accepted, ensure the modal is hidden and start the tutorial immediately
+                migrationOverlay.style.display = 'none';
+                migrationOverlay.classList.remove('opacity-100');
+                migrationOverlay.classList.add('opacity-0');
+                document.body.style.overflow = '';
+                // CRUCIAL: Start the tutorial listeners immediately
+                initListeners(); 
             } else {
-                // If the modal is shown, attach the initListeners call to the acknowledge button click
-                document.getElementById('acknowledge-migration-button').addEventListener('click', () => {
-                    initListeners();
-                    updateUI();
-                }, { once: true });
+                // If not accepted, show the notice (initListeners will be called by hideMigrationNotice on click)
+                showMigrationNotice();
             }
         });
     </script>
