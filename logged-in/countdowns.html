@@ -17,7 +17,7 @@
     <script src="../injector.js"></script>
 
     <style>
-        /* --- FONT & BASE STYLING (MATCHING notes.html) --- */
+        /* --- FONT & BASE STYLING --- */
         :root {
             --menu-bg: #000000;
             --menu-border: #333;
@@ -74,7 +74,6 @@
             color: #6366f1;
         }
 
-        /* NEW SECONDARY BUTTON STYLE (Matching notes.html mode switcher) */
         .btn-secondary-override {
             background: var(--menu-bg);
             border: 1px solid var(--menu-border);
@@ -83,7 +82,7 @@
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
-            border-radius: 0.5rem; /* Simplified for modal use */
+            border-radius: 0.5rem;
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
@@ -139,13 +138,13 @@
             margin-top: 20px;
         }
 
-        /* --- CARD STYLING (Modified for Trash icon) --- */
+        /* --- CARD STYLING --- */
         .countdown-card {
             background-color: #0d0d0d;
             border: 1px solid #1a1a1a;
             border-radius: 1rem;
             padding: 1.5rem;
-            padding-bottom: 3.5rem; /* Added space for button at bottom */
+            padding-bottom: 3.5rem; 
             display: flex;
             flex-direction: column;
             gap: 1rem;
@@ -169,7 +168,7 @@
             color: #707070;
         }
         .time-display {
-            font-family: 'Roboto', sans-serif; /* Monospace-ish look for numbers */
+            font-family: 'Roboto', sans-serif;
             font-size: 1.5rem;
             color: var(--tab-active-text);
             font-weight: 300;
@@ -179,7 +178,6 @@
             color: #9ca3af;
             line-height: 1.4;
         }
-        /* Trash Icon Styling: Larger (2rem) and square */
         .delete-btn {
             position: absolute;
             bottom: 1rem; 
@@ -192,7 +190,6 @@
             transition: all 0.2s;
             font-size: 1rem;
             line-height: 1;
-            /* NEW: Larger and enforced square dimensions */
             width: 2rem; 
             height: 2rem;
             display: flex;
@@ -203,13 +200,13 @@
             opacity: 1;
         }
         .delete-btn:hover {
-            background-color: rgba(239, 68, 68, 0.15); /* Reddish Background */
-            border: 1px solid rgba(239, 68, 68, 0.5); /* Reddish Outline (Sidebar style adaptation) */
+            background-color: rgba(239, 68, 68, 0.15); 
+            border: 1px solid rgba(239, 68, 68, 0.5); 
             color: #ef4444; 
             opacity: 1;
         }
 
-        /* --- MODAL STYLING (16:9, 20px Rounded) --- */
+        /* --- MODAL STYLING (16:9) --- */
         #modal-overlay {
             position: fixed;
             inset: 0;
@@ -231,16 +228,15 @@
         #countdown-modal {
             background: #0d0d0d;
             border: 1px solid #333;
-            border-radius: 20px; /* Requested */
+            border-radius: 20px;
             width: 80vw;
             max-width: 1000px;
-            aspect-ratio: 16 / 9; /* Requested */
+            aspect-ratio: 16 / 9;
             display: flex;
             overflow: hidden;
             box-shadow: 0 20px 50px rgba(0,0,0,0.5);
         }
 
-        /* Left Side: Inputs */
         .modal-left {
             width: 45%;
             padding: 2rem;
@@ -250,7 +246,6 @@
             gap: 1.5rem;
             overflow-y: auto;
         }
-        /* Right Side: Preview */
         .modal-right {
             width: 55%;
             background: #050505;
@@ -263,7 +258,6 @@
             position: relative;
         }
 
-        /* Form Elements */
         .form-group {
             display: flex;
             flex-direction: column;
@@ -276,7 +270,6 @@
             letter-spacing: 0.05em;
         }
 
-        /* Custom Input Display Styles */
         .custom-input-container {
             background: #151515;
             border: 1px solid #333;
@@ -302,20 +295,6 @@
             font-weight: 500;
         }
         
-        /* Ensure native inputs are hidden but functional */
-        .native-hidden-input {
-            /* Positioned relative to the form-group, but still hidden */
-            position: absolute; 
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            border: 0;
-        }
-
-        /* Select element styling */
         select {
             background: #151515;
             border: 1px solid #333;
@@ -356,7 +335,6 @@
             color: var(--tab-active-text);
         }
 
-        /* Preview Text Styles */
         #preview-big-time {
             font-size: 2.5rem;
             font-weight: 300;
@@ -389,16 +367,140 @@
             gap: 1rem;
         }
 
-        ::-webkit-scrollbar { width: 8px; }
+        /* --- CUSTOM PICKER MODALS STYLING --- */
+        .picker-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 3000; /* Higher than main modal */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        .picker-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .picker-modal {
+            background: #0d0d0d;
+            border: 1px solid #333;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            min-width: 320px;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        /* Date Picker Specifics */
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .calendar-nav-btn {
+            background: transparent;
+            border: 1px solid #333;
+            color: #fff;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .calendar-nav-btn:hover {
+            background: #222;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            text-align: center;
+        }
+        .calendar-day-name {
+            color: #707070;
+            font-size: 0.75rem;
+            padding-bottom: 0.5rem;
+        }
+        .calendar-day {
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.3rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #ccc;
+        }
+        .calendar-day:hover {
+            background: #222;
+            color: #fff;
+        }
+        .calendar-day.empty {
+            cursor: default;
+            pointer-events: none;
+        }
+        .calendar-day.selected {
+            background: var(--tab-active-bg);
+            border: 1px solid var(--tab-active-border);
+            color: var(--tab-active-text);
+        }
+        .calendar-day.today {
+            border: 1px solid #444;
+        }
+
+        /* Time Picker Specifics (12H Format) */
+        .time-picker-content {
+            display: flex;
+            gap: 0.5rem;
+            height: 200px;
+        }
+        .time-column {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid #222;
+            border-radius: 0.5rem;
+            background: #080808;
+        }
+        .time-option {
+            padding: 0.5rem;
+            text-align: center;
+            cursor: pointer;
+            font-size: 1.1rem;
+            color: #888;
+        }
+        .time-option:hover {
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .time-option.selected {
+            background: var(--tab-active-bg);
+            color: var(--tab-active-text);
+        }
+        .picker-title {
+            text-align: center;
+            color: #707070;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            width: 33%;
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #070707; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #555; }
     </style>
 </head>
 <body class="min-h-screen">
-    <!-- Removed loading screen entirely -->
-
-    <!-- HEADER -->
+    
     <header class="flex justify-between items-center p-4 border-b border-[#1a1a1a]">
         <h1 class="text-2xl font-bold text-white">4SP Countdowns</h1>
         
@@ -421,21 +523,17 @@
         </div>
     </header>
 
-    <!-- MAIN CONTENT -->
     <div id="page-content">
         <div id="countdown-grid">
-            <!-- Cards injected here -->
-        </div>
+            </div>
         <div id="empty-state" class="hidden flex-col items-center justify-center mt-20 text-[#333]">
             <i class="fa-thin fa-clock text-6xl mb-4"></i>
             <p>No countdowns yet.</p>
         </div>
     </div>
 
-    <!-- 16:9 MODAL -->
     <div id="modal-overlay">
         <div id="countdown-modal">
-            <!-- LEFT: FORM -->
             <div class="modal-left">
                 <h2 id="modal-title-text" class="text-xl text-white mb-2">New Countdown</h2>
                 
@@ -445,30 +543,25 @@
                            class="bg-[#151515] border border-[#333] rounded-lg p-3 text-white outline-none focus:border-indigo-500">
                 </div>
 
-                <!-- Date/Time Row (Custom Selectors) -->
                 <div class="flex gap-4">
                     <div class="form-group flex-1">
                         <label>Date</label>
                         <div id="date-display-container" class="custom-input-container relative">
                             <span id="date-display"></span>
                             <i class="fa-regular fa-calendar-day text-[#707070]"></i>
-                             <!-- Hidden native input to trigger the picker. Placed inside the container for click handler simplicity. -->
-                            <input type="date" id="input-date" class="native-hidden-input">
+                             <input type="hidden" id="input-date">
                         </div>
-                       
                     </div>
                     <div class="form-group flex-1">
                         <label>Time</label>
                         <div id="time-display-container" class="custom-input-container relative">
                             <span id="time-display"></span>
                             <i class="fa-regular fa-clock text-[#707070]"></i>
-                            <!-- Hidden native input to trigger the picker -->
-                            <input type="time" id="input-time" value="12:00" class="native-hidden-input">
+                            <input type="hidden" id="input-time" value="12:00">
                         </div>
                     </div>
                 </div>
 
-                <!-- Frequency Section (Hidden for One Time) -->
                 <div id="frequency-section" class="hidden">
                     <div class="form-group">
                         <label>Frequency Pattern</label>
@@ -480,11 +573,9 @@
                         </select>
                     </div>
 
-                    <!-- Days of Week Selector -->
                     <div id="days-selector" class="form-group hidden mt-2">
                         <label>Repeats On</label>
                         <div class="checkbox-group">
-                            <!-- Sun=0, Mon=1... -->
                             <label><input type="checkbox" class="day-checkbox" value="0"><span class="day-label">S</span></label>
                             <label><input type="checkbox" class="day-checkbox" value="1"><span class="day-label">M</span></label>
                             <label><input type="checkbox" class="day-checkbox" value="2"><span class="day-label">T</span></label>
@@ -497,14 +588,11 @@
                 </div>
 
                 <div class="modal-actions">
-                    <!-- CANCEL BUTTON (Secondary/Mode Switcher Style) -->
                     <button id="btn-cancel-modal" class="btn-secondary-override">Cancel</button>
-                    <!-- SAVE BUTTON (Primary/Add Countdown Style) -->
                     <button id="btn-save-countdown" class="btn-toolbar-style btn-primary-override">Create Countdown</button>
                 </div>
             </div>
 
-            <!-- RIGHT: PREVIEW -->
             <div class="modal-right">
                 <div class="absolute top-4 right-4 text-xs text-[#555]">PREVIEW</div>
                 <h3 id="preview-title" class="text-2xl text-white mb-4 font-light">New Event</h3>
@@ -522,11 +610,57 @@
         </div>
     </div>
 
+    <div id="date-picker-overlay" class="picker-overlay">
+        <div class="picker-modal">
+            <div class="calendar-header">
+                <button id="cal-prev" class="calendar-nav-btn"><i class="fa-solid fa-chevron-left"></i></button>
+                <div id="cal-month-year" class="font-semibold text-white">November 2025</div>
+                <button id="cal-next" class="calendar-nav-btn"><i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+            <div class="calendar-grid">
+                <div class="calendar-day-name">S</div>
+                <div class="calendar-day-name">M</div>
+                <div class="calendar-day-name">T</div>
+                <div class="calendar-day-name">W</div>
+                <div class="calendar-day-name">T</div>
+                <div class="calendar-day-name">F</div>
+                <div class="calendar-day-name">S</div>
+            </div>
+            <div id="calendar-days" class="calendar-grid">
+                </div>
+            <div class="flex justify-end mt-2">
+                <button id="btn-cancel-date" class="text-sm text-gray-500 hover:text-white">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="time-picker-overlay" class="picker-overlay">
+        <div class="picker-modal">
+            <div class="flex justify-around w-full">
+                <div class="picker-title">Hr</div>
+                <div class="picker-title">Min</div>
+                <div class="picker-title">Pd</div>
+            </div>
+            <div class="time-picker-content">
+                <div id="time-col-hours" class="time-column">
+                    </div>
+                <div id="time-col-minutes" class="time-column">
+                    </div>
+                <div id="time-col-period" class="time-column">
+                    </div>
+            </div>
+            <div class="flex justify-end gap-4 mt-2">
+                <button id="btn-cancel-time" class="text-sm text-gray-500 hover:text-white">Cancel</button>
+                <button id="btn-confirm-time" class="btn-secondary-override text-sm py-1 px-3">Set Time</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // --- STATE & CONFIG ---
         const MAX_YEARS_FUTURE = 15;
         let appState = {
-            countdowns: [] // Array of objects: { id, title, type, targetDate, freqConfig }
+            countdowns: [] 
         };
 
         // --- DOM ELEMENTS ---
@@ -535,21 +669,21 @@
         const grid = document.getElementById('countdown-grid');
         const emptyState = document.getElementById('empty-state');
         
-        // Modal Elements
+        // Main Modal Elements
         const modalOverlay = document.getElementById('modal-overlay');
         const modalTitleText = document.getElementById('modal-title-text');
         const btnCancel = document.getElementById('btn-cancel-modal');
         const btnSave = document.getElementById('btn-save-countdown');
         
-        // Inputs
+        // Form Inputs
         const inpTitle = document.getElementById('input-title');
-        const inpDate = document.getElementById('input-date');
-        const inpTime = document.getElementById('input-time');
+        const inpDate = document.getElementById('input-date'); // hidden YYYY-MM-DD
+        const inpTime = document.getElementById('input-time'); // hidden HH:MM (24h)
         const freqSection = document.getElementById('frequency-section');
         const inpFreqType = document.getElementById('input-freq-type');
         const daysSelector = document.getElementById('days-selector');
         
-        // Custom Display Elements
+        // Trigger Elements
         const dateDisplay = document.getElementById('date-display');
         const dateContainer = document.getElementById('date-display-container');
         const timeDisplay = document.getElementById('time-display');
@@ -565,8 +699,208 @@
         const pDays = document.getElementById('p-days');
         const pDateStr = document.getElementById('p-date-str');
 
-        let currentModalType = 'one-time'; // 'one-time' or 'repeating'
+        let currentModalType = 'one-time'; 
+
+        // --- PICKER LOGIC START ---
+
+        // Date Picker Variables
+        const datePickerOverlay = document.getElementById('date-picker-overlay');
+        const calMonthYear = document.getElementById('cal-month-year');
+        const calDaysContainer = document.getElementById('calendar-days');
+        const btnCalPrev = document.getElementById('cal-prev');
+        const btnCalNext = document.getElementById('cal-next');
+        let pickerDate = new Date(); 
+
+        // Time Picker Variables
+        const timePickerOverlay = document.getElementById('time-picker-overlay');
+        const timeColHours = document.getElementById('time-col-hours');
+        const timeColMinutes = document.getElementById('time-col-minutes');
+        const timeColPeriod = document.getElementById('time-col-period');
         
+        let pickerHour = 12;  // 1-12
+        let pickerMinute = 0; // 0-59
+        let pickerPeriod = 'AM'; // AM or PM
+
+        function initPickers() {
+            // Init Hours (1-12)
+            for(let h=1; h<=12; h++) {
+                const div = document.createElement('div');
+                div.className = 'time-option';
+                div.textContent = h; // No padStart for single digit hours usually, but kept simple
+                div.dataset.val = h;
+                div.onclick = () => {
+                    pickerHour = h;
+                    renderTimePicker();
+                };
+                timeColHours.appendChild(div);
+            }
+            // Init Minutes (00-59)
+            for(let m=0; m<60; m++) {
+                const div = document.createElement('div');
+                div.className = 'time-option';
+                div.textContent = String(m).padStart(2, '0');
+                div.dataset.val = m;
+                div.onclick = () => {
+                    pickerMinute = m;
+                    renderTimePicker();
+                };
+                timeColMinutes.appendChild(div);
+            }
+            // Init Period (AM/PM)
+            ['AM', 'PM'].forEach(p => {
+                const div = document.createElement('div');
+                div.className = 'time-option';
+                div.textContent = p;
+                div.dataset.val = p;
+                div.onclick = () => {
+                    pickerPeriod = p;
+                    renderTimePicker();
+                };
+                timeColPeriod.appendChild(div);
+            });
+
+            // Event Listeners for Date Picker
+            btnCalPrev.addEventListener('click', () => {
+                pickerDate.setMonth(pickerDate.getMonth() - 1);
+                renderCalendar();
+            });
+            btnCalNext.addEventListener('click', () => {
+                pickerDate.setMonth(pickerDate.getMonth() + 1);
+                renderCalendar();
+            });
+            document.getElementById('btn-cancel-date').addEventListener('click', () => {
+                datePickerOverlay.classList.remove('active');
+            });
+
+            // Event Listeners for Time Picker
+            document.getElementById('btn-cancel-time').addEventListener('click', () => {
+                timePickerOverlay.classList.remove('active');
+            });
+            document.getElementById('btn-confirm-time').addEventListener('click', () => {
+                // Convert 12H back to 24H for storage
+                let hour24 = pickerHour;
+                if (pickerPeriod === 'PM' && hour24 < 12) hour24 += 12;
+                if (pickerPeriod === 'AM' && hour24 === 12) hour24 = 0;
+
+                const timeStr24 = `${String(hour24).padStart(2,'0')}:${String(pickerMinute).padStart(2,'0')}`;
+                
+                inpTime.value = timeStr24;
+                // Display pretty 12H time
+                timeDisplay.textContent = formatTime12H(hour24, pickerMinute);
+                
+                timePickerOverlay.classList.remove('active');
+                updatePreview();
+            });
+
+            // Open Handlers
+            dateContainer.addEventListener('click', openDatePicker);
+            timeContainer.addEventListener('click', openTimePicker);
+        }
+
+        // Helper to show 12H time string
+        function formatTime12H(h, m) {
+            const period = h >= 12 ? 'PM' : 'AM';
+            let h12 = h % 12;
+            if (h12 === 0) h12 = 12;
+            return `${h12}:${String(m).padStart(2,'0')} ${period}`;
+        }
+
+        function openDatePicker() {
+            const currentVal = inpDate.value;
+            if(currentVal) {
+                const parts = currentVal.split('-');
+                pickerDate = new Date(parts[0], parts[1]-1, parts[2]);
+            } else {
+                pickerDate = new Date();
+            }
+            renderCalendar();
+            datePickerOverlay.classList.add('active');
+        }
+
+        function renderCalendar() {
+            const year = pickerDate.getFullYear();
+            const month = pickerDate.getMonth();
+            
+            const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+            calMonthYear.textContent = `${monthNames[month]} ${year}`;
+            
+            calDaysContainer.innerHTML = '';
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const today = new Date();
+            const selectedVal = inpDate.value; // YYYY-MM-DD
+
+            // Empty slots
+            for(let i=0; i<firstDay; i++) {
+                const div = document.createElement('div');
+                div.className = 'calendar-day empty';
+                calDaysContainer.appendChild(div);
+            }
+
+            // Days
+            for(let d=1; d<=daysInMonth; d++) {
+                const div = document.createElement('div');
+                div.className = 'calendar-day';
+                div.textContent = d;
+                
+                const currentStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                
+                if(currentStr === selectedVal) div.classList.add('selected');
+                if(today.getFullYear() === year && today.getMonth() === month && today.getDate() === d) {
+                    div.classList.add('today');
+                }
+
+                div.addEventListener('click', () => {
+                    inpDate.value = currentStr;
+                    dateDisplay.textContent = formatDisplayDate(currentStr);
+                    updatePreview();
+                    datePickerOverlay.classList.remove('active');
+                });
+
+                calDaysContainer.appendChild(div);
+            }
+        }
+
+        function openTimePicker() {
+            const currentVal = inpTime.value || "12:00";
+            const [h, m] = currentVal.split(':').map(Number);
+            
+            // Convert stored 24h to 12h for picker state
+            pickerPeriod = h >= 12 ? 'PM' : 'AM';
+            pickerHour = h % 12;
+            if(pickerHour === 0) pickerHour = 12;
+            pickerMinute = m;
+
+            renderTimePicker();
+            timePickerOverlay.classList.add('active');
+            
+            // Auto scroll
+            setTimeout(() => {
+                const hEl = timeColHours.querySelector(`div[data-val="${pickerHour}"]`);
+                const mEl = timeColMinutes.querySelector(`div[data-val="${pickerMinute}"]`);
+                const pEl = timeColPeriod.querySelector(`div[data-val="${pickerPeriod}"]`);
+                
+                if(hEl) hEl.scrollIntoView({block: "center"});
+                if(mEl) mEl.scrollIntoView({block: "center"});
+                if(pEl) pEl.scrollIntoView({block: "center"});
+            }, 10);
+        }
+
+        function renderTimePicker() {
+            Array.from(timeColHours.children).forEach(child => {
+                child.classList.toggle('selected', parseInt(child.dataset.val) === pickerHour);
+            });
+            Array.from(timeColMinutes.children).forEach(child => {
+                child.classList.toggle('selected', parseInt(child.dataset.val) === pickerMinute);
+            });
+            Array.from(timeColPeriod.children).forEach(child => {
+                child.classList.toggle('selected', child.dataset.val === pickerPeriod);
+            });
+        }
+
+        // --- PICKER LOGIC END ---
+
         // --- INDEXED DB LAYER ---
         const idbCountdowns = {
             db: null,
@@ -604,36 +938,23 @@
 
         // --- LOGIC & HELPERS ---
 
-        function setMaxDate() {
-            const today = new Date();
-            // Set minimum date to today (or tomorrow if time has passed)
-            inpDate.min = today.toISOString().split('T')[0];
-            
-            // Set maximum date 
-            const maxDate = new Date(today.getFullYear() + MAX_YEARS_FUTURE, today.getMonth(), today.getDate());
-            inpDate.max = maxDate.toISOString().split('T')[0];
-        }
-
-        // Helper to format date string for display
         function formatDisplayDate(dateString) {
             if (!dateString) return 'Select Date';
             try {
-                // We add T00:00:00 to avoid timezone issues when parsing only a date string
-                const date = new Date(dateString + 'T00:00:00'); 
+                const parts = dateString.split('-');
+                const date = new Date(parts[0], parts[1]-1, parts[2]);
                 return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
             } catch {
                 return dateString;
             }
         }
 
-        // Calculate duration breakdown
         function getDuration(target) {
             const now = new Date();
             let diff = target - now;
 
             if (diff <= 0) return { passed: true };
 
-            // Precise calculation
             const msInDecade = 31556952000 * 10;
             const msInYear = 31556952000;
             const msInMonth = 2629746000;
@@ -672,45 +993,37 @@
             };
         }
 
-        // Logic to find the Next occurrence for Repeating events
         function getNextOccurrence(item) {
             const now = new Date();
             const [tHours, tMinutes] = item.timeStr.split(':').map(Number);
             
-            let target = new Date(); // Used as a base for calculations
+            let target = new Date();
             
             if (item.type === 'one-time') {
-                target = new Date(item.dateStr);
+                const [y, m, d] = item.dateStr.split('-').map(Number);
+                target = new Date(y, m-1, d);
                 target.setHours(tHours, tMinutes, 0, 0);
                 return target;
             }
 
-            // Handling Repeating Logic
+            // Repeating Logic
             const freq = item.freqConfig;
-            
-            // Set target's time to the specified time for today
             target.setHours(tHours, tMinutes, 0, 0);
 
             if (freq.type === 'daily') {
                 if (target <= now) {
-                    // If target time today passed, set to same time tomorrow
                     target.setDate(target.getDate() + 1);
                 }
             }
             else if (freq.type === 'weekly') {
-                // freq.days is array of integers [0-6] as strings
                 const targetDays = freq.days.map(Number);
                 let found = false;
 
-                // Check next 8 days (1 week + 1 day to ensure we catch the next cycle)
                 for(let i=0; i<8; i++) {
                     let checkDate = new Date(now);
                     checkDate.setDate(now.getDate() + i);
                     checkDate.setHours(tHours, tMinutes, 0, 0);
 
-                    // Check if:
-                    // 1. The day is in the target list AND
-                    // 2. The event time has not yet passed (or if i>0, i.e. tomorrow or later)
                     const isToday = i === 0;
                     const isTargetDay = targetDays.includes(checkDate.getDay());
                     const isFutureTime = checkDate > now;
@@ -724,15 +1037,14 @@
                 if (!found) target = null;
             }
             else if (freq.type === 'monthly') {
-                let setDay = parseInt(item.dateStr.split('-')[2]); // Get the original Day
+                let setDay = parseInt(item.dateStr.split('-')[2]); 
                 target.setDate(setDay);
                 target.setFullYear(now.getFullYear(), now.getMonth());
 
                 if (target <= now) {
                     target.setMonth(target.getMonth() + 1);
-                    // Handle month end wrapping, e.g., setting day 31 in Feb
                     while (target.getDate() !== setDay && target.getMonth() !== (now.getMonth() + 2) % 12) {
-                        target.setDate(target.getDate() - 1); // Go back until you hit a valid date for that day
+                        target.setDate(target.getDate() - 1);
                     }
                 }
             }
@@ -777,12 +1089,11 @@
                     </div>
                     <div class="time-display" id="timer-${item.id}">Loading...</div>
                     <div class="detail-display" id="detail-${item.id}"></div>
-                    <!-- Delete button -->
                     <i class="fa-solid fa-trash delete-btn" onclick="deleteCountdown('${item.id}', event)"></i>
                 `;
                 grid.appendChild(card);
             });
-            updateTicks(); // Immediate update
+            updateTicks();
         }
 
         function updateTicks() {
@@ -794,8 +1105,8 @@
                 const target = getNextOccurrence(item);
                 if (!target) {
                     elTimer.textContent = "Error";
-                    elDetail.textContent = "Could not calculate next occurrence.";
-                    elTimer.style.color = "#ef4444"; // Red
+                    elDetail.textContent = "Check configuration";
+                    elTimer.style.color = "#ef4444";
                     return;
                 }
 
@@ -803,22 +1114,18 @@
 
                 if (d.passed) {
                     elTimer.textContent = "Completed";
-                    elTimer.style.color = "#10b981"; // Green
+                    elTimer.style.color = "#10b981";
                     elDetail.textContent = item.type === 'one-time' ? "This event has passed." : "Recalculating...";
-                    // Trigger a re-render/re-tick for repeating events to find the next one
                     if (item.type === 'repeating') {
-                         // Use a slight delay to allow UI to breathe
                          setTimeout(renderCountdowns, 50); 
                     }
                 } else {
                     elTimer.style.color = "var(--tab-active-text)";
-                    // Format 00:00:00
                     const h = String(d.hours).padStart(2, '0');
                     const m = String(d.minutes).padStart(2, '0');
                     const s = String(d.seconds).padStart(2, '0');
                     elTimer.textContent = `${h}:${m}:${s}`;
                     
-                    // Smart detail string
                     let parts = [];
                     if(d.decades > 0) parts.push(`${d.decades} decades`);
                     if(d.years > 0) parts.push(`${d.years} years`);
@@ -841,23 +1148,25 @@
             // Reset Inputs
             inpTitle.value = '';
             
-            // Set initial date/time values (today + 12:00)
+            // Set initial date/time values
             const today = new Date();
-            inpDate.value = today.toISOString().split('T')[0];
-            inpTime.value = '12:00';
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
             
-            // Initialize custom displays
+            inpDate.value = `${yyyy}-${mm}-${dd}`;
+            inpTime.value = '12:00'; // internal 24h default (12 PM)
+            
+            // Initialize displays
             dateDisplay.textContent = formatDisplayDate(inpDate.value);
-            timeDisplay.textContent = inpTime.value;
+            timeDisplay.textContent = formatTime12H(12, 0); // "12:00 PM"
             
-            // Toggle Repeating Section
             if (type === 'repeating') {
                 freqSection.classList.remove('hidden');
             } else {
                 freqSection.classList.add('hidden');
             }
             
-            // Reset Checkboxes
             document.querySelectorAll('.day-checkbox').forEach(cb => cb.checked = false);
             daysSelector.classList.add('hidden');
             inpFreqType.value = 'daily';
@@ -867,25 +1176,27 @@
 
         function closeModal() {
             modalOverlay.classList.remove('active');
-            dateContainer.classList.remove('focus-ring');
-            timeContainer.classList.remove('focus-ring');
+            datePickerOverlay.classList.remove('active');
+            timePickerOverlay.classList.remove('active');
         }
 
         function updatePreview() {
-            // Construct temporary object to feed into calculation logic
             const title = inpTitle.value || 'New Event';
-            // Use the actual input values, not the displayed ones
             const dateVal = inpDate.value; 
-            const timeVal = inpTime.value;
+            const timeVal = inpTime.value; // 24H
             
             pTitle.textContent = title;
-            pDateStr.textContent = `${formatDisplayDate(dateVal)} @ ${timeVal}`;
-
+            
             if (!dateVal || !timeVal) {
                 pBigTime.textContent = "---";
-                pDec.textContent = pYrs.textContent = pMos.textContent = pWks.textContent = pDays.textContent = '---';
+                pDateStr.textContent = "---";
                 return;
             }
+
+            // Format preview text for human reading
+            const [h, m] = timeVal.split(':').map(Number);
+            const friendlyTime = formatTime12H(h, m);
+            pDateStr.textContent = `${formatDisplayDate(dateVal)} @ ${friendlyTime}`;
 
             let freqConfig = null;
             if (currentModalType === 'repeating') {
@@ -905,7 +1216,6 @@
             const target = getNextOccurrence(tempItem);
             if(!target) {
                 pBigTime.textContent = "Error";
-                pDec.textContent = pYrs.textContent = pMos.textContent = pWks.textContent = pDays.textContent = '---';
                 return;
             }
 
@@ -925,8 +1235,6 @@
         }
 
         // --- EVENT LISTENERS ---
-
-        // Toolbar
         addMenuBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             addDropdown.classList.toggle('hidden');
@@ -943,38 +1251,8 @@
         
         btnCancel.addEventListener('click', closeModal);
 
-        // Custom Date/Time Selectors: Fire click on the hidden native input
-        dateContainer.addEventListener('click', () => {
-            inpDate.click(); // Opens the native date picker
-            dateContainer.classList.add('focus-ring');
-        });
-        timeContainer.addEventListener('click', () => {
-            inpTime.click(); // Opens the native time picker
-            timeContainer.classList.add('focus-ring');
-        });
-
-        // Native Input Changes -> Update Custom Display and Preview
+        // Input Watchers
         inpTitle.addEventListener('input', updatePreview);
-        
-        // Use 'input' event for real-time update in modern browsers
-        inpDate.addEventListener('input', () => {
-            dateDisplay.textContent = formatDisplayDate(inpDate.value);
-            // We keep focus-ring until it blurs for better UX
-            updatePreview();
-        });
-        inpDate.addEventListener('blur', () => {
-            dateContainer.classList.remove('focus-ring');
-        });
-
-        // Use 'input' event for real-time update in modern browsers
-        inpTime.addEventListener('input', () => {
-            timeDisplay.textContent = inpTime.value;
-            // We keep focus-ring until it blurs for better UX
-            updatePreview();
-        });
-        inpTime.addEventListener('blur', () => {
-            timeContainer.classList.remove('focus-ring');
-        });
 
         inpFreqType.addEventListener('change', () => {
             if (inpFreqType.value === 'weekly') {
@@ -987,7 +1265,6 @@
         
         document.querySelectorAll('.day-checkbox').forEach(cb => cb.addEventListener('change', updatePreview));
 
-        // Live Preview Interval
         setInterval(() => {
             if (modalOverlay.classList.contains('active')) updatePreview();
         }, 1000);
@@ -999,9 +1276,8 @@
             const timeStr = inpTime.value;
 
             if (!dateStr || !timeStr) {
-                // IMPORTANT: Do NOT use confirm/alert
                 console.error("Please select a valid date and time before saving.");
-                return; // Prevent saving if date/time is missing
+                return;
             }
 
             let freqConfig = null;
@@ -1009,9 +1285,6 @@
                 freqConfig = { type: inpFreqType.value, days: [] };
                 if (inpFreqType.value === 'weekly') {
                     document.querySelectorAll('.day-checkbox:checked').forEach(cb => freqConfig.days.push(cb.value));
-                    if (freqConfig.days.length === 0) {
-                        console.warn("No days selected for weekly repeat. The countdown may not behave as expected.");
-                    }
                 }
             }
 
@@ -1030,14 +1303,10 @@
             closeModal();
         });
 
-        // Global Tick for Grid
         setInterval(updateTicks, 1000);
 
-        // Delete Function (Exposed to Global Scope for onclick)
         window.deleteCountdown = (id, event) => {
             event.stopPropagation();
-            // Since we can't use confirm, we just delete. A better solution would be a custom modal.
-            console.log(`Deleting countdown with ID: ${id}`);
             appState.countdowns = appState.countdowns.filter(c => c.id !== id);
             idbCountdowns.save(appState.countdowns);
             renderCountdowns();
@@ -1045,7 +1314,7 @@
 
         // --- INIT ---
         window.addEventListener('load', async () => {
-            setMaxDate();
+            initPickers(); 
             await idbCountdowns.initDB();
             const saved = await idbCountdowns.load();
             if (saved) appState.countdowns = saved;
