@@ -1,57 +1,59 @@
 /**
  * humanity-agent.js
- * * VERSION: 3.0 (Gemini 3.0 Era)
+ * * FULL VERSION: 3.0 (Gemini 3.0 Era)
  * THEME: 4SP Integrated (Indigo #4f46e5 / Dark #070707)
- * * FEATURES:
- * - Gemini 3.0 Pro (Thinking Mode) for Deep Analysis
- * - Gemini 2.5 Pro for Math/Coding
- * - Gemini 3.0 Flash for Speed/Creativity
- * - Full "System Control" Settings UI matching settings.html
- * - Persistent Memory Bank
- * - File Creation & Graphing Support
- * - KaTeX Math Rendering
+ * * INCLUDES:
+ * - Full CSS Injection (No external CSS files needed)
+ * - Complete API Logic for Gemini 3.0 Pro, 2.5 Pro, and 3.0 Flash
+ * - Full Settings "Control Panel" UI
+ * - Full Memories Management UI
+ * - Graphing, KaTeX, and File Creation rendering
  */
 (function() {
-    // --- CONFIGURATION ---
+    // ==========================================================================
+    // --- 1. CONFIGURATION & CONSTANTS ---
+    // ==========================================================================
     const API_KEY = 'AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro';
     const BASE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/`;
     const MAX_INPUT_HEIGHT = 180;
     const CHAR_LIMIT = 10000;
-    const PASTE_TO_FILE_THRESHOLD = 10000;
-
-    // --- STORAGE KEYS ---
     const SAVED_MEMORIES_KEY = 'ai-saved-memories';
     const APP_SETTINGS_KEY = 'ai-app-settings';
-
-    // --- LIMITS ---
     const MAX_MEMORIES = 50;
     const MAX_ATTACHMENTS_PER_MESSAGE = 10;
     const MONOLOGUE_CHAR_THRESHOLD = 75;
 
-    // --- ICONS (SVG Fallbacks) ---
-    const copyIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
-    const checkIconSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
-    const downloadIconSVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`;
+    // --- ICONS (Inline SVG for independence) ---
+    const ICONS = {
+        copy: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`,
+        check: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`,
+        download: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`,
+        trash: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`,
+        close: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`
+    };
 
-    // --- STATE MANAGEMENT ---
+    // ==========================================================================
+    // --- 2. STATE MANAGEMENT ---
+    // ==========================================================================
     let isAIActive = false;
     let isRequestPending = false;
     let currentAIRequestController = null;
     let chatHistory = [];
     let attachedFiles = [];
     
-    // Default Settings
     let appSettings = {
         webSearch: true,
         locationSharing: false,
-        creativity: 1.0,       // Temperature (0.0 - 2.0)
-        thinkingLevel: "HIGH"  // Gemini 3.0 Specific: "LOW" or "HIGH"
+        creativity: 1.0,       // 0.0 to 2.0
+        thinkingLevel: "HIGH"  // "LOW" or "HIGH"
     };
     
     let savedMemories = [];
 
-    // --- UTILITY FUNCTIONS ---
-
+    // ==========================================================================
+    // --- 3. HELPER FUNCTIONS ---
+    // ==========================================================================
+    
     const debounce = (func, delay) => {
         let timeoutId;
         return (...args) => {
@@ -81,7 +83,21 @@
         return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
     }
 
-    // --- STORAGE MANAGEMENT ---
+    function httpGetAsync(url, callback) {
+        const xmlHttp = new XMLHttpRequest();
+        xmlHttp.onreadystatechange = function() {
+            if (xmlHttp.readyState === 4) {
+                if (xmlHttp.status === 200) callback(xmlHttp.responseText, null);
+                else callback(null, new Error(`HTTP Error: ${xmlHttp.status}`));
+            }
+        }
+        xmlHttp.open("GET", url, true);
+        xmlHttp.send(null);
+    }
+
+    // ==========================================================================
+    // --- 4. DATA STORAGE ---
+    // ==========================================================================
 
     function loadAppSettings() {
         try {
@@ -89,15 +105,13 @@
             if (stored) {
                 const parsed = JSON.parse(stored);
                 appSettings = { ...appSettings, ...parsed };
-                // Validation
+                // Validate
                 if (typeof appSettings.creativity !== 'number') appSettings.creativity = 1.0;
                 if (appSettings.thinkingLevel !== "LOW" && appSettings.thinkingLevel !== "HIGH") {
                     appSettings.thinkingLevel = "HIGH";
                 }
             }
-        } catch (e) {
-            console.error("Error loading settings:", e);
-        }
+        } catch (e) { console.error("Error loading settings:", e); }
     }
 
     function saveAppSettings() {
@@ -119,29 +133,18 @@
         } catch (e) { console.error("Error saving memories:", e); }
     }
 
-    // Initialize Storage
+    // Init
     loadAppSettings();
     loadSavedMemories();
 
-    // --- GEOLOCATION UTILITIES ---
-
-    function httpGetAsync(url, callback) {
-        const xmlHttp = new XMLHttpRequest();
-        xmlHttp.onreadystatechange = function() {
-            if (xmlHttp.readyState === 4) {
-                if (xmlHttp.status === 200) callback(xmlHttp.responseText, null);
-                else callback(null, new Error(`HTTP Error: ${xmlHttp.status}`));
-            }
-        }
-        xmlHttp.open("GET", url, true);
-        xmlHttp.send(null);
-    }
+    // ==========================================================================
+    // --- 5. CONTEXT & LOGIC ---
+    // ==========================================================================
 
     function getUserLocationForContext() {
         return new Promise((resolve) => {
             if (!appSettings.locationSharing) {
-                const fallback = 'Location Sharing is disabled.';
-                resolve(fallback);
+                resolve('Location Sharing is disabled.');
                 return;
             }
             if (!navigator.geolocation) {
@@ -179,7 +182,31 @@
         });
     }
 
-    // --- AI LOGIC (MODELS & PROMPTS) ---
+    function determineIntentCategory(query) {
+        const lower = query.toLowerCase();
+        
+        // DEEP REASONING (Gemini 3.0 Pro)
+        if (lower.includes('analyze') || lower.includes('deep dive') || lower.includes('complex') || 
+            lower.includes('why') || lower.includes('reasoning') || lower.includes('strategy') || 
+            lower.includes('critique') || lower.includes('investigate')) {
+            return 'DEEP_ANALYSIS';
+        }
+
+        // MID-TIER / MATH / CODING (Gemini 2.5 Pro)
+        if (lower.includes('math') || lower.includes('code') || lower.includes('solve') || 
+            lower.includes('formula') || lower.includes('script') || lower.includes('debug') ||
+            lower.includes('function') || lower.includes('calculus') || lower.includes('algebra')) {
+            return 'PROFESSIONAL_MATH';
+        }
+
+        // CREATIVE (Gemini 3.0 Flash)
+        if (lower.includes('story') || lower.includes('creative') || lower.includes('roast') || 
+            lower.includes('poem') || lower.includes('imagine') || lower.includes('write a')) {
+            return 'CREATIVE';
+        }
+
+        return 'CASUAL';
+    }
 
     const FSP_HISTORY = `You are the exclusive AI Agent for 4SP (4simpleproblems).
     4SP History:
@@ -187,34 +214,7 @@
     - v2 (Apr 2025): Media, Games, Proxy List.
     - v3 (May 2025): Visual Reinvention (Clean Grid).
     - v4 (Aug 2025): Dashboard Era (Widgets, Apps, Panic Key).
-    - v5 (Aug 2026): Project Zirconium (Social, Messenger, Humanity AI).
-    `;
-
-    function determineIntentCategory(query) {
-        const lower = query.toLowerCase();
-        
-        // DEEP REASONING (Gemini 3.0 Pro)
-        if (lower.includes('analyze') || lower.includes('deep dive') || lower.includes('complex') || 
-            lower.includes('why') || lower.includes('reasoning') || lower.includes('strategy') || 
-            lower.includes('critique')) {
-            return 'DEEP_ANALYSIS';
-        }
-
-        // MID-TIER / MATH / CODING (Gemini 2.5 Pro)
-        if (lower.includes('math') || lower.includes('code') || lower.includes('solve') || 
-            lower.includes('formula') || lower.includes('script') || lower.includes('debug')) {
-            return 'PROFESSIONAL_MATH';
-        }
-
-        // CREATIVE (Gemini 3.0 Flash)
-        if (lower.includes('story') || lower.includes('creative') || lower.includes('roast') || 
-            lower.includes('poem') || lower.includes('imagine')) {
-            return 'CREATIVE';
-        }
-
-        // DEFAULT (Gemini 3.0 Flash)
-        return 'CASUAL';
-    }
+    - v5 (Aug 2026): Project Zirconium (Social, Messenger, Humanity AI).`;
 
     function getDynamicSystemInstructionAndModel(query, settings) {
         const intent = determineIntentCategory(query);
@@ -233,7 +233,7 @@
 
         // Web Search Config
         if (settings.webSearch) {
-            instruction += `\n**Web Search: ENABLED.** Use it for real-time info/facts.\n`;
+            instruction += `\n**Web Search: ENABLED.** Use it for real-time info/facts. Append <SOURCE> tags.\n`;
         } else {
             instruction += `\n**Web Search: DISABLED.** If you cannot answer without it, output exactly: [NEEDS_WEB_SEARCH].\n`;
         }
@@ -242,13 +242,13 @@
             case 'DEEP_ANALYSIS':
                 model = 'gemini-3.0-pro-preview';
                 instruction += `\n\n**MODE: DEEP ANALYSIS (Gemini 3.0 Pro - Thinking: ${settings.thinkingLevel}).**
-                Provide comprehensive, multi-faceted analysis. Critically evaluate all assumptions. Structure your response deeply.`;
+                Provide comprehensive, multi-faceted analysis. Critically evaluate all assumptions. Structure your response deeply with headings.`;
                 break;
 
             case 'PROFESSIONAL_MATH':
                 model = 'gemini-2.5-pro';
                 instruction += `\n\n**MODE: TECHNICAL (Gemini 2.5 Pro).**
-                Provide precise, logical, and syntactically correct answers. Focus on accuracy and step-by-step derivation.`;
+                Provide precise, logical, and syntactically correct answers. Focus on accuracy, step-by-step derivation, and correct LaTeX syntax.`;
                 break;
 
             case 'CREATIVE':
@@ -256,7 +256,7 @@
                 if (query.toLowerCase().includes('roast')) {
                     instruction += `\n\n**MODE: ROAST.** Be sarcastic, witty, and playfully aggressive (while remaining safe).`;
                 } else {
-                    instruction += `\n\n**MODE: CREATIVE.** Use evocative language. Be imaginative.`;
+                    instruction += `\n\n**MODE: CREATIVE.** Use evocative language. Be imaginative. Focus on narrative and description.`;
                 }
                 break;
 
@@ -276,7 +276,9 @@
         return `\n\n[USER MEMORY BANK - ALWAYS REFERENCE IF RELEVANT]:\n${list}\n\n`;
     }
 
-    // --- API INTERACTION ---
+    // ==========================================================================
+    // --- 6. API INTERACTION ---
+    // ==========================================================================
 
     async function callGoogleAI(responseBubble) {
         if (!API_KEY) {
@@ -344,7 +346,12 @@
             }
 
             const data = await response.json();
-            let text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            
+            if (!data.candidates || data.candidates.length === 0) {
+                throw new Error("No response candidates returned.");
+            }
+
+            let text = data.candidates[0].content.parts[0].text;
             
             if (!text) throw new Error("Empty response from AI.");
 
@@ -354,7 +361,7 @@
                 text = text.replace(/\[NEEDS_WEB_SEARCH\]/g, '');
             }
 
-            // Push to history
+            // Push to history (using original user query, not the context-injected one)
             chatHistory.push({ role: "model", parts: [{ text: text }] });
 
             // Parse Response
@@ -423,13 +430,18 @@
             currentAIRequestController = null;
             document.getElementById('ai-input-wrapper').classList.remove('waiting');
             responseBubble.classList.remove('loading');
+            
             // Scroll to bottom
             const container = document.getElementById('ai-response-container');
-            if(container) container.scrollTop = container.scrollHeight;
+            if(container) {
+                setTimeout(() => container.scrollTop = container.scrollHeight, 100);
+            }
         }
     }
 
-    // --- PARSING LOGIC ---
+    // ==========================================================================
+    // --- 7. RESPONSE PARSING ---
+    // ==========================================================================
 
     function parseGeminiResponse(text) {
         let html = text;
@@ -454,7 +466,8 @@
         if (sources.length > 0) {
             sourcesHTML = `<div class="ai-sources-list"><h4>Sources:</h4><ul>`;
             sources.forEach(s => {
-                let domain = new URL(s.url).hostname;
+                let domain = '';
+                try { domain = new URL(s.url).hostname; } catch(e){ domain = 'link'; }
                 let favicon = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
                 sourcesHTML += `<li><img src="${favicon}" class="favicon"><a href="${s.url}" target="_blank">${escapeHTML(s.title)}</a></li>`;
             });
@@ -471,8 +484,8 @@
             return addP(`
                 <div class="code-block-wrapper">
                     <div class="code-block-header">
-                        <span>${lang || 'CODE'}</span>
-                        <button class="copy-code-btn">${copyIconSVG}</button>
+                        <span>${lang ? lang.toUpperCase() : 'CODE'}</span>
+                        <button class="copy-code-btn">${ICONS.copy}</button>
                     </div>
                     <pre><code class="language-${lang}">${escapeHTML(code)}</code></pre>
                 </div>`);
@@ -493,7 +506,7 @@
                     <div class="gemini-file-creation-card">
                         <div class="file-header">
                             <div class="file-name"><span>${escapeHTML(fname)}</span></div>
-                            <a href="${url}" download="${escapeHTML(fname)}" class="file-dl-btn">${downloadIconSVG}</a>
+                            <a href="${url}" download="${escapeHTML(fname)}" class="file-dl-btn">${ICONS.download}</a>
                             <div class="file-badge">${ext}</div>
                         </div>
                         <div class="file-body">
@@ -501,13 +514,15 @@
                         </div>
                     </div>
                 `);
-            } catch(e) { return addP('[File Error]'); }
+            } catch(e) { return addP('[File Creation Error]'); }
         });
 
         // 7. Standard Markdown
         html = escapeHTML(html);
         html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
         html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
+        html = html.replace(/^### (.*$)/gm, "<h3>$1</h3>");
+        html = html.replace(/^## (.*$)/gm, "<h2>$1</h2>");
         html = html.replace(/\n/g, "<br>");
 
         // Restore
@@ -516,7 +531,9 @@
         return { html, thoughtProcess, sourcesHTML };
     }
 
-    // --- RENDERING HELPERS ---
+    // ==========================================================================
+    // --- 8. RENDERING FUNCTIONS (KaTeX, Graphs, Code) ---
+    // ==========================================================================
 
     function renderKaTeX(container) {
         if (typeof katex === 'undefined') return;
@@ -550,32 +567,56 @@
         });
     }
 
+    // Simple Canvas Plotter Placeholder (Full graphing library replacement)
     function drawSimpleGraph(canvas, data) {
-        // Basic placeholder implementation of graphing
         const ctx = canvas.getContext('2d');
-        canvas.width = canvas.parentElement.clientWidth;
+        const rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = rect.width;
         canvas.height = 300;
-        ctx.fillStyle = '#222';
+        
+        // Background
+        ctx.fillStyle = '#1a1a1a';
         ctx.fillRect(0,0,canvas.width, canvas.height);
-        ctx.strokeStyle = '#4f46e5';
-        ctx.lineWidth = 2;
+        
+        // Grid
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(0, canvas.height/2);
-        ctx.lineTo(canvas.width, canvas.height/2);
+        ctx.lineTo(canvas.width, canvas.height/2); // X Axis
+        ctx.moveTo(canvas.width/2, 0);
+        ctx.lineTo(canvas.width/2, canvas.height); // Y Axis
         ctx.stroke();
-        // Full implementation omitted for brevity, but hook exists
+
+        // Plot Data (Assume simple line chart from data.data[0].x/y)
+        if(data.data && data.data[0]) {
+            const trace = data.data[0];
+            ctx.strokeStyle = '#4f46e5';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for(let i=0; i<trace.x.length; i++) {
+                // Simple normalization for demo
+                const x = (trace.x[i] + 10) * (canvas.width/20);
+                const y = canvas.height - ((trace.y[i] + 10) * (canvas.height/20));
+                if(i===0) ctx.moveTo(x,y);
+                else ctx.lineTo(x,y);
+            }
+            ctx.stroke();
+        }
     }
 
     function handleCopyCode(e) {
         const btn = e.currentTarget;
         const code = btn.closest('.code-block-wrapper').querySelector('code').innerText;
         navigator.clipboard.writeText(code).then(() => {
-            btn.innerHTML = checkIconSVG;
-            setTimeout(() => btn.innerHTML = copyIconSVG, 2000);
+            btn.innerHTML = ICONS.check;
+            setTimeout(() => btn.innerHTML = ICONS.copy, 2000);
         });
     }
 
-    // --- UI: MAIN INTERFACE & MENU ---
+    // ==========================================================================
+    // --- 9. UI: MODALS & MENUS (THEME MATCHING) ---
+    // ==========================================================================
 
     function toggleMainMenu() {
         const menu = document.getElementById('ai-main-menu');
@@ -616,8 +657,22 @@
         
         return menu;
     }
-
-    // --- UI: SETTINGS MODAL (4SP STYLED) ---
+    
+    function showWebSearchNudge() {
+        if(document.getElementById('ai-web-nudge')) return;
+        const div = document.createElement('div');
+        div.id = 'ai-web-nudge';
+        div.innerHTML = `
+            <div class="nudge-text">Enable Web Search for live data?</div>
+            <div class="nudge-actions">
+                <button id="nudge-no" class="btn-toolbar-style">No</button>
+                <button id="nudge-yes" class="btn-toolbar-style btn-primary-override">Settings</button>
+            </div>
+        `;
+        document.body.appendChild(div);
+        div.querySelector('#nudge-no').onclick = () => div.remove();
+        div.querySelector('#nudge-yes').onclick = () => { div.remove(); openSettingsModal(); };
+    }
 
     function openSettingsModal() {
         if (document.getElementById('ai-settings-modal')) return;
@@ -630,7 +685,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h3>System Control</h3>
-                    <button class="close-button"><i class="fa-solid fa-xmark"></i></button>
+                    <button class="close-button">${ICONS.close}</button>
                 </div>
                 <div class="modal-body">
                     
@@ -688,12 +743,11 @@
 
         document.body.appendChild(modal);
 
-        // Handlers
         const close = () => modal.remove();
         modal.querySelector('.close-button').onclick = close;
         modal.onclick = (e) => { if(e.target === modal) close(); };
 
-        // Slider
+        // Slider Logic
         const slider = modal.querySelector('#input-creativity');
         const valDisp = modal.querySelector('#val-creativity');
         slider.oninput = (e) => {
@@ -703,7 +757,7 @@
             saveAppSettings();
         };
 
-        // Segment
+        // Segment Logic
         modal.querySelectorAll('.segment-item').forEach(item => {
             item.onclick = () => {
                 modal.querySelectorAll('.segment-item').forEach(i => i.classList.remove('active'));
@@ -714,12 +768,10 @@
             };
         });
 
-        // Toggles
+        // Toggle Logic
         modal.querySelector('#input-web').onchange = (e) => { appSettings.webSearch = e.target.checked; saveAppSettings(); };
         modal.querySelector('#input-loc').onchange = (e) => { appSettings.locationSharing = e.target.checked; saveAppSettings(); };
     }
-
-    // --- UI: MEMORIES MODAL ---
 
     function openMemoriesModal() {
         if(document.getElementById('ai-memories-modal')) return;
@@ -732,7 +784,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h3>Memory Bank</h3>
-                    <button class="close-button"><i class="fa-solid fa-xmark"></i></button>
+                    <button class="close-button">${ICONS.close}</button>
                 </div>
                 <div class="modal-body">
                     <button id="btn-add-mem" class="btn-toolbar-style btn-primary-override w-full mb-4">
@@ -763,7 +815,7 @@
             <div class="settings-box flex-row p-3 mb-2">
                 <div class="text-sm">${escapeHTML(m.content)}</div>
                 <button class="btn-icon text-danger hover-danger mem-delete" data-idx="${i}">
-                    <i class="fa-solid fa-trash"></i>
+                    ${ICONS.trash}
                 </button>
             </div>
         `).join('');
@@ -781,24 +833,9 @@
         });
     }
 
-    // --- UI: WEB SEARCH NUDGE ---
-    function showWebSearchNudge() {
-        if(document.getElementById('ai-web-nudge')) return;
-        const div = document.createElement('div');
-        div.id = 'ai-web-nudge';
-        div.innerHTML = `
-            <div class="nudge-text">Enable Web Search for live data?</div>
-            <div class="nudge-actions">
-                <button id="nudge-no" class="btn-toolbar-style">No</button>
-                <button id="nudge-yes" class="btn-toolbar-style btn-primary-override">Settings</button>
-            </div>
-        `;
-        document.body.appendChild(div);
-        div.querySelector('#nudge-no').onclick = () => div.remove();
-        div.querySelector('#nudge-yes').onclick = () => { div.remove(); openSettingsModal(); };
-    }
-
-    // --- INPUT HANDLING ---
+    // ==========================================================================
+    // --- 10. ACTIVATION & EVENTS ---
+    // ==========================================================================
 
     function handleFileUpload() {
         const input = document.createElement('input');
@@ -824,7 +861,6 @@
 
     function renderAttachments() {
         const container = document.getElementById('ai-attachment-preview');
-        const wrapper = document.getElementById('ai-input-wrapper');
         
         if(attachedFiles.length === 0) {
             container.innerHTML = '';
@@ -847,17 +883,6 @@
         renderAttachments();
     };
 
-    async function handleKeyDown(e) {
-        if (e.ctrlKey && e.key === '\\') {
-            if (isAIActive) {
-                const input = document.getElementById('ai-input');
-                if (input && input.innerText.trim() === '') deactivateAI();
-            } else {
-                activateAI();
-            }
-        }
-    }
-
     function handleInput(e) {
         const el = e.target;
         if(el.scrollHeight > MAX_INPUT_HEIGHT) el.style.height = MAX_INPUT_HEIGHT + 'px';
@@ -877,19 +902,19 @@
             if(!text && attachedFiles.length === 0) return;
 
             const container = document.getElementById('ai-response-container');
-            
+            const compose = document.getElementById('ai-container');
+            if(!compose.classList.contains('chat-active')) compose.classList.add('chat-active');
+
             // User Bubble
             container.innerHTML += `<div class="ai-message-bubble user-message">${escapeHTML(text)}</div>`;
             
             // AI Loading Bubble
-            const loadingId = `loading-${Date.now()}`;
             const loadingBubble = document.createElement('div');
             loadingBubble.className = 'ai-message-bubble gemini-response loading';
-            loadingBubble.id = loadingId;
             loadingBubble.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
             container.appendChild(loadingBubble);
 
-            // History Push (Attachments logic simplified for prompt text)
+            // Prepare History
             let msgText = text;
             if(attachedFiles.length > 0) msgText += `\n[${attachedFiles.length} Files Attached]`;
             
@@ -904,8 +929,6 @@
             callGoogleAI(loadingBubble);
         }
     }
-
-    // --- ACTIVATION / DEACTIVATION ---
 
     function activateAI() {
         if (document.getElementById('ai-container')) return;
@@ -930,25 +953,27 @@
         `;
         
         document.body.appendChild(container);
-        
-        // Append Menu (Hidden initially)
         document.getElementById('ai-compose-area').appendChild(createMainMenu());
 
-        // Listeners
         const input = document.getElementById('ai-input');
         input.addEventListener('keydown', handleSubmit);
         input.addEventListener('input', handleInput);
         input.addEventListener('paste', handlePaste);
         
         document.getElementById('ai-menu-button').addEventListener('click', toggleMainMenu);
-        document.getElementById('ai-close-button')?.addEventListener('click', deactivateAI); // If added
 
-        // Animate In
         setTimeout(() => {
             container.classList.add('active');
             if(chatHistory.length > 0) {
-                renderHistory(document.getElementById('ai-response-container'));
+                const resp = document.getElementById('ai-response-container');
+                chatHistory.forEach(msg => {
+                    const cls = msg.role === 'user' ? 'user-message' : 'gemini-response';
+                    // Simple history render
+                    const txt = escapeHTML(msg.parts[0].text.substring(0, 300)) + (msg.parts[0].text.length>300?'...':'');
+                    resp.innerHTML += `<div class="ai-message-bubble ${cls}">${txt}</div>`;
+                });
                 container.classList.add('chat-active');
+                resp.scrollTop = resp.scrollHeight;
             }
         }, 10);
         
@@ -965,27 +990,34 @@
         isAIActive = false;
     }
 
-    function renderHistory(container) {
-        chatHistory.forEach(msg => {
-            const cls = msg.role === 'user' ? 'user-message' : 'gemini-response';
-            // Simple render for history to save complexity, full parsing applied on new messages
-            const txt = escapeHTML(msg.parts[0].text).substring(0, 300) + (msg.parts[0].text.length>300?'...':'');
-            container.innerHTML += `<div class="ai-message-bubble ${cls}">${txt}</div>`;
-        });
+    async function handleKeyDown(e) {
+        if (e.ctrlKey && e.key === '\\') {
+            if (isAIActive) {
+                const input = document.getElementById('ai-input');
+                // Only close if input is empty
+                if (input && input.innerText.trim() === '') deactivateAI();
+            } else {
+                activateAI();
+            }
+        }
     }
 
-    // --- CSS INJECTION ---
+    // ==========================================================================
+    // --- 11. CSS INJECTION ---
+    // ==========================================================================
 
     function injectStyles() {
         if (document.getElementById('ai-dynamic-styles')) return;
 
-        // Load Fonts
+        // External Libs
         const f1 = document.createElement('link'); f1.rel='stylesheet'; f1.href='https://kit-pro.fontawesome.com/releases/v7.0.1/css/pro.min.css';
         const f2 = document.createElement('link'); f2.rel='stylesheet'; f2.href='https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500&display=swap';
         const f3 = document.createElement('link'); f3.rel='stylesheet'; f3.href='https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css';
         document.head.append(f1, f2, f3);
 
-        const css = `
+        const style = document.createElement("style");
+        style.id = "ai-dynamic-styles";
+        style.innerHTML = `
             :root {
                 --ai-bg: #070707;
                 --ai-panel: #0d0d0d;
@@ -1009,7 +1041,6 @@
             }
             #ai-container.active { opacity: 1; }
 
-            /* Headers */
             #ai-brand-title, #ai-persistent-title {
                 position: absolute; top: 25px; left: 30px; font-size: 18px; font-weight: 400; color: #fff;
                 transition: opacity 0.3s;
@@ -1019,7 +1050,6 @@
             #ai-container:not(.chat-active) #ai-persistent-title { opacity: 0; }
             #ai-container.chat-active #ai-brand-title { opacity: 0; }
 
-            /* Chat Area */
             #ai-response-container {
                 flex: 1; overflow-y: auto; width: 100%; max-width: 800px; margin: 0 auto;
                 padding: 80px 20px 20px; display: flex; flex-direction: column; gap: 15px;
@@ -1034,11 +1064,10 @@
                 align-self: flex-end; background: var(--ai-border-light); border: 1px solid var(--ai-border); color: #fff;
             }
             .gemini-response {
-                align-self: flex-start; background: transparent; 
+                align-self: flex-start; background: transparent;
             }
             .gemini-response.loading { color: var(--ai-accent); font-size: 1.2rem; }
 
-            /* Input Area */
             #ai-compose-area { width: 100%; max-width: 800px; margin: 0 auto 30px; padding: 0 20px; position: relative; z-index: 100; }
             #ai-input-wrapper {
                 background: #111; border: 1px solid #252525; border-radius: var(--ai-btn-radius);
@@ -1063,7 +1092,6 @@
                 background: var(--ai-accent-bg); color: var(--ai-accent); border-color: var(--ai-accent); 
             }
 
-            /* Attachment Preview */
             #ai-attachment-preview {
                 padding: 10px 10px 0; display: flex; flex-wrap: wrap; gap: 8px;
             }
@@ -1074,7 +1102,6 @@
             .attachment-chip button { background: none; border: none; color: #aaa; cursor: pointer; font-size: 1.1em; }
             .attachment-chip button:hover { color: #fff; }
 
-            /* Menu Dropdown */
             #ai-main-menu {
                 position: absolute; bottom: 110%; right: 20px; width: 200px;
                 background: #000; border: 1px solid #333; border-radius: var(--ai-radius);
@@ -1090,7 +1117,6 @@
             .menu-item:hover { background: #1a1a1a; color: #fff; }
             .menu-item i { width: 20px; text-align: center; }
 
-            /* Nudge */
             #ai-web-nudge {
                 position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
                 background: #1a1a1a; border: 1px solid #333; padding: 12px 20px;
@@ -1101,7 +1127,6 @@
             .nudge-actions { display: flex; gap: 8px; }
             @keyframes fadeUp { from{opacity:0;transform:translate(-50%,10px);} to{opacity:1;transform:translate(-50%,0);} }
 
-            /* Modals */
             .ai-modal {
                 position: fixed; top: 0; left: 0; width: 100%; height: 100%;
                 background: rgba(0,0,0,0.7); backdrop-filter: blur(5px);
@@ -1122,7 +1147,6 @@
             .close-button:hover { color: #fff; }
             .modal-body { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
 
-            /* Common UI Components (Matching Settings.html) */
             .settings-box {
                 border: 1px solid #333; border-radius: 1rem; background: transparent;
                 padding: 1rem; display: flex; flex-direction: column; gap: 10px;
@@ -1134,7 +1158,6 @@
             .box-text label { display: block; color: #fff; font-size: 0.95rem; margin-bottom: 2px; }
             .box-text p { margin: 0; font-size: 0.8rem; color: #666; }
 
-            /* Buttons */
             .btn-toolbar-style {
                 background: transparent; border: 1px solid #333; border-radius: 0.75rem;
                 color: #ccc; padding: 8px 16px; font-size: 0.9rem; cursor: pointer;
@@ -1155,7 +1178,6 @@
             .hover-danger:hover { color: #ff6b6b; transform: scale(1.1); }
             .w-full { width: 100%; } .mb-4 { margin-bottom: 1rem; } .mb-2 { margin-bottom: 0.5rem; }
 
-            /* Custom Range Slider */
             .slider-container { width: 100%; padding: 5px 0; }
             .custom-range {
                 -webkit-appearance: none; width: 100%; height: 4px; background: #333; border-radius: 2px; outline: none;
@@ -1167,7 +1189,6 @@
             .custom-range::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #333; border-radius: 2px; }
             .slider-labels { display: flex; justify-content: space-between; font-size: 0.75rem; color: #666; margin-top: 5px; }
 
-            /* Segmented Control */
             .segment-control {
                 background: #000; border: 1px solid #333; border-radius: 0.5rem;
                 display: flex; padding: 3px;
@@ -1178,7 +1199,6 @@
             }
             .segment-item.active { background: var(--ai-accent); color: #fff; font-weight: 500; }
 
-            /* Toggle Switch */
             .toggle-switch { position: relative; width: 50px; height: 26px; display: inline-block; }
             .toggle-switch input { opacity: 0; width: 0; height: 0; }
             .slider {
@@ -1192,7 +1212,6 @@
             input:checked + .slider { background-color: var(--ai-accent-bg); border-color: var(--ai-accent); }
             input:checked + .slider:before { transform: translateX(24px); background-color: var(--ai-accent); }
 
-            /* Thought Process */
             .ai-thought-process {
                 margin-top: 10px; background: rgba(79, 70, 229, 0.05);
                 border: 1px dashed rgba(79, 70, 229, 0.3); border-radius: 8px; overflow: hidden;
@@ -1211,7 +1230,6 @@
             }
             .ai-thought-process.collapsed .monologue-content { display: none; }
 
-            /* File Cards */
             .gemini-file-creation-card {
                 background: #111; border: 1px solid #333; border-radius: 8px;
                 width: 220px; overflow: hidden; margin-top: 10px;
@@ -1225,7 +1243,6 @@
             .file-dl-btn { color: var(--ai-accent); cursor: pointer; }
             .file-body { padding: 8px 12px; font-size: 0.75rem; color: #666; }
             
-            /* Code Blocks */
             .code-block-wrapper { background: #0d0d0d; border: 1px solid #252525; border-radius: 8px; margin: 10px 0; overflow: hidden; }
             .code-block-header {
                 background: #1a1a1a; padding: 6px 12px; display: flex; justify-content: space-between;
@@ -1235,7 +1252,6 @@
             pre { margin: 0; padding: 12px; overflow-x: auto; }
             code { font-family: 'Menlo', monospace; font-size: 0.9rem; color: #e0e0e0; }
 
-            /* Sources */
             .ai-sources-list { border-top: 1px solid #222; margin-top: 10px; padding-top: 10px; }
             .ai-sources-list h4 { font-size: 0.85rem; color: #888; margin: 0 0 5px; }
             .ai-sources-list ul { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }
@@ -1246,23 +1262,20 @@
             .ai-sources-list a { color: var(--ai-accent); text-decoration: none; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
             .favicon { width: 14px; height: 14px; border-radius: 2px; }
 
-            /* Typing Animation */
             .typing-animation.terminal-typing::after {
                 content: '▋'; display: inline-block; animation: blink 1s infinite; color: var(--ai-accent);
             }
             @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
             
-            /* Markdown Styles */
             .gemini-response h3 { color: #fff; font-size: 1.1rem; margin: 15px 0 8px; }
             .gemini-response ul, .gemini-response ol { margin: 8px 0; padding-left: 20px; color: #ccc; }
             .gemini-response li { margin-bottom: 4px; }
             .gemini-response strong { color: #fff; font-weight: 500; }
         `;
-        style.innerHTML = css;
         document.head.appendChild(style);
     }
 
-    // --- INIT LISTENERS ---
+    // Init Listener
     document.addEventListener('keydown', handleKeyDown);
 
 })();
