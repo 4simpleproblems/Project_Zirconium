@@ -1245,7 +1245,7 @@ If the user asks about a topic other than 4SP, you should not hint at the websit
         // const userColor = settings.favoriteColor;
 
         const intent = determineIntentCategory(query);
-        let model = 'gemini-2.5-flash-lite'; // Default model
+        let model = 'gemini-flash-latest'; // Default model
         let personaInstruction = `${FSP_HISTORY}
 
 You are a highly capable and adaptable AI, taking on a persona to best serve the user's direct intent. You have significant control over the interaction's structure and detail level, ensuring the response is comprehensive and authoritative.
@@ -1282,13 +1282,13 @@ You **MUST** also provide a brief summary of the file's purpose in your main res
         switch (intent) {
             case 'DEEP_ANALYSIS':
                 // NEW (USER REQUEST): Use Pro model for deep analysis and complex tasks.
-                model = 'gemini-2.5-pro';
-                personaInstruction += `\n\n**Current Persona: Professional Analyst (Using gemini-2.5-pro).** You are performing a detailed analysis. Respond with clarity, professionalism, and structured data. Your response must be comprehensive, highly structured, and exhibit a deep level of reasoning and critical evaluation. Use an assertive, expert tone. Structure your analysis clearly with headings and bullet points. REMEMBER: You must ALWAYS provide both <THOUGHT_PROCESS> and your complete formatted answer.`;
+                model = 'gemini-3-pro-preview';
+                personaInstruction += `\n\n**Current Persona: Professional Analyst (Using gemini-3-pro).** You are performing a detailed analysis. Respond with clarity, professionalism, and structured data. Your response must be comprehensive, highly structured, and exhibit a deep level of reasoning and critical evaluation. Use an assertive, expert tone. Structure your analysis clearly with headings and bullet points. REMEMBER: You must ALWAYS provide both <THOUGHT_PROCESS> and your complete formatted answer.`;
                 break;
             case 'PROFESSIONAL_MATH':
                 // UPDATED (USER REQUEST): Use Flash for standard math/tech.
-                model = 'gemini-2.5-flash';
-                personaInstruction += `\n\n**Current Persona: Technical Expert (Using gemini-2.5-flash).** Respond with extreme clarity, professionalism, and precision. Focus on step-by-step logic, equations, and definitive answers. Use a formal, neutral tone. Use KaTeX and custom graphs where appropriate. REMEMBER: You must ALWAYS provide both <THOUGHT_PROCESS> and your complete formatted answer.`;
+                model = 'gemini-flash-latest';
+                personaInstruction += `\n\n**Current Persona: Technical Expert (Using gemini-flash-latest).** Respond with extreme clarity, professionalism, and precision. Focus on step-by-step logic, equations, and definitive answers. Use a formal, neutral tone. Use KaTeX and custom graphs where appropriate. REMEMBER: You must ALWAYS provide both <THOUGHT_PROCESS> and your complete formatted answer.`;
                 break;
             case 'CREATIVE':
                 // UPDATED (USER REQUEST): Use Flash Lite for creative tasks to save tokens.
