@@ -11,6 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     
+    <!-- FontAwesome 6.5.2 (Free CDN) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="../navigation.js"></script>
@@ -343,7 +344,7 @@
             <div class="flex flex-col items-center md:items-start">
                 <div class="text-sm text-[#4f46e5] uppercase tracking-wider font-bold mb-2">Current Conditions</div>
                 <div class="flex items-center gap-6">
-                    <div id="curr-icon" class="current-icon"><i class="fa-light fa-spinner fa-spin"></i></div>
+                    <div id="curr-icon" class="current-icon"><i class="fa-solid fa-spinner fa-spin"></i></div>
                     <div>
                         <div id="curr-temp" class="current-temp">--°</div>
                         <div id="curr-desc" class="text-xl text-gray-400">Loading data...</div>
@@ -433,34 +434,42 @@
         const modalIconCont = document.getElementById('modal-icon-container');
         const modalList = document.getElementById('modal-details-list');
 
-        // --- ICONS MAPPING ---
+        // --- ICONS MAPPING (UPDATED FOR FA 6 FREE) ---
         function getIconFromWMO(code, isDay = 1) {
             const day = isDay === 1;
+            // Mapped to FA 6 Free Icons
             const map = {
-                0: day ? 'fa-sun' : 'fa-moon-stars', 1: day ? 'fa-sun-cloud' : 'fa-moon-cloud',
-                2: day ? 'fa-cloud-sun' : 'fa-cloud-moon', 3: 'fa-clouds', 45: 'fa-fog', 48: 'fa-fog',
-                51: 'fa-cloud-drizzle', 53: 'fa-cloud-drizzle', 55: 'fa-cloud-drizzle',
+                0: day ? 'fa-sun' : 'fa-moon', 
+                1: day ? 'fa-cloud-sun' : 'fa-cloud-moon',
+                2: day ? 'fa-cloud-sun' : 'fa-cloud-moon', 
+                3: 'fa-cloud', 
+                45: 'fa-smog', 48: 'fa-smog',
+                51: 'fa-cloud-rain', 53: 'fa-cloud-rain', 55: 'fa-cloud-showers-heavy',
                 61: 'fa-cloud-rain', 63: 'fa-cloud-rain', 65: 'fa-cloud-showers-heavy',
-                71: 'fa-snowflake', 73: 'fa-snowflake', 75: 'fa-snowflakes', 77: 'fa-cloud-hail',
-                80: 'fa-cloud-showers', 81: 'fa-cloud-showers', 82: 'fa-cloud-showers-heavy',
+                71: 'fa-snowflake', 73: 'fa-snowflake', 75: 'fa-snowflake', 77: 'fa-snowflake',
+                80: 'fa-cloud-showers-heavy', 81: 'fa-cloud-showers-heavy', 82: 'fa-cloud-showers-heavy',
                 95: 'fa-cloud-bolt', 96: 'fa-cloud-bolt', 99: 'fa-cloud-bolt'
             };
-            return `fa-regular ${map[code] || 'fa-cloud'}`;
+            return `fa-solid ${map[code] || 'fa-cloud'}`;
         }
 
         function getIconFromNWS(shortForecast, isDay) {
             const lower = shortForecast.toLowerCase();
-            const prefix = 'fa-regular';
+            const prefix = 'fa-solid'; // FA 6 Free uses solid mostly
+            
             if (lower.includes('thunder')) return `${prefix} fa-cloud-bolt`;
             if (lower.includes('snow') || lower.includes('flurries')) return `${prefix} fa-snowflake`;
-            if (lower.includes('rain') || lower.includes('shower')) return `${prefix} fa-cloud-rain`;
-            if (lower.includes('drizzle')) return `${prefix} fa-cloud-drizzle`;
-            if (lower.includes('fog') || lower.includes('haze')) return `${prefix} fa-fog`;
+            if (lower.includes('rain') || lower.includes('shower')) return `${prefix} fa-cloud-showers-heavy`;
+            if (lower.includes('drizzle')) return `${prefix} fa-cloud-rain`;
+            if (lower.includes('fog') || lower.includes('haze')) return `${prefix} fa-smog`;
             if (lower.includes('wind')) return `${prefix} fa-wind`;
+            
             if (lower.includes('partly cloudy') || lower.includes('partly sunny')) return isDay ? `${prefix} fa-cloud-sun` : `${prefix} fa-cloud-moon`;
-            if (lower.includes('mostly cloudy') || lower.includes('overcast')) return `${prefix} fa-clouds`;
+            if (lower.includes('mostly cloudy') || lower.includes('overcast')) return `${prefix} fa-cloud`;
             if (lower.includes('cloud')) return `${prefix} fa-cloud`;
-            if (lower.includes('sunny') || lower.includes('clear')) return isDay ? `${prefix} fa-sun` : `${prefix} fa-moon-stars`;
+            
+            if (lower.includes('sunny') || lower.includes('clear')) return isDay ? `${prefix} fa-sun` : `${prefix} fa-moon`;
+            
             return `${prefix} fa-cloud`;
         }
 
@@ -555,13 +564,9 @@
                 const data = await res.json();
                 
                 // Filter for only Places (cities, towns, villages) or Administrative boundaries
-                // This filters out "Leisure" parks like "Minerva Park" unless it's also a village
                 const filtered = data.filter(item => {
                     const type = item.type;
                     const category = item.class;
-                    const addType = item.addresstype; // modern nominatim field
-                    
-                    // Valid types for a general location search
                     const validClasses = ['place', 'boundary'];
                     const validTypes = ['city', 'town', 'village', 'hamlet', 'administrative'];
                     
@@ -634,17 +639,12 @@
             searchInput.value = '';
             searchResults.classList.remove('active');
             
-            // Logic: If user selected Open-Meteo manually, KEEP IT (unless strictly required otherwise? No, keep it).
-            // If user selected NWS manually, KEEP IT, UNLESS country is not US.
-            
             const isUS = (countryCode && countryCode === 'us');
             
             if (!isUS) {
-                // Force switch to Open-Meteo if outside US
                 STATE.provider = 'open-meteo';
                 providerSelect.value = 'open-meteo';
             } 
-            // Else: If inside US, respect the user's current drop-down choice.
             
             updateLocationDisplay();
             loadWeather();
@@ -715,8 +715,6 @@
         function processNWSData(dailyRaw, hourlyRaw) {
             const current = hourlyRaw.properties.periods[0];
             
-            // NEW ROBUST 7-DAY LOGIC
-            // Group all periods by Date (YYYY-MM-DD) to handle split periods correctly
             const periodGroups = {};
             
             dailyRaw.properties.periods.forEach(p => {
@@ -733,11 +731,9 @@
 
             const dailyList = Object.keys(periodGroups).sort().slice(0, 7).map(date => {
                 const group = periodGroups[date];
-                // Max of all temps is High, Min of all temps is Low
                 const high = Math.max(...group.temps);
                 const low = Math.min(...group.temps);
                 
-                // Prefer daytime icon, fallback to first
                 let iconDesc = group.icons[0];
                 const dayIdx = group.isDay.indexOf(true);
                 if (dayIdx !== -1) iconDesc = group.icons[dayIdx];
@@ -767,12 +763,10 @@
                     temp: h.temperature,
                     desc: h.shortForecast,
                     iconClass: getIconFromNWS(h.shortForecast, h.isDaytime),
-                    // Add details for modal
                     details: {
                         "Wind": `${h.windSpeed} ${h.windDirection}`,
                         "Precipitation": `${h.probabilityOfPrecipitation.value || 0}%`,
                         "Humidity": `${h.relativeHumidity.value}%`,
-                        // NWS Hourly usually doesn't give pressure/dewpoint directly in periods list easily without parsing
                     }
                 })),
                 daily: dailyList
@@ -801,7 +795,6 @@
 
             const hourlyList = [];
             for(let i = currentHour; i < currentHour + 24; i++) {
-                // Wrap around logic is complex for static, assume API returns enough data (OpenMeteo returns 7 days hourly)
                 if (hourly.time[i]) {
                     const d = new Date(hourly.time[i]);
                     const temp = Math.round(hourly.temperature_2m[i]);
