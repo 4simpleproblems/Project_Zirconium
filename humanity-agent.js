@@ -218,11 +218,11 @@
 
     function getDynamicSystemInstructionAndModel(query, settings) {
         const intent = determineIntentCategory(query);
-        let model = 'gemini-3.0-flash-preview'; // Default
+        let model = 'gemini-3-flash-preview'; // Default
         
         let instruction = `${FSP_HISTORY}
         
-        You are Gemini 3.0, integrated into the 4SP platform.
+        You are Gemini 3, integrated into the 4SP platform.
         
         MANDATORY RESPONSE RULES:
         1. ALWAYS start with internal reasoning wrapped in: <THOUGHT_PROCESS>...reasoning...</THOUGHT_PROCESS>
@@ -240,8 +240,8 @@
 
         switch (intent) {
             case 'DEEP_ANALYSIS':
-                model = 'gemini-3.0-pro-preview';
-                instruction += `\n\n**MODE: DEEP ANALYSIS (Gemini 3.0 Pro - Thinking: ${settings.thinkingLevel}).**
+                model = 'gemini-3-pro-preview';
+                instruction += `\n\n**MODE: DEEP ANALYSIS (Gemini 3 Pro - Thinking: ${settings.thinkingLevel}).**
                 Provide comprehensive, multi-faceted analysis. Critically evaluate all assumptions. Structure your response deeply with headings.`;
                 break;
 
@@ -252,7 +252,7 @@
                 break;
 
             case 'CREATIVE':
-                model = 'gemini-3.0-flash-preview';
+                model = 'gemini-3-flash-preview';
                 if (query.toLowerCase().includes('roast')) {
                     instruction += `\n\n**MODE: ROAST.** Be sarcastic, witty, and playfully aggressive (while remaining safe).`;
                 } else {
@@ -262,7 +262,7 @@
 
             case 'CASUAL':
             default:
-                model = 'gemini-3.0-flash-preview';
+                model = 'gemini-3-flash-preview';
                 instruction += `\n\n**MODE: CASUAL.** Be concise, helpful, and friendly. Do not over-explain unless asked.`;
                 break;
         }
