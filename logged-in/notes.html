@@ -10,7 +10,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
+    
+    <!-- UPDATED: Using FontAwesome 6.5.2 Free (Matches navigation.js) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="../navigation.js"></script>
     <script src="../injector.js"></script>
@@ -376,7 +379,8 @@
 </head>
 <body class="min-h-screen mode-notes">
     <div id="loading-screen" class="fixed inset-0 bg-[#070707] flex items-center justify-center z-50">
-        <i class="fa-duotone fa-spinner fa-spin fa-2x"></i>
+        <!-- UPDATED ICON: fa-solid fa-spinner instead of fa-duotone -->
+        <i class="fa-solid fa-spinner fa-spin fa-2x"></i>
     </div>
 
     <div id="page-content" classm="hidden">
@@ -398,7 +402,7 @@
                     <div id="file-dropdown" class="dropdown-menu hidden">
                         <div id="export-header" class="dropdown-header">Export</div>
                         <div id="save-text-btn" class="dropdown-item">
-                            <i class="fa-solid fa-file-arrow-right w-5"></i> Save Standard Text
+                            <i class="fa-solid fa-download w-5"></i> Save Standard Text
                         </div>
                         <div id="save-encrypted-btn" class="dropdown-item">
                             <i class="fa-solid fa-lock w-5"></i> Save Encrypted (.4spnote)
@@ -407,12 +411,12 @@
                         <div id="import-divider" class="dropdown-divider"></div>
                         <div class="dropdown-header">Import</div>
                         <div id="load-file-btn" class="dropdown-item">
-                            <i class="fa-solid fa-file-arrow-left w-5"></i> Load File
+                            <i class="fa-solid fa-upload w-5"></i> Load File
                         </div>
 
                         <div id="notebook-divider" class="dropdown-divider hidden"></div>
                         <div id="delete-page-btn" class="dropdown-item hidden text-red-500 hover:bg-red-900/50">
-                            <i class="fa-solid fa-trash-can w-5"></i> Delete Current Page
+                            <i class="fa-solid fa-trash-can w-5"></i> Delete Page
                         </div>
                     </div>
                 </div>
