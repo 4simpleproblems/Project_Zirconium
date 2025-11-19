@@ -664,10 +664,6 @@ let db;
                                 <p class="text-sm font-semibold auth-menu-username truncate">${username}</p>
                                 <p class="text-xs text-gray-400 truncate">${email}</p>
                             </div>
-                            <a href="/logged-in/dashboard.html" class="auth-menu-link">
-                                <i class="fa-solid fa-house-user w-4"></i>
-                                Dashboard
-                            </a>
                             <a href="/logged-in/settings.html" class="auth-menu-link">
                                 <i class="fa-solid fa-gear w-4"></i>
                                 Settings
@@ -677,6 +673,10 @@ let db;
                                 <i class="fa-solid fa-right-from-bracket w-4"></i>
                                 Log Out
                             </button>
+                            <a href="../legal.html" class="auth-menu-link">
+                                <i class="fa-solid fa-gavel w-4"></i>
+                                Terms & Policies
+                            </a>
                         </div>
                     </div>
                 `;
