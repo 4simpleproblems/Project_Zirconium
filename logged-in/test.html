@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4SP - MESSENGER TUTORIAL</title>
+    <meta name="description" content="A tutorial on how to install and open the Messenger app.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" media="all">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../injector.js"></script>
+
+    <script>
+        // Customizing Tailwind to use the Geist font and dark mode settings
+        tailwind.config = {
+            darkMode: 'class', 
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Geist', 'sans-serif'],
+                        display: ['Geist', 'sans-serif'],
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', '"Liberation Mono"', '"Courier New"', 'monospace'],
+                    },
+                    colors: {
+                        'background': '#070707',
+                        'card': '#1a1a1a',
+                        'border-strong': '#374151',
+                        'text-primary': '#c0c0c0',
+                        'text-secondary': '#9ca3af',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent scrolling for true fullscreen experience */
+        }
+        body { 
+            font-family: 'Geist', sans-serif; 
+            background-color: #070707; 
+            color: #c0c0c0; 
+            font-weight: 300; /* Base font weight */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100vw; /* Full viewport width */
+            height: 100vh; /* Full viewport height */
+        }
+
+        /* Use font-weight 400 for headers and defined bold styles */
+        h1, h2, h3, .font-bold, .font-semibold {
+            font-weight: 400 !important;
+        }
+
+        /* Custom class for slightly bolder text (+100 weight from base 300) */
+        .font-accent-bold {
+            font-weight: 400; 
+            color: #ffffff; /* Make the highlighted text stand out */
+        }
+        
+        /* Main Fullscreen Container for the Two-Column Layout */
+        .main-tutorial-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            background-color: #070707;
+            /* ** MODIFICATION: Changed padding to 80px top, 0px right, 0px bottom, 0px left 
+             * to double the top spacing and eliminate the bottom spacing.
+             */
+            padding: 32px 0 0 0; 
+            box-sizing: border-box; /* Include padding in the height calculation */
+        }
+
+        /* Left Column: Fixed steps/navigation */
+        .left-column {
+            width: 350px; /* Fixed width for steps/navigation */
+            flex-shrink: 0;
+            background-color: #111111;
+            border-right: 1px solid #374151;
+            padding: 40px 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            /* Ensures it fills the new padded container area */
+            height: 100%;
+        }
+
+        /* Right Column: Dynamic content area */
+        .right-column {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            /* Ensures it fills the new padded container area */
+            height: 100%;
+            overflow-y: auto; /* Allow scrolling if the content exceeds the new height */
+        }
+        
+        /* Highlight active step text on the left */
+        .step-indicator.active .step-title {
+            color: white;
+            /* Note: font-weight 600 in Tailwind config is 400 here, but we use it for visual distinction */
+            font-weight: 600; 
+        }
+        .step-indicator.active .step-subtitle {
+            color: #d1d5db; /* Gray-300 */
+        }
+
+        /* ------------------------------------------- */
+        /* --- CUSTOMIZABLE BUTTON & STEP DOT STYLES --- */
+        /* ------------------------------------------- */
+
+        /* 1. Icon Button Styles (for Step Dots) */
+        .btn-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            /* Tailwinds are used for w/h of step dots (w-10 h-10) - override the 2.25rem size for uniformity here */
+            border-radius: 0.5rem;
+            background-color: transparent;
+            border: 1px solid #374151; /* gray-700 */
+            color: #9ca3af; 
+            cursor: pointer;
+            transition: all 0.2s;
+            line-height: 1; /* Fix vertical alignment for the number */
+            font-weight: 400;
+        }
+        .btn-icon:hover {
+            background-color: #374151; /* gray-700 */
+            color: #f3f4f6; /* gray-100 */
+            border-color: #374151; /* gray-700 */
+        }
+        .btn-icon.active {
+            /* Active style (subtle purple/indigo) */
+            background-color: rgba(79, 70, 229, 0.1);
+            color: #4f46e5;
+            border-color: #4f46e5;
+        }
+        .btn-icon:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+
+        /* 2. Main Action Button Style (for Download Button) */
+        .btn-main-action {
+            /* Match .btn-icon.active colors */
+            background-color: rgba(79, 70, 229, 0.15); /* Slightly stronger transparent background */
+            color: #4f46e5; /* Strong blue text color */
+            border: 1px solid #4f46e5; /* Strong blue border color */
+            transition: all 0.3s ease;
+            box-shadow: none; /* Removed the glow effect */
+            font-weight: 600;
+        }
+        .btn-main-action:hover {
+            background-color: rgba(79, 70, 229, 0.3); /* Darker hover */
+            color: #ffffff; /* White text on hover for contrast */
+        }
+
+        /* 3. Navigation Action Button Style (for Prev/Next) */
+        .btn-nav-action {
+            /* Base style: Match .btn-main-action's colors */
+            background-color: rgba(79, 70, 229, 0.15); /* Indigo 500 @ 15% */
+            color: #4f46e5; /* Indigo 500 */
+            border: 1px solid #4f46e5; /* Indigo 500 */
+            transition: all 0.2s ease;
+            box-shadow: none;
+            font-weight: 600;
+            
+            /* Shape and size: Match btn-icon size (w-10 h-10 = 2.5rem), but rounded-xl (0.75rem) */
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.5rem; /* w-10 */
+            height: 2.5rem; /* h-10 */
+            border-radius: 0.75rem; /* rounded-xl */
+            cursor: pointer;
+        }
+        .btn-nav-action:hover:not(:disabled) {
+            background-color: rgba(79, 70, 229, 0.3); /* Darker hover */
+            color: #ffffff; /* White text on hover for contrast */
+        }
+        .btn-nav-action:disabled {
+            opacity: 0.4; /* Stronger disabled look */
+            cursor: not-allowed;
+            background-color: transparent; /* Makes the disabled look cleaner */
+            border-color: #374151; /* gray-700 for disabled border */
+            color: #9ca3af; /* gray-400 for disabled icon */
+        }
+
+        /* 4. Description Block Custom Styling */
+        #description-block {
+            /* Slightly more rounded (1rem is rounded-2xl) */
+            border-radius: 1rem;
+            /* Less side padding (p-6 was 1.5rem, px-4 is 1rem) */
+            padding: 1.5rem 1rem; /* 24px top/bottom, 16px left/right */
+        }
+
+        /* Smaller font size for list items within the block */
+        #description-block ul li {
+            /* text-sm equivalent (0.875rem / 14px) */
+            font-size: 0.875rem; 
+        }
+
+        /* Step Animation CSS for the Right Column */
+        .step-container {
+            position: relative;
+            overflow: hidden;
+            height: 500px; /* Increased height for better visibility on non-fullscreen views */
+            width: 100%;
+            max-width: 600px;
+        }
+        .step-content {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .step-content.active {
+            opacity: 1;
+            pointer-events: all;
+            transform: translateX(0);
+        }
+        /* State when sliding out to the left (next step) */
+        .step-content.slide-left {
+            transform: translateX(-100%);
+        }
+        /* State when sliding out to the right (previous step) */
+        .step-content.slide-right {
+            transform: translateX(100%);
+        }
+
+        /* ------------------------------------------- */
+        /* --- MIGRATION MODAL STYLES (FROM index.html) --- */
+        /* ------------------------------------------- */
+
+        /* Ensure overlay styles are defined for the new modal */
+        #migration-overlay {
+            /* Use the same styling as #cookie-overlay from index.html */
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.7); /* bg-black/70 */
+            z-index: 9999;
+            transition: opacity 300ms ease-in-out; /* duration-300 */
+            opacity: 0;
+            display: none;
+        }
+
+        #migration-banner {
+            /* Matches #cookie-banner from index.html */
+            position: absolute;
+            bottom: 4px; /* bottom-4 */
+            left: 50%; /* left-1/2 */
+            transform: translateX(-50%); /* -translate-x-1/2 */
+            width: 100%;
+            max-width: 7xl; /* max-w-7xl */
+            padding-left: 1rem; /* px-4 */
+            padding-right: 1rem; /* px-4 */
+        }
+        
+        #migration-banner > div {
+             /* Matches inner div from index.html (bg-black/95, text-white, p-4 sm:p-6, rounded-3xl, border border-gray-700, shadow-2xl, backdrop-blur-md) */
+            background-color: rgba(0, 0, 0, 0.95);
+            color: white;
+            padding: 1rem; /* p-4 */
+            /* Add responsive padding for small screens */
+            padding-top: 1.5rem; 
+            padding-bottom: 1.5rem; 
+            border-radius: 1.5rem; /* rounded-3xl */
+            border: 1px solid rgb(55 65 81); /* border-gray-700 */
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); /* shadow-2xl */
+            /* Tailwind flex and spacing properties */
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem; /* space-y-4 */
+        }
+        
+        @media (min-width: 768px) { /* md breakpoint */
+            #migration-banner > div {
+                flex-direction: row;
+                align-items: center;
+                gap: 1.5rem; /* md:space-x-6 */
+            }
+        }
+
+    </style>
+</head>
+<body class="dark bg-background">
+
+    <div class="main-tutorial-container">
+        
+        <div class="left-column">
+            <h2 class="text-3xl font-display text-white mb-10 text-center border-b border-border-strong/50 pb-4">
+                <i class="fa-solid fa-graduation-cap text-indigo-500 mr-2"></i>
+                <span class="font-bold">Setup Guide</span>
+            </h2>
+
+            <div class="mb-10 w-full">
+                <a href="./messenger-v2.html" download="messenger-v2.html" id="download-btn-fixed" 
+                   class="btn-main-action flex items-center justify-center space-x-2 py-3 px-8 rounded-xl font-semibold text-xl w-full">
+                    <i class="fa-solid fa-download"></i>
+                    <span>Download Here</span>
+                </a>
+            </div>
+            <div id="step-indicators" class="space-y-8 flex-grow flex flex-col justify-center">
+                
+                <div class="step-indicator active flex items-start space-x-4 cursor-pointer" data-step="1">
+                    <button class="step-dot btn-icon active w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg" data-step="1" title="Go to Step 1">1</button>
+                    <div>
+                        <p class="text-white font-semibold text-xl step-title">Download App</p>
+                        <p class="text-text-secondary text-sm step-subtitle">Get the file onto your device.</p>
+                    </div>
+                </div>
+                
+                <div class="step-indicator flex items-start space-x-4 cursor-pointer" data-step="2">
+                    <button class="step-dot btn-icon w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg" data-step="2" title="Go to Step 2">2</button>
+                    <div>
+                        <p class="text-text-primary font-semibold text-xl step-title">Locate File</p>
+                        <p class="text-text-secondary text-sm step-subtitle">Find it in your downloads folder.</p>
+                    </div>
+                </div>
+                
+                <div class="step-indicator flex items-start space-x-4 cursor-pointer" data-step="3">
+                    <button class="step-dot btn-icon w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg" data-step="3" title="Go to Step 3">3</button>
+                    <div>
+                        <p class="text-text-primary font-semibold text-xl step-title">Open & Launch</p>
+                        <p class="text-text-secondary text-sm step-subtitle">Double-click to start chatting.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-between items-center mt-10">
+                <button id="prev-btn" class="btn-nav-action" title="Previous Step">
+                    <i class="fa-solid fa-arrow-left fa-lg"></i>
+                </button>
+                <button id="next-btn" class="btn-nav-action" title="Next Step">
+                    <i class="fa-solid fa-arrow-right fa-lg"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="right-column">
+            
+            <h1 class="text-4xl font-display text-white mb-8 text-center">
+                <i class="fa-solid fa-message-code text-indigo-500 mr-2"></i>
+                <span class="font-bold">Messenger 2.0 Features</span>
+            </h1>
+            
+            <div id="description-block" class="bg-card shadow-2xl border border-border-strong/50 w-full max-w-lg mb-8">
+                <h3 class="text-xl font-semibold text-white mb-4 flex items-center">
+                    <i class="fa-solid fa-hand-stars text-yellow-400 mr-2"></i>
+                    What you can do:
+                </h3>
+                <ul class="text-text-secondary space-y-3 list-disc list-inside">
+                    <li>Add new <span class="font-accent-bold">friends using their 8-digit unique code</span>.</li>
+                    <li>See <span class="font-accent-bold">read receipts</span> instantly to know when your message was viewed.</li>
+                    <li>Easily clear your <span class="font-accent-bold">local chat history</span> (the last 5 messages are permanently saved in the database).</li>
+                    <li><span class="font-accent-bold">Attach images</span> to your messages (Note: GIFs and videos are currently not supported).</li>
+                </ul>
+            </div>
+            
+            <div class="step-container">
+                <div id="step-1" class="step-content active">
+                    <div class="flex flex-col items-center text-center w-full">
+                        <i class="fa-solid fa-arrow-down-to-bracket text-6xl text-indigo-500 mb-6"></i>
+                        <h2 class="text-2xl font-semibold text-white mb-3">1. Download the App File</h2>
+                        <p class="text-text-secondary text-lg">
+                            Click the <span class="font-accent-bold">"Download Messenger"</span> button in the sidebar to get the <span class="font-accent-bold">single HTML file</span> that holds the entire Messenger application.
+                        </p>
+                        </div>
+                </div>
+
+                <div id="step-2" class="step-content">
+                    <div class="flex flex-col items-center text-center w-full">
+                        <i class="fa-solid fa-magnifying-glass text-6xl text-blue-400 mb-6"></i>
+                        <h2 class="text-2xl font-semibold text-white mb-3">2. Locate the Download</h2>
+                        <p class="text-text-secondary text-lg">
+                            Find the file named <code class="bg-gray-800 text-yellow-300 px-2 py-1 rounded-md text-sm font-mono tracking-wider shadow-inner">messenger-v2.html</code>, usually in your Downloads folder.
+                        </p>
+                    </div>
+                </div>
+
+                <div id="step-3" class="step-content">
+                    <div class="flex flex-col items-center text-center w-full">
+                        <i class="fa-solid fa-browser text-6xl text-green-400 mb-6"></i>
+                        <h2 class="text-2xl font-semibold text-white mb-3">3. Launch the Application</h2>
+                        <p class="text-text-secondary text-lg">
+                            <span class="font-accent-bold">Double-click</span> the file to open it in your web browser. That's it—the app is now running!
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="migration-overlay" class="fixed inset-0 bg-black/70 z-[9999] transition-opacity duration-300 opacity-0" style="display: none;">
+        <div id="migration-banner" class="absolute bottom-4 left-1/2 -translate-x-1/2 w-full max-w-7xl px-4">
+            <div class="bg-black/95 text-white p-4 sm:p-6 rounded-3xl border border-gray-700 shadow-2xl backdrop-blur-md flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0 md:space-x-6">
+                
+                <div class="flex-1 min-w-0 flex items-start space-x-4">
+                    
+                    <i class="fa-solid fa-triangle-exclamation text-3xl text-yellow-500 flex-shrink-0 mt-1 md:mt-0"></i>
+                    
+                    <div>
+                        <h3 class="text-xl font-normal mb-1 flex items-center">
+                            Migration Notice: Messenger 2.0 Compatibility
+                        </h3>
+                        <p class="text-sm text-gray-300 mb-2 font-light">
+                            Please be advised that Messenger 2.0 utilizes a **revised database messaging format** for enhanced functionality. While your **existing contact list will be successfully transferred** upon update, communication protocols are incompatible between versions.
+                            <br><br>
+                            This means users on Messenger **1.0 will not be able to send or receive messages properly** from users who have upgraded to Messenger 2.0. To ensure seamless communication with your friends, all parties must download and launch the Messenger 2.0 file.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex-shrink-0 w-full md:w-auto">
+                    <button id="acknowledge-migration-button" class="w-full md:w-auto inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-normal rounded-xl text-white bg-purple-500/10 ring-1 ring-purple-500/50 hover:bg-purple-500/20 transition duration-150 transform hover:scale-[1.02]">
+                        I Understand and Accept
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const dom = {
+            stepContents: document.querySelectorAll('.step-content'),
+            stepIndicators: document.querySelectorAll('.step-indicator'), 
+            stepDots: document.querySelectorAll('.step-dot'),
+            prevBtn: document.getElementById('prev-btn'),
+            nextBtn: document.getElementById('next-btn'),
+        };
+
+        let currentStep = 1;
+        const totalSteps = dom.stepContents.length;
+        let isAnimating = false;
+
+        // --- START MIGRATION MODAL LOGIC (New addition) ---
+
+        const MIGRATION_KEY = '4sp-migration-accepted-v2';
+        const migrationOverlay = document.getElementById('migration-overlay');
+        const acknowledgeButton = document.getElementById('acknowledge-migration-button');
+        const TRANSITION_DURATION_MS = 300; 
+        
+        /**
+         * Hides the migration notice overlay with a fade-out effect.
+         */
+        const hideMigrationNotice = () => {
+            // 1. Start the fade-out (opacity 1 -> 0)
+            migrationOverlay.classList.remove('opacity-100');
+            migrationOverlay.classList.add('opacity-0');
+
+            // 2. Wait for the transition to finish before setting display: none
+            setTimeout(() => {
+                migrationOverlay.style.display = 'none';
+                // Set consent in localStorage so the banner doesn't show on future visits
+                localStorage.setItem(MIGRATION_KEY, 'accepted');
+                // Re-enable scrolling on the body (disabled by show function)
+                document.body.style.overflow = ''; 
+            }, TRANSITION_DURATION_MS);
+        };
+
+        /**
+         * Shows the migration notice overlay with a fade-in effect.
+         */
+        const showMigrationNotice = () => {
+            // 1. Set display: block instantly
+            migrationOverlay.style.display = 'block';
+            // Prevent scrolling on the body while the modal is active
+            document.body.style.overflow = 'hidden'; 
+
+            // 2. Schedule the opacity change to trigger the transition
+            setTimeout(() => {
+                migrationOverlay.classList.remove('opacity-0');
+                migrationOverlay.classList.add('opacity-100');
+            }, 10); 
+        };
+
+        // Check for existing acknowledgment when the script loads
+        if (localStorage.getItem(MIGRATION_KEY) !== 'accepted') {
+            // If consent is not found, wait for the window to load, then show the banner
+            window.addEventListener('load', showMigrationNotice);
+        } else {
+             // If consent is found, ensure the overlay remains hidden and opacity is zero
+             migrationOverlay.style.display = 'none';
+             migrationOverlay.classList.remove('opacity-100');
+             migrationOverlay.classList.add('opacity-0');
+             document.body.style.overflow = '';
+        }
+
+        // Add event listener to the "I Understand and Accept" button
+        if (acknowledgeButton) {
+            acknowledgeButton.addEventListener('click', hideMigrationNotice);
+        }
+
+        // --- END MIGRATION MODAL LOGIC ---
+
+        /**
+         * Updates the tutorial step with a fade and slide animation.
+         * @param {number} newStep - The step number to navigate to (1, 2, or 3).
+         */
+        function updateStep(newStep) {
+            if (isAnimating || newStep < 1 || newStep > totalSteps || newStep === currentStep) return;
+            isAnimating = true;
+
+            const direction = newStep > currentStep ? 'next' : 'prev';
+            const oldStepElement = document.getElementById(`step-${currentStep}`);
+            const newStepElement = document.getElementById(`step-${newStep}`);
+            const directionClass = direction === 'next' ? 'slide-left' : 'slide-right';
+
+            // 1. Start transition: Make old step slide out
+            if (oldStepElement) {
+                oldStepElement.classList.add(directionClass);
+                oldStepElement.classList.remove('active');
+            }
+            
+            // 2. Prepare new step: position it off-screen on the opposite side
+            if (newStepElement) {
+                const resetClass = direction === 'next' ? 'slide-right' : 'slide-left';
+                newStepElement.classList.add(resetClass);
+            }
+            
+            // Short timeout to ensure CSS registers the slide-out and off-screen prep before slide-in starts
+            setTimeout(() => {
+                // 3. Activate new step and remove off-screen class to trigger slide-in
+                if (newStepElement) {
+                    newStepElement.classList.remove('slide-left', 'slide-right');
+                    newStepElement.classList.add('active');
+                }
+                
+                // 4. Update state and UI
+                currentStep = newStep;
+                updateUI();
+
+                // 5. Clean up old step and finish animation flag
+                setTimeout(() => {
+                    if (oldStepElement) {
+                        oldStepElement.classList.remove('slide-left', 'slide-right');
+                    }
+                    isAnimating = false;
+                }, 500); // Matches CSS transition duration
+            }, 10); 
+        }
+
+        /**
+         * Updates the visual state of navigation buttons and step dots/indicators.
+         */
+        function updateUI() {
+            // Update dots and indicator styling
+            dom.stepIndicators.forEach(indicator => {
+                const stepDot = indicator.querySelector('.step-dot');
+                const stepTitle = indicator.querySelector('.step-title');
+                const stepSubtitle = indicator.querySelector('.step-subtitle');
+                const stepNum = parseInt(indicator.dataset.step, 10);
+                
+                const isActive = stepNum === currentStep;
+                indicator.classList.toggle('active', isActive);
+                
+                // Dot styling: Toggle 'active' class for the new .btn-icon styling
+                stepDot.classList.toggle('active', isActive);
+
+                // Text styling (Ensures inactive text remains secondary)
+                if (!isActive) {
+                    stepTitle.classList.remove('text-white', 'font-semibold');
+                    stepTitle.classList.add('text-text-primary');
+                    stepSubtitle.classList.add('text-text-secondary');
+                }
+            });
+
+            // Update navigation buttons (disabled states)
+            // The visual disabled state is now handled by the .btn-nav-action:disabled CSS rule
+            dom.prevBtn.disabled = currentStep === 1;
+            dom.nextBtn.disabled = currentStep === totalSteps;
+        }
+
+        /**
+         * Initializes event listeners for navigation.
+         */
+        function initListeners() {
+            dom.prevBtn.addEventListener('click', () => updateStep(currentStep - 1));
+            dom.nextBtn.addEventListener('click', () => updateStep(currentStep + 1));
+            
+            // Use the whole indicator div to trigger the step change
+            dom.stepIndicators.forEach(indicator => {
+                indicator.addEventListener('click', (e) => {
+                    // Find the step number, prioritizing the button's data-step if clicked, otherwise the indicator's.
+                    let stepNum = parseInt(e.currentTarget.dataset.step, 10);
+
+                    // If a button inside was clicked, use its data-step
+                    const dot = e.target.closest('.step-dot');
+                    if (dot) {
+                        stepNum = parseInt(dot.dataset.step, 10);
+                    }
+                    
+                    updateStep(stepNum);
+                });
+            });
+        }
+
+        // --- Start the Tutorial App ---
+        // Changed window.onload to DOMContentLoaded to potentially run faster, 
+        // but kept it as a function that runs *after* the modal logic for safety.
+        window.addEventListener('load', function() {
+            // Only initialize the tutorial functionality if the migration notice is accepted/not needed
+            if (localStorage.getItem(MIGRATION_KEY) === 'accepted' || migrationOverlay.style.display === 'none') {
+                 initListeners();
+                 updateUI(); // Set initial state
+            } else {
+                // If the modal is shown, attach the initListeners call to the acknowledge button click
+                document.getElementById('acknowledge-migration-button').addEventListener('click', () => {
+                    initListeners();
+                    updateUI();
+                }, { once: true });
+            }
+        });
+    </script>
+</body>
+</html>
