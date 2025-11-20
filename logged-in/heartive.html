@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4SP - HEARTIVE LAUNCHER</title>
+    <meta name="description" content="Embedded music player for 4SP community, powered by Argon Launcher.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" media="all">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../navigation.js"></script>
+    <script src="../injector.js"></script>
+
+
+    <script>
+        // Customizing Tailwind to use the Geist font and dark mode settings
+        tailwind.config = {
+            darkMode: 'class', 
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Geist', 'sans-serif'],
+                        display: ['Geist', 'sans-serif'],
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', '"Liberation Mono"', '"Courier New"', 'monospace'],
+                    },
+                    colors: {
+                        'background': '#070707',
+                        'card': '#1a1a1a',
+                        'border-strong': '#374151',
+                        'text-primary': '#c0c0c0',
+                        'text-secondary': '#9ca3af',
+                        'indigo-primary': '#4f46e5', /* Customizing primary color for theme */
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; 
+        }
+        body { 
+            font-family: 'Geist', sans-serif; 
+            background-color: #070707; 
+            color: #c0c0c0; 
+            font-weight: 300;
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* Use font-weight 400 for headers and defined bold styles */
+        h1, h2, h3, .font-bold, .font-semibold {
+            font-weight: 400 !important;
+        }
+
+        /* --- Main App Container for Header and Iframe --- */
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            width: 100vw;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+
+        /* Fixed space for navigation bar (3rem = 48px) */
+        .nav-bar-placeholder {
+            height: 3rem; 
+            flex-shrink: 0;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            padding: 0 1.5rem;
+            background-color: #1a1a1a; 
+            border-bottom: 1px solid #374151;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+
+        .music-iframe {
+            flex-grow: 1;
+            width: 100%;
+            /* Important for full bleed */
+            height: calc(100vh - 3rem); 
+            border: none;
+            background-color: #070707; 
+        }
+        
+        /* ------------------------------------------- */
+        /* --- MODAL STYLING --- */
+        /* ------------------------------------------- */
+        .disclaimer-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.7); /* bg-black/70 */
+            z-index: 9999; 
+            transition: opacity 0.3s ease-in-out; 
+            opacity: 0;
+            display: none;
+        }
+        
+        /* FULL WIDTH BANNER STYLES - Added bottom spacing and horizontal padding */
+        .disclaimer-banner {
+            position: absolute;
+            bottom: 1rem; 
+            left: 0;
+            width: 100%;
+            padding: 0 1rem; 
+            box-sizing: border-box;
+            transform: none;
+        }
+        
+        /* CONTENT BOX STYLES */
+        .disclaimer-content-box {
+            background-color: rgba(0, 0, 0, 0.95); 
+            color: white;
+            padding: 1rem; 
+            border-radius: 1.5rem; 
+            border: 1px solid #4f46e5; /* Border color changed to primary indigo */
+            box-shadow: 0 0 25px rgba(79, 70, 229, 0.2); /* Shadow changed to primary indigo */
+            -webkit-backdrop-filter: blur(8px); 
+            backdrop-filter: blur(8px); 
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start; 
+            justify-content: space-between;
+            gap: 1rem; 
+            max-width: 800px; /* Constrain max width for desktop */
+            margin: 0 auto; /* Center on desktop */
+        }
+        
+        /* CUSTOM BOLD HIGHLIGHT STYLING */
+        .disclaimer-highlight {
+            font-weight: 400; 
+            color: #ffffff; 
+        }
+
+        @media (min-width: 768px) {
+            .disclaimer-content-box {
+                flex-direction: row;
+                align-items: center; 
+                gap: 1.5rem; 
+                padding: 1.5rem; 
+            }
+            .disclaimer-banner {
+                padding: 0 2rem; 
+            }
+        }
+        .disclaimer-text-area {
+            flex: 1 1 0%; 
+            min-width: 0;
+        }
+        .disclaimer-title {
+            font-size: 1.25rem; 
+            font-weight: 400; 
+            margin-bottom: 0.25rem; 
+            display: flex;
+            align-items: center;
+        }
+        /* Disclaimer Icon Color - Changed to positive/music-related blue */
+        .disclaimer-icon {
+            color: #6366f1; /* Indigo-500 for a positive, vibrant look */
+            margin-right: 0.5rem; 
+            font-size: 1.5rem;
+        }
+        .disclaimer-message {
+            font-size: 0.875rem; 
+            color: #d1d5db; 
+            margin-bottom: 0.5rem; 
+            font-weight: 300; 
+        }
+        
+        /* New styling for action container to stack buttons */
+        .disclaimer-action-container {
+            flex-shrink: 0;
+            width: 100%; 
+            display: flex;
+            flex-direction: column; /* Stack them vertically */
+            gap: 0.75rem; /* Add spacing between buttons */
+            align-items: center; /* Center the buttons */
+            max-width: 350px; /* Constrain the button area width */
+        }
+
+        /* --- PRIMARY BUTTON STYLE (Acknowledge) --- */
+        .primary-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center; 
+            
+            width: 100%; 
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem; 
+            font-weight: 400; 
+            border-radius: 0.75rem; 
+            
+            /* Color and Border */
+            background-color: #4f46e5; /* Indigo Background */
+            color: white;
+            border: 1px solid #4f46e5; 
+            
+            box-shadow: 0 4px 6px rgba(79, 70, 229, 0.4);
+            transition: all 0.15s ease-in-out;
+            cursor: pointer; 
+        }
+        .primary-button:hover {
+            background-color: #4338ca; /* Darker indigo hover */
+            transform: scale(1.02);
+            box-shadow: 0 6px 10px rgba(79, 70, 229, 0.6);
+        }
+
+        /* --- SECONDARY BUTTON STYLE (Join Discord) --- */
+        .secondary-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center; 
+            
+            width: 100%; 
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem; 
+            font-weight: 400; 
+            border-radius: 0.75rem; 
+            
+            /* Secondary Colors: Outline style */
+            background-color: transparent; 
+            color: #c0c0c0; /* text-primary */
+            border: 1px solid #374151; /* border-strong */
+            text-decoration: none; /* remove underline for anchor tag */
+
+            box-shadow: none;
+            transition: all 0.15s ease-in-out;
+            cursor: pointer; 
+        }
+
+        .secondary-button:hover {
+            background-color: #1a1a1a; /* card color for slight hover effect */
+            color: white;
+            transform: scale(1.02);
+            box-shadow: 0 2px 4px rgba(255, 255, 255, 0.1); 
+        }
+
+        /* Ensure buttons use full constrained width on desktop */
+        @media (min-width: 768px) {
+            .primary-button, .secondary-button {
+                max-width: none; 
+            }
+        }
+    </style>
+</head>
+<body class="dark bg-background">
+
+    <div class="app-container">
+        
+        <!-- Placeholder for the Navigation Bar (Icon removed) -->
+        <div class="nav-bar-placeholder">
+            <h1 class="text-xl font-bold text-white flex items-center">
+                Heartive Movie Launcher
+            </h1>
+        </div>
+
+        <!-- Secure Iframe for the Argon Launcher URL -->
+        <iframe 
+            src="https://v5-4sp-movies.global.ssl.fastly.net/" 
+            class="music-iframe" 
+            title="Heartive Launcher"
+            loading="lazy"
+            sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+        ></iframe>
+
+    </div>
+
+    <!-- Argon Launcher Credit/Disclaimer Modal -->
+    <div id="disclaimer-overlay" class="disclaimer-overlay">
+        <div id="disclaimer-banner" class="disclaimer-banner">
+            <div class="disclaimer-content-box">
+                <div class="disclaimer-text-area">
+                    <h3 class="disclaimer-title">
+                        <i class="fa-solid fa-headphones-simple disclaimer-icon"></i> 
+                        <span class="font-semibold">Heartive Launcher Community Credit</span>
+                    </h3>
+                    <p class="disclaimer-message">
+                        This movie player is the <span class="disclaimer-highlight">Heartive Launcher</span> originating from the <span class="disclaimer-highlight">US5 website</span>. 
+                        <br>
+                    </p>
+                </div>
+
+                <!-- Action Container with two buttons, styled as Primary and Secondary -->
+                <div class="disclaimer-action-container">
+                    <button id="accept-disclaimer-button" class="primary-button">
+                        Acknowledge & Play Movies
+                    </button>
+                    <!-- New "Join Discord" button using the secondary style -->
+                    <a href="https://discord.com/invite/VDA8Ngx38Z" target="_blank" class="secondary-button">
+                        <i class="fa-brands fa-discord mr-2"></i> Join US5 Discord
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const dom = {
+            disclaimerOverlay: document.getElementById('disclaimer-overlay'),
+            acceptDisclaimerButton: document.getElementById('accept-disclaimer-button'),
+        };
+
+        const DISCLAIMER_KEY = '4sp-movie-launcher-disclaimer';
+        const TRANSITION_DURATION_MS = 300; 
+
+        /**
+         * Function to hide the disclaimer modal with fade-out
+         */
+        const hideDisclaimerModal = () => {
+            // 1. Start the fade-out (opacity 1 -> 0)
+            dom.disclaimerOverlay.style.opacity = '0';
+
+            // 2. Wait for the transition to finish before setting display: none
+            setTimeout(() => {
+                dom.disclaimerOverlay.style.display = 'none';
+                // Set consent in localStorage so the banner doesn't show on future visits
+                localStorage.setItem(DISCLAIMER_KEY, 'understood');
+                // Allow scrolling on the body (just in case)
+                document.body.style.overflow = '';
+            }, TRANSITION_DURATION_MS);
+        };
+
+        /**
+         * Function to show the disclaimer modal with fade-in
+         */
+        const showDisclaimerModal = () => {
+            // 1. Set display: block instantly
+            dom.disclaimerOverlay.style.display = 'block';
+            // Prevent scrolling on the body
+            document.body.style.overflow = 'hidden';
+
+            // 2. Schedule the opacity change to trigger the transition
+            setTimeout(() => {
+                dom.disclaimerOverlay.style.opacity = '1';
+            }, 10); 
+        };
+        
+        /**
+         * Initializes event listeners and checks disclaimer status.
+         */
+        function initApp() {
+            // Disclaimer Modal button handler
+            if (dom.acceptDisclaimerButton) {
+                dom.acceptDisclaimerButton.addEventListener('click', hideDisclaimerModal);
+            }
+
+            // Check for existing disclaimer consent when the window loads
+            if (localStorage.getItem(DISCLAIMER_KEY) !== 'understood') {
+                showDisclaimerModal();
+            } else {
+                 // If consent is found, ensure the overlay remains hidden and opacity is zero
+                 dom.disclaimerOverlay.style.display = 'none';
+                 dom.disclaimerOverlay.style.opacity = '0';
+                 document.body.style.overflow = '';
+            }
+        }
+
+        window.onload = initApp;
+    </script>
+</body>
+</html>
