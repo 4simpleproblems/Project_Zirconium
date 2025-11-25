@@ -17,23 +17,10 @@
     
     <script src="../injector.js"></script>
 
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
-    
     <script type="module">
         import { firebaseConfig } from '../firebase-config.js';
-        
-        // Define init logic safely
-        function safeInit() {
-            if (typeof firebase !== 'undefined' && !firebase.apps.length) {
-                firebase.initializeApp(firebaseConfig);
-            }
-        }
-
-        // Expose config and try init
+        // Expose config for use by the modular script below
         window.firebaseConfig = firebaseConfig;
-        safeInit();
     </script>
 
     <style>
@@ -100,7 +87,7 @@
             margin-top: 0.5rem;
             background: var(--menu-bg);
             border: 1px solid var(--menu-border);
-            border-radius: 1rem; /* Highly rounded */
+            border-radius: 1rem;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
             z-index: 1010;
             min-width: 280px;
@@ -132,13 +119,13 @@
             margin-bottom: 0.5rem;
         }
 
-        /* --- CUSTOM CHECKBOX STYLE (Matching request) --- */
+        /* --- CUSTOM CHECKBOX STYLE --- */
         .custom-checkbox {
             appearance: none;
             -webkit-appearance: none;
-            background-color: #111; /* Dark background */
+            background-color: #111;
             border: 1px solid #333;
-            border-radius: 0.375rem; /* Softly rounded corners */
+            border-radius: 0.375rem;
             width: 1rem;
             height: 1rem;
             cursor: pointer;
@@ -150,13 +137,12 @@
         }
 
         .custom-checkbox:checked {
-            background-color: var(--tab-active-border); /* Primary color background */
+            background-color: var(--tab-active-border);
             border-color: var(--tab-active-border);
         }
 
-        /* Custom checkmark indicator using Font Awesome */
         .custom-checkbox:checked::after {
-            content: '\f00c'; /* Checkmark icon */
+            content: '\f00c';
             font-family: 'Font Awesome 6 Free'; 
             font-weight: 900;
             color: #ffffff;
@@ -198,7 +184,7 @@
             padding: 0 1rem;
         }
 
-        /* --- Sound Button Style (Highly Rounded - Matches notes.html mode switcher) --- */
+        /* --- Sound Button Style (Highly Rounded) --- */
         .sound-btn {
             background-color: #0d0d0d;
             border: 1px solid #1a1a1a;
@@ -326,12 +312,18 @@
 
     <div id="status-toaster"></div>
 
-    <script>
+    <script type="module">
+        import { firebaseConfig } from '../firebase-config.js';
+        
+        // Import Modular SDKs directly (This avoids the global scope conflict)
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+        import { getStorage, ref, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-storage.js";
+
         // --- UI & State References ---
         const loadingScreen = document.getElementById('loading-screen');
         const pageContent = document.getElementById('page-content');
-        // This targets the DIV inside the dropdown now, but the ID remains the same
-        const logoutBtn = document.getElementById('logoutBtn'); 
+        const logoutBtn = document.getElementById('logoutBtn');
         const optionsMenuBtn = document.getElementById('options-menu-btn');
         const optionsDropdown = document.getElementById('options-dropdown');
         const soundOverlayCheckbox = document.getElementById('soundOverlayCheckbox');
@@ -351,39 +343,16 @@
         let currentlyHoveredButton = null;
         let toasterTimeout = null;
 
-        // --- Auth Logic (Firebase) ---
-        function initApp() {
-            let attempts = 0;
-            const checkInterval = setInterval(() => {
-                attempts++;
-                
-                if (typeof firebase === 'undefined') return;
-
-                // Ensure initialized
-                if (firebase.apps.length === 0) {
-                    if (window.firebaseConfig) {
-                        try {
-                            firebase.initializeApp(window.firebaseConfig);
-                        } catch(e) { console.warn("Init notice:", e.message); }
-                    } else if (attempts > 30) {
-                        clearInterval(checkInterval);
-                        loadingScreen.innerHTML = '<p class="text-red-500">Error: Configuration Missing. Refresh page.</p>';
-                        return;
-                    } else {
-                        return; // Wait next tick
-                    }
-                }
-
-                clearInterval(checkInterval);
-                setupAuthAndLoad();
-
-            }, 100);
-        }
+        // --- Firebase Initialization (Modular) ---
+        // This initialization is contained within the module's scope and won't conflict with global 'firebase'
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const storage = getStorage(app);
 
         function setupAuthAndLoad() {
             try {
-                const auth = firebase.auth();
-                auth.onAuthStateChanged((user) => {
+                // Modular: using 'onAuthStateChanged(auth, ...)'
+                onAuthStateChanged(auth, (user) => {
                     if (user) {
                         loadingScreen.style.display = 'none';
                         pageContent.classList.remove('hidden');
@@ -393,10 +362,10 @@
                     }
                 });
 
-                // Listener for the new internal logout button
+                // Modular: using 'signOut(auth)'
                 logoutBtn.addEventListener('click', (e) => {
                     e.preventDefault();
-                    auth.signOut().then(() => {
+                    signOut(auth).then(() => {
                         window.location.href = '../index.html';
                     });
                 });
@@ -418,19 +387,17 @@
 
         async function loadSoundsFromStorage() {
             try {
-                const storage = firebase.storage();
-                const storageRef = storage.ref();
-                const jsonRef = storageRef.child('Soundboard/SoundboardNames.json');
+                // Modular: using 'ref(storage, ...)' and 'getDownloadURL(...)'
+                const jsonRef = ref(storage, 'Soundboard/SoundboardNames.json');
+                const url = await getDownloadURL(jsonRef);
                 
-                const url = await jsonRef.getDownloadURL();
                 const response = await fetch(url);
-                
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 
                 const data = await response.json();
 
-                if (data.NormalSounds) data.NormalSounds.forEach(f => createSoundButton(f, normalSoundsContainer, storage));
-                if (data.ExplicitSounds) data.ExplicitSounds.forEach(f => createSoundButton(f, explicitSoundsContainer, storage));
+                if (data.NormalSounds) data.NormalSounds.forEach(f => createSoundButton(f, normalSoundsContainer));
+                if (data.ExplicitSounds) data.ExplicitSounds.forEach(f => createSoundButton(f, explicitSoundsContainer));
 
             } catch (error) {
                 console.error("Storage Error:", error);
@@ -447,7 +414,7 @@
             }
         }
 
-        function createSoundButton(fileName, container, storageInstance) {
+        function createSoundButton(fileName, container) {
             const soundName = fileName.replace('.mp3', '').replace(/_/g, ' ');
             const btn = document.createElement('div');
             btn.className = 'sound-btn';
@@ -458,8 +425,10 @@
                 if (!soundOverlayCheckbox.checked) stopAllAudios();
 
                 try {
-                    const audioRef = storageInstance.ref(btn.dataset.storagePath);
-                    const audioUrl = await audioRef.getDownloadURL();
+                    // Modular: using 'ref(storage, ...)' and 'getDownloadURL(...)'
+                    const audioRef = ref(storage, btn.dataset.storagePath);
+                    const audioUrl = await getDownloadURL(audioRef);
+                    
                     const audio = new Audio(audioUrl);
                     playingAudios.push(audio);
                     audio.addEventListener('ended', () => playingAudios = playingAudios.filter(a => a !== audio));
@@ -518,6 +487,7 @@
             if (requestAnimationFrameId) { cancelAnimationFrame(requestAnimationFrameId); requestAnimationFrameId = null; }
         }
 
+        // --- Event Listeners ---
         optionsMenuBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             optionsDropdown.classList.toggle('hidden');
@@ -561,6 +531,8 @@
             if (e.shiftKey && e.key.toLowerCase() === 'c') stopAllAudios(true);
         });
 
+        // --- Init ---
+        // This runs after all imports are loaded and sets up the event listeners
         window.addEventListener('load', () => {
             const savedOverlay = localStorage.getItem('soundOverlay') === 'true';
             const savedAutoClick = localStorage.getItem('autoClicker') === 'true';
@@ -571,7 +543,7 @@
             autoClickDelayInput.value = savedDelay;
 
             if (savedAutoClick) delaySettings.classList.remove('hidden');
-            initApp();
+            setupAuthAndLoad();
         });
     </script>
 </body>
