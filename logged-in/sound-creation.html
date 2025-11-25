@@ -15,6 +15,8 @@
     <script src="../navigation.js"></script>
     <script src="../injector.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
+    <script src="https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.min.js"></script>
+    <script src="https://unpkg.com/wavesurfer.js@7/dist/plugins/regions.min.js"></script>
 
     <style>
         body { 
@@ -91,33 +93,49 @@
 
         <main class="flex-grow p-5 md:p-8 max-w-7xl mx-auto w-full">
             
-            <div class="settings-box">
-                <h2 class="text-xl font-bold text-white mb-4">Create New Sound</h2>
-                <div class="flex flex-col gap-4">
-                    <input type="text" id="soundTitle" placeholder="Sound Title" class="input-text-style">
-                    <input type="file" id="soundFile" accept="audio/*" class="input-text-style">
-                    <div class="grid grid-cols-2 gap-4">
-                        <input type="number" id="startTime" placeholder="Start Time (s)" class="input-text-style">
-                        <input type="number" id="endTime" placeholder="End Time (s)" class="input-text-style">
-                    </div>
-                    <button id="deployBtn" class="btn-toolbar-style btn-primary-override self-end">Deploy</button>
-                </div>
+            <div class="flex items-center gap-4 border-b border-gray-700 pb-4 mb-4">
+                <button id="showCreate" class="btn-toolbar-style btn-primary-override">Create Sound</button>
+                <button id="showManage" class="btn-toolbar-style">Manage Sounds</button>
+                <button id="showUtils" class="btn-toolbar-style">Utilities</button>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
-                <div class="md:col-span-3 settings-box">
-                    <h2 class="text-xl font-bold text-white mb-4">General Sync Status</h2>
-                    <div id="general-status"></div>
-                </div>
+            <section id="create-section">
                 <div class="settings-box">
-                    <h2 class="text-xl font-bold text-white mb-4">JSON File Sounds</h2>
-                    <div id="json-sounds"></div>
+                    <h2 class="text-xl font-bold text-white mb-4">Create New Sound</h2>
+                    <div class="flex flex-col gap-4">
+                        <input type="text" id="soundTitle" placeholder="Sound Title" class="input-text-style">
+                        <input type="file" id="soundFile" accept="audio/*" class="input-text-style">
+                        <div id="waveform" class="mt-4 bg-gray-800 rounded-lg"></div>
+                        <div id="trim-info" class="text-sm text-gray-400 h-4"></div>
+                        <button id="deployBtn" class="btn-toolbar-style btn-primary-override self-end">Deploy</button>
+                    </div>
                 </div>
-                <div class="md:col-span-2 settings-box">
-                    <h2 class="text-xl font-bold text-white mb-4">Sounds Folder Files</h2>
-                    <div id="storage-sounds"></div>
+            </section>
+
+            <section id="manage-section" class="hidden">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
+                    <div class="md:col-span-3 settings-box">
+                        <h2 class="text-xl font-bold text-white mb-4">General Sync Status</h2>
+                        <div id="general-status"></div>
+                    </div>
+                    <div class="settings-box">
+                        <h2 class="text-xl font-bold text-white mb-4">JSON File Sounds</h2>
+                        <div id="json-sounds"></div>
+                    </div>
+                    <div class="md:col-span-2 settings-box">
+                        <h2 class="text-xl font-bold text-white mb-4">Sounds Folder Files</h2>
+                        <div id="storage-sounds"></div>
+                    </div>
                 </div>
-            </div>
+            </section>
+
+            <section id="utils-section" class="hidden">
+                 <div class="settings-box">
+                    <h2 class="text-xl font-bold text-white mb-4">Sound Utilities</h2>
+                    <p class="text-gray-400 mb-4">Run utilities to manage sound data.</p>
+                    <button id="normalizeNamesBtn" class="btn-toolbar-style">Normalize All JSON Sound Names</button>
+                </div>
+            </section>
             
         </main>
     </div>
@@ -175,7 +193,10 @@
                 const soundData = await response.json();
                 
                 const createJsonListItem = (file, category) =>
-                    `<li>${file} <button data-file="${file}" data-category="${category}" class="text-red-500 hover:text-red-400 ml-2">Delete</button></li>`;
+                    `<li>${file} 
+                        <button data-file="${file}" data-category="${category}" class="rename-json-btn text-blue-500 hover:text-blue-400 ml-4">Rename</button>
+                        <button data-file="${file}" data-category="${category}" class="delete-json-btn text-red-500 hover:text-red-400 ml-2">Delete</button>
+                    </li>`;
 
                 jsonSoundsDiv.innerHTML = `
                     <h3 class="font-bold text-lg">Normal Sounds</h3>
@@ -189,7 +210,7 @@
                 const res = await listAll(soundsFolderRef);
                 const storageFiles = res.items.map(item => item.name);
                 
-                storageSoundsDiv.innerHTML = `<ul>${storageFiles.map(f => `<li>${f} <button data-file="${f}" class="text-red-500 hover:text-red-400 ml-2">Delete</button></li>`).join('')}</ul>`;
+                storageSoundsDiv.innerHTML = `<ul>${storageFiles.map(f => `<li>${f} <button data-file="${f}" class="delete-storage-btn text-red-500 hover:text-red-400 ml-2">Delete</button></li>`).join('')}</ul>`;
 
                 // 3. Compare and show sync status
                 const jsonFiles = [...(soundData.NormalSounds || []), ...(soundData.ExplicitSounds || [])];
@@ -214,10 +235,13 @@
                 generalStatusDiv.innerHTML = statusHtml;
 
                 // 4. Add event listeners for delete buttons
-                jsonSoundsDiv.querySelectorAll('button').forEach(btn => {
+                jsonSoundsDiv.querySelectorAll('.delete-json-btn').forEach(btn => {
                     btn.addEventListener('click', handleDeleteFromJson);
                 });
-                storageSoundsDiv.querySelectorAll('button').forEach(btn => {
+                 jsonSoundsDiv.querySelectorAll('.rename-json-btn').forEach(btn => {
+                    btn.addEventListener('click', handleRename);
+                });
+                storageSoundsDiv.querySelectorAll('.delete-storage-btn').forEach(btn => {
                     btn.addEventListener('click', handleDeleteFromStorage);
                 });
 
@@ -228,6 +252,57 @@
                 storageSoundsDiv.innerHTML = '';
             }
         }
+
+        async function handleRename(event) {
+            const oldFile = event.target.dataset.file;
+            const category = event.target.dataset.category;
+            const newTitle = prompt(`Enter new title for "${oldFile}"`);
+
+            if (!newTitle || newTitle.trim() === '') return;
+
+            const newFile = newTitle.trim().replace(/ /g, '_') + '.mp3';
+
+            if (confirm(`This will rename "${oldFile}" to "${newFile}". This involves re-uploading the file. Continue?`)) {
+                event.target.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                event.target.disabled = true;
+
+                try {
+                    // 1. Download old file
+                    const oldFileRef = ref(storage, `Soundboard/Sounds/${oldFile}`);
+                    const url = await getDownloadURL(oldFileRef);
+                    const response = await fetch(url);
+                    const blob = await response.blob();
+
+                    // 2. Upload as new file
+                    const newFileRef = ref(storage, `Soundboard/Sounds/${newFile}`);
+                    await uploadBytes(newFileRef, blob);
+
+                    // 3. Delete old file
+                    await deleteObject(oldFileRef);
+
+                    // 4. Update JSON
+                    const jsonRef = ref(storage, 'Soundboard/SoundboardNames.json');
+                    const jsonUrl = await getDownloadURL(jsonRef);
+                    const jsonResponse = await fetch(jsonUrl, { cache: "no-store" });
+                    const soundData = await jsonResponse.json();
+
+                    soundData[category] = soundData[category].map(f => f === oldFile ? newFile : f);
+
+                    const newJsonString = JSON.stringify(soundData, null, 2);
+                    await uploadString(jsonRef, newJsonString, 'raw', { contentType: 'application/json' });
+
+                    alert('File renamed successfully.');
+                    loadSoundData();
+
+                } catch (error) {
+                    console.error("Error renaming file:", error);
+                    alert(`Rename failed: ${error.message}`);
+                    event.target.innerHTML = 'Rename';
+                    event.target.disabled = false;
+                }
+            }
+        }
+
 
         async function handleDeleteFromJson(event) {
             const file = event.target.dataset.file;
@@ -277,21 +352,90 @@
         }
 
         const deployBtn = document.getElementById('deployBtn');
+        const fileInput = document.getElementById('soundFile');
+        const waveformDiv = document.getElementById('waveform');
+        const trimInfoDiv = document.getElementById('trim-info');
+
+        let wavesurfer, activeRegion;
+
+        // Section Toggling
+        const sections = {
+            create: document.getElementById('create-section'),
+            manage: document.getElementById('manage-section'),
+            utils: document.getElementById('utils-section'),
+        };
+        const navButtons = {
+            create: document.getElementById('showCreate'),
+            manage: document.getElementById('showManage'),
+            utils: document.getElementById('showUtils'),
+        };
+
+        function showSection(sectionName) {
+            Object.values(sections).forEach(s => s.classList.add('hidden'));
+            Object.values(navButtons).forEach(b => b.classList.remove('btn-primary-override'));
+            
+            sections[sectionName].classList.remove('hidden');
+            navButtons[sectionName].classList.add('btn-primary-override');
+        }
+
+        navButtons.create.addEventListener('click', () => showSection('create'));
+        navButtons.manage.addEventListener('click', () => showSection('manage'));
+        navButtons.utils.addEventListener('click', () => showSection('utils'));
+
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (wavesurfer) {
+                wavesurfer.destroy();
+            }
+
+            wavesurfer = WaveSurfer.create({
+                container: waveformDiv,
+                waveColor: 'rgb(200, 200, 200)',
+                progressColor: 'rgb(100, 100, 100)',
+                url: URL.createObjectURL(file),
+            });
+
+            const wsRegions = wavesurfer.registerPlugin(WaveSurfer.Regions.create());
+
+            wavesurfer.on('ready', () => {
+                wsRegions.clearRegions();
+                activeRegion = wsRegions.addRegion({
+                    start: 0,
+                    end: wavesurfer.getDuration(),
+                    color: 'rgba(79, 70, 229, 0.2)',
+                    drag: true,
+                    resize: true,
+                });
+                trimInfoDiv.textContent = `Full duration: ${wavesurfer.getDuration().toFixed(2)}s. Drag handles to trim.`;
+            });
+
+            wsRegions.on('region-updated', (region) => {
+                activeRegion = region;
+                trimInfoDiv.textContent = `Trimmed selection: ${region.start.toFixed(2)}s to ${region.end.toFixed(2)}s`;
+            });
+        });
+
+
         deployBtn.addEventListener('click', async () => {
             const titleInput = document.getElementById('soundTitle');
-            const fileInput = document.getElementById('soundFile');
-            const startTimeInput = document.getElementById('startTime');
-            const endTimeInput = document.getElementById('endTime');
-
             const title = titleInput.value.trim();
             const file = fileInput.files[0];
-            const startTime = parseFloat(startTimeInput.value);
-            const endTime = parseFloat(endTimeInput.value);
 
             if (!title || !file) {
                 alert('Please provide a title and a file.');
                 return;
             }
+
+            if (!wavesurfer || !activeRegion) {
+                alert('Please upload a file and wait for the waveform to load.');
+                return;
+            }
+
+            const startTime = activeRegion.start;
+            const endTime = activeRegion.end;
 
             deployBtn.disabled = true;
             deployBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Deploying...';
@@ -303,25 +447,21 @@
                     const audioContext = new AudioContext();
                     const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
-                    let trimmedBuffer = audioBuffer;
-                    if (!isNaN(startTime) && !isNaN(endTime) && startTime < endTime && endTime <= audioBuffer.duration) {
-                        const startOffset = Math.floor(startTime * audioBuffer.sampleRate);
-                        const endOffset = Math.floor(endTime * audioBuffer.sampleRate);
-                        const frameCount = endOffset - startOffset;
+                    const startOffset = Math.floor(startTime * audioBuffer.sampleRate);
+                    const endOffset = Math.floor(endTime * audioBuffer.sampleRate);
+                    const frameCount = endOffset - startOffset;
 
-                        const newBuffer = audioContext.createBuffer(audioBuffer.numberOfChannels, frameCount, audioBuffer.sampleRate);
-                        for (let i = 0; i < audioBuffer.numberOfChannels; i++) {
-                            const channelData = audioBuffer.getChannelData(i);
-                            const newChannelData = newBuffer.getChannelData(i);
-                            newChannelData.set(channelData.subarray(startOffset, endOffset));
-                        }
-                        trimmedBuffer = newBuffer;
+                    const newBuffer = audioContext.createBuffer(audioBuffer.numberOfChannels, frameCount, audioBuffer.sampleRate);
+                    for (let i = 0; i < audioBuffer.numberOfChannels; i++) {
+                        const channelData = audioBuffer.getChannelData(i);
+                        const newChannelData = newBuffer.getChannelData(i);
+                        newChannelData.set(channelData.subarray(startOffset, endOffset));
                     }
                     
-                    const mp3encoder = new lamejs.Mp3Encoder(trimmedBuffer.numberOfChannels, trimmedBuffer.sampleRate, 64);
+                    const mp3encoder = new lamejs.Mp3Encoder(newBuffer.numberOfChannels, newBuffer.sampleRate, 64);
                     const samples = [];
-                    for(let i = 0; i < trimmedBuffer.numberOfChannels; i++) {
-                        samples.push(trimmedBuffer.getChannelData(i));
+                    for(let i = 0; i < newBuffer.numberOfChannels; i++) {
+                        samples.push(newBuffer.getChannelData(i));
                     }
                     const mp3Data = [];
 
@@ -360,8 +500,9 @@
                     loadSoundData();
                     titleInput.value = '';
                     fileInput.value = '';
-                    startTimeInput.value = '';
-                    endTimeInput.value = '';
+                    if(wavesurfer) wavesurfer.destroy();
+                    trimInfoDiv.textContent = '';
+
                 };
                 reader.readAsArrayBuffer(file);
 
@@ -371,6 +512,63 @@
             } finally {
                 deployBtn.disabled = false;
                 deployBtn.innerHTML = 'Deploy';
+            }
+        });
+
+        document.getElementById('normalizeNamesBtn').addEventListener('click', async (e) => {
+            const btn = e.target;
+            if (!confirm("This will scan the JSON for names with spaces and try to rename the corresponding files in storage to use underscores. This can be risky. Are you sure?")) return;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Normalizing...';
+
+            try {
+                const jsonRef = ref(storage, 'Soundboard/SoundboardNames.json');
+                const jsonUrl = await getDownloadURL(jsonRef);
+                const response = await fetch(jsonUrl, { cache: "no-store" });
+                const soundData = await response.json();
+                let changed = false;
+
+                const normalizeCategory = async (category) => {
+                    const promises = soundData[category].map(async (file) => {
+                        if (file.includes(' ')) {
+                            const newFile = file.replace(/ /g, '_');
+                            console.log(`Normalizing: ${file} -> ${newFile}`);
+                            
+                            const oldFileRef = ref(storage, `Soundboard/Sounds/${file}`);
+                            const newFileRef = ref(storage, `Soundboard/Sounds/${newFile}`);
+
+                            const fileUrl = await getDownloadURL(oldFileRef);
+                            const fileRes = await fetch(fileUrl);
+                            const blob = await fileRes.blob();
+                            await uploadBytes(newFileRef, blob);
+                            await deleteObject(oldFileRef);
+                            
+                            changed = true;
+                            return newFile;
+                        }
+                        return file;
+                    });
+                    soundData[category] = await Promise.all(promises);
+                };
+
+                await normalizeCategory('NormalSounds');
+                await normalizeCategory('ExplicitSounds');
+
+                if (changed) {
+                    const newJsonString = JSON.stringify(soundData, null, 2);
+                    await uploadString(jsonRef, newJsonString, 'raw', { contentType: 'application/json' });
+                    alert('Normalization complete! Some names were fixed.');
+                    loadSoundData();
+                } else {
+                    alert('No names needed normalization.');
+                }
+            } catch (error) {
+                console.error("Normalization error:", error);
+                alert(`Error: ${error.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Normalize All JSON Sound Names';
             }
         });
 
