@@ -423,6 +423,7 @@
                     const audioUrl = await getDownloadURL(audioRef);
                     
                     const audio = new Audio(audioUrl);
+                    audio.soundButton = btn; // Store reference to the button
                     playingAudios.push(audio);
                     audio.addEventListener('ended', () => {
                         playingAudios = playingAudios.filter(a => a !== audio);
@@ -456,6 +457,10 @@
             playingAudios.forEach(audio => {
                 audio.pause();
                 audio.currentTime = 0;
+                // Check if the audio object has a reference to its button
+                if (audio.soundButton) {
+                    audio.soundButton.classList.remove('sound-btn-playing');
+                }
             });
             playingAudios = [];
             if (fade) showStatus('All sounds muted', 'success');
