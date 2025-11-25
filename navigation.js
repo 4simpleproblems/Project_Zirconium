@@ -338,6 +338,14 @@ let db;
             .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
             .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
 
+            /* NEW: Styles for the expandable "More" section */
+            .auth-menu-more-section {
+                display: none; /* Hidden by default */
+                padding-top: 0.5rem;
+                margin-top: 0.5rem;
+                border-top: 1px solid var(--menu-divider);
+            }
+
             /* UPDATED: Dropdown button styling to match notes.html */
             .auth-menu-link, .auth-menu-button { 
                 display: flex; align-items: center; 
@@ -631,6 +639,24 @@ let db;
                             <i class="fa-solid fa-lock w-4"></i>
                             Authenticate
                         </a>
+                        <button id="more-button" class="auth-menu-button">
+                            <i id="more-button-icon" class="fa-solid fa-chevron-down w-4"></i>
+                            <span id="more-button-text">Show More</span>
+                        </button>
+                        <div id="more-section" class="auth-menu-more-section">
+                            <a href="/documentation.html" class="auth-menu-link">
+                                <i class="fa-solid fa-book w-4"></i>
+                                Documentation
+                            </a>
+                            <a href="../legal.html" class="auth-menu-link">
+                                <i class="fa-solid fa-gavel w-4"></i>
+                                Terms & Policies
+                            </a>
+                            <a href="https://donate.stripe.com/5kA5mB2C5aeneBi144" class="auth-menu-link" target="_blank">
+                                <i class="fa-solid fa-heart w-4"></i>
+                                Donate
+                            </a>
+                        </div>
                     </div>
                 </div>
             `;
@@ -673,10 +699,24 @@ let db;
                                 <i class="fa-solid fa-right-from-bracket w-4"></i>
                                 Log Out
                             </button>
-                            <a href="../legal.html" class="auth-menu-link">
-                                <i class="fa-solid fa-gavel w-4"></i>
-                                Terms & Policies
-                            </a>
+                             <button id="more-button" class="auth-menu-button">
+                                <i id="more-button-icon" class="fa-solid fa-chevron-down w-4"></i>
+                                <span id="more-button-text">Show More</span>
+                            </button>
+                            <div id="more-section" class="auth-menu-more-section">
+                                <a href="/documentation.html" class="auth-menu-link">
+                                    <i class="fa-solid fa-book w-4"></i>
+                                    Documentation
+                                </a>
+                                <a href="../legal.html" class="auth-menu-link">
+                                    <i class="fa-solid fa-gavel w-4"></i>
+                                    Terms & Policies
+                                </a>
+                                <a href="https://donate.stripe.com/5kA5mB2C5aeneBi144" class="auth-menu-link" target="_blank">
+                                    <i class="fa-solid fa-heart w-4"></i>
+                                    Donate
+                                </a>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -706,6 +746,22 @@ let db;
                     // Close pin menu if open
                     document.getElementById('pin-context-menu')?.classList.add('closed');
                     document.getElementById('pin-context-menu')?.classList.remove('open');
+                });
+            }
+
+            // More Button Toggle
+            const moreButton = document.getElementById('more-button');
+            const moreSection = document.getElementById('more-section');
+            const moreButtonIcon = document.getElementById('more-button-icon');
+            const moreButtonText = document.getElementById('more-button-text');
+
+            if (moreButton && moreSection) {
+                moreButton.addEventListener('click', () => {
+                    const isExpanded = moreSection.style.display === 'block';
+                    moreSection.style.display = isExpanded ? 'none' : 'block';
+                    moreButtonText.textContent = isExpanded ? 'Show More' : 'Show Less';
+                    moreButtonIcon.classList.toggle('fa-chevron-down', isExpanded);
+                    moreButtonIcon.classList.toggle('fa-chevron-up', !isExpanded);
                 });
             }
 
