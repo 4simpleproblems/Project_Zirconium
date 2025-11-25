@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4SP - Soundboard</title>
+    <meta name="description" content="A simple soundboard application for the 4SP website.">
+
+    <!-- Fonts: Geist (Exactly as in notes.html) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Injections (Requested Updates) -->
+    <script src="../navigation.js"></script>
+    <script src="../injector.js"></script>
+
+    <!-- Firebase SDK (Compat for easier migration) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+    
+    <!-- Config (Requested Update) -->
+    <script src="../firebase-config.js"></script>
+
+    <style>
+        /* --- FONT & BASE STYLING (MATCHING notes.html) --- */
+        :root {
+            --menu-bg: #000000;
+            --menu-border: #333;
+            --menu-text: #d1d5db;
+            --tab-active-bg: rgba(79, 70, 229, 0.1);
+            --tab-active-border: #4f46e5;
+            --tab-active-text: #4f46e5;
+        }
+
+        body { 
+            font-family: 'Geist', sans-serif; 
+            background-color: #070707; 
+            color: #c0c0c0; 
+            transition: all 0.3s ease;
+            font-size: 16px;
+            overflow-x: hidden;
+            font-weight: 300;
+        }
+
+        h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
+            font-weight: 400 !important;
+        }
+
+        /* --- UI COMPONENTS --- */
+        
+        .btn-toolbar-style {
+            background: var(--menu-bg);
+            border: 1px solid var(--menu-border);
+            border-radius: 0.75rem;
+            color: var(--menu-text);
+            padding: 0.5rem 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn-toolbar-style:hover {
+            background-color: var(--menu-bg);
+            border-color: #fff;
+            color: #ffffff;
+        }
+        
+        /* Highlighted Button Style */
+        .btn-toolbar-style.btn-primary-override {
+            background-color: var(--tab-active-bg);
+            border: 1px solid var(--tab-active-border);
+            color: var(--tab-active-text);
+        }
+        .btn-toolbar-style.btn-primary-override:hover {
+            background-color: rgba(79, 70, 229, 0.15);
+            border-color: #6366f1;
+            color: #6366f1;
+        }
+
+        /* Dropdown Styling */
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 0.5rem;
+            background: var(--menu-bg);
+            border: 1px solid var(--menu-border);
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            z-index: 1010;
+            min-width: 280px;
+            padding: 0.75rem;
+        }
+
+        .dropdown-item {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            color: var(--menu-text);
+            border-radius: 0.375rem;
+            cursor: pointer;
+            transition: background-color 0.15s, color 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .dropdown-item:hover {
+            background-color: #2a2a2a;
+            color: #ffffff;
+        }
+        .dropdown-header {
+            padding: 0.5rem 0.75rem;
+            color: #9ca3af;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            border-bottom: 1px solid #333;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Custom Inputs inside Dropdown */
+        .custom-checkbox {
+            accent-color: #4f46e5;
+            width: 1rem;
+            height: 1rem;
+            cursor: pointer;
+        }
+        .custom-input {
+            background: #111;
+            border: 1px solid #333;
+            color: #fff;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            width: 70px;
+            font-size: 0.875rem;
+        }
+
+        /* --- Page Layout --- */
+        #page-content {
+            min-height: calc(100vh - 4rem);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section-header {
+            font-size: 1.25rem;
+            border-bottom: 1px solid #1a1a1a;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+            margin-top: 2rem;
+            color: #ffffff;
+        }
+
+        /* --- Sound Buttons Grid --- */
+        .sound-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 1rem;
+            padding: 0 1rem;
+        }
+
+        .sound-btn {
+            background-color: #0d0d0d;
+            border: 1px solid #1a1a1a;
+            color: #c0c0c0;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+            word-break: break-word;
+            user-select: none;
+        }
+        
+        .sound-btn:hover {
+            background-color: #1a1a1a;
+            border-color: #4f46e5;
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+        
+        .sound-btn:active {
+            transform: translateY(0);
+            background-color: rgba(79, 70, 229, 0.1);
+        }
+
+        /* --- Toaster/Status --- */
+        #status-toaster {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background-color: rgba(13, 13, 13, 0.95);
+            backdrop-filter: blur(5px);
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            border: 1px solid #333;
+            font-size: 0.85rem;
+            color: #fff;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        #status-toaster.visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="fixed inset-0 bg-[#070707] flex items-center justify-center z-50">
+        <i class="fa-solid fa-spinner fa-spin fa-2x"></i>
+    </div>
+
+    <div id="page-content" class="hidden">
+        
+        <!-- Header -->
+        <header class="flex justify-between items-center p-4 border-b border-[#1a1a1a] sticky top-0 bg-[#070707] z-40">
+            <h1 class="text-2xl font-bold text-white">4SP Soundboard</h1>
+            
+            <div class="flex items-center gap-2">
+                
+                <!-- Dashboard Link -->
+                <a href="dashboard.html" class="btn-toolbar-style no-underline">
+                    <i class="fa-solid fa-table-columns"></i>
+                    <span class="hidden sm:inline">Dashboard</span>
+                </a>
+
+                <!-- Options Menu -->
+                <div id="options-menu-container" class="relative">
+                    <button id="options-menu-btn" class="btn-toolbar-style btn-primary-override">
+                        <i class="fa-solid fa-sliders"></i> <span>Options</span>
+                    </button>
+
+                    <div id="options-dropdown" class="dropdown-menu hidden">
+                        <div class="dropdown-header">Playback Settings</div>
+                        
+                        <label class="dropdown-item">
+                            <span><i class="fa-solid fa-layer-group w-5"></i> Sound Overlay</span>
+                            <input type="checkbox" id="soundOverlayCheckbox" class="custom-checkbox">
+                        </label>
+
+                        <label class="dropdown-item">
+                            <span><i class="fa-solid fa-computer-mouse w-5"></i> Auto Clicker</span>
+                            <input type="checkbox" id="autoClickerCheckbox" class="custom-checkbox">
+                        </label>
+
+                        <div id="delay-settings" class="dropdown-item hidden">
+                            <span class="text-sm">Delay (ms)</span>
+                            <div class="flex gap-2">
+                                <input type="number" id="autoClickDelay" value="1000" min="0" class="custom-input">
+                                <button id="applyDelayBtn" class="text-xs bg-[#333] px-2 rounded hover:bg-[#444] text-white">Set</button>
+                            </div>
+                        </div>
+
+                        <div class="dropdown-divider border-t border-[#333] my-2"></div>
+                        
+                        <div id="clear-sounds-btn" class="dropdown-item text-red-500 hover:bg-red-900/20">
+                            <span><i class="fa-solid fa-volume-xmark w-5"></i> Stop All Sounds</span>
+                            <span class="text-xs text-gray-500 border border-[#333] px-1 rounded">SHIFT+C</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Logout -->
+                <button id="logoutBtn" class="btn-toolbar-style text-gray-400 hover:text-white">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-grow p-5 md:p-8 max-w-7xl mx-auto w-full">
+            
+            <!-- Normal Sounds -->
+            <div class="mb-10">
+                <h2 class="section-header">Normal Sounds</h2>
+                <div id="normalSoundsContainer" class="sound-grid">
+                    <!-- Buttons injected via JS -->
+                </div>
+            </div>
+
+            <!-- Explicit Sounds -->
+            <div class="mb-10">
+                <h2 class="section-header text-red-400/80 border-red-900/30">Explicit Sounds</h2>
+                <div id="explicitSoundsContainer" class="sound-grid">
+                    <!-- Buttons injected via JS -->
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Status Toaster -->
+    <div id="status-toaster"></div>
+
+    <script>
+        // --- UI & State References ---
+        const loadingScreen = document.getElementById('loading-screen');
+        const pageContent = document.getElementById('page-content');
+        const logoutBtn = document.getElementById('logoutBtn');
+        
+        const optionsMenuBtn = document.getElementById('options-menu-btn');
+        const optionsDropdown = document.getElementById('options-dropdown');
+        const soundOverlayCheckbox = document.getElementById('soundOverlayCheckbox');
+        const autoClickerCheckbox = document.getElementById('autoClickerCheckbox');
+        const delaySettings = document.getElementById('delay-settings');
+        const autoClickDelayInput = document.getElementById('autoClickDelay');
+        const applyDelayBtn = document.getElementById('applyDelayBtn');
+        const clearSoundsBtn = document.getElementById('clear-sounds-btn');
+        
+        const statusToaster = document.getElementById('status-toaster');
+
+        const normalSoundsContainer = document.getElementById('normalSoundsContainer');
+        const explicitSoundsContainer = document.getElementById('explicitSoundsContainer');
+
+        // --- Soundboard Logic State ---
+        let playingAudios = [];
+        let autoClickInterval;
+        let requestAnimationFrameId = null;
+        let currentlyHoveredButton = null;
+        let toasterTimeout = null;
+
+        // --- Auth Logic (Firebase) ---
+        function initApp() {
+            try {
+                if (typeof firebase !== 'undefined' && typeof firebaseConfig !== 'undefined') {
+                    // Initialize if not already done
+                    if (!firebase.apps.length) {
+                        firebase.initializeApp(firebaseConfig);
+                    }
+                    
+                    const auth = firebase.auth();
+                    
+                    auth.onAuthStateChanged((user) => {
+                        if (user) {
+                            // User is logged in, show content & load sounds
+                            loadingScreen.style.display = 'none';
+                            pageContent.classList.remove('hidden');
+                            loadSoundsFromStorage(); // Start loading data
+                        } else {
+                            // No user, redirect
+                            window.location.href = '../index.html'; 
+                        }
+                    });
+
+                    logoutBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        auth.signOut().then(() => {
+                            window.location.href = '../index.html';
+                        });
+                    });
+
+                } else {
+                    console.error("Firebase or Config not loaded correctly.");
+                    loadingScreen.innerHTML = '<p class="text-red-500">Error: Configuration Missing</p>';
+                }
+            } catch (e) {
+                console.error("Auth Error", e);
+            }
+        }
+
+        // --- UI Helper Functions ---
+
+        function showStatus(message, type = 'info') {
+            statusToaster.textContent = message;
+            statusToaster.className = ''; // Reset classes
+            
+            if (type === 'error') statusToaster.style.borderColor = '#ef4444';
+            else if (type === 'success') statusToaster.style.borderColor = '#22c55e';
+            else statusToaster.style.borderColor = '#333';
+
+            statusToaster.classList.add('visible');
+
+            if (toasterTimeout) clearTimeout(toasterTimeout);
+            toasterTimeout = setTimeout(() => {
+                statusToaster.classList.remove('visible');
+            }, 2000);
+        }
+
+        // --- Data Loading (Firebase Storage) ---
+
+        async function loadSoundsFromStorage() {
+            try {
+                const storage = firebase.storage();
+                const storageRef = storage.ref();
+                
+                // Path based on your image: Soundboard/SoundboardNames.json
+                const jsonRef = storageRef.child('Soundboard/SoundboardNames.json');
+                
+                // 1. Get URL for JSON
+                const url = await jsonRef.getDownloadURL();
+                
+                // 2. Fetch JSON Content
+                const response = await fetch(url);
+                const data = await response.json();
+
+                // 3. Generate Buttons
+                if (data.NormalSounds) {
+                    data.NormalSounds.forEach(fileName => {
+                        createSoundButton(fileName, normalSoundsContainer, storage);
+                    });
+                }
+                if (data.ExplicitSounds) {
+                    data.ExplicitSounds.forEach(fileName => {
+                        createSoundButton(fileName, explicitSoundsContainer, storage);
+                    });
+                }
+
+            } catch (error) {
+                console.error("Error loading sounds from Storage:", error);
+                showStatus("Failed to load soundboard configuration.", "error");
+                normalSoundsContainer.innerHTML = '<p class="text-gray-500 italic">Unable to load sounds.</p>';
+            }
+        }
+
+        // --- Sound Button Creation ---
+
+        function createSoundButton(fileName, container, storageInstance) {
+            const soundName = fileName.replace('.mp3', '').replace(/_/g, ' ');
+            
+            const btn = document.createElement('div');
+            btn.className = 'sound-btn';
+            btn.textContent = soundName;
+            
+            // Store reference to storage path for click handler
+            // Path based on image: Soundboard/Sounds/{filename}
+            btn.dataset.storagePath = `Soundboard/Sounds/${fileName}`;
+            
+            // Click Handler
+            btn.addEventListener('click', async () => {
+                // If overlay is OFF, stop others
+                if (!soundOverlayCheckbox.checked) {
+                    stopAllAudios();
+                }
+
+                try {
+                    // Fetch URL dynamically on click to ensure valid token
+                    // Optimization: We could cache this, but dynamic is safer for long sessions
+                    const audioRef = storageInstance.ref(btn.dataset.storagePath);
+                    const audioUrl = await audioRef.getDownloadURL();
+                    
+                    const audio = new Audio(audioUrl);
+                    
+                    // Track the audio
+                    playingAudios.push(audio);
+                    
+                    // Cleanup when done
+                    audio.addEventListener('ended', () => {
+                        playingAudios = playingAudios.filter(a => a !== audio);
+                    });
+
+                    await audio.play();
+
+                } catch (err) {
+                    console.error("Playback failed for " + fileName, err);
+                    showStatus('Error playing sound', 'error');
+                }
+            });
+
+            // Auto-clicker Hover Handlers
+            btn.addEventListener('mouseenter', () => {
+                currentlyHoveredButton = btn;
+                if (autoClickerCheckbox.checked) startAutoClicker();
+            });
+            btn.addEventListener('mouseleave', () => {
+                if (currentlyHoveredButton === btn) {
+                    currentlyHoveredButton = null;
+                    stopAutoClicker();
+                }
+            });
+
+            container.appendChild(btn);
+        }
+
+        // --- Sound Control Logic ---
+
+        function stopAllAudios(fade = false) {
+            if (playingAudios.length === 0) return;
+
+            playingAudios.forEach(audio => {
+                audio.pause();
+                audio.currentTime = 0;
+            });
+            playingAudios = [];
+            
+            if (fade) showStatus('All sounds muted', 'success');
+        }
+
+        // --- Auto Clicker Logic ---
+
+        function clickLoop() {
+             if (currentlyHoveredButton && autoClickerCheckbox.checked) {
+                currentlyHoveredButton.click();
+            }
+        }
+
+        function fastClicker() {
+            if (currentlyHoveredButton && autoClickerCheckbox.checked) {
+                currentlyHoveredButton.click();
+                requestAnimationFrameId = requestAnimationFrame(fastClicker);
+            }
+        }
+
+        function startAutoClicker() {
+            stopAutoClicker(); // clear existing
+            const delay = parseInt(autoClickDelayInput.value, 10) || 0;
+            
+            if (!currentlyHoveredButton || !autoClickerCheckbox.checked) return;
+
+            if (delay === 0) {
+                requestAnimationFrameId = requestAnimationFrame(fastClicker);
+            } else {
+                autoClickInterval = setInterval(clickLoop, delay);
+            }
+        }
+
+        function stopAutoClicker() {
+            if (autoClickInterval) {
+                clearInterval(autoClickInterval);
+                autoClickInterval = null;
+            }
+            if (requestAnimationFrameId) {
+                cancelAnimationFrame(requestAnimationFrameId);
+                requestAnimationFrameId = null;
+            }
+        }
+
+        // --- Event Listeners ---
+
+        // Dropdown Toggle
+        optionsMenuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            optionsDropdown.classList.toggle('hidden');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!optionsDropdown.classList.contains('hidden') && 
+                !optionsMenuBtn.contains(e.target) && 
+                !optionsDropdown.contains(e.target)) {
+                optionsDropdown.classList.add('hidden');
+            }
+        });
+
+        // Settings Listeners
+        soundOverlayCheckbox.addEventListener('change', (e) => {
+            localStorage.setItem('soundOverlay', e.target.checked);
+            if (!e.target.checked) stopAllAudios();
+        });
+
+        autoClickerCheckbox.addEventListener('change', (e) => {
+            localStorage.setItem('autoClicker', e.target.checked);
+            if (e.target.checked) {
+                delaySettings.classList.remove('hidden');
+                if (currentlyHoveredButton) startAutoClicker();
+            } else {
+                delaySettings.classList.add('hidden');
+                stopAutoClicker();
+            }
+        });
+
+        applyDelayBtn.addEventListener('click', () => {
+            const val = autoClickDelayInput.value;
+            localStorage.setItem('autoClickDelay', val);
+            if (autoClickerCheckbox.checked && currentlyHoveredButton) startAutoClicker();
+            showStatus(`Delay set to ${val}ms`);
+        });
+
+        clearSoundsBtn.addEventListener('click', () => {
+            stopAllAudios(true);
+            optionsDropdown.classList.add('hidden');
+        });
+
+        // Keyboard Shortcut (Shift + C)
+        document.addEventListener('keydown', (e) => {
+            if (e.shiftKey && e.key.toLowerCase() === 'c') {
+                stopAllAudios(true);
+            }
+        });
+
+        // --- Initialization ---
+
+        window.addEventListener('load', () => {
+            // Load Preferences
+            const savedOverlay = localStorage.getItem('soundOverlay') === 'true';
+            const savedAutoClick = localStorage.getItem('autoClicker') === 'true';
+            const savedDelay = localStorage.getItem('autoClickDelay') || '1000';
+
+            soundOverlayCheckbox.checked = savedOverlay;
+            autoClickerCheckbox.checked = savedAutoClick;
+            autoClickDelayInput.value = savedDelay;
+
+            if (savedAutoClick) {
+                delaySettings.classList.remove('hidden');
+            }
+
+            // Start App
+            initApp();
+        });
+
+    </script>
+</body>
+</html>
