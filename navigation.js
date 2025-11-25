@@ -419,7 +419,7 @@ let db;
             
             .nav-tab { 
                 flex-shrink: 0; padding: 8px 12px; color: var(--tab-text); /* UPDATED */
-                font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; 
+                font-size: 0.875rem; font-weight: 500; border-radius: 1rem; 
                 transition: all 0.2s, color 0.3s ease, border-color 0.3s ease, background-color 0.3s ease; 
                 text-decoration: none; line-height: 1.5; display: flex; align-items: center; margin-right: 8px; /* UPDATED */
                 border: 1px solid transparent; 
