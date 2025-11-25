@@ -413,10 +413,6 @@
             btn.className = 'sound-btn';
             btn.textContent = soundName;
             btn.dataset.storagePath = `Soundboard/Sounds/${fileName}`;
-            btn.dataset.originalFileName = fileName; // Store original filename
-            if (container) { // Only store container ID if container is provided
-                btn.dataset.originalContainerId = container.id; // Store original container ID
-            }
             
             btn.addEventListener('click', async () => {
                 if (!soundOverlayCheckbox.checked) stopAllAudios();
@@ -453,55 +449,21 @@
                 }
             });
 
-            if (container) { // Only append if container is provided initially
-                container.appendChild(btn);
-            }
-            return btn; // Return the created button
+            container.appendChild(btn);
         }
 
         function stopAllAudios(fade = false) {
-            if (playingAudios.length === 0) {
-                // Also check for any remaining sound-btn-playing classes that might not have audio objects
-                document.querySelectorAll('.sound-btn-playing').forEach(btn => {
-                    btn.classList.remove('sound-btn-playing');
-                });
-                return;
-            }
-
-            const buttonsToRecreate = new Map(); // Use a Map to preserve order and associate with nextSibling
+            if (playingAudios.length === 0) return;
             playingAudios.forEach(audio => {
                 audio.pause();
                 audio.currentTime = 0;
+                // Check if the audio object has a reference to its button
                 if (audio.soundButton) {
-                    const oldBtn = audio.soundButton;
-                    const container = document.getElementById(oldBtn.dataset.originalContainerId);
-                    if (container) {
-                        // Store the next sibling to re-insert in the correct position
-                        const nextSibling = oldBtn.nextElementSibling; 
-                        buttonsToRecreate.set(oldBtn, { originalFileName: oldBtn.dataset.originalFileName, container: container, nextSibling: nextSibling });
-                    }
+                    audio.soundButton.classList.remove('sound-btn-playing');
                 }
             });
-            playingAudios = []; // Clear the array of audio objects
-
-            // Recreate each unique button that was playing, preserving its original position
-            buttonsToRecreate.forEach((data, oldBtn) => {
-                const { originalFileName, container, nextSibling } = data;
-
-                if (originalFileName && container) {
-                    oldBtn.remove(); // Remove the old button
-                    // Re-create it and store the new button element
-                    const newBtn = createSoundButton(originalFileName, null); // Pass null for container, as we will insert manually
-
-                    // Insert the new button at the old button's original position
-                    container.insertBefore(newBtn, nextSibling);
-                } else {
-                    // Fallback if data attributes are missing or container not found
-                    oldBtn.classList.remove('sound-btn-playing');
-                }
-            });
-
-            if (fade) showStatus('All sounds muted and reset', 'success');
+            playingAudios = [];
+            if (fade) showStatus('All sounds muted', 'success');
         }
 
         function clickLoop() {
