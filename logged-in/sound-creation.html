@@ -32,7 +32,7 @@
         
         const SOUNDBOARD_JSON_PATH = 'Soundboard/SoundboardNames.json';
         const SOUNDBOARD_FOLDER_PATH = 'Soundboard/Sounds/';
-        // !!! UPDATED with the user's provided URL !!!
+        // !!! CLOUD FUNCTION URL CONFIRMED !!!
         const AUDIO_PROCESSING_ENDPOINT = 'https://us-central1-project-zirconium.cloudfunctions.net/soundboardProcessor'; 
 
         // Environment Globals (Mandatory for Canvas)
@@ -142,7 +142,7 @@
             }
         }
 
-        // --- UI Content Generation (Unchanged) ---
+        // --- UI Content Generation ---
 
         function getGeneralContent() {
             const allJsonNames = [...soundIndex.NormalSounds, ...soundIndex.ExplicitSounds].map(name => name.toLowerCase());
@@ -314,7 +314,7 @@
             `;
         }
 
-        // --- Tab Switching Logic (Unchanged) ---
+        // --- Tab Switching Logic ---
 
         async function switchTab(tabId) {
             // 1. Update UI to reflect active tab
@@ -365,7 +365,7 @@
         }
 
 
-        // --- DEPLOYMENT / AUDIO PROCESSING LOGIC (Now calling Cloud Function) ---
+        // --- DEPLOYMENT / AUDIO PROCESSING LOGIC (Calling Cloud Function) ---
 
         function updateModal(progress, text, timeEstimateSec = 0) {
             modalProgressBar.style.width = `${progress}%`;
@@ -381,7 +381,7 @@
         }
 
         /**
-         * Sends a request to the Cloud Function endpoint.
+         * Sends a request to the Cloud Function endpoint with exponential backoff.
          * @param {object} body The JSON payload for the CF.
          * @returns {Promise<object>} The JSON response from the CF.
          */
@@ -390,7 +390,6 @@
                 throw new Error("Authentication token is missing. Cannot call Cloud Function.");
             }
             
-            // Exponential Backoff implementation for API calls
             const maxRetries = 5;
             for (let i = 0; i < maxRetries; i++) {
                 try {
@@ -398,37 +397,32 @@
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            // Pass the ID token for security/authorization in the Cloud Function
                             'Authorization': `Bearer ${authToken}` 
                         },
                         body: JSON.stringify(body)
                     });
     
                     if (!response.ok) {
-                        // Check for temporary server errors (5xx)
                         if (response.status >= 500 && response.status < 600) {
                             if (i < maxRetries - 1) {
                                 const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
-                                console.log(`[CF Call] Retrying in ${delay / 1000}s...`);
+                                // console.log(`[CF Call] Retrying in ${delay / 1000}s...`); // Suppressed logging retry
                                 await new Promise(resolve => setTimeout(resolve, delay));
-                                continue; // Skip to next iteration/retry
+                                continue; 
                             }
                         }
                         
-                        // Handle client errors (4xx) or final server error
                         const errorBody = await response.json();
                         throw new Error(errorBody.message || `API call failed with status ${response.status}`);
                     }
     
-                    return response.json(); // Success
+                    return response.json(); 
                 } catch (error) {
                     if (i === maxRetries - 1) {
-                         // If we are on the last attempt, re-throw the error
                         throw error;
                     }
-                    // Connection errors, network issues, etc., will be caught here and retried
                     const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
-                    console.log(`[CF Call] Network error or temporary failure. Retrying in ${delay / 1000}s...`);
+                    // console.log(`[CF Call] Network error or temporary failure. Retrying in ${delay / 1000}s...`); // Suppressed logging retry
                     await new Promise(resolve => setTimeout(resolve, delay));
                 }
             }
@@ -522,24 +516,21 @@
 
             } catch (error) {
                 console.error("Cloud Function Error:", error);
+                // The cleanup (raw file deletion) is handled on the server side by the CF, 
+                // but if the CF failed immediately, the raw file might still exist.
+                // We show the error and let the user handle raw file cleanup via the Folder Manager if needed.
                 updateModal(0, `Server Error: ${error.message || 'Processing failed.'}`, 0);
                 showStatus(`Deployment failed: ${error.message}`, 'error');
 
                 // Keep the modal visible for a moment to show the error
                 await new Promise(r => setTimeout(r, 4000));
                 deployModal.classList.add('hidden');
-                
-                // Important: Server failed, but the raw file is still in staging. 
-                // The user needs to try again or manually delete it via the Folder Manager.
             }
         }
         
-        // --- EVENT HANDLERS (Updated to use callCloudFunction) ---
+        // --- EVENT HANDLERS ---
 
         function setupCreateListeners() {
-            // ... (file validation and form submission are the same)
-            // ... (see previous implementation for full listener setup)
-            
             const form = document.getElementById('create-sound-form');
             const deployButton = document.getElementById('deploy-button');
             const fileInput = document.getElementById('sound-file');
@@ -618,7 +609,10 @@
                 } catch (e) {
                     showStatus('Deployment failed during upload. Check console.', 'error');
                 } finally {
-                    deployButton.disabled = false; 
+                    // Re-enable button only if modal is hidden (error path)
+                    if (deployModal.classList.contains('hidden')) {
+                         deployButton.disabled = false; 
+                    }
                 }
             });
         }
@@ -638,13 +632,14 @@
             
             // Add New Entry
             document.getElementById('add-new-json-entry-btn').addEventListener('click', async () => {
-                const newName = prompt("Enter the new sound name (must match future filename.mp3):");
+                // Using a custom modal is preferred over prompt, but sticking to prompt for simplicity here.
+                const newName = window.prompt("Enter the new sound name (must match future filename.mp3):");
                 if (!newName) return;
 
                 const newCategory = 'NormalSounds'; // Default category
                 
                 await handleJsonCall('creation', { 
-                    newName: titleToFilename(newName).replace('.mp3', ''), // CF logic handles adding .mp3 to the index, but we pass the clean name for clarity
+                    newName: titleToFilename(newName).replace('.mp3', ''),
                     newCategory 
                 });
             });
@@ -690,7 +685,7 @@
                 const titleGuess = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
 
                 try {
-                    // Manual upload uses a default maximum duration for trimming
+                    // Manual upload uses maximum duration for trimming, meaning no trimming is performed
                     await processAndDeploySound(titleGuess, file, null, 0, 999999, true); 
                 } catch (e) {
                     showStatus('Manual upload failed during upload. Check console.', 'error');
