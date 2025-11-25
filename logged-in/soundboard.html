@@ -6,7 +6,7 @@
     <title>4SP - Soundboard</title>
     <meta name="description" content="A simple soundboard application for the 4SP website.">
 
-    <!-- Fonts: Geist (Exactly as in notes.html) -->
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
@@ -15,32 +15,36 @@
     <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     
-    <!-- Tailwind -->
+    <!-- Tailwind (CDN usage is expected for this setup) -->
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Injections -->
-    <!-- REMOVED navigation.js script tag because injector.js loads it automatically, preventing the duplicate identifier error -->
+    <!-- injector.js handles loading navigation.js and others -->
     <script src="../injector.js"></script>
 
-    <!-- Firebase SDK (Compat for easier migration) -->
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
     
-    <!-- Config: Loaded as module to handle 'export' keyword correctly -->
+    <!-- Config -->
     <script type="module">
         import { firebaseConfig } from '../firebase-config.js';
-        // Expose to window so the main script can see it if needed
-        window.firebaseConfig = firebaseConfig;
         
-        // Initialize immediately if firebase global is ready
-        if (window.firebase && !window.firebase.apps.length) {
-            window.firebase.initializeApp(firebaseConfig);
+        // Define init logic safely
+        function safeInit() {
+            if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
         }
+
+        // Expose config and try init
+        window.firebaseConfig = firebaseConfig;
+        safeInit();
     </script>
 
     <style>
-        /* --- FONT & BASE STYLING (MATCHING notes.html) --- */
+        /* --- FONT & BASE STYLING --- */
         :root {
             --menu-bg: #000000;
             --menu-border: #333;
@@ -65,7 +69,6 @@
         }
 
         /* --- UI COMPONENTS --- */
-        
         .btn-toolbar-style {
             background: var(--menu-bg);
             border: 1px solid var(--menu-border);
@@ -85,7 +88,6 @@
             color: #ffffff;
         }
         
-        /* Highlighted Button Style */
         .btn-toolbar-style.btn-primary-override {
             background-color: var(--tab-active-bg);
             border: 1px solid var(--tab-active-border);
@@ -137,7 +139,6 @@
             margin-bottom: 0.5rem;
         }
 
-        /* Custom Inputs inside Dropdown */
         .custom-checkbox {
             accent-color: #4f46e5;
             width: 1rem;
@@ -231,7 +232,6 @@
             opacity: 1;
             transform: translateX(-50%) translateY(0);
         }
-
     </style>
 </head>
 <body class="min-h-screen">
@@ -248,8 +248,6 @@
             <h1 class="text-2xl font-bold text-white">4SP Soundboard</h1>
             
             <div class="flex items-center gap-2">
-                
-                <!-- Dashboard Link -->
                 <a href="dashboard.html" class="btn-toolbar-style no-underline">
                     <i class="fa-solid fa-table-columns"></i>
                     <span class="hidden sm:inline">Dashboard</span>
@@ -291,7 +289,6 @@
                     </div>
                 </div>
 
-                <!-- Logout -->
                 <button id="logoutBtn" class="btn-toolbar-style text-gray-400 hover:text-white">
                     <i class="fa-solid fa-right-from-bracket"></i>
                 </button>
@@ -300,23 +297,15 @@
 
         <!-- Main Content -->
         <main class="flex-grow p-5 md:p-8 max-w-7xl mx-auto w-full">
-            
-            <!-- Normal Sounds -->
             <div class="mb-10">
                 <h2 class="section-header">Normal Sounds</h2>
-                <div id="normalSoundsContainer" class="sound-grid">
-                    <!-- Buttons injected via JS -->
-                </div>
+                <div id="normalSoundsContainer" class="sound-grid"></div>
             </div>
 
-            <!-- Explicit Sounds -->
             <div class="mb-10">
                 <h2 class="section-header text-red-400/80 border-red-900/30">Explicit Sounds</h2>
-                <div id="explicitSoundsContainer" class="sound-grid">
-                    <!-- Buttons injected via JS -->
-                </div>
+                <div id="explicitSoundsContainer" class="sound-grid"></div>
             </div>
-
         </main>
     </div>
 
@@ -328,7 +317,6 @@
         const loadingScreen = document.getElementById('loading-screen');
         const pageContent = document.getElementById('page-content');
         const logoutBtn = document.getElementById('logoutBtn');
-        
         const optionsMenuBtn = document.getElementById('options-menu-btn');
         const optionsDropdown = document.getElementById('options-dropdown');
         const soundOverlayCheckbox = document.getElementById('soundOverlayCheckbox');
@@ -337,9 +325,7 @@
         const autoClickDelayInput = document.getElementById('autoClickDelay');
         const applyDelayBtn = document.getElementById('applyDelayBtn');
         const clearSoundsBtn = document.getElementById('clear-sounds-btn');
-        
         const statusToaster = document.getElementById('status-toaster');
-
         const normalSoundsContainer = document.getElementById('normalSoundsContainer');
         const explicitSoundsContainer = document.getElementById('explicitSoundsContainer');
 
@@ -352,15 +338,10 @@
 
         // --- Auth Logic (Firebase) ---
         function initApp() {
-            // Wait for Firebase to be ready (it might be deferred)
-            // We poll briefly to check if the module script has set window.firebaseConfig
-            // or if window.firebase is ready.
-            
             let attempts = 0;
             const checkInterval = setInterval(() => {
                 attempts++;
                 
-                // If firebase is missing, wait.
                 if (typeof firebase === 'undefined') return;
 
                 // Ensure initialized
@@ -368,18 +349,16 @@
                     if (window.firebaseConfig) {
                         try {
                             firebase.initializeApp(window.firebaseConfig);
-                        } catch(e) { console.error("Init error", e); }
-                    } else {
-                        // Still waiting for config module...
-                        if (attempts > 20) { // 2 seconds timeout
-                            clearInterval(checkInterval);
-                            loadingScreen.innerHTML = '<p class="text-red-500">Error: Config Timeout</p>';
-                        }
+                        } catch(e) { console.warn("Init notice:", e.message); }
+                    } else if (attempts > 30) {
+                        clearInterval(checkInterval);
+                        loadingScreen.innerHTML = '<p class="text-red-500">Error: Configuration Missing. Refresh page.</p>';
                         return;
+                    } else {
+                        return; // Wait next tick
                     }
                 }
 
-                // If we get here, firebase exists and is initialized
                 clearInterval(checkInterval);
                 setupAuthAndLoad();
 
@@ -391,12 +370,10 @@
                 const auth = firebase.auth();
                 auth.onAuthStateChanged((user) => {
                     if (user) {
-                        // User is logged in, show content & load sounds
                         loadingScreen.style.display = 'none';
                         pageContent.classList.remove('hidden');
-                        loadSoundsFromStorage(); // Start loading data
+                        loadSoundsFromStorage();
                     } else {
-                        // No user, redirect
                         window.location.href = '../index.html'; 
                     }
                 });
@@ -412,105 +389,71 @@
             }
         }
 
-        // --- UI Helper Functions ---
-
         function showStatus(message, type = 'info') {
             statusToaster.textContent = message;
-            statusToaster.className = ''; // Reset classes
-            
+            statusToaster.className = ''; 
             if (type === 'error') statusToaster.style.borderColor = '#ef4444';
             else if (type === 'success') statusToaster.style.borderColor = '#22c55e';
             else statusToaster.style.borderColor = '#333';
-
             statusToaster.classList.add('visible');
-
             if (toasterTimeout) clearTimeout(toasterTimeout);
-            toasterTimeout = setTimeout(() => {
-                statusToaster.classList.remove('visible');
-            }, 2000);
+            toasterTimeout = setTimeout(() => statusToaster.classList.remove('visible'), 2000);
         }
-
-        // --- Data Loading (Firebase Storage) ---
 
         async function loadSoundsFromStorage() {
             try {
                 const storage = firebase.storage();
                 const storageRef = storage.ref();
-                
-                // Path based on your image: Soundboard/SoundboardNames.json
                 const jsonRef = storageRef.child('Soundboard/SoundboardNames.json');
                 
-                // 1. Get URL for JSON
                 const url = await jsonRef.getDownloadURL();
-                
-                // 2. Fetch JSON Content
                 const response = await fetch(url);
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
                 const data = await response.json();
 
-                // 3. Generate Buttons
-                if (data.NormalSounds) {
-                    data.NormalSounds.forEach(fileName => {
-                        createSoundButton(fileName, normalSoundsContainer, storage);
-                    });
-                }
-                if (data.ExplicitSounds) {
-                    data.ExplicitSounds.forEach(fileName => {
-                        createSoundButton(fileName, explicitSoundsContainer, storage);
-                    });
-                }
+                if (data.NormalSounds) data.NormalSounds.forEach(f => createSoundButton(f, normalSoundsContainer, storage));
+                if (data.ExplicitSounds) data.ExplicitSounds.forEach(f => createSoundButton(f, explicitSoundsContainer, storage));
 
             } catch (error) {
-                console.error("Error loading sounds from Storage:", error);
-                showStatus("Failed to load soundboard configuration.", "error");
-                normalSoundsContainer.innerHTML = '<p class="text-gray-500 italic">Unable to load sounds.</p>';
+                console.error("Storage Error:", error);
+                
+                let errorMsg = "Unable to load sounds.";
+                if (error.message.includes("Failed to fetch") || error.code === 'storage/unknown') {
+                    errorMsg = "CORS Error: Bucket configuration needed.";
+                } else if (error.code === 'storage/object-not-found') {
+                    errorMsg = "Config file missing in Storage.";
+                }
+
+                showStatus(errorMsg, "error");
+                normalSoundsContainer.innerHTML = `<p class="text-red-500 text-sm italic border border-red-900/50 p-2 rounded bg-red-900/10">${errorMsg} (Check Console)</p>`;
             }
         }
 
-        // --- Sound Button Creation ---
-
         function createSoundButton(fileName, container, storageInstance) {
             const soundName = fileName.replace('.mp3', '').replace(/_/g, ' ');
-            
             const btn = document.createElement('div');
             btn.className = 'sound-btn';
             btn.textContent = soundName;
-            
-            // Store reference to storage path for click handler
-            // Path based on image: Soundboard/Sounds/{filename}
             btn.dataset.storagePath = `Soundboard/Sounds/${fileName}`;
             
-            // Click Handler
             btn.addEventListener('click', async () => {
-                // If overlay is OFF, stop others
-                if (!soundOverlayCheckbox.checked) {
-                    stopAllAudios();
-                }
+                if (!soundOverlayCheckbox.checked) stopAllAudios();
 
                 try {
-                    // Fetch URL dynamically on click to ensure valid token
-                    // Optimization: We could cache this, but dynamic is safer for long sessions
                     const audioRef = storageInstance.ref(btn.dataset.storagePath);
                     const audioUrl = await audioRef.getDownloadURL();
-                    
                     const audio = new Audio(audioUrl);
-                    
-                    // Track the audio
                     playingAudios.push(audio);
-                    
-                    // Cleanup when done
-                    audio.addEventListener('ended', () => {
-                        playingAudios = playingAudios.filter(a => a !== audio);
-                    });
-
+                    audio.addEventListener('ended', () => playingAudios = playingAudios.filter(a => a !== audio));
                     await audio.play();
-
                 } catch (err) {
-                    console.error("Playback failed for " + fileName, err);
-                    showStatus('Error playing sound', 'error');
+                    console.error("Playback failed:", err);
+                    showStatus('Error playing sound (CORS?)', 'error');
                 }
             });
 
-            // Auto-clicker Hover Handlers
             btn.addEventListener('mouseenter', () => {
                 currentlyHoveredButton = btn;
                 if (autoClickerCheckbox.checked) startAutoClicker();
@@ -525,26 +468,18 @@
             container.appendChild(btn);
         }
 
-        // --- Sound Control Logic ---
-
         function stopAllAudios(fade = false) {
             if (playingAudios.length === 0) return;
-
             playingAudios.forEach(audio => {
                 audio.pause();
                 audio.currentTime = 0;
             });
             playingAudios = [];
-            
             if (fade) showStatus('All sounds muted', 'success');
         }
 
-        // --- Auto Clicker Logic ---
-
         function clickLoop() {
-             if (currentlyHoveredButton && autoClickerCheckbox.checked) {
-                currentlyHoveredButton.click();
-            }
+             if (currentlyHoveredButton && autoClickerCheckbox.checked) currentlyHoveredButton.click();
         }
 
         function fastClicker() {
@@ -555,47 +490,29 @@
         }
 
         function startAutoClicker() {
-            stopAutoClicker(); // clear existing
+            stopAutoClicker();
             const delay = parseInt(autoClickDelayInput.value, 10) || 0;
-            
             if (!currentlyHoveredButton || !autoClickerCheckbox.checked) return;
-
-            if (delay === 0) {
-                requestAnimationFrameId = requestAnimationFrame(fastClicker);
-            } else {
-                autoClickInterval = setInterval(clickLoop, delay);
-            }
+            if (delay === 0) requestAnimationFrameId = requestAnimationFrame(fastClicker);
+            else autoClickInterval = setInterval(clickLoop, delay);
         }
 
         function stopAutoClicker() {
-            if (autoClickInterval) {
-                clearInterval(autoClickInterval);
-                autoClickInterval = null;
-            }
-            if (requestAnimationFrameId) {
-                cancelAnimationFrame(requestAnimationFrameId);
-                requestAnimationFrameId = null;
-            }
+            if (autoClickInterval) { clearInterval(autoClickInterval); autoClickInterval = null; }
+            if (requestAnimationFrameId) { cancelAnimationFrame(requestAnimationFrameId); requestAnimationFrameId = null; }
         }
 
-        // --- Event Listeners ---
-
-        // Dropdown Toggle
         optionsMenuBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             optionsDropdown.classList.toggle('hidden');
         });
 
-        // Close dropdown when clicking outside
         document.addEventListener('click', (e) => {
-            if (!optionsDropdown.classList.contains('hidden') && 
-                !optionsMenuBtn.contains(e.target) && 
-                !optionsDropdown.contains(e.target)) {
+            if (!optionsDropdown.classList.contains('hidden') && !optionsMenuBtn.contains(e.target) && !optionsDropdown.contains(e.target)) {
                 optionsDropdown.classList.add('hidden');
             }
         });
 
-        // Settings Listeners
         soundOverlayCheckbox.addEventListener('change', (e) => {
             localStorage.setItem('soundOverlay', e.target.checked);
             if (!e.target.checked) stopAllAudios();
@@ -624,17 +541,11 @@
             optionsDropdown.classList.add('hidden');
         });
 
-        // Keyboard Shortcut (Shift + C)
         document.addEventListener('keydown', (e) => {
-            if (e.shiftKey && e.key.toLowerCase() === 'c') {
-                stopAllAudios(true);
-            }
+            if (e.shiftKey && e.key.toLowerCase() === 'c') stopAllAudios(true);
         });
 
-        // --- Initialization ---
-
         window.addEventListener('load', () => {
-            // Load Preferences
             const savedOverlay = localStorage.getItem('soundOverlay') === 'true';
             const savedAutoClick = localStorage.getItem('autoClicker') === 'true';
             const savedDelay = localStorage.getItem('autoClickDelay') || '1000';
@@ -643,14 +554,9 @@
             autoClickerCheckbox.checked = savedAutoClick;
             autoClickDelayInput.value = savedDelay;
 
-            if (savedAutoClick) {
-                delaySettings.classList.remove('hidden');
-            }
-
-            // Start App
+            if (savedAutoClick) delaySettings.classList.remove('hidden');
             initApp();
         });
-
     </script>
 </body>
 </html>
