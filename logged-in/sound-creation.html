@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4SP - Soundboard Admin Panel</title>
+    <meta name="description" content="Administrative panel for managing Soundboard content, including creation, trimming, and deployment.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    
+    <!-- Icons (Using FontAwesome 6.5.2 Free) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Injections (for navigation, panic key, etc.) -->
+    <script src="../injector.js"></script>
+
+    <!-- Firebase Modular SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut, getIdToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getStorage, ref as storageRef, uploadBytesResumable, deleteObject, listAll, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+        
+        // --- Core Constants and Setup ---
+        
+        const ADMIN_EMAILS = [
+            '4simpleproblems@gmail.com',
+            'belkwy30@minerva.sparcc.org'
+        ];
+        
+        const SOUNDBOARD_JSON_PATH = 'Soundboard/SoundboardNames.json';
+        const SOUNDBOARD_FOLDER_PATH = 'Soundboard/Sounds/';
+        // !!! UPDATED with the user's provided URL !!!
+        const AUDIO_PROCESSING_ENDPOINT = 'https://us-central1-project-zirconium.cloudfunctions.net/soundboardProcessor'; 
+
+        // Environment Globals (Mandatory for Canvas)
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const storage = getStorage(app);
+        
+        // Web Audio Context for decoding audio files for duration/trimming
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        let currentUser = null;
+        let soundIndex = {}; // Cache for the JSON file content
+        let soundFiles = []; // Cache for the Storage folder content
+        let authToken = null; // Store the Firebase ID Token for API calls
+
+        // --- UI Elements ---
+        const mainView = document.getElementById('main-view');
+        const sidebarTabs = document.querySelectorAll('.sidebar-tab');
+        const statusToaster = document.getElementById('status-toaster');
+        const deployModal = document.getElementById('deploy-modal');
+        const modalProgressBar = document.getElementById('modal-progress-bar');
+        const modalProgressText = document.getElementById('modal-progress-text');
+        const modalEstimationTime = document.getElementById('modal-estimation-time');
+
+        let toasterTimeout = null;
+        let uploadStartTime = 0; // Global for time estimation
+        let lastUploadProgress = 0; // Global for time estimation
+
+        const tabContent = {
+            general: { title: 'General Overview', icon: 'fa-solid fa-list-check' },
+            create: { title: 'Create New Sound', icon: 'fa-solid fa-plus-circle' },
+            json: { title: 'JSON File Manager', icon: 'fa-solid fa-file-code' },
+            folder: { title: 'Sounds Folder Manager', icon: 'fa-solid fa-folder-open' },
+            logout: { title: 'Log Out', icon: 'fa-solid fa-right-from-bracket' }
+        };
+
+        // --- Utility Functions ---
+
+        function showStatus(message, type = 'info') {
+            statusToaster.textContent = message;
+            statusToaster.className = ''; 
+            
+            let color = '#333';
+            if (type === 'error') color = '#ef4444';
+            else if (type === 'success') color = '#22c55e';
+            else if (type === 'warning') color = '#f59e0b';
+            
+            statusToaster.style.borderColor = color;
+            statusToaster.classList.add('visible');
+            if (toasterTimeout) clearTimeout(toasterTimeout);
+            toasterTimeout = setTimeout(() => statusToaster.classList.remove('visible'), 5000);
+        }
+
+        // Converts a title to a Firebase Storage-safe filename (e.g., "My Cool Sound" -> "my-cool-sound.mp3")
+        function titleToFilename(title) {
+            return title.trim()
+                        .replace(/[^a-zA-Z0-9\s-]/g, '')
+                        .replace(/\s+/g, '-')
+                        .toLowerCase() + '.mp3';
+        }
+
+        // --- Data Fetching and Caching ---
+
+        async function fetchSoundboardIndex() {
+            try {
+                const indexRef = storageRef(storage, SOUNDBOARD_JSON_PATH);
+                const url = await getDownloadURL(indexRef);
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                soundIndex = data;
+                return true;
+            } catch (error) {
+                console.warn("Could not fetch sound index, initializing empty:", error.message);
+                soundIndex = { NormalSounds: [], ExplicitSounds: [] };
+                return false;
+            }
+        }
+
+        async function fetchSoundboardFolder() {
+            try {
+                const folderRef = storageRef(storage, SOUNDBOARD_FOLDER_PATH);
+                const result = await listAll(folderRef);
+                soundFiles = result.items.map(item => item.name);
+                return true;
+            } catch (error) {
+                console.error("Error fetching sound folder contents:", error);
+                soundFiles = [];
+                return false;
+            }
+        }
+
+        async function loadAllData() {
+            showStatus('Refreshing sound data...', 'info');
+            const [indexLoaded, folderLoaded] = await Promise.all([
+                fetchSoundboardIndex(),
+                fetchSoundboardFolder()
+            ]);
+            
+            if (indexLoaded && folderLoaded) {
+                showStatus('Data refreshed successfully.', 'success');
+            } else {
+                showStatus('Warning: Some data failed to load. Check console.', 'warning');
+            }
+        }
+
+        // --- UI Content Generation (Unchanged) ---
+
+        function getGeneralContent() {
+            const allJsonNames = [...soundIndex.NormalSounds, ...soundIndex.ExplicitSounds].map(name => name.toLowerCase());
+            const allFileNames = soundFiles.map(name => name.toLowerCase());
+
+            const syncedSounds = allJsonNames.filter(name => allFileNames.includes(name));
+            const missingFiles = allJsonNames.filter(name => !allFileNames.includes(name));
+            const orphanFiles = allFileNames.filter(name => !allJsonNames.includes(name));
+
+            return `
+                <h2 class="text-xl font-semibold mb-6 text-white">${tabContent.general.title}</h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="p-4 bg-[#111] rounded-xl border border-[#222]">
+                        <p class="text-3xl font-bold text-green-400">${syncedSounds.length}</p>
+                        <p class="text-sm text-gray-400">Perfectly Synced Sounds (JSON & Folder)</p>
+                    </div>
+                    <div class="p-4 bg-[#111] rounded-xl border border-[#222]">
+                        <p class="text-3xl font-bold text-red-400">${missingFiles.length}</p>
+                        <p class="text-sm text-gray-400">JSON Entries Missing Files (Bad Links)</p>
+                    </div>
+                    <div class="p-4 bg-[#111] rounded-xl border border-[#222]">
+                        <p class="text-3xl font-bold text-yellow-400">${orphanFiles.length}</p>
+                        <p class="text-sm text-gray-400">Orphan Files (In Folder, Not in JSON)</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="bg-[#111] p-5 rounded-xl border border-[#222]">
+                        <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation text-red-400"></i> Missing Files (JSON entries that won't play)</h3>
+                        <ul class="space-y-1 text-sm text-red-300 max-h-48 overflow-y-auto">
+                            ${missingFiles.length > 0 ? missingFiles.map(name => `<li class="p-1 border-b border-[#222]"><i class="fa-solid fa-circle-xmark w-4 mr-2"></i>${name}</li>`).join('') : '<li class="text-gray-500">None</li>'}
+                        </ul>
+                    </div>
+                    <div class="bg-[#111] p-5 rounded-xl border border-[#222]">
+                        <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2"><i class="fa-solid fa-paperclip text-yellow-400"></i> Orphan Files (Wasted Storage Space)</h3>
+                        <ul class="space-y-1 text-sm text-yellow-300 max-h-48 overflow-y-auto">
+                            ${orphanFiles.length > 0 ? orphanFiles.map(name => `<li class="p-1 border-b border-[#222]"><i class="fa-solid fa-file-audio w-4 mr-2"></i>${name}</li>`).join('') : '<li class="text-gray-500">None</li>'}
+                        </ul>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getCreateContent() {
+            return `
+                <h2 class="text-xl font-semibold mb-6 text-white">${tabContent.create.title}</h2>
+                <p class="text-gray-400 mb-6">Upload an audio file. The external server component will convert it to 64kbps MP3, trim it, and rename it to match the Display Title.</p>
+
+                <form id="create-sound-form" class="space-y-6">
+                    <!-- 1. Sound Title -->
+                    <div>
+                        <label for="sound-title" class="block text-sm font-medium text-gray-300 mb-2">Display Title (This determines the final MP3 filename: "vine-boom.mp3")</label>
+                        <input type="text" id="sound-title" required class="w-full p-3 bg-[#111] border border-[#222] rounded-lg text-white focus:ring-indigo-500 focus:border-indigo-500" placeholder="A descriptive, user-friendly name">
+                    </div>
+
+                    <!-- 2. File Upload -->
+                    <div>
+                        <label for="sound-file" class="block text-sm font-medium text-gray-300 mb-2">MP3/WAV/Audio File Upload</label>
+                        <input type="file" id="sound-file" required accept="audio/*" class="w-full p-3 bg-[#111] border border-[#222] rounded-lg text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-600/20 file:text-indigo-400 hover:file:bg-indigo-600/30">
+                    </div>
+
+                    <!-- 3. Audio Player for Trimming Preview -->
+                    <div id="audio-preview-container" class="hidden p-5 bg-[#111] border border-[#222] rounded-xl">
+                        <label class="block text-sm font-medium text-gray-300 mb-3">Audio Preview and Trimming</label>
+                        <audio id="audio-preview" controls class="w-full mb-4 rounded-lg"></audio>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="clip-start" class="block text-xs font-medium text-gray-400 mb-1">Start Time (seconds)</label>
+                                <input type="number" id="clip-start" value="0" min="0" step="0.01" class="w-full p-2 bg-[#0a0a0a] border border-[#333] rounded-lg text-white">
+                            </div>
+                            <div>
+                                <label for="clip-end" class="block text-xs font-medium text-gray-400 mb-1">End Time (seconds)</label>
+                                <input type="number" id="clip-end" value="0" min="0" step="0.01" class="w-full p-2 bg-[#0a0a0a] border border-[#333] rounded-lg text-white">
+                            </div>
+                        </div>
+                        <p id="audio-duration-info" class="text-xs text-gray-500 mt-2">Duration: 0.00s</p>
+                    </div>
+
+                    <!-- 4. Sound Category -->
+                    <div>
+                        <label for="sound-category" class="block text-sm font-medium text-gray-300 mb-2">Category</label>
+                        <select id="sound-category" required class="w-full p-3 bg-[#111] border border-[#222] rounded-lg text-white focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="NormalSounds">Normal Sounds</option>
+                            <option value="ExplicitSounds">Explicit Sounds</option>
+                        </select>
+                    </div>
+
+                    <div class="pt-4 flex justify-end">
+                        <button type="submit" id="deploy-button" class="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-lg hover:bg-indigo-700 transition duration-150 flex items-center gap-2" disabled>
+                            <i class="fa-solid fa-upload"></i> Deploy Sound
+                        </button>
+                    </div>
+                </form>
+            `;
+        }
+        
+        function getJsonContent() {
+            const allSounds = [
+                ...soundIndex.NormalSounds.map(name => ({ name, category: 'NormalSounds' })),
+                ...soundIndex.ExplicitSounds.map(name => ({ name, category: 'ExplicitSounds' }))
+            ].sort((a, b) => a.name.localeCompare(b.name));
+
+            return `
+                <h2 class="text-xl font-semibold mb-6 text-white">${tabContent.json.title}</h2>
+                <p class="text-gray-400 mb-6">Manage sound names and categories that appear on the soundboard. Operations here require calling a secure backend API to safely read, modify, and rewrite the JSON file.</p>
+
+                <div id="json-list" class="space-y-4 max-h-96 overflow-y-auto pr-2">
+                    ${allSounds.length > 0 ? allSounds.map(item => `
+                        <div class="json-item flex items-center p-3 bg-[#111] border border-[#222] rounded-lg" data-old-name="${item.name}" data-category="${item.category}">
+                            <div class="flex-grow">
+                                <span class="text-xs font-mono text-gray-500 block mb-1">JSON Name / Filename:</span>
+                                <input type="text" value="${item.name}" class="json-name-input w-full p-2 bg-[#0a0a0a] border border-[#333] rounded-lg text-white text-sm font-mono" data-original-value="${item.name}">
+                            </div>
+                            <div class="ml-4 w-32">
+                                <span class="text-xs font-mono text-gray-500 block mb-1">Category:</span>
+                                <select class="json-category-select w-full p-2 bg-[#0a0a0a] border border-[#333] rounded-lg text-white text-sm">
+                                    <option value="NormalSounds" ${item.category === 'NormalSounds' ? 'selected' : ''}>Normal</option>
+                                    <option value="ExplicitSounds" ${item.category === 'ExplicitSounds' ? 'selected' : ''}>Explicit</option>
+                                </select>
+                            </div>
+                            <button class="update-json-btn ml-4 p-2 w-10 h-10 bg-indigo-600 rounded-full hover:bg-indigo-700 transition duration-150 text-white flex items-center justify-center" title="Rename/Recategorize (Backend required)">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                            <button class="delete-json-btn ml-2 p-2 w-10 h-10 bg-red-600 rounded-full hover:bg-red-700 transition duration-150 text-white flex items-center justify-center" title="Delete from JSON (Backend required, does not delete file)">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    `).join('') : '<p class="text-gray-500 italic p-4 bg-[#111] rounded-lg">The Soundboard index is empty.</p>'}
+                </div>
+                
+                <div class="mt-6 flex justify-end">
+                    <button id="add-new-json-entry-btn" class="px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg shadow-lg hover:bg-gray-700 transition duration-150 flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i> Add New Entry (Unlinked)
+                    </button>
+                </div>
+            `;
+        }
+
+        function getFolderContent() {
+            return `
+                <h2 class="text-xl font-semibold mb-6 text-white">${tabContent.folder.title}</h2>
+                <p class="text-gray-400 mb-6">Manage the actual sound files in Firebase Storage. Renaming requires a server-side copy/delete operation. Deletion is direct.</p>
+
+                <div id="folder-list" class="space-y-4 max-h-96 overflow-y-auto pr-2">
+                    ${soundFiles.length > 0 ? soundFiles.map(name => `
+                        <div class="folder-item flex items-center p-3 bg-[#111] border border-[#222] rounded-lg" data-old-name="${name}">
+                            <div class="flex-grow">
+                                <span class="text-xs font-mono text-gray-500 block mb-1">Current Filename:</span>
+                                <input type="text" value="${name}" class="folder-name-input w-full p-2 bg-[#0a0a0a] border border-[#333] rounded-lg text-white text-sm font-mono" data-original-value="${name}">
+                            </div>
+                            <button class="rename-folder-btn ml-4 p-2 w-10 h-10 bg-indigo-600 rounded-full hover:bg-indigo-700 transition duration-150 text-white flex items-center justify-center" title="Rename file (Requires backend copy/delete)">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                            <button class="delete-folder-btn ml-2 p-2 w-10 h-10 bg-red-600 rounded-full hover:bg-red-700 transition duration-150 text-white flex items-center justify-center" title="Delete file from Storage">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    `).join('') : '<p class="text-gray-500 italic p-4 bg-[#111] rounded-lg">The Sounds folder is empty.</p>'}
+                </div>
+
+                <div class="mt-6 flex justify-end">
+                    <input type="file" id="manual-upload-file" accept="audio/*" class="hidden">
+                    <button id="manual-upload-btn" class="px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-lg hover:bg-green-700 transition duration-150 flex items-center gap-2">
+                        <i class="fa-solid fa-file-arrow-up"></i> Upload Raw File (Server Processes)
+                    </button>
+                </div>
+            `;
+        }
+
+        // --- Tab Switching Logic (Unchanged) ---
+
+        async function switchTab(tabId) {
+            // 1. Update UI to reflect active tab
+            sidebarTabs.forEach(tab => tab.classList.remove('bg-indigo-700/30', 'text-white'));
+            const activeTab = document.querySelector(`.sidebar-tab[data-tab="${tabId}"]`);
+            if (activeTab) {
+                activeTab.classList.add('bg-indigo-700/30', 'text-white');
+            }
+
+            // Handle Logout separately
+            if (tabId === 'logout') {
+                showStatus('Logging out...', 'info');
+                await signOut(auth);
+                return;
+            }
+
+            // 2. Generate and display content
+            if (['general', 'json', 'folder'].includes(tabId)) {
+                await loadAllData(); 
+            }
+            
+            let contentHTML = '';
+            
+            if (tabId === 'general') {
+                contentHTML = getGeneralContent();
+            } else if (tabId === 'create') {
+                contentHTML = getCreateContent();
+            } else if (tabId === 'json') {
+                contentHTML = getJsonContent();
+            } else if (tabId === 'folder') {
+                contentHTML = getFolderContent();
+            } else {
+                contentHTML = `<h2 class="text-xl font-semibold mb-6 text-white">Error</h2><p class="text-red-400">Content for this tab is missing.</p>`;
+            }
+
+            mainView.innerHTML = contentHTML;
+
+            // 3. Attach event listeners specific to the new content
+            if (tabId === 'create') {
+                setupCreateListeners();
+            } else if (tabId === 'json') {
+                setupJsonListeners();
+            } else if (tabId === 'folder') {
+                setupFolderListeners();
+            }
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+
+        // --- DEPLOYMENT / AUDIO PROCESSING LOGIC (Now calling Cloud Function) ---
+
+        function updateModal(progress, text, timeEstimateSec = 0) {
+            modalProgressBar.style.width = `${progress}%`;
+            modalProgressText.textContent = text;
+            
+            if (progress < 100 && progress > 0 && timeEstimateSec > 0) {
+                modalEstimationTime.textContent = `Est. Remaining: ${timeEstimateSec.toFixed(1)}s`;
+            } else if (progress === 100) {
+                modalEstimationTime.textContent = "Processing Complete. Finalizing...";
+            } else {
+                modalEstimationTime.textContent = "Calculating time...";
+            }
+        }
+
+        /**
+         * Sends a request to the Cloud Function endpoint.
+         * @param {object} body The JSON payload for the CF.
+         * @returns {Promise<object>} The JSON response from the CF.
+         */
+        async function callCloudFunction(body) {
+            if (!authToken) {
+                throw new Error("Authentication token is missing. Cannot call Cloud Function.");
+            }
+            
+            // Exponential Backoff implementation for API calls
+            const maxRetries = 5;
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(AUDIO_PROCESSING_ENDPOINT, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            // Pass the ID token for security/authorization in the Cloud Function
+                            'Authorization': `Bearer ${authToken}` 
+                        },
+                        body: JSON.stringify(body)
+                    });
+    
+                    if (!response.ok) {
+                        // Check for temporary server errors (5xx)
+                        if (response.status >= 500 && response.status < 600) {
+                            if (i < maxRetries - 1) {
+                                const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+                                console.log(`[CF Call] Retrying in ${delay / 1000}s...`);
+                                await new Promise(resolve => setTimeout(resolve, delay));
+                                continue; // Skip to next iteration/retry
+                            }
+                        }
+                        
+                        // Handle client errors (4xx) or final server error
+                        const errorBody = await response.json();
+                        throw new Error(errorBody.message || `API call failed with status ${response.status}`);
+                    }
+    
+                    return response.json(); // Success
+                } catch (error) {
+                    if (i === maxRetries - 1) {
+                         // If we are on the last attempt, re-throw the error
+                        throw error;
+                    }
+                    // Connection errors, network issues, etc., will be caught here and retried
+                    const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+                    console.log(`[CF Call] Network error or temporary failure. Retrying in ${delay / 1000}s...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+        }
+
+
+        async function processAndDeploySound(title, file, category, clipStart, clipEnd, isManualUpload = false) {
+            deployModal.classList.remove('hidden');
+            updateModal(0, 'Initializing raw file upload...', 0);
+            
+            const targetFilename = titleToFilename(title);
+            const rawFileSizeMB = (file.size / 1024 / 1024); 
+            
+            // 1. UPLOAD RAW FILE (Client-side REAL progress)
+            const uploadPath = `Soundboard/RawUploads/${currentUser.uid}-${Date.now()}-${file.name}`;
+            const uploadRef = storageRef(storage, uploadPath);
+            const uploadTask = uploadBytesResumable(uploadRef, file);
+
+            uploadStartTime = Date.now();
+            lastUploadProgress = 0;
+
+            await new Promise((resolve, reject) => {
+                uploadTask.on('state_changed', 
+                    (snapshot) => {
+                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                        const elapsed = (Date.now() - uploadStartTime) / 1000;
+                        
+                        let remainingTimeSec = 0;
+                        if (progress > 1) { 
+                            const totalTimeEst = elapsed / (progress / 100);
+                            remainingTimeSec = totalTimeEst - elapsed;
+                        }
+
+                        // Use 0% to 20% for the client-side upload visualization
+                        updateModal(
+                            Math.min(99, progress * 0.20), 
+                            `Uploading Raw File (${(snapshot.bytesTransferred / 1024 / 1024).toFixed(2)}MB / ${rawFileSizeMB.toFixed(2)}MB)...`, 
+                            remainingTimeSec
+                        );
+                        lastUploadProgress = progress;
+                        
+                        if (progress >= 100) resolve();
+
+                    }, 
+                    (error) => {
+                        console.error("Raw Upload Failed:", error);
+                        updateModal(0, 'Upload Failed!', 0);
+                        reject(error);
+                    }, 
+                    () => {
+                        // Task completed successfully
+                    }
+                );
+            });
+
+            // 2. CLOUD FUNCTION CALL (Server-side work)
+            updateModal(20, 'Raw file uploaded. Calling server for processing...', 0); 
+            
+            const deployData = {
+                uploadPath: uploadPath,
+                targetFilename: targetFilename,
+                category: isManualUpload ? null : category,
+                clipStart: clipStart,
+                clipEnd: clipEnd,
+                bitrate: '64kbps', // Fixed bitrate for the server logic
+                uploadedBy: currentUser.email,
+                isManual: isManualUpload,
+                uid: currentUser.uid // Include UID for simple CF access (Token is better)
+            };
+            
+            // Server processing time is hard to estimate, assume a minimum of 15 seconds
+            const serverProcessTime = 15; 
+            updateModal(30, 'Server is processing audio (compression, trimming)...', serverProcessTime); 
+
+            try {
+                // Call the Cloud Function
+                const result = await callCloudFunction(deployData);
+
+                // Simulate the progress bar catch-up to give time for final JSON write
+                updateModal(90, 'Server processing complete. Updating JSON...', 5.0);
+                await new Promise(r => setTimeout(r, 1000)); // Short pause for visual
+
+                updateModal(100, isManualUpload ? 'Manual Upload Complete (Server Confirmed).' : 'Deployment Successful!', 0);
+                
+                showStatus(result.message, 'success');
+
+                setTimeout(() => {
+                    deployModal.classList.add('hidden');
+                    switchTab(isManualUpload ? 'folder' : 'create');
+                }, 1500);
+
+            } catch (error) {
+                console.error("Cloud Function Error:", error);
+                updateModal(0, `Server Error: ${error.message || 'Processing failed.'}`, 0);
+                showStatus(`Deployment failed: ${error.message}`, 'error');
+
+                // Keep the modal visible for a moment to show the error
+                await new Promise(r => setTimeout(r, 4000));
+                deployModal.classList.add('hidden');
+                
+                // Important: Server failed, but the raw file is still in staging. 
+                // The user needs to try again or manually delete it via the Folder Manager.
+            }
+        }
+        
+        // --- EVENT HANDLERS (Updated to use callCloudFunction) ---
+
+        function setupCreateListeners() {
+            // ... (file validation and form submission are the same)
+            // ... (see previous implementation for full listener setup)
+            
+            const form = document.getElementById('create-sound-form');
+            const deployButton = document.getElementById('deploy-button');
+            const fileInput = document.getElementById('sound-file');
+            const audioPreview = document.getElementById('audio-preview');
+            const audioContainer = document.getElementById('audio-preview-container');
+            const clipStartInput = document.getElementById('clip-start');
+            const clipEndInput = document.getElementById('clip-end');
+            const audioDurationInfo = document.getElementById('audio-duration-info');
+
+            const checkFormValidity = () => {
+                const title = document.getElementById('sound-title').value.trim();
+                const file = fileInput.files[0];
+                const start = parseFloat(clipStartInput.value);
+                const end = parseFloat(clipEndInput.value);
+                
+                if (title && file && !isNaN(start) && !isNaN(end) && start >= 0 && end > start) {
+                    deployButton.disabled = false;
+                } else {
+                    deployButton.disabled = true;
+                }
+            };
+            
+            document.getElementById('sound-title').addEventListener('input', checkFormValidity);
+            clipStartInput.addEventListener('input', checkFormValidity);
+            clipEndInput.addEventListener('input', checkFormValidity);
+
+            fileInput.addEventListener('change', () => {
+                const file = fileInput.files[0];
+                if (file) {
+                    const fileURL = URL.createObjectURL(file);
+                    audioPreview.src = fileURL;
+                    audioContainer.classList.remove('hidden');
+
+                    file.arrayBuffer().then(buffer => audioContext.decodeAudioData(buffer))
+                        .then(decodedData => {
+                            const duration = decodedData.duration;
+                            clipEndInput.value = duration.toFixed(2);
+                            audioDurationInfo.textContent = `Duration: ${duration.toFixed(2)}s`;
+                            checkFormValidity();
+                        })
+                        .catch(e => {
+                            console.error("Error decoding audio file:", e);
+                            showStatus('Could not decode audio file for trimming. Please check file format.', 'error');
+                            audioContainer.classList.add('hidden');
+                            clipStartInput.value = 0;
+                            clipEndInput.value = 0;
+                            audioDurationInfo.textContent = 'Duration: N/A';
+                            checkFormValidity();
+                        });
+                } else {
+                    audioContainer.classList.add('hidden');
+                    clipStartInput.value = 0;
+                    clipEndInput.value = 0;
+                    audioDurationInfo.textContent = 'Duration: 0.00s';
+                    checkFormValidity();
+                }
+            });
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                deployButton.disabled = true; 
+                
+                const title = document.getElementById('sound-title').value.trim();
+                const file = fileInput.files[0];
+                const category = document.getElementById('sound-category').value;
+                const clipStart = parseFloat(clipStartInput.value);
+                const clipEnd = parseFloat(clipEndInput.value);
+
+                if (!title || !file || clipStart >= clipEnd) {
+                    deployButton.disabled = false;
+                    return showStatus('Title, file, and valid clip times are required.', 'warning');
+                }
+
+                try {
+                    await processAndDeploySound(title, file, category, clipStart, clipEnd, false);
+                } catch (e) {
+                    showStatus('Deployment failed during upload. Check console.', 'error');
+                } finally {
+                    deployButton.disabled = false; 
+                }
+            });
+        }
+        
+        function setupJsonListeners() {
+            // Function to handle all JSON management calls
+            const handleJsonCall = async (action, payload) => {
+                showStatus(`Executing JSON ${action} action...`, 'info');
+                try {
+                    const result = await callCloudFunction({ ...payload, action: action, uid: currentUser.uid });
+                    showStatus(`JSON update successful: ${result.message}`, 'success');
+                    switchTab('json'); // Refresh the tab
+                } catch (e) {
+                    showStatus(`JSON action failed: ${e.message}`, 'error');
+                }
+            };
+            
+            // Add New Entry
+            document.getElementById('add-new-json-entry-btn').addEventListener('click', async () => {
+                const newName = prompt("Enter the new sound name (must match future filename.mp3):");
+                if (!newName) return;
+
+                const newCategory = 'NormalSounds'; // Default category
+                
+                await handleJsonCall('creation', { 
+                    newName: titleToFilename(newName).replace('.mp3', ''), // CF logic handles adding .mp3 to the index, but we pass the clean name for clarity
+                    newCategory 
+                });
+            });
+
+            // Update/Delete listeners
+            document.querySelectorAll('.json-item').forEach(item => {
+                const oldName = item.dataset.oldName;
+                
+                item.querySelector('.update-json-btn').addEventListener('click', async () => {
+                    const newName = item.querySelector('.json-name-input').value.trim();
+                    const newCategory = item.querySelector('.json-category-select').value;
+                    
+                    if (newName !== oldName || newCategory !== item.dataset.category) {
+                        await handleJsonCall('update', { 
+                            oldName, 
+                            newName: titleToFilename(newName).replace('.mp3', ''),
+                            newCategory 
+                        });
+                    } else {
+                        showStatus('No changes detected.', 'warning');
+                    }
+                });
+
+                item.querySelector('.delete-json-btn').addEventListener('click', async () => {
+                    if (window.confirm(`Are you sure you want to delete the JSON entry "${oldName}"? This does NOT delete the file in Storage!`)) {
+                        await handleJsonCall('delete', { oldName });
+                    }
+                });
+            });
+        }
+
+        function setupFolderListeners() {
+            const manualUploadFile = document.getElementById('manual-upload-file');
+            
+            document.getElementById('manual-upload-btn').addEventListener('click', () => {
+                manualUploadFile.click();
+            });
+
+            manualUploadFile.addEventListener('change', async () => {
+                const file = manualUploadFile.files[0];
+                if (!file) return;
+                
+                const titleGuess = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+
+                try {
+                    // Manual upload uses a default maximum duration for trimming
+                    await processAndDeploySound(titleGuess, file, null, 0, 999999, true); 
+                } catch (e) {
+                    showStatus('Manual upload failed during upload. Check console.', 'error');
+                } finally {
+                    manualUploadFile.value = ''; // Reset input
+                }
+            });
+
+
+            document.querySelectorAll('.folder-item').forEach(item => {
+                const oldName = item.dataset.oldName;
+                const input = item.querySelector('.folder-name-input');
+
+                item.querySelector('.rename-folder-btn').addEventListener('click', async () => {
+                    const newName = input.value.trim();
+                    if (newName === oldName) return showStatus('No name change detected.', 'warning');
+                    if (!newName.toLowerCase().endsWith('.mp3')) {
+                        return showStatus('Filename must end with .mp3', 'error');
+                    }
+                    
+                    showStatus(`Renaming file ${oldName} to ${newName}...`, 'info');
+                    try {
+                        const result = await callCloudFunction({ 
+                            action: 'rename', 
+                            oldPath: SOUNDBOARD_FOLDER_PATH + oldName, 
+                            newPath: SOUNDBOARD_FOLDER_PATH + newName,
+                            uid: currentUser.uid
+                        });
+                        showStatus(result.message, 'success');
+                        switchTab('folder'); // Refresh list
+                    } catch (e) {
+                        showStatus(`Rename failed: ${e.message}`, 'error');
+                    }
+                });
+                
+                item.querySelector('.delete-folder-btn').addEventListener('click', async () => {
+                    if (!window.confirm(`Are you sure you want to PERMANENTLY DELETE the file "${oldName}" from Firebase Storage? This action cannot be undone.`)) return;
+
+                    showStatus(`Deleting file "${oldName}"...`, 'info');
+                    try {
+                        const fileRef = storageRef(storage, SOUNDBOARD_FOLDER_PATH + oldName);
+                        await deleteObject(fileRef);
+                        showStatus(`File "${oldName}" deleted successfully!`, 'success');
+                        switchTab('folder'); // Refresh list
+                    } catch (error) {
+                        console.error("File Deletion Error:", error);
+                        showStatus('File deletion failed. Check console. Ensure you have Storage delete permissions.', 'error');
+                    }
+                });
+            });
+        }
+
+        // --- AUTHENTICATION/REDIRECT LOGIC ---
+
+        async function performInitialSignIn() {
+            try {
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (e) {
+                console.error("Initial Firebase sign-in failed (Custom or Anonymous):", e);
+            }
+        }
+
+        function initializeAuth() {
+            performInitialSignIn(); 
+
+            onAuthStateChanged(auth, async (user) => {
+                const pageContent = document.getElementById('page-content');
+                
+                if (!user) {
+                    window.location.href = '../index.html'; 
+                } else {
+                    currentUser = user;
+                    const userEmail = currentUser.email || 'anonymous';
+                    
+                    if (ADMIN_EMAILS.includes(userEmail)) {
+                        document.getElementById('admin-email').textContent = userEmail;
+                        pageContent.classList.remove('hidden');
+                        
+                        // Crucial: Get the ID token for CF calls
+                        try {
+                           authToken = await getIdToken(user);
+                        } catch (e) {
+                            console.error("Failed to get ID token:", e);
+                            showStatus('Authentication token error. Cannot access admin functions.', 'error');
+                            return;
+                        }
+
+                        switchTab('general'); 
+                    } else {
+                        pageContent.innerHTML = `<div class="text-center p-8 bg-[#111] rounded-xl border border-red-900/50 max-w-lg mx-auto mt-20">
+                            <i class="fa-solid fa-lock text-red-500 text-4xl mb-4"></i>
+                            <h2 class="text-xl text-white">Access Denied</h2>
+                            <p class="text-gray-400 mb-4">User ${userEmail} is not an authorized administrator.</p>
+                            <button id="logout-access-denied" class="mt-2 px-4 py-2 bg-red-600 rounded-lg text-white hover:bg-red-700 transition">Log Out</button>
+                        </div>`;
+                        document.getElementById('logout-access-denied').addEventListener('click', () => signOut(auth));
+                    }
+                }
+            });
+        }
+        
+        // --- Initialization on Load ---
+        window.onload = () => {
+            sidebarTabs.forEach(tab => {
+                tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+            });
+            initializeAuth();
+        };
+
+    </script>
+
+    <style>
+        /* Base Styles (Matching settings.html) */
+        body { 
+            font-family: 'Geist', sans-serif; 
+            background-color: #070707; 
+            color: #c0c0c0; 
+            font-weight: 300;
+        }
+        
+        /* Layout */
+        #page-content {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styling */
+        #sidebar {
+            width: 280px;
+            min-width: 280px;
+            background-color: #000000;
+            border-right: 1px solid #1a1a1a;
+            padding: 1.5rem 0;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+        }
+
+        .sidebar-tab {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1.5rem;
+            margin: 0 1rem;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 400;
+            color: #9ca3af;
+        }
+
+        .sidebar-tab:hover:not(.bg-indigo-700\/30) {
+            background-color: #111111;
+            color: #e5e7eb;
+        }
+
+        /* Main View */
+        #main-container {
+            flex-grow: 1;
+            padding: 2rem;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* Toaster */
+        #status-toaster {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background-color: rgba(13, 13, 13, 0.95);
+            backdrop-filter: blur(5px);
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            border: 1px solid #333;
+            font-size: 0.85rem;
+            color: #fff;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        #status-toaster.visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* Deployment Modal (Exporting Loading Bar) */
+        #deploy-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(4px);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .progress-bar-container {
+            background-color: #1a1a1a;
+            border-radius: 9999px;
+            height: 12px;
+            overflow: hidden;
+        }
+        #modal-progress-bar {
+            height: 100%;
+            width: 0%;
+            background-color: #4f46e5;
+            transition: width 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Smoother animation */
+        }
+
+    </style>
+</head>
+<body>
+    <div id="page-content" class="hidden">
+        
+        <!-- Sidebar -->
+        <nav id="sidebar">
+            <div class="px-6 pb-6 border-b border-[#1a1a1a]">
+                <h1 class="text-2xl font-bold text-white mb-1">Admin Panel</h1>
+                <p class="text-xs text-gray-500 truncate" id="admin-email">Loading...</p>
+            </div>
+
+            <div class="mt-4 space-y-1">
+                <div class="sidebar-tab" data-tab="general">
+                    <i class="fa-solid fa-list-check w-5 mr-3"></i>
+                    <span>General Overview</span>
+                </div>
+                
+                <div class="sidebar-tab" data-tab="create">
+                    <i class="fa-solid fa-plus-circle w-5 mr-3"></i>
+                    <span>Create New Sound</span>
+                </div>
+                
+                <div class="sidebar-tab" data-tab="json">
+                    <i class="fa-solid fa-file-code w-5 mr-3"></i>
+                    <span>JSON File Manager</span>
+                </div>
+
+                <div class="sidebar-tab" data-tab="folder">
+                    <i class="fa-solid fa-folder-open w-5 mr-3"></i>
+                    <span>Sounds Folder Manager</span>
+                </div>
+            </div>
+
+            <div class="absolute bottom-0 w-full p-4">
+                <div class="sidebar-tab bg-red-800/20 hover:bg-red-800/40 text-red-400" data-tab="logout">
+                    <i class="fa-solid fa-right-from-bracket w-5 mr-3"></i>
+                    <span>Log Out</span>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main id="main-container">
+            <div id="main-view" class="pt-2">
+                <!-- Content will be injected here by JavaScript -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Deployment Progress Modal (Exporting Loading Bar) -->
+    <div id="deploy-modal" class="hidden">
+        <div class="w-full max-w-md p-8 bg-[#000000] rounded-xl shadow-2xl border border-[#1a1a1a]">
+            <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-3">
+                <i class="fa-solid fa-cloud-arrow-up text-indigo-400"></i>
+                Sound Deployment in Progress
+            </h3>
+            <p id="modal-progress-text" class="text-gray-400 text-sm mb-4">Initializing...</p>
+            
+            <div class="progress-bar-container mb-2">
+                <div id="modal-progress-bar"></div>
+            </div>
+            
+            <div class="flex justify-between items-center">
+                <p class="text-xs text-gray-500">
+                    <span class="font-semibold text-gray-300" id="modal-estimation-time">Calculating time...</span>
+                </p>
+            </div>
+            <p class="text-xs text-yellow-500 mt-4 p-2 bg-yellow-900/20 rounded-lg border border-yellow-800/50">
+                The Cloud Function is handling processing, compression, and JSON updates.
+            </p>
+        </div>
+    </div>
+
+    <!-- Status Toaster -->
+    <div id="status-toaster"></div>
+</body>
+</html>
