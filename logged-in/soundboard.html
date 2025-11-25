@@ -18,8 +18,8 @@
     <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Injections (Requested Updates) -->
-    <script src="../navigation.js"></script>
+    <!-- Injections -->
+    <!-- REMOVED navigation.js script tag because injector.js loads it automatically, preventing the duplicate identifier error -->
     <script src="../injector.js"></script>
 
     <!-- Firebase SDK (Compat for easier migration) -->
@@ -27,8 +27,17 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
     
-    <!-- Config (Requested Update) -->
-    <script src="../firebase-config.js"></script>
+    <!-- Config: Loaded as module to handle 'export' keyword correctly -->
+    <script type="module">
+        import { firebaseConfig } from '../firebase-config.js';
+        // Expose to window so the main script can see it if needed
+        window.firebaseConfig = firebaseConfig;
+        
+        // Initialize immediately if firebase global is ready
+        if (window.firebase && !window.firebase.apps.length) {
+            window.firebase.initializeApp(firebaseConfig);
+        }
+    </script>
 
     <style>
         /* --- FONT & BASE STYLING (MATCHING notes.html) --- */
@@ -343,40 +352,63 @@
 
         // --- Auth Logic (Firebase) ---
         function initApp() {
-            try {
-                if (typeof firebase !== 'undefined' && typeof firebaseConfig !== 'undefined') {
-                    // Initialize if not already done
-                    if (!firebase.apps.length) {
-                        firebase.initializeApp(firebaseConfig);
-                    }
-                    
-                    const auth = firebase.auth();
-                    
-                    auth.onAuthStateChanged((user) => {
-                        if (user) {
-                            // User is logged in, show content & load sounds
-                            loadingScreen.style.display = 'none';
-                            pageContent.classList.remove('hidden');
-                            loadSoundsFromStorage(); // Start loading data
-                        } else {
-                            // No user, redirect
-                            window.location.href = '../index.html'; 
+            // Wait for Firebase to be ready (it might be deferred)
+            // We poll briefly to check if the module script has set window.firebaseConfig
+            // or if window.firebase is ready.
+            
+            let attempts = 0;
+            const checkInterval = setInterval(() => {
+                attempts++;
+                
+                // If firebase is missing, wait.
+                if (typeof firebase === 'undefined') return;
+
+                // Ensure initialized
+                if (firebase.apps.length === 0) {
+                    if (window.firebaseConfig) {
+                        try {
+                            firebase.initializeApp(window.firebaseConfig);
+                        } catch(e) { console.error("Init error", e); }
+                    } else {
+                        // Still waiting for config module...
+                        if (attempts > 20) { // 2 seconds timeout
+                            clearInterval(checkInterval);
+                            loadingScreen.innerHTML = '<p class="text-red-500">Error: Config Timeout</p>';
                         }
-                    });
-
-                    logoutBtn.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        auth.signOut().then(() => {
-                            window.location.href = '../index.html';
-                        });
-                    });
-
-                } else {
-                    console.error("Firebase or Config not loaded correctly.");
-                    loadingScreen.innerHTML = '<p class="text-red-500">Error: Configuration Missing</p>';
+                        return;
+                    }
                 }
+
+                // If we get here, firebase exists and is initialized
+                clearInterval(checkInterval);
+                setupAuthAndLoad();
+
+            }, 100);
+        }
+
+        function setupAuthAndLoad() {
+            try {
+                const auth = firebase.auth();
+                auth.onAuthStateChanged((user) => {
+                    if (user) {
+                        // User is logged in, show content & load sounds
+                        loadingScreen.style.display = 'none';
+                        pageContent.classList.remove('hidden');
+                        loadSoundsFromStorage(); // Start loading data
+                    } else {
+                        // No user, redirect
+                        window.location.href = '../index.html'; 
+                    }
+                });
+
+                logoutBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    auth.signOut().then(() => {
+                        window.location.href = '../index.html';
+                    });
+                });
             } catch (e) {
-                console.error("Auth Error", e);
+                console.error("Auth Setup Error", e);
             }
         }
 
