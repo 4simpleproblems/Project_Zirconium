@@ -334,6 +334,7 @@ let db;
             .auth-menu-username {
                 color: var(--menu-username-text);
                 transition: color 0.3s ease;
+                text-align: left !important; /* Force left alignment */
             }
             .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
             .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
@@ -652,8 +653,8 @@ let db;
                                 <i class="fa-solid fa-gavel w-4"></i>
                                 Terms & Policies
                             </a>
-                            <a href="https://donate.stripe.com/5kA5mB2C5aeneBi144" class="auth-menu-link" target="_blank">
-                                <i class="fa-solid fa-heart w-4"></i>
+                            <a href="https://buymeacoffee.com/4simpleproblems" class="auth-menu-link" target="_blank">
+                                <i class="fa-solid fa-mug-hot w-4"></i>
                                 Donate
                             </a>
                         </div>
@@ -712,8 +713,8 @@ let db;
                                     <i class="fa-solid fa-gavel w-4"></i>
                                     Terms & Policies
                                 </a>
-                                <a href="https://donate.stripe.com/5kA5mB2C5aeneBi144" class="auth-menu-link" target="_blank">
-                                    <i class="fa-solid fa-heart w-4"></i>
+                                <a href="https://buymeacoffee.com/4simpleproblems" class="auth-menu-link" target="_blank">
+                                    <i class="fa-solid fa-mug-hot w-4"></i>
                                     Donate
                                 </a>
                             </div>
