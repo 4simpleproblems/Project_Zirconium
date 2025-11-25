@@ -336,6 +336,10 @@ let db;
                 transition: color 0.3s ease;
                 text-align: left !important; /* Force left alignment */
             }
+            /* NEW: Force email left alignment */
+            .auth-menu-email {
+                text-align: left !important;
+            }
             .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
             .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
 
@@ -689,7 +693,7 @@ let db;
                         <div id="auth-menu-container" class="auth-menu-container closed">
                             <div class="px-3 py-2 border-b border-gray-700 mb-2 w-full min-w-0">
                                 <p class="text-sm font-semibold auth-menu-username truncate">${username}</p>
-                                <p class="text-xs text-gray-400 truncate">${email}</p>
+                                <p class="text-xs text-gray-400 truncate auth-menu-email">${email}</p>
                             </div>
                             <a href="/logged-in/settings.html" class="auth-menu-link">
                                 <i class="fa-solid fa-gear w-4"></i>
