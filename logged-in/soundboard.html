@@ -123,9 +123,9 @@
         .custom-checkbox {
             appearance: none;
             -webkit-appearance: none;
-            background-color: #111;
-            border: 1px solid #333;
-            border-radius: 0.375rem;
+            background-color: var(--menu-bg); /* Use theme variable */
+            border: 1px solid var(--menu-border); /* Use theme variable */
+            border-radius: 0.375rem; /* Consistent with notes.html */
             width: 1rem;
             height: 1rem;
             cursor: pointer;
@@ -137,8 +137,8 @@
         }
 
         .custom-checkbox:checked {
-            background-color: var(--tab-active-border);
-            border-color: var(--tab-active-border);
+            background-color: var(--tab-active-border); /* Use theme variable */
+            border-color: var(--tab-active-border); /* Use theme variable */
         }
 
         .custom-checkbox:checked::after {
@@ -151,11 +151,11 @@
         /* --- END CUSTOM CHECKBOX STYLE --- */
 
         .custom-input {
-            background: #111;
-            border: 1px solid #333;
-            color: #fff;
+            background: var(--menu-bg); /* Use theme variable */
+            border: 1px solid var(--menu-border); /* Use theme variable */
+            color: var(--menu-text); /* Use theme variable */
             padding: 0.25rem 0.5rem;
-            border-radius: 0.25rem;
+            border-radius: 0.5rem; /* Consistent with notes.html */
             width: 70px;
             font-size: 0.875rem;
         }
@@ -186,7 +186,7 @@
 
         /* --- Sound Button Style (Highly Rounded) --- */
         .sound-btn {
-            background-color: #0d0d0d;
+            background-color: #050505; /* Darker when not active */
             border: 1px solid #1a1a1a;
             color: #c0c0c0;
             border-radius: 1.5rem; /* Highly rounded */
@@ -212,9 +212,11 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         }
         
-        .sound-btn:active {
+        .sound-btn:active,
+        .sound-btn.sound-btn-playing { /* New class for active playing state */
+            background-color: rgba(79, 70, 229, 0.2);
+            border-color: #6366f1; /* Lighter blue border */
             transform: translateY(0);
-            background-color: rgba(79, 70, 229, 0.1);
             box-shadow: none;
         }
 
@@ -276,15 +278,13 @@
                             <span class="text-sm">Delay (ms)</span>
                             <div class="flex gap-2">
                                 <input type="number" id="autoClickDelay" value="1000" min="0" class="custom-input">
-                                <button id="applyDelayBtn" class="text-xs bg-[#333] px-2 rounded hover:bg-[#444] text-white">Set</button>
+                                <button id="applyDelayBtn" class="btn-toolbar-style" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">Set</button>
                             </div>
                         </div>
 
                         <div class="dropdown-divider border-t border-[#333] my-2"></div>
                         
-                        <div id="logoutBtn" class="dropdown-item text-gray-400 hover:text-white">
-                            <span><i class="fa-solid fa-right-from-bracket w-5"></i> Log Out</span>
-                        </div>
+
 
                         <div class="dropdown-divider border-t border-[#333] my-2"></div>
                         
@@ -323,7 +323,6 @@
         // --- UI & State References ---
         const loadingScreen = document.getElementById('loading-screen');
         const pageContent = document.getElementById('page-content');
-        const logoutBtn = document.getElementById('logoutBtn');
         const optionsMenuBtn = document.getElementById('options-menu-btn');
         const optionsDropdown = document.getElementById('options-dropdown');
         const soundOverlayCheckbox = document.getElementById('soundOverlayCheckbox');
@@ -362,13 +361,7 @@
                     }
                 });
 
-                // Modular: using 'signOut(auth)'
-                logoutBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    signOut(auth).then(() => {
-                        window.location.href = '../index.html';
-                    });
-                });
+
             } catch (e) {
                 console.error("Auth Setup Error", e);
             }
@@ -431,11 +424,16 @@
                     
                     const audio = new Audio(audioUrl);
                     playingAudios.push(audio);
-                    audio.addEventListener('ended', () => playingAudios = playingAudios.filter(a => a !== audio));
+                    audio.addEventListener('ended', () => {
+                        playingAudios = playingAudios.filter(a => a !== audio);
+                        btn.classList.remove('sound-btn-playing'); // Remove class when ended
+                    });
+                    btn.classList.add('sound-btn-playing'); // Add class when playing
                     await audio.play();
                 } catch (err) {
                     console.error("Playback failed:", err);
                     showStatus('Error playing sound (CORS?)', 'error');
+                    btn.classList.remove('sound-btn-playing'); // Remove class on error
                 }
             });
 
