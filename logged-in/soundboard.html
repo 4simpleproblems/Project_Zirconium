@@ -413,6 +413,8 @@
             btn.className = 'sound-btn';
             btn.textContent = soundName;
             btn.dataset.storagePath = `Soundboard/Sounds/${fileName}`;
+            btn.dataset.originalFileName = fileName; // Store original filename
+            btn.dataset.originalContainerId = container.id; // Store original container ID
             
             btn.addEventListener('click', async () => {
                 if (!soundOverlayCheckbox.checked) stopAllAudios();
@@ -453,17 +455,41 @@
         }
 
         function stopAllAudios(fade = false) {
-            if (playingAudios.length === 0) return;
+            if (playingAudios.length === 0) {
+                // Also check for any remaining sound-btn-playing classes that might not have audio objects
+                document.querySelectorAll('.sound-btn-playing').forEach(btn => {
+                    btn.classList.remove('sound-btn-playing');
+                });
+                return;
+            }
+
+            const buttonsToRecreate = new Set();
             playingAudios.forEach(audio => {
                 audio.pause();
                 audio.currentTime = 0;
-                // Check if the audio object has a reference to its button
                 if (audio.soundButton) {
-                    audio.soundButton.classList.remove('sound-btn-playing');
+                    buttonsToRecreate.add(audio.soundButton);
                 }
             });
-            playingAudios = [];
-            if (fade) showStatus('All sounds muted', 'success');
+            playingAudios = []; // Clear the array of audio objects
+
+            // Recreate each unique button that was playing
+            buttonsToRecreate.forEach(oldBtn => {
+                const originalFileName = oldBtn.dataset.originalFileName;
+                const originalContainerId = oldBtn.dataset.originalContainerId;
+                const container = document.getElementById(originalContainerId);
+
+                if (originalFileName && container) {
+                    oldBtn.remove(); // Remove the old button
+                    // Re-create it. createSoundButton appends it to the container.
+                    createSoundButton(originalFileName, container); 
+                } else {
+                    // Fallback if data attributes are missing or container not found
+                    oldBtn.classList.remove('sound-btn-playing');
+                }
+            });
+
+            if (fade) showStatus('All sounds muted and reset', 'success');
         }
 
         function clickLoop() {
