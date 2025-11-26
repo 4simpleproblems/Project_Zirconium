@@ -8,50 +8,115 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     
     <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
+        /* --- FONT & BASE STYLING --- */
         :root {
-            --container-radius: 28px;
-            --container-padding: 2rem;
-            
             --bg-page: #070707;
             --bg-container: #000000;
-            --border-color: #0d0d0d;
+            --border-color: #333;
             --text-primary: #c0c0c0;
-            
-            --font-weight-body: 300;
-            --font-weight-headings: 400;
+            --text-light-grey: #d1d5db; /* Solid light grey for clock */
         }
 
         body { 
             font-family: 'Geist', sans-serif; 
             background-color: var(--bg-page);
             color: var(--text-primary);
-            font-weight: var(--font-weight-body);
-            
+            font-weight: 300;
+            min-height: 100vh;
             display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
+            font-weight: 400 !important;
+        }
+
+        /* --- LAYOUT UTILS --- */
+        #page-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            margin: 0;
+            padding: 2rem;
+            position: relative;
+        }
+
+        /* --- DASHBOARD WIDGET STYLES --- */
+        .dashboard-widget {
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-container);
+            padding: 3rem 4rem;
             text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            
+            /* UPDATED: Rounded 32px */
+            border-radius: 32px; 
+            
+            /* UPDATED: Solid width to prevent container jitter */
+            width: 600px; 
+            max-width: 90vw; /* Responsive fallback */
+            box-sizing: border-box;
+        }
+
+        .dashboard-widget:hover {
+            border-color: #505050;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        /* --- HEADER STYLING --- */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid #1a1a1a;
+            background-color: var(--bg-page);
+            width: 100%;
+        }
+
+        /* --- TYPOGRAPHY SPECIFIC TO CLOCK --- */
+        .time-display {
+            font-family: 'Geist', sans-serif;
+            font-weight: 300;
+            line-height: 1;
+            
+            /* UPDATED: Solid light grey color */
+            color: var(--text-light-grey);
+            
+            /* UPDATED: Tabular nums to prevent text jitter inside the box */
+            font-variant-numeric: tabular-nums; 
         }
         
-        h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
-            font-weight: var(--font-weight-headings) !important;
+        .date-display {
+            font-weight: 300;
+            margin-top: 1rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            font-size: 1.1rem;
+            
+            /* UPDATED: Matching solid light grey color */
+            color: var(--text-light-grey); 
+            opacity: 0.8; /* Slight opacity difference for hierarchy */
         }
-
-        html { height: 100%; }
-
-        #date-time-display {
-            border-radius: var(--container-radius);
-            background-color: var(--bg-container);
-            border: 1px solid var(--border-color);
-            padding: var(--container-padding);
-            letter-spacing: -0.05em;
+        
+        .seconds-display {
+            font-weight: 300;
+            font-size: 0.5em;
+            margin-left: 0.5rem;
+            
+            /* UPDATED: Matching solid light grey */
+            color: var(--text-light-grey);
+            opacity: 0.8;
         }
     </style>
 
@@ -74,9 +139,11 @@
 </head>
 
 <body>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6659160370587814" crossorigin="anonymous"></script>
-    
-    <div id="date-time-display"></div>
+    <div id="page-content">
+        <div id="date-time-display" class="dashboard-widget">
+            <div class="animate-pulse bg-[#1a1a1a] h-24 w-48 rounded mx-auto"></div>
+        </div>
+    </div>
 
     <script type="module">
         import { firebaseConfig } from '../firebase-config.js';
@@ -94,20 +161,25 @@
         function updateDateTime() {
             const now = new Date();
             
-            const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+            const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
             const timeString = now.toLocaleTimeString('en-US', timeOptions);
+            const seconds = now.getSeconds().toString().padStart(2, '0');
             
+            const parts = timeString.split(' ');
+            const timeOnly = parts[0];
+            const amPm = parts[1] || '';
+
             const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
             const dateString = now.toLocaleDateString('en-US', dateOptions);
 
             if (dateTimeElement) {
-                const parts = timeString.split(':');
-                const timeWithColon = `${parts[0]}:${parts[1]}`;
-                const secondsAndAmPm = parts[2];
-                
                 dateTimeElement.innerHTML = `
-                    <div class="text-7xl font-light">${timeWithColon}<span class="text-3xl font-normal ml-2">${secondsAndAmPm}</span></div>
-                    <div class="text-3xl font-thin mt-2">${dateString}</div>
+                    <div class="time-display text-7xl md:text-8xl">
+                        ${timeOnly}<span class="seconds-display">${seconds} ${amPm}</span>
+                    </div>
+                    <div class="date-display">
+                        ${dateString}
+                    </div>
                 `;
             }
         }
@@ -118,7 +190,6 @@
                     console.log("User logged out. Redirecting to:", redirectPath);
                     window.location.replace(redirectPath);
                 } else {
-                    console.log("User signed in. UID:", user.uid);
                     updateDateTime();
                     setInterval(updateDateTime, 1000);
                 }
