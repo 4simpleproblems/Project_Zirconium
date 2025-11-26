@@ -55,7 +55,7 @@
     // --- Firebase Imports ---
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, signInWithCustomToken, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    // FIXED: Added setDoc to the import list below
+    // FIXED: Ensure setDoc is imported for database writes
     import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     
     // --- Import Firebase Config ---
@@ -103,32 +103,31 @@
                 const user = userCredential.user;
                 
                 try {
+                    // --- FIX: Explicitly get the claims from the custom token ---
+                    const idTokenResult = await user.getIdTokenResult();
+                    const claims = idTokenResult.claims || {};
+                    
+                    // Prioritize claims data, fallback to standard properties, then empty string
+                    // Note: Your custom token shows email in claims: "email":"4simpleproblems@gmail.com"
+                    const finalEmail = claims.email || user.email || "";
+                    // Note: Your custom token shows username in claims: "username":"foursimpleproblems"
+                    const discordUsername = claims.username || user.displayName || `User${user.uid.substring(0, 8)}`;
+
                     // --- Check for User Document Existence ---
                     const userDoc = await getDoc(getUserDocRef(user.uid));
                     
                     if (!userDoc.exists()) {
-                        let baseUsername = 'User';
-                        if (user.displayName) {
-                            baseUsername = user.displayName;
-                        } else if (typeof user.email === 'string' && user.email.length > 0) { 
-                            baseUsername = user.email.split('@')[0];
-                        } else if (user.uid) { 
-                            baseUsername = `User${user.uid.substring(0, 8)}`;
-                        }
-
-                        let username = baseUsername.replace(/[^a-zA-Z0-9]/g, '').slice(0, 16);
-                        if (username.length < 6) username = `User${user.uid.substring(0, 8)}`;
-                        
-                        const finalUsername = `DiscordUser_${user.uid.substring(0, 8)}`; 
-                        
-                        // This line was crashing before because setDoc wasn't imported
+                        // Create the document using the data extracted from Discord claims
                         await setDoc(getUserDocRef(user.uid), {
-                            email: user.email, 
+                            email: finalEmail, // Now uses the email from claims
                             authMethod: 'discord', 
                             createdAt: new Date(),
-                            username: finalUsername, 
+                            username: discordUsername, // Now uses the username from claims
                             emailVerified: true 
                         });
+                        console.log("Created new user doc for:", discordUsername);
+                    } else {
+                        console.log("User document already exists, skipping creation.");
                     }
                     
                     // --- Success! Redirect ---
@@ -141,13 +140,12 @@
                     }, 1000);
 
                 } catch (docError) {
-                    console.error("Error creating user document:", docError);
-                    displayError('Database Error', 'Signed in, but failed to set up user profile.');
+                    console.error("Error creating user document or getting claims:", docError);
+                    displayError('Database Error', 'Signed in, but failed to set up user profile. Check console for details.');
                 }
 
             })
             .catch((error) => {
-                // This logs the ACTUAL error to your browser console (F12)
                 console.error("Final Firebase Sign-in Failed:", error);
                 displayError('Sign-in Error', 'Could not finalize your session. This usually means the custom token was invalid or expired.');
             });
