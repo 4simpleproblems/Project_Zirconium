@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🔒 Securly Server Tester</title>
-    <meta name="description" content="A tool to test Securly block status across various regional servers.">
+    <title>🔒 Securly Block Tester</title>
+    <meta name="description" content="A tool to test Securly block status on the useast server.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,7 +31,9 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            align-items: center;
+            align-items: center; 
+            justify-content: flex-start; /* Keep content at the top */
+            padding-top: 4rem; /* Space for the fixed header */
         }
 
         h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
@@ -57,10 +59,14 @@
             border-color: var(--menu-border, #fff);
             color: var(--tab-hover-text, #ffffff);
         }
+        /* Primary Button Style (Used for Check Status button) */
         .btn-toolbar-style.btn-primary-override {
             background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
             border: 1px solid var(--tab-active-border, #4f46e5);
             color: var(--tab-active-text, #4f46e5);
+            /* Make it full width and centered */
+            width: 100%;
+            justify-content: center;
         }
         .btn-toolbar-style.btn-primary-override:hover {
             background-color: var(--tab-active-hover-bg, rgba(79, 70, 229, 0.15));
@@ -68,75 +74,26 @@
             color: var(--tab-active-hover-text, #6366f1);
         }
         
-        /* Dropdown Menu Styling */
-        .dropdown-menu {
-            position: absolute;
-            top: 100%;
-            right: 0;
-            background: var(--menu-bg, #000000);
-            border: 1px solid var(--menu-border, #333);
-            border-radius: 1rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-            z-index: 1010;
-            min-width: 200px;
-            padding: 0.5rem;
-        }
-        .dropdown-item {
-            padding: 0.5rem 0.75rem;
-            font-size: 0.875rem;
-            color: var(--menu-text, #d1d5db);
-            border-radius: 0.375rem;
-            cursor: pointer;
-            transition: background-color 0.15s, color 0.15s;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .dropdown-item:hover {
-            background-color: var(--menu-item-hover-bg, #2a2a2a);
-            color: var(--menu-item-hover-text, #ffffff);
-        }
-        .dropdown-header {
-            padding: 0.5rem 0.75rem;
-            color: var(--tab-text, #9ca3af);
-            font-size: 0.75rem;
-            text-transform: uppercase;
-        }
-        
-        /* --- Server Selector Styles --- */
-        #server-selector-container {
-            position: relative;
-        }
-        #server-selector-btn {
-            height: auto;
-            padding: 0.5rem 0.25rem;
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        #server-selector-btn:hover {
-            border-color: var(--menu-border, #333);
-        }
-        #server-selector-btn .fa-globe {
-            color: var(--tab-active-text, #4f46e5);
-        }
-        .server-item.active {
-            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
-            color: var(--tab-active-text, #4f46e5);
-            border: 1px solid var(--tab-active-border, #4f46e5);
-        }
-        
         /* --- MAIN TESTER UI STYLES --- */
+        #page-content {
+            /* Centers the form container within the rest of the vertical space (for 16:9) */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            flex-grow: 1; 
+            min-height: calc(100vh - 4rem); /* Header height */
+        }
+        
         #tester-container {
             background-color: #0d0d0d;
             border: 1px solid #1a1a1a;
             border-radius: 1rem;
             padding: 40px;
-            width: 100%;
-            max-width: 600px;
-            margin-top: 50px;
+            width: 90%; 
+            max-width: 600px; /* Sensible max-width for 16:9 form */
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+            margin-bottom: 50px; /* Add some margin at the bottom */
         }
         .input-group {
             margin-bottom: 20px;
@@ -166,28 +123,17 @@
             outline: none;
         }
         
-        /* Check Button Style (Primary Action) */
-        #check-button {
-            display: block;
-            width: 100%;
-            padding: 12px 20px;
-            background-color: #4f46e5; /* Tailwind indigo-600 */
-            color: white;
-            border: none;
-            border-radius: 0.5rem;
-            font-size: 1.1rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: background-color 0.3s, transform 0.1s;
-            margin-top: 25px;
-        }
-        #check-button:hover {
-            background-color: #6366f1; /* Tailwind indigo-500 */
-        }
-        #check-button:disabled {
-            background-color: #333;
-            color: #777;
+        /* Check Button disabled state using .btn-primary-override colors */
+        .btn-toolbar-style.btn-primary-override:disabled {
+            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
+            border-color: var(--tab-border, #333);
+            color: var(--tab-text, #9ca3af);
             cursor: not-allowed;
+        }
+        .btn-toolbar-style.btn-primary-override:disabled:hover {
+            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
+            border-color: var(--tab-border, #333);
+            color: var(--tab-text, #9ca3af);
         }
 
         /* Result Display Styles */
@@ -214,26 +160,6 @@
             color: #bbb;
         }
         
-        /* SERVER SELECTION IN TOOLBAR (Replaced notes toolbar) */
-        #securly-toolbar {
-            position: sticky;
-            top: 5.25rem;
-            width: 250px; /* Wider toolbar */
-            background: var(--menu-bg, #000000);
-            border: 1px solid var(--menu-border, #333);
-            border-radius: 0.75rem;
-            padding: 0.5rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            z-index: 100;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            align-items: center;
-            align-self: flex-start;
-            margin-top: 1.25rem;
-            margin-left: 20px;
-        }
-        
         #disclaimer {
             margin-top: 30px;
             font-size: 12px;
@@ -249,137 +175,54 @@
         <i class="fa-solid fa-spinner fa-spin fa-2x text-white"></i>
     </div>
 
-    <div id="page-content" class="w-full flex">
+    <div id="page-content" class="w-full">
         
         <header class="fixed top-0 left-0 w-full z-1000 flex justify-between items-center p-4 border-b border-[#1a1a1a] bg-[#070707]">
             <h1 class="text-2xl font-bold text-white">Securly Tester</h1>
             <div class="flex items-center gap-2">
-                <button class="btn-toolbar-style" onclick="window.location.href='../index.html'">
-                    <i class="fa-solid fa-house"></i> <span>Home</span>
-                </button>
-            </div>
         </header>
 
-        <div id="securly-toolbar">
-            <div id="server-selector-container" class="relative w-full">
-                <button id="server-selector-btn" class="btn-toolbar-style w-full" onclick="toggleDropdown()">
-                    <i class="fa-solid fa-globe"></i> 
-                    <span>Server: <strong id="current-server-display">useast</strong></span>
-                    <i class="fa-solid fa-chevron-down text-sm"></i>
-                </button>
+        <div id="tester-container">
+            <h2 class="text-xl font-bold text-white mb-6 text-center">Block Status Check (useast)</h2>
 
-                <div id="server-dropdown" class="dropdown-menu hidden right-auto left-0 mt-1 min-w-full">
-                    <div class="dropdown-header">Select Securly Broker</div>
-                    </div>
+            <div class="input-group">
+                <label for="user">Student Email (User)</label>
+                <input id="user" type="text" placeholder="student@yourschool.org" value="student@yourschool.org" oninput="clearResult()">
             </div>
-        </div>
-        
-        <div class="flex-grow flex justify-center pt-28 pb-10">
-            <div id="tester-container">
-                <h2 class="text-xl font-bold text-white mb-6 text-center">Block Status Check</h2>
 
-                <div class="input-group">
-                    <label for="user">Student Email (User)</label>
-                    <input id="user" type="text" placeholder="student@yourschool.org" value="student@yourschool.org" oninput="clearResult()">
-                </div>
-
-                <div class="input-group">
-                    <label for="url">URL to Test</label>
-                    <input id="url" type="text" placeholder="https://zapatopi.net/treeoctopus/" value="https://zapatopi.net/treeoctopus/" oninput="clearResult()">
-                </div>
-
-                <button id="check-button" onclick="checkSecurlyStatus()">
-                    Check Block Status
-                </button>
-
-                <div id="result-display" class="status-info">
-                    Click 'Check Block Status'
-                </div>
-
-                <p id="disclaimer">
-                    **CORS PROXY IN USE:** A public proxy is prepended to the Securly URL to attempt to bypass browser restrictions.
-                </p>
+            <div class="input-group">
+                <label for="url">URL to Test</label>
+                <input id="url" type="text" placeholder="https://zapatopi.net/treeoctopus/" value="https://zapatopi.net/treeoctopus/" oninput="clearResult()">
             </div>
+
+            <button id="check-button" class="btn-toolbar-style btn-primary-override" onclick="checkSecurlyStatus()">
+                <i class="fa-solid fa-check-circle"></i> Check Block Status
+            </button>
+
+            <div id="result-display" class="status-info">
+                Click 'Check Block Status'
+            </div>
+
+            <p id="disclaimer">
+                **CORS PROXY IN USE:** A public proxy is prepended to the Securly URL to attempt to bypass browser restrictions.
+            </p>
         </div>
 
     </div>
     
     <script type="text/javascript">
-        // --- Securly Server Configuration ---
-        const SERVER_CONFIG = {
-            useast: 'https://useast-www.securly.com',
-            useast2: 'https://useast2-www.securly.com',
-            uswest: 'https://uswest-www.securly.com',
-            uk: 'https://uk-www.securly.com',
-            euwest: 'https://euwest-www.securly.com',
-            canada: 'https://canada-www.securly.com',
-            apse: 'https://apse-www.securly.com'
-        };
-
-        // Default to useast, but try to load from localStorage
-        let currentServerKey = localStorage.getItem('securlyServer') || 'useast';
+        // Hardcoded server URL as requested
+        const SECURLY_SERVER_URL = 'https://useast-www.securly.com';
         
         // --- Global State and Element References ---
         const CORS_PROXY = 'https://corsproxy.io/?'; 
         const resultDisplay = document.getElementById('result-display');
         const checkButton = document.getElementById('check-button');
-        const currentServerDisplay = document.getElementById('current-server-display');
-        const serverDropdown = document.getElementById('server-dropdown');
-        const serverSelectorBtn = document.getElementById('server-selector-btn');
         const loadingScreen = document.getElementById('loading-screen');
         const pageContent = document.getElementById('page-content');
         
         // --- UI Functions ---
 
-        /**
-         * Populates the server dropdown menu.
-         */
-        function populateServerDropdown() {
-            serverDropdown.innerHTML = `<div class="dropdown-header">Select Securly Broker</div>`;
-            Object.keys(SERVER_CONFIG).forEach(key => {
-                const item = document.createElement('div');
-                item.className = 'dropdown-item server-item';
-                item.textContent = key.toUpperCase();
-                item.setAttribute('data-server-key', key);
-                if (key === currentServerKey) {
-                    item.classList.add('active');
-                }
-                item.addEventListener('click', () => selectServer(key));
-                serverDropdown.appendChild(item);
-            });
-            currentServerDisplay.textContent = currentServerKey;
-        }
-
-        /**
-         * Toggles the visibility of the server dropdown.
-         */
-        function toggleDropdown() {
-            serverDropdown.classList.toggle('hidden');
-        }
-
-        /**
-         * Selects a new server and updates the UI.
-         */
-        function selectServer(key) {
-            currentServerKey = key;
-            localStorage.setItem('securlyServer', key);
-            currentServerDisplay.textContent = key;
-            
-            // Update active class
-            document.querySelectorAll('.server-item').forEach(item => {
-                item.classList.remove('active');
-                if (item.getAttribute('data-server-key') === key) {
-                    item.classList.add('active');
-                }
-            });
-            
-            clearResult();
-            serverDropdown.classList.add('hidden');
-        }
-
-        /**
-         * Clears the result display when inputs change.
-         */
         function clearResult() {
             resultDisplay.className = 'status-info';
             resultDisplay.innerText = 'Click \'Check Block Status\'';
@@ -388,12 +231,12 @@
         // --- Core Securly Logic ---
 
         /**
-         * Builds the Securly URL based on inputs and the current server.
+         * Builds the Securly URL based on inputs and the hardcoded server.
          */
         function buildSecurlyUrl() {
             const user = document.getElementById('user').value.trim();
             const url = document.getElementById('url').value.trim();
-            const serverUrl = SERVER_CONFIG[currentServerKey];
+            const serverUrl = SECURLY_SERVER_URL; 
             
             if (!user || !url) {
                 return null;
@@ -429,14 +272,15 @@
 
             if (!proxiedSecurlyLink) {
                 resultDisplay.className = 'status-blocked';
-                resultDisplay.innerText = '⚠️ Please enter valid Email and URL.';
+                resultDisplay.innerHTML = '⚠️ **Please enter valid Email and URL.**';
                 return;
             }
 
             // Set loading state
             resultDisplay.className = 'status-loading';
-            resultDisplay.innerText = `Checking ${currentServerKey.toUpperCase()}...`;
+            resultDisplay.innerHTML = `Checking **useast**...`;
             checkButton.disabled = true;
+            checkButton.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Checking...`;
 
             try {
                 const response = await fetch(proxiedSecurlyLink);
@@ -458,7 +302,7 @@
                 }
                 else {
                     resultDisplay.className = 'status-info';
-                    resultDisplay.innerHTML = `❓ **Unclear Status** (Response Status: ${response.status})`;
+                    resultDisplay.innerHTML = `❓ **Unclear Status** (No DENY/ALLOW found)`;
                     console.log("Full Securly Response Text:", text);
                 }
 
@@ -468,30 +312,21 @@
                 console.error('Fetch Error:', error);
             } finally {
                 checkButton.disabled = false;
+                checkButton.innerHTML = `<i class="fa-solid fa-check-circle"></i> Check Block Status`;
             }
         }
         
-        // --- Initialization ---
+        // --- Initialization (Matching notes.html auth pattern) ---
 
-        // Close dropdown when clicking outside
-        document.addEventListener('click', (event) => {
-            if (!serverDropdown.classList.contains('hidden') && 
-                !serverSelectorBtn.contains(event.target) && 
-                !serverDropdown.contains(event.target)) {
-                serverDropdown.classList.add('hidden');
-            }
-        });
-        
         // Simple mock authentication to match notes.html behavior
         const mockAuth = { onAuthStateChanged: (cb) => cb(true) }; 
         
         async function initializeAuth() {
             mockAuth.onAuthStateChanged((user) => {
                 if (!user) {
-                    // window.location.href = '../index.html'; // Removed for simplicity
+                    // window.location.href = '../index.html'; // Removed but kept in auth block
                 } else {
                     // Initialize UI after "auth" check
-                    populateServerDropdown();
                     clearResult();
                     loadingScreen.style.display = 'none';
                     pageContent.style.display = 'flex';
