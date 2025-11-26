@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>4SP - DICTIONARY</title>
-    <meta name="description" content="A simple interactive dictionary with search and definition display using dictionaryapi.dev.">
+    <meta name="description" content="A simple interactive dictionary with search and definition display using Merriam-Webster APIs.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -37,12 +37,11 @@
             overflow-x: hidden;
         }
 
-        /* Thinner headings to match other pages */
         h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
             font-weight: 400 !important;
         }
 
-        /* --- UI COMPONENTS (Matching notes.html buttons) --- */
+        /* --- UI COMPONENTS --- */
         .btn-toolbar-style {
             background: var(--menu-bg, #0000000);
             border: 1px solid var(--menu-border, #333);
@@ -63,7 +62,6 @@
             color: var(--tab-hover-text, #ffffff);
         }
         
-        /* Primary/Action Button Override */
         .btn-toolbar-style.btn-primary-override {
             background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
             border: 1px solid var(--tab-active-border, #4f46e5);
@@ -75,10 +73,10 @@
             color: var(--tab-active-hover-text, #6366f1);
         }
 
-        /* Input Styling (Matching settings.html) */
+        /* Input Styling */
         .input-text-style {
             width: 100%; 
-            padding: 1rem 1.5rem; /* Larger padding for search */
+            padding: 1rem 1.5rem; 
             border: 1px solid #1a1a1a; 
             background-color: #0d0d0d; 
             border-radius: 0.75rem; 
@@ -109,11 +107,10 @@
             background-color: var(--bg-page);
         }
 
-        /* Main container acting like #editor-wrapper from notes.html */
         #main-wrapper {
             flex-grow: 1;
             padding: 20px;
-            margin: 1.25rem 20px; /* Matching editor margins */
+            margin: 1.25rem 20px;
             display: flex;
             flex-direction: column;
             gap: 1.5rem;
@@ -122,7 +119,6 @@
             align-self: center;
         }
 
-        /* Result Card styling */
         .dictionary-content-box {
             background-color: #0d0d0d;
             border: 1px solid #1a1a1a;
@@ -137,7 +133,7 @@
             font-style: italic;
             color: #9ca3af;
             transition: color 0.2s ease;
-            cursor: help; 
+            cursor: pointer; 
         }
         .pronunciation-text:hover {
             color: var(--tab-active-text, #4f46e5); 
@@ -155,6 +151,25 @@
             border-radius: 4px;
             color: #ffffff;
         }
+        
+        .synonym-tag {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .synonym-tag:hover {
+             color: var(--tab-active-text, #4f46e5); 
+             text-decoration: underline;
+        }
+        
+        .audio-icon {
+            font-size: 0.8em;
+            margin-left: 8px;
+            color: #4f46e5;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        .audio-icon:hover { opacity: 1; }
     </style>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-1D4F692C1Q"></script>
 <script>
@@ -175,9 +190,7 @@
         
         <header>
             <h1 class="text-2xl font-bold text-white">Interactive Lexicon</h1>
-            
-            <div class="flex items-center gap-2">
-                </div>
+            <div class="flex items-center gap-2"></div>
         </header>
 
         <div id="main-wrapper">
@@ -215,11 +228,13 @@
         import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { firebaseConfig } from "../firebase-config.js"; 
 
+        // --- CONFIGURATION ---
+        // REPLACE THIS URL with your deployed Firebase Cloud Function URL
+        const CLOUD_FUNCTION_URL = "https://us-central1-project-zirconium.cloudfunctions.net/getWordData";
+
         // --- Firebase Setup ---
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        
-        // --- Canvas Global Variables Support ---
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         // --- DOM Elements ---
@@ -229,13 +244,15 @@
         const searchButton = document.getElementById('search-button');
         const definitionOutput = document.getElementById('definition-output');
         
-        // --- DICTIONARY API LOGIC ---
+        let currentAudio = null; // To track playing audio
+
+        // --- DICTIONARY LOGIC (MERRIAM-WEBSTER) ---
         
         async function fetchDefinition(word) {
             const trimmedWord = word.trim().toLowerCase();
             if (!trimmedWord) return;
 
-            // Loading State
+            // UI: Loading State
             definitionOutput.innerHTML = `
                 <div class="h-full flex flex-col items-center justify-center pt-12">
                     <i class="fa-solid fa-spinner fa-spin fa-2x text-indigo-500 mb-4"></i>
@@ -245,100 +262,202 @@
             searchInput.value = trimmedWord;
 
             try {
-                const url = `https://api.dictionaryapi.dev/api/v2/entries/en/${trimmedWord}`;
-                const response = await fetch(url);
+                // Call our Proxy Cloud Function
+                const response = await fetch(`${CLOUD_FUNCTION_URL}?word=${encodeURIComponent(trimmedWord)}`);
 
                 if (!response.ok) {
-                    if (response.status === 404) {
-                        definitionOutput.innerHTML = `
-                             <div class="h-full flex flex-col items-center justify-center pt-12">
-                                <i class="fa-solid fa-circle-exclamation fa-2x text-red-400 mb-4"></i>
-                                <p class="text-lg text-gray-400">No definition found for <strong>"${trimmedWord}"</strong>.</p>
-                            </div>
-                        `;
-                    } else {
-                        throw new Error(`HTTP error! Status: ${response.status}`);
-                    }
-                    return;
+                    throw new Error(`Cloud Function Error: ${response.status}`);
                 }
 
                 const data = await response.json();
-                displayDefinition(trimmedWord, data);
+                
+                // Parse Merriam-Webster Response
+                // MW returns an array. If empty, word not found.
+                // If the first element is a string, it means "Suggestions" (spelling corrections).
+                
+                const dictEntries = data.dictionary;
+                const thesEntries = data.thesaurus;
+
+                if (!dictEntries || dictEntries.length === 0) {
+                     displayNotFound(trimmedWord);
+                     return;
+                }
+
+                // Check for suggestions (array of strings)
+                if (typeof dictEntries[0] === 'string') {
+                    displaySuggestions(trimmedWord, dictEntries);
+                    return;
+                }
+
+                displayDefinition(trimmedWord, dictEntries, thesEntries);
 
             } catch (error) {
                 console.error("Fetch error:", error);
                 definitionOutput.innerHTML = `
                     <div class="text-center pt-12">
-                        <p class="text-red-400">An unexpected error occurred. Please try again later.</p>
+                        <p class="text-red-400 mb-2"><i class="fa-solid fa-bug mr-2"></i>An error occurred.</p>
+                        <p class="text-sm text-gray-500">Please check your internet or the Cloud Function URL.</p>
                     </div>
                 `;
             }
         }
 
+        function displayNotFound(word) {
+            definitionOutput.innerHTML = `
+                 <div class="h-full flex flex-col items-center justify-center pt-12">
+                    <i class="fa-solid fa-circle-exclamation fa-2x text-red-400 mb-4"></i>
+                    <p class="text-lg text-gray-400">No definition found for <strong>"${word}"</strong>.</p>
+                </div>
+            `;
+        }
+
+        function displaySuggestions(word, suggestions) {
+            const suggestionsHtml = suggestions.slice(0, 10).map(s => 
+                `<span class="highlighted-word text-indigo-400 mx-2 cursor-pointer" data-word="${s}">${s}</span>`
+            ).join(', ');
+
+            definitionOutput.innerHTML = `
+                 <div class="h-full flex flex-col items-center justify-center pt-12 px-8 text-center">
+                    <i class="fa-solid fa-circle-question fa-2x text-yellow-500 mb-4"></i>
+                    <p class="text-lg text-gray-400 mb-4">Word <strong>"${word}"</strong> not found. Did you mean:</p>
+                    <div class="text-lg leading-relaxed">${suggestionsHtml}</div>
+                </div>
+            `;
+        }
+
+        // Helper to linkify text
         function highlightDefinitionText(text) {
-            const commonWords = ['the', 'and', 'but', 'not', 'for', 'with', 'from', 'that', 'this', 'have', 'when', 'what', 'which', 'will', 'was', 'are', 'you', 'can', 'one', 'use', 'any', 'all', 'out', 'into', 'upon', 'like', 'than', 'only', 'much', 'a', 'an', 'or'];
+             const commonWords = ['the', 'and', 'but', 'not', 'for', 'with', 'from', 'that', 'this', 'have', 'when', 'what', 'which', 'will', 'was', 'are', 'you', 'can', 'one', 'use', 'any', 'all', 'out', 'into', 'upon', 'like', 'than', 'only', 'much', 'a', 'an', 'or', 'of', 'in', 'to', 'is'];
             
-            return text.replace(/\b([a-zA-Z]{3,})\b/g, (match) => {
+            // MW uses {bc} for bold colon, {it} for italic, etc. We need to strip or format them.
+            // Simple strip for now, then linkify.
+            let cleanText = text
+                .replace(/{bc}/g, ': ')
+                .replace(/{it}/g, '<i>')
+                .replace(/{\/it}/g, '</i>')
+                .replace(/{wi}/g, '<i>') // Word identifier
+                .replace(/{\/wi}/g, '</i>')
+                .replace(/{sx\|([^|]+)\|([^}]*)}/g, '<span class="highlighted-word" data-word="$1">$1</span>') // Synonyms links in def
+                .replace(/{[^}]+}/g, ''); // Strip other tags
+
+            return cleanText.replace(/\b([a-zA-Z]{3,})\b/g, (match) => {
+                // Don't link if already inside a tag (simple check)
                 if (commonWords.includes(match.toLowerCase())) return match;
                 return `<span class="highlighted-word" data-word="${match.toLowerCase()}">${match}</span>`;
             });
         }
-
-        function displayDefinition(word, data) {
-            if (!data || data.length === 0) return;
-
-            const entry = data[0];
-            const phoneticText = entry.phonetic || entry.phonetics?.find(p => p.text)?.text || '';
+        
+        // Helper to construct MW Audio URL
+        function getAudioUrl(audioBase) {
+            if (!audioBase) return null;
+            let subdir = '';
+            if (audioBase.startsWith('bix')) subdir = 'bix';
+            else if (audioBase.startsWith('gg')) subdir = 'gg';
+            else if (!isNaN(parseInt(audioBase[0])) || !/^[a-zA-Z]/.test(audioBase)) subdir = 'number';
+            else subdir = audioBase[0];
             
+            return `https://media.merriam-webster.com/audio/prons/en/us/mp3/${subdir}/${audioBase}.mp3`;
+        }
+
+        function playAudio(url) {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+            }
+            currentAudio = new Audio(url);
+            currentAudio.play();
+        }
+
+        function displayDefinition(word, dictData, thesData) {
+            const primaryEntry = dictData[0];
+            
+            // Headword (replace * with ·)
+            const hw = primaryEntry.hwi ? primaryEntry.hwi.hw.replace(/\*/g, '·') : word;
+            
+            // Pronunciation
+            const prs = (primaryEntry.hwi && primaryEntry.hwi.prs && primaryEntry.hwi.prs.length > 0) ? primaryEntry.hwi.prs[0] : null;
+            const mwPron = prs ? prs.mw : '';
+            const audioUrl = prs && prs.sound ? getAudioUrl(prs.sound.audio) : null;
+
+            // Part of Speech
+            const fl = primaryEntry.fl || 'unknown';
+
             let htmlContent = `
                 <div class="space-y-6 fade-in">
                     <div class="border-b border-[#252525] pb-4">
-                        <h2 class="text-4xl text-indigo-400 capitalize mb-2 font-normal">${word}</h2>
-                        ${phoneticText ? `<p class="text-xl text-gray-500 pronunciation-text">${phoneticText}</p>` : ''}
+                        <div class="flex items-center gap-3 mb-2">
+                            <h2 class="text-4xl text-indigo-400 capitalize font-normal">${word}</h2>
+                            <span class="text-2xl text-gray-500 font-light ml-2">${hw}</span>
+                            ${audioUrl ? `<i class="fa-solid fa-volume-high audio-icon" title="Listen" data-audio="${audioUrl}"></i>` : ''}
+                        </div>
+                        
+                        <div class="flex items-center gap-4">
+                             ${mwPron ? `<p class="text-xl text-gray-500 pronunciation-text font-serif italic">/${mwPron}/</p>` : ''}
+                             <span class="px-3 py-0.5 bg-[#1a1a1a] border border-[#333] rounded text-sm text-gray-400 font-medium uppercase tracking-wider">${fl}</span>
+                        </div>
                     </div>
             `;
             
-            entry.meanings.forEach(meaning => {
-                htmlContent += `
-                    <div class="space-y-3 mb-8">
-                        <div class="flex items-center gap-3">
-                            <span class="px-3 py-1 bg-[#1a1a1a] border border-[#333] rounded text-sm text-gray-400 font-medium uppercase tracking-wider">
-                                ${meaning.partOfSpeech}
-                            </span>
-                        </div>
-                        
-                        <div class="ml-1 pl-4 border-l border-[#252525]">
-                            <ol class="space-y-4">
-                `;
+            // --- Definitions (Iterate over entries to get different meanings) ---
+            htmlContent += `<div class="ml-1 pl-4 border-l border-[#252525] space-y-6">`;
+            
+            // Limit to top 5 entries to avoid overwhelming
+            dictData.slice(0, 5).forEach((entry, index) => {
+                if (typeof entry === 'string') return; // Skip if suggestion leaked in
+                
+                // Get Short Definitions
+                if (entry.shortdef && entry.shortdef.length > 0) {
+                     // Add functional label if different from primary (e.g. noun vs verb)
+                     if (index > 0 && entry.fl && entry.fl !== fl) {
+                         htmlContent += `<div class="mt-4 mb-2 text-indigo-300 font-medium border-b border-[#333] inline-block pr-4">${entry.fl}</div>`;
+                     }
 
-                meaning.definitions.slice(0, 3).forEach((def) => { 
-                    const highlightedDefinition = highlightDefinitionText(def.definition);
-                    
-                    htmlContent += `
-                        <li class="text-gray-300 font-light leading-relaxed text-lg">
-                            ${highlightedDefinition}
-                            ${def.example ? `<div class="mt-2 text-sm text-gray-500 italic pl-2 border-l-2 border-[#333]">"${def.example}"</div>` : ''}
-                        </li>
-                    `;
-                });
-
-                htmlContent += `</ol>`;
-
-                if (meaning.synonyms && meaning.synonyms.length > 0) {
-                    const synonymTags = meaning.synonyms.slice(0, 6).map(s => 
-                        `<span class="synonym-tag cursor-pointer hover:text-indigo-400 hover:underline decoration-indigo-500/50 underline-offset-4 transition-colors" data-word="${s}">${s}</span>`
-                    ).join('<span class="text-gray-600 mx-2">•</span>');
-
-                    htmlContent += `
-                        <div class="mt-4 pt-3 flex items-start gap-2 text-sm text-gray-500">
-                            <span class="font-medium uppercase text-xs mt-1">Synonyms:</span>
-                            <div class="flex flex-wrap items-center">${synonymTags}</div>
-                        </div>
-                    `;
+                    htmlContent += `<ol class="list-decimal list-outside ml-4 space-y-3">`;
+                    entry.shortdef.forEach(def => {
+                         htmlContent += `
+                            <li class="text-gray-300 font-light leading-relaxed text-lg">
+                                ${highlightDefinitionText(def)}
+                            </li>`;
+                    });
+                    htmlContent += `</ol>`;
                 }
-
-                htmlContent += `</div></div>`; 
             });
+            htmlContent += `</div>`;
+
+            // --- Synonyms (From Thesaurus Data) ---
+            // MW Thesaurus entries have meta.syns (array of arrays)
+            let allSynonyms = [];
+            if (thesData && thesData.length > 0 && typeof thesData[0] !== 'string') {
+                thesData.forEach(entry => {
+                    if (entry.meta && entry.meta.syns) {
+                        entry.meta.syns.forEach(group => {
+                            allSynonyms.push(...group);
+                        });
+                    }
+                });
+            }
+            // If no thesaurus data, check dictionary entry for 'syns' (sometimes present)
+            if (allSynonyms.length === 0 && primaryEntry.meta && primaryEntry.meta.syns) {
+                 primaryEntry.meta.syns.forEach(group => allSynonyms.push(...group));
+            }
+
+            // Deduplicate and Slice
+            allSynonyms = [...new Set(allSynonyms)];
+
+            if (allSynonyms.length > 0) {
+                const synonymTags = allSynonyms.slice(0, 15).map(s => 
+                    `<span class="synonym-tag" data-word="${s}">${s}</span>`
+                ).join('<span class="text-gray-600 mx-2">•</span>');
+
+                htmlContent += `
+                    <div class="mt-8 pt-4 border-t border-[#252525]">
+                        <p class="text-sm text-gray-500 font-medium uppercase mb-3">Synonyms</p>
+                        <div class="flex flex-wrap items-center leading-loose text-gray-400">
+                            ${synonymTags}
+                        </div>
+                    </div>
+                `;
+            }
 
             htmlContent += `</div>`;
             definitionOutput.innerHTML = htmlContent;
@@ -356,10 +475,18 @@
         
         searchButton.addEventListener('click', handleSearch);
 
+        // Delegation for clicks (Words, Audio)
         definitionOutput.addEventListener('click', (event) => {
             const target = event.target;
+            
+            // Handle Word Click
             if (target.dataset.word) {
                 fetchDefinition(target.dataset.word);
+            }
+            
+            // Handle Audio Click
+            if (target.classList.contains('audio-icon') && target.dataset.audio) {
+                playAudio(target.dataset.audio);
             }
         });
 
