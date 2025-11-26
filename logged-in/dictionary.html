@@ -3,43 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - Interactive Dictionary</title>
+    <title>4SP - DICTIONARY</title>
     <meta name="description" content="A simple interactive dictionary with search and definition display using dictionaryapi.dev.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Slabo+27px&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="https://kit-pro.fontawesome.com/releases/v7.0.1/css/pro.min.css" media="all">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="../navigation.js"></script>
     <script src="../injector.js"></script>
 
     <style>
-        /* --- FONT & BASE STYLING (MATCHING notes.html + Thinner text) --- */
-        body { 
-            font-family: 'Geist', sans-serif; 
-            background-color: #070707; 
-            color: #c0c0c0; 
-            transition: all 0.3s ease;
-            font-size: 16px;
-            overflow-x: hidden;
-            min-height: 100vh;
-            font-weight: 300; /* <-- ADDED: Thinner base font */
+        /* --- FONT & BASE STYLING (MATCHING notes.html & settings.html) --- */
+        :root {
+            --bg-page: #070707;
+            --bg-container: #000000;
+            --border-color: #333;
+            --text-primary: #c0c0c0;
         }
 
-        /* <-- ADDED: Thinner bold/headings --> */
+        body { 
+            font-family: 'Geist', sans-serif; 
+            background-color: var(--bg-page);
+            color: var(--text-primary);
+            font-weight: 300;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Thinner headings to match other pages */
         h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
             font-weight: 400 !important;
         }
 
-        /* --- THEME-AWARE STYLES (COPIED FROM notes.html) --- */
-        
+        /* --- UI COMPONENTS (Matching notes.html buttons) --- */
         .btn-toolbar-style {
             background: var(--menu-bg, #0000000);
             border: 1px solid var(--menu-border, #333);
@@ -51,174 +54,109 @@
             transition: all 0.2s;
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 0.5rem;
         }
-        /* MODIFIED: Mode Toggle Hover now keeps black background, but text highlights */
         .btn-toolbar-style:hover {
-            background-color: var(--menu-bg, #000000); /* Force to Menu BG (black) */
-            border-color: var(--menu-border, #fff); /* Force to Menu Border */
-            color: var(--tab-hover-text, #ffffff); /* Keep the text highlight color */
+            background-color: var(--menu-bg, #000000);
+            border-color: var(--menu-border, #fff);
+            color: var(--tab-hover-text, #ffffff);
         }
         
-        /* MODIFIED: Files Button now uses Active Tab Texture */
+        /* Primary/Action Button Override */
         .btn-toolbar-style.btn-primary-override {
             background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
             border: 1px solid var(--tab-active-border, #4f46e5);
             color: var(--tab-active-text, #4f46e5);
         }
-        /* Files Button Hover now uses Active Tab Hover Texture */
         .btn-toolbar-style.btn-primary-override:hover {
             background-color: var(--tab-active-hover-bg, rgba(79, 70, 229, 0.15));
             border-color: var(--tab-active-hover-border, #6366f1);
             color: var(--tab-active-hover-text, #6366f1);
         }
 
-        .btn-icon {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 2.25rem; /* 36px */
-            height: 2.25rem; /* 36px */
-            border-radius: 0.5rem;
-            background-color: transparent;
-            border: 1px solid transparent;
-            color: var(--tab-text, #9ca3af);
-            cursor: pointer;
+        /* Input Styling (Matching settings.html) */
+        .input-text-style {
+            width: 100%; 
+            padding: 1rem 1.5rem; /* Larger padding for search */
+            border: 1px solid #1a1a1a; 
+            background-color: #0d0d0d; 
+            border-radius: 0.75rem; 
+            color: #c0c0c0; 
             transition: all 0.2s;
+            font-size: 1.1rem;
+            font-weight: 300;
         }
-        .btn-icon:hover {
-            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
-            color: var(--tab-active-text, #4f46e5);
-            border-color: var(--tab-active-border, #4f46e5);
+        .input-text-style:focus {
+            border-color: #505050; 
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(80, 80, 80, 0.3);
         }
-        .btn-icon.active {
-             background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
-            color: var(--tab-active-text, #4f46e5);
-            border-color: var(--tab-active-border, #4f46e5);
-        }
-        
-        /* Dropdown Menu Styling (MODIFIED BORDER-RADIUS) */
-        .dropdown-menu {
-            position: absolute;
-            top: 100%;
-            right: 0;
-            background: var(--menu-bg, #000000);
-            border: 1px solid var(--menu-border, #333);
-            border-radius: 1rem; /* UPDATED from 0.75rem */
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-            z-index: 1010;
-            min-width: 200px;
-            padding: 0.5rem;
-        }
-        /* Custom selector dropdowns (open to side) */
-        .selector-dropdown {
-            position: absolute;
-            top: 0;
-            left: 100%;
-            margin-left: 10px;
-            background: var(--menu-bg, #1a1a1a);
-            border: 1px solid var(--menu-border, #333);
-            border-radius: 1rem; /* UPDATED from 0.75rem */
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-            z-index: 1010;
-            min-width: 200px;
-            padding: 0.5rem;
-        }
-        .dropdown-item {
-            padding: 0.5rem 0.75rem;
-            font-size: 0.875rem;
-            color: var(--menu-text, #d1d5db);
-            border-radius: 0.375rem;
-            cursor: pointer;
-            transition: background-color 0.15s, color 0.15s;
+
+        /* --- LAYOUT UTILS --- */
+        #page-content {
+            flex-grow: 1;
             display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 10px;
+            padding: 1rem;
+            border-bottom: 1px solid #1a1a1a;
+            background-color: var(--bg-page);
         }
-        .dropdown-item:hover {
-            background-color: var(--menu-item-hover-bg, #2a2a2a);
-            color: var(--menu-item-hover-text, #ffffff);
-        }
-        .dropdown-divider {
-            border-color: var(--menu-divider, #374151);
-            margin: 0.5rem 0;
-        }
-        .dropdown-header {
-            padding: 0.5rem 0.75rem;
-            color: var(--tab-text, #9ca3af);
-            font-size: 0.75rem;
-            text-transform: uppercase;
-        }
-        
-        /* Native Color Picker Styling for Toolbar */
-        #font-color-picker {
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            width: 36px;
-            height: 36px;
-            background-color: transparent;
-            border: 1px solid var(--menu-border, #333);
-            border-radius: 0.5rem;
-            cursor: pointer;
-            padding: 0;
+
+        /* Main container acting like #editor-wrapper from notes.html */
+        #main-wrapper {
+            flex-grow: 1;
+            padding: 20px;
+            margin: 1.25rem 20px; /* Matching editor margins */
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            max-width: 1200px;
+            width: calc(100% - 40px);
             align-self: center;
         }
-        #font-color-picker::-webkit-color-swatch-wrapper {
-            padding: 0;
-        }
-        #font-color-picker::-webkit-color-swatch {
-            border: none;
-            border-radius: 0.5rem;
-        }
-        #font-color-picker::-moz-color-swatch {
-            border: none;
-            border-radius: 0.5rem;
+
+        /* Result Card styling */
+        .dictionary-content-box {
+            background-color: #0d0d0d;
+            border: 1px solid #1a1a1a;
+            border-radius: 0.75rem;
+            padding: 2rem;
+            min-height: 50vh;
         }
 
-        /* --- STYLING FOR THIS PAGE --- */
-
-        /* Main content card (Styled like notes.html editor) */
-        .dictionary-card {
-            background-color: #0d0d0d; /* from #note-editor */
-            border: 1px solid #1a1a1a; /* from #note-editor */
-            border-radius: 0.75rem; 
-            padding: 2rem; 
-            min-height: 70vh;
-            margin: 1.25rem 20px; /* from #note-editor margins */
-        }
-
-        /* --- CUSTOM DICTIONARY STYLING (UPDATED WITH INDIGO THEME) --- */
+        /* --- DICTIONARY SPECIFIC STYLES --- */
         .pronunciation-text {
-            /* Special font for pronunciation */
             font-family: 'Playfair Display', serif;
             font-style: italic;
-            color: #9ca3af; /* Initial muted gray */
+            color: #9ca3af;
             transition: color 0.2s ease;
             cursor: help; 
         }
-
         .pronunciation-text:hover {
-            /* Indigo color on hover (from notes.html theme) */
             color: var(--tab-active-text, #4f46e5); 
         }
         
         .highlighted-word {
-            /* Styling for clickable words (using notes.html theme) */
             text-decoration: underline;
-            text-decoration-color: rgba(79, 70, 229, 0.5); /* 50% opaque indigo */
+            text-decoration-color: rgba(79, 70, 229, 0.5);
             text-underline-offset: 3px;
             cursor: pointer;
             transition: background-color 0.15s ease;
         }
-        
         .highlighted-word:hover {
-            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1)); /* light indigo bg */
+            background-color: rgba(79, 70, 229, 0.1);
             border-radius: 4px;
+            color: #ffffff;
         }
     </style>
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6659160370587814"
-     crossorigin="anonymous"></script><script async src="https://www.googletagmanager.com/gtag/js?id=G-1D4F692C1Q"></script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-1D4F692C1Q"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
@@ -227,110 +165,98 @@
   gtag('config', 'G-1D4F692C1Q');
 </script>
 </head>
-<body>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6659160370587814"
-     crossorigin="anonymous"></script>
+<body class="min-h-screen">
+    
+    <div id="loading-screen" class="fixed inset-0 bg-[#070707] flex items-center justify-center z-50">
+        <i class="fa-solid fa-spinner fa-spin fa-2x"></i>
+    </div>
 
     <div id="page-content" class="hidden">
         
-        <header class="flex justify-between items-center p-4 border-b border-[#1a1a1a]">
+        <header>
             <h1 class="text-2xl font-bold text-white">Interactive Lexicon</h1>
-            </header>
+            
+            <div class="flex items-center gap-2">
+                </div>
+        </header>
 
-        <div class="dictionary-card shadow-xl">
-
-            <div class="relative mb-8">
+        <div id="main-wrapper">
+            
+            <div class="relative w-full">
                 <input 
                     type="text"
                     id="search-input"
-                    placeholder="Type a word and press Enter or click the Search icon..."
-                    class="w-full p-4 pl-12 pr-20 rounded-2xl bg-[#0d0d0d] text-white border border-[#1a1a1a] focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-150"
+                    placeholder="Type a word..."
+                    class="input-text-style pl-12 pr-24"
                     autocomplete="off"
                 />
-                <i class="fa-solid fa-book absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                <i class="fa-solid fa-magnifying-glass absolute left-5 top-1/2 transform -translate-y-1/2 text-gray-500"></i>
                 
                 <button 
                     id="search-button" 
-                    class="absolute right-2 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-[rgba(79,70,229,0.1)] hover:bg-[rgba(79,70,229,0.15)] text-[#4f46e5] hover:text-[#6366f1] border border-[#4f46e5] hover:border-[#6366f1] font-semibold rounded-[1rem] shadow-md transition duration-150 active:scale-[.98] flex items-center justify-center"
-                    title="Search Dictionary">
-                    <i class="fa-solid fa-paper-plane text-lg"></i>
+                    class="btn-toolbar-style btn-primary-override absolute right-2 top-1/2 transform -translate-y-1/2 h-10 px-4"
+                    title="Search">
+                    <i class="fa-solid fa-arrow-right"></i>
                 </button>
             </div>
 
-            <div id="definition-output" class="p-6 bg-[#0d0d0d] border border-[#1a1a1a] rounded-lg min-h-[30vh]">
-                <p class="text-lg text-gray-400 text-center">
-                    Enter a word above and hit **Search** or **Enter** to look up its definition, pronunciation, and synonyms using the dictionary API.
-                </p>
+            <div id="definition-output" class="dictionary-content-box">
+                <div class="h-full flex flex-col items-center justify-center text-gray-500 space-y-4 pt-12 opacity-50">
+                    <i class="fa-solid fa-book-open fa-3x mb-2"></i>
+                    <p class="text-lg font-light">Enter a word above to begin.</p>
+                </div>
             </div>
             
         </div>
     </div>
 
     <script type="module">
-        // --- Firebase Core Imports ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        
-        // --- CONFIGURATION IMPORT ---
-        // NOTE: This assumes you have a firebase-config.js file one level up (../)
+        import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { firebaseConfig } from "../firebase-config.js"; 
-        
-        // --- Canvas Global Variables (MANDATORY USE) ---
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const rawFirebaseConfig = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        
-        let config = firebaseConfig;
-        if (rawFirebaseConfig) {
-            try {
-                config = JSON.parse(rawFirebaseConfig);
-            } catch (e) {
-                console.error("Failed to parse __firebase_config:", e);
-            }
-        }
 
-        // --- Initialize Firebase ---
-        const app = initializeApp(config);
+        // --- Firebase Setup ---
+        const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
+        
+        // --- Canvas Global Variables Support ---
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         // --- DOM Elements ---
         const pageContent = document.getElementById('page-content');
+        const loadingScreen = document.getElementById('loading-screen');
         const searchInput = document.getElementById('search-input');
         const searchButton = document.getElementById('search-button');
         const definitionOutput = document.getElementById('definition-output');
         
         // --- DICTIONARY API LOGIC ---
         
-        /**
-         * Fetches the definition for a given word using the dictionaryapi.dev API.
-         * @param {string} word The word to look up.
-         */
         async function fetchDefinition(word) {
             const trimmedWord = word.trim().toLowerCase();
             if (!trimmedWord) return;
 
-            // 1. Set loading state and clear input field (UPDATED to indigo)
+            // Loading State
             definitionOutput.innerHTML = `
-                <p class="text-xl text-indigo-400 text-center flex items-center justify-center space-x-2">
-                    <i class="fa-solid fa-spinner fa-spin mr-2"></i><span>Searching for '${trimmedWord}'...</span>
-                </p>
+                <div class="h-full flex flex-col items-center justify-center pt-12">
+                    <i class="fa-solid fa-spinner fa-spin fa-2x text-indigo-500 mb-4"></i>
+                    <p class="text-lg font-light text-gray-400">Searching for '${trimmedWord}'...</p>
+                </div>
             `;
-            searchInput.value = trimmedWord; // Set the input field to the word being searched
+            searchInput.value = trimmedWord;
 
             try {
                 const url = `https://api.dictionaryapi.dev/api/v2/entries/en/${trimmedWord}`;
                 const response = await fetch(url);
 
                 if (!response.ok) {
-                    // API returns 404 for words not found
                     if (response.status === 404) {
                         definitionOutput.innerHTML = `
-                            <p class="text-xl text-red-400 text-center">
-                                Sorry, we couldn't find a definition for <strong>"${trimmedWord}"</strong>. Please check the spelling.
-                            </p>
+                             <div class="h-full flex flex-col items-center justify-center pt-12">
+                                <i class="fa-solid fa-circle-exclamation fa-2x text-red-400 mb-4"></i>
+                                <p class="text-lg text-gray-400">No definition found for <strong>"${trimmedWord}"</strong>.</p>
+                            </div>
                         `;
                     } else {
-                        // Handle other HTTP errors
                         throw new Error(`HTTP error! Status: ${response.status}`);
                     }
                     return;
@@ -342,166 +268,102 @@
             } catch (error) {
                 console.error("Fetch error:", error);
                 definitionOutput.innerHTML = `
-                    <p class="text-xl text-red-400 text-center">
-                        An unexpected error occurred while fetching the definition. Please try again later.
-                    </p>
+                    <div class="text-center pt-12">
+                        <p class="text-red-400">An unexpected error occurred. Please try again later.</p>
+                    </div>
                 `;
             }
         }
 
-        /**
-         * Replaces standalone words (3+ chars) in the definition text with clickable spans.
-         * Excludes common function words.
-         * @param {string} text The definition text.
-         * @returns {string} The text with clickable links.
-         */
         function highlightDefinitionText(text) {
-            // List of common short words to exclude from linking
-            const commonWords = ['the', 'and', 'but', 'not', 'for', 'with', 'from', 'that', 'this', 'have', 'when', 'what', 'which', 'will', 'was', 'are', 'you', 'can', 'one', 'use', 'any', 'all', 'out', 'into', 'upon', 'like', 'than', 'only', 'much'];
+            const commonWords = ['the', 'and', 'but', 'not', 'for', 'with', 'from', 'that', 'this', 'have', 'when', 'what', 'which', 'will', 'was', 'are', 'you', 'can', 'one', 'use', 'any', 'all', 'out', 'into', 'upon', 'like', 'than', 'only', 'much', 'a', 'an', 'or'];
             
-            // Regex to find standalone words (alphabetic characters, 3+ chars) surrounded by non-word chars
             return text.replace(/\b([a-zA-Z]{3,})\b/g, (match) => {
-                if (commonWords.includes(match.toLowerCase())) {
-                    return match;
-                }
-
-                // Wrap the word in a clickable span. (UPDATED to indigo)
-                return `<span 
-                            class="highlighted-word text-indigo-400 hover:text-indigo-200 cursor-pointer font-medium" 
-                            data-word="${match.toLowerCase()}">${match}</span>`;
+                if (commonWords.includes(match.toLowerCase())) return match;
+                return `<span class="highlighted-word" data-word="${match.toLowerCase()}">${match}</span>`;
             });
         }
 
-
-        /**
-         * Renders the definition data onto the page, with updated styling for definitions and synonyms.
-         * @param {string} word The word being displayed.
-         * @param {Array<Object>} data The array of definition objects from the API.
-         */
         function displayDefinition(word, data) {
-            if (!data || data.length === 0) {
-                definitionOutput.innerHTML = `<p class="text-xl text-red-400 text-center">No definition data available for "${word}".</p>`;
-                return;
-            }
+            if (!data || data.length === 0) return;
 
             const entry = data[0];
-            // Find the best phonetic representation or default to 'N/A'
-            const phoneticText = entry.phonetic || entry.phonetics?.find(p => p.text)?.text || 'N/A';
+            const phoneticText = entry.phonetic || entry.phonetics?.find(p => p.text)?.text || '';
             
             let htmlContent = `
-                <div class="space-y-6">
-                    <h2 class="text-4xl font-semibold text-indigo-400 capitalize mb-1">${word}</h2>
-                    <p class="text-xl text-gray-400">
-                        <span class="pronunciation-text" title="Pronunciation">${phoneticText}</span>
-                    </p>
-                    <hr class="border-zinc-700" />
+                <div class="space-y-6 fade-in">
+                    <div class="border-b border-[#252525] pb-4">
+                        <h2 class="text-4xl text-indigo-400 capitalize mb-2 font-normal">${word}</h2>
+                        ${phoneticText ? `<p class="text-xl text-gray-500 pronunciation-text">${phoneticText}</p>` : ''}
+                    </div>
             `;
             
-            // Iterate through all parts of speech (meanings)
             entry.meanings.forEach(meaning => {
                 htmlContent += `
-                    <div class="space-y-4 mb-8">
-                        <h3 class="text-2xl font-semibold text-indigo-300 border-l-4 border-indigo-500 pl-3">
-                            ${meaning.partOfSpeech.charAt(0).toUpperCase() + meaning.partOfSpeech.slice(1)}
-                        </h3>
+                    <div class="space-y-3 mb-8">
+                        <div class="flex items-center gap-3">
+                            <span class="px-3 py-1 bg-[#1a1a1a] border border-[#333] rounded text-sm text-gray-400 font-medium uppercase tracking-wider">
+                                ${meaning.partOfSpeech}
+                            </span>
+                        </div>
                         
-                        <div class="ml-4">
-                            <h4 class="text-xl font-medium text-white mb-2 pb-1 border-b border-zinc-700">Definitions</h4>
-                            <ol class="list-decimal list-inside space-y-3 pl-4">
+                        <div class="ml-1 pl-4 border-l border-[#252525]">
+                            <ol class="space-y-4">
                 `;
 
-                // Display up to 3 definitions for brevity
                 meaning.definitions.slice(0, 3).forEach((def) => { 
-                    // Apply highlighting to the definition text
                     const highlightedDefinition = highlightDefinitionText(def.definition);
                     
                     htmlContent += `
-                        <li>
-                            <div class="space-y-1">
-                                <p class="text-gray-300">${highlightedDefinition}</p>
+                        <li class="text-gray-300 font-light leading-relaxed text-lg">
+                            ${highlightedDefinition}
+                            ${def.example ? `<div class="mt-2 text-sm text-gray-500 italic pl-2 border-l-2 border-[#333]">"${def.example}"</div>` : ''}
+                        </li>
                     `;
-                    
-                    // Conditionally add a separator line and use smaller text for the example
-                    if (def.example) {
-                        htmlContent += `
-                            <hr class="border-zinc-800 mt-2 mb-1 w-full" /> 
-                            <p class="text-sm text-gray-500 italic">e.g. "${def.example}"</p>
-                        `;
-                    }
-                    
-                    htmlContent += `</div></li>`;
                 });
 
-                htmlContent += `</ol></div>`; // Close definitions ol and surrounding div
-                
-                // Display synonyms if available with special pill-shaped styling
+                htmlContent += `</ol>`;
+
                 if (meaning.synonyms && meaning.synonyms.length > 0) {
-                    // Mapping synonyms into pill-shaped tags (UPDATED to indigo theme)
-                    const synonymTags = meaning.synonyms.slice(0, 5).map(s => 
-                        `<span 
-                            class="px-3 py-1 bg-[rgba(79,70,229,0.1)] text-indigo-300 rounded-lg text-sm font-semibold cursor-pointer hover:bg-[rgba(79,70,229,0.15)] transition synonym-tag"
-                            data-word="${s}"
-                        >${s}</span>`
-                    ).join(' ');
+                    const synonymTags = meaning.synonyms.slice(0, 6).map(s => 
+                        `<span class="synonym-tag cursor-pointer hover:text-indigo-400 hover:underline decoration-indigo-500/50 underline-offset-4 transition-colors" data-word="${s}">${s}</span>`
+                    ).join('<span class="text-gray-600 mx-2">•</span>');
 
                     htmlContent += `
-                        <div class="ml-4 pt-4 p-3 bg-zinc-800 border border-indigo-700 rounded-lg shadow-inner">
-                            <p class="text-lg text-white font-bold mb-2">Synonyms:</p>
-                            <p class="flex flex-wrap gap-2">${synonymTags}</p>
+                        <div class="mt-4 pt-3 flex items-start gap-2 text-sm text-gray-500">
+                            <span class="font-medium uppercase text-xs mt-1">Synonyms:</span>
+                            <div class="flex flex-wrap items-center">${synonymTags}</div>
                         </div>
                     `;
                 }
 
-                htmlContent += `</div>`; // Close meaning div
+                htmlContent += `</div></div>`; 
             });
 
-            htmlContent += `</div>`; // Close space-y-6 div
+            htmlContent += `</div>`;
             definitionOutput.innerHTML = htmlContent;
         }
 
-        // --- EVENT HANDLERS ---
-        
-        /** Handler for Enter key press in the search box */
-        function handleInputKeyDown(event) {
-            if (event.key === 'Enter') {
-                handleSearchClick();
-            }
-        }
-        
-        /** Handler for Search button click */
-        function handleSearchClick() {
-            const query = searchInput.value.trim().toLowerCase();
-            if (query) {
-                fetchDefinition(query);
-            } else {
-                definitionOutput.innerHTML = `<p class="text-lg text-gray-400 text-center">Please enter a word to search.</p>`;
-            }
-        }
-
-
         // --- EVENT LISTENERS ---
-        searchInput.addEventListener('keydown', handleInputKeyDown);
-        searchButton.addEventListener('click', handleSearchClick);
+        function handleSearch() {
+            const query = searchInput.value.trim().toLowerCase();
+            if (query) fetchDefinition(query);
+        }
 
-        // --- Event Delegation for Clickable Words (Synonyms and Definition Highlights) ---
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') handleSearch();
+        });
+        
+        searchButton.addEventListener('click', handleSearch);
+
         definitionOutput.addEventListener('click', (event) => {
             const target = event.target;
-            let wordToSearch = null;
-
-            if (target.classList.contains('synonym-tag')) {
-                wordToSearch = target.getAttribute('data-word');
-            } else if (target.classList.contains('highlighted-word')) {
-                wordToSearch = target.getAttribute('data-word');
-            }
-            
-            if (wordToSearch) {
-                // Perform the new search
-                fetchDefinition(wordToSearch);
+            if (target.dataset.word) {
+                fetchDefinition(target.dataset.word);
             }
         });
 
-
-        // --- Core Authentication and Redirection Logic (Copied from base-template.html) ---
+        // --- AUTHENTICATION ---
         async function initializeAuth() {
             try {
                 if (initialAuthToken) {
@@ -510,29 +372,23 @@
                     await signInAnonymously(auth);
                 }
             } catch (error) {
-                console.error("Initial Firebase authentication failed:", error);
+                console.error("Auth Error:", error);
             }
         }
 
-        // 1. Listen for the authentication state change
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // User is authenticated
-                console.log("User authenticated. UID:", user.uid);
-                
-                pageContent.classList.remove('hidden');
-                // Added from notes.html to ensure content displays correctly
-                pageContent.style.display = 'flex'; 
-                pageContent.style.flexDirection = 'column';
-
+                loadingScreen.style.opacity = '0';
+                setTimeout(() => {
+                    loadingScreen.style.display = 'none';
+                    pageContent.classList.remove('hidden');
+                    pageContent.style.display = 'flex'; 
+                }, 300);
             } else {
-                // User is NOT authenticated. Redirect to login/index page.
-                console.log("User not authenticated. Redirecting to ../index.html...");
                 window.location.href = '../index.html'; 
             }
         });
 
-        // 2. Start the authentication process on load
         initializeAuth();
         
     </script>
