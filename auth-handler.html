@@ -73,26 +73,7 @@
     const statusMessage = document.getElementById('statusMessage');
 
     // --- Utility Functions (Copied from authentication.html) ---
-    const isUserBetaTester = async (email) => {
-        if (!email) return false;
-        const normalizedEmail = email.toLowerCase();
-        if (normalizedEmail === "4simpleproblems@gmail.com") return true;
 
-        const betaTestersRef = doc(db, 'artifacts', 'default-app-id', 'public', 'data', 'app_config', 'beta_testers');
-        
-        try {
-            const docSnap = await getDoc(betaTestersRef);
-            if (docSnap.exists()) {
-                const emails = docSnap.data()?.emails || [];
-                const normalizedEmails = emails.map(e => String(e).toLowerCase());
-                return normalizedEmails.includes(normalizedEmail);
-            }
-            return false;
-        } catch (error) { 
-            console.error("Error checking beta tester status:", error);
-            return false; 
-        }
-    };
 
     // --- Main Handler ---
     document.addEventListener('DOMContentLoaded', () => {
@@ -124,16 +105,7 @@
             .then(async (userCredential) => {
                 const user = userCredential.user;
                 
-                // --- BETA TESTER CHECK ---
-                const isBetaTester = await isUserBetaTester(user.email);
-                if (!isBetaTester) {
-                    const googleFormLink = "https://docs.google.com/forms/d/e/1FAIpQLSdWdL4RTE8p7t7gMGYpIHYiYcV__sNa8vOlwOCQyoolKuQimQ/viewform?usp=publish-editor";
-                    displayError('Beta Access Required', `This account is not on the beta tester list. <a href="${googleFormLink}" target="_blank" class="underline font-bold text-yellow-300">Apply for beta access here</a>.`);
-                    
-                    // Crucial: Sign out the non-beta user
-                    await signOut(auth);
-                    return; 
-                }
+
                 
                 // --- Check for User Document Existence ---
                 const userDoc = await getDoc(getUserDocRef(user.uid));
