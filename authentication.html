@@ -183,6 +183,10 @@
                         <img src="images/microsoft.png" alt="Microsoft Logo" class="w-5 h-5 mr-3">
                         Continue with Microsoft
                     </button>
+                    <button id="discordAuthBtn" class="btn-social flex items-center justify-center w-full max-w-md p-3 bg-custom-dark-gray text-custom-white-gray border border-custom-medium-gray rounded-xl font-normal cursor-pointer mb-3">
+                        <img src="images/discord.png" alt="Discord Logo" class="w-5 h-5 mr-3">
+                        Continue with Discord
+                    </button>
                     
                     <p class="text-xs italic text-custom-light-gray text-center max-w-md mt-4 leading-relaxed font-light">
                         By continuing, you agree to our 
@@ -389,6 +393,20 @@
             return null;
         };
 
+        // --- Discord Custom Auth Constants (NEW) ---
+        const DISCORD_CLIENT_ID = '1419262893941063866'; // Your provided ID
+        const DISCORD_REDIRECT_URI = 'https://us-central1-project-zirconium.cloudfunctions.net/discordCallback';
+        const DISCORD_SCOPE = 'identify%20email'; // URL-encoded scopes
+        
+        // --- Discord Login Handler (NEW) ---
+        const handleDiscordLogin = () => {
+            // Construct the Discord authorization URL using the constant variables
+            const discordAuthUrl = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${DISCORD_REDIRECT_URI}&response_type=code&scope=${DISCORD_SCOPE}`;
+            
+            // Redirect the user to the Discord login page
+            window.location.href = discordAuthUrl;
+        };
+
         // --- Event Listener Setup ---
         document.addEventListener('DOMContentLoaded', () => {
             // Initial view
@@ -575,6 +593,7 @@
             document.getElementById('googleAuthBtn').addEventListener('click', () => handleSocialAuth(new GoogleAuthProvider()));
             document.getElementById('githubAuthBtn').addEventListener('click', () => handleSocialAuth(new GithubAuthProvider()));
             document.getElementById('microsoftAuthBtn').addEventListener('click', () => handleSocialAuth(new OAuthProvider('microsoft.com')));
+            document.getElementById('discordAuthBtn').addEventListener('click', handleDiscordLogin);
         });
     </script>
 </body>
