@@ -477,6 +477,9 @@
         // This file MUST exist at ../site-mapping.js for import/export to work
         import { siteMapping } from "../site-mapping.js";
 
+        // --- Canvas Global Variables (MANDATORY USE from beta-settings.html) ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
 
         if (!firebaseConfig || !firebaseConfig.apiKey) {
             console.error("FATAL ERROR: Firebase configuration is missing or invalid.");
