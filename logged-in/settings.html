@@ -13,9 +13,7 @@
     <link rel="stylesheet" href="https://kit-pro.fontawesome.com/releases/v7.0.1/css/pro.min.css" media="all">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="../navigation.js"></script>
-    <script src="../injector.js"></script>
-    <script src="../panic-key.js"></script>
-    <script src="../url-changer.js" defer></script> 
+    <script src="../injector.js"></script> 
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
 
@@ -691,9 +689,6 @@
                 },
             ]);
         };
-
-        // --- Global State and Element References ---
-        const sidebarTabs = document.querySelectorAll('.settings-tab');
         const mainView = document.getElementById('settings-main-view');
         let currentUser = null; // To store the authenticated user object
         

@@ -155,11 +155,11 @@ let db;
 
 // --- Self-invoking function to encapsulate all logic ---
 (function() {
-    // Stop execution if Firebase config is not provided
-    if (!FIREBASE_CONFIG || !FIREBASE_CONFIG.apiKey) {
-        console.error("Firebase configuration is missing! Please paste your config into navigation.js.");
-        return;
-    }
+    // This check is now performed after firebaseConfig is imported within the 'run' function.
+    // if (!FIREBASE_CONFIG || !FIREBASE_CONFIG.apiKey) {
+    //     console.error("Firebase configuration is missing! Please paste your config into navigation.js.");
+    //     return;
+    // }
 
     // --- 1. DYNAMICALLY LOAD EXTERNAL ASSETS ---
 
@@ -483,7 +483,7 @@ let db;
 
 
     // --- 2. INITIALIZE FIREBASE AND RENDER NAVBAR ---
-    const initializeApp = (pages) => {
+    const initializeApp = (pages, firebaseConfig) => {
         // --- Create a div for the navbar to live in if it doesn't exist.
         if (!document.getElementById('navbar-container')) {
             const navbarDiv = document.createElement('div');
@@ -507,7 +507,7 @@ let db;
         // --- End Theme Loading ---
 
         // Initialize Firebase with the compat libraries
-        const app = firebase.initializeApp(FIREBASE_CONFIG);
+        const app = firebase.initializeApp(firebaseConfig);
         auth = firebase.auth();
         db = firebase.firestore();
 
