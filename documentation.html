@@ -18,113 +18,42 @@
     
     <style>
         :root {
-            --geist-foreground: 255, 255, 255;
-            --geist-background: 0, 0, 0;
-        }
-        .dark { color-scheme: dark; }
-        body { font-family: 'Geist', sans-serif; }
-        .gradient-text {
-            /* Copied from index (2).html */
-            background-image: linear-gradient(90deg, #0070f3, #f81ce5); 
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        
-        /* Enforce bold text to stand out using the strong tag (Matching legal.html style) */
-        strong {
-            font-weight: 450; /* Semi-bold weight from Geist font */
+            --bg-page: #040404;
+            --bg-container: #000000;
+            --border-color: #333;
+            --text-primary: #c0c0c0;
+            --text-secondary: #a0a0a0;
         }
 
-        /* Aspect Ratio Container - 16:9 */
-        .image-wrapper {
-            /* General styling for the new container */
-            background-color: #1a1a1a;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            cursor: pointer;
-            transition: box-shadow 0.3s ease;
-            position: relative;
-        }
-        .image-wrapper:hover {
-            box-shadow: 0 0 0 2px #0070f3, 0 4px 6px rgba(0, 0, 0, 0.2);
+        body { 
+            font-family: 'Geist', sans-serif; 
+            background-color: var(--bg-page);
+            color: var(--text-primary);
+            font-weight: 300;
         }
 
-        .image-container-16-9 {
-            position: relative;
+        h1, h2, h3, .font-bold, .font-semibold, strong {
+            font-weight: 400 !important;
+        }
+
+        .documentation-section {
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-container);
+            padding: 2rem;
+            border-radius: 32px;
+            margin-bottom: 2rem;
+        }
+
+        .image-placeholder {
+            border: 2px dashed var(--border-color);
+            background-color: #111;
+            border-radius: 16px;
             width: 100%;
-            padding-top: 56.25%; /* 16:9 aspect ratio */
-        }
-        .image-container-16-9 img {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover; 
-        }
-
-        /* FULL-VIEW MODAL (REPLICATED FROM DAILYPHOTO) */
-        #photo-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.95); /* Dark background */
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            cursor: zoom-out;
-            padding: 20px;
-        }
-
-        #photo-modal-content {
-            /* Ensures it doesn't cover the entire screen, but looks good */
-            max-width: 90%; 
-            max-height: 90vh; 
+            aspect-ratio: 16 / 9;
             display: flex;
-            flex-direction: column;
-            align-items: center;
             justify-content: center;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
-            position: relative;
-        }
-
-        #modal-image {
-            display: block;
-            width: auto;
-            max-width: 100%; 
-            height: auto;
-            max-height: 80vh; 
-            object-fit: contain; 
-            border-radius: 4px;
-        }
-
-        #modal-caption {
-            color: white;
-            padding: 10px 0 0 0;
-            text-align: center;
-            font-size: 1rem;
-            max-width: 100%;
-        }
-
-        #modal-close-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            color: white;
-            font-size: 24px;
-            cursor: pointer;
-            z-index: 1001;
-            opacity: 0.8;
-            transition: opacity 0.2s;
-        }
-        #modal-close-btn:hover {
-            opacity: 1;
+            align-items: center;
+            color: var(--text-secondary);
         }
     </style>
 <!-- Google tag (gtag.js) -->
@@ -147,261 +76,70 @@
         </div>
     </div>
     
-    <main>
-        <section class="text-center py-12 sm:py-20 border-b border-gray-900">
-            <div class="mx-auto max-w-4xl px-4">
-                <h1 class="text-5xl sm:text-6xl font-semibold tracking-tighter mb-4 leading-tight">
-                    <span class="gradient-text font-bold">4SP Documentation</span>
-                </h1>
-                <p class="text-xl text-gray-400 max-w-2xl mx-auto mb-6">
-                    Your comprehensive guide to getting the most out of the <strong>Essential Student Toolkit</strong>.
-                </p>
-            </div>
-        </section>
+    <main class="py-16 px-4">
+        <div class="mx-auto max-w-4xl text-center mb-16">
+            <h1 class="text-5xl sm:text-6xl font-semibold tracking-tighter mb-4 leading-tight">
+                4SP Documentation
+            </h1>
+            <p class="text-xl text-gray-400 max-w-2xl mx-auto">
+                Your comprehensive guide to getting the most out of the <strong>Essential Student Toolkit</strong>.
+            </p>
+        </div>
 
-        <section id="getting-started" class="py-16 mx-auto max-w-7xl px-4 space-y-12">
-            <h2 class="text-4xl font-medium mb-8 border-b border-gray-800 pb-4">1. Getting Started</h2>
-            
-            <div class="lg:grid lg:grid-cols-2 lg:gap-12">
-                <div>
-                    <h3 class="text-2xl font-medium mb-3 mt-2"><i class="fas fa-arrow-right-to-bracket text-blue-400 mr-2"></i> Account Authentication</h3>
-                    <p class="text-lg text-gray-400">
-                        Access the full suite of tools by logging into or creating your 4SP account. The <strong>Authentication</strong> page supports both standard <strong>email/password</strong> registration and social sign-in methods like <strong>Google</strong>, <strong>GitHub</strong>, and <strong>Microsoft</strong>.
-                    </p>
-                </div>
-                <div>
-                    <h3 class="text-2xl font-medium mb-3 mt-2"><i class="fas fa-envelope-circle-check text-blue-400 mr-2"></i> Email Verification</h3>
-                    <p class="text-lg text-gray-400">
-                        Only <strong>email/password accounts</strong> must verify their email address to complete registration. Accounts created using <strong>social sign-in methods</strong> (Google, GitHub, Microsoft) are typically <strong>pre-verified</strong> and do not require this step.
-                    </p>
-                </div>
+        <div class="mx-auto max-w-7xl">
+            <div class="documentation-section">
+                <h2 class="text-3xl font-medium mb-4">index.html</h2>
+                <div class="image-placeholder"><img src="doc-images/index.html.png" alt="Screenshot of index.html" class="w-full rounded-xl"></div>
+            </div>
+            <div class="documentation-section">
+                <h2 class="text-3xl font-medium mb-4">authentication.html</h2>
+                <div class="image-placeholder"><img src="doc-images/authentication.html.png" alt="Screenshot of authentication.html" class="w-full rounded-xl"></div>
+            </div>
+            <div class="documentation-section">
+                <h2 class="text-3xl font-medium mb-4">logged-in/dashboard.html</h2>
+                <div class="image-placeholder"><img src="doc-images/logged-in/dashboard.html.png" alt="Screenshot of logged-in/dashboard.html" class="w-full rounded-xl"></div>
+            </div>
+            <div class="documentation-section">
+                <h2 class="text-3xl font-medium mb-4">logged-in/settings.html</h2>
+                <div class="image-placeholder"><img src="doc-images/logged-in/settings.html.png" alt="Screenshot of logged-in/settings.html" class="w-full rounded-xl"></div>
             </div>
 
-            </section>
-
-        <hr class="border-gray-900">
-
-        <section id="pin-button-feature" class="py-16 mx-auto max-w-7xl px-4 space-y-12">
-            <h2 class="text-4xl font-medium mb-8 border-b border-gray-800 pb-4">2. Navigation Features</h2>
-            
-            <div class="lg:grid lg:grid-cols-2 lg:gap-12 items-center">
-                <div class="lg:pr-4 order-2 lg:order-1">
-                    <h3 class="text-2xl font-medium mb-3 mt-2"><i class="fas fa-thumbtack text-green-400 mr-2"></i> The Pin Button</h3>
-                    <p class="text-lg text-gray-400 mb-4">
-                        The Pin Button is a <strong>persistent Quality-of-Life feature</strong> located in the navigation bar, offering quick, one-click access to your <strong>most-used page</strong>.
-                    </p>
-                    <ul class="text-gray-400 space-y-2 ml-4">
-                        <li><strong>Pinning & Repinning:</strong> Click the Pin Button on any page to pin that page. The <strong>Repin option</strong> is available via <strong>right-click</strong> if the current page is different from the pinned page, or if no page is currently pinned.</li>
-                        <li><strong>Options Menu:</strong> You can <strong>right-click</strong> on the Pin Button to access its context menu.</li>
-                        <li><strong>Visibility:</strong> The button can be <strong>hidden</strong> via the right-click menu. If hidden, a <strong>Show Pin Button</strong> option appears in your main user dropdown menu.</li>
-                    </ul>
-                </div>
-                <div class="relative p-4 rounded-xl border border-green-800/50 bg-gray-900 flex flex-col items-center justify-center order-1 lg:order-2 mb-6 lg:mb-0">
-                    <div 
-                        class="image-wrapper w-full" 
-                        onclick="openModal('doc-images/pin-menu.png', 'Pin Button Context Menu')"
-                        role="button"
-                        tabindex="0"
-                    >
-                        <div class="image-container-16-9">
-                             <img src="doc-images/pin-menu.png" alt="Screenshot of the Pin Button context menu with Repin and Hide options.">
-                        </div>
-                    </div>
-                    <p class="text-sm text-gray-400 mt-3 font-medium">Pin Button Context Menu</p>
-                </div>
+            <div class="documentation-section">
+                <h2 class="text-3xl font-medium mb-4">logged-in/dailyphoto.html</h2>
+                <div class="image-placeholder"><img src="doc-images/logged-in/dailyphoto.html.png" alt="Screenshot of logged-in/dailyphoto.html" class="w-full rounded-xl"></div>
             </div>
-        </section>
-
-        <hr class="border-gray-900">
-
-        <section id="core-apps" class="py-16 mx-auto max-w-7xl px-4 space-y-16">
-            <h2 class="text-4xl font-medium border-b border-gray-800 pb-4">3. Core Applications</h2>
-
-            <div id="dashboard" class="border border-gray-900 p-8 rounded-xl bg-gray-950/70">
-                <h3 class="text-3xl font-medium mb-4"><i class="fas fa-gauge-high text-red-400 mr-2"></i> Dashboard</h3>
-                <div class="lg:grid lg:grid-cols-3 lg:gap-8 items-center">
-                    <div class="lg:col-span-2">
-                        <p class="text-lg text-gray-400 mb-4">
-                            The primary landing page for <strong>authenticated users</strong>. It provides a clean, distraction-free interface that prominently displays the <strong>current date and time</strong>. This allows you to quickly verify your access and get a clear sense of the time without navigating away from the main application environment.
-                        </p>
-                        <ul class="text-gray-400 space-y-2 ml-4">
-                            <li><strong>Default Landing:</strong> The page users are redirected to upon <strong>successful sign-in</strong>.</li>
-                            <li><strong>Time Display:</strong> Features a real-time, high-contrast <strong>digital clock</strong> display.</li>
-                        </ul>
-                    </div>
-                    <div class="relative flex flex-col items-center justify-center mt-6 lg:mt-0">
-                        <div 
-                            class="image-wrapper w-full" 
-                            onclick="openModal('doc-images/dashboard.png', '4SP Dashboard Interface')"
-                            role="button"
-                            tabindex="0"
-                        >
-                            <div class="image-container-16-9">
-                                <img src="doc-images/dashboard.png" alt="Screenshot of the Dashboard UI showing the date and time.">
-                            </div>
-                        </div>
-                        <p class="text-sm text-gray-400 mt-3 font-medium">4SP Dashboard Interface</p>
-                    </div>
-                </div>
+            <div class="documentation-section">
+                <h2 class="text-3xl font-medium mb-4">logged-in/countdowns.html</h2>
+                <div class="image-placeholder"><img src="doc-images/logged-in/countdowns.html.png" alt="Screenshot of logged-in/countdowns.html" class="w-full rounded-xl"></div>
             </div>
-            
-            <hr class="border-gray-900">
-
-            <div id="dailyphoto" class="border border-gray-900 p-8 rounded-xl bg-gray-950/70">
-                <h3 class="text-3xl font-medium mb-4"><i class="fas fa-camera text-blue-400 mr-2"></i> DailyPhoto</h3>
-                <div class="lg:grid lg:grid-cols-3 lg:gap-8 items-center">
-                    <div class="lg:col-span-2 order-2 lg:order-1">
-                        <p class="text-lg text-gray-400 mb-4">
-                            A social feature that encourages mindful sharing by limiting users to <strong>five photos per day</strong> to share with their friends. This creates a focused, high-quality sharing experience.
-                        </p>
-                        <ul class="text-gray-400 space-y-2 ml-4">
-                            <li><strong>Friend System:</strong> Users can send and manage <strong>friend requests</strong> to create a private sharing circle.</li>
-                            <li><strong>Daily Limit:</strong> Users can only upload a maximum of <strong>five photos</strong> within a 24-hour period.</li>
-                            <li><strong>Profile Display:</strong> Displays shared photos from your friends in a clean, scrollable feed.</li>
-                        </ul>
-                    </div>
-                    <div class="relative flex flex-col items-center justify-center mt-6 lg:mt-0 order-1 lg:order-2">
-                        <div 
-                            class="image-wrapper w-full" 
-                            onclick="openModal('doc-images/dailyphoto.png', 'DailyPhoto Upload & Feed')"
-                            role="button"
-                            tabindex="0"
-                        >
-                            <div class="image-container-16-9">
-                                <img src="doc-images/dailyphoto.png" alt="Screenshot of the DailyPhoto upload and friend feed interface.">
-                            </div>
-                        </div>
-                        <p class="text-sm text-gray-400 mt-3 font-medium">DailyPhoto Upload & Feed</p>
-                    </div>
-                </div>
+            <div class="documentation-section">
+                <h2 class="text-3xl font-medium mb-4">logged-in/messenger-tutorial.html</h2>
+                <div class="image-placeholder"><img src="doc-images/logged-in/messenger-tutorial.html.png" alt="Screenshot of logged-in/messenger-tutorial.html" class="w-full rounded-xl"></div>
+            </div>
+            <div class="documentation-section">
+                <h2 class="text-3xl font-medium mb-4">logged-in/notes.html</h2>
+                <div class="image-placeholder"><img src="doc-images/logged-in/notes.html.png" alt="Screenshot of logged-in/notes.html" class="w-full rounded-xl"></div>
             </div>
 
-            <hr class="border-gray-900">
-
-            <div id="dictionary" class="border border-gray-900 p-8 rounded-xl bg-gray-950/70">
-                <h3 class="text-3xl font-medium mb-4"><i class="fas fa-book-open text-yellow-400 mr-2"></i> Interactive Dictionary</h3>
-                <div class="lg:grid lg:grid-cols-3 lg:gap-8 items-center">
-                    <div class="lg:col-span-2">
-                        <p class="text-lg text-gray-400 mb-4">
-                            A quick-reference utility for students, offering a simple interface for <strong>searching and displaying word definitions</strong>. It leverages the comprehensive <strong>dictionaryapi.dev</strong> service.
-                        </p>
-                        <ul class="text-gray-400 space-y-2 ml-4">
-                            <li><strong>Phonetics:</strong> Provides phonetic spellings and, where available, <strong>audio pronunciations</strong>.</li>
-                            <li><strong>Synonyms & Examples:</strong> Displays <strong>synonyms</strong>, <strong>antonyms</strong>, and <strong>example</strong> sentences for improved comprehension.</li>
-                            <li><strong>Part-of-Speech Grouping:</strong> Definitions are clearly organized by <strong>Part of Speech</strong> (e.g., Noun, Verb, Adjective).</li>
-                        </ul>
-                    </div>
-                    <div class="relative flex flex-col items-center justify-center mt-6 lg:mt-0">
-                        <div 
-                            class="image-wrapper w-full" 
-                            onclick="openModal('doc-images/dictionary.png', 'Interactive Dictionary Search')"
-                            role="button"
-                            tabindex="0"
-                        >
-                            <div class="image-container-16-9">
-                                <img src="doc-images/dictionary.png" alt="Screenshot of a dictionary search result with definitions and phonetics.">
-                            </div>
-                        </div>
-                        <p class="text-sm text-gray-400 mt-3 font-medium">Interactive Dictionary Search</p>
-                    </div>
-                </div>
+            <div class="documentation-section">
+                <h2 class="text-3xl font-medium mb-4">logged-in/weather.html</h2>
+                <div class="image-placeholder"><img src="doc-images/logged-in/weather.html.png" alt="Screenshot of logged-in/weather.html" class="w-full rounded-xl"></div>
+            </div>
+            <div class="documentation-section">
+                <h2 class="text-3xl font-medium mb-4">logged-in/soundboard.html</h2>
+                <div class="image-placeholder"><img src="doc-images/logged-in/soundboard.html.png" alt="Screenshot of logged-in/soundboard.html" class="w-full rounded-xl"></div>
+            </div>
+            <div class="documentation-section">
+                <h2 class="text-3xl font-medium mb-4">logged-in/dictionary.html</h2>
+                <div class="image-placeholder"><img src="doc-images/logged-in/dictionary.html.png" alt="Screenshot of logged-in/dictionary.html" class="w-full rounded-xl"></div>
             </div>
 
-            <hr class="border-gray-900">
-
-            <div id="notes" class="border border-gray-900 p-8 rounded-xl bg-gray-950/70">
-                <h3 class="text-3xl font-medium mb-4"><i class="fas fa-lock text-purple-400 mr-2"></i> Notes</h3>
-                <div class="lg:grid lg:grid-cols-3 lg:gap-8 items-center">
-                    <div class="lg:col-span-2 order-2 lg:order-1">
-                        <p class="text-lg text-gray-400 mb-4">
-                            A secure, simple note-taking application designed for privacy, featuring <strong>password-encrypted storage</strong> for your private notes.
-                        </p>
-                        <ul class="text-gray-400 space-y-2 ml-4">
-                            <li><strong>Client-Side Encryption:</strong> Uses the <strong>Crypto-JS</strong> library for secure encryption, meaning only you can read your notes.</li>
-                            <li><strong>Lock/Unlock:</strong> Notes are locked behind a user-defined <strong>password</strong>.</li>
-                            <li><strong>Autosave:</strong> Includes an <strong>autosave</strong> feature for a seamless note-taking experience.</li>
-                        </ul>
-                    </div>
-                    <div class="relative flex flex-col items-center justify-center mt-6 lg:mt-0 order-1 lg:order-2">
-                        <div 
-                            class="image-wrapper w-full" 
-                            onclick="openModal('doc-images/notes.png', 'Notes Application Interface')"
-                            role="button"
-                            tabindex="0"
-                        >
-                            <div class="image-container-16-9">
-                                <img src="doc-images/notes.png" alt="Screenshot of the Notes application in locked or editor state.">
-                            </div>
-                        </div>
-                        <p class="text-sm text-gray-400 mt-3 font-medium">Notes Application Interface</p>
-                    </div>
-                </div>
+            <div class="documentation-section">
+                <h2 class="text-3xl font-medium mb-4">logged-in/messenger-v2.html</h2>
+                <div class="image-placeholder"><img src="doc-images/logged-in/messenger-v2.html.png" alt="Screenshot of logged-in/messenger-v2.html" class="w-full rounded-xl"></div>
             </div>
 
-            <hr class="border-gray-900">
-
-            <div id="settings" class="border border-gray-900 p-8 rounded-xl bg-gray-950/70">
-                <h3 class="text-3xl font-medium mb-4"><i class="fas fa-gear text-cyan-400 mr-2"></i> Settings</h3>
-                <div class="lg:grid lg:grid-cols-3 lg:gap-8 items-center">
-                    <div class="lg:col-span-2">
-                        <p class="text-lg text-gray-400 mb-4">
-                            The central hub for managing your user account and configuring application options. <strong>Personalization features</strong> are managed here.
-                        </p>
-                        <ul class="text-gray-400 space-y-2 ml-4">
-                            <li><strong>Navigation Color:</strong> Customize your experience by selecting, <strong>saving, and restoring your desired navigation bar color</strong>.</li>
-                            <li><strong>Restore Defaults:</strong> Option to <strong>restore</strong> all saved settings to their default values.</li>
-                            <li><strong>Account Management:</strong> Links for managing your <strong>password</strong>, <strong>email</strong>, and <strong>social</strong> account connections.</li>
-                        </ul>
-                    </div>
-                    <div class="relative flex flex-col items-center justify-center mt-6 lg:mt-0">
-                        <div 
-                            class="image-wrapper w-full" 
-                            onclick="openModal('doc-images/settings-personalization.png', 'Settings Personalization Menu')"
-                            role="button"
-                            tabindex="0"
-                        >
-                            <div class="image-container-16-9">
-                                <img src="doc-images/settings-personalization.png" alt="Screenshot of the Settings page showing the navigation color picker UI.">
-                            </div>
-                        </div>
-                        <p class="text-sm text-gray-400 mt-3 font-medium">Settings Personalization Menu</p>
-                    </div>
-                </div>
-            </div>
-
-            <hr class="border-gray-900">
-
-            <div id="humanity-agent" class="border border-gray-900 p-8 rounded-xl bg-gray-950/70">
-                <h3 class="text-3xl font-medium mb-4"><i class="fas fa-wand-magic-sparkles text-green-400 mr-2"></i> Humanity Agent (AI)</h3>
-                <div class="lg:grid lg:grid-cols-3 lg:gap-8 items-center">
-                    <div class="lg:col-span-2 order-2 lg:order-1">
-                        <p class="text-lg text-gray-400 mb-4">
-                            A <strong>context-aware AI persona</strong> designed to assist with your educational needs.
-                        </p>
-                        <ul class="text-gray-400 space-y-2 ml-4">
-                            <li><strong>Activation:</strong> Quickly activate the agent using the <strong>Ctrl + \</strong> keyboard shortcut.</li>
-                            <li><strong>Dynamic Persona:</strong> Features an <strong>intelligent system instruction</strong> that automatically changes based on the nature of your query.</li>
-                            <li><strong>Web Search:</strong> Includes a <strong>Web Search</strong> toggle in the settings menu, allowing the agent to access <strong>up-to-date information</strong>.</li>
-                            <li><strong>KaTeX Support:</strong> Renders mathematical formulas and equations using <strong>KaTeX</strong> for <strong>high-quality display</strong>.</li>
-                        </ul>
-                    </div>
-                    <div class="relative flex flex-col items-center justify-center mt-6 lg:mt-0 order-1 lg:order-2">
-                        <div 
-                            class="image-wrapper w-full" 
-                            onclick="openModal('doc-images/humanity-ai.png', 'Humanity Agent (AI) Chat')"
-                            role="button"
-                            tabindex="0"
-                        >
-                            <div class="image-container-16-9">
-                                <img src="doc-images/humanity-ai.png" alt="Screenshot of the Humanity Agent AI chat interface.">
-                            </div>
-                        </div>
-                        <p class="text-sm text-gray-400 mt-3 font-medium">Humanity Agent (AI) Chat</p>
-                    </div>
-                </div>
-            </div>
-
-        </section>
+        </div>
     </main>
     
     <script>
