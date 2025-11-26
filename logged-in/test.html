@@ -9,7 +9,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     
@@ -19,7 +18,18 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
 
     <style>
-        /* --- BASE STYLING (MATCHING notes.html) --- */
+        /* --- CUSTOM COLORS (for status display) --- */
+        :root {
+            /* Blocked/Denied Colors */
+            --deny-bg: #400d0d;      /* Dark Red Background */
+            --deny-border: #801a1a;  /* Light Red Outline */
+            
+            /* Allowed/Unblocked Colors */
+            --allow-bg: #0d400d;     /* Dark Green Background */
+            --allow-border: #1a801a; /* Light Green Outline */
+        }
+
+        /* --- FONT & BASE STYLING (MATCHING notes.html) --- */
         body { 
             font-family: 'Geist', sans-serif; 
             background-color: #070707; 
@@ -32,12 +42,17 @@
             display: flex;
             flex-direction: column;
             align-items: center; 
-            justify-content: flex-start; /* Keep content at the top */
-            padding-top: 4rem; /* Space for the fixed header */
+            justify-content: flex-start; 
+            padding-top: 4rem; 
         }
 
+        /* REQUIRED CHANGE: Set max boldness to 500 */
         h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
-            font-weight: 400 !important;
+            font-weight: 500 !important; /* Set boldest to 500 */
+        }
+        /* Custom class for inline bolding without asterisks */
+        .custom-bold {
+            font-weight: 500 !important;
         }
 
         /* --- THEME-AWARE STYLES (MATCHING notes.html) --- */
@@ -59,30 +74,30 @@
             border-color: var(--menu-border, #fff);
             color: var(--tab-hover-text, #ffffff);
         }
-        /* Primary Button Style (Used for Check Status button) */
+        /* Primary Button Style (The check button) */
         .btn-toolbar-style.btn-primary-override {
-            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
-            border: 1px solid var(--tab-active-border, #4f46e5);
-            color: var(--tab-active-text, #4f46e5);
-            /* Make it full width and centered */
+            /* REQUIRED CHANGE: Black background, lighter outline */
+            background-color: #000000;
+            border: 1px solid #707070; /* Light border color */
+            color: #d1d5db; /* Light text color */
             width: 100%;
             justify-content: center;
         }
         .btn-toolbar-style.btn-primary-override:hover {
-            background-color: var(--tab-active-hover-bg, rgba(79, 70, 229, 0.15));
-            border-color: var(--tab-active-hover-border, #6366f1);
-            color: var(--tab-active-hover-text, #6366f1);
+            /* REQUIRED CHANGE: Hover keeps black background, lightens border/text */
+            background-color: #1a1a1a;
+            border-color: #ffffff;
+            color: #ffffff;
         }
         
         /* --- MAIN TESTER UI STYLES --- */
         #page-content {
-            /* Centers the form container within the rest of the vertical space (for 16:9) */
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             flex-grow: 1; 
-            min-height: calc(100vh - 4rem); /* Header height */
+            min-height: calc(100vh - 4rem); 
         }
         
         #tester-container {
@@ -91,9 +106,9 @@
             border-radius: 1rem;
             padding: 40px;
             width: 90%; 
-            max-width: 600px; /* Sensible max-width for 16:9 form */
+            max-width: 600px;
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
-            margin-bottom: 50px; /* Add some margin at the bottom */
+            margin-bottom: 50px;
         }
         .input-group {
             margin-bottom: 20px;
@@ -123,17 +138,17 @@
             outline: none;
         }
         
-        /* Check Button disabled state using .btn-primary-override colors */
+        /* Check Button disabled state */
         .btn-toolbar-style.btn-primary-override:disabled {
-            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
-            border-color: var(--tab-border, #333);
-            color: var(--tab-text, #9ca3af);
+            background-color: #000000;
+            border-color: #333;
+            color: #707070;
             cursor: not-allowed;
         }
         .btn-toolbar-style.btn-primary-override:disabled:hover {
-            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
-            border-color: var(--tab-border, #333);
-            color: var(--tab-text, #9ca3af);
+            background-color: #000000;
+            border-color: #333;
+            color: #707070;
         }
 
         /* Result Display Styles */
@@ -143,21 +158,27 @@
             border-radius: 0.75rem;
             text-align: center;
             font-size: 1.5em;
-            font-weight: 700;
+            font-weight: 500; /* Max boldness */
             min-height: 40px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            border: 1px solid transparent; /* Base for status borders */
         }
+        /* REQUIRED CHANGE: Denied Status Styling */
         .status-blocked {
-            background-color: #dc2626; /* Tailwind red-600 */
-            color: white;
+            background-color: var(--deny-bg);
+            color: #ff9999;
+            border-color: var(--deny-border);
         }
+        /* REQUIRED CHANGE: Allowed Status Styling */
         .status-allowed {
-            background-color: #10b981; /* Tailwind emerald-500 */
-            color: black;
+            background-color: var(--allow-bg);
+            color: #99ff99;
+            border-color: var(--allow-border);
         }
         .status-loading, .status-info {
             background-color: #333;
             color: #bbb;
+            border-color: #333;
         }
         
         #disclaimer {
@@ -180,6 +201,10 @@
         <header class="fixed top-0 left-0 w-full z-1000 flex justify-between items-center p-4 border-b border-[#1a1a1a] bg-[#070707]">
             <h1 class="text-2xl font-bold text-white">Securly Tester</h1>
             <div class="flex items-center gap-2">
+                <button class="btn-toolbar-style" onclick="alert('Navigation is disabled in this example.')">
+                    <i class="fa-solid fa-house"></i> <span>Home</span>
+                </button>
+            </div>
         </header>
 
         <div id="tester-container">
@@ -195,7 +220,7 @@
                 <input id="url" type="text" placeholder="https://zapatopi.net/treeoctopus/" value="https://zapatopi.net/treeoctopus/" oninput="clearResult()">
             </div>
 
-            <button id="check-button" class="btn-toolbar-style btn-primary-override" onclick="checkSecurlyStatus()">
+            <button id="check-button" class="btn-toolbar-style btn-primary-override text-sm" onclick="checkSecurlyStatus()">
                 <i class="fa-solid fa-check-circle"></i> Check Block Status
             </button>
 
@@ -204,14 +229,14 @@
             </div>
 
             <p id="disclaimer">
-                **CORS PROXY IN USE:** A public proxy is prepended to the Securly URL to attempt to bypass browser restrictions.
+                <span class="custom-bold">CORS PROXY IN USE:</span> A public proxy is prepended to the Securly URL to attempt to bypass browser restrictions.
             </p>
         </div>
 
     </div>
     
     <script type="text/javascript">
-        // Hardcoded server URL as requested
+        // Hardcoded server URL
         const SECURLY_SERVER_URL = 'https://useast-www.securly.com';
         
         // --- Global State and Element References ---
@@ -230,9 +255,6 @@
 
         // --- Core Securly Logic ---
 
-        /**
-         * Builds the Securly URL based on inputs and the hardcoded server.
-         */
         function buildSecurlyUrl() {
             const user = document.getElementById('user').value.trim();
             const url = document.getElementById('url').value.trim();
@@ -244,14 +266,13 @@
 
             let urlHost;
             try {
-                // Ensure URL has a protocol for the URL constructor to work
                 const fullUrl = url.startsWith('http') ? url : 'https://' + url;
                 urlHost = (new URL(fullUrl)).hostname;
             } catch (e) {
                 return null;
             }
             
-            // 1. Construct the raw Securly Broker URL
+            // Construct the raw Securly Broker URL
             const securlyLink = `${serverUrl}/crextn/broker?useremail=` +
                 encodeURIComponent(user) +
                 "&reason=crextn&host=" +
@@ -260,25 +281,22 @@
                 btoa(url) +
                 "&msg=&ver=2.97.13&cu=" + encodeURIComponent(serverUrl + "/crextn") + "&uf=1&cf=1&lat=34.5678910&lng=-98.7654321";
             
-            // 2. Prepend the CORS Proxy
+            // Prepend the CORS Proxy
             return CORS_PROXY + encodeURIComponent(securlyLink);
         }
 
-        /**
-         * Fetches the status from Securly via proxy and displays the result.
-         */
         async function checkSecurlyStatus() {
             const proxiedSecurlyLink = buildSecurlyUrl();
 
             if (!proxiedSecurlyLink) {
                 resultDisplay.className = 'status-blocked';
-                resultDisplay.innerHTML = '⚠️ **Please enter valid Email and URL.**';
+                resultDisplay.innerHTML = '⚠️ <span class="custom-bold">Please enter valid Email and URL.</span>';
                 return;
             }
 
             // Set loading state
             resultDisplay.className = 'status-loading';
-            resultDisplay.innerHTML = `Checking **useast**...`;
+            resultDisplay.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Checking <span class="custom-bold">useast</span>...`;
             checkButton.disabled = true;
             checkButton.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Checking...`;
 
@@ -294,21 +312,21 @@
                 // Analyze the response text for Securly's keywords
                 if (text.includes('DENY')) {
                     resultDisplay.className = 'status-blocked';
-                    resultDisplay.innerHTML = '🚫 **BLOCKED (DENY)** 🚫';
+                    resultDisplay.innerHTML = '🚫 <span class="custom-bold">BLOCKED (DENY)</span> 🚫';
                 } 
                 else if (text.includes('ALLOW')) {
                     resultDisplay.className = 'status-allowed';
-                    resultDisplay.innerHTML = '✅ **ALLOWED (ALLOW)** ✅';
+                    resultDisplay.innerHTML = '✅ <span class="custom-bold">ALLOWED (ALLOW)</span> ✅';
                 }
                 else {
                     resultDisplay.className = 'status-info';
-                    resultDisplay.innerHTML = `❓ **Unclear Status** (No DENY/ALLOW found)`;
+                    resultDisplay.innerHTML = `❓ <span class="custom-bold">Unclear Status</span> (No DENY/ALLOW found)`;
                     console.log("Full Securly Response Text:", text);
                 }
 
             } catch (error) {
                 resultDisplay.className = 'status-blocked';
-                resultDisplay.innerHTML = '❌ **Failed to Connect** (CORS/Network Error)';
+                resultDisplay.innerHTML = '❌ <span class="custom-bold">Failed to Connect</span> (CORS/Network Error)';
                 console.error('Fetch Error:', error);
             } finally {
                 checkButton.disabled = false;
@@ -318,15 +336,13 @@
         
         // --- Initialization (Matching notes.html auth pattern) ---
 
-        // Simple mock authentication to match notes.html behavior
         const mockAuth = { onAuthStateChanged: (cb) => cb(true) }; 
         
         async function initializeAuth() {
             mockAuth.onAuthStateChanged((user) => {
                 if (!user) {
-                    // window.location.href = '../index.html'; // Removed but kept in auth block
+                    // window.location.href = '../index.html'; 
                 } else {
-                    // Initialize UI after "auth" check
                     clearResult();
                     loadingScreen.style.display = 'none';
                     pageContent.style.display = 'flex';
