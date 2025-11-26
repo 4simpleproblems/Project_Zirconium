@@ -1,200 +1,255 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - DASHBOARD</title>
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    <title>🔒 Securly Block Tester</title>
     
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;600;700&display=swap">
     
-    <script src="https://cdn.tailwindcss.com"></script>
-
     <style>
-        /* --- FONT & BASE STYLING --- */
-        :root {
-            --bg-page: #070707;
-            --bg-container: #000000;
-            --border-color: #333;
-            --text-primary: #c0c0c0;
-            --text-light-grey: #d1d5db; /* Solid light grey for clock */
-        }
-
-        body { 
-            font-family: 'Geist', sans-serif; 
-            background-color: var(--bg-page);
-            color: var(--text-primary);
-            font-weight: 300;
-            min-height: 100vh;
+        /* Global Styles */
+        body {
+            font-family: 'Geist', sans-serif; /* Use the Geist font */
+            background-color: #1a1a1a;
             display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
-            font-weight: 400 !important;
-        }
-
-        /* --- LAYOUT UTILS --- */
-        #page-content {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
-            padding: 2rem;
-            position: relative;
+            min-height: 100vh;
+            margin: 0;
+            color: #f0f0f0;
         }
 
-        /* --- DASHBOARD WIDGET STYLES --- */
-        .dashboard-widget {
-            border: 1px solid var(--border-color);
-            background-color: var(--bg-container);
-            padding: 3rem 4rem;
-            text-align: center;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s ease;
-            
-            /* UPDATED: Rounded 32px */
-            border-radius: 32px; 
-            
-            /* UPDATED: Solid width to prevent container jitter */
-            width: 600px; 
-            max-width: 90vw; /* Responsive fallback */
-            box-sizing: border-box;
-        }
-
-        .dashboard-widget:hover {
-            border-color: #505050;
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.5);
-        }
-
-        /* --- HEADER STYLING --- */
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem;
-            border-bottom: 1px solid #1a1a1a;
-            background-color: var(--bg-page);
+        .container {
+            background-color: #242424;
+            padding: 30px 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
             width: 100%;
+            max-width: 500px;
+            border: 1px solid #333;
         }
 
-        /* --- TYPOGRAPHY SPECIFIC TO CLOCK --- */
-        .time-display {
-            font-family: 'Geist', sans-serif;
+        h1 {
+            color: #70a6ff;
+            text-align: center;
+            margin-bottom: 25px;
             font-weight: 300;
-            line-height: 1;
-            
-            /* UPDATED: Solid light grey color */
-            color: var(--text-light-grey);
-            
-            /* UPDATED: Tabular nums to prevent text jitter inside the box */
-            font-variant-numeric: tabular-nums; 
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+
+        /* Input Group Styles */
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 400;
+            color: #aaaaaa;
+            font-size: 14px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #444;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 16px;
+            background-color: #333;
+            color: #f0f0f0;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        input[type="text"]:focus {
+            border-color: #70a6ff;
+            box-shadow: 0 0 0 3px rgba(112, 166, 255, 0.2);
+            outline: none;
+        }
+
+        /* Button and Result Styles */
+        #check-button {
+            display: block;
+            width: 100%;
+            padding: 12px 20px;
+            background-color: #70a6ff;
+            color: black;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+            margin-top: 25px;
+        }
+
+        #check-button:hover {
+            background-color: #a0c3ff;
+        }
+
+        #check-button:active {
+            transform: scale(0.99);
         }
         
-        .date-display {
-            font-weight: 300;
-            margin-top: 1rem;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-            font-size: 1.1rem;
-            
-            /* UPDATED: Matching solid light grey color */
-            color: var(--text-light-grey); 
-            opacity: 0.8; /* Slight opacity difference for hierarchy */
+        #result-display {
+            margin-top: 30px;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: 500;
+            min-height: 40px; /* Reserve space */
         }
-        
-        .seconds-display {
-            font-weight: 300;
-            font-size: 0.5em;
-            margin-left: 0.5rem;
-            
-            /* UPDATED: Matching solid light grey */
-            color: var(--text-light-grey);
-            opacity: 0.8;
+
+        /* Specific Result Styles */
+        .status-blocked {
+            background-color: #ff4a4a; /* Red for Blocked/DENY */
+            color: white;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+        }
+
+        .status-allowed {
+            background-color: #4aff4a; /* Green for Allowed/ALLOW */
+            color: black;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+
+        .status-loading, .status-info {
+            background-color: #444;
+            color: #bbb;
+        }
+
+        #disclaimer {
+            margin-top: 30px;
+            font-size: 12px;
+            color: #777;
+            text-align: center;
+            padding-top: 15px;
+            border-top: 1px solid #333;
         }
     </style>
-
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-    
-    <script src="../navigation.js"></script>
-    <script src="../injector.js"></script>
-    <script src="../humanity-agent.js"></script>
-
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6659160370587814" crossorigin="anonymous"></script>
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-1D4F692C1Q"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-1D4F692C1Q');
-    </script>
 </head>
-
 <body>
-    <div id="page-content">
-        <div id="date-time-display" class="dashboard-widget">
-            <div class="animate-pulse bg-[#1a1a1a] h-24 w-48 rounded mx-auto"></div>
+    <div class="container">
+        <h1>Securly Block Test Generator</h1>
+        
+        <div class="input-group">
+            <label for="user">Student Email (User)</label>
+            <input id="user" type="text" placeholder="student@yourschool.org" value="student@yourschool.org" oninput="clearResult()">
         </div>
+
+        <div class="input-group">
+            <label for="url">URL to Test</label>
+            <input id="url" type="text" placeholder="https://zapatopi.net/treeoctopus/" value="https://zapatopi.net/treeoctopus/" oninput="clearResult()">
+        </div>
+
+        <button id="check-button" onclick="checkSecurlyStatus()">
+            Check Block Status
+        </button>
+
+        <div id="result-display" class="status-info">
+            Click 'Check Block Status'
+        </div>
+
+        <p id="disclaimer">
+            **NOTE:** Due to browser security (**CORS**), this fetch will likely only work if you run it in an environment that bypasses these restrictions (e.g., a local server or browser with security disabled for testing). Otherwise, you will see a *CORS Error*.
+        </p>
     </div>
 
-    <script type="module">
-        import { firebaseConfig } from '../firebase-config.js';
+    <script>
+        const resultDisplay = document.getElementById('result-display');
+        const checkButton = document.getElementById('check-button');
 
-        if (typeof firebase !== 'undefined') {
-            const app = firebase.initializeApp(firebaseConfig);
-            const auth = firebase.auth(app);
-            window.db = firebase.firestore(app);
-            window.auth = auth;
+        function clearResult() {
+            // Clears previous result when input changes
+            resultDisplay.className = 'status-info';
+            resultDisplay.innerText = 'Click \'Check Block Status\'';
         }
 
-        const dateTimeElement = document.getElementById('date-time-display');
-        const redirectPath = '../index.html';
+        function buildSecurlyUrl() {
+            var user = document.getElementById('user').value.trim();
+            var url = document.getElementById('url').value.trim();
 
-        function updateDateTime() {
-            const now = new Date();
+            if (!user || !url) {
+                return null; // Don't proceed if inputs are empty
+            }
+
+            var urlHost;
+            try {
+                // Ensure URL has a protocol for the URL constructor to work
+                var fullUrl = url.startsWith('http') ? url : 'https://' + url;
+                urlHost = (new URL(fullUrl)).hostname;
+            } catch (e) {
+                return null; // Return null if URL is invalid
+            }
+
+            // Construct the Securly Broker URL
+            var link = "https://useast-www.securly.com/crextn/broker?useremail=" +
+                encodeURIComponent(user) +
+                "&reason=crextn&host=" +
+                encodeURIComponent(urlHost) +
+                "&url=" +
+                btoa(url) +
+                "&msg=&ver=2.97.13&cu=https://useast-www.securly.com/crextn&uf=1&cf=1&lat=34.5678910&lng=-98.7654321";
             
-            const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
-            const timeString = now.toLocaleTimeString('en-US', timeOptions);
-            const seconds = now.getSeconds().toString().padStart(2, '0');
-            
-            const parts = timeString.split(' ');
-            const timeOnly = parts[0];
-            const amPm = parts[1] || '';
+            return link;
+        }
 
-            const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            const dateString = now.toLocaleDateString('en-US', dateOptions);
+        async function checkSecurlyStatus() {
+            const securlyLink = buildSecurlyUrl();
 
-            if (dateTimeElement) {
-                dateTimeElement.innerHTML = `
-                    <div class="time-display text-7xl md:text-8xl">
-                        ${timeOnly}<span class="seconds-display">${seconds} ${amPm}</span>
-                    </div>
-                    <div class="date-display">
-                        ${dateString}
-                    </div>
-                `;
+            if (!securlyLink) {
+                resultDisplay.className = 'status-blocked';
+                resultDisplay.innerText = '⚠️ Please enter valid Email and URL.';
+                return;
+            }
+
+            // Set loading state
+            resultDisplay.className = 'status-loading';
+            resultDisplay.innerText = 'Checking...';
+            checkButton.disabled = true;
+
+            try {
+                // Use fetch to make the request in the background
+                const response = await fetch(securlyLink);
+
+                // Securly often returns a redirect or the DENY/ALLOW message.
+                // The status code itself might not be the primary indicator.
+                // We'll primarily look at the response text.
+                const text = await response.text();
+                
+                // The Securly response for a block typically contains the word 'DENY'
+                if (text.includes('DENY')) {
+                    resultDisplay.className = 'status-blocked';
+                    resultDisplay.innerText = '🚫 BLOCKED (DENY) 🚫';
+                } 
+                // The response for an allow typically contains the word 'ALLOW' or redirects to the actual site
+                else if (text.includes('ALLOW')) {
+                    resultDisplay.className = 'status-allowed';
+                    resultDisplay.innerText = '✅ ALLOWED (ALLOW) ✅';
+                }
+                // Fallback for other responses (e.g., successful redirect or unexpected content)
+                else {
+                    resultDisplay.className = 'status-info';
+                    resultDisplay.innerText = `❓ Unclear Status. Response status: ${response.status}. Check console for details.`;
+                    console.log("Full Securly Response Text:", text);
+                }
+
+            } catch (error) {
+                // This is where a CORS error is most likely to occur in a standard browser
+                resultDisplay.className = 'status-blocked';
+                resultDisplay.innerText = '❌ CORS/Network Error ❌ (Cannot connect to Securly)';
+                console.error('Fetch Error:', error);
+            } finally {
+                checkButton.disabled = false;
             }
         }
-
-        if (typeof firebase !== 'undefined' && firebase.auth) {
-            firebase.auth().onAuthStateChanged((user) => {
-                if (!user) {
-                    console.log("User logged out. Redirecting to:", redirectPath);
-                    window.location.replace(redirectPath);
-                } else {
-                    updateDateTime();
-                    setInterval(updateDateTime, 1000);
-                }
-            });
-        }
+        
+        // Initialize the result display on load
+        clearResult();
     </script>
 </body>
 </html>
