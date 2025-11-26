@@ -24,6 +24,7 @@
             --bg-container: #000000;
             --border-color: #333;
             --text-primary: #c0c0c0;
+            --color-indigo: #4f46e5;
         }
 
         body { 
@@ -133,10 +134,7 @@
             font-style: italic;
             color: #9ca3af;
             transition: color 0.2s ease;
-            cursor: pointer; 
-        }
-        .pronunciation-text:hover {
-            color: var(--tab-active-text, #4f46e5); 
+            cursor: default; /* Changed from pointer as there's no action */
         }
         
         .highlighted-word {
@@ -157,19 +155,32 @@
             transition: all 0.2s;
         }
         .synonym-tag:hover {
-             color: var(--tab-active-text, #4f46e5); 
+             color: var(--color-indigo); 
              text-decoration: underline;
         }
         
         .audio-icon {
             font-size: 0.8em;
             margin-left: 8px;
-            color: #4f46e5;
+            color: var(--color-indigo);
             cursor: pointer;
-            opacity: 0.7;
+            opacity: 0.8;
             transition: opacity 0.2s;
         }
         .audio-icon:hover { opacity: 1; }
+        
+        .part-of-speech-label {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background-color: var(--color-indigo);
+            color: #ffffff;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+        }
     </style>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-1D4F692C1Q"></script>
 <script>
@@ -189,7 +200,7 @@
     <div id="page-content" class="hidden">
         
         <header>
-            <h1 class="text-2xl font-bold text-white">Interactive Lexicon</h1>
+            <h1 class="text-2xl font-bold text-white">4SP DICTIONARY</h1>
             <div class="flex items-center gap-2"></div>
         </header>
 
@@ -229,7 +240,6 @@
         import { firebaseConfig } from "../firebase-config.js"; 
 
         // --- CONFIGURATION ---
-        // REPLACE THIS URL with your deployed Firebase Cloud Function URL
         const CLOUD_FUNCTION_URL = "https://us-central1-project-zirconium.cloudfunctions.net/getWordData";
 
         // --- Firebase Setup ---
@@ -244,7 +254,7 @@
         const searchButton = document.getElementById('search-button');
         const definitionOutput = document.getElementById('definition-output');
         
-        let currentAudio = null; // To track playing audio
+        let currentAudio = null; 
 
         // --- DICTIONARY LOGIC (MERRIAM-WEBSTER) ---
         
@@ -252,7 +262,6 @@
             const trimmedWord = word.trim().toLowerCase();
             if (!trimmedWord) return;
 
-            // UI: Loading State
             definitionOutput.innerHTML = `
                 <div class="h-full flex flex-col items-center justify-center pt-12">
                     <i class="fa-solid fa-spinner fa-spin fa-2x text-indigo-500 mb-4"></i>
@@ -262,7 +271,6 @@
             searchInput.value = trimmedWord;
 
             try {
-                // Call our Proxy Cloud Function
                 const response = await fetch(`${CLOUD_FUNCTION_URL}?word=${encodeURIComponent(trimmedWord)}`);
 
                 if (!response.ok) {
@@ -270,10 +278,6 @@
                 }
 
                 const data = await response.json();
-                
-                // Parse Merriam-Webster Response
-                // MW returns an array. If empty, word not found.
-                // If the first element is a string, it means "Suggestions" (spelling corrections).
                 
                 const dictEntries = data.dictionary;
                 const thesEntries = data.thesaurus;
@@ -283,7 +287,6 @@
                      return;
                 }
 
-                // Check for suggestions (array of strings)
                 if (typeof dictEntries[0] === 'string') {
                     displaySuggestions(trimmedWord, dictEntries);
                     return;
@@ -296,7 +299,7 @@
                 definitionOutput.innerHTML = `
                     <div class="text-center pt-12">
                         <p class="text-red-400 mb-2"><i class="fa-solid fa-bug mr-2"></i>An error occurred.</p>
-                        <p class="text-sm text-gray-500">Please check your internet or the Cloud Function URL.</p>
+                        <p class="text-sm text-gray-500">Check your Cloud Function (${CLOUD_FUNCTION_URL}) and console for errors.</p>
                     </div>
                 `;
             }
@@ -325,29 +328,25 @@
             `;
         }
 
-        // Helper to linkify text
         function highlightDefinitionText(text) {
              const commonWords = ['the', 'and', 'but', 'not', 'for', 'with', 'from', 'that', 'this', 'have', 'when', 'what', 'which', 'will', 'was', 'are', 'you', 'can', 'one', 'use', 'any', 'all', 'out', 'into', 'upon', 'like', 'than', 'only', 'much', 'a', 'an', 'or', 'of', 'in', 'to', 'is'];
             
-            // MW uses {bc} for bold colon, {it} for italic, etc. We need to strip or format them.
-            // Simple strip for now, then linkify.
+            // Clean up MW markup for Intermediate Dictionary
             let cleanText = text
                 .replace(/{bc}/g, ': ')
                 .replace(/{it}/g, '<i>')
                 .replace(/{\/it}/g, '</i>')
-                .replace(/{wi}/g, '<i>') // Word identifier
+                .replace(/{wi}/g, '<i>') 
                 .replace(/{\/wi}/g, '</i>')
-                .replace(/{sx\|([^|]+)\|([^}]*)}/g, '<span class="highlighted-word" data-word="$1">$1</span>') // Synonyms links in def
-                .replace(/{[^}]+}/g, ''); // Strip other tags
+                .replace(/{sx\|([^|]+)\|([^}]*)}/g, '<span class="highlighted-word" data-word="$1">$1</span>') 
+                .replace(/{[^}]+}/g, ''); 
 
             return cleanText.replace(/\b([a-zA-Z]{3,})\b/g, (match) => {
-                // Don't link if already inside a tag (simple check)
                 if (commonWords.includes(match.toLowerCase())) return match;
                 return `<span class="highlighted-word" data-word="${match.toLowerCase()}">${match}</span>`;
             });
         }
         
-        // Helper to construct MW Audio URL
         function getAudioUrl(audioBase) {
             if (!audioBase) return null;
             let subdir = '';
@@ -368,80 +367,86 @@
             currentAudio.play();
         }
 
+        // UPDATED: Function to structure MW data clearly
         function displayDefinition(word, dictData, thesData) {
             const primaryEntry = dictData[0];
             
-            // Headword (replace * with ·)
+            // Headword with replacement for stress/dots (replace * with ·)
             const hw = primaryEntry.hwi ? primaryEntry.hwi.hw.replace(/\*/g, '·') : word;
             
             // Pronunciation
             const prs = (primaryEntry.hwi && primaryEntry.hwi.prs && primaryEntry.hwi.prs.length > 0) ? primaryEntry.hwi.prs[0] : null;
             const mwPron = prs ? prs.mw : '';
             const audioUrl = prs && prs.sound ? getAudioUrl(prs.sound.audio) : null;
-
-            // Part of Speech
-            const fl = primaryEntry.fl || 'unknown';
-
+            
             let htmlContent = `
                 <div class="space-y-6 fade-in">
-                    <div class="border-b border-[#252525] pb-4">
-                        <div class="flex items-center gap-3 mb-2">
-                            <h2 class="text-4xl text-indigo-400 capitalize font-normal">${word}</h2>
-                            <span class="text-2xl text-gray-500 font-light ml-2">${hw}</span>
-                            ${audioUrl ? `<i class="fa-solid fa-volume-high audio-icon" title="Listen" data-audio="${audioUrl}"></i>` : ''}
-                        </div>
+                    <div class="border-b border-[#252525] pb-4 space-y-2">
+                        <h2 class="text-5xl text-indigo-400 capitalize font-normal">${hw}
+                            ${audioUrl ? `<i class="fa-solid fa-volume-high audio-icon text-3xl ml-4" title="Listen" data-audio="${audioUrl}"></i>` : ''}
+                        </h2>
                         
-                        <div class="flex items-center gap-4">
-                             ${mwPron ? `<p class="text-xl text-gray-500 pronunciation-text font-serif italic">/${mwPron}/</p>` : ''}
-                             <span class="px-3 py-0.5 bg-[#1a1a1a] border border-[#333] rounded text-sm text-gray-400 font-medium uppercase tracking-wider">${fl}</span>
-                        </div>
+                        ${mwPron ? `<p class="text-2xl text-gray-500 pronunciation-text font-serif italic">/${mwPron}/</p>` : ''}
                     </div>
             `;
             
-            // --- Definitions (Iterate over entries to get different meanings) ---
-            htmlContent += `<div class="ml-1 pl-4 border-l border-[#252525] space-y-6">`;
+            // --- Definitions Grouped by Part of Speech (Functional Label) ---
             
-            // Limit to top 5 entries to avoid overwhelming
-            dictData.slice(0, 5).forEach((entry, index) => {
-                if (typeof entry === 'string') return; // Skip if suggestion leaked in
-                
-                // Get Short Definitions
-                if (entry.shortdef && entry.shortdef.length > 0) {
-                     // Add functional label if different from primary (e.g. noun vs verb)
-                     if (index > 0 && entry.fl && entry.fl !== fl) {
-                         htmlContent += `<div class="mt-4 mb-2 text-indigo-300 font-medium border-b border-[#333] inline-block pr-4">${entry.fl}</div>`;
-                     }
+            // Group entries by functional label
+            const groupedDefinitions = {};
+            dictData.slice(0, 5).forEach(entry => {
+                if (typeof entry === 'string') return;
+                const fl = entry.fl ? entry.fl.toUpperCase() : 'DEFINITION'; // Default label
+                if (!groupedDefinitions[fl]) {
+                    groupedDefinitions[fl] = [];
+                }
+                groupedDefinitions[fl].push(entry);
+            });
+            
+            htmlContent += `<div class="space-y-8">`; 
+            
+            for (const fl in groupedDefinitions) {
+                if (groupedDefinitions.hasOwnProperty(fl) && groupedDefinitions[fl][0].shortdef) {
+                    const entries = groupedDefinitions[fl];
+                    
+                    // Part of Speech Header
+                    htmlContent += `
+                        <div class="pt-4">
+                            <span class="part-of-speech-label">${fl}</span>
+                        </div>
+                        <ol class="list-decimal list-outside ml-6 mt-4 space-y-4 text-xl">
+                    `;
 
-                    htmlContent += `<ol class="list-decimal list-outside ml-4 space-y-3">`;
-                    entry.shortdef.forEach(def => {
-                         htmlContent += `
-                            <li class="text-gray-300 font-light leading-relaxed text-lg">
-                                ${highlightDefinitionText(def)}
-                            </li>`;
+                    // Concatenate all short definitions for this part of speech
+                    entries.forEach(entry => {
+                        entry.shortdef.forEach(def => {
+                            htmlContent += `
+                                <li class="text-gray-300 font-light leading-relaxed text-lg">
+                                    ${highlightDefinitionText(def)}
+                                </li>
+                            `;
+                        });
                     });
+                    
                     htmlContent += `</ol>`;
                 }
-            });
-            htmlContent += `</div>`;
+            }
+            
+            htmlContent += `</div>`; 
 
             // --- Synonyms (From Thesaurus Data) ---
-            // MW Thesaurus entries have meta.syns (array of arrays)
             let allSynonyms = [];
             if (thesData && thesData.length > 0 && typeof thesData[0] !== 'string') {
                 thesData.forEach(entry => {
                     if (entry.meta && entry.meta.syns) {
-                        entry.meta.syns.forEach(group => {
-                            allSynonyms.push(...group);
-                        });
+                        entry.meta.syns.forEach(group => allSynonyms.push(...group));
                     }
                 });
             }
-            // If no thesaurus data, check dictionary entry for 'syns' (sometimes present)
             if (allSynonyms.length === 0 && primaryEntry.meta && primaryEntry.meta.syns) {
                  primaryEntry.meta.syns.forEach(group => allSynonyms.push(...group));
             }
 
-            // Deduplicate and Slice
             allSynonyms = [...new Set(allSynonyms)];
 
             if (allSynonyms.length > 0) {
@@ -479,12 +484,10 @@
         definitionOutput.addEventListener('click', (event) => {
             const target = event.target;
             
-            // Handle Word Click
             if (target.dataset.word) {
                 fetchDefinition(target.dataset.word);
             }
             
-            // Handle Audio Click
             if (target.classList.contains('audio-icon') && target.dataset.audio) {
                 playAudio(target.dataset.audio);
             }
