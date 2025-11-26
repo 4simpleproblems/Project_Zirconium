@@ -14,7 +14,7 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <script src="navigation-mini.js" defer></script> 
+    <script src="../navigation.js" defer></script> 
     
     <style>
         :root {
@@ -66,15 +66,8 @@
   gtag('config', 'G-1D4F692C1Q');
 </script>
 </head>
-<body class="bg-black text-white min-h-screen">
-    
-    <div id="photo-modal">
-        <div id="photo-modal-content">
-            <span id="modal-close-btn">&times;</span>
-            <img id="modal-image" src="" alt="">
-            <div id="modal-caption" class="text-sm text-gray-400"></div>
-        </div>
-    </div>
+<body class="text-white min-h-screen">
+
     
     <main class="py-16 px-4">
         <div class="mx-auto max-w-4xl text-center mb-16">
@@ -88,93 +81,120 @@
 
         <div class="mx-auto max-w-7xl">
             <div class="documentation-section">
-                <h2 class="text-3xl font-medium mb-4">index.html</h2>
-                <div class="image-placeholder"><img src="doc-images/index.html.png" alt="Screenshot of index.html" class="w-full rounded-xl"></div>
+                <div class="grid grid-cols-2 gap-8 items-center">
+                    <div>
+                        <h2 class="text-3xl font-medium mb-4">The Landing Page</h2>
+                        <p class="text-lg text-gray-400">The landing page of the website, providing an overview of the project and links to the main sections.</p>
+                    </div>
+                    <div class="image-placeholder"><img src="doc-images/index.png" alt="Screenshot of index.html" class="w-full rounded-xl"></div>
+                </div>
             </div>
             <div class="documentation-section">
-                <h2 class="text-3xl font-medium mb-4">authentication.html</h2>
-                <div class="image-placeholder"><img src="doc-images/authentication.html.png" alt="Screenshot of authentication.html" class="w-full rounded-xl"></div>
+                <div class="grid grid-cols-2 gap-8 items-center">
+                    <div>
+                        <h2 class="text-3xl font-medium mb-4">User Authentication</h2>
+                        <p class="text-lg text-gray-400">Handles user sign-up and login, supporting email/password and social providers like Google, GitHub, and Discord.</p>
+                    </div>
+                    <div class="image-placeholder"><img src="doc-images/authentication.png" alt="Screenshot of authentication.html" class="w-full rounded-xl"></div>
+                </div>
             </div>
             <div class="documentation-section">
-                <h2 class="text-3xl font-medium mb-4">logged-in/dashboard.html</h2>
-                <div class="image-placeholder"><img src="doc-images/logged-in/dashboard.html.png" alt="Screenshot of logged-in/dashboard.html" class="w-full rounded-xl"></div>
+                <div class="grid grid-cols-2 gap-8 items-center">
+                    <div>
+                        <h2 class="text-3xl font-medium mb-4">Dashboard</h2>
+                        <p class="text-lg text-gray-400">The main hub for authenticated users, displaying the current date and time.</p>
+                    </div>
+                    <div class="image-placeholder"><img src="doc-images/dashboard.png" alt="Screenshot of logged-in/dashboard.html" class="w-full rounded-xl"></div>
+                </div>
             </div>
             <div class="documentation-section">
-                <h2 class="text-3xl font-medium mb-4">logged-in/settings.html</h2>
-                <div class="image-placeholder"><img src="doc-images/logged-in/settings.html.png" alt="Screenshot of logged-in/settings.html" class="w-full rounded-xl"></div>
-            </div>
-
-            <div class="documentation-section">
-                <h2 class="text-3xl font-medium mb-4">logged-in/dailyphoto.html</h2>
-                <div class="image-placeholder"><img src="doc-images/logged-in/dailyphoto.html.png" alt="Screenshot of logged-in/dailyphoto.html" class="w-full rounded-xl"></div>
-            </div>
-            <div class="documentation-section">
-                <h2 class="text-3xl font-medium mb-4">logged-in/countdowns.html</h2>
-                <div class="image-placeholder"><img src="doc-images/logged-in/countdowns.html.png" alt="Screenshot of logged-in/countdowns.html" class="w-full rounded-xl"></div>
-            </div>
-            <div class="documentation-section">
-                <h2 class="text-3xl font-medium mb-4">logged-in/messenger-tutorial.html</h2>
-                <div class="image-placeholder"><img src="doc-images/logged-in/messenger-tutorial.html.png" alt="Screenshot of logged-in/messenger-tutorial.html" class="w-full rounded-xl"></div>
-            </div>
-            <div class="documentation-section">
-                <h2 class="text-3xl font-medium mb-4">logged-in/notes.html</h2>
-                <div class="image-placeholder"><img src="doc-images/logged-in/notes.html.png" alt="Screenshot of logged-in/notes.html" class="w-full rounded-xl"></div>
-            </div>
-
-            <div class="documentation-section">
-                <h2 class="text-3xl font-medium mb-4">logged-in/weather.html</h2>
-                <div class="image-placeholder"><img src="doc-images/logged-in/weather.html.png" alt="Screenshot of logged-in/weather.html" class="w-full rounded-xl"></div>
-            </div>
-            <div class="documentation-section">
-                <h2 class="text-3xl font-medium mb-4">logged-in/soundboard.html</h2>
-                <div class="image-placeholder"><img src="doc-images/logged-in/soundboard.html.png" alt="Screenshot of logged-in/soundboard.html" class="w-full rounded-xl"></div>
-            </div>
-            <div class="documentation-section">
-                <h2 class="text-3xl font-medium mb-4">logged-in/dictionary.html</h2>
-                <div class="image-placeholder"><img src="doc-images/logged-in/dictionary.html.png" alt="Screenshot of logged-in/dictionary.html" class="w-full rounded-xl"></div>
+                <div class="grid grid-cols-2 gap-8 items-center">
+                    <div>
+                        <h2 class="text-3xl font-medium mb-4">Settings</h2>
+                        <p class="text-lg text-gray-400">Allows users to manage their account, including changing their username, password, and linked social accounts.</p>
+                    </div>
+                    <div class="image-placeholder"><img src="doc-images/settings.png" alt="Screenshot of logged-in/settings.html" class="w-full rounded-xl"></div>
+                </div>
             </div>
 
             <div class="documentation-section">
-                <h2 class="text-3xl font-medium mb-4">logged-in/messenger-v2.html</h2>
-                <div class="image-placeholder"><img src="doc-images/logged-in/messenger-v2.html.png" alt="Screenshot of logged-in/messenger-v2.html" class="w-full rounded-xl"></div>
+                <div class="grid grid-cols-2 gap-8 items-center">
+                    <div>
+                        <h2 class="text-3xl font-medium mb-4">DailyPhoto</h2>
+                        <p class="text-lg text-gray-400">A social feature for sharing up to five photos per day with friends, fostering mindful sharing.</p>
+                    </div>
+                    <div class="image-placeholder"><img src="doc-images/dailyphoto.png" alt="Screenshot of logged-in/dailyphoto.html" class="w-full rounded-xl"></div>
+                </div>
+            </div>
+            <div class="documentation-section">
+                <div class="grid grid-cols-2 gap-8 items-center">
+                    <div>
+                        <h2 class="text-3xl font-medium mb-4">Countdowns</h2>
+                        <p class="text-lg text-gray-400">Create and track important events with customizable countdown timers.</p>
+                    </div>
+                    <div class="image-placeholder"><img src="doc-images/countdowns.png" alt="Screenshot of logged-in/countdowns.html" class="w-full rounded-xl"></div>
+                </div>
+            </div>
+            <div class="documentation-section">
+                <div class="grid grid-cols-2 gap-8 items-center">
+                    <div>
+                        <h2 class="text-3xl font-medium mb-4">Messenger Tutorial</h2>
+                        <p class="text-lg text-gray-400">A guided introduction to the messenger feature, helping users understand its functionalities.</p>
+                    </div>
+                    <div class="image-placeholder"><img src="doc-images/messenger-tutorial.png" alt="Screenshot of logged-in/messenger-tutorial.html" class="w-full rounded-xl"></div>
+                </div>
+            </div>
+            <div class="documentation-section">
+                <div class="grid grid-cols-2 gap-8 items-center">
+                    <div>
+                        <h2 class="text-3xl font-medium mb-4">Notes</h2>
+                        <p class="text-lg text-gray-400">Securely store and manage your personal notes with client-side encryption and password protection.</p>
+                    </div>
+                    <div class="image-placeholder"><img src="doc-images/notes.png" alt="Screenshot of logged-in/notes.html" class="w-full rounded-xl"></div>
+                </div>
+            </div>
+
+            <div class="documentation-section">
+                <div class="grid grid-cols-2 gap-8 items-center">
+                    <div>
+                        <h2 class="text-3xl font-medium mb-4">Weather</h2>
+                        <p class="text-lg text-gray-400">Get real-time weather updates for your current location or any specified city.</p>
+                    </div>
+                    <div class="image-placeholder"><img src="doc-images/weather.png" alt="Screenshot of logged-in/weather.html" class="w-full rounded-xl"></div>
+                </div>
+            </div>
+            <div class="documentation-section">
+                <div class="grid grid-cols-2 gap-8 items-center">
+                    <div>
+                        <h2 class="text-3xl font-medium mb-4">Soundboard</h2>
+                        <p class="text-lg text-gray-400">Play various sound effects and custom audio clips for entertainment or practical uses.</p>
+                    </div>
+                    <div class="image-placeholder"><img src="doc-images/soundboard.png" alt="Screenshot of logged-in/soundboard.html" class="w-full rounded-xl"></div>
+                </div>
+            </div>
+            <div class="documentation-section">
+                <div class="grid grid-cols-2 gap-8 items-center">
+                    <div>
+                        <h2 class="text-3xl font-medium mb-4">Dictionary</h2>
+                        <p class="text-lg text-gray-400">A quick-reference tool for searching word definitions, pronunciations, synonyms, and example sentences.</p>
+                    </div>
+                    <div class="image-placeholder"><img src="doc-images/dictionary.png" alt="Screenshot of logged-in/dictionary.html" class="w-full rounded-xl"></div>
+                </div>
+            </div>
+
+            <div class="documentation-section">
+                <div class="grid grid-cols-2 gap-8 items-center">
+                    <div>
+                        <h2 class="text-3xl font-medium mb-4">Messenger V2</h2>
+                        <p class="text-lg text-gray-400">The second version of the messenger, featuring improved performance and additional chat functionalities.</p>
+                    </div>
+                    <div class="image-placeholder"><img src="doc-images/messenger-v2.png" alt="Screenshot of logged-in/messenger-v2.html" class="w-full rounded-xl"></div>
+                </div>
             </div>
 
         </div>
     </main>
     
-    <script>
-        const modal = document.getElementById('photo-modal');
-        const modalImage = document.getElementById('modal-image');
-        const modalCaption = document.getElementById('modal-caption');
-        const modalCloseBtn = document.getElementById('modal-close-btn');
 
-        // Function to open the modal
-        function openModal(imageSrc, captionText) {
-            modalImage.src = imageSrc;
-            modalCaption.textContent = captionText;
-            modal.style.display = 'flex';
-        }
-
-        // Close modal when clicking the close button or the background
-        modalCloseBtn.onclick = function() {
-            modal.style.display = 'none';
-        }
-        modal.onclick = function(event) {
-            // Check if the click occurred on the modal background itself, not the content
-            if (event.target === modal || event.target.id === 'modal-close-btn') {
-                modal.style.display = 'none';
-            }
-        }
-
-        // Close modal with ESC key
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape' && modal.style.display === 'flex') {
-                modal.style.display = 'none';
-            }
-        });
-
-        // Expose openModal to the global scope (required for onclick HTML attributes)
-        window.openModal = openModal;
-    </script>
 </body>
 </html>
