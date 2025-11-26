@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- UPDATED: Title Capitalized -->
     <title>4SP - DICTIONARY</title>
     <meta name="description" content="A simple interactive dictionary with search and definition display using Merriam-Webster APIs.">
 
@@ -11,6 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
     
+    <!-- FontAwesome 6.5.2 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -46,8 +48,7 @@
         .btn-toolbar-style {
             background: var(--menu-bg, #0000000);
             border: 1px solid var(--menu-border, #333);
-            /* UPDATED: Increased button rounding */
-            border-radius: 1rem; 
+            border-radius: 0.75rem;
             color: var(--menu-text, #d1d5db);
             padding: 0.5rem 1rem;
             font-weight: 500;
@@ -78,12 +79,10 @@
         /* Input Styling */
         .input-text-style {
             width: 100%; 
-            /* UPDATED: Reduced vertical padding for shorter bar */
-            padding: 0.65rem 1.5rem; 
+            padding: 1rem 1.5rem; 
             border: 1px solid #1a1a1a; 
             background-color: #0d0d0d; 
-            /* UPDATED: Increased rounding for container */
-            border-radius: 1rem; 
+            border-radius: 0.75rem; 
             color: #c0c0c0; 
             transition: all 0.2s;
             font-size: 1.1rem;
@@ -196,6 +195,7 @@
 </head>
 <body class="min-h-screen">
     
+    <!-- Loading Screen -->
     <div id="loading-screen" class="fixed inset-0 bg-[#070707] flex items-center justify-center z-50">
         <i class="fa-solid fa-spinner fa-spin fa-2x"></i>
     </div>
@@ -209,6 +209,7 @@
 
         <div id="main-wrapper">
             
+            <!-- Search Area -->
             <div class="relative w-full">
                 <input 
                     type="text"
@@ -227,6 +228,7 @@
                 </button>
             </div>
 
+            <!-- Definition Output -->
             <div id="definition-output" class="dictionary-content-box">
                 <div class="h-full flex flex-col items-center justify-center text-gray-500 space-y-4 pt-12 opacity-50">
                     <i class="fa-solid fa-book-open fa-3x mb-2"></i>
@@ -421,6 +423,7 @@
             
             let htmlContent = `
                 <div class="space-y-6 fade-in">
+                    <!-- Primary Word Header and Pronunciation -->
                     <div class="border-b border-[#252525] pb-4 space-y-2">
                         <h2 class="text-5xl text-indigo-400 capitalize font-normal">${hw}
                             ${audioUrl ? `<i class="fa-solid fa-volume-high audio-icon text-3xl ml-4" title="Listen" data-audio="${audioUrl}"></i>` : ''}
