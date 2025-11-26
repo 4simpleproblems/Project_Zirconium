@@ -55,10 +55,10 @@
     // --- Firebase Imports ---
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, signInWithCustomToken, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    // FIXED: Added setDoc to the import list below
+    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     
     // --- Import Firebase Config ---
-    // NOTE: Ensure your firebase-config.js is in the same directory or adjust the path.
     import { firebaseConfig } from "./firebase-config.js"; 
 
     // --- Firebase Initialization ---
@@ -71,9 +71,6 @@
     const statusIcon = document.getElementById('statusIcon');
     const statusTitle = document.getElementById('statusTitle');
     const statusMessage = document.getElementById('statusMessage');
-
-    // --- Utility Functions (Copied from authentication.html) ---
-
 
     // --- Main Handler ---
     document.addEventListener('DOMContentLoaded', () => {
@@ -105,48 +102,52 @@
             .then(async (userCredential) => {
                 const user = userCredential.user;
                 
+                try {
+                    // --- Check for User Document Existence ---
+                    const userDoc = await getDoc(getUserDocRef(user.uid));
+                    
+                    if (!userDoc.exists()) {
+                        let baseUsername = 'User';
+                        if (user.displayName) {
+                            baseUsername = user.displayName;
+                        } else if (typeof user.email === 'string' && user.email.length > 0) { 
+                            baseUsername = user.email.split('@')[0];
+                        } else if (user.uid) { 
+                            baseUsername = `User${user.uid.substring(0, 8)}`;
+                        }
 
-                
-                // --- Check for User Document Existence ---
-                const userDoc = await getDoc(getUserDocRef(user.uid));
-                if (!userDoc.exists()) {
-                    // This block handles social users who did NOT have an account doc yet
-                    // The logic for username generation and document creation must be copied here
+                        let username = baseUsername.replace(/[^a-zA-Z0-9]/g, '').slice(0, 16);
+                        if (username.length < 6) username = `User${user.uid.substring(0, 8)}`;
+                        
+                        const finalUsername = `DiscordUser_${user.uid.substring(0, 8)}`; 
+                        
+                        // This line was crashing before because setDoc wasn't imported
+                        await setDoc(getUserDocRef(user.uid), {
+                            email: user.email, 
+                            authMethod: 'discord', 
+                            createdAt: new Date(),
+                            username: finalUsername, 
+                            emailVerified: true 
+                        });
+                    }
                     
-                    // Simple logic for the handler:
-                    let username = (user.displayName || user.email.split('@')[0] || 'User')
-                            .replace(/[^a-zA-Z0-9]/g, '').slice(0, 16);
-                    if (username.length < 6) username = `User${user.uid.substring(0, 8)}`;
+                    // --- Success! Redirect ---
+                    statusIcon.className = 'fas fa-check-circle text-5xl text-green-500 mb-6';
+                    statusTitle.textContent = 'Success!';
+                    statusMessage.textContent = 'Sign-in complete. Redirecting to your dashboard...';
                     
-                    // Simplified: Assume no profanity check here to keep it simple,
-                    // but in production, you'd replicate the full check.
-                    
-                    // For a fully robust solution, you should replicate the username collision logic
-                    // from authentication.html here or handle it in the Cloud Function.
-                    
-                    // For demonstration, let's assume a temporary placeholder username for new users:
-                    const finalUsername = `DiscordUser_${user.uid.substring(0, 8)}`; 
-                    
-                    const docCreated = await setDoc(getUserDocRef(user.uid), {
-                        email: user.email, 
-                        authMethod: 'discord', // Set the provider
-                        createdAt: new Date(), // Using new Date() as serverTimestamp() is for server SDK
-                        username: finalUsername, 
-                        emailVerified: true // Social providers are verified
-                    });
+                    setTimeout(() => {
+                        window.location.href = 'logged-in/dashboard.html';
+                    }, 1000);
+
+                } catch (docError) {
+                    console.error("Error creating user document:", docError);
+                    displayError('Database Error', 'Signed in, but failed to set up user profile.');
                 }
-                
-                // --- Success! Redirect ---
-                statusIcon.className = 'fas fa-check-circle text-5xl text-green-500 mb-6';
-                statusTitle.textContent = 'Success!';
-                statusMessage.textContent = 'Sign-in complete. Redirecting to your dashboard...';
-                
-                setTimeout(() => {
-                    window.location.href = 'logged-in/dashboard.html';
-                }, 1000);
 
             })
             .catch((error) => {
+                // This logs the ACTUAL error to your browser console (F12)
                 console.error("Final Firebase Sign-in Failed:", error);
                 displayError('Sign-in Error', 'Could not finalize your session. This usually means the custom token was invalid or expired.');
             });
