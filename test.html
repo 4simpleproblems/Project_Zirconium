@@ -3,34 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - HOME</title>
-    <meta name="description" content="A multi-tool toolkit for students, featuring soundboards, utility apps, and QOL features like Tab Disguising and Panic keys.">
+    <title>4SP - ACCESS ACCOUNT</title>
+    <meta name="description" content="Log into or create your 4SP account to access the student toolkit.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
-
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
-
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6659160370587814"
-     crossorigin="anonymous"></script>
-
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="../navigation-mini.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <script src="navigation-test.js" defer></script>
-
+    <script>
+        // Unified Tailwind CSS configuration for a consistent dark theme
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'custom-darkest-gray': '#040404', // Body background
+                        'custom-dark-gray': '#111111',    // Form container background
+                        'custom-medium-gray': '#252525', // Borders, inputs, buttons
+                        'custom-light-gray': '#505050',  // Labels and secondary text
+                        'custom-lighter-gray': '#808080', // Hover states and subtle text
+                        'custom-white-gray': '#c0c0c0',  // Main text and headings
+                    }
+                }
+            }
+        }
+    </script>
+    
     <style>
         :root {
-            --geist-foreground: 255, 255, 255;
-            --geist-background: 0, 0, 0;
+            --geist-foreground: 192, 192, 192; /* custom-white-gray */
+            --geist-background: 7, 7, 7;       /* custom-darkest-gray */
         }
-        .dark { color-scheme: dark; }
-        body { font-family: 'Geist', sans-serif; }
-        .gradient-text {
-            background-image: linear-gradient(90deg, #0070f3, #f81ce5);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+
+        body {
+            font-family: 'Geist', sans-serif;
+            background-color: rgb(var(--geist-background));
+            color: rgb(var(--geist-foreground));
+            transition: all 0.3s ease;
+            font-weight: 300; /* CUSTOM: Lighter base font weight */
+        }
+
+        /* CUSTOM: Lighter bold/headings to match notes.html */
+        h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-tighter {
+            font-weight: 400 !important;
+        }
+
+        .btn-social {
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+        .btn-social:hover {
+            /* Keep existing hover effect for social buttons */
+            background-color: rgba(37, 37, 37, 0.7); /* custom-medium-gray with transparency */
+            border-color: #383838;
+        }
+        
+        .message-area { min-height: 20px; }
+        .error-message { color: #f87171; font-weight: 400; /* Match new heading weight */ }
+        .success-message { color: #4ade80; font-weight: 400; }
+        .warning-message { color: #fbbf24; font-weight: 400; }
+        
+        .auth-split-container { max-width: 1200px; margin: 0 auto; }
+        @media (min-width: 768px) { .auth-col { } }
+        @media (max-width: 767px) {
+            .right-col { display: none; }
+            .left-col { border-right: none; }
         }
     </style>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-1D4F692C1Q"></script>
@@ -42,259 +79,525 @@
   gtag('config', 'G-1D4F692C1Q');
 </script>
 </head>
-<body class="bg-black text-white min-h-screen">
-    <main>
-        <section class="text-center border-b border-gray-900" style="padding-top: 2rem; padding-bottom: 2rem;">
-            <div class="mx-auto max-w-4xl px-4">
-                <h1 class="text-3xl sm:text-4xl font-light text-gray-300 tracking-tighter mb-4 leading-tight">
-                    Merry Christmas Everyone!
-                </h1>
-                <h2 class="text-5xl sm:text-6xl font-light tracking-tighter mb-4 leading-tight">
-                    <span class="gradient-text font-bold">The Essential Student Toolkit.</span>
-                </h2>
-                <p class="text-xl text-gray-400 max-w-2xl mx-auto mb-6 font-light">
-                    4simpleproblems (4SP) is a multi-tool platform offering soundboards, study apps, and essential Quality-of-Life (QOL) features like Tab Disguising and Panic Keys—all designed to make student life easier and more fun.
-                </p>
-                <div id="auth-button-container">
-                    <a id="auth-button" href="../authentication.html" class="inline-flex items-center justify-center px-8 py-3 border border-transparent text-base font-normal rounded-xl shadow-sm text-white bg-white/10 ring-1 ring-white/20 hover:bg-white/20 transition">
-                        Get Started Instantly <i class="fas fa-arrow-right ml-2"></i>
-                    </a>
-                </div>
-                <p id="release-cta-container" class="text-base text-yellow-300 mt-4 mb-0" style="display: block;">
-                    Full release coming in a few days!
-                </p>
-                <p id="pronunciation-text" class="text-base text-gray-600 mt-2 mb-0 italic font-light">
-                    4simpleproblems is pronounced: fɔr sɪmpəl pɹɑbləmz
-                </p>
-                </div>
-        </section>
+<body class="bg-custom-darkest-gray text-custom-white-gray min-h-screen flex flex-col">
 
-        <section id="features" class="py-16 mx-auto max-w-7xl px-4 space-y-16">
-             <h2 class="text-4xl font-light text-center mb-8">Core Features of 4SP</h2>
+    <div id="navbar-container"></div>
+    <main class="flex-grow flex items-stretch justify-center p-0">
+        <div class="auth-split-container bg-custom-darkest-gray flex flex-wrap w-full border-0 overflow-hidden p-0">
+            <div class="auth-col left-col flex-1 p-8 flex flex-col justify-center items-center bg-custom-darkest-gray min-w-[300px]">
 
-            <div class="lg:grid lg:grid-cols-2 lg:gap-12 items-center">
-
-                <div class="lg:pr-4 order-2 lg:order-1 mb-6 lg:mb-0">
-                    <span class="text-sm font-light text-green-400 uppercase tracking-widest mb-2 block">Toolkit Core</span>
-                    <h3 class="text-4xl font-light mb-3 mt-2">Soundboard</h3>
-                    <p class="text-xl text-gray-400 mb-5 font-light">
-                        Access our dynamic, low-latency soundboards to focus, meme, or just relax. Save and share your favorite sound sequences with friends.
+                <div id="loginContainer" class="w-full flex flex-col items-center">
+                    <h2 class="text-3xl font-normal text-custom-white-gray mb-6 text-center w-full tracking-tighter">Login to Your Account</h2>
+                    <form id="loginForm" novalidate class="w-full max-w-md"> 
+                        <div class="mb-5">
+                            <label for="loginEmail" class="block mb-2 text-custom-light-gray text-sm font-light text-left">Email</label>
+                            <input type="email" id="loginEmail" placeholder="Enter your email" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-xl text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
+                        </div>
+                        <div class="mb-5">
+                            <label for="loginPassword" class="block mb-2 text-custom-light-gray text-sm font-light text-left">Password</label>
+                            <input type="password" id="loginPassword" placeholder="Enter your password" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-xl text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
+                        </div>
+                        <button type="submit" class="w-full p-3 text-lg rounded-xl font-normal ring-1 ring-white/20 text-white bg-white/5 hover:bg-white/10 transition">LOGIN</button>
+                    </form>
+                    <div id="loginMessage" class="message-area w-full max-w-md mt-4 text-center text-sm"></div>
+                    <div class="w-full max-w-md mt-4 text-center"> 
+                        <a id="forgotPasswordLink" class="text-white hover:text-gray-300 font-normal text-sm cursor-pointer">Forgot Password?</a> 
+                    </div>
+                    <p class="text-sm text-custom-light-gray mt-6 text-center w-full max-w-md">
+                        Don't have an account? 
+                        <a id="showSignupLink" href="#" class="text-white hover:text-gray-300 font-normal transition">Sign up here</a>
                     </p>
-                    <a href="/logged-in/soundboard.html" class="inline-flex items-center text-green-400 font-normal hover:text-green-300 transition">
-                        Explore Soundboard &rarr;
-                    </a>
                 </div>
 
-                <div class="relative p-8 rounded-3xl border border-green-800/50 overflow-hidden shadow-2xl bg-gray-900 h-40 flex items-center justify-center order-1 lg:order-2 mb-6 lg:mb-0">
-                    <i class="fas fa-volume-up text-7xl text-green-400 z-10"></i>
-                    <p class="absolute bottom-4 left-4 text-xs text-green-500/50 z-10">Low-Latency Audio</p>
+                <div id="resetPasswordContainer" class="w-full flex-col items-center" style="display: none;">
+                    <h2 class="text-3xl font-normal text-custom-white-gray mb-6 text-center w-full tracking-tighter">Reset Your Password</h2>
+                    <p class="text-custom-light-gray text-base mb-6 text-center max-w-md font-normal">Enter your email address and we'll send you a link to reset your password.</p>
+                    <form id="resetPasswordForm" novalidate class="w-full max-w-md">
+                        <div class="mb-5">
+                            <label for="resetEmail" class="block mb-2 text-custom-light-gray text-sm font-light text-left">Email</label>
+                            <input type="email" id="resetEmail" placeholder="Enter your registered email" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-xl text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
+                        </div>
+                        <button type="submit" class="w-full p-3 text-lg rounded-xl font-normal ring-1 ring-white/20 text-white bg-white/5 hover:bg-white/10 transition">SEND RESET LINK</button>
+                    </form>
+                    <div id="resetMessage" class="message-area w-full max-w-md mt-4 text-center text-sm"></div>
+                    <div class="w-full max-w-md mt-6 text-center"> 
+                        <a id="backToLoginLink" class="text-white hover:text-gray-300 font-normal text-sm cursor-pointer">&larr; Back to Login</a> 
+                    </div>
                 </div>
+
+                <div id="usernameContainer" class="w-full flex-col items-center" style="display: none;">
+                    <h2 class="text-3xl font-normal text-custom-white-gray mb-6 text-center w-full tracking-tighter">Choose Your Username</h2>
+                    <form id="usernameForm" novalidate class="w-full max-w-md"> 
+                        <div class="mb-5">
+                            <label for="signupUsername" class="block mb-2 text-custom-light-gray text-sm font-light text-left">Username</label>
+                            <input type="text" id="signupUsername" placeholder="6-24 characters, including symbols" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-xl text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
+                            <p class="text-xs text-custom-lighter-gray mt-2 text-left font-light">Allowed symbols: .,-+\_!?$</p>
+                        </div>
+                        <button type="submit" class="w-full p-3 text-lg rounded-xl font-normal ring-1 ring-white/20 text-white bg-white/5 hover:bg-white/10 transition">NEXT</button>
+                    </form>
+                    <div id="usernameMessage" class="message-area w-full max-w-md mt-4 text-center text-sm"></div>
+                    <p class="text-sm text-custom-light-gray mt-6 text-center w-full max-w-md">
+                        Already have an account? 
+                        <a id="showLoginLink" href="#" class="text-white hover:text-gray-300 font-normal transition">Login here</a>
+                    </p>
+                </div>
+                
+                <div id="signupContainer" class="w-full flex-col items-center" style="display: none;">
+                    <h2 class="text-3xl font-normal text-custom-white-gray mb-6 text-center w-full tracking-tighter">Set Your Credentials</h2>
+                    <form id="signupForm" novalidate class="w-full max-w-md"> 
+                        <div class="mb-5">
+                            <label for="signupEmail" class="block mb-2 text-custom-light-gray text-sm font-light text-left">Email</label>
+                            <input type="email" id="signupEmail" placeholder="Enter your email" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-xl text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
+                        </div>
+                        <div class="mb-5">
+                            <label for="signupPassword" class="block mb-2 text-custom-light-gray text-sm font-light text-left">Password</label>
+                            <input type="password" id="signupPassword" placeholder="Enter your password" required class="w-full p-3 border border-custom-medium-gray bg-custom-dark-gray rounded-xl text-custom-white-gray transition focus:border-custom-light-gray focus:ring focus:ring-custom-light-gray/50 focus:outline-none">
+                            <p class="text-xs text-custom-lighter-gray mt-2 text-left font-light">8-48 chars, must include 1 uppercase, 1 number, and 1 special symbol.</p>
+                        </div>
+                        <button type="submit" class="w-full p-3 text-lg rounded-xl font-normal ring-1 ring-white/20 text-white bg-white/5 hover:bg-white/10 transition">CREATE ACCOUNT</button>
+                    </form>
+                    <div id="signupMessage" class="message-area w-full max-w-md mt-4 text-center text-sm"></div>
+                    <div class="w-full max-w-md mt-6 text-center"> 
+                        <a id="backToUsernameLink" class="text-white hover:text-gray-300 font-normal text-sm cursor-pointer">&larr; Back to Username</a> 
+                    </div>
+                </div>
+
             </div>
 
-            <div class="lg:grid lg:grid-cols-2 lg:gap-12 items-center">
-
-                <div class="relative p-8 rounded-3xl border border-blue-800/50 overflow-hidden shadow-2xl bg-gray-900 h-40 flex items-center justify-center order-1 lg:order-1 mb-6 lg:mb-0">
-                   <i class="fas fa-tasks text-7xl text-blue-400 z-10"></i>
-                    <p class="absolute bottom-4 right-4 text-xs text-blue-500/50 z-10">Notes, Countdowns, and Task Lists</p>
-                </div>
-
-                <div class="lg:pl-4 order-2 lg:order-2 mb-6 lg:mb-0">
-                    <span class="text-sm font-light text-blue-400 uppercase tracking-widest mb-2 block">Productivity Suite</span>
-                    <h3 class="text-4xl font-light mb-3 mt-2">Essential Apps for Success</h3>
-                    <p class="text-xl text-gray-400 mb-5 font-light">
-                        A suite of utilities built for academic success, keeping your notes, deadlines, and schedule organized in one place.
+            <div class="auth-col right-col flex-1 p-8 flex flex-col justify-center items-center bg-custom-darkest-gray">
+                <div class="w-full flex flex-col items-center justify-center">
+                    <h2 class="text-3xl font-normal text-custom-white-gray mb-6 text-center w-full tracking-tighter">Continue instantly</h2>
+                    <p class="text-lg text-custom-light-gray mb-8 text-center max-w-md font-normal">
+                        Use a trusted provider to sign in or create an account in one click.
                     </p>
-                    <ul class="space-y-2 text-lg text-gray-300">
-                        <li class="flex items-center"><i class="fas fa-sticky-note fa-fw w-5 mr-3 text-blue-500"></i><span class="font-light mr-2">Notes:</span>Simple, persistent storage for quick thoughts.</li>
-                        <li class="flex items-center"><i class="fas fa-hourglass-half fa-fw w-5 mr-3 text-blue-500"></i><span class="font-light mr-2">Countdowns:</span>Track due dates and exam times seamlessly.</li>
-                        <li class="flex items-center"><i class="fas fa-book fa-fw w-5 mr-3 text-blue-500"></i><span class="font-light mr-2">Dictionary:</span>Quickly look up definitions.</li>
-                    </ul>
+                    
+                    <button id="googleAuthBtn" class="btn-social flex items-center justify-center w-full max-w-md p-3 bg-custom-dark-gray text-custom-white-gray border border-custom-medium-gray rounded-xl font-normal cursor-pointer mb-3">
+                        <img src="images/google-icon.png" alt="Google Logo" class="w-5 h-5 mr-3">
+                        Continue with Google
+                    </button>
+                    <button id="githubAuthBtn" class="btn-social flex items-center justify-center w-full max-w-md p-3 bg-custom-dark-gray text-custom-white-gray border border-custom-medium-gray rounded-xl font-normal cursor-pointer mb-3">
+                        <img src="images/github-mark-white.png" alt="GitHub Logo" class="w-5 h-5 mr-3">
+                        Continue with GitHub
+                    </button>
+                    <button id="microsoftAuthBtn" class="btn-social flex items-center justify-center w-full max-w-md p-3 bg-custom-dark-gray text-custom-white-gray border border-custom-medium-gray rounded-xl font-normal cursor-pointer mb-3">
+                        <img src="images/microsoft.png" alt="Microsoft Logo" class="w-5 h-5 mr-3">
+                        Continue with Microsoft
+                    </button>
+                    
+                    <button id="discordAuthBtn" class="btn-social flex items-center justify-center w-full max-w-md p-3 bg-custom-dark-gray text-custom-white-gray border border-custom-medium-gray rounded-xl font-normal cursor-pointer mb-3">
+                        <i class="fab fa-discord w-5 h-5 mr-3 text-[#5865F2]"></i> Continue with Discord
+                    </button>
+                    
+                    <p class="text-xs italic text-custom-light-gray text-center max-w-md mt-4 leading-relaxed font-light">
+                        By continuing, you agree to our 
+                        <a href="legal.html#terms-of-service" target="_blank" class="text-white hover:text-gray-300 font-normal">Terms of Service</a> and 
+                        <a href="legal.html#privacy-policy" target="_blank" class="text-white hover:text-gray-300 font-normal">Privacy Policy</a>.
+                    </p>
                 </div>
             </div>
-
-            <div class="lg:grid lg:grid-cols-2 lg:gap-12 items-center">
-                <div class="lg:pr-4 order-2 lg:order-1 mb-6 lg:mb-0">
-                    <span class="text-sm font-light text-purple-400 uppercase tracking-widest mb-2 block">Stealth & Utility</span>
-                    <h3 class="text-4xl font-light mb-3 mt-2">QOL & Discreet Features</h3>
-                    <p class="text-xl text-gray-400 mb-5 font-light">
-                        Quality-of-Life tools designed to help you manage distractions instantly and discreetly, without drawing unwanted attention.
-                    </p>
-                    <ul class="space-y-2 text-lg text-gray-300">
-                        <li class="flex items-center"><i class="fas fa-eye-slash fa-fw w-5 mr-3 text-purple-500"></i><span class="font-light mr-2">Tab Disguising:</span>Instantly change the tab title/favicon to blend in.</li>
-                        <li class="flex items-center"><i class="fas fa-bolt fa-fw w-5 mr-3 text-purple-500"></i><span class="font-light mr-2">Panic Keys:</span>A quick key combination to redirect.</li>
-                        <li class="flex items-center"><i class="fas fa-palette fa-fw w-5 mr-3 text-purple-500"></i><span class="font-light mr-2">Customizable UI:</span>Adjust themes for maximum discretion.</li>
-                    </ul>
-                </div>
-
-                <div class="relative p-8 rounded-3xl border border-purple-800/50 overflow-hidden shadow-2xl bg-gray-900 h-40 flex items-center justify-center order-1 lg:order-2 mb-6 lg:mb-0">
-                    <i class="fas fa-user-secret text-7xl text-purple-400 z-10"></i>
-                    <p class="absolute bottom-4 left-4 text-xs text-purple-500/50 z-10">Discretion and Quick Hiding</p>
-                </div>
-            </div>
-        </section>
-
-        <section class="py-12 mx-auto max-w-7xl px-4 text-center border-t border-gray-900">
-            <h2 class="text-xl font-light text-gray-400 mb-2">Powered by Modern Cloud Tools</h2>
-            <p class="text-gray-500 text-lg font-light">
-                <strong class="text-white font-normal">Authentication and Backend Infrastructure</strong>
-                are handled robustly using
-                <strong class="text-white font-normal">Firebase</strong>,
-                ensuring secure, reliable, and scalable user management for all your student tools.
-            </p>
-        </section>
-
+        </div>
     </main>
 
-    <footer class="border-t border-gray-900 py-6">
-        <div class="mx-auto max-w-7xl px-4 text-center text-gray-500 text-sm">
+    <footer class="w-full h-10 flex items-center justify-center bg-black border-t border-custom-medium-gray">
+        <div class="text-center text-custom-light-gray text-xs font-light">
             &copy; 2025 4simpleproblems (4SP). Built for students.
         </div>
     </footer>
 
-    <div id="cookie-overlay" class="fixed inset-0 bg-black/70 z-[9999] transition-opacity duration-300 opacity-0" style="display: none;">
-        <div id="cookie-banner" class="absolute bottom-4 left-1/2 -translate-x-1/2 w-full max-w-7xl px-4">
-            <div class="bg-black/95 text-white p-4 sm:p-6 rounded-3xl border border-gray-700 shadow-2xl backdrop-blur-md flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0 md:space-x-6">
-                <div class="flex-1 min-w-0">
-                    <h3 class="text-xl font-normal mb-1">4SP Uses Cookies</h3>
-                    <p class="text-sm text-gray-300 mb-2 font-light">
-                        We use cookies to ensure the core functionality of authentication (via Firebase) and to analyze site traffic for improvements. This data is non-personal and essential for our services.
-                    </p>
-                    <div class="space-x-3 text-xs">
-                        <a href="https://policies.google.com/technologies/cookies" target="_blank" class="text-blue-400 hover:text-blue-300 underline transition">
-                            Extra (What are cookies?)
-                        </a>
-                        <a class="text-gray-500 pointer-events-none">|</a>
-                        <a href="../legal.html#privacy-policy" class="text-blue-400 hover:text-blue-300 underline transition">
-                            Privacy Policy
-                        </a>
-                    </div>
-                </div>
+<script type="module">
+        // --- Firebase Imports (Combined) ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import {
+            getAuth,
+            signInWithEmailAndPassword,
+            createUserWithEmailAndPassword,
+            sendPasswordResetEmail,
+            sendEmailVerification,
+            fetchSignInMethodsForEmail,
+            signOut,
+            GoogleAuthProvider,
+            GithubAuthProvider,
+            OAuthProvider,
+            signInWithPopup,
+            setPersistence,
+            browserLocalPersistence
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            getDoc, 
+            setDoc, 
+            collection,
+            query,
+            where,
+            getDocs,
+            serverTimestamp,
+            setLogLevel
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        
+        // --- Import Firebase Config ---
+        import { firebaseConfig } from "./firebase-config.js"; 
 
-                <div class="flex-shrink-0">
-                    <button id="accept-cookies-button" class="w-full md:w-auto inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-normal rounded-xl text-white bg-purple-500/10 ring-1 ring-purple-500/50 hover:bg-purple-500/20 transition duration-150 transform hover:scale-[1.02]">
-                        I Understand
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-    <script type="module" src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
-    <script type="module" src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
+        // --- Discord Custom Auth Constants (NEW) ---
+        const DISCORD_CLIENT_ID = '1419262893941063866'; // Your provided ID
+        const DISCORD_REDIRECT_URI = 'https://us-central1-project-zirconium.cloudfunctions.net/discordCallback';
+        const DISCORD_SCOPE = 'identify%20email'; // URL-encoded scopes
 
-    <script type="module" src="../firebase-config.js"></script>
+        // --- Canvas Global Variables (MANDATORY USE) ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-    <script type="module">
-        // --- START COOKIE LOGIC ---
-
-        const COOKIE_KEY = '4sp-cookie-consent';
-        const cookieOverlay = document.getElementById('cookie-overlay');
-        const acceptCookiesButton = document.getElementById('accept-cookies-button');
-        // Define transition duration in MS to match Tailwind's 'duration-300'
-        const TRANSITION_DURATION_MS = 300; 
-
-        // Function to hide the banner with fade-out
-        const hideCookieBanner = () => {
-            // 1. Start the fade-out (opacity 1 -> 0)
-            cookieOverlay.classList.remove('opacity-100');
-            cookieOverlay.classList.add('opacity-0');
-
-            // 2. Wait for the transition to finish before setting display: none
-            setTimeout(() => {
-                cookieOverlay.style.display = 'none';
-                // Set consent in localStorage so the banner doesn't show on future visits
-                localStorage.setItem(COOKIE_KEY, 'accepted');
-                // Allow scrolling on the body
-                document.body.style.overflow = '';
-            }, TRANSITION_DURATION_MS);
-        };
-
-        // Function to show the banner with fade-in
-        const showCookieBanner = () => {
-            // 1. Set display: block instantly
-            cookieOverlay.style.display = 'block';
-            // Prevent scrolling on the body
-            document.body.style.overflow = 'hidden';
-
-            // 2. Schedule the opacity change to trigger the transition
-            // Use a small timeout (10ms) to ensure display:block is rendered first
-            setTimeout(() => {
-                cookieOverlay.classList.remove('opacity-0');
-                cookieOverlay.classList.add('opacity-100');
-            }, 10); 
-        };
-
-        // Check for existing consent when the script loads
-        if (localStorage.getItem(COOKIE_KEY) !== 'accepted') {
-            // If consent is not found, wait for the window to load, then show the banner
-            window.addEventListener('load', showCookieBanner);
-        } else {
-             // If consent is found, ensure the overlay remains hidden and opacity is zero
-             cookieOverlay.style.display = 'none';
-             cookieOverlay.classList.remove('opacity-100');
-             cookieOverlay.classList.add('opacity-0');
-             document.body.style.overflow = '';
+        if (!firebaseConfig || !firebaseConfig.apiKey) {
+            console.error("FATAL ERROR: Firebase configuration is missing or invalid.");
         }
 
-        // Add event listener to the "I Understand" button
-        if (acceptCookiesButton) {
-            acceptCookiesButton.addEventListener('click', hideCookieBanner);
-        }
-
-        // --- END COOKIE LOGIC ---
-
-
-        // Constants for button content
-        const DASHBOARD_HTML = 'Go to Dashboard <i class="fas fa-arrow-right ml-2"></i>';
-        const GET_STARTED_HTML = 'Get Started Instantly <i class="fas fa-arrow-right ml-2"></i>';
-
-        // NOTE: The BETA_FORM_URL is no longer needed but kept for completeness in the JS structure.
-        const BETA_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdWdL4RTE8p7t7gMGYpIHYiYcV__sNa8vOlwOCQyoolKuQimQ/viewform?usp=publish-editor";
-
-
-        // Import the required functions and the config object
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
-        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js';
-
-        // This line imports the configuration object exported from your file.
-        import { firebaseConfig } from '../firebase-config.js';
-
-        // 1. Initialize the Firebase App using the imported configuration.
+        // --- Firebase Initialization ---
         const app = initializeApp(firebaseConfig);
-
-        // 2. Get the Firebase Auth instance
         const auth = getAuth(app);
+        const db = getFirestore(app);
+        setLogLevel('debug'); // Enable Firestore logging
 
-        // 3. Reference to the button and new elements
-        const authButton = document.getElementById('auth-button');
-        // NOTE: Renamed betaCtaContainer to releaseCtaContainer in HTML, updating variable name here.
-        const releaseCtaContainer = document.getElementById('release-cta-container');
-        // NOTE: betaApplyLink is no longer needed but kept for completeness in the JS structure.
-        const betaApplyLink = document.getElementById('beta-apply-link');
+        // --- Beta Tester Check Function ---
+        const isUserBetaTester = async (email) => {
+            if (!email) return false;
+            const normalizedEmail = email.toLowerCase();
 
-
-        /**
-         * Listens for changes in the user's sign-in state.
-         * If a user is logged in, it updates the button to "Go to dashboard".
-         * The release CTA is always shown now, regardless of auth state, so no need to hide/show it.
-         */
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                // User is signed in. Change the button to "Go to dashboard".
-                if (authButton) {
-                    authButton.href = '../logged-in/dashboard.html';
-                    authButton.innerHTML = DASHBOARD_HTML; // Use Font Awesome content
+            // --- ADMIN OVERRIDE ---
+            // Hardcoded email to always allow access
+            if (normalizedEmail === "4simpleproblems@gmail.com") {
+                console.log("Admin override: Access granted for 4simpleproblems@gmail.com");
+                return true;
+            }
+            // --- END ADMIN OVERRIDE ---
+            
+            // Define the path to the beta testers document
+            const betaTestersRef = doc(db, 'artifacts', appId, 'public', 'data', 'app_config', 'beta_testers');
+            
+            try {
+                const docSnap = await getDoc(betaTestersRef);
+                
+                if (docSnap.exists()) {
+                    const emails = docSnap.data()?.emails || [];
+                    const normalizedEmails = emails.map(e => String(e).toLowerCase());
+                    return normalizedEmails.includes(normalizedEmail);
+                } else {
+                    // If the list doc doesn't exist, deny access (fail-closed)
+                    console.warn("Beta tester list document not found. Access denied.");
+                    return false;
                 }
+            } catch (error) {
+                console.error("Error checking beta tester status:", error);
+                // If there's an error, deny access (fail-closed)
+                return false;
+            }
+        };
+
+        // --- Unified Data Model ---
+        // All user profile data will be stored in a top-level 'users' collection.
+        const getUserDocRef = (userId) => doc(db, 'users', userId);
+        let selectedUsername = null; // Store username between signup steps
+
+        // --- DOM Elements ---
+        const containers = {
+            login: document.getElementById('loginContainer'),
+            reset: document.getElementById('resetPasswordContainer'),
+            username: document.getElementById('usernameContainer'),
+            signup: document.getElementById('signupContainer')
+        };
+        const messageDivs = {
+            login: document.getElementById('loginMessage'),
+            reset: document.getElementById('resetMessage'),
+            username: document.getElementById('usernameMessage'),
+            signup: document.getElementById('signupMessage')
+        };
+
+        // --- View Management ---
+        const showView = (viewName) => {
+            Object.values(messageDivs).forEach(div => div.innerHTML = '');
+            for (const key in containers) {
+                containers[key].style.display = (key === viewName) ? 'flex' : 'none';
+                if (key === viewName) {
+                    containers[key].style.flexDirection = 'column';
+                }
+            }
+        };
+
+        // --- Helper Functions ---
+        const showMessage = (element, text, type = 'error') => {
+            element.innerHTML = text;
+            element.className = `message-area w-full max-w-md mt-4 text-center text-sm ${type}-message`;
+        };
+
+        const navigateToDashboard = () => window.location.href = 'logged-in/dashboard.html';
+
+        const createUserDocument = async (user, authMethod, username) => {
+            const isVerified = authMethod !== 'email' || !!user.emailVerified;
+            try {
+                await setDoc(getUserDocRef(user.uid), {
+                    email: user.email, 
+                    authMethod: authMethod, 
+                    createdAt: serverTimestamp(),
+                    username: username, 
+                    emailVerified: isVerified
+                });
+                return true;
+            } catch (error) { 
+                console.error("Error creating user document:", error); 
+                return false; 
+            }
+        };
+
+        const handleSuccessfulLogin = async (user) => {
+            await setPersistence(auth, browserLocalPersistence);
+            
+            // --- NEW: BETA TESTER CHECK (for Email + Existing Social) ---
+            const isBetaTester = await isUserBetaTester(user.email);
+            if (!isBetaTester) {
+                const googleFormLink = "https://docs.google.com/forms/d/e/1FAIpQLSdWdL4RTE8p7t7gMGYpIHYiYcV__sNa8vOlwOCQyoolKuQimQ/viewform?usp=publish-editor";
+                showMessage(messageDivs.login, `This account is not on the beta tester list. <a href="${googleFormLink}" target="_blank" class="underline font-bold text-yellow-300">Apply for beta access here</a>.`, 'warning');
+                await signOut(auth); // Log them out.
+                return; // Stop further execution.
+            }
+            // --- End Beta Tester Check ---
+            
+            const isProviderLogin = user.providerData.some(p => ['google.com', 'github.com', 'microsoft.com'].includes(p.providerId));
+            
+            if (user.emailVerified || isProviderLogin) {
+                navigateToDashboard();
             } else {
-                // User is signed out. Ensure the button is set to "Get Started Instantly".
-                if (authButton) {
-                    authButton.href = '../authentication.html';
-                    authButton.innerHTML = GET_STARTED_HTML; // Use Font Awesome content
+                showMessage(messageDivs.login, 'Your email is not verified. Please check your inbox. <a href="#" id="resend-link" class="underline cursor-pointer">Resend email</a>', 'error');
+                document.getElementById('resend-link').addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    try {
+                        await sendEmailVerification(user);
+                        showMessage(messageDivs.login, 'A new verification link has been sent!', 'success');
+                    } catch (err) { showMessage(messageDivs.login, `Error sending email: ${err.message}`); }
+                });
+                await signOut(auth);
+            }
+        };
+
+        const checkProfanity = async (text) => {
+            try {
+                const response = await fetch(`https://www.purgomalum.com/service/containsprofanity?text=${encodeURIComponent(text)}`);
+                const result = await response.text();
+                return result.toLowerCase() === 'true';
+            } catch (error) { console.error('Profanity API error:', error); return false; }
+        };
+
+        const isUsernameTaken = async (username) => {
+            const q = query(collection(db, 'users'), where('username', '==', username));
+            const querySnapshot = await getDocs(q);
+            return !querySnapshot.empty;
+        };
+
+        const validatePassword = (password) => {
+            if (password.length < 8 || password.length > 48) return 'Password must be 8-48 characters.';
+            if (!/[A-Z]/.test(password)) return 'Password must contain an uppercase letter.';
+            if (!/[0-9]/.test(password)) return 'Password must contain a number.';
+            if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) return 'Password must contain a special symbol.';
+            return null;
+        };
+        
+        // --- Discord Login Handler (NEW) ---
+        const handleDiscordLogin = () => {
+            // Construct the Discord authorization URL using the constant variables
+            const discordAuthUrl = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${DISCORD_REDIRECT_URI}&response_type=code&scope=${DISCORD_SCOPE}`;
+            
+            // Redirect the user to the Discord login page
+            window.location.href = discordAuthUrl;
+        };
+
+
+        // --- Event Listener Setup ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initial view
+            showView('login');
+
+            // --- View Navigation ---
+            document.getElementById('showSignupLink').addEventListener('click', (e) => { e.preventDefault(); showView('username'); });
+            document.getElementById('showLoginLink').addEventListener('click', (e) => { e.preventDefault(); showView('login'); });
+            document.getElementById('forgotPasswordLink').addEventListener('click', () => showView('reset'));
+            document.getElementById('backToLoginLink').addEventListener('click', () => showView('login'));
+            document.getElementById('backToUsernameLink').addEventListener('click', () => showView('username'));
+            
+            // --- Discord Listener (NEW) ---
+            document.getElementById('discordAuthBtn').addEventListener('click', handleDiscordLogin);
+
+
+            // --- Form Handlers ---
+
+            // Login Form
+            document.getElementById('loginForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('loginEmail').value.trim();
+                const password = document.getElementById('loginPassword').value;
+                if (!email || !password) { showMessage(messageDivs.login, 'Please enter both email and password.'); return; }
+
+                try {
+                    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                    const userDoc = await getDoc(getUserDocRef(userCredential.user.uid));
+                    if (userDoc.exists()) {
+                        await handleSuccessfulLogin(userCredential.user);
+                    } else {
+                        await signOut(auth);
+                        showMessage(messageDivs.login, 'Account record is incomplete. Please sign up again or contact support.');
+                    }
+                } catch (error) {
+                    let msg = 'Invalid email or password.';
+                    if (error.code === 'auth/too-many-requests') msg = 'Access temporarily disabled due to too many failed login attempts.';
+                    else if (error.code === 'auth/user-disabled') msg = 'Your account has been disabled.';
+                    showMessage(messageDivs.login, msg);
                 }
-            }
-            // Release CTA remains visible in both states as per the new requirement.
-            if (releaseCtaContainer) {
-                releaseCtaContainer.style.display = 'block';
-            }
+            });
+
+            // Password Reset Form
+            document.getElementById('resetPasswordForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('resetEmail').value.trim();
+                if (!email) { showMessage(messageDivs.reset, 'Please enter your email.'); return; }
+
+                try {
+                    const methods = await fetchSignInMethodsForEmail(auth, email);
+                    if (methods.length === 0) {
+                        showMessage(messageDivs.reset, 'No account found with this email.');
+                    } else if (methods.some(m => m !== 'password')) {
+                        showMessage(messageDivs.reset, 'This account uses a social provider and does not have a password to reset.');
+                    } else {
+                        await sendPasswordResetEmail(auth, email);
+                        showMessage(messageDivs.reset, 'Password reset link sent! Check your inbox.', 'success');
+                    }
+                } catch (error) {
+                    showMessage(messageDivs.reset, 'An error occurred. Please check the email and try again.');
+                }
+            });
+
+            // Signup Step 1: Username Form
+            document.getElementById('usernameForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const username = document.getElementById('signupUsername').value.trim();
+                if (username.length < 6 || username.length > 24) { showMessage(messageDivs.username, 'Username must be 6-24 characters.'); return; }
+                if (!/^[a-zA-Z0-9.,\-+_\!\?\$\\]+$/.test(username)) { showMessage(messageDivs.username, 'Username contains invalid characters.'); return; }
+
+                showMessage(messageDivs.username, 'Checking username...', 'warning');
+                if (await checkProfanity(username)) { showMessage(messageDivs.username, 'This username is not allowed. Please choose another.'); return; }
+                if (await isUsernameTaken(username)) { showMessage(messageDivs.username, 'This username is already taken.'); return; }
+
+                selectedUsername = username;
+                showView('signup');
+                document.getElementById('signupEmail').focus();
+            });
+
+            // Signup Step 2: Credentials Form
+            document.getElementById('signupForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('signupEmail').value.trim();
+                const password = document.getElementById('signupPassword').value;
+
+                // --- NEW: BETA TESTER CHECK (for New Email Signup) ---
+                const isBetaTester = await isUserBetaTester(email);
+                if (!isBetaTester) {
+                    const googleFormLink = "https://docs.google.com/forms/d/e/1FAIpQLSdWdL4RTE8p7t7gMGYpIHYiYcV__sNa8vOlwOCQyoolKuQimQ/viewform?usp=publish-editor";
+                    showMessage(messageDivs.signup, `This email is not on the beta tester list. <a href="${googleFormLink}" target="_blank" class="underline font-bold text-yellow-300">Apply for beta access here</a>.`, 'warning');
+                    return; // Stop account creation
+                }
+                // --- End Beta Tester Check ---
+                
+                const passwordError = validatePassword(password);
+                if (passwordError) { showMessage(messageDivs.signup, passwordError); return; }
+
+                try {
+                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                    await sendEmailVerification(userCredential.user);
+                    const docCreated = await createUserDocument(userCredential.user, 'email', selectedUsername);
+
+                    if (docCreated) {
+                        await signOut(auth);
+                        showMessage(messageDivs.signup, `Success! A verification email has been sent to ${email}. You can now log in.`, 'success');
+                    } else {
+                        await userCredential.user.delete();
+                        showMessage(messageDivs.signup, 'Failed to create user record. Please try again.');
+                    }
+                } catch (error) {
+                    let msg = 'An unknown error occurred.';
+                    if (error.code === 'auth/email-already-in-use') msg = 'This email is already in use. Please log in instead.';
+                    else if (error.code === 'auth/invalid-email') msg = 'The email address is not valid.';
+                    else if (error.code === 'auth/weak-password') msg = 'Password is too weak.';
+                    showMessage(messageDivs.signup, msg);
+                }
+            });
+
+            // --- Social Authentication Handler (Unified for Login & Signup) ---
+            const handleSocialAuth = async (provider) => {
+                try {
+                    const result = await signInWithPopup(auth, provider);
+                    const user = result.user;
+                    const userDoc = await getDoc(getUserDocRef(user.uid));
+                    const providerName = provider.providerId.split('.')[0];
+
+                    if (userDoc.exists()) {
+                        // User exists -> Log them in
+                        // This will trigger handleSuccessfulLogin, which has the beta check.
+                        await handleSuccessfulLogin(user);
+                    } else {
+                        // New user -> Create account
+                        
+                        // --- NEW: BETA TESTER CHECK (for New Social) ---
+                        const isBetaTester = await isUserBetaTester(user.email);
+                        if (!isBetaTester) {
+                            const googleFormLink = "https://docs.google.com/forms/d/e/1FAIpQLSdWdL4RTE8p7t7gMGYpIHYiYcV__sNa8vOlwOCQyoolKuQimQ/viewform?usp=publish-editor";
+                            const visibleMessageDiv = messageDivs.login.offsetParent ? messageDivs.login : messageDivs.username;
+                            showMessage(visibleMessageDiv, `This account is not on the beta tester list. <a href="${googleFormLink}" target="_blank" class="underline font-bold text-yellow-300">Apply for beta access here</a>.`, 'warning');
+                            
+                            // Important: Delete the just-created auth user and sign out
+                            try {
+                                await user.delete();
+                                console.log("Deleted non-beta social user from Firebase Auth.");
+                            } catch (deleteError) {
+                                console.error("Error deleting non-beta user:", deleteError);
+                                // If deletion fails, at least sign them out.
+                                await signOut(auth);
+                            }
+                            return; // Stop execution
+                        }
+                        // --- End Beta Tester Check ---
+                        
+                        let username = (user.displayName || user.email.split('@')[0] || 'User')
+                            .replace(/[^a-zA-Z0-9]/g, '').slice(0, 16);
+                        if (username.length < 6) username = `User${user.uid.substring(0, 8)}`;
+                        if (await checkProfanity(username)) username = `User${user.uid.substring(0, 8)}`;
+                        
+                        let finalUsername = username;
+                        let counter = 1;
+                        while (await isUsernameTaken(finalUsername)) {
+                            finalUsername = `${username.slice(0, 14)}_${counter++}`;
+                        }
+
+                        const docCreated = await createUserDocument(user, providerName, finalUsername);
+                        if (docCreated) {
+                            // Since this is a new social user, they are already "verified"
+                            // and have passed the beta check. Log them in.
+                            await setPersistence(auth, browserLocalPersistence);
+                            navigateToDashboard();
+                        } else {
+                            throw new Error('Failed to create user document for social auth.');
+                        }
+                    }
+                } catch (error) {
+                    let msg = `A problem occurred during social sign-in.`;
+                    if (error.code === 'auth/account-exists-with-different-credential') {
+                        msg = 'An account with this email already exists using a different sign-in method.';
+                    } else if (error.code === 'auth/popup-closed-by-user') {
+                        return; // User cancelled, do nothing.
+                    }
+                    // Show error on the currently visible panel
+                    const visibleMessageDiv = messageDivs.login.offsetParent ? messageDivs.login : messageDivs.username;
+                    showMessage(visibleMessageDiv, msg);
+                }
+            };
+
+            document.getElementById('googleAuthBtn').addEventListener('click', () => handleSocialAuth(new GoogleAuthProvider()));
+            document.getElementById('githubAuthBtn').addEventListener('click', () => handleSocialAuth(new GithubAuthProvider()));
+            document.getElementById('microsoftAuthBtn').addEventListener('click', () => handleSocialAuth(new OAuthProvider('microsoft.com')));
         });
     </script>
 </body>
