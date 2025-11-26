@@ -322,7 +322,7 @@ let db;
                 position: absolute; right: 0; top: 60px; width: 16rem; /* UPDATED top from 50px */
                 background: var(--menu-bg);
                 border: 1px solid var(--menu-border); 
-                border-radius: 0.8rem; padding: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
+                border-radius: 0.9rem; padding: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
                 transition: transform 0.2s ease-out, opacity 0.2s ease-out, background-color 0.3s ease, border-color 0.3s ease; 
                 transform-origin: top right; z-index: 1010;
             }
@@ -463,7 +463,7 @@ let db;
                 border: 1px solid var(--hint-border);
                 color: var(--hint-text);
                 padding: 0.5rem 1rem;
-                border-radius: 0.8rem;
+                border-radius: 0.9rem;
                 box-shadow: 0 4px 10px rgba(0,0,0,0.5);
                 opacity: 0;
                 pointer-events: none;
