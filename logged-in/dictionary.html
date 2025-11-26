@@ -46,7 +46,8 @@
         .btn-toolbar-style {
             background: var(--menu-bg, #0000000);
             border: 1px solid var(--menu-border, #333);
-            border-radius: 0.75rem;
+            /* UPDATED: Increased button rounding */
+            border-radius: 1rem; 
             color: var(--menu-text, #d1d5db);
             padding: 0.5rem 1rem;
             font-weight: 500;
@@ -77,10 +78,12 @@
         /* Input Styling */
         .input-text-style {
             width: 100%; 
-            padding: 1rem 1.5rem; 
+            /* UPDATED: Reduced vertical padding for shorter bar */
+            padding: 0.65rem 1.5rem; 
             border: 1px solid #1a1a1a; 
             background-color: #0d0d0d; 
-            border-radius: 0.75rem; 
+            /* UPDATED: Increased rounding for container */
+            border-radius: 1rem; 
             color: #c0c0c0; 
             transition: all 0.2s;
             font-size: 1.1rem;
@@ -134,7 +137,7 @@
             font-style: italic;
             color: #9ca3af;
             transition: color 0.2s ease;
-            cursor: default; /* Changed from pointer as there's no action */
+            cursor: default; 
         }
         
         .highlighted-word {
@@ -256,11 +259,49 @@
         
         let currentAudio = null; 
 
+        // --- URL HASH MANAGEMENT ---
+        
+        // Gets the word from the URL hash (e.g., #word=apple)
+        function getWordFromHash() {
+            const hash = window.location.hash;
+            if (hash.startsWith('#word=')) {
+                return decodeURIComponent(hash.substring(6)).trim();
+            }
+            return '';
+        }
+
+        // Updates the URL hash without reloading the page
+        function updateUrlHash(word) {
+            const newHash = word ? `#word=${encodeURIComponent(word.toLowerCase())}` : '';
+            // Use replaceState if the hash hasn't changed to avoid adding duplicate history entries
+            if (window.location.hash === newHash) return;
+            history.pushState(null, '', newHash);
+        }
+
+        // Checks the URL hash on load or when the hash changes
+        function checkUrlHashForWord() {
+            const word = getWordFromHash();
+            if (word) {
+                searchInput.value = word;
+                fetchDefinition(word);
+            } else {
+                // If hash is empty, ensure the search box is clear
+                searchInput.value = '';
+            }
+        }
+
+        // Listen for browser back/forward buttons when hash changes
+        window.addEventListener('popstate', checkUrlHashForWord);
+
+
         // --- DICTIONARY LOGIC (MERRIAM-WEBSTER) ---
         
         async function fetchDefinition(word) {
             const trimmedWord = word.trim().toLowerCase();
             if (!trimmedWord) return;
+            
+            // Set the URL hash immediately when starting a search
+            updateUrlHash(trimmedWord);
 
             definitionOutput.innerHTML = `
                 <div class="h-full flex flex-col items-center justify-center pt-12">
@@ -367,7 +408,6 @@
             currentAudio.play();
         }
 
-        // UPDATED: Function to structure MW data clearly
         function displayDefinition(word, dictData, thesData) {
             const primaryEntry = dictData[0];
             
@@ -392,11 +432,10 @@
             
             // --- Definitions Grouped by Part of Speech (Functional Label) ---
             
-            // Group entries by functional label
             const groupedDefinitions = {};
             dictData.slice(0, 5).forEach(entry => {
                 if (typeof entry === 'string') return;
-                const fl = entry.fl ? entry.fl.toUpperCase() : 'DEFINITION'; // Default label
+                const fl = entry.fl ? entry.fl.toUpperCase() : 'DEFINITION'; 
                 if (!groupedDefinitions[fl]) {
                     groupedDefinitions[fl] = [];
                 }
@@ -417,7 +456,6 @@
                         <ol class="list-decimal list-outside ml-6 mt-4 space-y-4 text-xl">
                     `;
 
-                    // Concatenate all short definitions for this part of speech
                     entries.forEach(entry => {
                         entry.shortdef.forEach(def => {
                             htmlContent += `
@@ -471,7 +509,10 @@
         // --- EVENT LISTENERS ---
         function handleSearch() {
             const query = searchInput.value.trim().toLowerCase();
-            if (query) fetchDefinition(query);
+            if (query) {
+                 // The fetchDefinition function now handles updating the hash
+                fetchDefinition(query); 
+            }
         }
 
         searchInput.addEventListener('keydown', (e) => {
@@ -485,6 +526,8 @@
             const target = event.target;
             
             if (target.dataset.word) {
+                // When a linked word is clicked, update the input and search
+                searchInput.value = target.dataset.word; 
                 fetchDefinition(target.dataset.word);
             }
             
@@ -493,7 +536,7 @@
             }
         });
 
-        // --- AUTHENTICATION ---
+        // --- AUTHENTICATION & INITIALIZATION ---
         async function initializeAuth() {
             try {
                 if (initialAuthToken) {
@@ -513,6 +556,8 @@
                     loadingScreen.style.display = 'none';
                     pageContent.classList.remove('hidden');
                     pageContent.style.display = 'flex'; 
+                    // New: Check URL hash once authentication is ready
+                    checkUrlHashForWord(); 
                 }, 300);
             } else {
                 window.location.href = '../index.html'; 
