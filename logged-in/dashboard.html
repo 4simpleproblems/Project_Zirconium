@@ -4,54 +4,103 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>4SP - DASHBOARD</title>
-    
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
+    
     <script src="https://cdn.tailwindcss.com"></script>
-     <script src="../navigation.js"></script>
-    <script src="../injector.js"></script>
+
+    <style>
+        :root {
+            --container-radius: 16px;
+            --container-padding: 2rem;
+            
+            --bg-page: #070707;
+            --bg-container: #0d0d0d;
+            --border-color: #1a1a1a;
+            --text-primary: #c0c0c0;
+            
+            --font-weight-body: 300;
+            --font-weight-headings: 400;
+        }
+
+        body { 
+            font-family: 'Geist', sans-serif; 
+            background-color: var(--bg-page);
+            color: var(--text-primary);
+            font-weight: var(--font-weight-body);
+            
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+        
+        h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
+            font-weight: var(--font-weight-headings) !important;
+        }
+
+        html { height: 100%; }
+
+        #date-time-display {
+            border-radius: var(--container-radius);
+            background-color: var(--bg-container);
+            border: 1px solid var(--border-color);
+            padding: var(--container-padding);
+            letter-spacing: -0.05em;
+        }
+    </style>
+
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     
+    <script src="../navigation.js"></script>
+    <script src="../injector.js"></script>
     <script src="../humanity-agent.js"></script>
 
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6659160370587814" crossorigin="anonymous"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-1D4F692C1Q"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-1D4F692C1Q');
+    </script>
+</head>
+
+<body>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6659160370587814" crossorigin="anonymous"></script>
+    
+    <div id="date-time-display"></div>
 
     <script type="module">
         import { firebaseConfig } from '../firebase-config.js';
 
-        // Initialize Firebase globally using the window object for older SDK compatibility
-        // Only initialize if 'firebase' is available (from the scripts above)
         if (typeof firebase !== 'undefined') {
             const app = firebase.initializeApp(firebaseConfig);
             const auth = firebase.auth(app);
-            // Optionally set global variables for modules that need them
             window.db = firebase.firestore(app);
             window.auth = auth;
         }
 
-
         const dateTimeElement = document.getElementById('date-time-display');
         const redirectPath = '../index.html';
 
-        /**
-         * Updates the date and time display every second.
-         */
         function updateDateTime() {
             const now = new Date();
             
-            // Format time (e.g., 04:20 PM:23)
             const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
             const timeString = now.toLocaleTimeString('en-US', timeOptions);
             
-            // Format date (e.g., Saturday, October 4, 2025)
             const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
             const dateString = now.toLocaleDateString('en-US', dateOptions);
 
             if (dateTimeElement) {
-                // Ensure seconds are formatted to 2 digits for consistent width
                 const parts = timeString.split(':');
                 const timeWithColon = `${parts[0]}:${parts[1]}`;
                 const secondsAndAmPm = parts[2];
@@ -63,70 +112,18 @@
             }
         }
 
-        /**
-         * Handles user authentication state and redirects if logged out.
-         */
         if (typeof firebase !== 'undefined' && firebase.auth) {
             firebase.auth().onAuthStateChanged((user) => {
                 if (!user) {
-                    // User is signed out. Redirect immediately.
                     console.log("User logged out. Redirecting to:", redirectPath);
                     window.location.replace(redirectPath);
                 } else {
-                    // User is signed in. Start the clock update.
                     console.log("User signed in. UID:", user.uid);
-                    
-                    // Set the initial time and then update it every second
                     updateDateTime();
                     setInterval(updateDateTime, 1000);
                 }
             });
         }
-
-
-        // Add CSS for minimal black screen look
-        document.head.insertAdjacentHTML('beforeend', `
-            <style>
-                /* Apply Geist font universally (from notes.html) */
-                body { 
-                    font-family: 'Geist', sans-serif; 
-                    background-color: #070707; /* MATCHED */
-                    color: #c0c0c0; /* MATCHED */
-                    font-weight: 300; /* ADDED */
-                    
-                    /* Centering styles for dashboard */
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    height: 100vh;
-                    margin: 0;
-                    text-align: center;
-                }
-                
-                /* ADDED: Thinner bold/headings (from notes.html) */
-                h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
-                    font-weight: 400 !important;
-                }
-
-                /* Ensure HTML and body take full viewport height */
-                html { height: 100%; }
-            </style>
-        `);
     </script>
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6659160370587814"
-     crossorigin="anonymous"></script><script async src="https://www.googletagmanager.com/gtag/js?id=G-1D4F692C1Q"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-1D4F692C1Q');
-</script>
-</head>
-<body>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6659160370587814"
-     crossorigin="anonymous"></script>
-    <div id="date-time-display" class="tracking-tighter p-8 rounded-2xl bg-[#0d0d0d] border border-[#1a1a1a]">
-        </div>
 </body>
 </html>
