@@ -14,12 +14,13 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
-        /* --- FONT & BASE STYLING (MATCHING settings.html & notes.html) --- */
+        /* --- FONT & BASE STYLING --- */
         :root {
             --bg-page: #070707;
             --bg-container: #000000;
             --border-color: #333;
             --text-primary: #c0c0c0;
+            --text-light-grey: #d1d5db; /* Solid light grey for clock */
         }
 
         body { 
@@ -30,10 +31,9 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            overflow: hidden; /* Prevent scroll bars if not needed */
+            overflow: hidden;
         }
 
-        /* Thinner headings to match other pages */
         h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
             font-weight: 400 !important;
         }
@@ -43,22 +43,28 @@
             flex-grow: 1;
             display: flex;
             flex-direction: column;
-            justify-content: center; /* Center clock vertically */
-            align-items: center;     /* Center clock horizontally */
+            justify-content: center;
+            align-items: center;
             padding: 2rem;
             position: relative;
         }
 
-        /* --- COMPONENT STYLES (Matching settings-box) --- */
+        /* --- DASHBOARD WIDGET STYLES --- */
         .dashboard-widget {
             border: 1px solid var(--border-color);
-            border-radius: 1rem; /* Matching settings-box radius */
             background-color: var(--bg-container);
             padding: 3rem 4rem;
             text-align: center;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            min-width: 300px;
             transition: all 0.3s ease;
+            
+            /* UPDATED: Rounded 32px */
+            border-radius: 32px; 
+            
+            /* UPDATED: Solid width to prevent container jitter */
+            width: 600px; 
+            max-width: 90vw; /* Responsive fallback */
+            box-sizing: border-box;
         }
 
         .dashboard-widget:hover {
@@ -67,7 +73,7 @@
             box-shadow: 0 10px 15px rgba(0, 0, 0, 0.5);
         }
 
-        /* --- HEADER STYLING (Matching settings/notes) --- */
+        /* --- HEADER STYLING --- */
         header {
             display: flex;
             justify-content: space-between;
@@ -81,26 +87,37 @@
         /* --- TYPOGRAPHY SPECIFIC TO CLOCK --- */
         .time-display {
             font-family: 'Geist', sans-serif;
-            font-weight: 200; /* Ultra thin */
+            font-weight: 200;
             letter-spacing: -0.05em;
             line-height: 1;
-            color: #ffffff;
+            
+            /* UPDATED: Solid light grey color */
+            color: var(--text-light-grey);
+            
+            /* UPDATED: Tabular nums to prevent text jitter inside the box */
+            font-variant-numeric: tabular-nums; 
         }
         
         .date-display {
             font-weight: 300;
-            color: #9ca3af; /* Gray-400 */
             margin-top: 1rem;
             letter-spacing: 0.05em;
             text-transform: uppercase;
             font-size: 1.1rem;
+            
+            /* UPDATED: Matching solid light grey color */
+            color: var(--text-light-grey); 
+            opacity: 0.8; /* Slight opacity difference for hierarchy */
         }
         
         .seconds-display {
             font-weight: 300;
-            color: #6b7280; /* Gray-500 */
             font-size: 0.5em;
             margin-left: 0.5rem;
+            
+            /* UPDATED: Matching solid light grey */
+            color: var(--text-light-grey);
+            opacity: 0.8;
         }
     </style>
 
@@ -125,14 +142,12 @@
 <body>
     <header>
         <h1 class="text-2xl font-bold text-white">4SP Dashboard</h1>
-        
-        <div class="flex items-center gap-2">
-            </div>
+        <div class="flex items-center gap-2"></div>
     </header>
 
     <div id="page-content">
         <div id="date-time-display" class="dashboard-widget">
-            <div class="animate-pulse bg-gray-900 h-24 w-64 rounded mx-auto"></div>
+            <div class="animate-pulse bg-[#1a1a1a] h-24 w-48 rounded mx-auto"></div>
         </div>
     </div>
 
@@ -153,11 +168,9 @@
             const now = new Date();
             
             const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
-            // Get basic time string (e.g., "09:41 PM")
             const timeString = now.toLocaleTimeString('en-US', timeOptions);
             const seconds = now.getSeconds().toString().padStart(2, '0');
             
-            // Split to separate AM/PM if needed, or just append seconds
             const parts = timeString.split(' ');
             const timeOnly = parts[0];
             const amPm = parts[1] || '';
@@ -167,7 +180,7 @@
 
             if (dateTimeElement) {
                 dateTimeElement.innerHTML = `
-                    <div class="time-display text-7xl md:text-9xl">
+                    <div class="time-display text-7xl md:text-8xl">
                         ${timeOnly}<span class="seconds-display">${seconds} ${amPm}</span>
                     </div>
                     <div class="date-display">
@@ -183,9 +196,7 @@
                     console.log("User logged out. Redirecting to:", redirectPath);
                     window.location.replace(redirectPath);
                 } else {
-                    console.log("User signed in. UID:", user.uid);
                     updateDateTime();
-                    // Update every second
                     setInterval(updateDateTime, 1000);
                 }
             });
