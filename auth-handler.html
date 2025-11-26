@@ -42,11 +42,10 @@
     // --- Firebase Imports ---
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, signInWithCustomToken, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    // UPDATED: Added 'setDoc' to imports so database writes work
+    // FIXED IMPORT: Ensure setDoc is included for database operations
     import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     
     // --- Import Firebase Config ---
-    // NOTE: Ensure your firebase-config.js is in the same directory or adjust the path.
     import { firebaseConfig } from "./firebase-config.js"; 
 
     // --- Firebase Initialization ---
@@ -60,53 +59,53 @@
     const statusTitle = document.getElementById('statusTitle');
     const statusMessage = document.getElementById('statusMessage');
 
+    // --- Utility Functions ---
+    const displayError = (title, message) => {
+        statusIcon.className = 'fas fa-times-circle text-5xl text-red-500 mb-6';
+        statusTitle.textContent = title;
+        statusMessage.innerHTML = `${message} <br><a href="authentication.html" class="text-blue-400 hover:text-blue-300 font-normal mt-4 inline-block">&larr; Go back to Login</a>`;
+    };
+
     // --- Main Handler ---
     document.addEventListener('DOMContentLoaded', () => {
         const params = new URLSearchParams(window.location.search);
         const customToken = params.get('custom_token');
         const error = params.get('error');
 
-        // Function to update the UI for errors
-        const displayError = (title, message) => {
-            statusIcon.className = 'fas fa-times-circle text-5xl text-red-500 mb-6';
-            statusTitle.textContent = title;
-            statusMessage.innerHTML = `${message} <br><a href="authentication.html" class="text-blue-400 hover:text-blue-300 font-normal mt-4 inline-block">&larr; Go back to Login</a>`;
-        };
-        
-        // --- 1. Check for Cloud Function Errors ---
+        // 1. Check for Cloud Function Errors
         if (error) {
             displayError('Authentication Failed', 'The Discord sign-in process encountered an error. Please try again.');
             return;
         }
 
-        // --- 2. Check for Token ---
+        // 2. Check for Token
         if (!customToken) {
             displayError('Missing Token', 'Did not receive the expected sign-in token. Redirecting error.');
             return;
         }
 
-        // --- 3. Finalize Firebase Sign-In ---
+        // 3. Finalize Firebase Sign-In
         signInWithCustomToken(auth, customToken)
             .then(async (userCredential) => {
                 const user = userCredential.user;
                 
                 try {
-                    // --- KEY FIX: Extract Discord Data from Token Claims ---
-                    // This pulls the "claims" object that contains the data sent from your backend
+                    // --- CRITICAL FIX: Get the Token Claims to extract custom data ---
                     const idTokenResult = await user.getIdTokenResult();
                     const claims = idTokenResult.claims || {};
                     
-                    // Use claims data first, then fallback to user object, then empty string
+                    // Prioritize the data from the claims (where Discord info is stored)
+                    // Ensure the final variables are always defined strings to prevent errors in settings.html
                     const finalEmail = claims.email || user.email || "";
-                    // Use the Discord username passed in claims
                     const discordUsername = claims.username || user.displayName || `User${user.uid.substring(0, 8)}`;
 
                     // --- Check for User Document Existence ---
-                    const userDoc = await getDoc(getUserDocRef(user.uid));
+                    const userDocRef = getUserDocRef(user.uid);
+                    const userDoc = await getDoc(userDocRef);
                     
                     if (!userDoc.exists()) {
-                        // Create the document using the data extracted from Discord
-                        await setDoc(getUserDocRef(user.uid), {
+                        // Create the document using the actual Discord data from the claims
+                        await setDoc(userDocRef, {
                             email: finalEmail, 
                             authMethod: 'discord', 
                             createdAt: new Date(),
@@ -128,12 +127,13 @@
                     }, 1000);
 
                 } catch (docError) {
-                    console.error("Error creating user document:", docError);
-                    displayError('Database Error', 'Signed in, but failed to set up user profile.');
+                    // Catches errors during claim retrieval or database writing
+                    console.error("Error during authentication finalization:", docError);
+                    displayError('Processing Error', `Failed to set up user profile: ${docError.message}`);
                 }
-
             })
             .catch((error) => {
+                // Catches errors with the custom token itself (invalid, expired)
                 console.error("Final Firebase Sign-in Failed:", error);
                 displayError('Sign-in Error', 'Could not finalize your session. This usually means the custom token was invalid or expired.');
             });
