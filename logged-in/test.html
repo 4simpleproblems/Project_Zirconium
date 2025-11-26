@@ -1,49 +1,146 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🔒 Securly Block Tester</title>
+    <title>🔒 Securly Server Tester</title>
+    <meta name="description" content="A tool to test Securly block status across various regional servers.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;600;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../navigation.js"></script>
+    <script src="../injector.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+
     <style>
-        /* Global Styles */
-        body {
-            font-family: 'Geist', sans-serif; /* Use the Geist font */
-            background-color: #1a1a1a;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+        /* --- BASE STYLING (MATCHING notes.html) --- */
+        body { 
+            font-family: 'Geist', sans-serif; 
+            background-color: #070707; 
+            color: #c0c0c0; 
+            transition: all 0.3s ease;
+            font-size: 16px;
+            overflow-x: hidden;
+            font-weight: 300; 
             min-height: 100vh;
-            margin: 0;
-            color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
-        .container {
-            background-color: #242424;
-            padding: 30px 40px;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
+            font-weight: 400 !important;
+        }
+
+        /* --- THEME-AWARE STYLES (MATCHING notes.html) --- */
+        .btn-toolbar-style {
+            background: var(--menu-bg, #0000000);
+            border: 1px solid var(--menu-border, #333);
+            border-radius: 0.75rem;
+            color: var(--menu-text, #d1d5db);
+            padding: 0.5rem 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn-toolbar-style:hover {
+            background-color: var(--menu-bg, #000000);
+            border-color: var(--menu-border, #fff);
+            color: var(--tab-hover-text, #ffffff);
+        }
+        .btn-toolbar-style.btn-primary-override {
+            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
+            border: 1px solid var(--tab-active-border, #4f46e5);
+            color: var(--tab-active-text, #4f46e5);
+        }
+        .btn-toolbar-style.btn-primary-override:hover {
+            background-color: var(--tab-active-hover-bg, rgba(79, 70, 229, 0.15));
+            border-color: var(--tab-active-hover-border, #6366f1);
+            color: var(--tab-active-hover-text, #6366f1);
+        }
+        
+        /* Dropdown Menu Styling */
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: var(--menu-bg, #000000);
+            border: 1px solid var(--menu-border, #333);
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            z-index: 1010;
+            min-width: 200px;
+            padding: 0.5rem;
+        }
+        .dropdown-item {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            color: var(--menu-text, #d1d5db);
+            border-radius: 0.375rem;
+            cursor: pointer;
+            transition: background-color 0.15s, color 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .dropdown-item:hover {
+            background-color: var(--menu-item-hover-bg, #2a2a2a);
+            color: var(--menu-item-hover-text, #ffffff);
+        }
+        .dropdown-header {
+            padding: 0.5rem 0.75rem;
+            color: var(--tab-text, #9ca3af);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+        
+        /* --- Server Selector Styles --- */
+        #server-selector-container {
+            position: relative;
+        }
+        #server-selector-btn {
+            height: auto;
+            padding: 0.5rem 0.25rem;
             width: 100%;
-            max-width: 500px;
-            border: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-
-        h1 {
-            color: #70a6ff;
-            text-align: center;
-            margin-bottom: 25px;
-            font-weight: 300;
-            border-bottom: 2px solid #333;
-            padding-bottom: 10px;
+        #server-selector-btn:hover {
+            border-color: var(--menu-border, #333);
         }
-
-        /* Input Group Styles */
+        #server-selector-btn .fa-globe {
+            color: var(--tab-active-text, #4f46e5);
+        }
+        .server-item.active {
+            background-color: var(--tab-active-bg, rgba(79, 70, 229, 0.1));
+            color: var(--tab-active-text, #4f46e5);
+            border: 1px solid var(--tab-active-border, #4f46e5);
+        }
+        
+        /* --- MAIN TESTER UI STYLES --- */
+        #tester-container {
+            background-color: #0d0d0d;
+            border: 1px solid #1a1a1a;
+            border-radius: 1rem;
+            padding: 40px;
+            width: 100%;
+            max-width: 600px;
+            margin-top: 50px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+        }
         .input-group {
             margin-bottom: 20px;
         }
-
         label {
             display: block;
             margin-bottom: 8px;
@@ -51,157 +148,286 @@
             color: #aaaaaa;
             font-size: 14px;
         }
-
         input[type="text"] {
             width: 100%;
             padding: 12px;
             border: 1px solid #444;
-            border-radius: 8px;
+            border-radius: 0.5rem;
             box-sizing: border-box;
-            font-size: 16px;
-            background-color: #333;
+            font-size: 1rem;
+            background-color: #1a1a1a;
             color: #f0f0f0;
+            font-weight: 300;
             transition: border-color 0.3s, box-shadow 0.3s;
         }
-
         input[type="text"]:focus {
-            border-color: #70a6ff;
-            box-shadow: 0 0 0 3px rgba(112, 166, 255, 0.2);
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
             outline: none;
         }
-
-        /* Button and Result Styles */
+        
+        /* Check Button Style (Primary Action) */
         #check-button {
             display: block;
             width: 100%;
             padding: 12px 20px;
-            background-color: #70a6ff;
-            color: black;
+            background-color: #4f46e5; /* Tailwind indigo-600 */
+            color: white;
             border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 500;
+            border-radius: 0.5rem;
+            font-size: 1.1rem;
+            font-weight: 700;
             cursor: pointer;
             transition: background-color 0.3s, transform 0.1s;
             margin-top: 25px;
         }
-
         #check-button:hover {
-            background-color: #a0c3ff;
+            background-color: #6366f1; /* Tailwind indigo-500 */
+        }
+        #check-button:disabled {
+            background-color: #333;
+            color: #777;
+            cursor: not-allowed;
         }
 
-        #check-button:active {
-            transform: scale(0.99);
-        }
-        
+        /* Result Display Styles */
         #result-display {
             margin-top: 30px;
-            padding: 15px;
-            border-radius: 8px;
+            padding: 20px;
+            border-radius: 0.75rem;
             text-align: center;
-            font-size: 1.2em;
-            font-weight: 500;
-            min-height: 40px; /* Reserve space */
+            font-size: 1.5em;
+            font-weight: 700;
+            min-height: 40px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
         }
-
-        /* Specific Result Styles */
         .status-blocked {
-            background-color: #ff4a4a; /* Red for Blocked/DENY */
+            background-color: #dc2626; /* Tailwind red-600 */
             color: white;
-            box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
         }
-
         .status-allowed {
-            background-color: #4aff4a; /* Green for Allowed/ALLOW */
+            background-color: #10b981; /* Tailwind emerald-500 */
             color: black;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
         }
-
         .status-loading, .status-info {
-            background-color: #444;
+            background-color: #333;
             color: #bbb;
         }
-
+        
+        /* SERVER SELECTION IN TOOLBAR (Replaced notes toolbar) */
+        #securly-toolbar {
+            position: sticky;
+            top: 5.25rem;
+            width: 250px; /* Wider toolbar */
+            background: var(--menu-bg, #000000);
+            border: 1px solid var(--menu-border, #333);
+            border-radius: 0.75rem;
+            padding: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            z-index: 100;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            align-items: center;
+            align-self: flex-start;
+            margin-top: 1.25rem;
+            margin-left: 20px;
+        }
+        
         #disclaimer {
             margin-top: 30px;
             font-size: 12px;
             color: #777;
             text-align: center;
             padding-top: 15px;
-            border-top: 1px solid #333;
         }
     </style>
+
 </head>
-<body>
-    <div class="container">
-        <h1>Securly Block Test Generator</h1>
-        
-        <div class="input-group">
-            <label for="user">Student Email (User)</label>
-            <input id="user" type="text" placeholder="student@yourschool.org" value="student@yourschool.org" oninput="clearResult()">
-        </div>
-
-        <div class="input-group">
-            <label for="url">URL to Test</label>
-            <input id="url" type="text" placeholder="https://zapatopi.net/treeoctopus/" value="https://zapatopi.net/treeoctopus/" oninput="clearResult()">
-        </div>
-
-        <button id="check-button" onclick="checkSecurlyStatus()">
-            Check Block Status
-        </button>
-
-        <div id="result-display" class="status-info">
-            Click 'Check Block Status'
-        </div>
-
-        <p id="disclaimer">
-            **NOTE:** Due to browser security (**CORS**), this fetch will likely only work if you run it in an environment that bypasses these restrictions (e.g., a local server or browser with security disabled for testing). Otherwise, you will see a *CORS Error*.
-        </p>
+<body class="min-h-screen">
+    <div id="loading-screen" class="fixed inset-0 bg-[#070707] flex items-center justify-center z-50">
+        <i class="fa-solid fa-spinner fa-spin fa-2x text-white"></i>
     </div>
 
-    <script>
+    <div id="page-content" class="w-full flex">
+        
+        <header class="fixed top-0 left-0 w-full z-1000 flex justify-between items-center p-4 border-b border-[#1a1a1a] bg-[#070707]">
+            <h1 class="text-2xl font-bold text-white">Securly Tester</h1>
+            <div class="flex items-center gap-2">
+                <button class="btn-toolbar-style" onclick="window.location.href='../index.html'">
+                    <i class="fa-solid fa-house"></i> <span>Home</span>
+                </button>
+            </div>
+        </header>
+
+        <div id="securly-toolbar">
+            <div id="server-selector-container" class="relative w-full">
+                <button id="server-selector-btn" class="btn-toolbar-style w-full" onclick="toggleDropdown()">
+                    <i class="fa-solid fa-globe"></i> 
+                    <span>Server: <strong id="current-server-display">useast</strong></span>
+                    <i class="fa-solid fa-chevron-down text-sm"></i>
+                </button>
+
+                <div id="server-dropdown" class="dropdown-menu hidden right-auto left-0 mt-1 min-w-full">
+                    <div class="dropdown-header">Select Securly Broker</div>
+                    </div>
+            </div>
+        </div>
+        
+        <div class="flex-grow flex justify-center pt-28 pb-10">
+            <div id="tester-container">
+                <h2 class="text-xl font-bold text-white mb-6 text-center">Block Status Check</h2>
+
+                <div class="input-group">
+                    <label for="user">Student Email (User)</label>
+                    <input id="user" type="text" placeholder="student@yourschool.org" value="student@yourschool.org" oninput="clearResult()">
+                </div>
+
+                <div class="input-group">
+                    <label for="url">URL to Test</label>
+                    <input id="url" type="text" placeholder="https://zapatopi.net/treeoctopus/" value="https://zapatopi.net/treeoctopus/" oninput="clearResult()">
+                </div>
+
+                <button id="check-button" onclick="checkSecurlyStatus()">
+                    Check Block Status
+                </button>
+
+                <div id="result-display" class="status-info">
+                    Click 'Check Block Status'
+                </div>
+
+                <p id="disclaimer">
+                    **CORS PROXY IN USE:** A public proxy is prepended to the Securly URL to attempt to bypass browser restrictions.
+                </p>
+            </div>
+        </div>
+
+    </div>
+    
+    <script type="text/javascript">
+        // --- Securly Server Configuration ---
+        const SERVER_CONFIG = {
+            useast: 'https://useast-www.securly.com',
+            useast2: 'https://useast2-www.securly.com',
+            uswest: 'https://uswest-www.securly.com',
+            uk: 'https://uk-www.securly.com',
+            euwest: 'https://euwest-www.securly.com',
+            canada: 'https://canada-www.securly.com',
+            apse: 'https://apse-www.securly.com'
+        };
+
+        // Default to useast, but try to load from localStorage
+        let currentServerKey = localStorage.getItem('securlyServer') || 'useast';
+        
+        // --- Global State and Element References ---
+        const CORS_PROXY = 'https://corsproxy.io/?'; 
         const resultDisplay = document.getElementById('result-display');
         const checkButton = document.getElementById('check-button');
+        const currentServerDisplay = document.getElementById('current-server-display');
+        const serverDropdown = document.getElementById('server-dropdown');
+        const serverSelectorBtn = document.getElementById('server-selector-btn');
+        const loadingScreen = document.getElementById('loading-screen');
+        const pageContent = document.getElementById('page-content');
+        
+        // --- UI Functions ---
 
+        /**
+         * Populates the server dropdown menu.
+         */
+        function populateServerDropdown() {
+            serverDropdown.innerHTML = `<div class="dropdown-header">Select Securly Broker</div>`;
+            Object.keys(SERVER_CONFIG).forEach(key => {
+                const item = document.createElement('div');
+                item.className = 'dropdown-item server-item';
+                item.textContent = key.toUpperCase();
+                item.setAttribute('data-server-key', key);
+                if (key === currentServerKey) {
+                    item.classList.add('active');
+                }
+                item.addEventListener('click', () => selectServer(key));
+                serverDropdown.appendChild(item);
+            });
+            currentServerDisplay.textContent = currentServerKey;
+        }
+
+        /**
+         * Toggles the visibility of the server dropdown.
+         */
+        function toggleDropdown() {
+            serverDropdown.classList.toggle('hidden');
+        }
+
+        /**
+         * Selects a new server and updates the UI.
+         */
+        function selectServer(key) {
+            currentServerKey = key;
+            localStorage.setItem('securlyServer', key);
+            currentServerDisplay.textContent = key;
+            
+            // Update active class
+            document.querySelectorAll('.server-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.getAttribute('data-server-key') === key) {
+                    item.classList.add('active');
+                }
+            });
+            
+            clearResult();
+            serverDropdown.classList.add('hidden');
+        }
+
+        /**
+         * Clears the result display when inputs change.
+         */
         function clearResult() {
-            // Clears previous result when input changes
             resultDisplay.className = 'status-info';
             resultDisplay.innerText = 'Click \'Check Block Status\'';
         }
 
-        function buildSecurlyUrl() {
-            var user = document.getElementById('user').value.trim();
-            var url = document.getElementById('url').value.trim();
+        // --- Core Securly Logic ---
 
+        /**
+         * Builds the Securly URL based on inputs and the current server.
+         */
+        function buildSecurlyUrl() {
+            const user = document.getElementById('user').value.trim();
+            const url = document.getElementById('url').value.trim();
+            const serverUrl = SERVER_CONFIG[currentServerKey];
+            
             if (!user || !url) {
-                return null; // Don't proceed if inputs are empty
+                return null;
             }
 
-            var urlHost;
+            let urlHost;
             try {
                 // Ensure URL has a protocol for the URL constructor to work
-                var fullUrl = url.startsWith('http') ? url : 'https://' + url;
+                const fullUrl = url.startsWith('http') ? url : 'https://' + url;
                 urlHost = (new URL(fullUrl)).hostname;
             } catch (e) {
-                return null; // Return null if URL is invalid
+                return null;
             }
-
-            // Construct the Securly Broker URL
-            var link = "https://useast-www.securly.com/crextn/broker?useremail=" +
+            
+            // 1. Construct the raw Securly Broker URL
+            const securlyLink = `${serverUrl}/crextn/broker?useremail=` +
                 encodeURIComponent(user) +
                 "&reason=crextn&host=" +
                 encodeURIComponent(urlHost) +
                 "&url=" +
                 btoa(url) +
-                "&msg=&ver=2.97.13&cu=https://useast-www.securly.com/crextn&uf=1&cf=1&lat=34.5678910&lng=-98.7654321";
+                "&msg=&ver=2.97.13&cu=" + encodeURIComponent(serverUrl + "/crextn") + "&uf=1&cf=1&lat=34.5678910&lng=-98.7654321";
             
-            return link;
+            // 2. Prepend the CORS Proxy
+            return CORS_PROXY + encodeURIComponent(securlyLink);
         }
 
+        /**
+         * Fetches the status from Securly via proxy and displays the result.
+         */
         async function checkSecurlyStatus() {
-            const securlyLink = buildSecurlyUrl();
+            const proxiedSecurlyLink = buildSecurlyUrl();
 
-            if (!securlyLink) {
+            if (!proxiedSecurlyLink) {
                 resultDisplay.className = 'status-blocked';
                 resultDisplay.innerText = '⚠️ Please enter valid Email and URL.';
                 return;
@@ -209,47 +435,71 @@
 
             // Set loading state
             resultDisplay.className = 'status-loading';
-            resultDisplay.innerText = 'Checking...';
+            resultDisplay.innerText = `Checking ${currentServerKey.toUpperCase()}...`;
             checkButton.disabled = true;
 
             try {
-                // Use fetch to make the request in the background
-                const response = await fetch(securlyLink);
+                const response = await fetch(proxiedSecurlyLink);
 
-                // Securly often returns a redirect or the DENY/ALLOW message.
-                // The status code itself might not be the primary indicator.
-                // We'll primarily look at the response text.
+                if (!response.ok) {
+                     throw new Error(`Proxy error with status: ${response.status}`);
+                }
+
                 const text = await response.text();
                 
-                // The Securly response for a block typically contains the word 'DENY'
+                // Analyze the response text for Securly's keywords
                 if (text.includes('DENY')) {
                     resultDisplay.className = 'status-blocked';
-                    resultDisplay.innerText = '🚫 BLOCKED (DENY) 🚫';
+                    resultDisplay.innerHTML = '🚫 **BLOCKED (DENY)** 🚫';
                 } 
-                // The response for an allow typically contains the word 'ALLOW' or redirects to the actual site
                 else if (text.includes('ALLOW')) {
                     resultDisplay.className = 'status-allowed';
-                    resultDisplay.innerText = '✅ ALLOWED (ALLOW) ✅';
+                    resultDisplay.innerHTML = '✅ **ALLOWED (ALLOW)** ✅';
                 }
-                // Fallback for other responses (e.g., successful redirect or unexpected content)
                 else {
                     resultDisplay.className = 'status-info';
-                    resultDisplay.innerText = `❓ Unclear Status. Response status: ${response.status}. Check console for details.`;
+                    resultDisplay.innerHTML = `❓ **Unclear Status** (Response Status: ${response.status})`;
                     console.log("Full Securly Response Text:", text);
                 }
 
             } catch (error) {
-                // This is where a CORS error is most likely to occur in a standard browser
                 resultDisplay.className = 'status-blocked';
-                resultDisplay.innerText = '❌ CORS/Network Error ❌ (Cannot connect to Securly)';
+                resultDisplay.innerHTML = '❌ **Failed to Connect** (CORS/Network Error)';
                 console.error('Fetch Error:', error);
             } finally {
                 checkButton.disabled = false;
             }
         }
         
-        // Initialize the result display on load
-        clearResult();
+        // --- Initialization ---
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (event) => {
+            if (!serverDropdown.classList.contains('hidden') && 
+                !serverSelectorBtn.contains(event.target) && 
+                !serverDropdown.contains(event.target)) {
+                serverDropdown.classList.add('hidden');
+            }
+        });
+        
+        // Simple mock authentication to match notes.html behavior
+        const mockAuth = { onAuthStateChanged: (cb) => cb(true) }; 
+        
+        async function initializeAuth() {
+            mockAuth.onAuthStateChanged((user) => {
+                if (!user) {
+                    // window.location.href = '../index.html'; // Removed for simplicity
+                } else {
+                    // Initialize UI after "auth" check
+                    populateServerDropdown();
+                    clearResult();
+                    loadingScreen.style.display = 'none';
+                    pageContent.style.display = 'flex';
+                }
+            });
+        }
+        setTimeout(() => { initializeAuth(); }, 100); 
+
     </script>
 </body>
 </html>
