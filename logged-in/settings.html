@@ -13,7 +13,9 @@
     <link rel="stylesheet" href="https://kit-pro.fontawesome.com/releases/v7.0.1/css/pro.min.css" media="all">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="../navigation.js"></script>
-    <script src="../injector.js"></script> 
+    <script src="../injector.js"></script>
+    <script src="../panic-key.js"></script>
+    <script src="../url-changer.js" defer></script> 
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
 
@@ -405,9 +407,6 @@
                 <button id="tab-data" class="btn-toolbar-style settings-tab" data-tab="data">
                     <i class="fa-solid fa-database w-5"></i> <span>Data Management</span>
                 </button>
-                <button id="tab-beta" class="btn-toolbar-style settings-tab" data-tab="beta">
-                    <i class="fa-solid fa-vial w-5"></i> <span>Beta Testing</span>
-                </button>
                 <button id="tab-about" class="btn-toolbar-style settings-tab" data-tab="about">
                     <i class="fa-solid fa-circle-info w-5"></i> <span>About 4SP</span>
                 </button>
@@ -475,9 +474,6 @@
         // This file MUST exist at ../site-mapping.js for import/export to work
         import { siteMapping } from "../site-mapping.js";
 
-        // --- Canvas Global Variables (MANDATORY USE from beta-settings.html) ---
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
 
         if (!firebaseConfig || !firebaseConfig.apiKey) {
             console.error("FATAL ERROR: Firebase configuration is missing or invalid.");
@@ -488,207 +484,8 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // --- NEW: Beta Admin Constants (from beta-settings.html) ---
-        const ADMIN_EMAILS = [
-            '4simpleproblems@gmail.com',
-            'belkwy30@minerva.sparcc.org'
-        ];
-        const CONFIG_DOC_PATH = ['artifacts', appId, 'public', 'data', 'app_config', 'beta_testers'];
-
         // --- Global State and Element References ---
         const sidebarTabs = document.querySelectorAll('.settings-tab');
-        const mainView = document.getElementById('settings-main-view');
-        let currentUser = null; // To store the authenticated user object
-        
-        // --- NEW: Global elements for Beta Access tab (will be queried after panel renders) ---
-        let betaTesterList = null;
-        let newTesterEmailInput = null;
-        let addMessageDiv = null;
-        let listMessageDiv = null;
-        let testerCountSpan = null;
-        let addTesterForm = null;
-
-        // --- NEW: Beta-specific message helper (adapted from beta-settings.html) ---
-        // This is separate from the general showMessage as it uses specific element IDs
-        const showBetaMessage = (element, text, type) => {
-            if (!element) return;
-            element.textContent = text;
-            if (type === 'error') {
-                element.className = 'general-message-area text-sm error-message';
-            } else if (type === 'success') {
-                element.className = 'general-message-area text-sm success-message';
-            } else {
-                element.className = 'general-message-area text-sm warning-message';
-            }
-        };
-
-        // --- NEW: List Rendering (adapted from beta-settings.html, with username lookup) ---
-        const renderTesterList = async (emails) => {
-            if (!betaTesterList || !testerCountSpan || !listMessageDiv) {
-                console.warn("Beta panel elements not found. Skipping renderTesterList.");
-                return;
-            }
-            
-            betaTesterList.innerHTML = '';
-            testerCountSpan.textContent = emails.length;
-
-            if (emails.length === 0) {
-                betaTesterList.innerHTML = '<p class="text-gray-500 text-center p-4">No beta testers currently registered.</p>';
-                return;
-            }
-
-            // Fetch all user documents once to optimize lookups
-            const usersRef = collection(db, 'users');
-            const q = query(usersRef, where('email', 'in', emails));
-            const querySnapshot = await getDocs(q);
-            const emailToUsernameMap = {};
-            querySnapshot.forEach(doc => {
-                const userData = doc.data();
-                emailToUsernameMap[userData.email.toLowerCase()] = userData.username;
-            });
-
-            emails.forEach(email => {
-                const normalizedEmail = email.toLowerCase();
-                const username = emailToUsernameMap[normalizedEmail];
-                const display = username ? 
-                                `<span class="text-white font-medium">${username}</span> <span class="text-gray-500 text-sm">(${email})</span>` : 
-                                `<span class="text-yellow-400 font-medium">${email}</span> <span class="text-gray-500 text-sm">(User not yet registered)</span>`;
-
-                const item = document.createElement('div');
-                item.className = 'flex justify-between items-center px-4 py-2 bg-[#1a1a1a] rounded-md mb-2'; // Tailwind classes for styling
-                item.innerHTML = `
-                    <div class="flex items-center">
-                        ${username ? `<i class="fa-solid fa-user text-blue-400 mr-3"></i>` : `<i class="fa-solid fa-envelope text-yellow-400 mr-3"></i>`}
-                        <div>
-                            ${display}
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        ${username ? `<button data-username="${username}" class="view-analytics-btn btn-toolbar-style" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">
-                            <i class="fa-solid fa-chart-line"></i> Analytics
-                        </button>` : ''}
-                        <button data-email="${email}" class="remove-beta-btn btn-toolbar-style btn-primary-override-danger" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">
-                            <i class="fa-solid fa-user-xmark"></i> Remove
-                        </button>
-                    </div>
-                `;
-                betaTesterList.appendChild(item);
-            });
-
-            // Attach listeners for removal and analytics
-            document.querySelectorAll('.remove-beta-btn').forEach(button => {
-                button.addEventListener('click', (e) => removeTester(e.currentTarget.getAttribute('data-email')));
-            });
-            document.querySelectorAll('.view-analytics-btn').forEach(button => {
-                button.addEventListener('click', (e) => viewUserAnalytics(e.currentTarget.getAttribute('data-username')));
-            });
-        };
-
-        // --- NEW: Real-time listener for the beta tester list (adapted from beta-settings.html) ---
-        const setupRealtimeListener = () => {
-            const docRef = doc(db, ...CONFIG_DOC_PATH);
-
-            // Check if current user is an admin before setting up listener
-            if (!currentUser || !ADMIN_EMAILS.includes(currentUser.email.toLowerCase())) {
-                if (listMessageDiv) {
-                    showBetaMessage(listMessageDiv, 'You are not authorized to view the beta tester list.', 'error');
-                }
-                return;
-            }
-
-            onSnapshot(docRef, (docSnap) => {
-                const emails = docSnap.data()?.emails || [];
-                emails.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
-                renderTesterList(emails);
-            }, (error) => {
-                console.error("Firestore realtime listener failed:", error);
-                if (listMessageDiv) {
-                    showBetaMessage(listMessageDiv, 'Failed to load beta tester list in real-time.', 'error');
-                }
-            });
-        };
-
-        // --- NEW: Add Beta Tester Function (adapted from beta-settings.html) ---
-        const addTester = async (email) => {
-            if (!email || !addMessageDiv) return;
-            showBetaMessage(addMessageDiv, '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Adding email...', 'warning');
-
-            const docRef = doc(db, ...CONFIG_DOC_PATH);
-            const normalizedEmail = email.toLowerCase().trim();
-
-            try {
-                // Check if document exists, if not, create it
-                const docSnap = await getDoc(docRef);
-                if (!docSnap.exists()) {
-                     await setDoc(docRef, { emails: [] }, { merge: true });
-                }
-
-                // Add the email using arrayUnion for atomicity and to prevent duplicates
-                await setDoc(docRef, {
-                    emails: arrayUnion(normalizedEmail)
-                }, { merge: true });
-
-                showBetaMessage(addMessageDiv, `Successfully added ${email} to the beta list.`, 'success');
-                if (newTesterEmailInput) {
-                    newTesterEmailInput.value = ''; // Clear input
-                }
-            } catch (error) {
-                console.error("Error adding beta tester:", error);
-                showBetaMessage(addMessageDiv, `Failed to add email: ${error.message}`, 'error');
-            }
-        };
-
-        // --- NEW: Remove Beta Tester Function (adapted from beta-settings.html) ---
-        const removeTester = async (email) => {
-            if (!email || !listMessageDiv) return;
-            
-            showBetaMessage(listMessageDiv, `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Removing ${email}...`, 'warning');
-            
-            const docRef = doc(db, ...CONFIG_DOC_PATH);
-            const normalizedEmail = email.toLowerCase().trim();
-
-            try {
-                // Remove the email using arrayRemove
-                await setDoc(docRef, {
-                    emails: arrayRemove(normalizedEmail)
-                }, { merge: true });
-
-                showBetaMessage(listMessageDiv, `Successfully removed ${email}.`, 'success');
-            } catch (error) {
-                console.error("Error removing beta tester:", error);
-                showBetaMessage(listMessageDiv, `Failed to remove email: ${error.message}`, 'error');
-            }
-        };
-
-        // --- NEW: Event Listener for adding beta testers ---
-        function handleAddTesterSubmit(e) {
-            e.preventDefault();
-            if (newTesterEmailInput) {
-                const email = newTesterEmailInput.value;
-                if (email) {
-                    addTester(email);
-                }
-            }
-        }
-
-        // --- NEW: Placeholder for viewing user analytics ---
-        const viewUserAnalytics = (username) => {
-            openModal(`
-                <p class="text-xl font-bold text-white mb-2">User Analytics for: <span class="text-blue-400">${username}</span></p>
-                <p class="text-lg text-yellow-400 mb-4"><i class="fa-solid fa-triangle-exclamation mr-2"></i> Feature Not Fully Implemented</p>
-                <p class="text-gray-300">
-                    Retrieving real-time, user-specific analytics requires more advanced Google Analytics integration (e.g., User-ID feature, custom dimensions, and secure backend API calls).
-                    Currently, this functionality is a placeholder.
-                </p>
-            `, [
-                {
-                    text: "Close",
-                    onclick: () => {
-                        document.getElementById('modalPrompt').style.display = "none";
-                    },
-                },
-            ]);
-        };
         const mainView = document.getElementById('settings-main-view');
         let currentUser = null; // To store the authenticated user object
         
@@ -708,7 +505,6 @@
             'personalization': { title: 'Personalization', icon: 'fa-palette' },
             'data': { title: 'Data Management', icon: 'fa-database' },
             'about': { title: 'About 4SP', icon: 'fa-circle-info' },
-            'beta': { title: 'Beta Testing', icon: 'fa-vial' }, // NEW: Beta Testing section
         };
         
         // Constants for providers (NEW)
@@ -1584,76 +1380,39 @@
         }
         
         // --- NEW: Generates the HTML for the "Data Management" section ---
-                function getDataManagementContent() {
-                    return `
-                        <h2 class="text-3xl font-bold text-white mb-6">Data Management</h2>
-                        <div class="w-full">
-                            <h3 class="text-xl font-bold text-white mb-2">Export Data</h3>
-                            <div class="settings-box transition-all duration-300 p-4 mb-8">
-                                <p class="text-sm font-light text-gray-400 mb-4">
-                                    Export all your local game data (from LocalStorage and IndexedDB) into a single JSON file.
-                                    This file can be used as a backup or to transfer your data to another browser.
-                                </p>
-                                <button id="exportDataBtn" class="btn-toolbar-style btn-primary-override w-48">
-                                    <i class="fa-solid fa-download mr-2"></i> Export Data
-                                </button>
-                            </div>
-        
-                            <h3 class="text-xl font-bold text-white mb-2">Import Data</h3>
-                            <div class="settings-box transition-all duration-300 p-4 bg-red-900/10 border-red-700/50">
-                                <p class="text-sm font-light text-red-300 mb-4">
-                                    <i class="fa-solid fa-triangle-exclamation mr-1"></i> 
-                                    **WARNING:** Importing data will overwrite all existing local game data. This action cannot be undone.
-                                    Only import a file you have previously exported from this site.
-                                </p>
-                                <button id="importDataBtn" class="btn-toolbar-style btn-primary-override-danger w-48">
-                                    <i class="fa-solid fa-upload mr-2"></i> Import Data
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                }
-        
-                /**
-                 * NEW: Generates the HTML for the "Beta Testing" section.
-                 */
-                function getBetaAccessContent() {
-                    return `
-                        <h2 class="text-3xl font-bold text-white mb-6">Beta Testing</h2>
-                        
-                        <div class="settings-box p-4 mb-6">
-                            <h3 class="text-xl font-bold text-white mb-4">Add Beta Tester</h3>
-                            <form id="addTesterForm">
-                                <label for="newTesterEmail" class="block text-gray-400 text-sm font-light mb-2">New Tester Email</label>
-                                <div class="flex flex-col sm:flex-row sm:items-start sm:gap-4">
-                                    <input type="email" id="newTesterEmail" placeholder="Enter email address" required 
-                                        class="input-text-style flex-grow" 
-                                        pattern="[a-z0-9._%+\\-]+@[a-z0-9.\\-]+\\.[a-z]{2,}$" 
-                                        title="Must be a valid email address">
-                                    <button type="submit" class="btn-toolbar-style btn-primary-override mt-3 sm:mt-0 sm:flex-shrink-0">
-                                        <i class="fa-solid fa-plus mr-2"></i> Add Email
-                                    </button>
-                                </div>
-                            </form>
-                            <div id="addMessage" class="general-message-area text-sm"></div>
-                            <p class="text-sm font-light text-gray-500 mt-2">
-                                Manage the list of user emails authorized to access the 4SP application beta.
-                            </p>
-                        </div>
-        
-                        <div class="settings-box p-4">
-                            <h3 class="text-xl font-bold text-white mb-4">Current Beta Testers (<span id="testerCount">0</span>)</h3>
-                            
-                            <div id="betaTesterList" class="space-y-2 max-h-72 overflow-y-auto pr-2">
-                                <p id="listPlaceholder" class="text-gray-500 text-center p-4">Loading list...</p>
-                            </div>
-                            <div id="listMessage" class="general-message-area text-sm"></div>
-                        </div>
-                    `;
-                }
-        
-                /**
-                 * Generates the HTML for the "About 4SP" section.
+        function getDataManagementContent() {
+            return `
+                <h2 class="text-3xl font-bold text-white mb-6">Data Management</h2>
+                <div class="w-full">
+                    <h3 class="text-xl font-bold text-white mb-2">Export Data</h3>
+                    <div class="settings-box transition-all duration-300 p-4 mb-8">
+                        <p class="text-sm font-light text-gray-400 mb-4">
+                            Export all your local game data (from LocalStorage and IndexedDB) into a single JSON file.
+                            This file can be used as a backup or to transfer your data to another browser.
+                        </p>
+                        <button id="exportDataBtn" class="btn-toolbar-style btn-primary-override w-48">
+                            <i class="fa-solid fa-download mr-2"></i> Export Data
+                        </button>
+                    </div>
+
+                    <h3 class="text-xl font-bold text-white mb-2">Import Data</h3>
+                    <div class="settings-box transition-all duration-300 p-4 bg-red-900/10 border-red-700/50">
+                        <p class="text-sm font-light text-red-300 mb-4">
+                            <i class="fa-solid fa-triangle-exclamation mr-1"></i> 
+                            **WARNING:** Importing data will overwrite all existing local game data. This action cannot be undone.
+                            Only import a file you have previously exported from this site.
+                        </p>
+                        <button id="importDataBtn" class="btn-toolbar-style btn-primary-override-danger w-48">
+                            <i class="fa-solid fa-upload mr-2"></i> Import Data
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+
+        /**
+         * Generates the HTML for the "About 4SP" section.
          */
         function getAboutContent() {
             return `
@@ -2391,117 +2150,6 @@
                     if (typeof urlChanger === 'undefined' || !urlChanger.fetchFavicon) {
                         throw new Error("URL Changer script not loaded correctly.");
                     }
-                    // The rest of loadPrivacyTab() content
-                } finally {
-                    fetchFaviconBtn.disabled = false;
-                    fetchFaviconBtn.innerHTML = 'Fetch';
-                }
-            });
-
-            // Apply URL Changer settings button
-            applyUrlChangerBtn.addEventListener('click', () => {
-                const mode = modeSelect.value;
-                let settings = { type: mode };
-                let isValid = true;
-                
-                if (mode === 'preset') {
-                    const presetId = presetSelect.value;
-                    const selectedPreset = urlChangerPresets.find(p => p.id === presetId);
-                    if (selectedPreset) {
-                        settings.title = selectedPreset.title;
-                        settings.favicon = selectedPreset.favicon;
-                    } else {
-                        showMessage(urlChangerMessage, 'Please select a valid preset.', 'error');
-                        isValid = false;
-                    }
-                } else if (mode === 'custom') {
-                    settings.title = customTitle.value.trim();
-                    settings.favicon = previewImg.src; // Use the image src from the preview
-
-                    if (!settings.title) {
-                        showMessage(urlChangerMessage, 'Custom title cannot be empty.', 'error');
-                        isValid = false;
-                    }
-                }
-                
-                if (!isValid) return;
-
-                if (saveUrlChangerSetting(settings)) {
-                    showMessage(urlChangerMessage, 'Tab disguise settings applied! Refresh the page to see changes.', 'success');
-                    // Immediately apply the new favicon and title if possible
-                    if (settings.type !== 'none') {
-                        document.title = settings.title || document.title;
-                        let link = document.querySelector("link[rel~='icon']");
-                        if (!link) {
-                            link = document.createElement('link');
-                            link.rel = 'icon';
-                            document.getElementsByTagName('head')[0].appendChild(link);
-                        }
-                        link.href = settings.favicon;
-                    } else {
-                        // Reset to original (or default 4SP) values
-                        document.title = '4SP - Settings'; // Hardcoded, ideally would be dynamic
-                        let link = document.querySelector("link[rel~='icon']");
-                        if (link) link.href = '../favicon.ico'; // Hardcoded, ideally dynamic
-                    }
-                } else {
-                    showMessage(urlChangerMessage, 'Failed to save tab disguise settings. Try again.', 'error');
-                }
-            });
-            
-            // Initial state for URL Changer
-            modeSelect.dispatchEvent(new Event('change'));
-            if (savedUrlSettings.type === 'custom') {
-                customTitle.value = savedUrlSettings.title || '';
-                if (savedUrlSettings.favicon) {
-                    previewImg.src = savedUrlSettings.favicon;
-                    previewImg.style.display = 'block';
-                }
-            } else if (savedUrlSettings.type === 'preset') {
-                presetSelect.value = urlChangerPresets.find(p => p.title === savedUrlSettings.title)?.id || 'hac';
-            }
-        }
-
-        /**
-         * NEW: Loads data and adds event listeners for the Beta Access tab.
-         */
-        async function loadBetaAccessTab() {
-            // 1. Render the Beta Access Content
-            mainView.innerHTML = getBetaAccessContent();
-
-            // 2. Query and Assign DOM elements for this panel
-            betaTesterList = document.getElementById('betaTesterList');
-            newTesterEmailInput = document.getElementById('newTesterEmail');
-            addMessageDiv = document.getElementById('addMessage');
-            listMessageDiv = document.getElementById('listMessage');
-            testerCountSpan = document.getElementById('testerCount');
-            addTesterForm = document.getElementById('addTesterForm');
-
-            // 3. Attach listener for adding beta testers
-            if(addTesterForm) {
-                addTesterForm.addEventListener('submit', handleAddTesterSubmit);
-            }
-
-            // 4. Admin Authorization Check
-            if (!currentUser || !ADMIN_EMAILS.includes(currentUser.email.toLowerCase())) {
-                mainView.innerHTML = `
-                    <h2 class="text-3xl font-bold text-white mb-6">Beta Testing</h2>
-                    <div class="settings-box p-4 bg-red-900/10 border-red-700/50">
-                        <p class="text-lg text-red-300">
-                            <i class="fa-solid fa-triangle-exclamation mr-2"></i> Access Denied: This feature is only available to administrators.
-                        </p>
-                    </div>
-                `;
-                return;
-            }
-
-            // 5. Start the data listener
-            setupRealtimeListener();
-        }
-        
-        /**
-         * Generates the HTML for the "About 4SP" section.
-                    }
                     
                     const faviconUrl = await urlChanger.fetchFavicon(domain);
                     
@@ -2727,13 +2375,13 @@
                 // --- NEW: Load Personalization Tab ---
                 mainView.innerHTML = getPersonalizationContent(); // Render HTML
                 await loadPersonalizationTab(); // Load data and add listeners
-            } else if (tabId === 'data') {
-                mainView.innerHTML = getDataManagementContent();
-                document.getElementById('exportDataBtn').addEventListener('click', downloadAllSaves);
-                document.getElementById('importDataBtn').addEventListener('click', handleFileUpload);
-            } else if (tabId === 'beta') { // NEW: Beta Testing Tab
-                await loadBetaAccessTab();
-            } else if (tabId === 'about') {
+            }
+            else if (tabId === 'data') {
+                // --- NEW: Load Data Management Tab ---
+                mainView.innerHTML = getDataManagementContent(); // Render HTML
+                await loadDataTab(); // Load data and add listeners
+            }
+            else if (tabId === 'about') {
                 mainView.innerHTML = getAboutContent();
             } else {
                 const content = tabContent[tabId];
