@@ -11,7 +11,20 @@
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="../navigation-mini.js"></script>
-    <link href="./dist/output.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Unified Tailwind CSS configuration for a consistent dark theme
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'custom-darkest-gray': '#040404', 
+                        'custom-white-gray': '#c0c0c0', 
+                    }
+                }
+            }
+        }
+    </script>
     
     <style>
         :root {
@@ -42,7 +55,7 @@
     // --- Firebase Imports ---
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, signInWithCustomToken, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    // FIXED IMPORT: Ensure setDoc is included for database operations
+    // FIXED: Added setDoc to the import list below
     import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     
     // --- Import Firebase Config ---
@@ -59,62 +72,63 @@
     const statusTitle = document.getElementById('statusTitle');
     const statusMessage = document.getElementById('statusMessage');
 
-    // --- Utility Functions ---
-    const displayError = (title, message) => {
-        statusIcon.className = 'fas fa-times-circle text-5xl text-red-500 mb-6';
-        statusTitle.textContent = title;
-        statusMessage.innerHTML = `${message} <br><a href="authentication.html" class="text-blue-400 hover:text-blue-300 font-normal mt-4 inline-block">&larr; Go back to Login</a>`;
-    };
-
     // --- Main Handler ---
     document.addEventListener('DOMContentLoaded', () => {
         const params = new URLSearchParams(window.location.search);
         const customToken = params.get('custom_token');
         const error = params.get('error');
 
-        // 1. Check for Cloud Function Errors
+        // Function to update the UI for errors
+        const displayError = (title, message) => {
+            statusIcon.className = 'fas fa-times-circle text-5xl text-red-500 mb-6';
+            statusTitle.textContent = title;
+            statusMessage.innerHTML = `${message} <br><a href="authentication.html" class="text-blue-400 hover:text-blue-300 font-normal mt-4 inline-block">&larr; Go back to Login</a>`;
+        };
+        
+        // --- 1. Check for Cloud Function Errors ---
         if (error) {
             displayError('Authentication Failed', 'The Discord sign-in process encountered an error. Please try again.');
             return;
         }
 
-        // 2. Check for Token
+        // --- 2. Check for Token ---
         if (!customToken) {
             displayError('Missing Token', 'Did not receive the expected sign-in token. Redirecting error.');
             return;
         }
 
-        // 3. Finalize Firebase Sign-In
+        // --- 3. Finalize Firebase Sign-In ---
         signInWithCustomToken(auth, customToken)
             .then(async (userCredential) => {
                 const user = userCredential.user;
                 
                 try {
-                    // --- CRITICAL FIX: Get the Token Claims to extract custom data ---
-                    const idTokenResult = await user.getIdTokenResult();
-                    const claims = idTokenResult.claims || {};
-                    
-                    // Prioritize the data from the claims (where Discord info is stored)
-                    // Ensure the final variables are always defined strings to prevent errors in settings.html
-                    const finalEmail = claims.email || user.email || "";
-                    const discordUsername = claims.username || user.displayName || `User${user.uid.substring(0, 8)}`;
-
                     // --- Check for User Document Existence ---
-                    const userDocRef = getUserDocRef(user.uid);
-                    const userDoc = await getDoc(userDocRef);
+                    const userDoc = await getDoc(getUserDocRef(user.uid));
                     
                     if (!userDoc.exists()) {
-                        // Create the document using the actual Discord data from the claims
-                        await setDoc(userDocRef, {
-                            email: finalEmail, 
+                        let baseUsername = 'User';
+                        if (user.displayName) {
+                            baseUsername = user.displayName;
+                        } else if (typeof user.email === 'string' && user.email.length > 0) { 
+                            baseUsername = user.email.split('@')[0];
+                        } else if (user.uid) { 
+                            baseUsername = `User${user.uid.substring(0, 8)}`;
+                        }
+
+                        let username = baseUsername.replace(/[^a-zA-Z0-9]/g, '').slice(0, 16);
+                        if (username.length < 6) username = `User${user.uid.substring(0, 8)}`;
+                        
+                        const finalUsername = `DiscordUser_${user.uid.substring(0, 8)}`; 
+                        
+                        // This line was crashing before because setDoc wasn't imported
+                        await setDoc(getUserDocRef(user.uid), {
+                            email: user.email, 
                             authMethod: 'discord', 
                             createdAt: new Date(),
-                            username: discordUsername, 
+                            username: finalUsername, 
                             emailVerified: true 
                         });
-                        console.log("Created new user doc for:", discordUsername);
-                    } else {
-                        console.log("User document already exists, skipping creation.");
                     }
                     
                     // --- Success! Redirect ---
@@ -127,13 +141,13 @@
                     }, 1000);
 
                 } catch (docError) {
-                    // Catches errors during claim retrieval or database writing
-                    console.error("Error during authentication finalization:", docError);
-                    displayError('Processing Error', `Failed to set up user profile: ${docError.message}`);
+                    console.error("Error creating user document:", docError);
+                    displayError('Database Error', 'Signed in, but failed to set up user profile.');
                 }
+
             })
             .catch((error) => {
-                // Catches errors with the custom token itself (invalid, expired)
+                // This logs the ACTUAL error to your browser console (F12)
                 console.error("Final Firebase Sign-in Failed:", error);
                 displayError('Sign-in Error', 'Could not finalize your session. This usually means the custom token was invalid or expired.');
             });
