@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4SP - FINALIZING AUTHENTICATION</title>
+    <meta name="description" content="Completing your sign-in process with a custom authentication provider.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Unified Tailwind CSS configuration for a consistent dark theme
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'custom-darkest-gray': '#040404', 
+                        'custom-white-gray': '#c0c0c0', 
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        :root {
+            --geist-foreground: 192, 192, 192;
+            --geist-background: 7, 7, 7;
+        }
+
+        body {
+            font-family: 'Geist', sans-serif;
+            background-color: rgb(var(--geist-background));
+            color: rgb(var(--geist-foreground));
+            transition: all 0.3s ease;
+            font-weight: 300;
+        }
+    </style>
+</head>
+<body class="bg-custom-darkest-gray text-custom-white-gray min-h-screen flex items-center justify-center">
+
+    <main class="text-center p-8 max-w-lg">
+        <i id="statusIcon" class="fas fa-spinner fa-spin text-5xl text-blue-500 mb-6"></i>
+        <h1 id="statusTitle" class="text-3xl font-normal tracking-tighter mb-4">Finalizing Authentication...</h1>
+        <p id="statusMessage" class="text-custom-white-gray text-lg font-light">
+            We are securely exchanging tokens with Discord and Firebase. Please wait.
+        </p>
+    </main>
+
+<script type="module">
+    // --- Firebase Imports ---
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, signInWithCustomToken, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    
+    // --- Import Firebase Config ---
+    // NOTE: Ensure your firebase-config.js is in the same directory or adjust the path.
+    import { firebaseConfig } from "./firebase-config.js"; 
+
+    // --- Firebase Initialization ---
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const getUserDocRef = (userId) => doc(db, 'users', userId);
+    
+    // --- DOM Elements ---
+    const statusIcon = document.getElementById('statusIcon');
+    const statusTitle = document.getElementById('statusTitle');
+    const statusMessage = document.getElementById('statusMessage');
+
+    // --- Utility Functions (Copied from authentication.html) ---
+    const isUserBetaTester = async (email) => {
+        if (!email) return false;
+        const normalizedEmail = email.toLowerCase();
+        if (normalizedEmail === "4simpleproblems@gmail.com") return true;
+
+        const betaTestersRef = doc(db, 'artifacts', 'default-app-id', 'public', 'data', 'app_config', 'beta_testers');
+        
+        try {
+            const docSnap = await getDoc(betaTestersRef);
+            if (docSnap.exists()) {
+                const emails = docSnap.data()?.emails || [];
+                const normalizedEmails = emails.map(e => String(e).toLowerCase());
+                return normalizedEmails.includes(normalizedEmail);
+            }
+            return false;
+        } catch (error) { 
+            console.error("Error checking beta tester status:", error);
+            return false; 
+        }
+    };
+
+    // --- Main Handler ---
+    document.addEventListener('DOMContentLoaded', () => {
+        const params = new URLSearchParams(window.location.search);
+        const customToken = params.get('custom_token');
+        const error = params.get('error');
+
+        // Function to update the UI for errors
+        const displayError = (title, message) => {
+            statusIcon.className = 'fas fa-times-circle text-5xl text-red-500 mb-6';
+            statusTitle.textContent = title;
+            statusMessage.innerHTML = `${message} <br><a href="authentication.html" class="text-blue-400 hover:text-blue-300 font-normal mt-4 inline-block">&larr; Go back to Login</a>`;
+        };
+        
+        // --- 1. Check for Cloud Function Errors ---
+        if (error) {
+            displayError('Authentication Failed', 'The Discord sign-in process encountered an error. Please try again.');
+            return;
+        }
+
+        // --- 2. Check for Token ---
+        if (!customToken) {
+            displayError('Missing Token', 'Did not receive the expected sign-in token. Redirecting error.');
+            return;
+        }
+
+        // --- 3. Finalize Firebase Sign-In ---
+        signInWithCustomToken(auth, customToken)
+            .then(async (userCredential) => {
+                const user = userCredential.user;
+                
+                // --- BETA TESTER CHECK ---
+                const isBetaTester = await isUserBetaTester(user.email);
+                if (!isBetaTester) {
+                    const googleFormLink = "https://docs.google.com/forms/d/e/1FAIpQLSdWdL4RTE8p7t7gMGYpIHYiYcV__sNa8vOlwOCQyoolKuQimQ/viewform?usp=publish-editor";
+                    displayError('Beta Access Required', `This account is not on the beta tester list. <a href="${googleFormLink}" target="_blank" class="underline font-bold text-yellow-300">Apply for beta access here</a>.`);
+                    
+                    // Crucial: Sign out the non-beta user
+                    await signOut(auth);
+                    return; 
+                }
+                
+                // --- Check for User Document Existence ---
+                const userDoc = await getDoc(getUserDocRef(user.uid));
+                if (!userDoc.exists()) {
+                    // This block handles social users who did NOT have an account doc yet
+                    // The logic for username generation and document creation must be copied here
+                    
+                    // Simple logic for the handler:
+                    let username = (user.displayName || user.email.split('@')[0] || 'User')
+                            .replace(/[^a-zA-Z0-9]/g, '').slice(0, 16);
+                    if (username.length < 6) username = `User${user.uid.substring(0, 8)}`;
+                    
+                    // Simplified: Assume no profanity check here to keep it simple,
+                    // but in production, you'd replicate the full check.
+                    
+                    // For a fully robust solution, you should replicate the username collision logic
+                    // from authentication.html here or handle it in the Cloud Function.
+                    
+                    // For demonstration, let's assume a temporary placeholder username for new users:
+                    const finalUsername = `DiscordUser_${user.uid.substring(0, 8)}`; 
+                    
+                    const docCreated = await setDoc(getUserDocRef(user.uid), {
+                        email: user.email, 
+                        authMethod: 'discord', // Set the provider
+                        createdAt: new Date(), // Using new Date() as serverTimestamp() is for server SDK
+                        username: finalUsername, 
+                        emailVerified: true // Social providers are verified
+                    });
+                }
+                
+                // --- Success! Redirect ---
+                statusIcon.className = 'fas fa-check-circle text-5xl text-green-500 mb-6';
+                statusTitle.textContent = 'Success!';
+                statusMessage.textContent = 'Sign-in complete. Redirecting to your dashboard...';
+                
+                setTimeout(() => {
+                    window.location.href = 'logged-in/dashboard.html';
+                }, 1000);
+
+            })
+            .catch((error) => {
+                console.error("Final Firebase Sign-in Failed:", error);
+                displayError('Sign-in Error', 'Could not finalize your session. This usually means the custom token was invalid or expired.');
+            });
+    });
+</script>
+</body>
+</html>
