@@ -11,20 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="../navigation-mini.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        // Unified Tailwind CSS configuration for a consistent dark theme
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'custom-darkest-gray': '#040404', 
-                        'custom-white-gray': '#c0c0c0', 
-                    }
-                }
-            }
-        }
-    </script>
+    <link href="./dist/output.css" rel="stylesheet">
     
     <style>
         :root {
@@ -55,10 +42,11 @@
     // --- Firebase Imports ---
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, signInWithCustomToken, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    // FIXED: Added setDoc to the import list below
+    // UPDATED: Added 'setDoc' to imports so database writes work
     import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     
     // --- Import Firebase Config ---
+    // NOTE: Ensure your firebase-config.js is in the same directory or adjust the path.
     import { firebaseConfig } from "./firebase-config.js"; 
 
     // --- Firebase Initialization ---
@@ -103,32 +91,31 @@
                 const user = userCredential.user;
                 
                 try {
+                    // --- KEY FIX: Extract Discord Data from Token Claims ---
+                    // This pulls the "claims" object that contains the data sent from your backend
+                    const idTokenResult = await user.getIdTokenResult();
+                    const claims = idTokenResult.claims || {};
+                    
+                    // Use claims data first, then fallback to user object, then empty string
+                    const finalEmail = claims.email || user.email || "";
+                    // Use the Discord username passed in claims
+                    const discordUsername = claims.username || user.displayName || `User${user.uid.substring(0, 8)}`;
+
                     // --- Check for User Document Existence ---
                     const userDoc = await getDoc(getUserDocRef(user.uid));
                     
                     if (!userDoc.exists()) {
-                        let baseUsername = 'User';
-                        if (user.displayName) {
-                            baseUsername = user.displayName;
-                        } else if (typeof user.email === 'string' && user.email.length > 0) { 
-                            baseUsername = user.email.split('@')[0];
-                        } else if (user.uid) { 
-                            baseUsername = `User${user.uid.substring(0, 8)}`;
-                        }
-
-                        let username = baseUsername.replace(/[^a-zA-Z0-9]/g, '').slice(0, 16);
-                        if (username.length < 6) username = `User${user.uid.substring(0, 8)}`;
-                        
-                        const finalUsername = `DiscordUser_${user.uid.substring(0, 8)}`; 
-                        
-                        // This line was crashing before because setDoc wasn't imported
+                        // Create the document using the data extracted from Discord
                         await setDoc(getUserDocRef(user.uid), {
-                            email: user.email, 
+                            email: finalEmail, 
                             authMethod: 'discord', 
                             createdAt: new Date(),
-                            username: finalUsername, 
+                            username: discordUsername, 
                             emailVerified: true 
                         });
+                        console.log("Created new user doc for:", discordUsername);
+                    } else {
+                        console.log("User document already exists, skipping creation.");
                     }
                     
                     // --- Success! Redirect ---
@@ -147,7 +134,6 @@
 
             })
             .catch((error) => {
-                // This logs the ACTUAL error to your browser console (F12)
                 console.error("Final Firebase Sign-in Failed:", error);
                 displayError('Sign-in Error', 'Could not finalize your session. This usually means the custom token was invalid or expired.');
             });
