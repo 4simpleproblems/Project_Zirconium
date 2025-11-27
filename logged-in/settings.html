@@ -236,6 +236,112 @@
         .error-message { color: #f87171; }
         .warning-message { color: #fbbf24; }
         
+        /* --- Custom Dropdown Styles --- */
+        .custom-select-wrapper {
+            position: relative;
+            user-select: none;
+            width: 100%;
+        }
+        .custom-select {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        .custom-select-trigger {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem;
+            font-size: 1rem;
+            font-weight: 300;
+            color: #c0c0c0;
+            background: #111111;
+            border: 1px solid #252525;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .custom-select-trigger:hover {
+            border-color: #505050;
+        }
+        .custom-options {
+            position: absolute;
+            display: block;
+            top: 100%;
+            left: 0;
+            right: 0;
+            border: 1px solid #252525;
+            border-top: 0;
+            border-bottom-left-radius: 0.5rem;
+            border-bottom-right-radius: 0.5rem;
+            background: #111111;
+            transition: all 0.2s;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            z-index: 50;
+            margin-top: 2px;
+            overflow: hidden;
+        }
+        .custom-select.open .custom-options {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: all;
+            border-color: #505050;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+        }
+        .custom-option {
+            position: relative;
+            display: block;
+            padding: 0.75rem;
+            font-size: 1rem;
+            font-weight: 300;
+            color: #c0c0c0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .custom-option:hover {
+            background-color: #252525;
+            color: #ffffff;
+        }
+        .custom-option.selected {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-weight: 400;
+        }
+        .arrow {
+            position: relative;
+            height: 10px;
+            width: 10px;
+        }
+        .arrow::before, .arrow::after {
+            content: "";
+            position: absolute;
+            bottom: 0px;
+            width: 0.15rem;
+            height: 100%;
+            transition: all 0.2s;
+        }
+        .arrow::before {
+            left: -3px;
+            transform: rotate(-45deg);
+            background-color: #6b7280;
+        }
+        .arrow::after {
+            left: 3px;
+            transform: rotate(45deg);
+            background-color: #6b7280;
+        }
+        .custom-select.open .arrow::before {
+            left: -3px;
+            transform: rotate(45deg);
+        }
+        .custom-select.open .arrow::after {
+            left: 3px;
+            transform: rotate(-45deg);
+        }
+
         /* --- NEW: Theme Picker Styles --- */
         /* MODIFICATION: These styles ARE theme-aware */
         #theme-picker-container {
@@ -1630,6 +1736,117 @@
             switchTab('general');
         };
 
+        // --- Utility: Custom Dropdown Setup ---
+        function setupCustomDropdown(selectElement, onChangeCallback) {
+            // Hide original select
+            selectElement.style.display = 'none';
+            
+            // Create wrapper
+            const wrapper = document.createElement('div');
+            wrapper.className = 'custom-select-wrapper';
+            selectElement.parentNode.insertBefore(wrapper, selectElement);
+            wrapper.appendChild(selectElement);
+            
+            // Create custom structure
+            const customSelect = document.createElement('div');
+            customSelect.className = 'custom-select';
+            
+            const trigger = document.createElement('div');
+            trigger.className = 'custom-select-trigger';
+            
+            // Get initial text
+            const selectedOption = selectElement.options[selectElement.selectedIndex];
+            const initialText = selectedOption ? selectedOption.textContent : 'Select...';
+            
+            trigger.innerHTML = `<span>${initialText}</span><div class="arrow"></div>`;
+            
+            const optionsContainer = document.createElement('div');
+            optionsContainer.className = 'custom-options';
+            
+            // Populate options
+            Array.from(selectElement.options).forEach(option => {
+                const customOption = document.createElement('div');
+                customOption.className = 'custom-option' + (option.selected ? ' selected' : '');
+                customOption.dataset.value = option.value;
+                customOption.textContent = option.textContent;
+                
+                customOption.addEventListener('click', function() {
+                    // Update Trigger Text
+                    trigger.querySelector('span').textContent = this.textContent;
+                    
+                    // Update Classes
+                    customSelect.classList.remove('open');
+                    optionsContainer.querySelectorAll('.custom-option').forEach(opt => opt.classList.remove('selected'));
+                    this.classList.add('selected');
+                    
+                    // Update Original Select
+                    selectElement.value = this.dataset.value;
+                    
+                    // Trigger Callback
+                    if (onChangeCallback) onChangeCallback(this.dataset.value);
+                });
+                
+                optionsContainer.appendChild(customOption);
+            });
+            
+            customSelect.appendChild(trigger);
+            customSelect.appendChild(optionsContainer);
+            wrapper.appendChild(customSelect);
+            
+            // Trigger Event
+            trigger.addEventListener('click', function() {
+                customSelect.classList.toggle('open');
+            });
+            
+            // Close when clicking outside
+            window.addEventListener('click', function(e) {
+                if (!customSelect.contains(e.target)) {
+                    customSelect.classList.remove('open');
+                }
+            });
+            
+            // Return an update function to refresh options dynamically
+            return {
+                refresh: () => {
+                    // Clear existing options
+                    optionsContainer.innerHTML = '';
+                    // Re-populate
+                    Array.from(selectElement.options).forEach(option => {
+                        const customOption = document.createElement('div');
+                        customOption.className = 'custom-option' + (option.selected ? ' selected' : '');
+                        customOption.dataset.value = option.value;
+                        customOption.textContent = option.textContent;
+                        
+                        if (option.selected) {
+                             trigger.querySelector('span').textContent = option.textContent;
+                        }
+
+                        customOption.addEventListener('click', function() {
+                            trigger.querySelector('span').textContent = this.textContent;
+                            customSelect.classList.remove('open');
+                            optionsContainer.querySelectorAll('.custom-option').forEach(opt => opt.classList.remove('selected'));
+                            this.classList.add('selected');
+                            selectElement.value = this.dataset.value;
+                            if (onChangeCallback) onChangeCallback(this.dataset.value);
+                        });
+                        optionsContainer.appendChild(customOption);
+                    });
+                },
+                // Helper to manually select value programmatically
+                setValue: (value) => {
+                    const optionToSelect = Array.from(selectElement.options).find(opt => opt.value === value);
+                    if (optionToSelect) {
+                        selectElement.value = value;
+                        trigger.querySelector('span').textContent = optionToSelect.textContent;
+                        optionsContainer.querySelectorAll('.custom-option').forEach(opt => {
+                            if (opt.dataset.value === value) opt.classList.add('selected');
+                            else opt.classList.remove('selected');
+                        });
+                    }
+                }
+            };
+        }
+
         /**
          * Loads user data, checks rate limit, and renders the General tab.
          */
@@ -2114,6 +2331,14 @@
             const previewContainer = document.getElementById('favicon-fetch-preview-container');
             const previewImg = previewContainer.querySelector('img');
 
+            // --- Initialize Custom Dropdowns ---
+            const modeDropdown = setupCustomDropdown(modeSelect, (value) => {
+                presetGroup.classList.toggle('hidden', value !== 'preset');
+                customGroup.classList.toggle('hidden', value !== 'custom');
+            });
+            
+            const presetDropdown = setupCustomDropdown(presetSelect, null);
+
             
             // --- 2. Load Panic Key Settings ---
             try {
@@ -2141,13 +2366,18 @@
             
             // --- 3. Load URL Changer Settings ---
             const savedUrlSettings = getSavedUrlChangerSetting();
-            modeSelect.value = savedUrlSettings.type;
             
-            if (savedUrlSettings.type === 'preset') {
-                presetGroup.classList.remove('hidden');
-                presetSelect.value = savedUrlSettings.id;
+            // Set values and update UI
+            if (savedUrlSettings.type) {
+                modeDropdown.setValue(savedUrlSettings.type);
+                // Manually trigger visibility logic
+                presetGroup.classList.toggle('hidden', savedUrlSettings.type !== 'preset');
+                customGroup.classList.toggle('hidden', savedUrlSettings.type !== 'custom');
+            }
+
+            if (savedUrlSettings.type === 'preset' && savedUrlSettings.id) {
+                presetDropdown.setValue(savedUrlSettings.id);
             } else if (savedUrlSettings.type === 'custom') {
-                customGroup.classList.remove('hidden');
                 customTitle.value = savedUrlSettings.title || '';
                 
                 // NEW logic to load saved custom favicon into the preview
@@ -2269,12 +2499,7 @@
                 }
             });
 
-            // URL Changer Mode Select
-            modeSelect.addEventListener('change', () => {
-                const mode = modeSelect.value;
-                presetGroup.classList.toggle('hidden', mode !== 'preset');
-                customGroup.classList.toggle('hidden', mode !== 'custom');
-            });
+            // Mode Select Event Removed - Handled by setupCustomDropdown callback
 
             // NEW: Favicon Fetcher Button
             fetchFaviconBtn.addEventListener('click', async () => {
@@ -2382,6 +2607,20 @@
                 const letterInput = document.getElementById('pfpLetterInput');
                 const saveLetterTextBtn = document.getElementById('saveLetterTextBtn');
 
+                // --- CONDITIONAL GOOGLE OPTION ---
+                const hasGoogle = currentUser.providerData.some(p => p.providerId === 'google.com');
+                if (!hasGoogle) {
+                    const googleOption = Array.from(pfpModeSelect.options).find(opt => opt.value === 'google');
+                    if (googleOption) {
+                        googleOption.remove();
+                    }
+                    // If current selection was google (shouldn't happen for new non-google users but possible for legacy), default to letter
+                    if (currentPfpType === 'google') {
+                        // Wait, we can't update userData here easily without potentially overwriting.
+                        // Just let the UI default to the first available option or handle visually.
+                    }
+                }
+
                 // Function to dispatch instant update event
                 const triggerNavbarUpdate = () => {
                     window.dispatchEvent(new CustomEvent('pfp-updated', { 
@@ -2396,19 +2635,13 @@
 
                 // Function to update UI based on selection
                 const updatePfpUi = (type) => {
-                    pfpModeSelect.value = type;
                     letterSettings.classList.toggle('hidden', type !== 'letter');
                     customSettings.classList.toggle('hidden', type !== 'custom');
                 };
 
-                // Init UI
-                updatePfpUi(currentPfpType);
-                
-                // Dropdown Change Listener
-                pfpModeSelect.addEventListener('change', async () => {
-                    const type = pfpModeSelect.value;
+                // Init Custom Dropdown
+                const pfpDropdown = setupCustomDropdown(pfpModeSelect, async (type) => {
                     updatePfpUi(type);
-                    
                     // Auto-save type change
                     try {
                         await updateDoc(userDocRef, { pfpType: type });
@@ -2419,6 +2652,16 @@
                         showMessage(pfpMessage, 'Error saving preference.', 'error');
                     }
                 });
+
+                // Init UI with current value
+                // Ensure value is valid (e.g. if google was selected but removed)
+                let validPfpType = currentPfpType;
+                if (!hasGoogle && currentPfpType === 'google') {
+                    validPfpType = 'letter'; // Fallback
+                }
+                pfpDropdown.setValue(validPfpType);
+                updatePfpUi(validPfpType);
+                
 
                 // --- Letter Logic ---
                 // Load existing letters
@@ -2706,7 +2949,7 @@
                         triggerNavbarUpdate();
                         
                         // Update UI
-                        pfpModeSelect.value = 'custom';
+                        pfpDropdown.setValue('custom'); // Use custom dropdown method
                         updatePfpUi('custom');
                         previewImg.src = base64;
                         previewImg.style.display = 'block';
