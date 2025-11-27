@@ -365,19 +365,19 @@ let db;
                             transition: border-color 0.3s ease;
                         }
                         /* --- USERNAME COLOR FIX --- (3/3) Added new style rule */
-                        .auth-menu-username {
-                            color: var(--menu-username-text);
-                            transition: color 0.3s ease;
-                            text-align: left !important; /* Force left alignment */
-                            margin: 0 !important;
-                            font-weight: 600 !important;
-                        }
-                        /* NEW: Force email left alignment */
-                        .auth-menu-email {
-                            text-align: left !important;
-                            margin: 0 !important;
-                            font-weight: 600 !important;
-                        }            .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
+                                    .auth-menu-username {
+                                        color: var(--menu-username-text);
+                                        transition: color 0.3s ease;
+                                        text-align: left !important; /* Force left alignment */
+                                        margin: 0 !important;
+                                        font-weight: 400 !important;
+                                    }
+                                    /* NEW: Force email left alignment */
+                                    .auth-menu-email {
+                                        text-align: left !important;
+                                        margin: 0 !important;
+                                        font-weight: 400 !important;
+                                    }            .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
             .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
 
             /* NEW: Styles for the expandable "More" section */

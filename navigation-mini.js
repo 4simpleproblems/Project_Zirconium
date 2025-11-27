@@ -188,18 +188,17 @@ const FIREBASE_CONFIG = {
             
                         .initial-avatar { background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: 'Geist', sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; }
             
-                        /* Auth Menu Username and Email Styling */
-                        .auth-menu-username {
-                            text-align: left !important;
-                            margin: 0 !important;
-                            font-weight: 600 !important;
-                        }
-                        .auth-menu-email {
-                            text-align: left !important;
-                            margin: 0 !important;
-                            font-weight: 600 !important;
-                        }            
-            /* * UPDATED STYLE: Matches 'dropdown-item' from notes.html 
+                                    /* Auth Menu Username and Email Styling */
+                                    .auth-menu-username {
+                                        text-align: left !important;
+                                        margin: 0 !important;
+                                        font-weight: 400 !important;
+                                    }
+                                    .auth-menu-email {
+                                        text-align: left !important;
+                                        margin: 0 !important;
+                                        font-weight: 400 !important;
+                                    }            /* * UPDATED STYLE: Matches 'dropdown-item' from notes.html 
              * Using flex gap instead of margin-right on icons.
              * Darker hover background (#2a2a2a).
              */
