@@ -1236,24 +1236,18 @@ let db;
             }
 
             // --- NEW: Auth Toggle Listeners (Called on full render) ---
-            // This function now contains the auth toggle, logout, and "show pin" listeners
             setupAuthToggleListeners(user);
 
             // --- NEW: Pin Button Event Listeners (Called on full render) ---
             setupPinEventListeners();
 
             // Global click listener to close *both* menus
-            // NEW: Only add this listener ONCE
             if (!globalClickListenerAdded) {
                 document.addEventListener('click', (e) => {
-                    // --- FIX START: Bug 1 ---
-                    // Fetched elements *inside* the listener to avoid stale references
-                    // after a re-render. Used .contains() to handle clicks on child icons.
                     const menu = document.getElementById('auth-menu-container');
                     const toggleButton = document.getElementById('auth-toggle');
                     
                     if (menu && menu.classList.contains('open')) {
-                        // Check if the click was outside the menu AND outside the toggle button
                         if (!menu.contains(e.target) && (toggleButton && !toggleButton.contains(e.target))) {
                             menu.classList.add('closed');
                             menu.classList.remove('open');
@@ -1264,14 +1258,59 @@ let db;
                     const pinContextMenu = document.getElementById('pin-context-menu');
 
                     if (pinContextMenu && pinContextMenu.classList.contains('open')) {
-                         // Check if the click was outside the pin menu AND outside the pin button
                         if (!pinContextMenu.contains(e.target) && (pinButton && !pinButton.contains(e.target))) {
                             pinContextMenu.classList.add('closed');
                             pinContextMenu.classList.remove('open');
                         }
                     }
-                    // --- FIX END: Bug 1 ---
                 });
+                
+                // --- NEW: PFP Update Listener ---
+                window.addEventListener('pfp-updated', (e) => {
+                    if (!currentUserData) currentUserData = {};
+                    
+                    // Update local state
+                    Object.assign(currentUserData, e.detail);
+                    
+                    // Update DOM immediately with fade
+                    const authToggle = document.getElementById('auth-toggle');
+                    if (authToggle) {
+                        // Create new avatar HTML using the helper which uses the *updated* currentUserData
+                        // We temporarily need to construct a dummy 'user' object if needed, but loggedInView uses currentUserData for PFP mainly.
+                        // Actually `loggedInView` returns the whole button structure. We just want the inner HTML.
+                        
+                        // Let's extract the avatar logic from loggedInView or just re-run it.
+                        // Re-running getAuthControlsHtml() is safest but might be overkill.
+                        // Let's just update the button content.
+                        
+                        const username = currentUserData.username || currentUser?.displayName || 'User';
+                        const initial = (currentUserData.pfpLetters) ? currentUserData.pfpLetters : username.charAt(0).toUpperCase();
+                        let newContent = '';
+                        
+                        if (currentUserData.pfpType === 'custom' && currentUserData.customPfp) {
+                            newContent = `<img src="${currentUserData.customPfp}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
+                        } else if (currentUserData.pfpType === 'letter') {
+                            const style = currentUserData.pfpLetterBg ? `background: ${currentUserData.pfpLetterBg};` : '';
+                            newContent = `<div class="initial-avatar w-full h-full rounded-full text-sm font-semibold" style="${style}">${initial}</div>`;
+                        } else {
+                            if (currentUser?.photoURL) {
+                                newContent = `<img src="${currentUser.photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
+                            } else {
+                                newContent = `<div class="initial-avatar w-full h-full rounded-full text-sm font-semibold">${initial}</div>`;
+                            }
+                        }
+
+                        // Fade out, swap, fade in
+                        authToggle.style.transition = 'opacity 0.2s ease';
+                        authToggle.style.opacity = '0';
+                        
+                        setTimeout(() => {
+                            authToggle.innerHTML = newContent;
+                            authToggle.style.opacity = '1';
+                        }, 200);
+                    }
+                });
+
                 globalClickListenerAdded = true;
             }
         };

@@ -1450,32 +1450,36 @@
                         </p>
                         
                         <div class="flex flex-col gap-4">
-                            <!-- Option 1: Google -->
-                            <label class="flex items-center space-x-3 cursor-pointer">
-                                <input type="radio" name="pfpType" value="google" class="form-radio h-5 w-5 text-blue-600 bg-[#111] border-gray-600 focus:ring-blue-500">
-                                <span class="text-gray-300">Use Google Profile Picture</span>
-                            </label>
-
-                            <!-- Option 2: Letter -->
-                            <label class="flex items-center space-x-3 cursor-pointer">
-                                <input type="radio" name="pfpType" value="letter" class="form-radio h-5 w-5 text-blue-600 bg-[#111] border-gray-600 focus:ring-blue-500">
-                                <span class="text-gray-300">Use Letter Avatar</span>
-                            </label>
-                            
-                            <!-- Letter Settings (Hidden by default) -->
-                            <div id="pfpLetterSettings" class="hidden pl-8">
-                                <p class="text-xs text-gray-500 mb-2">Select Background Color:</p>
-                                <div id="letterColorPalette" class="color-palette-grid"></div>
+                            <!-- Mode Selection Dropdown -->
+                            <div>
+                                <label for="pfpModeSelect" class="block text-gray-400 text-sm font-light mb-2">Display Mode</label>
+                                <select id="pfpModeSelect" class="input-select-style">
+                                    <option value="google">Use Google Profile Picture</option>
+                                    <option value="letter">Use Letter Avatar</option>
+                                    <option value="custom">Upload Custom Image</option>
+                                </select>
                             </div>
 
-                            <!-- Option 3: Custom Upload -->
-                            <label class="flex items-center space-x-3 cursor-pointer">
-                                <input type="radio" name="pfpType" value="custom" class="form-radio h-5 w-5 text-blue-600 bg-[#111] border-gray-600 focus:ring-blue-500">
-                                <span class="text-gray-300">Upload Custom Image</span>
-                            </label>
-                            
+                            <!-- Letter Settings (Hidden by default) -->
+                            <div id="pfpLetterSettings" class="hidden flex flex-col gap-4 mt-2">
+                                <div>
+                                    <label for="pfpLetterInput" class="block text-gray-400 text-sm font-light mb-2">Avatar Text (Max 3 Chars)</label>
+                                    <div class="flex gap-2">
+                                        <input type="text" id="pfpLetterInput" maxlength="3" class="input-text-style w-32" placeholder="ABC">
+                                        <button id="saveLetterTextBtn" class="btn-toolbar-style btn-primary-override">
+                                            <i class="fa-solid fa-save mr-2"></i> Save Text
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <p class="text-xs text-gray-500 mb-2">Select Background Gradient:</p>
+                                    <div id="letterColorPalette" class="color-palette-grid"></div>
+                                </div>
+                            </div>
+
                             <!-- Custom Upload Settings (Hidden by default) -->
-                            <div id="pfpCustomSettings" class="hidden pl-8">
+                            <div id="pfpCustomSettings" class="hidden mt-2">
                                 <div class="flex items-center gap-4">
                                     <!-- Preview -->
                                     <div class="w-16 h-16 rounded-full overflow-hidden border border-gray-600 flex-shrink-0 bg-black relative">
@@ -1491,7 +1495,7 @@
                                             <i class="fa-solid fa-upload mr-2"></i> Upload Image
                                         </button>
                                         <input type="file" id="pfpFileInput" accept="image/*" style="display: none;">
-                                        <p class="text-xs text-gray-500 mt-1">Max size: 2MB</p>
+                                        <p class="text-xs text-gray-500 mt-1">Max size: 2MB. Images are cropped to square.</p>
                                     </div>
                                 </div>
                             </div>
@@ -2355,7 +2359,7 @@
         async function loadPersonalizationTab() {
             const themePickerContainer = document.getElementById('theme-picker-container');
             const themeMessage = document.getElementById('themeMessage');
-            const pfpMessage = document.getElementById('pfpMessage'); // New message area
+            const pfpMessage = document.getElementById('pfpMessage'); 
             
             // --- 1. PROFILE PICTURE LOGIC ---
             if (currentUser) {
@@ -2367,50 +2371,104 @@
                 } catch (e) { console.error("Error fetching PFP settings:", e); }
 
                 const currentPfpType = userData.pfpType || 'google';
-                const pfpRadios = document.getElementsByName('pfpType');
+                const pfpModeSelect = document.getElementById('pfpModeSelect');
                 const letterSettings = document.getElementById('pfpLetterSettings');
                 const customSettings = document.getElementById('pfpCustomSettings');
                 const previewImg = document.getElementById('customPfpPreview');
                 const previewPlaceholder = document.getElementById('customPfpPlaceholder');
+                
+                // Letter inputs
+                const letterInput = document.getElementById('pfpLetterInput');
+                const saveLetterTextBtn = document.getElementById('saveLetterTextBtn');
+
+                // Function to dispatch instant update event
+                const triggerNavbarUpdate = () => {
+                    window.dispatchEvent(new CustomEvent('pfp-updated', { 
+                        detail: { 
+                            pfpType: userData.pfpType, 
+                            customPfp: userData.customPfp, 
+                            pfpLetterBg: userData.pfpLetterBg,
+                            pfpLetters: userData.pfpLetters
+                        }
+                    }));
+                };
 
                 // Function to update UI based on selection
                 const updatePfpUi = (type) => {
+                    pfpModeSelect.value = type;
                     letterSettings.classList.toggle('hidden', type !== 'letter');
                     customSettings.classList.toggle('hidden', type !== 'custom');
                 };
 
-                // Set initial radio state
-                pfpRadios.forEach(radio => {
-                    if (radio.value === currentPfpType) radio.checked = true;
-                    
-                    radio.addEventListener('change', async () => {
-                        const type = radio.value;
-                        updatePfpUi(type);
-                        
-                        // Auto-save type change
-                        try {
-                            await updateDoc(userDocRef, { pfpType: type });
-                            showMessage(pfpMessage, 'Preference saved!', 'success');
-                        } catch (e) {
-                            showMessage(pfpMessage, 'Error saving preference.', 'error');
-                        }
-                    });
-                });
+                // Init UI
                 updatePfpUi(currentPfpType);
+                
+                // Dropdown Change Listener
+                pfpModeSelect.addEventListener('change', async () => {
+                    const type = pfpModeSelect.value;
+                    updatePfpUi(type);
+                    
+                    // Auto-save type change
+                    try {
+                        await updateDoc(userDocRef, { pfpType: type });
+                        userData.pfpType = type; // Update local state
+                        triggerNavbarUpdate();
+                        showMessage(pfpMessage, 'Preference saved!', 'success');
+                    } catch (e) {
+                        showMessage(pfpMessage, 'Error saving preference.', 'error');
+                    }
+                });
 
-                // --- Letter Palette Logic ---
+                // --- Letter Logic ---
+                // Load existing letters
+                if (userData.pfpLetters) {
+                    letterInput.value = userData.pfpLetters;
+                } else {
+                    letterInput.value = userData.username ? userData.username.substring(0, 1).toUpperCase() : '';
+                }
+
+                // Save Letter Text
+                saveLetterTextBtn.addEventListener('click', async () => {
+                    const text = letterInput.value.trim().toUpperCase().substring(0, 3);
+                    if (!text) {
+                        showMessage(pfpMessage, 'Please enter at least one letter.', 'warning');
+                        return;
+                    }
+                    try {
+                        saveLetterTextBtn.disabled = true;
+                        await updateDoc(userDocRef, { pfpLetters: text });
+                        userData.pfpLetters = text; // Update local
+                        triggerNavbarUpdate();
+                        showMessage(pfpMessage, 'Avatar text saved!', 'success');
+                    } catch (e) {
+                        showMessage(pfpMessage, 'Error saving text.', 'error');
+                    } finally {
+                        saveLetterTextBtn.disabled = false;
+                    }
+                });
+
+                // Gradient Palette Logic
                 const paletteContainer = document.getElementById('letterColorPalette');
-                const colors = [
-                    '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e', '#10b981', '#14b8a6', 
-                    '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', 
-                    '#f43f5e', '#78716c', '#374151', '#1f2937'
+                const gradients = [
+                    'linear-gradient(135deg, #ef4444, #f97316)', 
+                    'linear-gradient(135deg, #f59e0b, #eab308)', 
+                    'linear-gradient(135deg, #84cc16, #22c55e)', 
+                    'linear-gradient(135deg, #10b981, #14b8a6)', 
+                    'linear-gradient(135deg, #06b6d4, #0ea5e9)', 
+                    'linear-gradient(135deg, #3b82f6, #6366f1)', 
+                    'linear-gradient(135deg, #8b5cf6, #a855f7)', 
+                    'linear-gradient(135deg, #d946ef, #ec4899)', 
+                    'linear-gradient(135deg, #f43f5e, #e11d48)', 
+                    'linear-gradient(135deg, #78716c, #57534e)', 
+                    'linear-gradient(135deg, #374151, #1f2937)', 
+                    'linear-gradient(135deg, #1f2937, #111827)'
                 ];
-                const currentLetterBg = userData.pfpLetterBg || '#374151';
+                const currentLetterBg = userData.pfpLetterBg || 'linear-gradient(135deg, #374151, #1f2937)';
 
-                colors.forEach(color => {
+                gradients.forEach(grad => {
                     const dot = document.createElement('div');
-                    dot.className = `color-option ${color === currentLetterBg ? 'selected' : ''}`;
-                    dot.style.backgroundColor = color;
+                    dot.className = `color-option ${grad === currentLetterBg ? 'selected' : ''}`;
+                    dot.style.background = grad;
                     dot.addEventListener('click', async () => {
                         // Update UI
                         paletteContainer.querySelectorAll('.color-option').forEach(d => d.classList.remove('selected'));
@@ -2418,15 +2476,11 @@
                         
                         // Save
                         try {
-                            await updateDoc(userDocRef, { pfpLetterBg: color });
-                            // Implicitly switch to letter type if not already
-                            if (document.querySelector('input[name="pfpType"]:checked').value !== 'letter') {
-                                document.querySelector('input[name="pfpType"][value="letter"]').checked = true;
-                                updatePfpUi('letter');
-                                await updateDoc(userDocRef, { pfpType: 'letter' });
-                            }
-                            showMessage(pfpMessage, 'Background color saved!', 'success');
-                        } catch (e) { showMessage(pfpMessage, 'Error saving color.', 'error'); }
+                            await updateDoc(userDocRef, { pfpLetterBg: grad });
+                            userData.pfpLetterBg = grad; // Update local
+                            triggerNavbarUpdate();
+                            showMessage(pfpMessage, 'Background gradient saved!', 'success');
+                        } catch (e) { showMessage(pfpMessage, 'Error saving gradient.', 'error'); }
                     });
                     paletteContainer.appendChild(dot);
                 });
@@ -2449,43 +2503,10 @@
                 uploadBtn.addEventListener('click', () => fileInput.click());
 
                 let cropperImage = null;
-                let cropState = { x: 0, y: 0, radius: 100, scale: 1 };
+                let cropState = { x: 0, y: 0, radius: 100 };
                 let isDragging = false;
                 let dragStart = { x: 0, y: 0 };
-
                 const ctx = cropperCanvas.getContext('2d');
-
-                const drawCropper = () => {
-                    if (!cropperImage) return;
-                    
-                    const width = cropperCanvas.width;
-                    const height = cropperCanvas.height;
-                    
-                    ctx.clearRect(0, 0, width, height);
-                    
-                    // Draw image centered
-                    const imgW = cropperImage.width * cropState.scale;
-                    const imgH = cropperImage.height * cropState.scale;
-                    const imgX = (width - imgW) / 2;
-                    const imgY = (height - imgH) / 2;
-                    
-                    ctx.drawImage(cropperImage, imgX, imgY, imgW, imgH);
-                    
-                    // Draw overlay
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                    ctx.beginPath();
-                    ctx.rect(0, 0, width, height);
-                    // Cut out circle (counter-clockwise)
-                    ctx.arc(cropState.x, cropState.y, cropState.radius, 0, 2 * Math.PI, true);
-                    ctx.fill();
-                    
-                    // Draw border
-                    ctx.strokeStyle = '#ffffff';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.arc(cropState.x, cropState.y, cropState.radius, 0, 2 * Math.PI);
-                    ctx.stroke();
-                };
 
                 fileInput.addEventListener('change', (e) => {
                     const file = e.target.files[0];
@@ -2500,47 +2521,28 @@
                     reader.onload = (evt) => {
                         cropperImage = new Image();
                         cropperImage.onload = () => {
-                            // Setup canvas size
-                            const maxWidth = 500;
-                            const scale = Math.min(1, maxWidth / cropperImage.width);
+                            // Setup canvas with fixed height for consistency
+                            const fixedHeight = 400;
+                            const scale = fixedHeight / cropperImage.height;
+                            cropperCanvas.height = fixedHeight;
                             cropperCanvas.width = cropperImage.width * scale;
-                            cropperCanvas.height = cropperImage.height * scale;
                             
-                            // Reset state
+                            // Initial crop state: center, 1/3 min dim
                             cropState = {
                                 x: cropperCanvas.width / 2,
                                 y: cropperCanvas.height / 2,
-                                radius: Math.min(cropperCanvas.width, cropperCanvas.height) / 3,
-                                scale: scale // Use canvas drawing scale relative to original
+                                radius: Math.min(cropperCanvas.width, cropperCanvas.height) / 3
                             };
                             
-                            // Reset cropState scale logic: actually we draw the image 1:1 on canvas (which is scaled down)
-                            // Wait, let's keep it simple: canvas matches image dimensions (clamped).
-                            // drawCropper logic above uses cropState.scale. 
-                            // Let's fix logic: canvas size is fixed to display size.
-                            // Actually simpler: Set canvas size to reasonable pixel dims, draw image scaled to fit.
-                            
-                            // Revised setup:
-                            cropState.scale = Math.min(500 / cropperImage.width, 400 / cropperImage.height, 1);
-                            cropperCanvas.width = cropperImage.width * cropState.scale;
-                            cropperCanvas.height = cropperImage.height * cropState.scale;
-                            cropState.x = cropperCanvas.width / 2;
-                            cropState.y = cropperCanvas.height / 2;
-                            cropState.radius = Math.min(cropperCanvas.width, cropperCanvas.height) / 3;
-                            
-                            // Override drawCropper scale usage since we sized the canvas
-                            // drawCropper implementation above uses cropState.scale which is now redundant if we draw at 0,0 w,h
-                            // Let's redefine drawCropper for this context
-                            
                             cropperModal.style.display = 'flex';
-                            requestAnimationFrame(drawRedefined);
+                            requestAnimationFrame(drawCropper);
                         };
                         cropperImage.src = evt.target.result;
                     };
                     reader.readAsDataURL(file);
                 });
                 
-                const drawRedefined = () => {
+                const drawCropper = () => {
                     if (!cropperImage) return;
                     const w = cropperCanvas.width;
                     const h = cropperCanvas.height;
@@ -2553,9 +2555,11 @@
                     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
                     ctx.beginPath();
                     ctx.rect(0, 0, w, h);
+                    // Cut hole
                     ctx.arc(cropState.x, cropState.y, cropState.radius, 0, 2 * Math.PI, true);
                     ctx.fill();
                     
+                    // Draw border
                     ctx.strokeStyle = '#fff';
                     ctx.lineWidth = 2;
                     ctx.beginPath();
@@ -2567,7 +2571,6 @@
                 const handleStart = (x, y) => {
                     const dx = x - cropState.x;
                     const dy = y - cropState.y;
-                    // Check if inside circle
                     if (dx*dx + dy*dy < cropState.radius * cropState.radius) {
                         isDragging = true;
                         dragStart = { x, y };
@@ -2578,10 +2581,25 @@
                     if (isDragging) {
                         const dx = x - dragStart.x;
                         const dy = y - dragStart.y;
-                        cropState.x += dx;
-                        cropState.y += dy;
+                        
+                        let newX = cropState.x + dx;
+                        let newY = cropState.y + dy;
+                        
+                        // Constraint: Circle must stay within canvas
+                        // x - radius >= 0  => x >= radius
+                        // x + radius <= w  => x <= w - radius
+                        const r = cropState.radius;
+                        const w = cropperCanvas.width;
+                        const h = cropperCanvas.height;
+                        
+                        newX = Math.max(r, Math.min(newX, w - r));
+                        newY = Math.max(r, Math.min(newY, h - r));
+                        
+                        cropState.x = newX;
+                        cropState.y = newY;
+                        
                         dragStart = { x, y };
-                        requestAnimationFrame(drawRedefined);
+                        requestAnimationFrame(drawCropper);
                     }
                 };
 
@@ -2590,8 +2608,22 @@
                 const handleScroll = (e) => {
                     e.preventDefault();
                     const delta = e.deltaY > 0 ? -5 : 5;
-                    cropState.radius = Math.max(20, Math.min(cropState.radius + delta, Math.min(cropperCanvas.width, cropperCanvas.height)/2));
-                    requestAnimationFrame(drawRedefined);
+                    let newR = cropState.radius + delta;
+                    
+                    // Constraint: Radius cannot exceed boundaries based on current center
+                    // x - r >= 0 => r <= x
+                    // x + r <= w => r <= w - x
+                    // y - r >= 0 => r <= y
+                    // y + r <= h => r <= h - y
+                    const w = cropperCanvas.width;
+                    const h = cropperCanvas.height;
+                    const maxR = Math.min(cropState.x, w - cropState.x, cropState.y, h - cropState.y);
+                    
+                    // Min radius 20, Max radius is restricted by position
+                    newR = Math.max(20, Math.min(newR, maxR));
+                    
+                    cropState.radius = newR;
+                    requestAnimationFrame(drawCropper);
                 };
 
                 cropperCanvas.addEventListener('mousedown', e => handleStart(e.offsetX, e.offsetY));
@@ -2605,13 +2637,19 @@
                     e.preventDefault();
                     const rect = cropperCanvas.getBoundingClientRect();
                     const touch = e.touches[0];
-                    handleStart(touch.clientX - rect.left, touch.clientY - rect.top);
+                    // Account for CSS scaling if canvas is displayed smaller than actual size
+                    // offsetX = (clientX - left) * (canvas.width / clientWidth)
+                    const scaleX = cropperCanvas.width / rect.width;
+                    const scaleY = cropperCanvas.height / rect.height;
+                    handleStart((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * scaleY);
                 });
                 cropperCanvas.addEventListener('touchmove', e => {
                     e.preventDefault();
                     const rect = cropperCanvas.getBoundingClientRect();
                     const touch = e.touches[0];
-                    handleMove(touch.clientX - rect.left, touch.clientY - rect.top);
+                    const scaleX = cropperCanvas.width / rect.width;
+                    const scaleY = cropperCanvas.height / rect.height;
+                    handleMove((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * scaleY);
                 });
                 cropperCanvas.addEventListener('touchend', handleEnd);
 
@@ -2628,19 +2666,16 @@
                     tempCanvas.height = size;
                     const tCtx = tempCanvas.getContext('2d');
                     
-                    // Calculate source coordinates relative to the ORIGINAL image
-                    // cropperCanvas.width = cropperImage.width * scale
-                    // cropState.x is on canvas. 
-                    // trueX = cropState.x / scale
-                    const scale = cropperCanvas.width / cropperImage.width;
+                    // Mapping back to original image
+                    // Canvas was scaled to fixedHeight (400).
+                    // scale = 400 / image.height
+                    // originalX = cropState.x / scale
+                    const scale = cropperCanvas.height / cropperImage.height;
                     
                     const sourceX = (cropState.x - cropState.radius) / scale;
                     const sourceY = (cropState.y - cropState.radius) / scale;
                     const sourceSize = (cropState.radius * 2) / scale;
                     
-                    // Draw cropped portion to temp canvas
-                    // Draw as circle? No, standard pfp is square image masked by CSS usually.
-                    // But we can make it square.
                     tCtx.drawImage(cropperImage, sourceX, sourceY, sourceSize, sourceSize, 0, 0, size, size);
                     
                     const base64 = tempCanvas.toDataURL('image/jpeg', 0.8);
@@ -2654,8 +2689,12 @@
                             pfpType: 'custom'
                         });
                         
+                        userData.customPfp = base64;
+                        userData.pfpType = 'custom';
+                        triggerNavbarUpdate();
+                        
                         // Update UI
-                        document.querySelector('input[name="pfpType"][value="custom"]').checked = true;
+                        pfpModeSelect.value = 'custom';
                         updatePfpUi('custom');
                         previewImg.src = base64;
                         previewImg.style.display = 'block';

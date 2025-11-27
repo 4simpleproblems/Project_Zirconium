@@ -31,8 +31,10 @@ const FIREBASE_CONFIG = {
 
 // --- Self-invoking function to encapsulate all logic ---
 (function() {
-    // Global references for Firebase objects
+    // Global references for Firebase objects and state
     let auth, db;
+    let currentUser = null;
+    let currentUserData = null;
 
     // Stop execution if Firebase config is not provided
     if (!FIREBASE_CONFIG || !FIREBASE_CONFIG.apiKey) {
@@ -106,6 +108,40 @@ const FIREBASE_CONFIG = {
 
         // Start the Auth listener immediately after initialization
         setupAuthListener();
+        
+        // Add PFP Update Listener
+        window.addEventListener('pfp-updated', (e) => {
+            if (!currentUserData) currentUserData = {};
+            Object.assign(currentUserData, e.detail);
+            
+            const authToggle = document.getElementById('auth-toggle');
+            if (authToggle) {
+                const username = currentUserData.username || currentUser?.displayName || 'User';
+                const initial = (currentUserData.pfpLetters) ? currentUserData.pfpLetters : username.charAt(0).toUpperCase();
+                let newContent = '';
+                
+                if (currentUserData.pfpType === 'custom' && currentUserData.customPfp) {
+                    newContent = `<img src="${currentUserData.customPfp}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
+                } else if (currentUserData.pfpType === 'letter') {
+                    const style = currentUserData.pfpLetterBg ? `background: ${currentUserData.pfpLetterBg};` : '';
+                    newContent = `<div class="initial-avatar w-full h-full rounded-full text-sm font-semibold" style="${style}">${initial}</div>`;
+                } else {
+                    if (currentUser?.photoURL) {
+                        newContent = `<img src="${currentUser.photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
+                    } else {
+                        newContent = `<div class="initial-avatar w-full h-full rounded-full text-sm font-semibold">${initial}</div>`;
+                    }
+                }
+
+                // Fade animation
+                authToggle.style.transition = 'opacity 0.2s ease';
+                authToggle.style.opacity = '0';
+                setTimeout(() => {
+                    authToggle.innerHTML = newContent;
+                    authToggle.style.opacity = '1';
+                }, 200);
+            }
+        });
     };
 
     // --- 3. INJECT CSS STYLES (UPDATED) ---
@@ -232,7 +268,7 @@ const FIREBASE_CONFIG = {
         const loggedInView = (user, userData) => {
             const username = userData?.username || user.displayName || 'User';
             const email = user.email || 'No email';
-            const initial = username.charAt(0).toUpperCase();
+            const initial = (userData?.pfpLetters) ? userData.pfpLetters : username.charAt(0).toUpperCase();
 
             // --- NEW PROFILE PICTURE LOGIC ---
             let avatarHtml = '';
@@ -324,20 +360,21 @@ const FIREBASE_CONFIG = {
     // --- 6. AUTH STATE LISTENER (MODIFIED) ---
     const setupAuthListener = () => {
         auth.onAuthStateChanged(async (user) => {
+            currentUser = user; // Update global var
             if (user) {
                 // User is signed in. Fetch their data from Firestore.
                 try {
                     const userDoc = await db.collection('users').doc(user.uid).get();
-                    const userData = userDoc.exists ? userDoc.data() : null;
-                    renderNavbar(user, userData);
+                    currentUserData = userDoc.exists ? userDoc.data() : null; // Update global var
+                    renderNavbar(user, currentUserData);
                 } catch (error) {
                     console.error("Error fetching user data:", error);
                     renderNavbar(user, null); // Render even if Firestore fails
                 }
             } else {
                 // User is signed out.
+                currentUserData = null;
                 renderNavbar(null, null);
-                // REMOVED: Anonymous sign-in attempt. Guests are now unsupported.
             }
 
             // --- START: Injection failure retry logic ---
