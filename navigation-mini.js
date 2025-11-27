@@ -308,7 +308,7 @@ const FIREBASE_CONFIG = {
                                 <p class="text-sm font-semibold text-white truncate">${username}</p>
                                 <p class="text-xs text-gray-400 truncate">${email}</p>
                             </div>
-                            <div id="auth-menu-avatar-container" class="flex-shrink-0 w-12 h-12 rounded-full border border-gray-600 overflow-hidden">
+                            <div id="auth-menu-avatar-container" class="flex-shrink-0 w-10 h-10 rounded-full border border-gray-600 overflow-hidden">
                                 ${avatarHtml}
                             </div>
                         </div>
