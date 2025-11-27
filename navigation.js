@@ -334,33 +334,32 @@ let db;
         style.textContent = `
             /* Base Styles */
             body { padding-top: 64px; } /* UPDATED */
-            .auth-navbar { 
-                position: fixed; top: 0; left: 0; right: 0; z-index: 1000; 
-                background: var(--navbar-bg); 
-                border-bottom: 1px solid var(--navbar-border); 
-                height: 64px; /* UPDATED */
-                transition: background-color 0.3s ease, border-color 0.3s ease;
-            }
-            .auth-navbar nav { padding: 0 16px; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; } /* UPDATED */
-            .initial-avatar { 
-                background: var(--avatar-gradient); 
-                font-family: sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; 
-            }
-            #auth-toggle {
-                border-color: var(--avatar-border);
-                transition: border-color 0.3s ease;
-            }
-            
-            /* Auth Dropdown Menu Styles */
-                        .auth-menu-container { 
-                            position: absolute; right: 0; top: 60px; width: 16rem; /* UPDATED top from 50px */
-                            background: var(--menu-bg);
-                            border: 1px solid var(--menu-border); 
-                            border-radius: 0.9rem; padding: 0.75rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
-                            transition: transform 0.2s ease-out, opacity 0.2s ease-out, background-color 0.3s ease, border-color 0.3s ease; 
-                            transform-origin: top right; z-index: 1010;
+                        .auth-navbar {
+                            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+                            background: var(--navbar-bg);
+                            border-bottom: 1px solid var(--navbar-border);
+                            height: 64px; /* UPDATED */
+                            transition: background-color 0.3s ease, border-color 0.3s ease;
                         }
-                        .auth-menu-container .border-b { /* User info divider */
+                        .auth-navbar nav { padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; } /* UPDATED */
+                        .initial-avatar {
+                            background: var(--avatar-gradient);
+                            font-family: sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white;
+                        }
+                        #auth-toggle {
+                            border-color: var(--avatar-border);
+                            transition: border-color 0.3s ease;
+                        }
+            
+                        /* Auth Dropdown Menu Styles */
+                        .auth-menu-container {
+                            position: absolute; right: 0; top: 50px; width: 16rem; /* UPDATED top from 50px */
+                            background: var(--menu-bg);
+                            border: 1px solid var(--menu-border);
+                            border-radius: 0.9rem; padding: 0.75rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2);
+                            transition: transform 0.2s ease-out, opacity 0.2s ease-out, background-color 0.3s ease, border-color 0.3s ease;
+                            transform-origin: top right; z-index: 1010;
+                        }                        .auth-menu-container .border-b { /* User info divider */
                             border-color: var(--menu-divider) !important;
                             transition: border-color 0.3s ease;
                         }
