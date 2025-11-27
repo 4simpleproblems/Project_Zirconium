@@ -475,12 +475,6 @@
         import { siteMapping } from "../site-mapping.js";
 
 
-        // --- Discord Custom Auth Constants (NEW) ---
-        const DISCORD_CLIENT_ID = '1419262893941063866'; // Your provided ID
-        const DISCORD_REDIRECT_URI = 'https://us-central1-project-zirconium.cloudfunctions.net/discordCallback';
-        const DISCORD_SCOPE = 'identify%20email'; // URL-encoded scopes
-
-
         if (!firebaseConfig || !firebaseConfig.apiKey) {
             console.error("FATAL ERROR: Firebase configuration is missing or invalid.");
         }
@@ -529,11 +523,6 @@
                 name: 'Microsoft', 
                 icon: '../images/microsoft.png', 
                 instance: () => new OAuthProvider('microsoft.com') 
-            },
-            'discord.com': {
-                name: 'Discord',
-                icon: '../images/discord.png',
-                instance: () => 'custom' // Special case for custom handler
             },
             'password': { 
                 name: 'Email & Password', 
@@ -1069,7 +1058,7 @@
                 const canUnlink = providerData.length > 1 && !(id === 'password' && primaryProviderId === 'password');
                 
                 // Determine if icon is an image or a FontAwesome icon
-                let iconHtml = config.icon.startsWith('<i') ? config.icon : `<img src="${config.icon}" alt="${config.name} Icon" class="h-5 mr-3">`;
+                let iconHtml = config.icon.startsWith('<i') ? config.icon : `<img src="${config.icon}" alt="${config.name} Icon" class="w-5 h-5 mr-3">`;
 
                 return `
                     <div class="flex justify-between items-center px-4 py-4 border-b border-[#252525] last:border-b-0">
@@ -1094,7 +1083,7 @@
                 .filter(id => id !== 'password' && !linkedIds.includes(id))
                 .map(id => {
                     const config = PROVIDER_CONFIG[id];
-                    let iconHtml = config.icon.startsWith('<i') ? config.icon : `<img src="${config.icon}" alt="${config.name} Icon" class="h-5 mr-3">`;
+                    let iconHtml = config.icon.startsWith('<i') ? config.icon : `<img src="${config.icon}" alt="${config.name} Icon" class="w-5 h-5 mr-3">`;
 
                     return `
                         <div class="flex justify-between items-center px-4 py-4 border-b border-[#252525] last:border-b-0">
@@ -1488,20 +1477,6 @@
                 </div>
             `;
         }
-
-        // --- Discord Link Handler (NEW) ---
-        const handleDiscordLink = () => {
-            if (!auth.currentUser) {
-                showMessage(document.getElementById('usernameChangeMessage'), 'You must be logged in to link an account.', 'error');
-                return;
-            }
-            // Add the UID to the state parameter for the cloud function to identify the user
-            const state = auth.currentUser.uid;
-            const discordAuthUrl = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${DISCORD_REDIRECT_URI}&response_type=code&scope=${DISCORD_SCOPE}&state=${state}`;
-            
-            // Redirect the user to the Discord login page
-            window.location.href = discordAuthUrl;
-        };
         
         // Helper for refreshing the General Tab
         const refreshGeneralTab = () => {
@@ -1795,13 +1770,6 @@
             linkProviderButtons.forEach(button => {
                 button.addEventListener('click', async () => {
                     const providerId = button.dataset.providerId;
-                    
-                    // --- NEW: Special handling for Discord ---
-                    if (providerId === 'discord.com') {
-                        handleDiscordLink();
-                        return;
-                    }
-                    
                     const config = PROVIDER_CONFIG[providerId];
                     const providerInstance = config.instance();
                     
