@@ -373,6 +373,67 @@
           }
         }
         
+        /* --- Cropper Modal Styles --- */
+        #cropperModal {
+            display: none;
+            position: fixed;
+            z-index: 2050;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        #cropperContent {
+            background-color: #1a1a1a;
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 90%;
+            max-width: 600px;
+        }
+        #cropperCanvasContainer {
+            position: relative;
+            margin-bottom: 20px;
+            overflow: hidden;
+            /* Limits for the canvas display */
+            max-height: 60vh; 
+        }
+        #cropperCanvas {
+            display: block;
+            max-width: 100%;
+            max-height: 60vh;
+        }
+        
+        /* --- Color Palette Styles --- */
+        .color-palette-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+            gap: 10px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .color-option {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .color-option:hover {
+            transform: scale(1.1);
+        }
+        .color-option.selected {
+            border-color: white;
+            box-shadow: 0 0 0 2px #4f46e5; /* Ring effect */
+        }
     </style>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-1D4F692C1Q"></script>
 <script>
@@ -436,6 +497,26 @@
     </div>
     
     
+    <div id="cropperModal">
+        <div id="cropperContent">
+            <h3 class="text-xl font-bold text-white mb-4">Adjust Profile Picture</h3>
+            <p class="text-sm text-gray-400 mb-4">Drag to move. Scroll to resize the selection.</p>
+            
+            <div id="cropperCanvasContainer">
+                <canvas id="cropperCanvas"></canvas>
+            </div>
+            
+            <div class="flex justify-between w-full mt-4">
+                <button id="cancelCropBtn" class="btn-toolbar-style">
+                    <i class="fa-solid fa-xmark mr-2"></i> Cancel
+                </button>
+                <button id="submitCropBtn" class="btn-toolbar-style btn-primary-override">
+                    <i class="fa-solid fa-check mr-2"></i> Submit
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { 
@@ -1361,6 +1442,65 @@
                 <h2 class="text-3xl font-bold text-white mb-6">Personalization</h2>
                 
                 <div class="w-full">
+                    <!-- PROFILE PICTURE SECTION -->
+                    <h3 class="text-xl font-bold text-white mb-2">Profile Picture</h3>
+                    <div id="pfpSection" class="settings-box transition-all duration-300 p-4 mb-8">
+                        <p class="text-sm font-light text-gray-400 mb-4">
+                            Choose how you appear across the site.
+                        </p>
+                        
+                        <div class="flex flex-col gap-4">
+                            <!-- Option 1: Google -->
+                            <label class="flex items-center space-x-3 cursor-pointer">
+                                <input type="radio" name="pfpType" value="google" class="form-radio h-5 w-5 text-blue-600 bg-[#111] border-gray-600 focus:ring-blue-500">
+                                <span class="text-gray-300">Use Google Profile Picture</span>
+                            </label>
+
+                            <!-- Option 2: Letter -->
+                            <label class="flex items-center space-x-3 cursor-pointer">
+                                <input type="radio" name="pfpType" value="letter" class="form-radio h-5 w-5 text-blue-600 bg-[#111] border-gray-600 focus:ring-blue-500">
+                                <span class="text-gray-300">Use Letter Avatar</span>
+                            </label>
+                            
+                            <!-- Letter Settings (Hidden by default) -->
+                            <div id="pfpLetterSettings" class="hidden pl-8">
+                                <p class="text-xs text-gray-500 mb-2">Select Background Color:</p>
+                                <div id="letterColorPalette" class="color-palette-grid"></div>
+                            </div>
+
+                            <!-- Option 3: Custom Upload -->
+                            <label class="flex items-center space-x-3 cursor-pointer">
+                                <input type="radio" name="pfpType" value="custom" class="form-radio h-5 w-5 text-blue-600 bg-[#111] border-gray-600 focus:ring-blue-500">
+                                <span class="text-gray-300">Upload Custom Image</span>
+                            </label>
+                            
+                            <!-- Custom Upload Settings (Hidden by default) -->
+                            <div id="pfpCustomSettings" class="hidden pl-8">
+                                <div class="flex items-center gap-4">
+                                    <!-- Preview -->
+                                    <div class="w-16 h-16 rounded-full overflow-hidden border border-gray-600 flex-shrink-0 bg-black relative">
+                                        <img id="customPfpPreview" src="" class="w-full h-full object-cover" style="display: none;">
+                                        <div id="customPfpPlaceholder" class="w-full h-full flex items-center justify-center text-gray-600">
+                                            <i class="fa-solid fa-user"></i>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Upload Button -->
+                                    <div>
+                                        <button id="uploadPfpBtn" class="btn-toolbar-style btn-primary-override">
+                                            <i class="fa-solid fa-upload mr-2"></i> Upload Image
+                                        </button>
+                                        <input type="file" id="pfpFileInput" accept="image/*" style="display: none;">
+                                        <p class="text-xs text-gray-500 mt-1">Max size: 2MB</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="pfpMessage" class="general-message-area text-sm"></div>
+                    </div>
+
+                    <!-- THEME SECTION -->
                     <h3 class="text-xl font-bold text-white mb-2">Navigation Bar Theme</h3>
                     <div id="themeSection" class="settings-box transition-all duration-300 p-4">
                         <p class="text-sm font-light text-gray-400 mb-4">
@@ -2215,6 +2355,325 @@
         async function loadPersonalizationTab() {
             const themePickerContainer = document.getElementById('theme-picker-container');
             const themeMessage = document.getElementById('themeMessage');
+            const pfpMessage = document.getElementById('pfpMessage'); // New message area
+            
+            // --- 1. PROFILE PICTURE LOGIC ---
+            if (currentUser) {
+                const userDocRef = getUserDocRef(currentUser.uid);
+                let userData = {};
+                try {
+                    const snap = await getDoc(userDocRef);
+                    if (snap.exists()) userData = snap.data();
+                } catch (e) { console.error("Error fetching PFP settings:", e); }
+
+                const currentPfpType = userData.pfpType || 'google';
+                const pfpRadios = document.getElementsByName('pfpType');
+                const letterSettings = document.getElementById('pfpLetterSettings');
+                const customSettings = document.getElementById('pfpCustomSettings');
+                const previewImg = document.getElementById('customPfpPreview');
+                const previewPlaceholder = document.getElementById('customPfpPlaceholder');
+
+                // Function to update UI based on selection
+                const updatePfpUi = (type) => {
+                    letterSettings.classList.toggle('hidden', type !== 'letter');
+                    customSettings.classList.toggle('hidden', type !== 'custom');
+                };
+
+                // Set initial radio state
+                pfpRadios.forEach(radio => {
+                    if (radio.value === currentPfpType) radio.checked = true;
+                    
+                    radio.addEventListener('change', async () => {
+                        const type = radio.value;
+                        updatePfpUi(type);
+                        
+                        // Auto-save type change
+                        try {
+                            await updateDoc(userDocRef, { pfpType: type });
+                            showMessage(pfpMessage, 'Preference saved!', 'success');
+                        } catch (e) {
+                            showMessage(pfpMessage, 'Error saving preference.', 'error');
+                        }
+                    });
+                });
+                updatePfpUi(currentPfpType);
+
+                // --- Letter Palette Logic ---
+                const paletteContainer = document.getElementById('letterColorPalette');
+                const colors = [
+                    '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e', '#10b981', '#14b8a6', 
+                    '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', 
+                    '#f43f5e', '#78716c', '#374151', '#1f2937'
+                ];
+                const currentLetterBg = userData.pfpLetterBg || '#374151';
+
+                colors.forEach(color => {
+                    const dot = document.createElement('div');
+                    dot.className = `color-option ${color === currentLetterBg ? 'selected' : ''}`;
+                    dot.style.backgroundColor = color;
+                    dot.addEventListener('click', async () => {
+                        // Update UI
+                        paletteContainer.querySelectorAll('.color-option').forEach(d => d.classList.remove('selected'));
+                        dot.classList.add('selected');
+                        
+                        // Save
+                        try {
+                            await updateDoc(userDocRef, { pfpLetterBg: color });
+                            // Implicitly switch to letter type if not already
+                            if (document.querySelector('input[name="pfpType"]:checked').value !== 'letter') {
+                                document.querySelector('input[name="pfpType"][value="letter"]').checked = true;
+                                updatePfpUi('letter');
+                                await updateDoc(userDocRef, { pfpType: 'letter' });
+                            }
+                            showMessage(pfpMessage, 'Background color saved!', 'success');
+                        } catch (e) { showMessage(pfpMessage, 'Error saving color.', 'error'); }
+                    });
+                    paletteContainer.appendChild(dot);
+                });
+
+                // --- Custom Upload Logic ---
+                const uploadBtn = document.getElementById('uploadPfpBtn');
+                const fileInput = document.getElementById('pfpFileInput');
+                const cropperModal = document.getElementById('cropperModal');
+                const cropperCanvas = document.getElementById('cropperCanvas');
+                const cancelCropBtn = document.getElementById('cancelCropBtn');
+                const submitCropBtn = document.getElementById('submitCropBtn');
+                
+                // Show existing custom pfp in preview
+                if (userData.customPfp) {
+                    previewImg.src = userData.customPfp;
+                    previewImg.style.display = 'block';
+                    previewPlaceholder.style.display = 'none';
+                }
+
+                uploadBtn.addEventListener('click', () => fileInput.click());
+
+                let cropperImage = null;
+                let cropState = { x: 0, y: 0, radius: 100, scale: 1 };
+                let isDragging = false;
+                let dragStart = { x: 0, y: 0 };
+
+                const ctx = cropperCanvas.getContext('2d');
+
+                const drawCropper = () => {
+                    if (!cropperImage) return;
+                    
+                    const width = cropperCanvas.width;
+                    const height = cropperCanvas.height;
+                    
+                    ctx.clearRect(0, 0, width, height);
+                    
+                    // Draw image centered
+                    const imgW = cropperImage.width * cropState.scale;
+                    const imgH = cropperImage.height * cropState.scale;
+                    const imgX = (width - imgW) / 2;
+                    const imgY = (height - imgH) / 2;
+                    
+                    ctx.drawImage(cropperImage, imgX, imgY, imgW, imgH);
+                    
+                    // Draw overlay
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                    ctx.beginPath();
+                    ctx.rect(0, 0, width, height);
+                    // Cut out circle (counter-clockwise)
+                    ctx.arc(cropState.x, cropState.y, cropState.radius, 0, 2 * Math.PI, true);
+                    ctx.fill();
+                    
+                    // Draw border
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(cropState.x, cropState.y, cropState.radius, 0, 2 * Math.PI);
+                    ctx.stroke();
+                };
+
+                fileInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    
+                    if (file.size > 2 * 1024 * 1024) {
+                        showMessage(pfpMessage, 'File is too large (max 2MB).', 'error');
+                        return;
+                    }
+
+                    const reader = new FileReader();
+                    reader.onload = (evt) => {
+                        cropperImage = new Image();
+                        cropperImage.onload = () => {
+                            // Setup canvas size
+                            const maxWidth = 500;
+                            const scale = Math.min(1, maxWidth / cropperImage.width);
+                            cropperCanvas.width = cropperImage.width * scale;
+                            cropperCanvas.height = cropperImage.height * scale;
+                            
+                            // Reset state
+                            cropState = {
+                                x: cropperCanvas.width / 2,
+                                y: cropperCanvas.height / 2,
+                                radius: Math.min(cropperCanvas.width, cropperCanvas.height) / 3,
+                                scale: scale // Use canvas drawing scale relative to original
+                            };
+                            
+                            // Reset cropState scale logic: actually we draw the image 1:1 on canvas (which is scaled down)
+                            // Wait, let's keep it simple: canvas matches image dimensions (clamped).
+                            // drawCropper logic above uses cropState.scale. 
+                            // Let's fix logic: canvas size is fixed to display size.
+                            // Actually simpler: Set canvas size to reasonable pixel dims, draw image scaled to fit.
+                            
+                            // Revised setup:
+                            cropState.scale = Math.min(500 / cropperImage.width, 400 / cropperImage.height, 1);
+                            cropperCanvas.width = cropperImage.width * cropState.scale;
+                            cropperCanvas.height = cropperImage.height * cropState.scale;
+                            cropState.x = cropperCanvas.width / 2;
+                            cropState.y = cropperCanvas.height / 2;
+                            cropState.radius = Math.min(cropperCanvas.width, cropperCanvas.height) / 3;
+                            
+                            // Override drawCropper scale usage since we sized the canvas
+                            // drawCropper implementation above uses cropState.scale which is now redundant if we draw at 0,0 w,h
+                            // Let's redefine drawCropper for this context
+                            
+                            cropperModal.style.display = 'flex';
+                            requestAnimationFrame(drawRedefined);
+                        };
+                        cropperImage.src = evt.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                });
+                
+                const drawRedefined = () => {
+                    if (!cropperImage) return;
+                    const w = cropperCanvas.width;
+                    const h = cropperCanvas.height;
+                    ctx.clearRect(0, 0, w, h);
+                    
+                    // Draw image filling canvas
+                    ctx.drawImage(cropperImage, 0, 0, w, h);
+                    
+                    // Draw overlay
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                    ctx.beginPath();
+                    ctx.rect(0, 0, w, h);
+                    ctx.arc(cropState.x, cropState.y, cropState.radius, 0, 2 * Math.PI, true);
+                    ctx.fill();
+                    
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(cropState.x, cropState.y, cropState.radius, 0, 2 * Math.PI);
+                    ctx.stroke();
+                };
+
+                // Interaction Handlers
+                const handleStart = (x, y) => {
+                    const dx = x - cropState.x;
+                    const dy = y - cropState.y;
+                    // Check if inside circle
+                    if (dx*dx + dy*dy < cropState.radius * cropState.radius) {
+                        isDragging = true;
+                        dragStart = { x, y };
+                    }
+                };
+                
+                const handleMove = (x, y) => {
+                    if (isDragging) {
+                        const dx = x - dragStart.x;
+                        const dy = y - dragStart.y;
+                        cropState.x += dx;
+                        cropState.y += dy;
+                        dragStart = { x, y };
+                        requestAnimationFrame(drawRedefined);
+                    }
+                };
+
+                const handleEnd = () => { isDragging = false; };
+                
+                const handleScroll = (e) => {
+                    e.preventDefault();
+                    const delta = e.deltaY > 0 ? -5 : 5;
+                    cropState.radius = Math.max(20, Math.min(cropState.radius + delta, Math.min(cropperCanvas.width, cropperCanvas.height)/2));
+                    requestAnimationFrame(drawRedefined);
+                };
+
+                cropperCanvas.addEventListener('mousedown', e => handleStart(e.offsetX, e.offsetY));
+                cropperCanvas.addEventListener('mousemove', e => handleMove(e.offsetX, e.offsetY));
+                cropperCanvas.addEventListener('mouseup', handleEnd);
+                cropperCanvas.addEventListener('mouseleave', handleEnd);
+                cropperCanvas.addEventListener('wheel', handleScroll);
+                
+                // Touch support
+                cropperCanvas.addEventListener('touchstart', e => {
+                    e.preventDefault();
+                    const rect = cropperCanvas.getBoundingClientRect();
+                    const touch = e.touches[0];
+                    handleStart(touch.clientX - rect.left, touch.clientY - rect.top);
+                });
+                cropperCanvas.addEventListener('touchmove', e => {
+                    e.preventDefault();
+                    const rect = cropperCanvas.getBoundingClientRect();
+                    const touch = e.touches[0];
+                    handleMove(touch.clientX - rect.left, touch.clientY - rect.top);
+                });
+                cropperCanvas.addEventListener('touchend', handleEnd);
+
+                cancelCropBtn.addEventListener('click', () => {
+                    cropperModal.style.display = 'none';
+                    fileInput.value = ''; // Reset
+                });
+
+                submitCropBtn.addEventListener('click', async () => {
+                    // Create final cropped image
+                    const tempCanvas = document.createElement('canvas');
+                    const size = 128; // Output size
+                    tempCanvas.width = size;
+                    tempCanvas.height = size;
+                    const tCtx = tempCanvas.getContext('2d');
+                    
+                    // Calculate source coordinates relative to the ORIGINAL image
+                    // cropperCanvas.width = cropperImage.width * scale
+                    // cropState.x is on canvas. 
+                    // trueX = cropState.x / scale
+                    const scale = cropperCanvas.width / cropperImage.width;
+                    
+                    const sourceX = (cropState.x - cropState.radius) / scale;
+                    const sourceY = (cropState.y - cropState.radius) / scale;
+                    const sourceSize = (cropState.radius * 2) / scale;
+                    
+                    // Draw cropped portion to temp canvas
+                    // Draw as circle? No, standard pfp is square image masked by CSS usually.
+                    // But we can make it square.
+                    tCtx.drawImage(cropperImage, sourceX, sourceY, sourceSize, sourceSize, 0, 0, size, size);
+                    
+                    const base64 = tempCanvas.toDataURL('image/jpeg', 0.8);
+                    
+                    // Save to Firestore
+                    try {
+                        submitCropBtn.disabled = true;
+                        submitCropBtn.textContent = "Saving...";
+                        await updateDoc(userDocRef, { 
+                            customPfp: base64,
+                            pfpType: 'custom'
+                        });
+                        
+                        // Update UI
+                        document.querySelector('input[name="pfpType"][value="custom"]').checked = true;
+                        updatePfpUi('custom');
+                        previewImg.src = base64;
+                        previewImg.style.display = 'block';
+                        previewPlaceholder.style.display = 'none';
+                        
+                        cropperModal.style.display = 'none';
+                        showMessage(pfpMessage, 'Profile picture updated!', 'success');
+                    } catch (e) {
+                        console.error(e);
+                        alert('Failed to save image.');
+                    } finally {
+                        submitCropBtn.disabled = false;
+                        submitCropBtn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Submit';
+                    }
+                });
+            }
+
+            // --- 2. THEME LOGIC (Existing) ---
             
             if (!themePickerContainer) return;
             

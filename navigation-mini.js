@@ -230,20 +230,35 @@ const FIREBASE_CONFIG = {
         }
 
         const loggedInView = (user, userData) => {
-            const photoURL = user.photoURL || userData?.photoURL;
             const username = userData?.username || user.displayName || 'User';
             const email = user.email || 'No email';
             const initial = username.charAt(0).toUpperCase();
 
-            // UPDATED: Changed w-full h-8 to w-full h-full to match navigation.js
-            const avatar = photoURL ?
-                `<img src="${photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">` :
-                `<div class="initial-avatar w-full h-full rounded-full text-sm font-semibold">${initial}</div>`; 
+            // --- NEW PROFILE PICTURE LOGIC ---
+            let avatarHtml = '';
+            const pfpType = userData?.pfpType || 'google'; // Default to 'google'
+
+            if (pfpType === 'custom' && userData?.customPfp) {
+                avatarHtml = `<img src="${userData.customPfp}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
+            } else if (pfpType === 'letter') {
+                // If a specific color is set, use it. Otherwise, the class 'initial-avatar' handles the default gradient.
+                const style = userData?.pfpLetterBg ? `background: ${userData.pfpLetterBg};` : '';
+                avatarHtml = `<div class="initial-avatar w-full h-full rounded-full text-sm font-semibold" style="${style}">${initial}</div>`;
+            } else {
+                // 'google' or fallback
+                if (user.photoURL) {
+                    avatarHtml = `<img src="${user.photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
+                } else {
+                    // Fallback to standard letter avatar if no Google photo exists
+                    avatarHtml = `<div class="initial-avatar w-full h-full rounded-full text-sm font-semibold">${initial}</div>`;
+                }
+            }
+            // --- END NEW LOGIC ---
 
             return `
                 <div class="relative">
                     <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
-                        ${avatar}
+                        ${avatarHtml}
                     </button>
                     <div id="auth-menu-container" class="auth-menu-container closed">
                         <div class="px-3 py-2 border-b border-gray-700 mb-2">
