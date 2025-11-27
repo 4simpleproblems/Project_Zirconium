@@ -174,30 +174,31 @@ const FIREBASE_CONFIG = {
             
             .auth-navbar nav { padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; }
             
-            .auth-menu-container { 
-                position: absolute; right: 0; top: 50px; width: 16rem; 
-                background: #000000; /* Pure Black */
-                backdrop-filter: none;
-                -webkit-backdrop-filter: none;
-                border: 1px solid rgb(55 65 81); border-radius: 0.75rem; padding: 0.5rem; 
-                box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2);
-                transition: transform 0.2s ease-out, opacity 0.2s ease-out; transform-origin: top right; 
-            }
-            .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
-            .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
+                        .auth-menu-container { 
+                            position: absolute; right: 0; top: 50px; width: 16rem; 
+                            background: #000000; /* Pure Black */
+                            backdrop-filter: none;
+                            -webkit-backdrop-filter: none;
+                            border: 1px solid rgb(55 65 81); border-radius: 0.9rem; padding: 0.75rem; 
+                            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2);
+                            transition: transform 0.2s ease-out, opacity 0.2s ease-out; transform-origin: top right; 
+                        }
+                        .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
+                        .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
             
-            .initial-avatar { background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: 'Geist', sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; }
-
-            /* Auth Menu Username and Email Styling */
-            .auth-menu-username {
-                text-align: left !important;
-                margin: 0 !important;
-            }
-            .auth-menu-email {
-                text-align: left !important;
-                margin: 0 !important;
-            }
+                        .initial-avatar { background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: 'Geist', sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; }
             
+                        /* Auth Menu Username and Email Styling */
+                        .auth-menu-username {
+                            text-align: left !important;
+                            margin: 0 !important;
+                            font-weight: 600 !important;
+                        }
+                        .auth-menu-email {
+                            text-align: left !important;
+                            margin: 0 !important;
+                            font-weight: 600 !important;
+                        }            
             /* * UPDATED STYLE: Matches 'dropdown-item' from notes.html 
              * Using flex gap instead of margin-right on icons.
              * Darker hover background (#2a2a2a).
@@ -463,7 +464,7 @@ const FIREBASE_CONFIG = {
                         ${avatarHtml}
                     </button>
                     <div id="auth-menu-container" class="auth-menu-container closed">
-                        <div class="px-3 py-3 border-b border-gray-700 mb-2 flex items-center">
+                        <div class="border-b border-gray-700 mb-2 flex items-center">
                             <div class="min-w-0 flex-1 overflow-hidden">
                                 <div class="marquee-container" id="username-marquee">
                                     <p class="text-sm font-semibold text-white auth-menu-username marquee-content">${username}</p>

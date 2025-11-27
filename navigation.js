@@ -352,31 +352,32 @@ let db;
             }
             
             /* Auth Dropdown Menu Styles */
-            .auth-menu-container { 
-                position: absolute; right: 0; top: 60px; width: 16rem; /* UPDATED top from 50px */
-                background: var(--menu-bg);
-                border: 1px solid var(--menu-border); 
-                border-radius: 0.9rem; padding: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
-                transition: transform 0.2s ease-out, opacity 0.2s ease-out, background-color 0.3s ease, border-color 0.3s ease; 
-                transform-origin: top right; z-index: 1010;
-            }
-            .auth-menu-container .border-b { /* User info divider */
-                border-color: var(--menu-divider) !important;
-                transition: border-color 0.3s ease;
-            }
-            /* --- USERNAME COLOR FIX --- (3/3) Added new style rule */
-            .auth-menu-username {
-                color: var(--menu-username-text);
-                transition: color 0.3s ease;
-                text-align: left !important; /* Force left alignment */
-                margin: 0 !important;
-            }
-            /* NEW: Force email left alignment */
-            .auth-menu-email {
-                text-align: left !important;
-                margin: 0 !important;
-            }
-            .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
+                        .auth-menu-container { 
+                            position: absolute; right: 0; top: 60px; width: 16rem; /* UPDATED top from 50px */
+                            background: var(--menu-bg);
+                            border: 1px solid var(--menu-border); 
+                            border-radius: 0.9rem; padding: 0.75rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2); 
+                            transition: transform 0.2s ease-out, opacity 0.2s ease-out, background-color 0.3s ease, border-color 0.3s ease; 
+                            transform-origin: top right; z-index: 1010;
+                        }
+                        .auth-menu-container .border-b { /* User info divider */
+                            border-color: var(--menu-divider) !important;
+                            transition: border-color 0.3s ease;
+                        }
+                        /* --- USERNAME COLOR FIX --- (3/3) Added new style rule */
+                        .auth-menu-username {
+                            color: var(--menu-username-text);
+                            transition: color 0.3s ease;
+                            text-align: left !important; /* Force left alignment */
+                            margin: 0 !important;
+                            font-weight: 600 !important;
+                        }
+                        /* NEW: Force email left alignment */
+                        .auth-menu-email {
+                            text-align: left !important;
+                            margin: 0 !important;
+                            font-weight: 600 !important;
+                        }            .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
             .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
 
             /* NEW: Styles for the expandable "More" section */
@@ -847,7 +848,7 @@ let db;
                             ${avatarHtml}
                         </button>
                         <div id="auth-menu-container" class="auth-menu-container closed">
-                            <div class="px-3 py-3 border-b border-gray-700 mb-2 w-full min-w-0 flex items-center">
+                            <div class="border-b border-gray-700 mb-2 w-full min-w-0 flex items-center">
                                 <div class="min-w-0 flex-1 overflow-hidden">
                                     <div class="marquee-container" id="username-marquee">
                                         <p class="text-sm font-semibold auth-menu-username marquee-content">${username}</p>
