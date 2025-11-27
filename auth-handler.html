@@ -59,7 +59,8 @@
         getFirestore, 
         doc, 
         getDoc, 
-        // Removed setDoc, collection, query, where, getDocs, serverTimestamp as DB writing is now done in authentication.html
+        setDoc, // Re-added for direct DB writing
+        serverTimestamp // Re-added for direct DB writing
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     
     // --- Import Firebase Config ---
