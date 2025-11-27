@@ -28,6 +28,12 @@ const FIREBASE_CONFIG = {
 };
 // =========================================================================
 
+// --- Configuration ---
+// This object defines the default "Dark" theme, containing only necessary properties for navigation-mini.js
+const DEFAULT_THEME = {
+    'avatar-gradient': 'linear-gradient(135deg, #374151 0%, #111827 100%)',
+};
+
 
 // --- Self-invoking function to encapsulate all logic ---
 (function() {
@@ -123,7 +129,7 @@ const FIREBASE_CONFIG = {
                 if (currentUserData.pfpType === 'custom' && currentUserData.customPfp) {
                     newContent = `<img src="${currentUserData.customPfp}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
                 } else if (currentUserData.pfpType === 'letter') {
-                    const bg = currentUserData.pfpLetterBg || 'linear-gradient(135deg, #374151 0%, #111827 100%)'; // Default from navigation.js
+                    const bg = currentUserData.pfpLetterBg || DEFAULT_THEME['avatar-gradient']; // Default from navigation.js
                     const textColor = getLetterAvatarTextColor(bg);
                     const fontSizeClass = initial.length >= 3 ? 'text-xs' : (initial.length === 2 ? 'text-sm' : 'text-base');
                     newContent = `<div class="initial-avatar w-full h-full rounded-full font-semibold ${fontSizeClass}" style="background: ${bg}; color: ${textColor}">${initial}</div>`;
@@ -136,7 +142,7 @@ const FIREBASE_CONFIG = {
                     if (displayPhoto) {
                         newContent = `<img src="${displayPhoto}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
                     } else {
-                        const bg = 'linear-gradient(135deg, #374151 0%, #111827 100%)'; // Default from navigation.js
+                        const bg = DEFAULT_THEME['avatar-gradient']; // Default from navigation.js
                         const textColor = getLetterAvatarTextColor(bg);
                         const fontSizeClass = initial.length >= 3 ? 'text-xs' : (initial.length === 2 ? 'text-sm' : 'text-base');
                         newContent = `<div class="initial-avatar w-full h-full rounded-full font-semibold ${fontSizeClass}" style="background: ${bg}; color: ${textColor}">${initial}</div>`;
@@ -433,7 +439,7 @@ const FIREBASE_CONFIG = {
             if (pfpType === 'custom' && userData?.customPfp) {
                 avatarHtml = `<img src="${userData.customPfp}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
             } else if (pfpType === 'letter') {
-                const bg = userData?.pfpLetterBg || 'linear-gradient(135deg, #374151 0%, #111827 100%)'; // Default from navigation.js
+                const bg = userData?.pfpLetterBg || DEFAULT_THEME['avatar-gradient']; // Default from navigation.js
                 const textColor = getLetterAvatarTextColor(bg); // Use new helper
                 const fontSizeClass = initial.length >= 3 ? 'text-xs' : (initial.length === 2 ? 'text-sm' : 'text-base'); // Dynamic font size
 
