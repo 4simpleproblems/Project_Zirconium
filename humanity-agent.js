@@ -91,7 +91,8 @@
     // NEW: Replaced userSettings with appSettings. Location sharing is now off by default.
     let appSettings = {
         webSearch: true,
-        locationSharing: false
+        locationSharing: false,
+        adsEnabled: false // NEW: AdSense toggle
     };
     // NEW: Saved memories for persistent AI context
     let savedMemories = [];
@@ -118,8 +119,9 @@
                 const parsed = JSON.parse(storedSettings);
                 // Ensure defaults are kept if properties are missing
                 appSettings = {
-                    ...appSettings,
-                    ...parsed
+                    ...appSettings, // Preserve defaults
+                    ...parsed,
+                    adsEnabled: parsed.hasOwnProperty('adsEnabled') ? parsed.adsEnabled : appSettings.adsEnabled // Explicitly handle new setting
                 };
             }
         } catch (e) {
@@ -665,6 +667,14 @@
                     const isAuthorized = await isUserAuthorized();
                     if (isAuthorized) {
                         e.preventDefault();
+
+                        // NEW: Prompt for ads
+                        if (appSettings.adsEnabled === undefined || appSettings.adsEnabled === null) {
+                            const enableAds = confirm("Do you want to enable ads to support the agent? This will display banners on the sides of the chat.");
+                            appSettings.adsEnabled = enableAds;
+                            saveAppSettings(); // Save user's preference
+                        }
+                        
                         activateAI();
                     }
                 }
@@ -681,8 +691,39 @@
         attachedFiles = [];
         injectStyles();
 
+        // NEW: AdSense script injection if enabled
+        if (appSettings.adsEnabled) {
+            const script = document.createElement('script');
+            script.async = true;
+            script.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6659160370587814";
+            script.crossOrigin = "anonymous";
+            script.id = 'adsense-script'; // NEW: Add ID for easy removal
+            document.head.appendChild(script);
+        }
+
         const container = document.createElement('div');
         container.id = 'ai-container';
+
+        // NEW: Create left ad container
+        const aiAdLeft = document.createElement('div');
+        aiAdLeft.id = 'ai-ad-left';
+        aiAdLeft.className = 'ai-ad-container';
+        if (appSettings.adsEnabled) {
+            const adUnitLeft = document.createElement('ins');
+            adUnitLeft.className = 'adsbygoogle';
+            adUnitLeft.style.display = 'block';
+            // Placeholder ad slot IDs - REPLACE WITH ACTUAL ONES FROM GOOGLE ADSENSE
+            adUnitLeft.setAttribute('data-ad-client', 'ca-pub-6659160370587814');
+            adUnitLeft.setAttribute('data-ad-slot', '8765432109'); // Example Left Ad Slot
+            aiAdLeft.appendChild(adUnitLeft);
+        } else {
+            // Display a message or placeholder if ads are not enabled
+            aiAdLeft.innerHTML = '<p style="text-align: center; color: #888; font-size: 0.8em;">Ads Disabled</p>';
+        }
+
+        // NEW: Create main chat content wrapper
+        const mainChatContent = document.createElement('div');
+        mainChatContent.id = 'main-chat-content';
 
         const brandTitle = document.createElement('div');
         brandTitle.id = 'ai-brand-title';
@@ -745,23 +786,61 @@
         composeArea.appendChild(createMainMenu()); // NEW: Main dropdown menu
         composeArea.appendChild(inputWrapper);
 
-        container.appendChild(brandTitle);
-        container.appendChild(persistentTitle);
-        container.appendChild(welcomeMessage);
-        container.appendChild(closeButton);
-        container.appendChild(responseContainer);
-        container.appendChild(composeArea);
-        container.appendChild(charCounter);
+        // Append to mainChatContent
+        mainChatContent.appendChild(brandTitle);
+        mainChatContent.appendChild(persistentTitle);
+        mainChatContent.appendChild(welcomeMessage);
+        mainChatContent.appendChild(closeButton);
+        mainChatContent.appendChild(responseContainer);
+        mainChatContent.appendChild(composeArea);
+        mainChatContent.appendChild(charCounter);
 
-        // --- Add KaTeX ---
-        const katexScript = document.createElement('script');
-        katexScript.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.js';
-        container.appendChild(katexScript);
+        // NEW: Create right ad container
+        const aiAdRight = document.createElement('div');
+        aiAdRight.id = 'ai-ad-right';
+        aiAdRight.className = 'ai-ad-container';
+        if (appSettings.adsEnabled) {
+            const adUnitRight = document.createElement('ins');
+            adUnitRight.className = 'adsbygoogle';
+            adUnitRight.style.display = 'block';
+            // Placeholder ad slot IDs - REPLACE WITH ACTUAL ONES FROM GOOGLE ADSENSE
+            adUnitRight.setAttribute('data-ad-client', 'ca-pub-6659160370587814');
+            adUnitRight.setAttribute('data-ad-slot', '9876543210'); // Example Right Ad Slot
+            aiAdRight.appendChild(adUnitRight);
+        } else {
+            // Display a message or placeholder if ads are not enabled
+            aiAdRight.innerHTML = '<p style="text-align: center; color: #888; font-size: 0.8em;">Ads Disabled</p>';
+        }
 
-        document.body.appendChild(container);
+        // Append all to the main container
+        container.appendChild(aiAdLeft);
+        container.appendChild(mainChatContent);
+        container.appendChild(aiAdRight);
 
+        document.body.appendChild(container); // CRITICAL: Append container to body
+
+        // Render chat history if any (moved from inside the setTimeout)
         if (chatHistory.length > 0) {
             renderChatHistory();
+        }
+
+        // AdSense initialization: Trigger ad loading if ads are enabled
+        if (appSettings.adsEnabled) {
+            // Ensure adsbygoogle array exists
+            window.adsbygoogle = window.adsbygoogle || [];
+            // Push an empty object to trigger ad loading for all units
+            // (units are already in the DOM and have data-ad-attributes)
+            setTimeout(() => {
+                try {
+                    if (window.adsbygoogle && typeof window.adsbygoogle.push === 'function') {
+                        window.adsbygoogle.push({});
+                    } else {
+                        console.warn("AdSense script not loaded or 'adsbygoogle' global variable not found.");
+                    }
+                } catch (e) {
+                    console.error("Error pushing AdSense ads:", e);
+                }
+            }, 100); // Small delay to ensure ads render properly
         }
 
         setTimeout(() => {
@@ -770,6 +849,17 @@
             }
             container.classList.add('active');
         }, 10);
+
+        // Add KaTeX (moved to after container is in DOM for proper script loading)
+        const katexScript = document.createElement('script');
+        katexScript.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.js';
+        document.head.appendChild(katexScript); // Append to head for global availability
+
+        if (appSettings.adsEnabled) {
+            // Initialize AdSense only if enabled
+            window.adsbygoogle = window.adsbygoogle || [];
+
+                        
 
         visualInput.focus();
         isAIActive = true;
@@ -793,6 +883,13 @@
                 if (katexCSS) katexCSS.remove();
                 const fontAwesome = document.querySelector('link[href*="font-awesome"]');
                 if (fontAwesome) fontAwesome.remove();
+                const adsenseScript = document.getElementById('adsense-script');
+                if (adsenseScript) adsenseScript.remove();
+                // NEW: Also remove any AdSense placeholder elements if they were added
+                const adLeftPlaceholder = document.getElementById('ai-ad-left');
+                if (adLeftPlaceholder) adLeftPlaceholder.remove();
+                const adRightPlaceholder = document.getElementById('ai-ad-right');
+                if (adRightPlaceholder) adRightPlaceholder.remove();
             }, 500);
         }
         isAIActive = false;
@@ -2307,16 +2404,62 @@ Response Structure: <THOUGHT_PROCESS>...</THOUGHT_PROCESS> [Your Answer]
                 backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
                 z-index: 2147483647; opacity: 0; transition: opacity 0.5s, background 0.5s;
                 font-family: 'Geist', sans-serif; font-weight: 300;
-                display: flex; flex-direction: column;
-                justify-content: flex-end; padding: 0; box-sizing: border-box; overflow: hidden;
+                display: flex; /* MODIFIED: Use flexbox for main layout */
+                flex-direction: row; /* MODIFIED: Arrange children horizontally */
+                justify-content: center; /* Center main chat content */
+                align-items: flex-end; /* Align chat to bottom */
+                padding: 0; box-sizing: border-box; overflow: hidden;
                 color: #c0c0c0;
-            }
-            h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
-                    font-weight: 400 !important;
             }
             #ai-container.active { opacity: 1; }
             #ai-container.deactivating, #ai-container.deactivating > * { transition: opacity 0.4s, transform 0.4s; }
             #ai-container.deactivating { opacity: 0 !important; background-color: rgba(0,0,0,0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); }
+
+            /* NEW: Ad container styles */
+            .ai-ad-container {
+                width: 160px; /* Standard skyscraper ad width */
+                min-width: 160px;
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-start;
+                align-items: center;
+                padding: 10px 5px;
+                background-color: #0d0d0d;
+                overflow-y: auto; /* Allow scrolling if ads overflow */
+                border-radius: 15px; /* Match container */
+                transition: all 0.3s ease;
+                height: calc(100% - 40px); /* Adjust height to give some margin */
+                margin: 20px 0;
+            }
+
+            #ai-ad-left {
+                border-right: 1px solid #333;
+                border-top-left-radius: 15px;
+                border-bottom-left-radius: 15px;
+            }
+
+            #ai-ad-right {
+                border-left: 1px solid #333;
+                border-top-right-radius: 15px;
+                border-bottom-right-radius: 15px;
+            }
+
+            /* NEW: Main chat content wrapper */
+            #main-chat-content {
+                flex-grow: 1; /* Take up remaining space */
+                max-width: 700px; /* Limit chat width */
+                height: 100vh; /* Fill full height */
+                display: flex;
+                flex-direction: column;
+                position: relative;
+                background-color: #1a1a1a;
+                overflow: hidden;
+                border-radius: 0; /* No rounding, as ads have it */
+            }
+
+            h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
+                    font-weight: 400 !important;
+            }
             #ai-persistent-title, #ai-brand-title {
                 position: absolute; top: 28px; left: 30px; font-family: 'Geist', sans-serif;
                 font-size: 18px; font-weight: bold; color: #FFFFFF;
@@ -2333,7 +2476,18 @@ Response Structure: <THOUGHT_PROCESS>...</THOUGHT_PROCESS> [Your Answer]
             #ai-close-button { position: absolute; top: 20px; right: 30px; color: rgba(255,255,255,.7); font-size: 40px; cursor: pointer; transition: color .2s ease,transform .3s ease, opacity 0.4s; }
             #ai-char-counter { position: fixed; bottom: 15px; right: 30px; font-size: 0.9em; font-family: monospace; color: #aaa; transition: color 0.2s; z-index: 2147483647; }
             #ai-char-counter.limit-exceeded { color: #e57373; font-weight: bold; }
-            #ai-response-container { flex: 1 1 auto; overflow-y: auto; width: 100%; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; padding: 20px; -webkit-mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%); mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%);}
+            /* Adjusted #ai-response-container to fit within #main-chat-content */
+            #ai-response-container {
+                flex: 1 1 auto;
+                overflow-y: auto;
+                width: 100%;
+                margin: 0 auto;
+                display: flex;
+                flex-direction: column;
+                gap: 15px;
+                padding: 20px;
+                -webkit-mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%); mask-image: linear-gradient(to bottom,transparent 0,black 3%,black 97%,transparent 100%);
+            }
             .ai-message-bubble { background: #0d0d0d; border: 1px solid #1a1a1a; border-radius: 16px; padding: 12px 18px; color: #e0e0e0; backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); animation: message-pop-in .5s cubic-bezier(.4,0,.2,1) forwards; max-width: 90%; line-height: 1.6; overflow-wrap: break-word; transition: opacity 0.3s ease-in-out; align-self: flex-start; text-align: left; }
             .gemini-response .ai-message-bubble { padding-top: 0; }
             .user-message { background: #1a1a1a; align-self: flex-end; }
@@ -3234,3 +3388,4 @@ Response Structure: <THOUGHT_PROCESS>...</THOUGHT_PROCESS> [Your Answer]
         loadAppSettings(); // Replaced loadUserSettings
     });
 })();
+
