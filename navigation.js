@@ -686,10 +686,76 @@ let db;
         };
 
         /**
-         * NEW: Generates the HTML for the entire right-side auth/pin controls area.
-         * This uses the global state variables (currentUser, currentUserData).
-         * @returns {string} The HTML string for the auth controls.
+         * Helper: Converts a hex color string to an RGB object.
+         * @param {string} hex - The hex color string (e.g., "#RRGGBB" or "#RGB").
+         * @returns {object} An object {r, g, b} or null if invalid.
          */
+        const hexToRgb = (hex) => {
+            if (!hex || typeof hex !== 'string') return null;
+            let c = hex.substring(1); // Remove #
+            if (c.length === 3) {
+                c = c[0] + c[0] + c[1] + c[1] + c[2] + c[2];
+            }
+            if (c.length !== 6) return null;
+            const num = parseInt(c, 16);
+            return {
+                r: (num >> 16) & 0xFF,
+                g: (num >> 8) & 0xFF,
+                b: (num >> 0) & 0xFF
+            };
+        };
+
+        /**
+         * Helper: Calculates the relative luminance of an RGB color.
+         * @param {object} rgb - An object {r, g, b}.
+         * @returns {number} The luminance (0.0 to 1.0).
+         */
+        const getLuminance = (rgb) => {
+            if (!rgb) return 0;
+            const a = [rgb.r, rgb.g, rgb.b].map(v => {
+                v /= 255;
+                return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+            });
+            return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
+        };
+
+        /**
+         * Helper: Determines a contrasting text color (dark or white) for a given background gradient.
+         * For saturated colors, it tries to provide a darker shade of the color, otherwise white.
+         * @param {string} gradientBg - The CSS linear-gradient string.
+         * @returns {string} A hex color string (e.g., "#000000" or "#FFFFFF" or darker shade).
+         */
+        const getLetterAvatarTextColor = (gradientBg) => {
+            if (!gradientBg) return '#FFFFFF'; // Default to white for safety
+
+            // Extract the first color from the gradient string
+            const match = gradientBg.match(/#([0-9a-fA-F]{3}){1,2}/);
+            const firstHexColor = match ? match[0] : null;
+
+            if (!firstHexColor) return '#FFFFFF'; // Fallback if no hex color found
+
+            const rgb = hexToRgb(firstHexColor);
+            if (!rgb) return '#FFFFFF';
+
+            const luminance = getLuminance(rgb);
+
+            // If background is bright, provide a darker version of the color.
+            // If background is dark, use white.
+            // Threshold 0.5 is subjective, adjust as needed.
+            if (luminance > 0.5) { 
+                // Darken the color by reducing RGB values
+                // A simple darkening: reduce R, G, B by a factor
+                const darkenFactor = 0.5; // Reduce lightness by 50%
+                const darkerR = Math.floor(rgb.r * darkenFactor);
+                const darkerG = Math.floor(rgb.g * darkenFactor);
+                const darkerB = Math.floor(rgb.b * darkenFactor);
+                
+                // Convert back to hex
+                return `#${((1 << 24) + (darkerR << 16) + (darkerG << 8) + darkerB).toString(16).slice(1)}`;
+            } else {
+                return '#FFFFFF';
+            }
+        };
         const getAuthControlsHtml = () => {
             // Use the global state variables
             const user = currentUser;
@@ -733,7 +799,7 @@ let db;
             const loggedInView = (user, userData) => {
                 const username = userData?.username || user.displayName || 'User';
                 const email = user.email || 'No email';
-                const initial = username.charAt(0).toUpperCase();
+                const initial = (userData?.pfpLetters || username.charAt(0)).toUpperCase();
                 
                 // --- NEW PROFILE PICTURE LOGIC ---
                 let avatarHtml = '';
@@ -742,9 +808,11 @@ let db;
                 if (pfpType === 'custom' && userData?.customPfp) {
                     avatarHtml = `<img src="${userData.customPfp}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
                 } else if (pfpType === 'letter') {
-                    // If a specific color is set, use it. Otherwise, the class 'initial-avatar' handles the default gradient.
-                    const style = userData?.pfpLetterBg ? `background: ${userData.pfpLetterBg};` : '';
-                    avatarHtml = `<div class="initial-avatar w-full h-full rounded-full text-sm font-semibold" style="${style}">${initial}</div>`;
+                    const bg = userData?.pfpLetterBg || DEFAULT_THEME['avatar-gradient'];
+                    const textColor = getLetterAvatarTextColor(bg); // Use new helper
+                    const fontSizeClass = initial.length >= 3 ? 'text-xs' : (initial.length === 2 ? 'text-sm' : 'text-base'); // Dynamic font size
+                    
+                    avatarHtml = `<div class="initial-avatar w-full h-full rounded-full font-semibold ${fontSizeClass}" style="background: ${bg}; color: ${textColor}">${initial}</div>`;
                 } else {
                     // 'google' or fallback
                     // Try to find specific Google photo first if available in providerData
@@ -756,7 +824,10 @@ let db;
                         avatarHtml = `<img src="${displayPhoto}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
                     } else {
                         // Fallback to standard letter avatar
-                        avatarHtml = `<div class="initial-avatar w-full h-full rounded-full text-sm font-semibold">${initial}</div>`;
+                        const bg = DEFAULT_THEME['avatar-gradient'];
+                        const textColor = getLetterAvatarTextColor(bg);
+                        const fontSizeClass = initial.length >= 3 ? 'text-xs' : (initial.length === 2 ? 'text-sm' : 'text-base');
+                        avatarHtml = `<div class="initial-avatar w-full h-full rounded-full font-semibold ${fontSizeClass}" style="background: ${bg}; color: ${textColor}">${initial}</div>`;
                     }
                 }
                 // --- END NEW LOGIC ---
@@ -1375,8 +1446,10 @@ let db;
                     if (currentUserData.pfpType === 'custom' && currentUserData.customPfp) {
                         newContent = `<img src="${currentUserData.customPfp}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
                     } else if (currentUserData.pfpType === 'letter') {
-                        const style = currentUserData.pfpLetterBg ? `background: ${currentUserData.pfpLetterBg};` : '';
-                        newContent = `<div class="initial-avatar w-full h-full rounded-full text-sm font-semibold" style="${style}">${initial}</div>`;
+                        const bg = currentUserData.pfpLetterBg || DEFAULT_THEME['avatar-gradient'];
+                        const textColor = getLetterAvatarTextColor(bg);
+                        const fontSizeClass = initial.length >= 3 ? 'text-xs' : (initial.length === 2 ? 'text-sm' : 'text-base');
+                        newContent = `<div class="initial-avatar w-full h-full rounded-full font-semibold ${fontSizeClass}" style="background: ${bg}; color: ${textColor}">${initial}</div>`;
                     } else {
                         // 'google' or fallback
                         // Try to find specific Google photo first if available in providerData
@@ -1388,7 +1461,10 @@ let db;
                         if (displayPhoto) {
                             newContent = `<img src="${displayPhoto}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
                         } else {
-                            newContent = `<div class="initial-avatar w-full h-full rounded-full text-sm font-semibold">${initial}</div>`;
+                            const bg = DEFAULT_THEME['avatar-gradient'];
+                            const textColor = getLetterAvatarTextColor(bg);
+                            const fontSizeClass = initial.length >= 3 ? 'text-xs' : (initial.length === 2 ? 'text-sm' : 'text-base');
+                            newContent = `<div class="initial-avatar w-full h-full rounded-full font-semibold ${fontSizeClass}" style="background: ${bg}; color: ${textColor}">${initial}</div>`;
                         }
                     }
 
