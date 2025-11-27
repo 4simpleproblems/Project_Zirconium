@@ -10,7 +10,8 @@
     const scriptsToLoad = [
       '../url-changer.js',
       '../panic-key.js',
-      '../navigation.js'
+      '../navigation.js',
+      '../ban-enforcer.js'
 
     
     ];
