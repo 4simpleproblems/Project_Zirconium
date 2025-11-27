@@ -67,8 +67,8 @@ exports.discordCallback = functions.https.onRequest(async (req, res) => {
 
         console.log(`Successfully created Firebase custom token for user: ${discordUserId}`);
 
-        // 4. Redirect back to the frontend with the Firebase Custom Token, email, and username
-        const finalRedirectUrl = `${FRONTEND_REDIRECT}?custom_token=${firebaseToken}&discord_email=${encodeURIComponent(email)}&discord_username=${encodeURIComponent(username)}`;
+        // 4. Redirect back to the frontend with the Firebase Custom Token
+        const finalRedirectUrl = `${FRONTEND_REDIRECT}?custom_token=${firebaseToken}`;
         
         return res.redirect(finalRedirectUrl);
 
