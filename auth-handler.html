@@ -87,7 +87,7 @@
 
     // --- Unified User Setup Logic ---
     // This function now only determines if the user is new or existing, and redirects accordingly.
-    const finalizeUserSetup = async (user, providerId, discordUsername) => {
+    const finalizeUserSetup = async (user, providerId, discordUsername, discordEmail) => {
         try {
             // Check for User Document Existence
             const userDoc = await getDoc(getUserDocRef(user.uid));
@@ -96,7 +96,7 @@
                 // --- NEW USER FLOW: Create User Document in Firestore ---
 
                 const now = serverTimestamp();
-                const userEmail = user.email || ''; // Fallback for email if not available
+                const userEmail = discordEmail || user.email || ''; // Prioritize discordEmail, then user.email
                 let username = discordUsername || user.displayName || userEmail.split('@')[0];
                 if (username === '') { // Ensure username is not empty
                     username = 'user' + user.uid.substring(0, 8); // Generate a unique placeholder
@@ -149,6 +149,7 @@
         const params = new URLSearchParams(window.location.search);
         const customToken = params.get('custom_token');
         const discordUsername = params.get('discord_username');
+        const discordEmail = params.get('discord_email');
         const error = params.get('error');
 
         // --- 1. Check for Cloud Function Errors (Discord) ---
@@ -162,7 +163,7 @@
             try {
                 const userCredential = await signInWithCustomToken(auth, customToken);
                 // Provider ID is not strictly needed anymore, but we pass 'discord' for clarity
-                await finalizeUserSetup(userCredential.user, 'discord', discordUsername); 
+                await finalizeUserSetup(userCredential.user, 'discord', discordUsername, discordEmail); 
             } catch (error) {
                 console.error("Custom Token Sign-in Failed:", error);
                 displayError('Sign-in Error', 'Could not finalize your session. The custom token was invalid or expired.');
