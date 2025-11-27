@@ -210,6 +210,36 @@ const FIREBASE_CONFIG = {
             .logged-out-auth-toggle i {
                 color: #DADADA; 
             }
+
+            /* --- Marquee Styles --- */
+            .marquee-container {
+                overflow: hidden;
+                white-space: nowrap;
+                position: relative;
+                max-width: 100%;
+            }
+            
+            /* Only apply mask and animation when active */
+            .marquee-container.active {
+                mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+                -webkit-mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+            }
+            
+            .marquee-content {
+                display: inline-block;
+                white-space: nowrap;
+            }
+            
+            .marquee-container.active .marquee-content {
+                animation: marquee 10s linear infinite;
+                /* Make sure there is enough width for the scroll */
+                min-width: 100%; 
+            }
+            
+            @keyframes marquee {
+                0% { transform: translateX(0); }
+                100% { transform: translateX(-50%); } /* Move half way (since content is duplicated) */
+            }
         `;
         document.head.appendChild(style);
     };
@@ -246,6 +276,33 @@ const FIREBASE_CONFIG = {
         return links;
     }
 
+
+    // --- NEW: Check Marquees Helper ---
+    const checkMarquees = () => {
+        requestAnimationFrame(() => {
+            const containers = document.querySelectorAll('.marquee-container');
+            containers.forEach(container => {
+                const content = container.querySelector('.marquee-content');
+                if (!content) return;
+
+                container.classList.remove('active');
+                if (content.nextElementSibling && content.nextElementSibling.classList.contains('marquee-content')) {
+                    content.nextElementSibling.remove();
+                }
+
+                if (content.offsetWidth > container.offsetWidth) {
+                    container.classList.add('active');
+                    const duplicate = content.cloneNode(true);
+                    duplicate.setAttribute('aria-hidden', 'true');
+                    content.style.paddingRight = '2rem'; 
+                    duplicate.style.paddingRight = '2rem';
+                    container.appendChild(duplicate);
+                } else {
+                    content.style.paddingRight = '';
+                }
+            });
+        });
+    };
 
     // --- 4. RENDER THE NAVBAR HTML (UPDATED) ---
     const renderNavbar = (user, userData) => {
@@ -304,9 +361,13 @@ const FIREBASE_CONFIG = {
                     </button>
                     <div id="auth-menu-container" class="auth-menu-container closed">
                         <div class="px-3 py-3 border-b border-gray-700 mb-2 flex items-center justify-between gap-3">
-                            <div class="min-w-0 flex-1">
-                                <p class="text-sm font-semibold text-white truncate">${username}</p>
-                                <p class="text-xs text-gray-400 truncate">${email}</p>
+                            <div class="min-w-0 flex-1 overflow-hidden">
+                                <div class="marquee-container" id="username-marquee">
+                                    <p class="text-sm font-semibold text-white marquee-content">${username}</p>
+                                </div>
+                                <div class="marquee-container" id="email-marquee">
+                                    <p class="text-xs text-gray-400 marquee-content">${email}</p>
+                                </div>
                             </div>
                             <div id="auth-menu-avatar-container" class="flex-shrink-0 w-10 h-10 rounded-full border border-gray-600 overflow-hidden">
                                 ${avatarHtml}
@@ -336,6 +397,9 @@ const FIREBASE_CONFIG = {
 
         // --- 5. SETUP EVENT LISTENERS ---
         setupEventListeners(user);
+        
+        // --- NEW: Init Marquees ---
+        checkMarquees();
     };
 
     const setupEventListeners = (user) => {
@@ -347,6 +411,10 @@ const FIREBASE_CONFIG = {
                 e.stopPropagation();
                 menu.classList.toggle('closed');
                 menu.classList.toggle('open');
+                
+                if (menu.classList.contains('open')) {
+                    checkMarquees();
+                }
             });
         }
 

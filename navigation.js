@@ -511,6 +511,36 @@ let db;
                 transform: translateX(-50%) scale(1);
                 transition-delay: 0.2s; /* Slight delay on show */
             }
+
+            /* --- Marquee Styles --- */
+            .marquee-container {
+                overflow: hidden;
+                white-space: nowrap;
+                position: relative;
+                max-width: 100%;
+            }
+            
+            /* Only apply mask and animation when active */
+            .marquee-container.active {
+                mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+                -webkit-mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+            }
+            
+            .marquee-content {
+                display: inline-block;
+                white-space: nowrap;
+            }
+            
+            .marquee-container.active .marquee-content {
+                animation: marquee 10s linear infinite;
+                /* Make sure there is enough width for the scroll */
+                min-width: 100%; 
+            }
+            
+            @keyframes marquee {
+                0% { transform: translateX(0); }
+                100% { transform: translateX(-50%); } /* Move half way (since content is duplicated) */
+            }
         `;
         document.head.appendChild(style);
     };
@@ -740,9 +770,13 @@ let db;
                         </button>
                         <div id="auth-menu-container" class="auth-menu-container closed">
                             <div class="px-3 py-3 border-b border-gray-700 mb-2 w-full min-w-0 flex items-center justify-between gap-3">
-                                <div class="min-w-0 flex-1">
-                                    <p class="text-sm font-semibold auth-menu-username truncate">${username}</p>
-                                    <p class="text-xs text-gray-400 truncate auth-menu-email">${email}</p>
+                                <div class="min-w-0 flex-1 overflow-hidden">
+                                    <div class="marquee-container" id="username-marquee">
+                                        <p class="text-sm font-semibold auth-menu-username marquee-content">${username}</p>
+                                    </div>
+                                    <div class="marquee-container" id="email-marquee">
+                                        <p class="text-xs text-gray-400 auth-menu-email marquee-content">${email}</p>
+                                    </div>
                                 </div>
                                 <div id="auth-menu-avatar-container" class="flex-shrink-0 w-10 h-10 rounded-full border border-gray-600 overflow-hidden">
                                     ${avatarHtml}
@@ -804,6 +838,11 @@ let db;
                     // Close pin menu if open
                     document.getElementById('pin-context-menu')?.classList.add('closed');
                     document.getElementById('pin-context-menu')?.classList.remove('open');
+                    
+                    // Check marquees when menu becomes visible
+                    if (menu.classList.contains('open')) {
+                        checkMarquees();
+                    }
                 });
             }
 
@@ -859,6 +898,48 @@ let db;
             setupAuthToggleListeners(currentUser); // Pass in the global user state
         }
 
+
+        /**
+         * NEW: Checks for text overflow in marquee containers and activates animation.
+         */
+        const checkMarquees = () => {
+            // Use a small timeout to ensure DOM is rendered/visible
+            requestAnimationFrame(() => {
+                const containers = document.querySelectorAll('.marquee-container');
+                
+                containers.forEach(container => {
+                    const content = container.querySelector('.marquee-content');
+                    if (!content) return;
+
+                    // Check if overflow exists
+                    // Note: container must be visible to measure scrollWidth properly.
+                    // If parent is hidden (display: none), widths are 0.
+                    // The auth menu uses 'opacity: 0' and 'pointer-events: none', but NOT display: none.
+                    // So measurement *should* work.
+                    
+                    // Reset to measure true width
+                    container.classList.remove('active');
+                    // Remove duplicate if exists
+                    if (content.nextElementSibling && content.nextElementSibling.classList.contains('marquee-content')) {
+                        content.nextElementSibling.remove();
+                    }
+
+                    if (content.offsetWidth > container.offsetWidth) {
+                        container.classList.add('active');
+                        // Duplicate content for seamless loop
+                        const duplicate = content.cloneNode(true);
+                        duplicate.setAttribute('aria-hidden', 'true'); // Accessibilty
+                        // Add padding to original to create gap
+                        content.style.paddingRight = '2rem'; 
+                        duplicate.style.paddingRight = '2rem';
+                        container.appendChild(duplicate);
+                    } else {
+                        // Clean up
+                        content.style.paddingRight = '';
+                    }
+                });
+            });
+        };
 
         /**
          * The rerenderNavbar function is now primarily for initial load and auth changes.
@@ -1033,6 +1114,9 @@ let db;
                     });
                 }
             }
+            
+            // --- NEW: Init Marquees ---
+            checkMarquees();
         };
 
 
