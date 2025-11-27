@@ -666,8 +666,7 @@
             serverTimestamp,
             deleteDoc // NEW FIREBASE IMPORT
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js"; // NEW IMPORT
-
+        
         // --- Import Firebase Config (Assumed to exist in a relative file) ---
         import { firebaseConfig } from "../firebase-config.js"; 
         
@@ -680,17 +679,13 @@
             console.error("FATAL ERROR: Firebase configuration is missing or invalid.");
         }
 
-        const ADMIN_EMAIL = '4simpleproblems@gmail.com';
-        
         // --- Firebase Initialization ---
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const functions = getFunctions(app); // Initialize Functions SDK
-        const listAllUsersCallable = httpsCallable(functions, 'listAllUsers'); // Create callable function
 
         // --- Global State and Element References ---
-        let sidebarTabs = document.querySelectorAll('.settings-tab'); // Make it 'let' to re-assign
+        const sidebarTabs = document.querySelectorAll('.settings-tab');
         const mainView = document.getElementById('settings-main-view');
         let currentUser = null; // To store the authenticated user object
         
@@ -710,7 +705,6 @@
             'personalization': { title: 'Personalization', icon: 'fa-palette' },
             'data': { title: 'Data Management', icon: 'fa-database' },
             'about': { title: 'About 4SP', icon: 'fa-circle-info' },
-            'bannedUsers': { title: 'Banned Users', icon: 'fa-ban' },
         };
         
         // Constants for providers (NEW)
@@ -1753,491 +1747,6 @@
             // This is necessary because currentUser.providerData needs to be fresh
             switchTab('general');
         };
-
-        // --- NEW: Loads data and adds event listeners for the Banned Users tab ---
-        async function loadBannedUsersTab() {
-            if (!currentUser) return;
-
-            mainView.innerHTML = `
-                <h2 class="text-3xl font-bold text-white mb-6">${tabContent.bannedUsers.title}</h2>
-                <div class="w-full flex flex-col gap-6">
-                    <!-- User Lookup Search Bar -->
-                    <div class="settings-box p-4">
-                        <h3 class="text-xl font-bold text-white mb-2">User Lookup</h3>
-                        <div class="flex flex-col gap-3">
-                            <input type="text" id="userSearchBar" class="input-text-style" placeholder="Search by UID, Email, or Username">
-                            <!-- Search Suggestions -->
-                            <div id="searchResultsSuggestions" class="relative">
-                                <div id="suggestionsList" class="custom-options hidden absolute w-full bg-[#111111] border border-[#252525] rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
-                                    <!-- Suggestions will be populated here -->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Search Results Display (Individual User Card) -->
-                    <div id="userSearchResult" class="settings-box p-4 hidden">
-                        <h3 class="text-xl font-bold text-white mb-2">User Details</h3>
-                        <div id="userDetailsContent">
-                            <!-- User details and ban/unban controls will be rendered here -->
-                        </div>
-                    </div>
-
-                    <!-- All Users List -->
-                    <div class="settings-box p-4">
-                        <h3 class="text-xl font-bold text-white mb-2">All Users</h3>
-                        <div class="flex items-center gap-2 mb-4">
-                            <span class="text-gray-400">Sort by:</span>
-                            <select id="userListSortBy" class="input-select-style w-auto">
-                                <option value="creationDate">Creation Date</option>
-                                <option value="email">Email</option>
-                                <option value="username">Username</option>
-                                <option value="uid">UID</option>
-                            </select>
-                            <button id="userListSortDirection" class="btn-toolbar-style w-auto">
-                                <i class="fa-solid fa-arrow-down-wide-short"></i>
-                            </button>
-                        </div>
-                        <div id="allUsersList" class="flex flex-col gap-2">
-                            <!-- All users will be listed here -->
-                            <p class="text-gray-500">Loading users...</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-            const allUsersListElement = document.getElementById('allUsersList');
-            const userListSortByElement = document.getElementById('userListSortBy');
-            const userListSortDirectionElement = document.getElementById('userListSortDirection');
-            const userSearchBarElement = document.getElementById('userSearchBar');
-            const suggestionsListElement = document.getElementById('suggestionsList');
-            const userSearchResultElement = document.getElementById('userSearchResult');
-            const userDetailsContentElement = document.getElementById('userDetailsContent');
-
-            let allUsers = []; // Stores all user data combined with ban status
-            let displayedUsers = []; // Users currently displayed in the list
-            let sortDirection = 'asc'; // 'asc' or 'desc'
-            let sortBy = 'creationDate'; // Default sort
-
-            // Helper to debounce input
-            const debounce = (func, delay) => {
-                let timeout;
-                return function(...args) {
-                    const context = this;
-                    clearTimeout(timeout);
-                    timeout = setTimeout(() => func.apply(context, args), delay);
-                };
-            };
-
-            // Helper to render a single user card
-            const renderUserCard = (user, isSearchResult = false) => {
-                const isBanned = user.banStatus && user.banStatus.banType;
-                const banDetails = user.banStatus;
-                
-                let banInfoHtml = '';
-                if (isBanned) {
-                    const banType = banDetails.banType === 'permanent' ? 'Permanent' : 'Temporary';
-                    const banEnd = banDetails.banEndTime ? banDetails.banEndTime.toDate().toLocaleString() : 'N/A';
-                    const reason = banDetails.reason ? `Reason: ${banDetails.reason}` : '';
-                    banInfoHtml = `
-                        <div class="text-red-400 text-sm mt-2">
-                            <i class="fa-solid fa-gavel mr-1"></i> Banned: ${banType}
-                            ${banDetails.banType === 'temporary' ? `(Ends: ${banEnd})` : ''}
-                            ${reason ? `<br><span class="ml-4">${reason}</span>` : ''}
-                        </div>
-                    `;
-                }
-
-                const creationDate = user.metadata?.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString() : 'N/A';
-
-                // Determine primary provider icon
-                let primaryProviderIcon = '<i class="fa-solid fa-user text-gray-400"></i>';
-                let primaryProviderName = 'N/A';
-                if (user.providerData && user.providerData.length > 0) {
-                    const primaryProvider = user.providerData[0];
-                    const config = PROVIDER_CONFIG[primaryProvider.providerId];
-                    if (config) {
-                        primaryProviderName = config.name;
-                        primaryProviderIcon = config.icon.startsWith('<i') ? config.icon : `<img src="${config.icon}" alt="${config.name}" class="w-4 h-4 mr-1 inline-block">`;
-                    }
-                }
-
-                return `
-                    <div class="user-card settings-box p-3 flex flex-col gap-2 ${isBanned ? 'border-red-600 bg-red-900/10' : ''}">
-                        <div class="flex justify-between items-center">
-                            <div class="flex items-center gap-2">
-                                <span class="font-semibold text-white">${user.username || user.email || 'N/A'}</span>
-                                ${isBanned ? '<span class="text-red-400 text-xs ml-2"><i class="fa-solid fa-ban"></i></span>' : ''}
-                            </div>
-                            <div class="flex items-center text-xs text-gray-400">
-                                ${primaryProviderIcon} ${primaryProviderName}
-                            </div>
-                        </div>
-                        <p class="text-xs text-gray-500">UID: ${user.uid}</p>
-                        <p class="text-xs text-gray-500">Email: ${user.email || 'N/A'}</p>
-                        <p class="text-xs text-gray-500">Created: ${creationDate}</p>
-                        ${banInfoHtml}
-                        <div class="flex justify-end gap-2 mt-2">
-                            ${isBanned ? 
-                                `<button class="btn-toolbar-style btn-primary-override-danger" data-action="unban" data-uid="${user.uid}">
-                                    <i class="fa-solid fa-unlock mr-1"></i> Unban
-                                </button>` :
-                                `<button class="btn-toolbar-style btn-primary-override" data-action="ban" data-uid="${user.uid}">
-                                    <i class="fa-solid fa-ban mr-1"></i> Ban
-                                </button>`
-                            }
-                        </div>
-                    </div>
-                `;
-            };
-
-            // Helper to display a list of users
-            const displayUsers = (usersToDisplay, containerElement) => {
-                containerElement.innerHTML = '';
-                if (usersToDisplay.length === 0) {
-                    containerElement.innerHTML = `<p class="text-gray-500">No users found.</p>`;
-                    return;
-                }
-                usersToDisplay.forEach(user => {
-                    containerElement.innerHTML += renderUserCard(user);
-                });
-            };
-
-            // Function to fetch all users and their ban status
-            const fetchAndProcessUsers = async () => {
-                showLoading('Fetching users...');
-                try {
-                    // Fetch all users from Firebase Auth (limited to 1000 for now, need pagination for large apps)
-                    // For a real app, this would be done via a Cloud Function
-                    const result = await listAllUsersCallable();
-                    const usersAuth = result.data.users;
-                    
-                    // Fetch all user data from Firestore 'users' collection
-                    const usersCollection = collection(db, 'users');
-                    const usersSnapshot = await getDocs(usersCollection);
-                    const usersFirestore = {};
-                    usersSnapshot.forEach(doc => {
-                        usersFirestore[doc.id] = doc.data();
-                    });
-
-                    // Fetch all banned users from 'bannedUsers' collection
-                    const bannedUsersCollection = collection(db, 'bannedUsers');
-                    const bannedUsersSnapshot = await getDocs(bannedUsersCollection);
-                    const bannedUsersMap = {};
-                    bannedUsersSnapshot.forEach(doc => {
-                        bannedUsersMap[doc.id] = doc.data();
-                    });
-
-                    // Combine data
-                    allUsers = usersAuth.users.map(authU => {
-                        const firestoreU = usersFirestore[authU.uid] || {};
-                        const banStatus = bannedUsersMap[authU.uid] || null;
-
-                        return {
-                            uid: authU.uid,
-                            email: authU.email,
-                            username: firestoreU.username || authU.displayName || authU.email,
-                            creationDate: authU.metadata.creationTime,
-                            providerData: authU.providerData,
-                            banStatus: banStatus
-                        };
-                    });
-                    
-                    // Initial display
-                    sortAndDisplayUsers();
-
-                } catch (error) {
-                    console.error("Error fetching users:", error);
-                    allUsersListElement.innerHTML = `<p class="text-red-400">Error loading users: ${error.message}</p>`;
-                } finally {
-                    hideLoading();
-                }
-            };
-
-            // Function to sort and display users
-            const sortAndDisplayUsers = (usersToProcess = allUsers) => {
-                let sortedUsers = [...usersToProcess]; // Create a copy to sort
-
-                sortedUsers.sort((a, b) => {
-                    let valA, valB;
-
-                    switch (sortBy) {
-                        case 'creationDate':
-                            valA = new Date(a.creationDate || 0);
-                            valB = new Date(b.creationDate || 0);
-                            break;
-                        case 'email':
-                            valA = a.email || '';
-                            valB = b.email || '';
-                            break;
-                        case 'username':
-                            valA = a.username || '';
-                            valB = b.username || '';
-                            break;
-                        case 'uid':
-                            valA = a.uid || '';
-                            valB = b.uid || '';
-                            break;
-                        default:
-                            valA = new Date(a.creationDate || 0);
-                            valB = new Date(b.creationDate || 0);
-                    }
-
-                    if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
-                    if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
-                    return 0;
-                });
-                displayedUsers = sortedUsers;
-                displayUsers(displayedUsers, allUsersListElement);
-            };
-
-            // Event Listeners for sorting
-            userListSortByElement.addEventListener('change', (e) => {
-                sortBy = e.target.value;
-                sortAndDisplayUsers();
-            });
-
-            userListSortDirectionElement.addEventListener('click', () => {
-                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-                userListSortDirectionElement.innerHTML = sortDirection === 'asc' ? 
-                    '<i class="fa-solid fa-arrow-down-wide-short"></i>' : 
-                    '<i class="fa-solid fa-arrow-up-wide-short"></i>';
-                sortAndDisplayUsers();
-            });
-            
-            // --- Search functionality ---
-            const performSearch = (queryText) => {
-                const lowerCaseQuery = queryText.toLowerCase();
-                const filtered = allUsers.filter(user => 
-                    (user.email && user.email.toLowerCase().includes(lowerCaseQuery)) ||
-                    (user.username && user.username.toLowerCase().includes(lowerCaseQuery)) ||
-                    (user.uid && user.uid.toLowerCase().includes(lowerCaseQuery))
-                );
-                suggestionsListElement.innerHTML = '';
-                if (lowerCaseQuery.length > 0 && filtered.length > 0) {
-                    suggestionsListElement.classList.remove('hidden');
-                    filtered.slice(0, 5).forEach(user => { // Show top 5 suggestions
-                        const suggestionItem = document.createElement('div');
-                        suggestionItem.className = 'custom-option';
-                        suggestionItem.innerHTML = `<span>${user.username || user.email} (${user.uid})</span>`;
-                        suggestionItem.dataset.uid = user.uid;
-                        suggestionItem.addEventListener('click', () => {
-                            displayUserSearchResult(user);
-                            suggestionsListElement.classList.add('hidden');
-                            userSearchBarElement.value = user.username || user.email;
-                        });
-                        suggestionsListElement.appendChild(suggestionItem);
-                    });
-                } else {
-                    suggestionsListElement.classList.add('hidden');
-                }
-                
-                // Also update the main list based on search, if not displaying a single result
-                if (queryText.length > 0) {
-                     displayUsers(filtered, allUsersListElement);
-                } else {
-                     displayUsers(allUsers, allUsersListElement);
-                }
-            };
-
-            const debouncedSearch = debounce(performSearch, 300);
-            userSearchBarElement.addEventListener('input', (e) => {
-                if (e.target.value.length === 0) {
-                    // Clear single search result and show all users
-                    userSearchResultElement.classList.add('hidden');
-                    displayUsers(allUsers, allUsersListElement);
-                }
-                debouncedSearch(e.target.value);
-            });
-
-            // Display single user search result
-            const displayUserSearchResult = (user) => {
-                userDetailsContentElement.innerHTML = renderUserCard(user, true);
-                userSearchResultElement.classList.remove('hidden');
-                // Hide main list temporarily or filter it to just this user
-                displayUsers([user], allUsersListElement); // Optionally, only show this user in the main list
-            };
-            
-            // Initial fetch
-            fetchAndProcessUsers();
-
-            // --- Ban/Unban functionality ---
-            const banUser = async (uid, username, email) => {
-                let banType = '';
-                let banReason = '';
-                let banDurationHours = 0;
-
-                const getBanDetails = () => {
-                    return new Promise(resolve => {
-                        openModal(
-                            `Ban ${username || email}`,
-                            [
-                                {
-                                    text: "Permanent Ban",
-                                    onclick: () => {
-                                        banType = 'permanent';
-                                        resolve();
-                                    }
-                                },
-                                {
-                                    text: "Temporary Ban",
-                                    onclick: () => {
-                                        banType = 'temporary';
-                                        resolve();
-                                    }
-                                },
-                                {
-                                    text: "Cancel",
-                                    onclick: () => {
-                                        resolve(false); // Cancelled
-                                    }
-                                }
-                            ]
-                        );
-                    });
-                };
-
-                const getReasonAndDuration = () => {
-                    return new Promise(resolve => {
-                        const modalContent = document.getElementById('modalContent');
-                        modalContent.innerHTML = `
-                            <span class="modal-close" id="modalClose">&times;</span>
-                            <p id="modalText" class="mb-4">Ban ${username || email} (${banType} ban)</p>
-                            <input type="text" id="banReasonInput" class="input-text-style mb-3" placeholder="Reason (Optional)">
-                            ${banType === 'temporary' ? `<input type="number" id="banDurationInput" class="input-text-style" placeholder="Duration in hours" min="1" value="1">` : ''}
-                            <div class="modal-buttons flex justify-center gap-3 mt-4">
-                                <button id="confirmBanBtn" class="btn-toolbar-style btn-primary-override">Confirm</button>
-                                <button id="cancelReasonBtn" class="btn-toolbar-style">Cancel</button>
-                            </div>
-                        `;
-
-                        document.getElementById('modalPrompt').style.display = 'flex';
-                        document.getElementById('modalClose').addEventListener('click', () => resolve(false));
-                        document.getElementById('cancelReasonBtn').addEventListener('click', () => resolve(false));
-                        document.getElementById('confirmBanBtn').addEventListener('click', () => {
-                            banReason = document.getElementById('banReasonInput').value.trim();
-                            if (banType === 'temporary') {
-                                banDurationHours = parseInt(document.getElementById('banDurationInput').value, 10);
-                                if (isNaN(banDurationHours) || banDurationHours <= 0) {
-                                    alert('Please enter a valid duration in hours.');
-                                    return;
-                                }
-                            }
-                            resolve(true);
-                        });
-                    });
-                };
-
-                const banProceed = await getBanDetails();
-                if (!banProceed) {
-                    hideLoading();
-                    return;
-                }
-
-                const reasonDurationProceed = await getReasonAndDuration();
-                if (!reasonDurationProceed) {
-                    hideLoading();
-                    return;
-                }
-
-                showLoading(`Banning ${username || email}...`);
-                try {
-                    const banDocRef = doc(db, 'bannedUsers', uid);
-                    const banData = {
-                        bannedByUid: currentUser.uid,
-                        bannedByEmail: currentUser.email,
-                        reason: banReason,
-                        banType: banType,
-                        banStartTime: serverTimestamp(),
-                        userEmail: email,
-                        username: username // Store for easy lookup
-                    };
-
-                    if (banType === 'temporary') {
-                        const banEndTime = new Date();
-                        banEndTime.setHours(banEndTime.getHours() + banDurationHours);
-                        banData.banEndTime = banEndTime;
-                    }
-
-                    await setDoc(banDocRef, banData);
-                    showMessage(null, `User ${username || email} has been ${banType} banned.`, 'success'); // Null element to use alert
-                    
-                    // Re-fetch and re-display users to update UI
-                    fetchAndProcessUsers();
-                } catch (error) {
-                    console.error("Error banning user:", error);
-                    showMessage(null, `Failed to ban user ${username || email}: ${error.message}`, 'error');
-                } finally {
-                    document.getElementById('modalPrompt').style.display = 'none'; // Close any open modal
-                    hideLoading();
-                }
-            };
-
-            const unbanUser = async (uid, username, email) => {
-                const proceed = await new Promise(resolve => {
-                    openModal(
-                        `Are you sure you want to unban ${username || email}?`,
-                        [
-                            { text: "Yes, Unban", onclick: () => resolve(true) },
-                            { text: "Cancel", onclick: () => resolve(false) }
-                        ]
-                    );
-                });
-
-                if (!proceed) {
-                    hideLoading();
-                    return;
-                }
-
-                showLoading(`Unbanning ${username || email}...`);
-                try {
-                    const banDocRef = doc(db, 'bannedUsers', uid);
-                    await deleteDoc(banDocRef);
-                    showMessage(null, `User ${username || email} has been unbanned.`, 'success');
-
-                    // Re-fetch and re-display users to update UI
-                    fetchAndProcessUsers();
-                } catch (error) {
-                    console.error("Error unbanning user:", error);
-                    showMessage(null, `Failed to unban user ${username || email}: ${error.message}`, 'error');
-                } finally {
-                    document.getElementById('modalPrompt').style.display = 'none'; // Close any open modal
-                    hideLoading();
-                }
-            };
-
-            // Event delegation for ban/unban buttons
-            const handleBanUnbanClick = (e) => {
-                const targetBtn = e.target.closest('button[data-action][data-uid]');
-                if (!targetBtn) return;
-
-                const uid = targetBtn.dataset.uid;
-                const action = targetBtn.dataset.action;
-                
-                // Find the user object from the current displayed users
-                const userToActOn = allUsers.find(u => u.uid === uid);
-                if (!userToActOn) {
-                    console.error("User not found for ban/unban action:", uid);
-                    return;
-                }
-
-                if (action === 'ban') {
-                    banUser(userToActOn.uid, userToActOn.username, userToActOn.email);
-                } else if (action === 'unban') {
-                    unbanUser(userToActOn.uid, userToActOn.username, userToActOn.email);
-                }
-            };
-
-            allUsersListElement.addEventListener('click', handleBanUnbanClick);
-            userDetailsContentElement.addEventListener('click', handleBanUnbanClick);
-            
-            // Close suggestions list if clicking outside
-            document.addEventListener('click', (e) => {
-                if (!userSearchBarElement.contains(e.target) && !suggestionsListElement.contains(e.target)) {
-                    suggestionsListElement.classList.add('hidden');
-                }
-            });
-
-        }
 
         // --- Utility: Custom Dropdown Setup ---
         function setupCustomDropdown(selectElement, onChangeCallback) {
@@ -3683,8 +3192,6 @@
             }
             else if (tabId === 'about') {
                 mainView.innerHTML = getAboutContent();
-            } else if (tabId === 'bannedUsers') {
-                await loadBannedUsersTab();
             } else {
                 const content = tabContent[tabId];
                 mainView.innerHTML = getComingSoonContent(content.title);
@@ -3700,19 +3207,11 @@
         // --- Initialization on Load ---
         
         // Add listener to each sidebar button
-        // Refactored into a named function to be reusable
-        const tabClickListener = async (event) => {
-            await switchTab(event.currentTarget.dataset.tab);
-        };
-
-        const attachTabListeners = () => {
-            sidebarTabs.forEach(tab => {
-                tab.removeEventListener('click', tabClickListener); // Remove existing to prevent duplicates
-                tab.addEventListener('click', tabClickListener);
+        sidebarTabs.forEach(tab => {
+            tab.addEventListener('click', async () => {
+                await switchTab(tab.dataset.tab);
             });
-        };
-        
-        attachTabListeners(); // Initial attachment
+        });
 
 
         // --- AUTHENTICATION/REDIRECT LOGIC (Retained and Modified) ---
@@ -3723,37 +3222,8 @@
                     window.location.href = '../authentication.html'; 
                 } else {
                     currentUser = user; 
-                    
-                    // --- ADMIN TAB INJECTION ---
-                    if (currentUser.email === ADMIN_EMAIL) {
-                        const bannedUsersTab = document.createElement('button');
-                        bannedUsersTab.id = 'tab-bannedUsers';
-                        bannedUsersTab.className = 'btn-toolbar-style settings-tab';
-                        bannedUsersTab.dataset.tab = 'bannedUsers';
-                        bannedUsersTab.innerHTML = `<i class="fa-solid fa-ban w-5"></i> <span>Banned Users</span>`;
-                        
-                        const aboutTab = document.getElementById('tab-about');
-                        if (aboutTab) {
-                            aboutTab.parentNode.insertBefore(bannedUsersTab, aboutTab.nextSibling);
-                        }
-                        // Re-query sidebar tabs to include the new button
-                        sidebarTabs = document.querySelectorAll('.settings-tab');
-                        
-                        // Re-attach event listeners for newly added tab (and existing ones)
-                        attachTabListeners();
-                    }
-                    // --- END ADMIN TAB INJECTION ---
-
-                    // Default to 'general' tab if no hash is present or invalid
-                    const initialTab = window.location.hash ? window.location.hash.substring(1) : 'general';
-                    // Validate initialTab
-                    if (!tabContent[initialTab]) {
-                        window.location.hash = '#general'; // Redirect to default valid tab
-                        switchTab('general');
-                    } else {
-                         switchTab(initialTab);
-                    }
-                   
+                    // Set initial state to 'General' (or the first tab)
+                    switchTab('general'); 
                 }
             });
         }
