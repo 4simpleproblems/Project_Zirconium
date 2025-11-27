@@ -732,15 +732,21 @@ let db;
                     : '';
                 
                 // FIX: Added w-full and min-w-0 to the header div to prevent centering bug
+                // UPDATED: Added avatar to the menu header
                 return `
                     <div id="auth-button-container" class="relative flex-shrink-0 flex items-center">
                         <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
                             ${avatarHtml}
                         </button>
                         <div id="auth-menu-container" class="auth-menu-container closed">
-                            <div class="px-3 py-2 border-b border-gray-700 mb-2 w-full min-w-0">
-                                <p class="text-sm font-semibold auth-menu-username truncate">${username}</p>
-                                <p class="text-xs text-gray-400 truncate auth-menu-email">${email}</p>
+                            <div class="px-3 py-3 border-b border-gray-700 mb-2 w-full min-w-0 flex items-center justify-between gap-3">
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-sm font-semibold auth-menu-username truncate">${username}</p>
+                                    <p class="text-xs text-gray-400 truncate auth-menu-email">${email}</p>
+                                </div>
+                                <div id="auth-menu-avatar-container" class="flex-shrink-0 w-12 h-12 rounded-full border border-gray-600 overflow-hidden">
+                                    ${avatarHtml}
+                                </div>
                             </div>
                             <a href="/logged-in/settings.html" class="auth-menu-link">
                                 <i class="fa-solid fa-gear w-4"></i>
@@ -1272,35 +1278,27 @@ let db;
                     // Update local state
                     Object.assign(currentUserData, e.detail);
                     
-                    // Update DOM immediately with fade
+                    // Generate new content
+                    const username = currentUserData.username || currentUser?.displayName || 'User';
+                    const initial = (currentUserData.pfpLetters) ? currentUserData.pfpLetters : username.charAt(0).toUpperCase();
+                    let newContent = '';
+                    
+                    if (currentUserData.pfpType === 'custom' && currentUserData.customPfp) {
+                        newContent = `<img src="${currentUserData.customPfp}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
+                    } else if (currentUserData.pfpType === 'letter') {
+                        const style = currentUserData.pfpLetterBg ? `background: ${currentUserData.pfpLetterBg};` : '';
+                        newContent = `<div class="initial-avatar w-full h-full rounded-full text-sm font-semibold" style="${style}">${initial}</div>`;
+                    } else {
+                        if (currentUser?.photoURL) {
+                            newContent = `<img src="${currentUser.photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
+                        } else {
+                            newContent = `<div class="initial-avatar w-full h-full rounded-full text-sm font-semibold">${initial}</div>`;
+                        }
+                    }
+
+                    // Update Toggle Button
                     const authToggle = document.getElementById('auth-toggle');
                     if (authToggle) {
-                        // Create new avatar HTML using the helper which uses the *updated* currentUserData
-                        // We temporarily need to construct a dummy 'user' object if needed, but loggedInView uses currentUserData for PFP mainly.
-                        // Actually `loggedInView` returns the whole button structure. We just want the inner HTML.
-                        
-                        // Let's extract the avatar logic from loggedInView or just re-run it.
-                        // Re-running getAuthControlsHtml() is safest but might be overkill.
-                        // Let's just update the button content.
-                        
-                        const username = currentUserData.username || currentUser?.displayName || 'User';
-                        const initial = (currentUserData.pfpLetters) ? currentUserData.pfpLetters : username.charAt(0).toUpperCase();
-                        let newContent = '';
-                        
-                        if (currentUserData.pfpType === 'custom' && currentUserData.customPfp) {
-                            newContent = `<img src="${currentUserData.customPfp}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
-                        } else if (currentUserData.pfpType === 'letter') {
-                            const style = currentUserData.pfpLetterBg ? `background: ${currentUserData.pfpLetterBg};` : '';
-                            newContent = `<div class="initial-avatar w-full h-full rounded-full text-sm font-semibold" style="${style}">${initial}</div>`;
-                        } else {
-                            if (currentUser?.photoURL) {
-                                newContent = `<img src="${currentUser.photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
-                            } else {
-                                newContent = `<div class="initial-avatar w-full h-full rounded-full text-sm font-semibold">${initial}</div>`;
-                            }
-                        }
-
-                        // Fade out, swap, fade in
                         authToggle.style.transition = 'opacity 0.2s ease';
                         authToggle.style.opacity = '0';
                         
@@ -1308,6 +1306,13 @@ let db;
                             authToggle.innerHTML = newContent;
                             authToggle.style.opacity = '1';
                         }, 200);
+                    }
+                    
+                    // Update Dropdown Menu Avatar (if open or exists)
+                    const menuAvatar = document.getElementById('auth-menu-avatar-container');
+                    if (menuAvatar) {
+                        // Instant update for menu, no fade needed as it's usually hidden during update
+                        menuAvatar.innerHTML = newContent; 
                     }
                 });
 

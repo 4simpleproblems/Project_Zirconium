@@ -140,6 +140,12 @@ const FIREBASE_CONFIG = {
                     authToggle.innerHTML = newContent;
                     authToggle.style.opacity = '1';
                 }, 200);
+                
+                // Update Dropdown Menu Avatar (if open or exists)
+                const menuAvatar = document.getElementById('auth-menu-avatar-container');
+                if (menuAvatar) {
+                    menuAvatar.innerHTML = newContent;
+                }
             }
         });
     };
@@ -297,9 +303,14 @@ const FIREBASE_CONFIG = {
                         ${avatarHtml}
                     </button>
                     <div id="auth-menu-container" class="auth-menu-container closed">
-                        <div class="px-3 py-2 border-b border-gray-700 mb-2">
-                            <p class="text-sm font-semibold text-white truncate">${username}</p>
-                            <p class="text-xs text-gray-400 truncate">${email}</p>
+                        <div class="px-3 py-3 border-b border-gray-700 mb-2 flex items-center justify-between gap-3">
+                            <div class="min-w-0 flex-1">
+                                <p class="text-sm font-semibold text-white truncate">${username}</p>
+                                <p class="text-xs text-gray-400 truncate">${email}</p>
+                            </div>
+                            <div id="auth-menu-avatar-container" class="flex-shrink-0 w-12 h-12 rounded-full border border-gray-600 overflow-hidden">
+                                ${avatarHtml}
+                            </div>
                         </div>
                         <a href="/logged-in/dashboard.html" class="auth-menu-link"><i class="fa-solid fa-house-chimney-user w-5"></i>Dashboard</a>
                         <a href="/logged-in/settings.html" class="auth-menu-link"><i class="fa-solid fa-gear w-5"></i>Settings</a>
