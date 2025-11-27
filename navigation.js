@@ -230,3 +230,4 @@ let db;
 
 // --- Self-invoking function to encapsulate all logic ---
 (function() {
+})(); // Close the IIFE
