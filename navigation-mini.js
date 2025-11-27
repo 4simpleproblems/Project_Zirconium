@@ -9,7 +9,9 @@
  * 2. Icons: Added dynamic loading for Font Awesome.
  * 3. Logo: Increased size to h-10.
  * 4. Dropdown Buttons: Styled exactly like notes.html (darker hover, gap spacing).
- * 5. NEW: Added a 5-second reload loop if the navbar fails to inject, to force a fix.
+ * 5. Retry Logic: Added a 5-second reload loop if the navbar fails to inject.
+ * 6. NO GUEST LOGIN: Removed automatic anonymous sign-in.
+ * 7. AVATAR FIX: Updated initial avatar to match navigation.js centering logic.
  */
 
 // =========================================================================
@@ -233,9 +235,10 @@ const FIREBASE_CONFIG = {
             const email = user.email || 'No email';
             const initial = username.charAt(0).toUpperCase();
 
+            // UPDATED: Changed w-full h-8 to w-full h-full to match navigation.js
             const avatar = photoURL ?
                 `<img src="${photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">` :
-                `<div class="initial-avatar w-full h-8 rounded-full text-sm font-semibold">${initial}</div>`; 
+                `<div class="initial-avatar w-full h-full rounded-full text-sm font-semibold">${initial}</div>`; 
 
             return `
                 <div class="relative">
@@ -319,16 +322,7 @@ const FIREBASE_CONFIG = {
             } else {
                 // User is signed out.
                 renderNavbar(null, null);
-                // Attempt to sign in anonymously for a seamless guest experience.
-                auth.signInAnonymously().catch((error) => {
-                    if (error.code === 'auth/operation-not-allowed' || error.code === 'auth/admin-restricted-operation') {
-                        console.warn(
-                            "Anonymous sign-in is disabled. Enable it in the Firebase Console (Authentication > Sign-in method) for guest features."
-                        );
-                    } else {
-                        console.error("Anonymous sign-in error:", error);
-                    }
-                });
+                // REMOVED: Anonymous sign-in attempt. Guests are now unsupported.
             }
 
             // --- START: Injection failure retry logic ---
