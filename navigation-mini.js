@@ -126,8 +126,13 @@ const FIREBASE_CONFIG = {
                     const style = currentUserData.pfpLetterBg ? `background: ${currentUserData.pfpLetterBg};` : '';
                     newContent = `<div class="initial-avatar w-full h-full rounded-full text-sm font-semibold" style="${style}">${initial}</div>`;
                 } else {
-                    if (currentUser?.photoURL) {
-                        newContent = `<img src="${currentUser.photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
+                    // 'google' or fallback
+                    const googleProvider = currentUser?.providerData.find(p => p.providerId === 'google.com');
+                    const googlePhoto = googleProvider ? googleProvider.photoURL : null;
+                    const displayPhoto = googlePhoto || currentUser?.photoURL;
+
+                    if (displayPhoto) {
+                        newContent = `<img src="${displayPhoto}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
                     } else {
                         newContent = `<div class="initial-avatar w-full h-full rounded-full text-sm font-semibold">${initial}</div>`;
                     }
@@ -345,10 +350,15 @@ const FIREBASE_CONFIG = {
                 avatarHtml = `<div class="initial-avatar w-full h-full rounded-full text-sm font-semibold" style="${style}">${initial}</div>`;
             } else {
                 // 'google' or fallback
-                if (user.photoURL) {
-                    avatarHtml = `<img src="${user.photoURL}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
+                // Try to find specific Google photo first if available in providerData
+                const googleProvider = user.providerData.find(p => p.providerId === 'google.com');
+                const googlePhoto = googleProvider ? googleProvider.photoURL : null;
+                const displayPhoto = googlePhoto || user.photoURL;
+
+                if (displayPhoto) {
+                    avatarHtml = `<img src="${displayPhoto}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
                 } else {
-                    // Fallback to standard letter avatar if no Google photo exists
+                    // Fallback to standard letter avatar
                     avatarHtml = `<div class="initial-avatar w-full h-full rounded-full text-sm font-semibold">${initial}</div>`;
                 }
             }
