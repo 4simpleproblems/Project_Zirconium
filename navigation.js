@@ -369,10 +369,12 @@ let db;
                 color: var(--menu-username-text);
                 transition: color 0.3s ease;
                 text-align: left !important; /* Force left alignment */
+                margin: 0 !important;
             }
             /* NEW: Force email left alignment */
             .auth-menu-email {
                 text-align: left !important;
+                margin: 0 !important;
             }
             .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
             .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
@@ -845,7 +847,7 @@ let db;
                             ${avatarHtml}
                         </button>
                         <div id="auth-menu-container" class="auth-menu-container closed">
-                            <div class="px-3 py-3 border-b border-gray-700 mb-2 w-full min-w-0 flex items-center gap-3">
+                            <div class="px-3 py-3 border-b border-gray-700 mb-2 w-full min-w-0 flex items-center">
                                 <div class="min-w-0 flex-1 overflow-hidden">
                                     <div class="marquee-container" id="username-marquee">
                                         <p class="text-sm font-semibold auth-menu-username marquee-content">${username}</p>

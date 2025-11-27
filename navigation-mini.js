@@ -187,6 +187,16 @@ const FIREBASE_CONFIG = {
             .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
             
             .initial-avatar { background: linear-gradient(135deg, #374151 0%, #111827 100%); font-family: 'Geist', sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white; }
+
+            /* Auth Menu Username and Email Styling */
+            .auth-menu-username {
+                text-align: left !important;
+                margin: 0 !important;
+            }
+            .auth-menu-email {
+                text-align: left !important;
+                margin: 0 !important;
+            }
             
             /* * UPDATED STYLE: Matches 'dropdown-item' from notes.html 
              * Using flex gap instead of margin-right on icons.
@@ -453,13 +463,13 @@ const FIREBASE_CONFIG = {
                         ${avatarHtml}
                     </button>
                     <div id="auth-menu-container" class="auth-menu-container closed">
-                        <div class="px-3 py-3 border-b border-gray-700 mb-2 flex items-center gap-3">
+                        <div class="px-3 py-3 border-b border-gray-700 mb-2 flex items-center">
                             <div class="min-w-0 flex-1 overflow-hidden">
                                 <div class="marquee-container" id="username-marquee">
-                                    <p class="text-sm font-semibold text-white marquee-content">${username}</p>
+                                    <p class="text-sm font-semibold text-white auth-menu-username marquee-content">${username}</p>
                                 </div>
                                 <div class="marquee-container" id="email-marquee">
-                                    <p class="text-xs text-gray-400 marquee-content">${email}</p>
+                                    <p class="text-xs text-gray-400 auth-menu-email marquee-content">${email}</p>
                                 </div>
                             </div>
                         </div>
