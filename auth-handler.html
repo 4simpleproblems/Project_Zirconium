@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>4SP - FINALIZING AUTHENTICATION</title>
-    <meta name="description" content="Completing your sign-in process with a custom authentication provider.">
+    <meta name="description" content="Completing your sign-in process.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -47,15 +47,15 @@
         <i id="statusIcon" class="fas fa-spinner fa-spin text-5xl text-blue-500 mb-6"></i>
         <h1 id="statusTitle" class="text-3xl font-normal tracking-tighter mb-4">Finalizing Authentication...</h1>
         <p id="statusMessage" class="text-custom-white-gray text-lg font-light">
-            We are securely exchanging tokens with Discord and Firebase. Please wait.
+            We are securely exchanging tokens with your provider. Please wait.
         </p>
     </main>
 
 <script type="module">
     // --- Firebase Imports ---
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, signInWithCustomToken, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    // UPDATED: Added necessary imports for username validation and serverTimestamp
+    // UPDATED: Added getRedirectResult for standard OAuth flows (GitHub etc)
+    import { getAuth, signInWithCustomToken, getRedirectResult, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { 
         getFirestore, 
         doc, 
@@ -97,99 +97,119 @@
         return !querySnapshot.empty;
     };
 
+    // --- Display Error Helper ---
+    const displayError = (title, message) => {
+        statusIcon.className = 'fas fa-times-circle text-5xl text-red-500 mb-6';
+        statusTitle.textContent = title;
+        statusMessage.innerHTML = `${message} <br><a href="authentication.html" class="text-blue-400 hover:text-blue-300 font-normal mt-4 inline-block">&larr; Go back to Login</a>`;
+    };
+
+    // --- Unified User Setup Logic ---
+    const finalizeUserSetup = async (user, providerId) => {
+        try {
+            // 1. Get Claims (Crucial for Discord Custom Tokens)
+            const idTokenResult = await user.getIdTokenResult();
+            const claims = idTokenResult.claims || {};
+            
+            // 2. Determine Email
+            // Priority: Claims (Discord) -> User Object (GitHub/Google) -> Empty
+            const finalEmail = claims.email || user.email || "";
+            
+            // 3. Determine Raw Username Source
+            // A. 'username' claim (Discord Custom Token)
+            // B. 'screenName' from reloadUserInfo (Crucial for GitHub Handles!)
+            // C. 'displayName' (Standard Name)
+            // D. Email prefix
+            const screenName = user.reloadUserInfo?.screenName; // This captures GitHub handle
+            const rawUsername = claims.username || screenName || user.displayName || finalEmail.split('@')[0] || 'User';
+
+            // --- Check for User Document Existence ---
+            const userDoc = await getDoc(getUserDocRef(user.uid));
+            
+            if (!userDoc.exists()) {
+                // --- Apply Username Formatting/Uniqueness Logic (Matches authentication.html) ---
+                // 1. Sanitize to alphanumeric, max 16 chars
+                let username = rawUsername.replace(/[^a-zA-Z0-9]/g, '').slice(0, 16);
+                
+                // 2. Fallback if too short or profane
+                if (username.length < 6) username = `User${user.uid.substring(0, 8)}`;
+                if (await checkProfanity(username)) username = `User${user.uid.substring(0, 8)}`;
+                
+                let finalUsername = username;
+                let counter = 1;
+                
+                // 3. Ensure uniqueness in database
+                while (await isUsernameTaken(finalUsername)) {
+                    finalUsername = `${username.slice(0, 14)}_${counter++}`;
+                }
+
+                // Create the document matching authentication.html schema
+                await setDoc(getUserDocRef(user.uid), {
+                    email: finalEmail, 
+                    authMethod: providerId || 'unknown', 
+                    createdAt: serverTimestamp(), 
+                    username: finalUsername, 
+                    emailVerified: true 
+                });
+                console.log(`Created new user doc for: ${finalUsername} (${providerId})`);
+            } else {
+                console.log("User document already exists, skipping creation.");
+            }
+            
+            // --- Success! Redirect ---
+            statusIcon.className = 'fas fa-check-circle text-5xl text-green-500 mb-6';
+            statusTitle.textContent = 'Success!';
+            statusMessage.textContent = 'Sign-in complete. Redirecting to your dashboard...';
+            
+            setTimeout(() => {
+                window.location.href = 'logged-in/dashboard.html';
+            }, 1000);
+
+        } catch (docError) {
+            console.error("Error setting up user profile:", docError);
+            displayError('Database Error', 'Signed in, but failed to set up user profile. Check console for details.');
+        }
+    };
+
     // --- Main Handler ---
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
         const params = new URLSearchParams(window.location.search);
         const customToken = params.get('custom_token');
         const error = params.get('error');
 
-        // Function to update the UI for errors
-        const displayError = (title, message) => {
-            statusIcon.className = 'fas fa-times-circle text-5xl text-red-500 mb-6';
-            statusTitle.textContent = title;
-            statusMessage.innerHTML = `${message} <br><a href="authentication.html" class="text-blue-400 hover:text-blue-300 font-normal mt-4 inline-block">&larr; Go back to Login</a>`;
-        };
-        
-        // --- 1. Check for Cloud Function Errors ---
+        // --- 1. Check for Cloud Function Errors (Discord) ---
         if (error) {
-            displayError('Authentication Failed', 'The Discord sign-in process encountered an error. Please try again.');
+            displayError('Authentication Failed', 'The sign-in process encountered an error. Please try again.');
             return;
         }
 
-        // --- 2. Check for Token ---
-        if (!customToken) {
-            displayError('Missing Token', 'Did not receive the expected sign-in token. Redirecting error.');
-            return;
+        // --- 2. Handle Custom Token (Discord Flow) ---
+        if (customToken) {
+            try {
+                const userCredential = await signInWithCustomToken(auth, customToken);
+                await finalizeUserSetup(userCredential.user, 'discord');
+            } catch (error) {
+                console.error("Custom Token Sign-in Failed:", error);
+                displayError('Sign-in Error', 'Could not finalize your session. The custom token was invalid or expired.');
+            }
+            return; // Stop here if processing custom token
         }
 
-        // --- 3. Finalize Firebase Sign-In ---
-        signInWithCustomToken(auth, customToken)
-            .then(async (userCredential) => {
-                const user = userCredential.user;
-                
-                try {
-                    // --- FIX: Explicitly get the claims from the custom token ---
-                    const idTokenResult = await user.getIdTokenResult();
-                    const claims = idTokenResult.claims || {};
-                    
-                    // Prioritize claims data (from Discord), fallback to standard properties
-                    const finalEmail = claims.email || user.email || "";
-                    
-                    // Get raw username source (prioritize Discord claim)
-                    const rawUsername = claims.username || user.displayName || user.email.split('@')[0] || 'User';
-
-                    // --- Check for User Document Existence ---
-                    const userDoc = await getDoc(getUserDocRef(user.uid));
-                    
-                    if (!userDoc.exists()) {
-                        // --- Apply Username Formatting/Uniqueness Logic (Matches authentication.html) ---
-                        // 1. Sanitize to alphanumeric, max 16 chars
-                        let username = rawUsername.replace(/[^a-zA-Z0-9]/g, '').slice(0, 16);
-                        
-                        // 2. Fallback if too short or profane
-                        if (username.length < 6) username = `User${user.uid.substring(0, 8)}`;
-                        if (await checkProfanity(username)) username = `User${user.uid.substring(0, 8)}`;
-                        
-                        let finalUsername = username;
-                        let counter = 1;
-                        
-                        // 3. Ensure uniqueness in database
-                        while (await isUsernameTaken(finalUsername)) {
-                            finalUsername = `${username.slice(0, 14)}_${counter++}`;
-                        }
-
-                        // Create the document matching authentication.html schema
-                        await setDoc(getUserDocRef(user.uid), {
-                            email: finalEmail, 
-                            authMethod: 'discord', 
-                            createdAt: serverTimestamp(), // Use serverTimestamp()
-                            username: finalUsername, 
-                            emailVerified: true 
-                        });
-                        console.log("Created new user doc for:", finalUsername);
-                    } else {
-                        console.log("User document already exists, skipping creation.");
-                    }
-                    
-                    // --- Success! Redirect ---
-                    statusIcon.className = 'fas fa-check-circle text-5xl text-green-500 mb-6';
-                    statusTitle.textContent = 'Success!';
-                    statusMessage.textContent = 'Sign-in complete. Redirecting to your dashboard...';
-                    
-                    setTimeout(() => {
-                        window.location.href = 'logged-in/dashboard.html';
-                    }, 1000);
-
-                } catch (docError) {
-                    console.error("Error creating user document or getting claims:", docError);
-                    displayError('Database Error', 'Signed in, but failed to set up user profile. Check console for details.');
-                }
-
-            })
-            .catch((error) => {
-                console.error("Final Firebase Sign-in Failed:", error);
-                displayError('Sign-in Error', 'Could not finalize your session. This usually means the custom token was invalid or expired.');
-            });
+        // --- 3. Handle Redirect Result (GitHub/Standard Flow) ---
+        // If we are here, there is no custom token. Check if we returned from a Firebase Redirect (GitHub).
+        try {
+            const result = await getRedirectResult(auth);
+            if (result && result.user) {
+                const providerId = result.providerId || 'oauth'; // e.g. 'github.com'
+                await finalizeUserSetup(result.user, providerId);
+            } else {
+                // No custom token AND no redirect result found.
+                displayError('Missing Authentication', 'No token or login data found. Please try logging in again.');
+            }
+        } catch (error) {
+            console.error("Redirect Sign-in Failed:", error);
+            displayError('Login Error', error.message);
+        }
     });
 </script>
 </body>
