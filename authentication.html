@@ -464,7 +464,7 @@
                     }
                 } catch (error) {
                     let msg = 'An unknown error occurred.';
-                    if (error.code === 'auth/email-already-in-use') msg = 'This email is already in use. Please log in instead.';
+                    if (error.code === 'auth/email-already-in-use') msg = 'This email is already in use. If you used a social provider, please sign in with that instead.';
                     else if (error.code === 'auth/invalid-email') msg = 'The email address is not valid.';
                     else if (error.code === 'auth/weak-password') msg = 'Password is too weak.';
                     showMessage(messageDivs.signup, msg);
@@ -512,7 +512,7 @@
                 } catch (error) {
                     let msg = `A problem occurred during social sign-in.`;
                     if (error.code === 'auth/account-exists-with-different-credential') {
-                        msg = 'An account with this email already exists using a different sign-in method.';
+                        msg = 'An account with this email already exists using a different sign-in method. Please sign in with the provider you originally used.';
                     } else if (error.code === 'auth/popup-closed-by-user') {
                         return; // User cancelled, do nothing.
                     }
