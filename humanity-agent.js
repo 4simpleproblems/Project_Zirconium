@@ -3387,5 +3387,4 @@ Response Structure: <THOUGHT_PROCESS>...</THOUGHT_PROCESS> [Your Answer]
     document.addEventListener('DOMContentLoaded', async () => {
         loadAppSettings(); // Replaced loadUserSettings
     });
-})();
-
+}();
