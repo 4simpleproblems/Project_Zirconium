@@ -87,23 +87,45 @@
 
     // --- Unified User Setup Logic ---
     // This function now only determines if the user is new or existing, and redirects accordingly.
-    const finalizeUserSetup = async (user, providerId) => {
+    const finalizeUserSetup = async (user, providerId, discordUsername) => {
         try {
             // Check for User Document Existence
             const userDoc = await getDoc(getUserDocRef(user.uid));
             
             if (!userDoc.exists()) {
-                // --- NEW USER FLOW: Redirect to Username Selection Panel on authentication.html ---
-                
-                // The user is successfully signed into Firebase Auth but has no profile document.
-                statusIcon.className = 'fas fa-check-circle text-5xl text-blue-500 mb-6';
-                statusTitle.textContent = 'Account Confirmed';
-                statusMessage.textContent = 'Redirecting to complete your profile setup...';
-                
+                // --- NEW USER FLOW: Create User Document in Firestore ---
+
+                const now = serverTimestamp();
+                const userEmail = user.email || ''; // Fallback for email if not available
+                let username = discordUsername || user.displayName || userEmail.split('@')[0];
+                if (username === '') { // Ensure username is not empty
+                    username = 'user' + user.uid.substring(0, 8); // Generate a unique placeholder
+                }
+
+                const userData = {
+                    uid: user.uid,
+                    email: userEmail,
+                    username: username, // Prioritize Discord username, then display name, then derive from email
+                    providerId: providerId,
+                    createdAt: now,
+                    lastLoginAt: now,
+                    // Add any other default fields for new users
+                    profilePicture: user.photoURL || '',
+                    bio: '',
+                    isOnline: true,
+                    lastSeen: now,
+                };
+
+                await setDoc(getUserDocRef(user.uid), userData);
+
+                statusIcon.className = 'fas fa-check-circle text-5xl text-green-500 mb-6';
+                statusTitle.textContent = 'Account Created!';
+                statusMessage.textContent = 'Welcome! Redirecting to your dashboard...';
+
                 setTimeout(() => {
-                    // This hash signals authentication.html to show the username picker panel.
-                    window.location.href = 'authentication.html#new_social_user';
+                    window.location.href = 'logged-in/dashboard.html';
                 }, 1000);
+
             } else {
                 // --- EXISTING USER FLOW: Redirect to Dashboard ---
                 console.log("User document already exists, redirecting to dashboard.");
@@ -126,6 +148,7 @@
     document.addEventListener('DOMContentLoaded', async () => {
         const params = new URLSearchParams(window.location.search);
         const customToken = params.get('custom_token');
+        const discordUsername = params.get('discord_username');
         const error = params.get('error');
 
         // --- 1. Check for Cloud Function Errors (Discord) ---
@@ -139,7 +162,7 @@
             try {
                 const userCredential = await signInWithCustomToken(auth, customToken);
                 // Provider ID is not strictly needed anymore, but we pass 'discord' for clarity
-                await finalizeUserSetup(userCredential.user, 'discord'); 
+                await finalizeUserSetup(userCredential.user, 'discord', discordUsername); 
             } catch (error) {
                 console.error("Custom Token Sign-in Failed:", error);
                 displayError('Sign-in Error', 'Could not finalize your session. The custom token was invalid or expired.');
