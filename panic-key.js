@@ -76,13 +76,9 @@ function addPanicKeyListener(settingsArray) {
         // --- MODIFICATION START ---
         // This check prevents the panic key from firing while a user is typing in any form field or the AI chat box.
         if (activeElement) {
-            // Check for the custom AI Mode input box by its ID
-            if (activeElement.id === 'ai-input') {
-                return;
-            }
-            // Check for standard browser input elements by their tag name
+            // Check if the active element is an input field, a textarea, a select element, or contenteditable.
             const tagName = activeElement.tagName.toLowerCase();
-            if (['input', 'select', 'textarea'].includes(tagName)) {
+            if (['input', 'select', 'textarea'].includes(tagName) || activeElement.isContentEditable) {
                 return;
             }
         }
