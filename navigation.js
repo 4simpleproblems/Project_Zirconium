@@ -845,7 +845,7 @@ let db;
                             ${avatarHtml}
                         </button>
                         <div id="auth-menu-container" class="auth-menu-container closed">
-                            <div class="px-3 py-3 border-b border-gray-700 mb-2 w-full min-w-0 flex items-center justify-between gap-3">
+                            <div class="px-3 py-3 border-b border-gray-700 mb-2 w-full min-w-0 flex items-center gap-3">
                                 <div class="min-w-0 flex-1 overflow-hidden">
                                     <div class="marquee-container" id="username-marquee">
                                         <p class="text-sm font-semibold auth-menu-username marquee-content">${username}</p>
@@ -853,9 +853,6 @@ let db;
                                     <div class="marquee-container" id="email-marquee">
                                         <p class="text-xs text-gray-400 auth-menu-email marquee-content">${email}</p>
                                     </div>
-                                </div>
-                                <div id="auth-menu-avatar-container" class="flex-shrink-0 w-10 h-10 rounded-full border border-gray-600 overflow-hidden">
-                                    ${avatarHtml}
                                 </div>
                             </div>
                             <a href="/logged-in/settings.html" class="auth-menu-link">

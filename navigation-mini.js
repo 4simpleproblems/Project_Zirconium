@@ -453,7 +453,7 @@ const FIREBASE_CONFIG = {
                         ${avatarHtml}
                     </button>
                     <div id="auth-menu-container" class="auth-menu-container closed">
-                        <div class="px-3 py-3 border-b border-gray-700 mb-2 flex items-center justify-between gap-3">
+                        <div class="px-3 py-3 border-b border-gray-700 mb-2 flex items-center gap-3">
                             <div class="min-w-0 flex-1 overflow-hidden">
                                 <div class="marquee-container" id="username-marquee">
                                     <p class="text-sm font-semibold text-white marquee-content">${username}</p>
@@ -461,9 +461,6 @@ const FIREBASE_CONFIG = {
                                 <div class="marquee-container" id="email-marquee">
                                     <p class="text-xs text-gray-400 marquee-content">${email}</p>
                                 </div>
-                            </div>
-                            <div id="auth-menu-avatar-container" class="flex-shrink-0 w-10 h-10 rounded-full border border-gray-600 overflow-hidden">
-                                ${avatarHtml}
                             </div>
                         </div>
                         <a href="/logged-in/dashboard.html" class="auth-menu-link"><i class="fa-solid fa-house-chimney-user w-5"></i>Dashboard</a>
