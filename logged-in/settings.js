@@ -2445,7 +2445,7 @@
 
                 // Function to update UI visibility and the letter avatar preview
                 const updatePfpUi = (type) => {
-                    mibiSettings.classList.toggle('hidden', selectedMode !== 'mibi'); // Ensure the container div for Mibi settings is visible
+                    mibiSettings.classList.toggle('hidden', type !== 'mibi'); // Ensure the container div for Mibi settings is visible
                     customSettings.classList.toggle('hidden', type !== 'custom');
 
                     // Update letter avatar preview
