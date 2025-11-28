@@ -97,19 +97,6 @@
             }
         };
 
-        // Constants for Letter Avatar Colors
-        const LETTER_AVATAR_COLORS = [
-            'linear-gradient(135deg, #007bff, #0056b3)', // Blue
-            'linear-gradient(135deg, #28a745, #1e7e34)', // Green
-            'linear-gradient(135deg, #ffc107, #d39e00)', // Yellow
-            'linear-gradient(135deg, #dc3545, #bd2130)', // Red
-            'linear-gradient(135deg, #6f42c1, #563d7c)', // Purple
-            'linear-gradient(135deg, #fd7e14, #cb6b10)', // Orange
-            'linear-gradient(135deg, #20c997, #17a2b8)', // Teal
-            'linear-gradient(135deg, #e83e8c, #ad2e6c)', // Pink
-            'linear-gradient(135deg, #6c757d, #5a6268)', // Gray
-            'linear-gradient(135deg, #17a2b8, #138496)'  // Cyan
-        ];
         // --- NEW: Constants for Privacy Settings ---
         
         // IndexedDB Config for Panic Key
@@ -2013,70 +2000,6 @@
                 // Letter inputs
                 const letterInput = document.getElementById('pfpLetterInput');
                 const saveLetterTextBtn = document.getElementById('saveLetterTextBtn');
-                const letterColorPalette = document.getElementById('letterColorPalette');
-                
-                // --- PFP Mode Selection ---
-                // Helper to update visibility
-                const updatePfpModeVisibility = (mode) => {
-                    letterSettings.classList.toggle('hidden', mode !== 'letter');
-                    customSettings.classList.toggle('hidden', mode !== 'custom');
-                };
-
-                // Set initial selection and visibility
-                pfpModeSelect.value = currentPfpType;
-                updatePfpModeVisibility(currentPfpType);
-                
-                pfpModeSelect.addEventListener('change', (e) => {
-                    updatePfpModeVisibility(e.target.value);
-                });
-
-                // --- Letter Avatar Logic ---
-                // Initialize color palette
-                letterColorPalette.innerHTML = LETTER_AVATAR_COLORS.map(color => `
-                    <div class="color-box" style="background: ${color};" data-color="${color}"></div>
-                `).join('');
-
-                // Load saved letter avatar settings
-                let selectedLetterColor = userData.letterAvatarColor || LETTER_AVATAR_COLORS[0];
-                letterInput.value = userData.letterAvatarText || currentUser.displayName ? currentUser.displayName.substring(0, 3).toUpperCase() : '';
-
-                // Add active class to selected color
-                const colorBoxes = letterColorPalette.querySelectorAll('.color-box');
-                colorBoxes.forEach(box => {
-                    if (box.dataset.color === selectedLetterColor) {
-                        box.classList.add('active');
-                    }
-                    box.addEventListener('click', () => {
-                        colorBoxes.forEach(b => b.classList.remove('active'));
-                        box.classList.add('active');
-                        selectedLetterColor = box.dataset.color;
-                    });
-                });
-                
-                // Save Letter Avatar Text & Color
-                saveLetterTextBtn.addEventListener('click', async () => {
-                    const avatarText = letterInput.value.trim().substring(0, 3).toUpperCase();
-                    if (!avatarText) {
-                        showMessage(pfpMessage, 'Letter avatar text cannot be empty.', 'error');
-                        return;
-                    }
-                    
-                    try {
-                        await updateDoc(userDocRef, {
-                            pfpType: 'letter',
-                            letterAvatarText: avatarText,
-                            letterAvatarColor: selectedLetterColor
-                        });
-                        showMessage(pfpMessage, 'Letter avatar settings saved!', 'success');
-                        // Refresh to apply changes (and update preview if needed elsewhere)
-                        setTimeout(() => switchTab('personalization'), 1000);
-                    } catch (error) {
-                        console.error("Error saving letter avatar settings:", error);
-                        showMessage(pfpMessage, 'Failed to save letter avatar settings.', 'error');
-                    }
-                });
-
-                // --- Custom Upload Logic ---
 
                 // --- CONDITIONAL GOOGLE OPTION ---
                 const hasGoogle = currentUser.providerData.some(p => p.providerId === 'google.com');
