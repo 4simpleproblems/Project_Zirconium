@@ -550,6 +550,83 @@
             border-color: white;
             box-shadow: 0 0 0 2px #4f46e5; /* Ring effect */
         }
+
+        /* --- Mibi Modal Styles --- */
+        #mibiModal {
+            display: none;
+            position: fixed;
+            z-index: 2100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        #mibiModal.active {
+            opacity: 1;
+        }
+        #mibiContent {
+            background: linear-gradient(135deg, #1a1a1a, #0d0d0d);
+            padding: 40px;
+            border-radius: 24px;
+            border: 2px solid #4f46e5;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 0 30px rgba(79, 70, 229, 0.3);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+        #mibiModal.active #mibiContent {
+            transform: scale(1);
+        }
+        .mibi-title {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #4f46e5, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1.5rem;
+        }
+        .mibi-lore {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: #d1d5db;
+            margin-bottom: 2.5rem;
+            font-style: italic;
+        }
+        .mibi-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            width: 100%;
+        }
+        
+        /* --- Sparkle Effect --- */
+        .sparkle {
+            position: fixed;
+            pointer-events: none;
+            background-color: white;
+            border-radius: 50%;
+            opacity: 0;
+            z-index: 9999;
+            animation: sparkle-anim 1s ease-out forwards;
+        }
+        @keyframes sparkle-anim {
+            0% {
+                transform: scale(0) translate(0, 0);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1) translate(var(--tx), var(--ty));
+                opacity: 0;
+            }
+        }
     </style>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-1D4F692C1Q"></script>
 <script>
@@ -628,6 +705,25 @@
                 </button>
                 <button id="submitCropBtn" class="btn-toolbar-style btn-primary-override">
                     <i class="fa-solid fa-check mr-2"></i> Submit
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mibi Modal -->
+    <div id="mibiModal">
+        <div id="mibiContent">
+            <h2 class="mibi-title">Meet the Mibis!</h2>
+            <p class="mibi-lore">
+                theyre js some chunky lil guys that survived the meteor impact that the dinosaurs died from by absorbing the blast impact with their chunkiness.
+            </p>
+            
+            <div class="mibi-buttons">
+                <button id="mibiCancelBtn" class="btn-toolbar-style">
+                    Cancel
+                </button>
+                <button id="mibiNextBtn" class="btn-toolbar-style btn-primary-override">
+                    Next <i class="fa-solid fa-arrow-right ml-2"></i>
                 </button>
             </div>
         </div>
