@@ -282,8 +282,7 @@
             pointer-events: none;
             z-index: 50;
             margin-top: 2px;
-            overflow-y: auto; /* Changed from hidden */
-            max-height: 200px; /* Added max-height */
+            overflow: hidden;
         }
         .custom-select.open .custom-options {
             opacity: 1;
@@ -310,17 +309,6 @@
             background-color: #1a1a1a;
             color: #ffffff;
             font-weight: 400;
-        }
-        .custom-option-content {
-            display: flex;
-            align-items: center;
-            gap: 10px; /* Space between favicon and text */
-        }
-        .custom-option-content img {
-            width: 20px; /* Favicon size */
-            height: 20px;
-            object-fit: contain;
-            flex-shrink: 0;
         }
         .arrow {
             position: relative;
@@ -1766,25 +1754,11 @@
             const trigger = document.createElement('div');
             trigger.className = 'custom-select-trigger';
             
-            // Helper to get option HTML with favicon
-            const getOptionContentHtml = (option) => {
-                const preset = urlChangerPresets.find(p => p.id === option.value);
-                if (preset && preset.favicon) {
-                    return `
-                        <div class="custom-option-content">
-                            <img src="${preset.favicon}" alt="${preset.name} Favicon">
-                            <span>${option.textContent}</span>
-                        </div>
-                    `;
-                }
-                return `<span>${option.textContent}</span>`;
-            };
-
             // Get initial text
             const selectedOption = selectElement.options[selectElement.selectedIndex];
-            const initialHtml = selectedOption ? getOptionContentHtml(selectedOption) : '<span>Select...</span>';
+            const initialText = selectedOption ? selectedOption.textContent : 'Select...';
             
-            trigger.innerHTML = `${initialHtml}<div class="arrow"></div>`; // Use initialHtml here
+            trigger.innerHTML = `<span>${initialText}</span><div class="arrow"></div>`;
             
             const optionsContainer = document.createElement('div');
             optionsContainer.className = 'custom-options';
@@ -1794,12 +1768,11 @@
                 const customOption = document.createElement('div');
                 customOption.className = 'custom-option' + (option.selected ? ' selected' : '');
                 customOption.dataset.value = option.value;
-                // --- MODIFICATION: Use innerHTML with favicon ---
-                customOption.innerHTML = getOptionContentHtml(option); 
+                customOption.textContent = option.textContent;
                 
                 customOption.addEventListener('click', function() {
                     // Update Trigger Text
-                    trigger.innerHTML = `${this.innerHTML}<div class="arrow"></div>`; // Update trigger with selected option's full HTML
+                    trigger.querySelector('span').textContent = this.textContent;
                     
                     // Update Classes
                     customSelect.classList.remove('open');
@@ -1842,15 +1815,14 @@
                         const customOption = document.createElement('div');
                         customOption.className = 'custom-option' + (option.selected ? ' selected' : '');
                         customOption.dataset.value = option.value;
-                        // --- MODIFICATION: Use innerHTML with favicon ---
-                        customOption.innerHTML = getOptionContentHtml(option);
+                        customOption.textContent = option.textContent;
                         
                         if (option.selected) {
-                             trigger.innerHTML = `${getOptionContentHtml(option)}<div class="arrow"></div>`;
+                             trigger.querySelector('span').textContent = option.textContent;
                         }
 
                         customOption.addEventListener('click', function() {
-                            trigger.innerHTML = `${this.innerHTML}<div class="arrow"></div>`;
+                            trigger.querySelector('span').textContent = this.textContent;
                             customSelect.classList.remove('open');
                             optionsContainer.querySelectorAll('.custom-option').forEach(opt => opt.classList.remove('selected'));
                             this.classList.add('selected');
@@ -1865,7 +1837,7 @@
                     const optionToSelect = Array.from(selectElement.options).find(opt => opt.value === value);
                     if (optionToSelect) {
                         selectElement.value = value;
-                        trigger.innerHTML = `${getOptionContentHtml(optionToSelect)}<div class="arrow"></div>`;
+                        trigger.querySelector('span').textContent = optionToSelect.textContent;
                         optionsContainer.querySelectorAll('.custom-option').forEach(opt => {
                             if (opt.dataset.value === value) opt.classList.add('selected');
                             else opt.classList.remove('selected');
@@ -3233,4 +3205,3 @@
     </script>
 </body>
 </html>
-    
