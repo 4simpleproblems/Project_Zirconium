@@ -940,18 +940,26 @@
                                 <label for="pfpModeSelect" class="block text-gray-400 text-sm font-light mb-2">Display Mode</label>
                                 <select id="pfpModeSelect" class="input-select-style">
                                     <option value="google">Use Google Profile Picture</option>
-                                    <option value="mibi">Use Mibi Avatar</option>
+                                    <option value="letter">Use Letter Avatar</option>
                                     <option value="custom">Upload Custom Image</option>
                                 </select>
                             </div>
 
-                            <!-- Mibi Settings (Hidden by default) -->
-                            <div id="pfpMibiSettings" class="hidden flex flex-col gap-4 mt-2">
-                                <div class="p-4 border border-[#333] rounded-lg bg-[#111]">
-                                    <p class="text-sm text-gray-400 mb-2">Mibi Avatar Selected</p>
-                                    <button id="openMibiMenuBtn" class="btn-toolbar-style btn-primary-override w-full justify-center">
-                                        <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> Open Mibi Menu
-                                    </button>
+                            <!-- Letter Settings (Hidden by default) -->
+                            <div id="pfpLetterSettings" class="hidden flex flex-col gap-4 mt-2">
+                                <div>
+                                    <label for="pfpLetterInput" class="block text-gray-400 text-sm font-light mb-2">Avatar Text (Max 3 Chars)</label>
+                                    <div class="flex gap-2">
+                                        <input type="text" id="pfpLetterInput" maxlength="3" class="input-text-style w-32" placeholder="ABC">
+                                        <button id="saveLetterTextBtn" class="btn-toolbar-style btn-primary-override">
+                                            <i class="fa-solid fa-save mr-2"></i> Save Text
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <p class="text-xs text-gray-500 mb-2">Select Background Gradient:</p>
+                                    <div id="letterColorPalette" class="color-palette-grid"></div>
                                 </div>
                             </div>
 
@@ -1044,7 +1052,7 @@
                         <span class="text-emphasis">4SP (4simpleproblems)</span> is a <span class="text-emphasis">Student Toolkit and Entertainment website</span> designed to boost student productivity and provide useful resources. We aim to solve four core challenges that students face every day by integrating essential tools and engaging digital content into one seamless platform.
                     </p>
                     
-                    <h3 class="text-xl font-bold text-white mt-6 mb-2">The Four Simple Problems We Address</h3>
+                    <h3 class="text-xl font-bold text-white mt-6 mb-2">The Four Simple Challenges We Address</h3>
                     <ul class="list-disc list-inside ml-4 text-lg text-gray-400 leading-relaxed">
                         <li>Providing a <span class="text-emphasis">digital leisure platform free of advertisements</span>.</li>
                         <li>Delivering a <span class="text-emphasis">student toolkit designed for accessibility and consistent availability</span>, bypassing typical institutional network restrictions.</li>
@@ -1984,19 +1992,14 @@
 
                 const currentPfpType = userData.pfpType || 'google';
                 const pfpModeSelect = document.getElementById('pfpModeSelect');
-                
-                // New elements
-                const mibiSettings = document.getElementById('pfpMibiSettings');
-                const openMibiMenuBtn = document.getElementById('openMibiMenuBtn');
-                
+                const letterSettings = document.getElementById('pfpLetterSettings');
                 const customSettings = document.getElementById('pfpCustomSettings');
                 const previewImg = document.getElementById('customPfpPreview');
                 const previewPlaceholder = document.getElementById('customPfpPlaceholder');
                 
-                // Mibi Modal Elements
-                const mibiModal = document.getElementById('mibiModal');
-                const mibiCancelBtn = document.getElementById('mibiCancelBtn');
-                const mibiNextBtn = document.getElementById('mibiNextBtn');
+                // Letter inputs
+                const letterInput = document.getElementById('pfpLetterInput');
+                const saveLetterTextBtn = document.getElementById('saveLetterTextBtn');
 
                 // --- CONDITIONAL GOOGLE OPTION ---
                 const hasGoogle = currentUser.providerData.some(p => p.providerId === 'google.com');
@@ -2005,7 +2008,11 @@
                     if (googleOption) {
                         googleOption.remove();
                     }
-                    // If current selection was google, default to mibi logic handled below
+                    // If current selection was google (shouldn't happen for new non-google users but possible for legacy), default to letter
+                    if (currentPfpType === 'google') {
+                        // Wait, we can't update userData here easily without potentially overwriting.
+                        // Just let the UI default to the first available option or handle visually.
+                    }
                 }
 
                 // Function to dispatch instant update event
@@ -2013,99 +2020,50 @@
                     window.dispatchEvent(new CustomEvent('pfp-updated', { 
                         detail: { 
                             pfpType: userData.pfpType, 
-                            customPfp: userData.customPfp
+                            customPfp: userData.customPfp, 
+                            pfpLetterBg: userData.pfpLetterBg,
+                            pfpLetters: userData.pfpLetters
                         }
                     }));
                 };
 
-                // Sparkle Effect Function
-                const triggerSparkleEffect = () => {
-                    const count = 30;
-                    for (let i = 0; i < count; i++) {
-                        const sparkle = document.createElement('div');
-                        sparkle.className = 'sparkle';
-                        
-                        // Random starting position near center
-                        const x = window.innerWidth / 2;
-                        const y = window.innerHeight / 2;
-                        
-                        sparkle.style.left = x + 'px';
-                        sparkle.style.top = y + 'px';
-                        
-                        // Random size
-                        const size = Math.random() * 5 + 5;
-                        sparkle.style.width = size + 'px';
-                        sparkle.style.height = size + 'px';
-                        
-                        // Random destination
-                        const angle = Math.random() * Math.PI * 2;
-                        const dist = Math.random() * 300 + 50;
-                        const tx = Math.cos(angle) * dist + 'px';
-                        const ty = Math.sin(angle) * dist + 'px';
-                        
-                        sparkle.style.setProperty('--tx', tx);
-                        sparkle.style.setProperty('--ty', ty);
-                        sparkle.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 75%)`; // Colorful sparkles
-                        
-                        document.body.appendChild(sparkle);
-                        
-                        // Cleanup
-                        setTimeout(() => sparkle.remove(), 1000);
-                    }
-                };
-                
-                const openMibiMenu = () => {
-                    mibiModal.style.display = 'flex';
-                    requestAnimationFrame(() => mibiModal.classList.add('active'));
-                };
-                
-                const closeMibiMenu = () => {
-                    mibiModal.classList.remove('active');
-                    setTimeout(() => mibiModal.style.display = 'none', 300);
-                };
-
-                // Mibi Modal Listeners
-                if (mibiCancelBtn) mibiCancelBtn.onclick = closeMibiMenu;
-                if (mibiNextBtn) mibiNextBtn.onclick = closeMibiMenu;
-                if (openMibiMenuBtn) openMibiMenuBtn.onclick = openMibiMenu;
-
-                // Function to update UI visibility and the avatar preview
+                // Function to update UI visibility and the letter avatar preview
                 const updatePfpUi = (type) => {
-                    if (mibiSettings) mibiSettings.classList.toggle('hidden', type !== 'mibi');
+                    letterSettings.classList.toggle('hidden', type !== 'letter');
                     customSettings.classList.toggle('hidden', type !== 'custom');
 
-                    // Update avatar preview
-                    if (type === 'mibi') {
-                        // Placeholder for now, showing a generic user or specific mibi icon
-                        customPfpPlaceholder.style.display = 'flex';
-                        customPfpPlaceholder.className = `w-full h-full flex items-center justify-center text-gray-600`;
-                        customPfpPlaceholder.innerHTML = '<i class="fa-solid fa-user-astronaut fa-2x"></i>';
-                        customPfpPlaceholder.style.background = '';
+                    // Update letter avatar preview
+                    if (type === 'letter') {
+                        const letterText = (userData.pfpLetters || (currentUser?.displayName ? currentUser.displayName.charAt(0) : '')).toUpperCase();
+                        const letterBg = userData.pfpLetterBg || 'linear-gradient(135deg, #374151 0%, #111827 100%)';
+                        const letterColor = window.pfpColorUtils.getLetterAvatarTextColor(letterBg);
+                        const fontSizeClass = letterText.length >= 3 ? 'text-xs' : (letterText.length === 2 ? 'text-sm' : 'text-base');
+                        
+                        customPfpPlaceholder.textContent = letterText;
+                        customPfpPlaceholder.style.background = letterBg;
+                        customPfpPlaceholder.style.color = letterColor;
+                        customPfpPlaceholder.className = `w-full h-full flex items-center justify-center text-gray-600 font-semibold ${fontSizeClass}`;
                         customPfpPreview.style.display = 'none';
+                        customPfpPlaceholder.style.display = 'flex';
                     } else if (type === 'custom' && userData.customPfp) {
                         customPfpPreview.src = userData.customPfp;
                         customPfpPreview.style.display = 'block';
                         customPfpPlaceholder.style.display = 'none';
                     } else {
-                        // Default/Google
+                        // Default/Google or no custom/letter set
                         customPfpPreview.style.display = 'none';
+                        // For Google or empty, show generic user icon
                         customPfpPlaceholder.style.display = 'flex';
                         customPfpPlaceholder.className = `w-full h-full flex items-center justify-center text-gray-600`;
-                        customPfpPlaceholder.innerHTML = '<i class="fa-solid fa-user"></i>'; 
-                        customPfpPlaceholder.style.background = ''; 
-                        customPfpPlaceholder.style.color = ''; 
+                        customPfpPlaceholder.innerHTML = '<i class="fa-solid fa-user"></i>'; // Reset to default icon
+                        customPfpPlaceholder.style.background = ''; // Clear custom background
+                        customPfpPlaceholder.style.color = ''; // Clear custom color
                     }
                 };
 
                 // Init Custom Dropdown
                 const pfpDropdown = setupCustomDropdown(pfpModeSelect, async (type) => {
                     updatePfpUi(type);
-                    
-                    if (type === 'mibi') {
-                        triggerSparkleEffect();
-                        openMibiMenu();
-                    }
-
                     // Auto-save type change
                     try {
                         await updateDoc(userDocRef, { pfpType: type });
@@ -2118,17 +2076,80 @@
                 });
 
                 // Init UI with current value
+                // Ensure value is valid (e.g. if google was selected but removed)
                 let validPfpType = currentPfpType;
                 if (!hasGoogle && currentPfpType === 'google') {
-                    validPfpType = 'mibi'; 
+                    validPfpType = 'letter'; // Fallback
                 }
-                // Fallback if type was 'letter' or invalid
-                if (!['google', 'mibi', 'custom'].includes(validPfpType)) {
-                    validPfpType = 'mibi'; 
-                }
-                
                 pfpDropdown.setValue(validPfpType);
                 updatePfpUi(validPfpType);
+                
+
+                // --- Letter Logic ---
+                // Load existing letters
+                if (userData.pfpLetters) {
+                    letterInput.value = userData.pfpLetters;
+                } else {
+                    letterInput.value = userData.username ? userData.username.substring(0, 1).toUpperCase() : '';
+                }
+
+                // Save Letter Text
+                saveLetterTextBtn.addEventListener('click', async () => {
+                    const text = letterInput.value.trim().toUpperCase().substring(0, 3);
+                    if (!text) {
+                        showMessage(pfpMessage, 'Please enter at least one letter.', 'warning');
+                        return;
+                    }
+                    try {
+                        saveLetterTextBtn.disabled = true;
+                        await updateDoc(userDocRef, { pfpLetters: text });
+                        userData.pfpLetters = text; // Update local
+                        triggerNavbarUpdate();
+                        showMessage(pfpMessage, 'Avatar text saved!', 'success');
+                    } catch (e) {
+                        showMessage(pfpMessage, 'Error saving text.', 'error');
+                    } finally {
+                        saveLetterTextBtn.disabled = false;
+                    }
+                });
+
+                // Gradient Palette Logic
+                const paletteContainer = document.getElementById('letterColorPalette');
+                const gradients = [
+                    'linear-gradient(135deg, #ef4444, #a020f0)', // Red to Purple
+                    'linear-gradient(135deg, #f97316, #f59e0b)', // Orange to Amber
+                    'linear-gradient(135deg, #eab308, #84cc16)', // Amber to Lime
+                    'linear-gradient(135deg, #22c55e, #10b981)', // Emerald to Teal
+                    'linear-gradient(135deg, #14b8a6, #06b6d4)', // Teal to Cyan
+                    'linear-gradient(135deg, #0ea5e9, #3b82f6)', // Light Blue to Blue
+                    'linear-gradient(135deg, #6366f1, #8b5cf6)', // Indigo to Violet
+                    'linear-gradient(135deg, #a855f7, #d946ef)', // Purple to Magenta
+                    'linear-gradient(135deg, #ec4899, #f43f5e)', // Pink to Rose
+                    'linear-gradient(135deg, #e11d48, #be185d)', // Rose to Ruby
+                    'linear-gradient(135deg, #a1a1aa, #71717a)', // Cool Gray
+                    'linear-gradient(135deg, #52525b, #27272a)'  // Dark Gray
+                ];
+                const currentLetterBg = userData.pfpLetterBg || 'linear-gradient(135deg, #374151, #1f2937)';
+
+                gradients.forEach(grad => {
+                    const dot = document.createElement('div');
+                    dot.className = `color-option ${grad === currentLetterBg ? 'selected' : ''}`;
+                    dot.style.background = grad;
+                    dot.addEventListener('click', async () => {
+                        // Update UI
+                        paletteContainer.querySelectorAll('.color-option').forEach(d => d.classList.remove('selected'));
+                        dot.classList.add('selected');
+                        
+                        // Save
+                        try {
+                            await updateDoc(userDocRef, { pfpLetterBg: grad });
+                            userData.pfpLetterBg = grad; // Update local
+                            triggerNavbarUpdate();
+                            showMessage(pfpMessage, 'Background gradient saved!', 'success');
+                        } catch (e) { showMessage(pfpMessage, 'Error saving gradient.', 'error'); }
+                    });
+                    paletteContainer.appendChild(dot);
+                });
 
                 // --- Custom Upload Logic ---
                 const uploadBtn = document.getElementById('uploadPfpBtn');
