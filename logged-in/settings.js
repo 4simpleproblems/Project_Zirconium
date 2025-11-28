@@ -940,6 +940,7 @@
                                 <label for="pfpModeSelect" class="block text-gray-400 text-sm font-light mb-2">Display Mode</label>
                                 <select id="pfpModeSelect" class="input-select-style">
                                     <option value="google">Use Google Profile Picture</option>
+                                    <option value="letter">Use Letter Avatar</option>
                                     <option value="custom">Upload Custom Image</option>
                                 </select>
                             </div>
@@ -2026,10 +2027,40 @@
                     }));
                 };
 
-                // Function to update UI visibility
+                // Function to update UI visibility and the letter avatar preview
                 const updatePfpUi = (type) => {
+                    letterSettings.classList.toggle('hidden', type !== 'letter');
                     customSettings.classList.toggle('hidden', type !== 'custom');
-                    
+
+                    // Update letter avatar preview
+                    if (type === 'letter') {
+                        const letterText = (userData.pfpLetters || (currentUser?.displayName ? currentUser.displayName.charAt(0) : '')).toUpperCase();
+                        const letterBg = userData.pfpLetterBg || 'linear-gradient(135deg, #374151 0%, #111827 100%)';
+                        const letterColor = window.pfpColorUtils.getLetterAvatarTextColor(letterBg);
+                        const fontSizeClass = letterText.length >= 3 ? 'text-xs' : (letterText.length === 2 ? 'text-sm' : 'text-base');
+                        
+                        customPfpPlaceholder.textContent = letterText;
+                        customPfpPlaceholder.style.background = letterBg;
+                        customPfpPlaceholder.style.color = letterColor;
+                        customPfpPlaceholder.className = `w-full h-full flex items-center justify-center text-gray-600 font-semibold ${fontSizeClass}`;
+                        customPfpPreview.style.display = 'none';
+                        customPfpPlaceholder.style.display = 'flex';
+                    } else if (type === 'custom' && userData.customPfp) {
+                        customPfpPreview.src = userData.customPfp;
+                        customPfpPreview.style.display = 'block';
+                        customPfpPlaceholder.style.display = 'none';
+                    } else {
+                        // Default/Google or no custom/letter set
+                        customPfpPreview.style.display = 'none';
+                        // For Google or empty, show generic user icon
+                        customPfpPlaceholder.style.display = 'flex';
+                        customPfpPlaceholder.className = `w-full h-full flex items-center justify-center text-gray-600`;
+                        customPfpPlaceholder.innerHTML = '<i class="fa-solid fa-user"></i>'; // Reset to default icon
+                        customPfpPlaceholder.style.background = ''; // Clear custom background
+                        customPfpPlaceholder.style.color = ''; // Clear custom color
+                    }
+                };
+
                 // Init Custom Dropdown
                 const pfpDropdown = setupCustomDropdown(pfpModeSelect, async (type) => {
                     updatePfpUi(type);
