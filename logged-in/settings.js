@@ -970,6 +970,18 @@
 
                             <!-- Mibi Avatar Settings (Hidden by default) -->
                             <div id="pfpMibiSettings" class="hidden flex flex-col gap-4 mt-2">
+                                <p class="text-sm font-light text-gray-400 mb-4">
+                                    Create your custom Mibi Avatar!
+                                </p>
+                                <button id="open-mac-menu-btn" class="btn-toolbar-style btn-primary-override">
+                                    <i class="fa-solid fa-paintbrush mr-2"></i> Open Mibi Avatar Creator
+                                </button>
+                                <p class="text-sm font-light text-gray-400 mb-4">
+                                    Create your custom Mibi Avatar!
+                                </p>
+                                <button id="open-mac-menu-btn" class="btn-toolbar-style btn-primary-override">
+                                    <i class="fa-solid fa-paintbrush mr-2"></i> Open Mibi Avatar Creator
+                                </button>
                                 <div id="mibi-mac-menu" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
                                     <div class="relative bg-[#1a1a1a] p-6 rounded-lg shadow-xl w-11/12 max-w-4xl h-[80vh] flex flex-col overflow-hidden">
                                         <!-- MAC Menu Header -->
@@ -1504,6 +1516,10 @@
 
         // --- Utility: Custom Dropdown Setup ---
         function setupCustomDropdown(selectElement, onChangeCallback) {
+            if (!selectElement) {
+                console.error("setupCustomDropdown: selectElement is null.");
+                return null; // Return null if the element doesn't exist
+            }
             // Hide original select
             selectElement.style.display = 'none';
             
@@ -2412,10 +2428,8 @@
                 const customSettings = document.getElementById('pfpCustomSettings');
                 const previewImg = document.getElementById('customPfpPreview');
                 const previewPlaceholder = document.getElementById('customPfpPlaceholder');
-                
-                // Letter inputs
-                const letterInput = document.getElementById('pfpLetterInput');
-                const saveLetterTextBtn = document.getElementById('saveLetterTextBtn');
+                const macMenu = document.getElementById('mibi-mac-menu'); // Reference to the MAC menu overlay
+                const openMacMenuBtn = document.getElementById('open-mac-menu-btn'); // New button
 
                 // --- CONDITIONAL GOOGLE OPTION ---
                 const hasGoogle = currentUser.providerData.some(p => p.providerId === 'google.com');
@@ -2424,9 +2438,7 @@
                     if (googleOption) {
                         googleOption.remove();
                     }
-                    // If current selection was google (shouldn't happen for new non-google users but possible for legacy), default to letter
                     if (currentPfpType === 'google') {
-                        // Wait, we can't update userData here easily without potentially overwriting.
                         // Just let the UI default to the first available option or handle visually.
                     }
                 }
@@ -2436,39 +2448,26 @@
                     window.dispatchEvent(new CustomEvent('pfp-updated', { 
                         detail: { 
                             pfpType: userData.pfpType, 
-                            customPfp: userData.customPfp, 
-                            pfpLetterBg: userData.pfpLetterBg,
-                            pfpLetters: userData.pfpLetters
+                            customPfp: userData.customPfp
                         }
                     }));
                 };
 
-                // Function to update UI visibility and the letter avatar preview
+                // Function to update UI visibility and the avatar preview
                 const updatePfpUi = (type) => {
-                    mibiSettings.classList.toggle('hidden', type !== 'mibi'); // Ensure the container div for Mibi settings is visible
+                    mibiSettings.classList.toggle('hidden', type !== 'mibi');
                     customSettings.classList.toggle('hidden', type !== 'custom');
+                    // Hide the MAC menu overlay unless explicitly opened
+                    macMenu.classList.add('hidden');
 
-                    // Update letter avatar preview
-                    if (type === 'letter') {
-                        const letterText = (userData.pfpLetters || (currentUser?.displayName ? currentUser.displayName.charAt(0) : '')).toUpperCase();
-                        const letterBg = userData.pfpLetterBg || 'linear-gradient(135deg, #374151 0%, #111827 100%)';
-                        const letterColor = window.pfpColorUtils.getLetterAvatarTextColor(letterBg);
-                        const fontSizeClass = letterText.length >= 3 ? 'text-xs' : (letterText.length === 2 ? 'text-sm' : 'text-base');
-                        
-                        customPfpPlaceholder.textContent = letterText;
-                        customPfpPlaceholder.style.background = letterBg;
-                        customPfpPlaceholder.style.color = letterColor;
-                        customPfpPlaceholder.className = `w-full h-full flex items-center justify-center text-gray-600 font-semibold ${fontSizeClass}`;
-                        customPfpPreview.style.display = 'none';
-                        customPfpPlaceholder.style.display = 'flex';
-                    } else if (type === 'custom' && userData.customPfp) {
+                    // Update avatar preview based on type
+                    if (type === 'custom' && userData.customPfp) {
                         customPfpPreview.src = userData.customPfp;
                         customPfpPreview.style.display = 'block';
                         customPfpPlaceholder.style.display = 'none';
                     } else {
-                        // Default/Google or no custom/letter set
+                        // Default/Google or no custom/mibi set
                         customPfpPreview.style.display = 'none';
-                        // For Google or empty, show generic user icon
                         customPfpPlaceholder.style.display = 'flex';
                         customPfpPlaceholder.className = `w-full h-full flex items-center justify-center text-gray-600`;
                         customPfpPlaceholder.innerHTML = '<i class="fa-solid fa-user"></i>'; // Reset to default icon
@@ -2491,83 +2490,27 @@
                     }
                 });
 
-                // Init UI with current value
-                // Ensure value is valid (e.g. if google was selected but removed)
-                let validPfpType = currentPfpType;
-                if (!hasGoogle && currentPfpType === 'google') {
-                    validPfpType = 'letter'; // Fallback
+                if (!pfpDropdown) { // Defensive check
+                    console.error("pfpDropdown could not be initialized.");
+                    return; // Exit if dropdown failed to initialize
                 }
-                pfpDropdown.setValue(validPfpType);
-                updatePfpUi(validPfpType);
                 
-
-                // --- Letter Logic ---
-                // Load existing letters
-                if (userData.pfpLetters) {
-                    letterInput.value = userData.pfpLetters;
-                } else {
-                    letterInput.value = userData.username ? userData.username.substring(0, 1).toUpperCase() : '';
+                // Add event listener for the Open Mibi Avatar Creator button
+                if (openMacMenuBtn) {
+                    openMacMenuBtn.addEventListener('click', () => {
+                        macMenu.classList.remove('hidden'); // Show the MAC menu overlay
+                        currentMacSlide = 1; // Reset to first slide
+                        showMacSlide(currentMacSlide);
+                    });
                 }
 
-                // Save Letter Text
-                saveLetterTextBtn.addEventListener('click', async () => {
-                    const text = letterInput.value.trim().toUpperCase().substring(0, 3);
-                    if (!text) {
-                        showMessage(pfpMessage, 'Please enter at least one letter.', 'warning');
-                        return;
-                    }
-                    try {
-                        saveLetterTextBtn.disabled = true;
-                        await updateDoc(userDocRef, { pfpLetters: text });
-                        userData.pfpLetters = text; // Update local
-                        triggerNavbarUpdate();
-                        showMessage(pfpMessage, 'Avatar text saved!', 'success');
-                    } catch (e) {
-                        showMessage(pfpMessage, 'Error saving text.', 'error');
-                    } finally {
-                        saveLetterTextBtn.disabled = false;
-                    }
-                });
-
-                // Gradient Palette Logic
-                const paletteContainer = document.getElementById('letterColorPalette');
-                const gradients = [
-                    'linear-gradient(135deg, #ef4444, #a020f0)', // Red to Purple
-                    'linear-gradient(135deg, #f97316, #f59e0b)', // Orange to Amber
-                    'linear-gradient(135deg, #eab308, #84cc16)', // Amber to Lime
-                    'linear-gradient(135deg, #22c55e, #10b981)', // Emerald to Teal
-                    'linear-gradient(135deg, #14b8a6, #06b6d4)', // Teal to Cyan
-                    'linear-gradient(135deg, #0ea5e9, #3b82f6)', // Light Blue to Blue
-                    'linear-gradient(135deg, #6366f1, #8b5cf6)', // Indigo to Violet
-                    'linear-gradient(135deg, #a855f7, #d946ef)', // Purple to Magenta
-                    'linear-gradient(135deg, #ec4899, #f43f5e)', // Pink to Rose
-                    'linear-gradient(135deg, #e11d48, #be185d)', // Rose to Ruby
-                    'linear-gradient(135deg, #a1a1aa, #71717a)', // Cool Gray
-                    'linear-gradient(135deg, #52525b, #27272a)'  // Dark Gray
-                ];
-                const currentLetterBg = userData.pfpLetterBg || 'linear-gradient(135deg, #374151, #1f2937)';
-
-                gradients.forEach(grad => {
-                    const dot = document.createElement('div');
-                    dot.className = `color-option ${grad === currentLetterBg ? 'selected' : ''}`;
-                    dot.style.background = grad;
-                    dot.addEventListener('click', async () => {
-                        // Update UI
-                        paletteContainer.querySelectorAll('.color-option').forEach(d => d.classList.remove('selected'));
-                        dot.classList.add('selected');
-                        
-                        // Save
-                        try {
-                            await updateDoc(userDocRef, { pfpLetterBg: grad });
-                            userData.pfpLetterBg = grad; // Update local
-                            triggerNavbarUpdate();
-                            showMessage(pfpMessage, 'Background gradient saved!', 'success');
-                        } catch (e) { showMessage(pfpMessage, 'Error saving gradient.', 'error'); }
-                    });
-                    paletteContainer.appendChild(dot);
-                });
-
-                // --- Custom Upload Logic ---
+                // Set initial display based on saved settings
+                pfpModeSelect.value = currentPfpType;
+                if (currentPfpType === 'custom') {
+                    customSettings.classList.remove('hidden');
+                } else if (currentPfpType === 'mibi') {
+                    mibiSettings.classList.remove('hidden'); // Ensure the container div for Mibi settings is visible
+                }
                 const uploadBtn = document.getElementById('uploadPfpBtn');
                 const fileInput = document.getElementById('pfpFileInput');
                 const cropperModal = document.getElementById('cropperModal');
