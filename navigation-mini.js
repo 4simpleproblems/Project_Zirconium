@@ -123,13 +123,13 @@ const DEFAULT_THEME = {
             const authToggle = document.getElementById('auth-toggle');
             if (authToggle) {
                 const username = currentUserData.username || currentUser?.displayName || 'User';
-                const initial = (currentUserData.pfpLetters) ? currentUserData.pfpLetters : username.charAt(0).toUpperCase();
+                const initial = (currentUserData.letterAvatarText) ? currentUserData.letterAvatarText : username.charAt(0).toUpperCase();
                 let newContent = '';
                 
                 if (currentUserData.pfpType === 'custom' && currentUserData.customPfp) {
                     newContent = `<img src="${currentUserData.customPfp}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
                 } else if (currentUserData.pfpType === 'letter') {
-                    const bg = currentUserData.pfpLetterBg || DEFAULT_THEME['avatar-gradient']; // Default from navigation.js
+                    const bg = currentUserData.letterAvatarColor || DEFAULT_THEME['avatar-gradient']; // Default from navigation.js
                     const textColor = getLetterAvatarTextColor(bg);
                     const fontSizeClass = initial.length >= 3 ? 'text-xs' : (initial.length === 2 ? 'text-sm' : 'text-base');
                     newContent = `<div class="initial-avatar w-full h-full rounded-full font-semibold ${fontSizeClass}" style="background: ${bg}; color: ${textColor}">${initial}</div>`;
@@ -430,7 +430,7 @@ const DEFAULT_THEME = {
         const loggedInView = (user, userData) => {
             const username = userData?.username || user.displayName || 'User';
             const email = user.email || 'No email';
-            const initial = (userData?.pfpLetters || username.charAt(0)).toUpperCase();
+            const initial = (userData?.letterAvatarText || username.charAt(0)).toUpperCase();
 
             // --- NEW PROFILE PICTURE LOGIC ---
             let avatarHtml = '';
