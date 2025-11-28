@@ -85,6 +85,11 @@
                 icon: '../images/microsoft.png', 
                 instance: () => new OAuthProvider('microsoft.com') 
             },
+            'twitter.com': { // NEW: X (Twitter) Provider
+                name: 'X (Twitter)',
+                icon: '../images/x.png',
+                instance: () => new OAuthProvider('twitter.com')
+            },
             'password': { 
                 name: 'Email & Password', 
                 icon: '<i class="fa-solid fa-at fa-lg mr-3"></i>', 
@@ -619,7 +624,7 @@
                 const canUnlink = providerData.length > 1 && !(id === 'password' && primaryProviderId === 'password');
                 
                 // Determine if icon is an image or a FontAwesome icon
-                let iconHtml = config.icon.startsWith('<i') ? config.icon : `<img src="${config.icon}" alt="${config.name} Icon" class="w-5 h-5 mr-3">`;
+                let iconHtml = config.icon.startsWith('<i') ? config.icon : `<img src="${config.icon}" alt="${config.name} Icon" class="w-6 h-6 mr-3">`;
 
                 return `
                     <div class="flex justify-between items-center px-4 py-4 border-b border-[#252525] last:border-b-0">
@@ -644,7 +649,7 @@
                 .filter(id => id !== 'password' && !linkedIds.includes(id))
                 .map(id => {
                     const config = PROVIDER_CONFIG[id];
-                    let iconHtml = config.icon.startsWith('<i') ? config.icon : `<img src="${config.icon}" alt="${config.name} Icon" class="w-5 h-5 mr-3">`;
+                    let iconHtml = config.icon.startsWith('<i') ? config.icon : `<img src="${config.icon}" alt="${config.name} Icon" class="w-6 h-6 mr-3">`;
 
                     return `
                         <div class="flex justify-between items-center px-4 py-4 border-b border-[#252525] last:border-b-0">
