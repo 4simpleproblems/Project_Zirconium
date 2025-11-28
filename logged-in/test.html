@@ -12,812 +12,412 @@
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+
+    <style>
+        /* --- FONT & BASE STYLING --- */
+        body { 
+            font-family: 'Geist', sans-serif; 
+            background-color: #040404; 
+            color: #c0c0c0; 
+            transition: all 0.3s ease;
+            font-size: 16px;
+            font-weight: 300;
+        }
+
+        /* --- THEME-AWARE STYLES (Existing) --- */
+        .btn-toolbar-style {
+            background: #000000;
+            border: 1px solid #333;
+            border-radius: 0.75rem;
+            color: #d1d5db;
+            padding: 0.5rem 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn-toolbar-style:hover {
+            background-color: #111;
+            border-color: #fff;
+            color: #ffffff;
+        }
+        .btn-toolbar-style.btn-primary-override {
+            justify-content: center;
+            background-color: rgba(79, 70, 229, 0.1);
+            border: 1px solid #4f46e5;
+            color: #4f46e5;
+        }
+        .btn-toolbar-style.btn-primary-override:hover {
+            background-color: rgba(79, 70, 229, 0.15);
+            border-color: #6366f1;
+            color: #6366f1;
+        }
+        .btn-toolbar-style.btn-primary-override-danger {
+            justify-content: center;
+            background-color: rgba(220, 38, 38, 0.1);
+            border: 1px solid #dc2626;
+            color: #dc2626;
+        }
+        .settings-tab.active {
+            background-color: rgba(79, 70, 229, 0.1);
+            border: 1px solid #4f46e5;
+            color: #4f46e5;
+        }
+        
+        /* --- Layout Styles --- */
+        #page-content { min-height: calc(100vh - 4rem); display: flex; flex-direction: column; }
+        #settings-container { display: flex; flex-grow: 1; padding: 20px; min-height: calc(100vh - 4rem - 40px); }
+        #settings-sidebar { width: 250px; padding-right: 20px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; position: sticky; top: 4.5rem; align-self: flex-start; }
+        #settings-main-view { flex-grow: 1; padding: 20px; background-color: #0d0d0d; border: 1px solid #1a1a1a; border-radius: 0.75rem; min-height: 100%; display: flex; flex-direction: column; align-items: flex-start; }
+        .settings-box { border: 1px solid #333; border-radius: 1rem; background-color: #0000000; transition: all 0.2s; }
+        .input-text-style, .input-select-style { width: 100%; padding: 0.75rem; border: 1px solid #252525; background-color: #111111; border-radius: 0.5rem; color: #c0c0c0; transition: all 0.2s; }
+        .input-key-style { width: 4rem; padding: 0.75rem; border: 1px solid #252525; background-color: #111111; border-radius: 0.5rem; color: #c0c0c0; text-align: center; font-weight: 500; text-transform: uppercase; }
+
+        /* --- MIBI AVATAR CREATOR STYLES (NEW) --- */
+        #mibiModal {
+            display: none;
+            position: fixed;
+            z-index: 2100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        #mibiModal.active { opacity: 1; }
+        
+        #mibiCreatorInterface {
+            width: 90%;
+            max-width: 900px;
+            height: 600px;
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 16px;
+            display: flex;
+            overflow: hidden;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        }
+
+        /* Left Side: Canvas Area */
+        .mibi-canvas-area {
+            flex: 1;
+            background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* The Canvas Container Shifts Left when menu opens */
+        .mibi-canvas-area.shifted {
+            flex: 0 0 40%;
+        }
+
+        #mibiCanvas {
+            width: 350px;
+            height: 350px;
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+            transition: width 0.3s, height 0.3s;
+        }
+        .mibi-canvas-area.shifted #mibiCanvas {
+            width: 250px;
+            height: 250px;
+        }
+
+        /* Right Side: Controls Area */
+        .mibi-controls-area {
+            flex: 1;
+            background: #161616;
+            border-left: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Navigation Step Bar */
+        .mibi-step-nav {
+            display: flex;
+            border-bottom: 1px solid #333;
+        }
+        .mibi-step-btn {
+            flex: 1;
+            padding: 1rem;
+            background: transparent;
+            color: #666;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .mibi-step-btn:hover { color: #fff; background: #222; }
+        .mibi-step-btn.active { color: #4f46e5; border-bottom: 2px solid #4f46e5; font-weight: bold; background: rgba(79, 70, 229, 0.05); }
+
+        /* Content Panels */
+        .mibi-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding: 20px;
+        }
+        .mibi-panel.hidden { display: none; }
+
+        /* Toolbar (Like Notes App) */
+        .mibi-toolbar {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #252525;
+        }
+        .mibi-tool-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            background: #252525;
+            color: #888;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+        .mibi-tool-btn:hover { background: #333; color: #fff; transform: translateY(-2px); }
+        .mibi-tool-btn.active { background: rgba(79, 70, 229, 0.2); color: #4f46e5; border-color: #4f46e5; }
+
+        /* Options Grid */
+        .mibi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+            gap: 10px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        .mibi-grid::-webkit-scrollbar { width: 6px; }
+        .mibi-grid::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+        .mibi-grid-item {
+            aspect-ratio: 1;
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            padding: 5px;
+        }
+        .mibi-grid-item:hover { border-color: #666; }
+        .mibi-grid-item.selected { border-color: #4f46e5; box-shadow: 0 0 0 1px #4f46e5; background: rgba(79, 70, 229, 0.05); }
+        .mibi-grid-item img { width: 100%; height: 100%; object-fit: contain; }
+
+        /* Color Circles */
+        .mibi-color-circle {
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.2s;
+        }
+        .mibi-color-circle:hover { transform: scale(1.1); }
+        .mibi-color-circle.selected { border-color: white; box-shadow: 0 0 0 2px #4f46e5; }
+
+        /* Sliders */
+        .mibi-slider-group { margin-bottom: 20px; }
+        .mibi-slider-group label { display: block; font-size: 0.8rem; color: #888; margin-bottom: 5px; }
+        .mibi-slider {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            outline: none;
+        }
+        .mibi-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #4f46e5;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .mibi-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+        /* Footer Actions */
+        .mibi-actions {
+            padding: 20px;
+            border-top: 1px solid #333;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        /* --- Existing Modal & Loading --- */
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); justify-content: center; align-items: center; }
+        .modal-content { background-color: #1a1a1a; padding: 20px; border-radius: 10px; border: 1px solid #333; width: 90%; max-width: 400px; text-align: center; color: white; position: relative; }
+        .loading-overlay { display: none; position: fixed; z-index: 3000; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); justify-content: center; align-items: center; flex-direction: column; color: white; }
+        .loading-overlay.active { display: flex; }
+        .loading-bar { background-color: rgba(255, 255, 255, 0.3); width: 20px; height: 40px; margin-right: 5px; border-radius: 10px; animation: load ease infinite 5s; }
+        .loading-bar:nth-child(2) { animation-delay: 0.1s; } .loading-bar:nth-child(3) { animation-delay: 0.2s; } .loading-bar:nth-child(4) { animation-delay: 0.3s; } .loading-bar:nth-child(5) { animation-delay: 0.4s; }
+        @keyframes load { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(720deg) rotateX(180deg); } }
+        
+        /* Cropper Modal (Retained) */
+        #cropperModal { display: none; position: fixed; z-index: 2050; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); justify-content: center; align-items: center; flex-direction: column; }
+        #cropperContent { background-color: #1a1a1a; padding: 20px; border-radius: 16px; border: 1px solid #333; display: flex; flex-direction: column; align-items: center; width: 90%; max-width: 600px; }
+        #cropperCanvas { display: block; max-width: 100%; max-height: 60vh; border: 1px dashed rgba(255, 255, 255, 0.3); }
+    </style>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-1D4F692C1Q"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-1D4F692C1Q');
+</script>
+</head>
+<body class="min-h-screen">
+    <div id="page-content">
+        <header class="flex justify-between items-center p-4 border-b border-[#1a1a1a]">
+            <h1 class="text-2xl font-bold text-white">4SP Settings</h1>
+        </header>
+
+        <div id="settings-container">
+            <nav id="settings-sidebar">
+                <button id="tab-general" class="btn-toolbar-style settings-tab active" data-tab="general">
+                    <i class="fa-solid fa-gear w-5"></i> <span>General</span>
+                </button>
+                <button id="tab-privacy" class="btn-toolbar-style settings-tab" data-tab="privacy">
+                    <i class="fa-solid fa-shield-halved w-5"></i> <span>Privacy & Security</span>
+                </button>
+                <button id="tab-personalization" class="btn-toolbar-style settings-tab" data-tab="personalization">
+                    <i class="fa-solid fa-palette w-5"></i> <span>Personalization</span>
+                </button>
+                <button id="tab-data" class="btn-toolbar-style settings-tab" data-tab="data">
+                    <i class="fa-solid fa-database w-5"></i> <span>Data Management</span>
+                </button>
+                <button id="tab-about" class="btn-toolbar-style settings-tab" data-tab="about">
+                    <i class="fa-solid fa-circle-info w-5"></i> <span>About 4SP</span>
+                </button>
+            </nav>
+
+            <div id="settings-main-view"></div>
+        </div>
+    </div>
+    
+    <div class="modal" id="modalPrompt">
+        <div class="modal-content" id="modalContent">
+            <span class="modal-close" id="modalClose">&times;</span>
+            <p id="modalText">Modal Text</p>
+            <div class="modal-buttons" id="modalButtons"></div>
+        </div>
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-animation">
+            <div class="loading-bar"></div><div class="loading-bar"></div><div class="loading-bar"></div><div class="loading-bar"></div><div class="loading-bar"></div>
+        </div>
+        <p id="loadingText">Loading...</p>
+    </div>
+    
+    <div id="cropperModal">
+        <div id="cropperContent">
+            <h3 class="text-xl font-bold text-white mb-4">Adjust Profile Picture</h3>
+            <p class="text-sm text-gray-400 mb-4">Drag to move. Scroll to resize.</p>
+            <div id="cropperCanvasContainer"><canvas id="cropperCanvas"></canvas></div>
+            <div class="flex justify-between w-full mt-4">
+                <button id="cancelCropBtn" class="btn-toolbar-style"><i class="fa-solid fa-xmark mr-2"></i> Cancel</button>
+                <button id="submitCropBtn" class="btn-toolbar-style btn-primary-override"><i class="fa-solid fa-check mr-2"></i> Submit</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="mibiModal">
+        <div id="mibiCreatorInterface">
+            <div class="mibi-canvas-area shifted" id="mibiCanvasContainer">
+                <canvas id="mibiCanvas"></canvas>
+            </div>
+
+            <div class="mibi-controls-area">
+                <div class="mibi-step-nav">
+                    <button id="mibiNavCustom" class="mibi-step-btn active">Customize</button>
+                    <button id="mibiNavBg" class="mibi-step-btn">Background</button>
+                    <button id="mibiNavPos" class="mibi-step-btn">Position</button>
+                </div>
+
+                <div id="mibi-panel-customization" class="mibi-panel">
+                    <div class="mibi-toolbar">
+                        <button class="mibi-tool-btn active" data-category="hats" title="Hats">
+                            <i class="fa-solid fa-hat-cowboy"></i>
+                        </button>
+                        <button class="mibi-tool-btn" data-category="eyes" title="Eyes">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                        <button class="mibi-tool-btn" data-category="mouths" title="Mouths">
+                            <i class="fa-solid fa-face-smile"></i>
+                        </button>
+                    </div>
+                    <div id="mibiOptionsGrid" class="mibi-grid">
+                        </div>
+                </div>
+
+                <div id="mibi-panel-background" class="mibi-panel hidden">
+                    <h3 class="text-white text-lg font-bold mb-4">Select Background</h3>
+                    <div id="mibiColorGrid" class="mibi-grid">
+                        </div>
+                </div>
+
+                <div id="mibi-panel-position" class="mibi-panel hidden">
+                    <h3 class="text-white text-lg font-bold mb-4">Adjust Position</h3>
+                    
+                    <div class="mibi-slider-group">
+                        <label>Horizontal Position</label>
+                        <input type="range" id="mibiSlider-posX" min="-100" max="100" value="0" class="mibi-slider">
+                    </div>
+                    <div class="mibi-slider-group">
+                        <label>Vertical Position</label>
+                        <input type="range" id="mibiSlider-posY" min="-100" max="100" value="0" class="mibi-slider">
+                    </div>
+                    <div class="mibi-slider-group">
+                        <label>Size / Scale</label>
+                        <input type="range" id="mibiSlider-scale" min="0.5" max="2" step="0.1" value="1" class="mibi-slider">
+                    </div>
+                    <div class="mibi-slider-group">
+                        <label>Rotation</label>
+                        <input type="range" id="mibiSlider-rotation" min="-180" max="180" value="0" class="mibi-slider">
+                    </div>
+                </div>
+
+                <div class="mibi-actions">
+                    <button id="mibiCancelBtn" class="btn-toolbar-style">Cancel</button>
+                    <button id="mibiSaveBtn" class="btn-toolbar-style btn-primary-override">
+                        <i class="fa-solid fa-floppy-disk mr-2"></i> Save Avatar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <script src="../navigation.js"></script>
     <script src="../injector.js"></script>
     <script src="../panic-key.js"></script>
     <script src="../url-changer.js" defer></script> 
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
-
-    <style>
-        /* --- FONT & BASE STYLING (MATCHING template) --- */
-        body { 
-            font-family: 'Geist', sans-serif; 
-            background-color: #040404; 
-            color: #c0c0c0; /* custom-white-gray */
-            font-weight: 300;
-        }
-        h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-tighter {
-            font-weight: 400 !important;
-        }
-
-        /* --- TAILWIND UTILITY EXTENSIONS (MATCHING template) --- */
-        .input-text-style {
-            /* w-full p-3 border border-[#252525] bg-[#111111] rounded-xl text-white transition focus:border-gray-500 focus:ring focus:ring-gray-500/50 focus:outline-none; */
-            width: 100%; padding: 0.75rem; border: 1px solid #252525; background-color: #111111; border-radius: 0.75rem; color: white; transition: all 0.15s ease-in-out; 
-            outline: none;
-        }
-        .input-text-style:focus {
-            border-color: #6b7280; 
-            box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.5); /* ring-gray-500/50 */
-        }
-
-        .btn-toolbar-style {
-            /* px-4 py-2 text-sm rounded-xl font-normal ring-1 ring-white/10 text-white bg-white/5 hover:bg-white/10 transition flex items-center justify-center; */
-            padding: 0.5rem 1rem; font-size: 0.875rem; border-radius: 0.75rem; font-weight: 400; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1); color: white; background-color: rgba(255, 255, 255, 0.05); transition: background-color 0.15s ease-in-out; display: flex; align-items: center; justify-content: center;
-        }
-        .btn-toolbar-style:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-
-        .btn-primary-override {
-            /* ring-0 bg-blue-600 hover:bg-blue-700 text-white font-medium; */
-            box-shadow: none; background-color: #2563eb; font-weight: 500;
-        }
-        .btn-primary-override:hover {
-            background-color: #1d4ed8;
-        }
-
-        .settings-box {
-            background-color: #111111;
-            border: 1px solid #252525;
-            border-radius: 0.75rem;
-        }
-
-        /* --- Custom Message Areas --- */
-        .general-message-area { min-height: 20px; }
-        .error-message { color: #f87171; }
-        .success-message { color: #4ade80; }
-        .warning-message { color: #fbbf24; }
-        .text-emphasis { color: #4ade80; } /* Highlight for specific text */
-        
-        .tab-item {
-            /* cursor-pointer p-3 rounded-xl transition flex items-center; */
-            cursor: pointer; padding: 0.75rem; border-radius: 0.75rem; transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out; display: flex; align-items: center;
-        }
-        .tab-item-active {
-            /* bg-[#252525] text-white; */
-            background-color: #252525; color: white;
-        }
-        .tab-item-inactive {
-            /* text-gray-400 hover:bg-[#111111]; */
-            color: #9ca3af; /* gray-400 */
-        }
-        .tab-item-inactive:hover {
-             background-color: #111111;
-        }
-
-        .linked-provider-box {
-            /* flex items-center justify-between p-3 rounded-xl bg-[#111111] border border-[#252525] mb-3; */
-            display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; border-radius: 0.75rem; background-color: #111111; border: 1px solid #252525; margin-bottom: 0.75rem;
-        }
-    </style>
-</head>
-<body class="bg-[#040404] min-h-screen">
-    <div id="navbar-container"></div>
-    
-    <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-        <div class="flex flex-col lg:flex-row gap-8">
-            <aside class="w-full lg:w-64">
-                <nav class="p-4 bg-[#111111] border border-[#252525] rounded-xl sticky top-24">
-                    <h3 class="text-xs uppercase text-gray-500 font-bold mb-4 tracking-wider">Account</h3>
-                    <ul id="sidebar-tabs">
-                        <li class="tab-item tab-item-active" data-tab="general">
-                            <i class="fa-solid fa-gear w-5 h-5 mr-3"></i> General
-                        </li>
-                        <li class="tab-item tab-item-inactive" data-tab="security">
-                            <i class="fa-solid fa-shield-halved w-5 h-5 mr-3"></i> Security
-                        </li>
-                        <li class="tab-item tab-item-inactive" data-tab="notifications">
-                            <i class="fa-solid fa-bell w-5 h-5 mr-3"></i> Notifications
-                        </li>
-                    </ul>
-                    <h3 class="text-xs uppercase text-gray-500 font-bold mb-4 mt-6 tracking-wider">Other</h3>
-                    <ul>
-                        <li class="tab-item tab-item-inactive" data-tab="subscription">
-                            <i class="fa-solid fa-crown w-5 h-5 mr-3"></i> Subscription
-                        </li>
-                        <li class="tab-item tab-item-inactive" data-tab="help">
-                            <i class="fa-solid fa-circle-info w-5 h-5 mr-3"></i> Help
-                        </li>
-                        <li class="tab-item tab-item-inactive" data-tab="about">
-                            <i class="fa-solid fa-code w-5 h-5 mr-3"></i> About
-                        </li>
-                        <li id="logoutBtn" class="tab-item tab-item-inactive text-red-400 hover:text-red-300 hover:bg-[#111111] mt-4">
-                            <i class="fa-solid fa-right-from-bracket w-5 h-5 mr-3"></i> Sign Out
-                        </li>
-                    </ul>
-                </nav>
-            </aside>
-
-            <div id="main-view" class="flex-grow min-h-[600px] p-0">
-                </div>
-        </div>
-    </div>
-
-    <div id="footer-container"></div>
-    
-    <script type="module">
-        // --- Firebase Imports ---
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { 
-            getAuth, 
-            onAuthStateChanged, 
-            signOut,
-            updateProfile,
-            updateEmail,
-            EmailAuthProvider,
-            GoogleAuthProvider,
-            GithubAuthProvider,
-            OAuthProvider,
-            linkWithPopup,
-            unlink,
-            reauthenticateWithCredential,
-            updatePassword
-        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { 
-            getFirestore, 
-            doc, 
-            getDoc, 
-            updateDoc, 
-            query, 
-            collection, 
-            where, 
-            getDocs 
-        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-        
-        // --- Import Firebase Config ---
-        import { firebaseConfig } from "../authentication/firebase-config.js"; 
-
-        // --- Firebase Initialization ---
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        
-        // --- Global State ---
-        let currentUser = null;
-        let userData = null;
-        let isSaving = false; // Flag to prevent double-clicks
-        
-        // --- Constants ---
-        const MIN_LENGTH = 6;
-        const MAX_LENGTH = 24;
-        const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-        
-        // --- Firebase Paths ---
-        const getUserDocRef = (userId) => doc(db, 'users', userId);
-        
-        // --- Constants for providers (UPDATED for Discord) ---
-        const PROVIDER_CONFIG = {
-            'google.com': { 
-                name: 'Google', 
-                icon: '../images/google-icon.png', 
-                instance: () => new GoogleAuthProvider() 
-            },
-            'github.com': { 
-                name: 'GitHub', 
-                icon: '../images/github-mark-white.png', 
-                instance: () => new GithubAuthProvider() 
-            },
-            'discord.com': { // <--- NEW DISCORD PROVIDER
-                name: 'Discord', 
-                icon: '../images/discord.png', // Using ../images/discord.png as requested
-                instance: () => new OAuthProvider('discord.com') 
-            },
-            'microsoft.com': { 
-                name: 'Microsoft', 
-                icon: '../images/microsoft.png', 
-                instance: () => new OAuthProvider('microsoft.com') 
-            },
-            'password': { 
-                name: 'Email & Password', 
-                icon: '<i class="fa-solid fa-at fa-lg mr-3"></i>', 
-                isCredential: true
-            }
-        };
-
-        // --- DOM Elements ---
-        const sidebarTabs = document.querySelectorAll('.tab-item:not(#logoutBtn)');
-        const mainView = document.getElementById('main-view');
-
-        // --- Utility Functions ---
-        function showMessage(elementId, text, type = 'error') {
-            const element = document.getElementById(elementId);
-            if (element) {
-                element.innerHTML = text;
-                element.className = `general-message-area text-sm mt-2 ${type}-message`;
-            }
-        }
-
-        function getProviderName(providerId) {
-            return PROVIDER_CONFIG[providerId]?.name || providerId;
-        }
-
-        function getProviderIcon(providerId) {
-            const config = PROVIDER_CONFIG[providerId];
-            if (!config) return '';
-            
-            if (config.icon.startsWith('<')) {
-                return config.icon; // Already an icon tag
-            } else {
-                return `<img src="${config.icon}" alt="${config.name} logo" class="w-5 h-5 mr-3">`;
-            }
-        }
-
-        // --- Data Fetching and Initialization ---
-        async function fetchUserData(uid) {
-            try {
-                const docSnap = await getDoc(getUserDocRef(uid));
-                if (docSnap.exists()) {
-                    return docSnap.data();
-                } else {
-                    console.error("User document not found.");
-                    return null;
-                }
-            } catch (error) {
-                console.error("Error fetching user data:", error);
-                return null;
-            }
-        }
-
-        async function getCurrentUsernameData(uid) {
-            const data = await fetchUserData(uid);
-            if (data) {
-                // Ensure usage data exists, initialize if not
-                const now = new Date();
-                const currentMonth = now.getMonth();
-                const currentYear = now.getFullYear();
-
-                const usage = data.usernameUsage || {
-                    lastChangeMonth: -1,
-                    lastChangeYear: -1,
-                    changesThisMonth: 0,
-                    limit: 1 // Default limit
-                };
-                
-                let changesThisMonth = usage.changesThisMonth;
-                let changesRemaining = usage.limit;
-
-                // Reset count if the month/year has changed
-                if (usage.lastChangeMonth !== currentMonth || usage.lastChangeYear !== currentYear) {
-                    changesThisMonth = 0;
-                }
-
-                changesRemaining = usage.limit - changesThisMonth;
-
-                return {
-                    username: data.username,
-                    changesRemaining: Math.max(0, changesRemaining),
-                    changesThisMonth: changesThisMonth,
-                    currentMonthName: MONTH_NAMES[currentMonth],
-                    limit: usage.limit,
-                    currentMonth: currentMonth,
-                    currentYear: currentYear
-                };
-            }
-            return { username: '', changesRemaining: 0, changesThisMonth: 0, currentMonthName: '', limit: 1 };
-        }
-
-        // --- Content Generation Functions ---
-
-        function getChangePasswordSection() {
-             return `
-                <h3 class="text-xl font-bold text-white mb-4 mt-8">Password</h3>
-                <div class="settings-box w-full p-6">
-                    <div class="mb-4">
-                        <label for="currentPasswordInput" class="block mb-2 text-sm font-light text-gray-400">Current Password</label>
-                        <input type="password" id="currentPasswordInput" class="input-text-style" placeholder="Enter current password">
-                    </div>
-                    <div class="mb-4">
-                        <label for="newPasswordInput" class="block mb-2 text-sm font-light text-gray-400">New Password</label>
-                        <input type="password" id="newPasswordInput" class="input-text-style" placeholder="8-48 chars, 1 uppercase, 1 number, 1 symbol">
-                    </div>
-                    <div class="flex justify-end items-center">
-                        <p id="passwordMessage" class="general-message-area mr-4 text-sm"></p>
-                        <button id="changePasswordBtn" class="btn-toolbar-style btn-primary-override w-36 mt-2" style="padding: 0.5rem 0.75rem;">
-                            Change Password
-                        </button>
-                    </div>
-                </div>
-            `;
-        }
-
-        function getAccountManagementContent(providerData, primaryProviderId, changesRemaining, changesThisMonth, currentMonthName) {
-            let linkedProvidersHtml = '';
-            let availableProvidersHtml = '';
-            let deletionContent = '';
-            const providers = Object.keys(PROVIDER_CONFIG).filter(id => id !== 'password');
-            const linkedIds = providerData.map(p => p.providerId);
-            
-            // --- 1. Linked Providers List ---
-            linkedProvidersHtml = providerData.map(p => {
-                const config = PROVIDER_CONFIG[p.providerId] || {};
-                const name = config.name || p.providerId;
-                const icon = getProviderIcon(p.providerId);
-                const isPrimary = p.providerId === primaryProviderId;
-                const canUnlink = providerData.length > 1; // Can only unlink if more than one provider is linked
-
-                let button = '';
-                if (isPrimary) {
-                    button = `<span class="text-sm text-gray-500">Primary</span>`;
-                } else if (p.providerId === 'password') {
-                    // Password cannot be unlinked once set for primary Email/Password users
-                } else if (canUnlink) {
-                    button = `<button data-provider-id="${p.providerId}" class="unlink-btn btn-toolbar-style bg-red-600 hover:bg-red-700 w-24">Unlink</button>`;
-                }
-
-                return `
-                    <div class="linked-provider-box">
-                        <div class="flex items-center">
-                            ${icon}
-                            <span class="text-base">${name}</span>
-                        </div>
-                        ${button}
-                    </div>
-                `;
-            }).join('');
-            
-            // --- 2. Available Providers List ---
-            availableProvidersHtml = providers.filter(id => !linkedIds.includes(id)).map(id => {
-                const config = PROVIDER_CONFIG[id] || {};
-                const name = config.name || id;
-                const icon = getProviderIcon(id);
-                
-                return `
-                    <div class="linked-provider-box hover:bg-[#1f1f1f]">
-                        <div class="flex items-center">
-                            ${icon}
-                            <span class="text-base">${name}</span>
-                        </div>
-                        <button data-provider-id="${id}" class="link-btn btn-toolbar-style btn-primary-override w-24">Link</button>
-                    </div>
-                `;
-            }).join('');
-
-            // --- 3. Account Deletion Section ---
-            deletionContent = `
-                <h3 class="text-xl font-bold text-white mb-4 mt-8">Account Deletion</h3>
-                <div class="settings-box w-full p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border border-red-500 bg-red-900/10">
-                    <p class="text-sm font-light text-red-300">
-                        This action is permanent and cannot be reversed. All data, notes, and records will be deleted.
-                    </p>
-                    <button id="deleteAccountBtn" class="btn-toolbar-style bg-red-600 hover:bg-red-700 w-full sm:w-48 flex-shrink-0" style="padding: 0.5rem 0.75rem;">
-                        Delete Account
-                    </button>
-                </div>
-                <p id="deleteMessage" class="general-message-area text-sm text-center"></p>
-            `;
-
-            return `
-                <h3 class="text-xl font-bold text-white mb-4 mt-8">Linked Providers</h3>
-                <div class="settings-box w-full mb-4 p-0" data-section="linked-providers">${linkedProvidersHtml}</div>
-                <h3 class="text-xl font-bold text-white mb-2">Link New Providers</h3>
-                <div class="settings-box w-full flex flex-col gap-0 p-0">${availableProvidersHtml}</div>
-                ${deletionContent}
-            `;
-        }
-
-
-        /**
-         * Generates the HTML for the "General Settings" section.
-         * (Updated to remove the Discord support link, only includes account management)
-         */
-        function getGeneralContent(currentUsername, changesRemaining, changesThisMonth, currentMonthName, isEmailPasswordUser, providerData) {
-            const changesUsed = changesThisMonth;
-            const primaryProviderId = providerData[0].providerId;
-
-            // Conditionally generate the password section HTML
-            let passwordSectionHtml = '';
-            if (isEmailPasswordUser) {
-                passwordSectionHtml = getChangePasswordSection();
-            }
-            
-            // Account Management Content (Assumes getAccountManagementContent is defined elsewhere)
-            const accountManagementContent = getAccountManagementContent(providerData, primaryProviderId, changesRemaining, changesThisMonth, currentMonthName);
-
-            return `
-                <h2 class="text-3xl font-bold text-white mb-6">General Settings</h2>
-                <div class="w-full">
-                    <div class="flex justify-between items-center border-b border-[#252525] pb-4 mb-4">
-                        <div class="w-1/2">
-                            <p class="text-sm font-light text-gray-400 mb-2">Username (<span class="text-emphasis">${changesRemaining}</span> changes left this ${currentMonthName})</p>
-                            <input type="text" id="usernameInput" class="input-text-style" value="${currentUsername}" minlength="${MIN_LENGTH}" maxlength="${MAX_LENGTH}">
-                        </div>
-                        <div class="flex flex-col justify-end h-full">
-                            <p id="usernameMessage" class="general-message-area text-sm"></p>
-                            <button id="applyUsernameBtn" class="btn-toolbar-style btn-primary-override w-36 mt-2" style="padding: 0.5rem 0.75rem;" disabled>
-                                <i class="fa-solid fa-check mr-1"></i> Apply
-                            </button>
-                        </div>
-                    </div>
-                    ${passwordSectionHtml}
-                    
-                    ${accountManagementContent} 
-                </div>
-            `;
-        }
-
-        function getComingSoonContent(title) {
-            return `
-                <h2 class="text-3xl font-bold text-white mb-6">${title} Settings</h2>
-                <div class="settings-box w-full p-8 text-center">
-                    <i class="fa-solid fa-hourglass-half fa-4x text-gray-500 mb-4"></i>
-                    <p class="text-xl text-gray-300 font-normal">Coming Soon</p>
-                    <p class="text-sm text-gray-500 mt-2">We are actively working on this feature. Check back later!</p>
-                </div>
-            `;
-        }
-
-        function getAboutContent() {
-             return `
-                <h2 class="text-3xl font-bold text-white mb-6">About 4SP</h2>
-                <div class="settings-box w-full p-6">
-                    <h3 class="text-xl font-bold text-white mb-4">Version & Build</h3>
-                    <p class="text-sm font-light text-gray-400 mb-4">
-                        Current Version: <span class="text-emphasis">v5.0.0-beta</span>
-                        <br>
-                        Build Date: <span class="text-emphasis">November 26, 2025</span>
-                    </p>
-                    
-                    <h3 class="text-xl font-bold text-white mb-4 mt-6">Open Source & Credits</h3>
-                    <p class="text-sm font-light text-gray-400 mb-4">
-                        4simpleproblems is built on a modern stack using:
-                        <ul class="list-disc list-inside ml-4 mt-2 text-sm text-gray-300">
-                            <li><span class="text-emphasis">Firebase</span> for Authentication and Database</li>
-                            <li><span class="text-emphasis">Tailwind CSS</span> for rapid styling</li>
-                            <li><span class="text-emphasis">Geist Font</span> for typography</li>
-                            <li><span class="text-emphasis">Font Awesome</span> for icons</li>
-                        </ul>
-                    </p>
-
-                    <h3 class="text-xl font-bold text-white mb-4 mt-6">Legal</h3>
-                    <a href="../legal.html#terms-of-service" target="_blank" class="block text-sm text-blue-400 hover:text-blue-300 mb-2">Terms of Service</a>
-                    <a href="../legal.html#privacy-policy" target="_blank" class="block text-sm text-blue-400 hover:text-blue-300">Privacy Policy</a>
-                </div>
-            `;
-        }
-
-        // --- Event Listeners and Handlers ---
-
-        function attachGeneralListeners(usernameData) {
-            const usernameInput = document.getElementById('usernameInput');
-            const applyUsernameBtn = document.getElementById('applyUsernameBtn');
-            const usernameMessage = document.getElementById('usernameMessage');
-            
-            // Reauthentication listeners (for unlinking/deleting)
-            document.querySelectorAll('.unlink-btn').forEach(btn => {
-                btn.addEventListener('click', () => handleUnlinkProvider(btn.dataset.providerId));
-            });
-            document.querySelectorAll('.link-btn').forEach(btn => {
-                btn.addEventListener('click', () => handleLinkProvider(btn.dataset.providerId));
-            });
-            document.getElementById('deleteAccountBtn')?.addEventListener('click', handleDeleteAccount);
-
-            // Change Password Listeners
-            document.getElementById('changePasswordBtn')?.addEventListener('click', handleChangePassword);
-
-            // Username Change Logic
-            let initialUsername = usernameData.username;
-            
-            usernameInput.addEventListener('input', () => {
-                const newUsername = usernameInput.value.trim();
-                const isValid = newUsername.length >= MIN_LENGTH && newUsername.length <= MAX_LENGTH && /^[a-zA-Z0-9.,\-+_\!\?\$\\]+$/.test(newUsername);
-                const isDifferent = newUsername !== initialUsername;
-
-                if (usernameData.changesRemaining === 0) {
-                    usernameMessage.textContent = "You have used all your username changes this month.";
-                    usernameMessage.className = 'general-message-area text-sm mt-2 error-message';
-                    applyUsernameBtn.disabled = true;
-                    return;
-                }
-                
-                if (isDifferent && isValid) {
-                    showMessage('usernameMessage', 'New username is valid. Click Apply.', 'success');
-                    applyUsernameBtn.disabled = false;
-                } else if (!isDifferent) {
-                    showMessage('usernameMessage', '', 'success');
-                    applyUsernameBtn.disabled = true;
-                } else if (!isValid) {
-                    showMessage('usernameMessage', 'Username must be 6-24 chars, only including allowed symbols.', 'error');
-                    applyUsernameBtn.disabled = true;
-                }
-            });
-
-            applyUsernameBtn.addEventListener('click', () => handleUsernameChange(usernameInput.value.trim(), usernameData));
-        }
-        
-        async function handleUsernameChange(newUsername, usernameData) {
-            if (isSaving || usernameData.changesRemaining === 0) return;
-            isSaving = true;
-            showMessage('usernameMessage', 'Checking username availability...', 'warning');
-
-            try {
-                // 1. Check for profanity and availability
-                if (await checkProfanity(newUsername)) {
-                    showMessage('usernameMessage', 'This username is not allowed. Please choose another.', 'error');
-                    return;
-                }
-                if (await isUsernameTaken(newUsername)) {
-                    showMessage('usernameMessage', 'This username is already taken.', 'error');
-                    return;
-                }
-
-                // 2. Update Firestore document (Username and Usage)
-                const now = new Date();
-                const newUsage = {
-                    lastChangeMonth: now.getMonth(),
-                    lastChangeYear: now.getFullYear(),
-                    changesThisMonth: usernameData.changesThisMonth + 1,
-                    limit: usernameData.limit
-                };
-
-                await updateDoc(getUserDocRef(currentUser.uid), {
-                    username: newUsername,
-                    usernameUsage: newUsage
-                });
-
-                // 3. Update local state and UI
-                userData.username = newUsername;
-                userData.usernameUsage = newUsage;
-
-                showMessage('usernameMessage', 'Username successfully updated!', 'success');
-                // Re-render the tab to update the counter
-                await switchTab('general');
-
-            } catch (error) {
-                console.error("Error updating username:", error);
-                showMessage('usernameMessage', 'Failed to update username. Please try again.', 'error');
-            } finally {
-                isSaving = false;
-                document.getElementById('applyUsernameBtn').disabled = true;
-            }
-        }
-
-        async function handleChangePassword() {
-            if (isSaving) return;
-            isSaving = true;
-            
-            const currentPass = document.getElementById('currentPasswordInput').value;
-            const newPass = document.getElementById('newPasswordInput').value;
-
-            // Simple validation (reusing logic from authentication.html)
-            const passwordError = validatePassword(newPass);
-            if (passwordError) { showMessage('passwordMessage', passwordError, 'error'); isSaving = false; return; }
-            if (!currentPass) { showMessage('passwordMessage', 'Please enter your current password.', 'error'); isSaving = false; return; }
-            
-            showMessage('passwordMessage', 'Changing password...', 'warning');
-
-            try {
-                // 1. Re-authenticate the user
-                const credential = EmailAuthProvider.credential(currentUser.email, currentPass);
-                await reauthenticateWithCredential(currentUser, credential);
-
-                // 2. Update the password
-                await updatePassword(currentUser, newPass);
-
-                // 3. Success
-                showMessage('passwordMessage', 'Password successfully changed!', 'success');
-                document.getElementById('currentPasswordInput').value = '';
-                document.getElementById('newPasswordInput').value = '';
-
-            } catch (error) {
-                console.error("Error changing password:", error);
-                let msg = 'Failed to change password.';
-                if (error.code === 'auth/wrong-password') {
-                    msg = 'The current password you entered is incorrect.';
-                } else if (error.code === 'auth/weak-password') {
-                    msg = 'Password is too weak. (8-48 chars, 1 uppercase, 1 number, 1 symbol)';
-                }
-                showMessage('passwordMessage', msg, 'error');
-            } finally {
-                isSaving = false;
-            }
-        }
-        
-        async function handleLinkProvider(providerId) {
-            if (isSaving) return;
-            isSaving = true;
-            
-            // --- CUSTOM DISCORD FLOW ---
-            if (providerId === 'discord.com') {
-                // NOTE: This URL must be set up to initiate the Discord OAuth flow,
-                // generate a custom token linked to the current user's UID, and redirect
-                // to a page (like auth-handler.html) to finalize the link.
-                const DISCORD_LINK_INITIATION_URL = `https://us-central1-project-zirconium.cloudfunctions.net/discordAuthLink?uid=${currentUser.uid}`;
-                
-                // Redirecting to the Cloud Function endpoint to start the linking process.
-                window.location.href = DISCORD_LINK_INITIATION_URL;
-                isSaving = false;
-                return; // Stop further execution
-            }
-            // --- END CUSTOM DISCORD FLOW ---
-            
-            const providerInstance = PROVIDER_CONFIG[providerId]?.instance();
-            if (!providerInstance) { 
-                console.error("Invalid provider ID:", providerId); 
-                isSaving = false; 
-                return; 
-            }
-            
-            // Find the active message area (e.g., usernameMessage)
-            const msgId = 'usernameMessage';
-            showMessage(msgId, `Linking account with ${getProviderName(providerId)}...`, 'warning');
-
-            try {
-                await linkWithPopup(currentUser, providerInstance);
-                // Force a refresh of the user object and re-render the tab
-                currentUser = auth.currentUser; 
-                await switchTab('general');
-                showMessage(msgId, `Successfully linked account with ${getProviderName(providerId)}!`, 'success');
-            } catch (error) {
-                console.error("Error linking provider:", error);
-                let msg = `Failed to link ${getProviderName(providerId)}.`;
-                if (error.code === 'auth/credential-already-in-use') {
-                    msg = `The ${getProviderName(providerId)} account is already linked to another 4SP user.`;
-                } else if (error.code === 'auth/popup-closed-by-user') {
-                    msg = `Linking process cancelled.`;
-                }
-                showMessage(msgId, msg, 'error');
-            } finally {
-                isSaving = false;
-            }
-        }
-        
-        async function handleUnlinkProvider(providerId) {
-            if (isSaving || !providerId) return;
-            
-            const providerData = currentUser.providerData;
-            if (providerData.length <= 1) {
-                showMessage('usernameMessage', 'You must have at least one sign-in method linked.', 'error');
-                return;
-            }
-            
-            isSaving = true;
-            const msgId = 'usernameMessage';
-            showMessage(msgId, `Unlinking account from ${getProviderName(providerId)}...`, 'warning');
-
-            try {
-                await unlink(currentUser, providerId);
-                
-                // Force a refresh of the user object and re-render the tab
-                currentUser = auth.currentUser; 
-                await switchTab('general');
-                showMessage(msgId, `Successfully unlinked account from ${getProviderName(providerId)}.`, 'success');
-            } catch (error) {
-                console.error("Error unlinking provider:", error);
-                showMessage(msgId, `Failed to unlink ${getProviderName(providerId)}. Please try again.`, 'error');
-            } finally {
-                isSaving = false;
-            }
-        }
-
-        async function handleDeleteAccount() {
-            // NOTE: This is a placeholder that triggers a password prompt.
-            // In a real application, account deletion requires re-authentication, 
-            // a confirmation flow, and server-side cleanup of Firestore data.
-            showMessage('deleteMessage', 'Please contact support to initiate account deletion.', 'warning');
-        }
-
-
-        // --- Validation Helpers (Reused from authentication.html) ---
-
-        const checkProfanity = async (text) => {
-            try {
-                const response = await fetch(`https://www.purgomalum.com/service/containsprofanity?text=${encodeURIComponent(text)}`);
-                const result = await response.text();
-                return result.toLowerCase() === 'true';
-            } catch (error) { console.error('Profanity API error:', error); return false; }
-        };
-
-        const isUsernameTaken = async (username) => {
-            const q = query(collection(db, 'users'), where('username', '==', username));
-            const querySnapshot = await getDocs(q);
-            return !querySnapshot.empty;
-        };
-
-        const validatePassword = (password) => {
-            if (password.length < 8 || password.length > 48) return 'Password must be 8-48 characters.';
-            if (!/[A-Z]/.test(password)) return 'Password must contain an uppercase letter.';
-            if (!/[0-9]/.test(password)) return 'Password must contain a number.';
-            if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) return 'Password must contain a special symbol.';
-            return null;
-        };
-
-        // --- Tab Management ---
-
-        const tabContent = {
-            general: { title: 'General', handler: renderGeneralTab },
-            security: { title: 'Security', handler: () => {} },
-            notifications: { title: 'Notifications', handler: () => {} },
-            subscription: { title: 'Subscription', handler: () => {} },
-            help: { title: 'Help', handler: () => {} },
-            about: { title: 'About', handler: renderAboutTab }
-        };
-
-        async function renderGeneralTab() {
-            const usernameData = await getCurrentUsernameData(currentUser.uid);
-            const isEmailPasswordUser = currentUser.providerData.some(p => p.providerId === 'password');
-            
-            mainView.innerHTML = getGeneralContent(
-                usernameData.username, 
-                usernameData.changesRemaining, 
-                usernameData.changesThisMonth, 
-                usernameData.currentMonthName,
-                isEmailPasswordUser,
-                currentUser.providerData
-            );
-            attachGeneralListeners(usernameData);
-        }
-
-        async function renderAboutTab() {
-            mainView.innerHTML = getAboutContent();
-        }
-
-        async function switchTab(tabId) {
-            // 1. Update the sidebar classes
-            sidebarTabs.forEach(tab => {
-                tab.classList.remove('tab-item-active');
-                tab.classList.add('tab-item-inactive');
-                if (tab.dataset.tab === tabId) {
-                    tab.classList.add('tab-item-active');
-                    tab.classList.remove('tab-item-inactive');
-                }
-            });
-
-            // 2. Render the content
-            if (tabId === 'general') {
-                await tabContent[tabId].handler();
-            } else if (tabId === 'about') {
-                await tabContent[tabId].handler();
-            } else {
-                const content = tabContent[tabId];
-                mainView.innerHTML = getComingSoonContent(content.title);
-            }
-
-            // 3. New: Smoothly scroll the window back to the top (y=0)
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
-        }
-
-        // --- Initialization on Load ---
-        
-        // Add listener to each sidebar button
-        sidebarTabs.forEach(tab => {
-            tab.addEventListener('click', async () => {
-                await switchTab(tab.dataset.tab);
-            });
-        });
-
-        // Logout listener
-        document.getElementById('logoutBtn').addEventListener('click', async (e) => {
-            e.preventDefault();
-            try {
-                await signOut(auth);
-                // Redirection is handled by the onAuthStateChanged listener
-            } catch (error) {
-                console.error("Logout failed:", error);
-            }
-        });
-
-
-        // --- AUTHENTICATION/REDIRECT LOGIC (Retained and Modified) ---
-        function initializeAuth() {
-            onAuthStateChanged(auth, async (user) => {
-                if (!user) {
-                    // No user is logged in, redirect to authentication.html (path corrected)
-                    window.location.href = '../authentication.html'; 
-                } else {
-                    currentUser = user; 
-                    // Set initial state to 'General' (or the first tab)
-                    await switchTab('general'); 
-                }
-            });
-        }
-        
-        // Use a short timeout to allow the rest of the script to run before auth check
-        setTimeout(() => { initializeAuth(); }, 100); 
-    </script>
+    <script type="module" src="settings.js"></script>
 </body>
 </html>
