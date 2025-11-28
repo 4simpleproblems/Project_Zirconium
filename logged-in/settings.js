@@ -614,15 +614,19 @@
          */
         function getAccountManagementContent(providerData) {
             // Determine the Primary Provider (the first one in the list)
-            const primaryProviderId = providerData[0].providerId;
+            const primaryProviderId = providerData && providerData.length > 0 ? providerData[0].providerId : null;
             
             let linkedProvidersHtml = providerData.map(info => {
                 const id = info.providerId;
                 const config = PROVIDER_CONFIG[id] || { name: id, icon: '<i class="fa-solid fa-puzzle-piece fa-lg mr-3"></i>' };
                 
-                // Determine if this provider can be unlinked
+                const isPrimary = (id === primaryProviderId); // Check if this is the primary provider
                 const canUnlink = providerData.length > 1 && !(id === 'password' && primaryProviderId === 'password');
                 
+                // NEW: Determine if "Set as Primary" button should be shown
+                // Show if no primary is explicitly set, it's not the current primary, and it's not the password provider.
+                const showSetPrimaryButton = !isPrimary && primaryProviderId === null && id !== 'password';
+
                 // Determine if icon is an image or a FontAwesome icon
                 let iconHtml = config.icon.startsWith('<i') ? config.icon : `<img src="${config.icon}" alt="${config.name} Icon" class="w-6 h-6 mr-3">`;
 
@@ -631,14 +635,23 @@
                         <div class="flex items-center text-lg text-white">
                             ${iconHtml}
                             ${config.name}
-                            ${id === primaryProviderId ? '<span class="text-xs text-yellow-400 ml-2 font-normal">(Primary)</span>' : ''}
+                            ${isPrimary ? '<span class="text-xs text-yellow-400 ml-2 font-normal">(Primary)</span>' : ''}
                         </div>
-                        ${canUnlink ? 
-                            `<button class="btn-toolbar-style text-red-400 hover:border-red-600 hover:text-red-600" data-provider-id="${id}" data-action="unlink" style="padding: 0.5rem 0.75rem;">
-                                <i class="fa-solid fa-unlink mr-1"></i> Unlink
-                            </button>` : 
-                            `<span class="text-xs text-custom-light-gray font-light ml-4">Cannot Unlink</span>`
-                        }
+                        <div class="flex items-center gap-2"> <!-- Container for buttons -->
+                            ${showSetPrimaryButton ? 
+                                `<button class="btn-toolbar-style btn-primary-override" data-provider-id="${id}" data-action="set-primary" style="padding: 0.5rem 0.75rem;">
+                                    <i class="fa-solid fa-star mr-1"></i> Set Primary
+                                </button>` : ''
+                            }
+                            ${canUnlink ? 
+                                `<button class="btn-toolbar-style text-red-400 hover:border-red-600 hover:text-red-600" data-provider-id="${id}" data-action="unlink" style="padding: 0.5rem 0.75rem;">
+                                    <i class="fa-solid fa-unlink mr-1"></i> Unlink
+                                </button>` : 
+                                // Show "Cannot Unlink" if not able to unlink (e.g., it's the only provider, or it's password and primary)
+                                (providerData.length === 1 || (id === 'password' && primaryProviderId === 'password')) ? 
+                                    `<span class="text-xs text-custom-light-gray font-light ml-4">Cannot Unlink</span>` : ''
+                            }
+                        </div>
                     </div>
                 `;
             }).join('');
@@ -676,7 +689,17 @@
             // --- Account Deletion Section ---
             let deletionContent = '';
             
-            if (primaryProviderId === 'password') {
+            if (!primaryProviderId) { // No primary provider found
+                deletionContent = `
+                    <h3 class="text-xl font-bold text-white mb-2 mt-8">Delete Account</h3>
+                    <div id="deletionSection" class="settings-box w-full bg-red-900/10 border-red-700/50 p-4">
+                        <p class="text-sm font-light text-red-300 mb-3">
+                            <i class="fa-solid fa-triangle-exclamation mr-1"></i> 
+                            WARNING: Deleting your account is permanent. No primary authentication method found. Please contact support.
+                        </p>
+                    </div>
+                `;
+            } else if (primaryProviderId === 'password') {
                 deletionContent = `
                     <h3 class="text-xl font-bold text-white mb-2 mt-8">Delete Account</h3>
                     <div id="deletionSection" class="settings-box w-full bg-red-900/10 border-red-700/50 p-4">
@@ -1521,6 +1544,7 @@
 
             const linkProviderButtons = mainView.querySelectorAll('button[data-action="link"]');
             const unlinkProviderButtons = mainView.querySelectorAll('button[data-action="unlink"]');
+            const setPrimaryProviderButtons = mainView.querySelectorAll('button[data-action="set-primary"]');
 
             // --- LINKING Providers ---
             linkProviderButtons.forEach(button => {
@@ -1574,6 +1598,33 @@
                             msg = "Cannot unlink the last remaining sign-in method.";
                         }
                         
+                        showMessage(messageElement, msg, 'error');
+                    }
+                });
+            });
+            
+            // --- SET PRIMARY Provider ---
+            setPrimaryProviderButtons.forEach(button => {
+                button.addEventListener('click', async () => {
+                    const providerId = button.dataset.providerId;
+                    const config = PROVIDER_CONFIG[providerId];
+                    const providerInstance = config.instance();
+                    
+                    showMessage(messageElement, `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Attempting to set ${config.name} as primary...`, 'warning');
+                    
+                    try {
+                        // Re-authenticate with the desired provider to make it primary
+                        await reauthenticateWithPopup(auth.currentUser, providerInstance);
+                        showMessage(messageElement, `${config.name} successfully set as primary!`, 'success');
+                        setTimeout(refreshGeneralTab, 1500); // Refresh UI
+                    } catch (error) {
+                        console.error("Error setting primary provider:", error);
+                        let msg = `Failed to set ${config.name} as primary.`;
+                        if (error.code === 'auth/popup-closed-by-user') {
+                            msg = 'Operation cancelled by user.';
+                        } else if (error.code === 'auth/requires-recent-login') {
+                            msg = 'Please sign out and sign in again to set a new primary provider.';
+                        }
                         showMessage(messageElement, msg, 'error');
                     }
                 });
