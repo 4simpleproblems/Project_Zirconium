@@ -1965,11 +1965,9 @@
         }
         
         
-        /**
-         * NEW: Loads data and adds event listeners for the Personalization tab.
-         */
-        async function loadPersonalizationTab() {
         import { MibiAvatarCreator } from "./mibi-avatar-creation.js"; 
+
+            async function loadPersonalizationTab() {
             const themePickerContainer = document.getElementById('theme-picker-container');
             const themeMessage = document.getElementById('themeMessage');
             const pfpMessage = document.getElementById('pfpMessage'); 
