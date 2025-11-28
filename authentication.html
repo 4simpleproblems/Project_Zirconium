@@ -180,6 +180,12 @@
                         <img src="images/github-mark-white.png" alt="GitHub Logo" class="w-5 h-5 mr-3">
                         Continue with GitHub
                     </button>
+                    
+                    <button id="twitterAuthBtn" class="btn-social flex items-center justify-center w-full max-w-md p-3 bg-custom-dark-gray text-custom-white-gray border border-custom-medium-gray rounded-xl font-normal cursor-pointer mb-3">
+                        <img src="../images/x.png" alt="X Logo" class="w-5 h-5 mr-3">
+                        Continue with X
+                    </button>
+
                     <button id="microsoftAuthBtn" class="btn-social flex items-center justify-center w-full max-w-md p-3 bg-custom-dark-gray text-custom-white-gray border border-custom-medium-gray rounded-xl font-normal cursor-pointer mb-3">
                         <img src="images/microsoft.png" alt="Microsoft Logo" class="w-5 h-5 mr-3">
                         Continue with Microsoft
@@ -215,6 +221,7 @@
             signOut,
             GoogleAuthProvider,
             GithubAuthProvider,
+            TwitterAuthProvider,
             OAuthProvider,
             signInWithPopup,
             setPersistence,
@@ -311,7 +318,7 @@
             
 
             
-            const isProviderLogin = user.providerData.some(p => ['google.com', 'github.com', 'microsoft.com'].includes(p.providerId));
+            const isProviderLogin = user.providerData.some(p => ['google.com', 'github.com', 'twitter.com', 'microsoft.com'].includes(p.providerId));
             
             if (user.emailVerified || isProviderLogin) {
                 navigateToDashboard();
@@ -348,20 +355,6 @@
             if (!/[0-9]/.test(password)) return 'Password must contain a number.';
             if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) return 'Password must contain a special symbol.';
             return null;
-        };
-
-        // --- Discord Custom Auth Constants (NEW) ---
-        const DISCORD_CLIENT_ID = '1419262893941063866'; // Your provided ID
-        const DISCORD_REDIRECT_URI = 'https://discordcallback-6v3fpfm2zq-uc.a.run.app/';
-        const DISCORD_SCOPE = 'identify%20email'; // URL-encoded scopes
-        
-        // --- Discord Login Handler (NEW) ---
-        const handleDiscordLogin = () => {
-            // Construct the Discord authorization URL using the constant variables
-            const discordAuthUrl = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${DISCORD_REDIRECT_URI}&response_type=code&scope=${DISCORD_SCOPE}`;
-            
-            // Redirect the user to the Discord login page
-            window.location.href = discordAuthUrl;
         };
 
         // --- Event Listener Setup ---
@@ -524,8 +517,9 @@
 
             document.getElementById('googleAuthBtn').addEventListener('click', () => handleSocialAuth(new GoogleAuthProvider()));
             document.getElementById('githubAuthBtn').addEventListener('click', () => handleSocialAuth(new GithubAuthProvider()));
+            document.getElementById('twitterAuthBtn').addEventListener('click', () => handleSocialAuth(new TwitterAuthProvider()));
             document.getElementById('microsoftAuthBtn').addEventListener('click', () => handleSocialAuth(new OAuthProvider('microsoft.com')));
-            document.getElementById('discordAuthBtn').addEventListener('click', handleDiscordLogin);
+            
         });
     </script>
 </body>
