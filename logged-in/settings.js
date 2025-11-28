@@ -1052,7 +1052,7 @@
                         <span class="text-emphasis">4SP (4simpleproblems)</span> is a <span class="text-emphasis">Student Toolkit and Entertainment website</span> designed to boost student productivity and provide useful resources. We aim to solve four core challenges that students face every day by integrating essential tools and engaging digital content into one seamless platform.
                     </p>
                     
-                    <h3 class="text-xl font-bold text-white mt-6 mb-2">The Four Simple Challenges We Address</h3>
+                    <h3 class="text-xl font-bold text-white mt-6 mb-2">The Four Simple Problems We Address</h3>
                     <ul class="list-disc list-inside ml-4 text-lg text-gray-400 leading-relaxed">
                         <li>Providing a <span class="text-emphasis">digital leisure platform free of advertisements</span>.</li>
                         <li>Delivering a <span class="text-emphasis">student toolkit designed for accessibility and consistent availability</span>, bypassing typical institutional network restrictions.</li>
