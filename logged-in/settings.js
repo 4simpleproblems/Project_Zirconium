@@ -947,6 +947,43 @@
          */
         function getPersonalizationContent() {
              return `
+                <style>
+                    /* Custom Range Slider Styling */
+                    .mac-slider {
+                        -webkit-appearance: none;
+                        appearance: none;
+                        background: transparent; /* Track color handled by Tailwind classes */
+                    }
+                    .mac-slider::-webkit-slider-thumb {
+                        -webkit-appearance: none;
+                        appearance: none;
+                        width: 20px;
+                        height: 20px;
+                        background: black;
+                        border: 2px solid white;
+                        border-radius: 50%;
+                        cursor: pointer;
+                        margin-top: -6px; /* Adjust based on track height */
+                    }
+                    .mac-slider::-moz-range-thumb {
+                        width: 20px;
+                        height: 20px;
+                        background: black;
+                        border: 2px solid white;
+                        border-radius: 50%;
+                        cursor: pointer;
+                    }
+                    .mac-slider::-webkit-slider-runnable-track {
+                        height: 0.5rem;
+                        border-radius: 0.5rem;
+                        background: #374151; /* gray-700 */
+                    }
+                    .mac-slider::-moz-range-track {
+                        height: 0.5rem;
+                        border-radius: 0.5rem;
+                        background: #374151;
+                    }
+                </style>
                 <h2 class="text-3xl font-bold text-white mb-6">Personalization</h2>
                 
                 <div class="w-full">
@@ -994,7 +1031,7 @@
                                             
                                             <!-- LEFT: Live Preview -->
                                             <div id="mac-preview-wrapper" class="w-1/2 flex flex-col items-center justify-center bg-[#0a0a0a] p-8 border-r border-[#333] transition-all duration-500 ease-in-out z-10">
-                                                <div class="relative w-64 md:w-80 aspect-square rounded-full overflow-hidden border-4 border-[#333] shadow-lg mb-6 transition-all duration-300 hover:border-dashed hover:border-white cursor-pointer" id="mac-preview-container">
+                                                <div class="relative w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden border-4 border-[#333] shadow-lg mb-6 transition-all duration-300 hover:border-dashed hover:border-white cursor-pointer flex-shrink-0" id="mac-preview-container">
                                                     <!-- Background (Static) -->
                                                     <div id="mac-preview-bg" class="absolute inset-0 w-full h-full transition-colors duration-300"></div>
                                                     
@@ -1010,11 +1047,17 @@
                                                 <div id="mac-sliders-container" class="hidden flex-col gap-6 w-full max-w-xs transition-opacity duration-300 opacity-0">
                                                     <div class="flex flex-col gap-2">
                                                         <label class="text-xs text-gray-400 uppercase tracking-wider font-bold">Size</label>
-                                                        <input type="range" id="mac-size-slider" min="50" max="150" value="100" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                                        <input type="range" id="mac-size-slider" min="50" max="150" value="100" list="mac-size-ticks" class="mac-slider w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                                        <datalist id="mac-size-ticks">
+                                                            <option value="100"></option>
+                                                        </datalist>
                                                     </div>
                                                     <div class="flex flex-col gap-2">
                                                         <label class="text-xs text-gray-400 uppercase tracking-wider font-bold">Rotation</label>
-                                                        <input type="range" id="mac-rotation-slider" min="-180" max="180" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                                        <input type="range" id="mac-rotation-slider" min="-180" max="180" value="0" list="mac-rotation-ticks" class="mac-slider w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                                        <datalist id="mac-rotation-ticks">
+                                                            <option value="0"></option>
+                                                        </datalist>
                                                     </div>
                                                     <p class="text-center text-gray-500 text-xs mt-2"><i class="fa-solid fa-hand-pointer mr-1"></i> Drag avatar to position</p>
                                                 </div>
