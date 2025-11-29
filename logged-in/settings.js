@@ -1451,7 +1451,13 @@
                 // Animate UI
                 previewWrapper.classList.remove('w-1/2');
                 previewWrapper.classList.add('w-full');
-                previewContainer.classList.add('mac-preview-scaled'); // Apply scale to preview
+                
+                // Apply scale to preview container (make it smaller to avoid clipping)
+                // Using transform: scale(0.8) via a style or class. 
+                // Since mac-preview-scaled is just a transition class in CSS, we can add inline style or a utility class.
+                // Let's use a utility class 'scale-75' (Tailwind) or set style directly if not available. 
+                // But wait, transform-origin might need to be set.
+                previewContainer.style.transform = 'scale(0.75)'; 
                 
                 controlsWrapper.classList.add('translate-x-full', 'w-0', 'overflow-hidden', 'p-0'); // Slide out and collapse
                 controlsWrapper.classList.remove('translate-x-0', 'w-1/2');
@@ -1474,7 +1480,9 @@
                 // Revert UI
                 previewWrapper.classList.add('w-1/2');
                 previewWrapper.classList.remove('w-full');
-                previewContainer.classList.remove('mac-preview-scaled'); // Remove scale from preview
+                
+                // Remove scale
+                previewContainer.style.transform = '';
 
                 controlsWrapper.classList.remove('translate-x-full', 'w-0', 'overflow-hidden', 'p-0');
                 controlsWrapper.classList.add('translate-x-0', 'w-1/2');
@@ -1517,11 +1525,23 @@
                 const dy = e.clientY - startY;
                 
                 // Convert drag distance to percentage of container size
-                const deltaXPercent = (dx / rect.width) * 100;
-                const deltaYPercent = (dy / rect.height) * 100;
+                // Note: rect.width might be scaled now, so we should use the unscaled width if possible, 
+                // or just adjust sensitivity. With scale(0.75), rect.width is smaller, so movement is faster.
+                // That's probably fine, or we can divide by scale.
+                const scale = 0.75;
+                const deltaXPercent = (dx / (rect.width / scale)) * 100;
+                const deltaYPercent = (dy / (rect.height / scale)) * 100;
                 
-                mibiAvatarState.offsetX = initialOffsetX + deltaXPercent;
-                mibiAvatarState.offsetY = initialOffsetY + deltaYPercent;
+                let newX = initialOffsetX + deltaXPercent;
+                let newY = initialOffsetY + deltaYPercent;
+                
+                // Clamp values (e.g. -60 to 60)
+                const CLAMP_LIMIT = 60;
+                newX = Math.max(-CLAMP_LIMIT, Math.min(CLAMP_LIMIT, newX));
+                newY = Math.max(-CLAMP_LIMIT, Math.min(CLAMP_LIMIT, newY));
+
+                mibiAvatarState.offsetX = newX;
+                mibiAvatarState.offsetY = newY;
                 
                 updateMibiPreview();
             });

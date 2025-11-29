@@ -503,15 +503,16 @@
             flex-direction: column;
         }
         #cropperContent {
-            background-color: #1a1a1a;
-            padding: 20px;
-            border-radius: 16px;
+            background-color: #000000;
+            padding: 0;
+            border-radius: 1rem;
             border: 1px solid #333;
             display: flex;
             flex-direction: column;
-            align-items: center;
+            align-items: stretch;
             width: 90%;
             max-width: 600px;
+            overflow: hidden;
         }
         #cropperCanvasContainer {
             position: relative;
@@ -615,20 +616,27 @@
     
     <div id="cropperModal">
         <div id="cropperContent">
-            <h3 class="text-xl font-bold text-white mb-4">Adjust Profile Picture</h3>
-            <p class="text-sm text-gray-400 mb-4">Drag to move. Scroll to resize the selection.</p>
-            
-            <div id="cropperCanvasContainer">
-                <canvas id="cropperCanvas"></canvas>
+            <!-- Header -->
+            <div class="flex justify-between items-center p-6 border-b border-[#333] bg-black">
+                <h3 class="text-2xl font-bold text-white">Adjust Profile Picture</h3>
+                <button id="cancelCropBtn" class="btn-toolbar-style w-10 h-10 flex items-center justify-center p-0 rounded-xl">
+                     <i class="fa-solid fa-xmark fa-xl"></i>
+                </button>
             </div>
             
-            <div class="flex justify-between w-full mt-4">
-                <button id="cancelCropBtn" class="btn-toolbar-style">
-                    <i class="fa-solid fa-xmark mr-2"></i> Cancel
-                </button>
-                <button id="submitCropBtn" class="btn-toolbar-style btn-primary-override">
-                    <i class="fa-solid fa-check mr-2"></i> Submit
-                </button>
+            <!-- Body -->
+            <div class="flex flex-col items-center p-6 bg-[#0a0a0a]">
+                <p class="text-sm text-gray-400 mb-4">Drag to move. Scroll to resize the selection.</p>
+                
+                <div id="cropperCanvasContainer" class="relative mb-6 border border-[#333] rounded-lg overflow-hidden">
+                    <canvas id="cropperCanvas"></canvas>
+                </div>
+                
+                <div class="flex justify-end w-full">
+                    <button id="submitCropBtn" class="btn-toolbar-style btn-primary-override px-6 py-2 rounded-xl">
+                        <i class="fa-solid fa-check mr-2"></i> Submit
+                    </button>
+                </div>
             </div>
         </div>
     </div>

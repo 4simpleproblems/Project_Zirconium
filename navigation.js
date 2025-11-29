@@ -323,7 +323,7 @@ let db;
             .nav-tab.active { color: var(--tab-active-text); border-color: var(--tab-active-border); background-color: var(--tab-active-bg); }
             .nav-tab.active:hover { color: var(--tab-active-hover-text); border-color: var(--tab-active-hover-border); background-color: var(--tab-active-hover-bg); }
             
-            #pin-button { border-color: var(--pin-btn-border); transition: background-color 0.2s, border-color 0.3s ease; }
+            #pin-button { border-color: var(--pin-btn-border); transition: background-color 0.2s, border-color 0.3s ease; display: flex; align-items: center; justify-content: center; }
             #pin-button:hover { background-color: var(--pin-btn-hover-bg); }
             #pin-button-icon { color: var(--pin-btn-icon-color); transition: color 0.3s ease; }
 
