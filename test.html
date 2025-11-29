@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>4SP - DOCUMENTATION</title>
-    <meta name="description" content="Your comprehensive guide to getting the most out of the 4SP Essential Student Toolkit features and settings.">
+    <meta name="description" content="Your comprehensive guide to getting the most out of the 4SP Essential Student Toolkit.">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,467 +14,340 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- Assumed dependency for navigation structure -->
-    <script src="../navigation-mini.js" defer></script> 
-    
     <style>
-        /* --- Tailwind Customization (Ensuring Geist and Weight 400 Max) --- */
         :root {
             --bg-page: #040404;
             --bg-container: #000000;
             --border-color: #333;
             --text-primary: #c0c0c0;
             --text-secondary: #a0a0a0;
-            --accent-color: #4f46e5; /* Indigo-600 */
         }
 
         body { 
             font-family: 'Geist', sans-serif; 
             background-color: var(--bg-page);
             color: var(--text-primary);
-            min-height: 100vh;
-            /* Enforce max weight 400 across the body */
-            font-weight: 300; 
+            font-weight: 300;
         }
 
-        h1, h2, h3, h4 {
-            /* Keep headers visually distinct, but respect max weight 400 */
-            font-weight: 400; 
+        h1, h2, h3, .font-bold, .font-semibold, strong {
+            font-weight: 400 !important;
         }
-
-        .container-main {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem 1rem;
-        }
-
-        /* --- Tab Styles --- */
-        .tab-bar {
-            display: flex;
-            flex-wrap: wrap;
-            border-bottom: 2px solid var(--border-color);
-            margin-bottom: 2rem;
-            gap: 0.5rem; /* Spacing between tabs */
-        }
-
-        .tab-button {
-            padding: 0.75rem 1.25rem;
+        
+        .btn-toolbar-style {
+            background: #0000000;
+            border: 1px solid #333;
+            border-radius: 0.75rem;
+            color: #d1d5db;
+            padding: 0.5rem 1rem;
+            font-weight: 500;
             cursor: pointer;
-            background-color: transparent;
-            color: var(--text-secondary);
-            font-weight: 400;
-            border-radius: 6px 6px 0 0;
-            transition: all 0.2s ease-in-out;
-            white-space: nowrap; /* Prevent wrapping of individual tabs */
-            margin-bottom: -2px; /* Pulls tab over the border line */
-            border: 2px solid transparent;
-        }
-
-        .tab-button:hover:not(.active) {
-            color: var(--text-primary);
-            background-color: #111;
-        }
-
-        .tab-button.active {
-            color: white;
-            border-color: var(--accent-color);
-            border-bottom: 2px solid var(--bg-page); /* Covers the main border */
-            background-color: var(--bg-container);
-        }
-
-        /* --- Content Pane Style --- */
-        .content-pane {
-            background-color: var(--bg-container);
-            border: 1px solid var(--border-color);
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-            min-height: 400px; /* Ensure content area is substantial */
-        }
-        
-        /* Step List Styling */
-        .step-list {
-            list-style: none;
-            counter-reset: step-counter;
-            padding: 0;
-        }
-        .step-list li {
-            margin-bottom: 1.5rem;
-            padding-left: 3rem;
-            position: relative;
-        }
-
-        .step-list li::before {
-            content: counter(step-counter);
-            counter-increment: step-counter;
-            position: absolute;
-            left: 0;
-            top: 0;
-            background-color: var(--accent-color);
-            color: white;
-            font-weight: 400;
-            width: 28px;
-            height: 28px;
-            display: flex;
+            transition: all 0.2s;
+            display: inline-flex;
             align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            font-size: 1rem;
+            gap: 0.5rem;
+        }
+        .btn-toolbar-style:hover {
+            background-color: #000000;
+            border-color: #fff;
+            color: #ffffff;
+        }
+        
+        .settings-tab {
+            width: 100%;
+            justify-content: flex-start;
+        }
+        .settings-tab.active {
+            background-color: rgba(79, 70, 229, 0.1);
+            border: 1px solid #4f46e5;
+            color: #4f46e5;
+        }
+        .settings-tab.active:hover {
+             background-color: rgba(79, 70, 229, 0.15);
+            border-color: #6366f1;
+            color: #6366f1;
+        }
+        
+        #page-content {
+            min-height: calc(100vh - 4rem);
+            display: flex;
+            flex-direction: column;
         }
 
-        .image-container {
-            margin-top: 1.5rem;
-            padding: 1rem;
-            background-color: #1a1a1a;
-            border: 1px dashed var(--accent-color);
-            border-radius: 8px;
+        #documentation-container {
+            display: flex;
+            flex-grow: 1;
+            padding: 20px;
+            min-height: calc(100vh - 4rem - 40px); 
+            max-width: 1200px; /* Limit width to be readable */
+            margin: 0 auto; /* Center the container */
         }
-        
-        .image-container img {
+
+        #documentation-sidebar {
+            width: 250px;
+            padding-right: 20px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            position: sticky; 
+            top: 4.5rem; 
+            align-self: flex-start; 
+        }
+
+        #documentation-main-view {
+            flex-grow: 1;
+            padding: 20px;
+            background-color: #0d0d0d;
+            border: 1px solid #1a1a1a;
+            border-radius: 0.75rem;
+            min-height: 100%; 
+            display: flex;
+            flex-direction: column; 
+            align-items: flex-start;
+        }
+
+        .documentation-section {
+            display: none; /* Hidden by default, shown by JS */
             width: 100%;
-            max-width: 500px;
-            height: auto;
-            border-radius: 4px;
+        }
+
+        .documentation-section.active {
             display: block;
-            margin: 0 auto;
         }
-        
-        .note {
-            background-color: #1a0f30; 
-            border-left: 4px solid var(--accent-color);
-            padding: 1rem;
-            border-radius: 6px;
+
+        .image-placeholder {
+            border: 2px dashed var(--border-color);
+            background-color: #111;
+            border-radius: 16px;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-secondary);
             margin-top: 1rem;
-            font-size: 0.95rem;
-            color: #d1c4e9; /* Light purple tint for contrast */
-        }
-        
-        /* Responsive list layout for small screens */
-        @media (max-width: 640px) {
-            .tab-bar {
-                flex-direction: column;
-            }
-            .tab-button {
-                width: 100%;
-                border-radius: 6px;
-            }
-            .tab-button.active {
-                 border-bottom: 2px solid var(--accent-color);
-            }
+            max-width: 600px; /* Constrain image width */
+            object-fit: cover; /* Ensure image covers the area nicely */
         }
     </style>
-</head>
-<body>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-1D4F692C1Q"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
 
-    <main class="container-main">
-        <header class="text-center mb-10">
-            <h1 class="text-5xl font-extrabold mb-3 text-white" style="font-weight: 400;">4SP User Guide</h1>
-            <p class="text-xl text-gray-400" style="font-weight: 300;">Interactive tutorials for mastering the platform.</p>
+  gtag('config', 'G-1D4F692C1Q');
+</script>
+    
+</head>
+<body class="min-h-screen">
+
+    <div id="page-content">
+        <header class="flex justify-between items-center p-4 border-b border-[#1a1a1a]">
+            <h1 class="text-2xl font-bold text-white">4SP Documentation</h1>
         </header>
 
-        <!-- Tab Navigation -->
-        <div class="tab-bar overflow-x-auto">
-            <button class="tab-button active" data-tab="auth"><i class="fas fa-lock mr-2"></i> How to Authenticate</button>
-            <button class="tab-button" data-tab="navigate"><i class="fas fa-compass mr-2"></i> How to Navigate</button>
-            <button class="tab-button" data-tab="categories"><i class="fas fa-gamepad mr-2"></i> Switch Game Categories</button>
-            <button class="tab-button" data-tab="themes"><i class="fas fa-palette mr-2"></i> Change Themes</button>
-            <button class="tab-button" data-tab="providers"><i class="fas fa-link mr-2"></i> Link Providers</button>
-            <button class="tab-button" data-tab="pin"><i class="fas fa-thumbtack mr-2"></i> Pin Button</button>
-            <button class="tab-button" data-tab="panic"><i class="fas fa-exclamation-triangle mr-2"></i> Panic Keys</button>
-            <button class="tab-button" data-tab="disguiser"><i class="fas fa-mask mr-2"></i> Tab Disguiser</button>
-            <button class="tab-button" data-tab="mibi"><i class="fas fa-user-circle mr-2"></i> Mibi Avatar</button>
-            <button class="tab-button" data-tab="messenger"><i class="fas fa-paper-plane mr-2"></i> Open Messenger 2.0</button>
-            <button class="tab-button" data-tab="dailyphoto"><i class="fas fa-user-plus mr-2"></i> Dailyphoto Friends</button>
-        </div>
+        <div id="documentation-container">
+            <nav id="documentation-sidebar">
+                <button class="btn-toolbar-style settings-tab active" data-tab="authenticate">
+                    <i class="fa-solid fa-lock w-5"></i> <span>How to Authenticate</span>
+                </button>
+                <button class="btn-toolbar-style settings-tab" data-tab="navigate">
+                    <i class="fa-solid fa-compass w-5"></i> <span>How to Navigate</span>
+                </button>
+                <button class="btn-toolbar-style settings-tab" data-tab="game-categories">
+                    <i class="fa-solid fa-gamepad w-5"></i> <span>How to Switch Game Categories</span>
+                </button>
+                <button class="btn-toolbar-style settings-tab" data-tab="themes">
+                    <i class="fa-solid fa-palette w-5"></i> <span>How to Change Themes</span>
+                </button>
+                <button class="btn-toolbar-style settings-tab" data-tab="providers">
+                    <i class="fa-solid fa-link w-5"></i> <span>How to Link Providers</span>
+                </button>
+                <button class="btn-toolbar-style settings-tab" data-tab="pin-button">
+                    <i class="fa-solid fa-thumbtack w-5"></i> <span>How to use the Pin Button</span>
+                </button>
+                <button class="btn-toolbar-style settings-tab" data-tab="panic-keys">
+                    <i class="fa-solid fa-hand-paper w-5"></i> <span>How to use Panic Keys</span>
+                </button>
+                <button class="btn-toolbar-style settings-tab" data-tab="tab-disguiser">
+                    <i class="fa-solid fa-mask w-5"></i> <span>How to use Tab Disguiser</span>
+                </button>
+                <button class="btn-toolbar-style settings-tab" data-tab="mibi-avatar">
+                    <i class="fa-solid fa-user-circle w-5"></i> <span>How to use your Mibi Avatar</span>
+                </button>
+                <button class="btn-toolbar-style settings-tab" data-tab="messenger-2">
+                    <i class="fa-solid fa-comments w-5"></i> <span>How to open the Messenger 2.0</span>
+                </button>
+                <button class="btn-toolbar-style settings-tab" data-tab="dailyphoto-friends">
+                    <i class="fa-solid fa-users w-5"></i> <span>How to add friends on Dailyphoto</span>
+                </button>
+            </nav>
 
-        <!-- Content Display Area -->
-        <div id="documentation-content" class="content-pane">
-            <!-- Content will be injected here -->
+            <div id="documentation-main-view">
+                
+                <div id="authenticate-section" class="documentation-section active">
+                    <h2 class="text-3xl font-medium mb-4">How to Authenticate</h2>
+                    <p class="text-lg text-gray-400">
+                        Instructions on how to log in or create an account using various authentication methods, including email/password and social providers.
+                    </p>
+                    <img src="https://via.placeholder.com/600x400?text=Authentication+Image" alt="Authentication Screenshot" class="image-placeholder">
+                </div>
+
+                <div id="navigate-section" class="documentation-section">
+                    <h2 class="text-3xl font-medium mb-4">How to Navigate</h2>
+                    <p class="text-lg text-gray-400">
+                        Learn how to efficiently move between different sections and features of the 4SP toolkit.
+                    </p>
+                    <img src="https://via.placeholder.com/600x400?text=Navigation+Image" alt="Navigation Screenshot" class="image-placeholder">
+                </div>
+
+                <div id="game-categories-section" class="documentation-section">
+                    <h2 class="text-3xl font-medium mb-4">How to Switch Game Categories</h2>
+                    <p class="text-lg text-gray-400">
+                        Detailed steps on how to change and filter different categories of games available in the platform.
+                    </p>
+                    <img src="https://via.placeholder.com/600x400?text=Game+Categories+Image" alt="Game Categories Screenshot" class="image-placeholder">
+                </div>
+
+                <div id="themes-section" class="documentation-section">
+                    <h2 class="text-3xl font-medium mb-4">How to Change Themes</h2>
+                    <p class="text-lg text-gray-400">
+                        Customize your 4SP experience by learning how to switch between different visual themes.
+                    </p>
+                    <img src="https://via.placeholder.com/600x400?text=Themes+Image" alt="Themes Screenshot" class="image-placeholder">
+                </div>
+
+                <div id="providers-section" class="documentation-section">
+                    <h2 class="text-3xl font-medium mb-4">How to Link Providers</h2>
+                    <p class="text-lg text-gray-400">
+                        Connect your 4SP account with external services and providers for enhanced functionality.
+                    </p>
+                    <img src="https://via.placeholder.com/600x400?text=Link+Providers+Image" alt="Link Providers Screenshot" class="image-placeholder">
+                </div>
+
+                <div id="pin-button-section" class="documentation-section">
+                    <h2 class="text-3xl font-medium mb-4">How to use the Pin Button</h2>
+                    <p class="text-lg text-gray-400">
+                        Understand the functionality of the pin button to quickly access your favorite pages or tools.
+                    </p>
+                    <img src="https://via.placeholder.com/600x400?text=Pin+Button+Image" alt="Pin Button Screenshot" class="image-placeholder">
+                </div>
+
+                <div id="panic-keys-section" class="documentation-section">
+                    <h2 class="text-3xl font-medium mb-4">How to use Panic Keys</h2>
+                    <p class="text-lg text-gray-400">
+                        Learn how to set up and effectively use panic keys for quick and discreet exits.
+                    </p>
+                    <img src="https://via.placeholder.com/600x400?text=Panic+Keys+Image" alt="Panic Keys Screenshot" class="image-placeholder">
+                </div>
+
+                <div id="tab-disguiser-section" class="documentation-section">
+                    <h2 class="text-3xl font-medium mb-4">How to use Tab Disguiser</h2>
+                    <p class="text-lg text-gray-400">
+                        Instructions on how to use the tab disguiser feature to quickly change your tab's appearance and title.
+                    </p>
+                    <img src="https://via.placeholder.com/600x400?text=Tab+Disguiser+Image" alt="Tab Disguiser Screenshot" class="image-placeholder">
+                </div>
+
+                <div id="mibi-avatar-section" class="documentation-section">
+                    <h2 class="text-3xl font-medium mb-4">How to use your Mibi Avatar</h2>
+                    <p class="text-lg text-gray-400">
+                        Personalize your profile with a Mibi Avatar and learn how to customize its various components.
+                    </p>
+                    <img src="https://via.placeholder.com/600x400?text=Mibi+Avatar+Image" alt="Mibi Avatar Screenshot" class="image-placeholder">
+                </div>
+
+                <div id="messenger-2-section" class="documentation-section">
+                    <h2 class="text-3xl font-medium mb-4">How to open the Messenger 2.0</h2>
+                    <p class="text-lg text-gray-400">
+                        To access Messenger 2.0, you first need to download the HTML file from the 
+                        <a href="logged-in/messenger-tutorial.html" class="text-blue-400 hover:underline">Messenger Tutorial page</a>.
+                        Once downloaded, navigate to the files app where the HTML file was saved.
+                        Then, you have two options to open it:
+                    </p>
+                    <ol class="list-decimal list-inside text-lg text-gray-400 ml-4 mt-2">
+                        <li>Double-click the file (this works on most file managers).</li>
+                        <li>Right-click the file and select "Open" from the context menu.</li>
+                    </ol>
+                    <p class="text-lg text-red-400 mt-4">
+                        <strong>Important:</strong> If these methods do not work, HTML file opening might not be supported on your device or browser configuration.
+                    </p>
+                    <img src="https://via.placeholder.com/600x400?text=Messenger+2.0+Image" alt="Messenger 2.0 Screenshot" class="image-placeholder">
+                </div>
+
+                <div id="dailyphoto-friends-section" class="documentation-section">
+                    <h2 class="text-3xl font-medium mb-4">How to add friends on Dailyphoto</h2>
+                    <p class="text-lg text-gray-400">
+                        Learn how to connect with friends and share your daily photos within the Dailyphoto application.
+                    </p>
+                    <img src="https://via.placeholder.com/600x400?text=Dailyphoto+Friends+Image" alt="Dailyphoto Friends Screenshot" class="image-placeholder">
+                </div>
+
+            </div>
         </div>
-    </main>
+    </div>
     
+    <script src="navigation.js"></script>
+    <script src="injector.js"></script>
+    <script src="panic-key.js"></script>
+    <script src="url-changer.js" defer></script> 
+
     <script>
-        const contentData = {
-            'auth': {
-                title: 'How to Authenticate and Set Up Your Account',
-                icon: 'fas fa-lock',
-                html: `
-                    <p class="text-lg text-gray-300 mb-6">Authentication is your gateway to all 4SP tools. You can sign up or log in using traditional email/password or various social providers.</p>
-                    <ol class="step-list">
-                        <li>
-                            <strong class="text-white">Access the Authentication Page:</strong> Navigate directly to the <a href="../authentication.html" class="text-accent-color hover:underline">Access Account</a> page.
-                        </li>
-                        <li>
-                            <strong class="text-white">Choose Your Method:</strong> Select your preferred sign-in method: Email/Password, or link quickly via Google, GitHub, Microsoft, or Twitter.
-                            <div class="note"><strong class="text-accent-color">TIP:</strong> Using a social provider (Google, etc.) can be faster, but ensure you remember which one you used.</div>
-                        </li>
-                        <li>
-                            <strong class="text-white">Initial Username Setup:</strong> If this is your very first time, after successful sign-in, you will be prompted to choose a unique, visible username. This username is permanent and cannot be changed later.
-                        </li>
-                        <li>
-                            <strong class="text-white">Confirm and Access:</strong> Once authenticated, you will be automatically redirected to your main application dashboard.
-                            
-                        </li>
-                    </ol>
-                `
-            },
-            'navigate': {
-                title: 'General Site Navigation',
-                icon: 'fas fa-compass',
-                html: `
-                    <p class="text-lg text-gray-300 mb-6">The 4SP interface uses a fixed, horizontal navigation bar for quick access to all pages and settings.</p>
-                    <ol class="step-list">
-                        <li>
-                            <strong class="text-white">Page Tabs:</strong> All main applications (Dashboard, Soundboard, Notes, Dailyphoto, etc.) are listed as scrollable tabs in the center of the navbar. Scroll horizontally if you don't see all tabs.
-                        </li>
-                        <li>
-                            <strong class="text-white">Search Function:</strong> Use the universal search bar (usually on the left) to quickly filter and find any application or game by name.
-                        </li>
-                        <li>
-                            <strong class="text-white">User Menu:</strong> Your Mibi Avatar and username are on the right side. Click here to open a dropdown menu giving you access to Settings and the Logout button.
-                            
-                        </li>
-                        <li>
-                            <strong class="text-white">Switching Pages:</strong> Simply click any tab in the center to switch immediately. The page content will load dynamically without a full browser refresh, maintaining speed.
-                        </li>
-                    </ol>
-                `
-            },
-            'categories': {
-                title: 'How to Switch Game Categories',
-                icon: 'fas fa-gamepad',
-                html: `
-                    <p class="text-lg text-gray-300 mb-6">The main Games page (usually <code class="text-yellow-300">index.html</code>) organizes games into categories for filtering and easy browsing.</p>
-                    <ol class="step-list">
-                        <li>
-                            <strong class="text-white">Locate the Category Filters:</strong> On the main Games page, look for the row of filter buttons or tabs, usually located right above the list of games.
-                        </li>
-                        <li>
-                            <strong class="text-white">Select a Category:</strong> Click on categories like "Arcade," "Strategy," or "Favorites." The list of games below will instantly filter to show only games belonging to that category.
-                        </li>
-                        <li>
-                            <strong class="text-white">Using Favorites:</strong> Games you have starred or marked as favorites will appear in the "Favorites" category, providing quick access to your most-played titles.
-                            
-                        </li>
-                    </ol>
-                `
-            },
-            'themes': {
-                title: 'How to Change Themes',
-                icon: 'fas fa-palette',
-                html: `
-                    <p class="text-lg text-gray-300 mb-6">You can customize the visual style of 4SP, though the Dark Theme is the default experience.</p>
-                    <ol class="step-list">
-                        <li>
-                            <strong class="text-white">Open Settings:</strong> Click on your Mibi Avatar/Profile icon in the top right corner of the navigation bar and select "Settings."
-                        </li>
-                        <li>
-                            <strong class="text-white">Navigate to Appearance:</strong> In the Settings page (<code class="text-yellow-300">settings.html</code>), look for the "Appearance" or "Theme" tab/section.
-                        </li>
-                        <li>
-                            <strong class="text-white">Select New Theme:</strong> Choose your preferred theme (e.g., Light, Dark, or System Sync). The change should apply immediately across all pages.
-                            
-                        </li>
-                    </ol>
-                `
-            },
-            'providers': {
-                title: 'How to Link/Unlink Login Providers',
-                icon: 'fas fa-link',
-                html: `
-                    <p class="text-lg text-gray-300 mb-6">Manage your linked accounts in Settings to control which providers you can use to sign in.</p>
-                    <ol class="step-list">
-                        <li>
-                            <strong class="text-white">Go to Security Settings:</strong> In the Settings page (<code class="text-yellow-300">settings.html</code>), navigate to the "Security" or "Providers" section.
-                        </li>
-                        <li>
-                            <strong class="text-white">Link New Provider:</strong> Find the provider you wish to add (e.g., Google, GitHub). Click the "Link" button next to it. A secure popup will appear to authorize the connection.
-                        </li>
-                        <li>
-                            <strong class="text-white">Unlink Provider:</strong> To remove a linked provider, simply click the "Unlink" button next to it.
-                            <div class="note"><strong class="text-accent-color">CRITICAL:</strong> You must always maintain at least one active sign-in method (Email/Password or one social provider). You cannot unlink your last remaining access method.</div>
-                            
-                        </li>
-                    </ol>
-                `
-            },
-            'pin': {
-                title: 'How to use the Pin Button',
-                icon: 'fas fa-thumbtack',
-                html: `
-                    <p class="text-lg text-gray-300 mb-6">The Pin Button is used to save or prioritize key information, notes, or widgets on your Dashboard or within specific applications.</p>
-                    <ol class="step-list">
-                        <li>
-                            <strong class="text-white">Locate the Icon:</strong> Look for the small thumbtack or pin icon (<code class="text-yellow-300">fas fa-thumbtack</code>) on a widget, note, or item you want to prioritize.
-                        </li>
-                        <li>
-                            <strong class="text-white">Click to Pin:</strong> Clicking the icon will 'pin' the item. This action usually moves it to a prominent, 'sticky' location (like the top of your Dashboard) or highlights it across the application.
-                        </li>
-                        <li>
-                            <strong class="text-white">Click to Unpin:</strong> Clicking the icon again will unpin the item, returning it to its default chronological or un-prioritized location.
-                            
-                        </li>
-                    </ol>
-                `
-            },
-            'panic': {
-                title: 'How to use Panic Keys',
-                icon: 'fas fa-exclamation-triangle',
-                html: `
-                    <p class="text-lg text-gray-300 mb-6">The Panic Key feature is designed for rapid, discreet exit from the application and immediate redirection to a safe, educational page.</p>
-                    <ol class="step-list">
-                        <li>
-                            <strong class="text-white">Default Key:</strong> The default panic key is the <kbd class="px-2 py-0.5 bg-[#222] border border-[#555] rounded text-sm">Esc</kbd> (Escape) key.
-                        </li>
-                        <li>
-                            <strong class="text-white">Execution:</strong> Pressing the panic key will instantly change the current URL and page content to a neutral, pre-set destination (e.g., a Google search page or an official educational site).
-                        </li>
-                        <li>
-                            <strong class="text-white">Customization:</strong> You can change the panic key combination and the redirection URL in the Settings page (<code class="text-yellow-300">settings.html</code>), typically under a "Safety" or "Advanced" tab.
-                        </li>
-                    </ol>
-                    <div class="note"><strong class="text-accent-color">IMPORTANT NOTE:</strong> Once triggered, you will be redirected off-site and the browser history will be cleared for that page. You must manually navigate back to 4SP afterwards.</div>
-                    
-                `
-            },
-            'disguiser': {
-                title: 'How to use Tab Disguiser',
-                icon: 'fas fa-mask',
-                html: `
-                    <p class="text-lg text-gray-300 mb-6">The Tab Disguiser allows you to instantly change the browser tab's title and favicon to mimic a legitimate, work-related or educational site.</p>
-                    <ol class="step-list">
-                        <li>
-                            <strong class="text-white">Open Settings:</strong> Navigate to the Settings page (<code class="text-yellow-300">settings.html</code>).
-                        </li>
-                        <li>
-                            <strong class="text-white">Find the Disguiser:</strong> Look for the "Tab Disguiser" or "Appearance" section within Settings.
-                        </li>
-                        <li>
-                            <strong class="text-white">Select a Preset:</strong> Choose from presets like "Google Docs," "Class Schedule," or "Math Calculator." The favicon and tab title will update immediately in your browser window.
-                        </li>
-                        <li>
-                            <strong class="text-white">To Revert:</strong> Select the "4SP Default" option to restore the original title and favicon.
-                            
-                        </li>
-                    </ol>
-                `
-            },
-            'mibi': {
-                title: 'How to use your Mibi Avatar',
-                icon: 'fas fa-user-circle',
-                html: `
-                    <p class="text-lg text-gray-300 mb-6">Your Mibi Avatar is your unique profile picture, used across the platform and visible to your friends.</p>
-                    <ol class="step-list">
-                        <li>
-                            <strong class="text-white">Access Avatar Settings:</strong> In the Settings page (<code class="text-yellow-300">settings.html</code>), navigate to the "Profile" or "Avatar" tab/section.
-                        </li>
-                        <li>
-                            <strong class="text-white">Upload New Image:</strong> Click the upload button to select a new image file from your device.
-                        </li>
-                        <li>
-                            <strong class="text-white">Crop and Adjust:</strong> Use the built-in cropper tool to drag, resize, and position the image to fit the circular profile frame perfectly.
-                        </li>
-                        <li>
-                            <strong class="text-white">Save Changes:</strong> Confirm the crop and save the changes. Your new Mibi Avatar will now be visible in the navigation bar and on your Dailyphoto profile.
-                            
-                        </li>
-                    </ol>
-                `
-            },
-            'messenger': {
-                title: 'How to Open the Messenger 2.0 (Local Access)',
-                icon: 'fas fa-paper-plane',
-                html: `
-                    <p class="text-lg text-gray-300 mb-6">The Messenger 2.0 app is designed to run locally on your device by downloading and opening the dedicated HTML file.</p>
-                    <ol class="step-list">
-                        <li>
-                            <strong class="text-white">Download the File:</strong> Go to the Messenger page (which links to <code class="text-yellow-300">messenger-tutorial.html</code>) and follow the instructions to download the <code class="text-yellow-300">messenger-v2.html</code> file.
-                        </li>
-                        <li>
-                            <strong class="text-white">Locate the Download:</strong> Open your file manager (like File Explorer on Windows or Finder on Mac) and find the <code class="text-yellow-300">messenger-v2.html</code> file in your "Downloads" folder or wherever your browser saved it.
-                        </li>
-                        <li>
-                            <strong class="text-white">Open the Messenger:</strong>
-                            <ul class="ml-6 mt-2 list-disc list-outside space-y-2 text-gray-300">
-                                <li><strong>Option A (Recommended):</strong> Double-click the <code class="text-yellow-300">messenger-v2.html</code> file. This often opens it directly in your default browser.</li>
-                                <li><strong>Option B:</strong> Right-click the file and select the "Open" option from the menu. If "Open" is not available, look for "Open with..." and choose your preferred browser (Chrome, Edge, Firefox, etc.).</li>
-                            </ul>
-                        </li>
-                    </ol>
-                    <div class="note"><strong class="text-accent-color">TROUBLESHOOTING:</strong> If these methods do not launch the messenger in a browser tab, your device or network environment may be restricting local HTML file execution. This is rare, but if it happens, try a different browser or ensure the file has not been blocked by your system.</div>
-                    
-                `
-            },
-            'dailyphoto': {
-                title: 'How to Add Friends on Dailyphoto',
-                icon: 'fas fa-user-plus',
-                html: `
-                    <p class="text-lg text-gray-300 mb-6">Dailyphoto (<code class="text-yellow-300">dailyphoto.html</code>) is a shared experience. You need a friend's unique User ID to connect with them.</p>
-                    <ol class="step-list">
-                        <li>
-                            <strong class="text-white">Find Your ID:</strong> Your unique User ID is a long string of characters visible in your Settings page (under Profile) or displayed prominently on the Dailyphoto page itself. <strong class="text-accent-color">Share this ID with friends who want to add you.</strong>
-                        </li>
-                        <li>
-                            <strong class="text-white">Enter Friend's ID:</strong> On the Dailyphoto page, locate the "Add Friend" input area. Copy and paste the unique User ID of the friend you want to add into the input box.
-                        </li>
-                        <li>
-                            <strong class="text-white">Send Request:</strong> Click the "Add Friend" button to send the connection request.
-                        </li>
-                        <li>
-                            <strong class="text-white">Accept Request:</strong> The friend you sent the request to must log in to Dailyphoto, find their "Friend Requests" section, and click "Accept" to finalize the connection. The process requires confirmation from both sides.
-                            
-                        </li>
-                    </ol>
-                `
-            }
-        };
-
-        const docContent = document.getElementById('documentation-content');
-        const tabButtons = document.querySelectorAll('.tab-button');
-
-        function renderContent(tabId) {
-            const content = contentData[tabId];
-            if (content) {
-                docContent.innerHTML = `
-                    <h2 class="text-3xl font-bold mb-6 flex items-center text-white" style="font-weight: 400;">
-                        <i class="${content.icon} text-accent-color mr-3 text-2xl"></i> ${content.title}
-                    </h2>
-                    ${content.html}
-                `;
-            }
-            // Scroll content area to top
-            docContent.scrollTop = 0;
-        }
-
-        function handleTabClick(event) {
-            const selectedButton = event.currentTarget;
-            const tabId = selectedButton.dataset.tab;
-
-            // 1. Remove 'active' class from all buttons
-            tabButtons.forEach(btn => btn.classList.remove('active'));
-
-            // 2. Add 'active' class to the clicked button
-            selectedButton.classList.add('active');
-
-            // 3. Render the content
-            renderContent(tabId);
-            
-            // 4. Scroll to the top of the content pane on mobile
-            window.scrollTo({
-                top: document.getElementById('documentation-content').offsetTop - 20,
-                behavior: 'smooth'
-            });
-        }
-
-        // Initialize: Attach listeners and load default content
         document.addEventListener('DOMContentLoaded', () => {
-            tabButtons.forEach(button => {
-                button.addEventListener('click', handleTabClick);
+            const tabs = document.querySelectorAll('#documentation-sidebar .settings-tab');
+            const sections = document.querySelectorAll('#documentation-main-view .documentation-section');
+
+            function showSection(tabId) {
+                sections.forEach(section => {
+                    section.classList.remove('active');
+                });
+                tabs.forEach(tab => {
+                    tab.classList.remove('active');
+                });
+
+                document.getElementById(`${tabId}-section`).classList.add('active');
+                document.querySelector(`.settings-tab[data-tab="${tabId}"]`).classList.add('active');
+            }
+
+            // Function to get the initial tab from URL hash, or default to the first tab
+            function getInitialTab() {
+                const hash = window.location.hash.substring(1); // Get hash without '#'
+                if (hash) {
+                    const correspondingTab = document.querySelector(`.settings-tab[data-tab="${hash}"]`);
+                    if (correspondingTab) {
+                        return hash;
+                    }
+                }
+                return tabs.length > 0 ? tabs[0].dataset.tab : null;
+            }
+
+            // Show the initial section based on URL hash or default
+            const initialTab = getInitialTab();
+            if (initialTab) {
+                showSection(initialTab);
+            }
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabId = tab.dataset.tab;
+                    showSection(tabId);
+                    window.location.hash = tabId; // Update URL hash on tab change
+                });
             });
 
-            // Load the first tab content on page load
-            const initialTab = tabButtons[0].dataset.tab;
-            renderContent(initialTab);
+            // Handle browser back/forward buttons with hash changes
+            window.addEventListener('hashchange', () => {
+                const hash = window.location.hash.substring(1);
+                if (hash) {
+                    const correspondingTab = document.querySelector(`.settings-tab[data-tab="${hash}"]`);
+                    if (correspondingTab && !correspondingTab.classList.contains('active')) {
+                        showSection(hash);
+                    }
+                }
+            });
         });
     </script>
 </body>
