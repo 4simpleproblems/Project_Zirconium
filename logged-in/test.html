@@ -12,10 +12,12 @@
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
 
     <style>
-        /* --- FONT & BASE STYLING --- */
+        /* --- FONT & BASE STYLING (MATCHING template) --- */
         body { 
             font-family: 'Geist', sans-serif; 
             background-color: #040404; 
@@ -25,9 +27,21 @@
             font-weight: 300;
         }
 
-        /* --- THEME-AWARE STYLES (Existing) --- */
+        h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
+            font-weight: 400 !important;
+        }
+        
+        /* Emphasis class for slightly bolder text */
+        .text-emphasis {
+            font-weight: 500 !important; 
+            color: #ffffff;
+        }
+
+        /* --- THEME-AWARE STYLES --- */
+        /* MODIFICATION: These styles are now HARD-CODED to the default theme */
+        
         .btn-toolbar-style {
-            background: #000000;
+            background: #0000000;
             border: 1px solid #333;
             border-radius: 0.75rem;
             color: #d1d5db;
@@ -40,11 +54,13 @@
             gap: 0.5rem;
         }
         .btn-toolbar-style:hover {
-            background-color: #111;
+            background-color: #000000;
             border-color: #fff;
             color: #ffffff;
         }
+        
         .btn-toolbar-style.btn-primary-override {
+            /* For the Apply button (Blue) */
             justify-content: center;
             background-color: rgba(79, 70, 229, 0.1);
             border: 1px solid #4f46e5;
@@ -55,233 +71,487 @@
             border-color: #6366f1;
             color: #6366f1;
         }
+        
+        /* NEW DANGER STYLE - Based on primary style but with red colors */
         .btn-toolbar-style.btn-primary-override-danger {
+            /* For the Delete button (Red) */
             justify-content: center;
-            background-color: rgba(220, 38, 38, 0.1);
-            border: 1px solid #dc2626;
-            color: #dc2626;
+            
+            background-color: rgba(220, 38, 38, 0.1); /* red-700/10 */
+            border: 1px solid #dc2626; /* red-600 */
+            color: #dc2626; /* red-600 */
+        }
+        .btn-toolbar-style.btn-primary-override-danger:hover {
+            background-color: rgba(220, 38, 38, 0.15); /* red-700/15 */
+            border-color: #ef4444; /* red-500 */
+            color: #ef4444; /* red-500 */
+        }
+
+        .settings-tab {
+            width: 100%;
+            justify-content: flex-start;
         }
         .settings-tab.active {
             background-color: rgba(79, 70, 229, 0.1);
             border: 1px solid #4f46e5;
             color: #4f46e5;
         }
+        .settings-tab.active:hover {
+             background-color: rgba(79, 70, 229, 0.15);
+            border-color: #6366f1;
+            color: #6366f1;
+        }
         
-        /* --- Layout Styles --- */
-        #page-content { min-height: calc(100vh - 4rem); display: flex; flex-direction: column; }
-        #settings-container { display: flex; flex-grow: 1; padding: 20px; min-height: calc(100vh - 4rem - 40px); }
-        #settings-sidebar { width: 250px; padding-right: 20px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; position: sticky; top: 4.5rem; align-self: flex-start; }
-        #settings-main-view { flex-grow: 1; padding: 20px; background-color: #0d0d0d; border: 1px solid #1a1a1a; border-radius: 0.75rem; min-height: 100%; display: flex; flex-direction: column; align-items: flex-start; }
-        .settings-box { border: 1px solid #333; border-radius: 1rem; background-color: #0000000; transition: all 0.2s; }
-        .input-text-style, .input-select-style { width: 100%; padding: 0.75rem; border: 1px solid #252525; background-color: #111111; border-radius: 0.5rem; color: #c0c0c0; transition: all 0.2s; }
-        .input-key-style { width: 4rem; padding: 0.75rem; border: 1px solid #252525; background-color: #111111; border-radius: 0.5rem; color: #c0c0c0; text-align: center; font-weight: 500; text-transform: uppercase; }
+        /* --- Page Content Layout --- */
+        #page-content {
+            min-height: calc(100vh - 4rem);
+            display: flex;
+            flex-direction: column;
+        }
 
-        /* --- MIBI AVATAR CREATOR STYLES (NEW) --- */
-        #mibiModal {
+        #settings-container {
+            display: flex;
+            flex-grow: 1;
+            padding: 20px;
+            min-height: calc(100vh - 4rem - 40px); 
+        }
+
+        #settings-sidebar {
+            width: 250px;
+            padding-right: 20px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            position: sticky; 
+            top: 4.5rem; 
+            align-self: flex-start; 
+        }
+
+        #settings-main-view {
+            flex-grow: 1;
+            padding: 20px;
+            background-color: #0d0d0d;
+            border: 1px solid #1a1a1a;
+            border-radius: 0.75rem;
+            min-height: 100%; 
+            display: flex;
+            flex-direction: column; 
+            align-items: flex-start;
+        }
+        
+        .about-section-content {
+            width: 100%;
+            margin-top: 1rem;
+        }
+        .social-link-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            margin-bottom: 20px;
+        }
+        .legal-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        /* Container style to match tab look (used for rate limit and input wrapper) */
+        /* MODIFICATION: Hard-coded default theme */
+        .settings-box { 
+            border: 1px solid #333; 
+            border-radius: 1rem; 
+            background-color: #0000000; 
+            transition: all 0.2s;
+        }
+        
+        /* Utility styles for form elements */
+        .input-text-style {
+            width: 100%; 
+            padding: 0.75rem; 
+            border: 1px solid #252525; 
+            background-color: #111111; 
+            border-radius: 0.5rem; 
+            color: #c0c0c0; 
+            transition: all 0.2s;
+        }
+        .input-text-style:focus {
+            border-color: #505050; 
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(80, 80, 80, 0.5);
+        }
+        
+        /* Style for the Panic Key input (single character) */
+        .input-key-style {
+            width: 4rem; /* Fixed width for a single key */
+            padding: 0.75rem;
+            border: 1px solid #252525; 
+            background-color: #111111; 
+            border-radius: 0.5rem; 
+            color: #c0c0c0; 
+            transition: all 0.2s;
+            font-size: 1.1rem;
+            text-align: center;
+            font-weight: 500;
+            text-transform: uppercase; /* Show the key as uppercase */
+            caret-color: transparent; /* Hide the caret */
+        }
+        .input-key-style::placeholder {
+            font-size: 1rem;
+            text-transform: none;
+        }
+         .input-key-style:focus {
+            border-color: #505050; 
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(80, 80, 80, 0.5);
+         }
+        
+        .input-select-style {
+            width: 100%; 
+            padding: 0.75rem; 
+            border: 1px solid #252525; 
+            background-color: #111111; 
+            border-radius: 0.5rem; 
+            color: #c0c0c0; 
+            transition: all 0.2s;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+        .input-select-style:focus {
+            border-color: #505050; 
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(80, 80, 80, 0.5);
+        }
+        
+        .general-message-area { min-height: 20px; margin-top: 1rem; font-weight: 400; }
+        .success-message { color: #4ade80; }
+        .error-message { color: #f87171; }
+        .warning-message { color: #fbbf24; }
+        
+        /* --- Custom Dropdown Styles --- */
+        .custom-select-wrapper {
+            position: relative;
+            user-select: none;
+            width: 100%;
+        }
+        .custom-select {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        .custom-select-trigger {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem;
+            font-size: 1rem;
+            font-weight: 300;
+            color: #c0c0c0;
+            background: #111111;
+            border: 1px solid #252525;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .custom-select-trigger:hover {
+            border-color: #505050;
+        }
+        .custom-options {
+            position: absolute;
+            display: block;
+            top: 100%;
+            left: 0;
+            right: 0;
+            border: 1px solid #252525;
+            border-top: 0;
+            border-bottom-left-radius: 0.5rem;
+            border-bottom-right-radius: 0.5rem;
+            background: #111111;
+            transition: all 0.2s;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            z-index: 50;
+            margin-top: 2px;
+            overflow-y: auto; /* Changed from hidden */
+            max-height: 200px; /* Added max-height */
+        }
+        .custom-select.open .custom-options {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: all;
+            border-color: #505050;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+        }
+        .custom-option {
+            position: relative;
+            display: block;
+            padding: 0.75rem;
+            font-size: 1rem;
+            font-weight: 300;
+            color: #c0c0c0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .custom-option:hover {
+            background-color: #252525;
+            color: #ffffff;
+        }
+        .custom-option.selected {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-weight: 400;
+        }
+        .custom-option-content {
+            display: flex;
+            align-items: center;
+            gap: 10px; /* Space between favicon and text */
+        }
+        .custom-option-content img {
+            width: 20px; /* Favicon size */
+            height: 20px;
+            object-fit: contain;
+            flex-shrink: 0;
+        }
+        .arrow {
+            position: relative;
+            height: 10px;
+            width: 10px;
+        }
+        .arrow::before, .arrow::after {
+            content: "";
+            position: absolute;
+            bottom: 0px;
+            width: 0.15rem;
+            height: 100%;
+            transition: all 0.2s;
+        }
+        .arrow::before {
+            left: -3px;
+            transform: rotate(-45deg);
+            background-color: #6b7280;
+        }
+        .arrow::after {
+            left: 3px;
+            transform: rotate(45deg);
+            background-color: #6b7280;
+        }
+        .custom-select.open .arrow::before {
+            left: -3px;
+            transform: rotate(45deg);
+        }
+        .custom-select.open .arrow::after {
+            left: 3px;
+            transform: rotate(-45deg);
+        }
+
+        /* --- NEW: Theme Picker Styles --- */
+        /* MODIFICATION: These styles ARE theme-aware */
+        #theme-picker-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 1rem;
+            width: 100%;
+        }
+        .theme-button {
+            /* MODIFICATION: Border color is now theme-aware */
+            border: 2px solid var(--tab-active-border, #4f46e5); 
+            background-color: #111; /* This will be overridden by inline style */
+            border-radius: 0.75rem; 
+            padding: 0.75rem; /* MODIFICATION: Reduced padding */
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease-out;
+            opacity: 0.7;
+            position: relative;
+        }
+        .theme-button:hover {
+            opacity: 1;
+            /* MODIFICATION: Use a consistent hover border */
+            border-color: var(--tab-active-hover-border, #6366f1);
+            transform: translateY(-2px);
+        }
+        .theme-button.active {
+            opacity: 1;
+            /* MODIFICATION: Removed redundant border-color */
+            box-shadow: 0 0 10px rgba(79, 70, 229, 0.3); /* Will use variable shadow */
+            box-shadow: 0 0 10px var(--tab-active-shadow, rgba(79, 70, 229, 0.3));
+        }
+        
+        .theme-button-name {
+            font-weight: 500;
+            color: #e0e0e0; /* This will be overridden by inline style */
+        }
+        
+        /* --- NEW: Modal and Loading Styles (from index.html) --- */
+        .modal {
+          display: none;
+          position: fixed;
+          z-index: 2000;
+          left: 0;
+          top: 0;
+          width: 100%;
+          height: 100%;
+          background-color: rgba(0, 0, 0, 0.7);
+          justify-content: center;
+          align-items: center;
+        }
+        .modal-content {
+          background-color: #1a1a1a; /* Darker modal */
+          padding: 20px;
+          border-radius: 10px;
+          border: 1px solid #333;
+          width: 90%;
+          max-width: 400px;
+          text-align: center;
+          color: white;
+          position: relative;
+        }
+        .modal-close {
+          color: #aaa;
+          position: absolute;
+          top: 10px;
+          right: 15px;
+          font-size: 28px;
+          font-weight: bold;
+          cursor: pointer;
+        }
+        .modal-close:hover {
+          color: #fff;
+        }
+        .modal-buttons {
+          display: flex;
+          gap: 10px;
+          justify-content: center;
+          margin-top: 20px;
+        }
+        /* Style modal buttons to match settings buttons */
+        .modal-buttons button { 
+            /* This will be styled by btn-toolbar-style */
+        }
+
+        .loading-overlay {
+          display: none;
+          position: fixed;
+          z-index: 3000;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.8);
+          justify-content: center;
+          align-items: center;
+          flex-direction: column;
+          color: white;
+        }
+        .loading-overlay.active {
+          display: flex;
+        }
+        .loading-animation {
+          display: flex;
+          align-items: center;
+          margin-bottom: 20px;
+        }
+        .loading-bar {
+          background-color: rgba(255, 255, 255, 0.3);
+          width: 20px;
+          height: 40px;
+          margin-right: 5px;
+          border-radius: 10px;
+          animation: load ease infinite 5s;
+        }
+        .loading-bar:nth-child(2) {
+          animation-delay: 0.1s;
+        }
+        .loading-bar:nth-child(3) {
+          animation-delay: 0.2s;
+        }
+        .loading-bar:nth-child(4) {
+          animation-delay: 0.3s;
+        }
+        .loading-bar:nth-child(5) {
+          animation-delay: 0.4s;
+        }
+        @keyframes load {
+          0%,
+          100% {
+            transform: rotate(0deg);
+          }
+          50% {
+            transform: rotate(720deg) rotateX(180deg);
+          }
+        }
+
+        
+        /* --- Cropper Modal Styles --- */
+        #cropperModal {
             display: none;
             position: fixed;
-            z-index: 2100;
+            z-index: 2050;
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.9);
+            background-color: rgba(0, 0, 0, 0.85);
             justify-content: center;
             align-items: center;
-            opacity: 0;
-            transition: opacity 0.3s ease;
+            flex-direction: column;
         }
-        #mibiModal.active { opacity: 1; }
-        
-        #mibiCreatorInterface {
+        #cropperContent {
+            background-color: #000000;
+            padding: 0;
+            border-radius: 1rem;
+            border: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
             width: 90%;
-            max-width: 900px;
-            height: 600px;
-            background: #111;
-            border: 1px solid #333;
-            border-radius: 16px;
-            display: flex;
+            max-width: 600px;
             overflow: hidden;
-            box-shadow: 0 0 50px rgba(0,0,0,0.8);
         }
-
-        /* Left Side: Canvas Area */
-        .mibi-canvas-area {
-            flex: 1;
-            background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
+        #cropperCanvasContainer {
             position: relative;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-bottom: 20px;
+            overflow: hidden;
+            /* Limits for the canvas display */
+            max-height: 60vh; 
+        }
+        #cropperCanvas {
+            display: block;
+            max-width: 100%;
+            max-height: 60vh;
+            border: 1px dashed rgba(255, 255, 255, 0.3); /* Thinner dashed outline */
         }
         
-        /* The Canvas Container Shifts Left when menu opens */
-        .mibi-canvas-area.shifted {
-            flex: 0 0 40%;
-        }
-
-        #mibiCanvas {
-            width: 350px;
-            height: 350px;
-            max-width: 90%;
-            max-height: 90%;
-            object-fit: contain;
-            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
-            transition: width 0.3s, height 0.3s;
-        }
-        .mibi-canvas-area.shifted #mibiCanvas {
-            width: 250px;
-            height: 250px;
-        }
-
-        /* Right Side: Controls Area */
-        .mibi-controls-area {
-            flex: 1;
-            background: #161616;
-            border-left: 1px solid #333;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Top Navigation Step Bar */
-        .mibi-step-nav {
-            display: flex;
-            border-bottom: 1px solid #333;
-        }
-        .mibi-step-btn {
-            flex: 1;
-            padding: 1rem;
-            background: transparent;
-            color: #666;
-            font-size: 0.9rem;
-            cursor: pointer;
-            border: none;
-            transition: all 0.2s;
-            text-align: center;
-        }
-        .mibi-step-btn:hover { color: #fff; background: #222; }
-        .mibi-step-btn.active { color: #4f46e5; border-bottom: 2px solid #4f46e5; font-weight: bold; background: rgba(79, 70, 229, 0.05); }
-
-        /* Content Panels */
-        .mibi-panel {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            padding: 20px;
-        }
-        .mibi-panel.hidden { display: none; }
-
-        /* Toolbar (Like Notes App) */
-        .mibi-toolbar {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 20px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #252525;
-        }
-        .mibi-tool-btn {
-            width: 50px;
-            height: 50px;
-            border-radius: 12px;
-            background: #252525;
-            color: #888;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 1.2rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: 1px solid transparent;
-        }
-        .mibi-tool-btn:hover { background: #333; color: #fff; transform: translateY(-2px); }
-        .mibi-tool-btn.active { background: rgba(79, 70, 229, 0.2); color: #4f46e5; border-color: #4f46e5; }
-
-        /* Options Grid */
-        .mibi-grid {
+        /* --- Color Palette Styles --- */
+        .color-palette-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
             gap: 10px;
-            overflow-y: auto;
-            padding-right: 5px;
-        }
-        .mibi-grid::-webkit-scrollbar { width: 6px; }
-        .mibi-grid::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-
-        .mibi-grid-item {
-            aspect-ratio: 1;
-            background: #0a0a0a;
-            border: 1px solid #333;
-            border-radius: 8px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            transition: all 0.2s;
-            padding: 5px;
-        }
-        .mibi-grid-item:hover { border-color: #666; }
-        .mibi-grid-item.selected { border-color: #4f46e5; box-shadow: 0 0 0 1px #4f46e5; background: rgba(79, 70, 229, 0.05); }
-        .mibi-grid-item img { width: 100%; height: 100%; object-fit: contain; }
-
-        /* Color Circles */
-        .mibi-color-circle {
             width: 100%;
-            aspect-ratio: 1;
+            margin-top: 10px;
+        }
+        .color-option {
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             cursor: pointer;
             border: 2px solid transparent;
-            transition: transform 0.2s;
+            transition: transform 0.2s, border-color 0.2s;
         }
-        .mibi-color-circle:hover { transform: scale(1.1); }
-        .mibi-color-circle.selected { border-color: white; box-shadow: 0 0 0 2px #4f46e5; }
-
-        /* Sliders */
-        .mibi-slider-group { margin-bottom: 20px; }
-        .mibi-slider-group label { display: block; font-size: 0.8rem; color: #888; margin-bottom: 5px; }
-        .mibi-slider {
-            width: 100%;
-            -webkit-appearance: none;
-            height: 4px;
-            background: #333;
-            border-radius: 2px;
-            outline: none;
+        .color-option:hover {
+            transform: scale(1.1);
         }
-        .mibi-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 16px;
-            height: 16px;
-            background: #4f46e5;
-            border-radius: 50%;
-            cursor: pointer;
-            transition: transform 0.2s;
+        .color-option.selected {
+            border-color: white;
+            box-shadow: 0 0 0 2px #4f46e5; /* Ring effect */
         }
-        .mibi-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
-
-        /* Footer Actions */
-        .mibi-actions {
-            padding: 20px;
-            border-top: 1px solid #333;
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-        }
-
-        /* --- Existing Modal & Loading --- */
-        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); justify-content: center; align-items: center; }
-        .modal-content { background-color: #1a1a1a; padding: 20px; border-radius: 10px; border: 1px solid #333; width: 90%; max-width: 400px; text-align: center; color: white; position: relative; }
-        .loading-overlay { display: none; position: fixed; z-index: 3000; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); justify-content: center; align-items: center; flex-direction: column; color: white; }
-        .loading-overlay.active { display: flex; }
-        .loading-bar { background-color: rgba(255, 255, 255, 0.3); width: 20px; height: 40px; margin-right: 5px; border-radius: 10px; animation: load ease infinite 5s; }
-        .loading-bar:nth-child(2) { animation-delay: 0.1s; } .loading-bar:nth-child(3) { animation-delay: 0.2s; } .loading-bar:nth-child(4) { animation-delay: 0.3s; } .loading-bar:nth-child(5) { animation-delay: 0.4s; }
-        @keyframes load { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(720deg) rotateX(180deg); } }
-        
-        /* Cropper Modal (Retained) */
-        #cropperModal { display: none; position: fixed; z-index: 2050; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); justify-content: center; align-items: center; flex-direction: column; }
-        #cropperContent { background-color: #1a1a1a; padding: 20px; border-radius: 16px; border: 1px solid #333; display: flex; flex-direction: column; align-items: center; width: 90%; max-width: 600px; }
-        #cropperCanvas { display: block; max-width: 100%; max-height: 60vh; border: 1px dashed rgba(255, 255, 255, 0.3); }
     </style>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-1D4F692C1Q"></script>
 <script>
@@ -294,30 +564,35 @@
 </head>
 <body class="min-h-screen">
     <div id="page-content">
+        
         <header class="flex justify-between items-center p-4 border-b border-[#1a1a1a]">
             <h1 class="text-2xl font-bold text-white">4SP Settings</h1>
+            
+            <div class="flex items-center gap-2">
+                 </div>
         </header>
 
         <div id="settings-container">
             <nav id="settings-sidebar">
-                <button id="tab-general" class="btn-toolbar-style settings-tab active" data-tab="general">
+                <a id="tab-general" href="#general" class="btn-toolbar-style settings-tab active">
                     <i class="fa-solid fa-gear w-5"></i> <span>General</span>
-                </button>
-                <button id="tab-privacy" class="btn-toolbar-style settings-tab" data-tab="privacy">
+                </a>
+                <a id="tab-privacy" href="#privacy" class="btn-toolbar-style settings-tab">
                     <i class="fa-solid fa-shield-halved w-5"></i> <span>Privacy & Security</span>
-                </button>
-                <button id="tab-personalization" class="btn-toolbar-style settings-tab" data-tab="personalization">
+                </a>
+                <a id="tab-personalization" href="#personalization" class="btn-toolbar-style settings-tab">
                     <i class="fa-solid fa-palette w-5"></i> <span>Personalization</span>
-                </button>
-                <button id="tab-data" class="btn-toolbar-style settings-tab" data-tab="data">
+                </a>
+                <a id="tab-data" href="#data" class="btn-toolbar-style settings-tab">
                     <i class="fa-solid fa-database w-5"></i> <span>Data Management</span>
-                </button>
-                <button id="tab-about" class="btn-toolbar-style settings-tab" data-tab="about">
+                </a>
+                <a id="tab-about" href="#about" class="btn-toolbar-style settings-tab">
                     <i class="fa-solid fa-circle-info w-5"></i> <span>About 4SP</span>
-                </button>
+                </a>
             </nav>
 
-            <div id="settings-main-view"></div>
+            <div id="settings-main-view">
+                </div>
         </div>
     </div>
     
@@ -331,83 +606,37 @@
 
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-animation">
-            <div class="loading-bar"></div><div class="loading-bar"></div><div class="loading-bar"></div><div class="loading-bar"></div><div class="loading-bar"></div>
+            <div class="loading-bar"></div>
+            <div class="loading-bar"></div>
+            <div class="loading-bar"></div>
+            <div class="loading-bar"></div>
+            <div class="loading-bar"></div>
         </div>
         <p id="loadingText">Loading...</p>
     </div>
     
+    
     <div id="cropperModal">
         <div id="cropperContent">
-            <h3 class="text-xl font-bold text-white mb-4">Adjust Profile Picture</h3>
-            <p class="text-sm text-gray-400 mb-4">Drag to move. Scroll to resize.</p>
-            <div id="cropperCanvasContainer"><canvas id="cropperCanvas"></canvas></div>
-            <div class="flex justify-between w-full mt-4">
-                <button id="cancelCropBtn" class="btn-toolbar-style"><i class="fa-solid fa-xmark mr-2"></i> Cancel</button>
-                <button id="submitCropBtn" class="btn-toolbar-style btn-primary-override"><i class="fa-solid fa-check mr-2"></i> Submit</button>
+            <!-- Header -->
+            <div class="flex justify-between items-center p-6 border-b border-[#333] bg-black">
+                <h3 class="text-2xl font-bold text-white">Adjust Profile Picture</h3>
+                <button id="cancelCropBtn" class="btn-toolbar-style w-10 h-10 flex items-center justify-center p-0 rounded-xl">
+                     <i class="fa-solid fa-xmark fa-xl"></i>
+                </button>
             </div>
-        </div>
-    </div>
-
-    <div id="mibiModal">
-        <div id="mibiCreatorInterface">
-            <div class="mibi-canvas-area shifted" id="mibiCanvasContainer">
-                <canvas id="mibiCanvas"></canvas>
-            </div>
-
-            <div class="mibi-controls-area">
-                <div class="mibi-step-nav">
-                    <button id="mibiNavCustom" class="mibi-step-btn active">Customize</button>
-                    <button id="mibiNavBg" class="mibi-step-btn">Background</button>
-                    <button id="mibiNavPos" class="mibi-step-btn">Position</button>
+            
+            <!-- Body -->
+            <div class="flex flex-col items-center p-6 bg-[#0a0a0a]">
+                <p class="text-sm text-gray-400 mb-4">Drag to move. Scroll to resize the selection.</p>
+                
+                <div id="cropperCanvasContainer" class="relative mb-6 border border-[#333] rounded-lg overflow-hidden">
+                    <canvas id="cropperCanvas"></canvas>
                 </div>
-
-                <div id="mibi-panel-customization" class="mibi-panel">
-                    <div class="mibi-toolbar">
-                        <button class="mibi-tool-btn active" data-category="hats" title="Hats">
-                            <i class="fa-solid fa-hat-cowboy"></i>
-                        </button>
-                        <button class="mibi-tool-btn" data-category="eyes" title="Eyes">
-                            <i class="fa-solid fa-eye"></i>
-                        </button>
-                        <button class="mibi-tool-btn" data-category="mouths" title="Mouths">
-                            <i class="fa-solid fa-face-smile"></i>
-                        </button>
-                    </div>
-                    <div id="mibiOptionsGrid" class="mibi-grid">
-                        </div>
-                </div>
-
-                <div id="mibi-panel-background" class="mibi-panel hidden">
-                    <h3 class="text-white text-lg font-bold mb-4">Select Background</h3>
-                    <div id="mibiColorGrid" class="mibi-grid">
-                        </div>
-                </div>
-
-                <div id="mibi-panel-position" class="mibi-panel hidden">
-                    <h3 class="text-white text-lg font-bold mb-4">Adjust Position</h3>
-                    
-                    <div class="mibi-slider-group">
-                        <label>Horizontal Position</label>
-                        <input type="range" id="mibiSlider-posX" min="-100" max="100" value="0" class="mibi-slider">
-                    </div>
-                    <div class="mibi-slider-group">
-                        <label>Vertical Position</label>
-                        <input type="range" id="mibiSlider-posY" min="-100" max="100" value="0" class="mibi-slider">
-                    </div>
-                    <div class="mibi-slider-group">
-                        <label>Size / Scale</label>
-                        <input type="range" id="mibiSlider-scale" min="0.5" max="2" step="0.1" value="1" class="mibi-slider">
-                    </div>
-                    <div class="mibi-slider-group">
-                        <label>Rotation</label>
-                        <input type="range" id="mibiSlider-rotation" min="-180" max="180" value="0" class="mibi-slider">
-                    </div>
-                </div>
-
-                <div class="mibi-actions">
-                    <button id="mibiCancelBtn" class="btn-toolbar-style">Cancel</button>
-                    <button id="mibiSaveBtn" class="btn-toolbar-style btn-primary-override">
-                        <i class="fa-solid fa-floppy-disk mr-2"></i> Save Avatar
+                
+                <div class="flex justify-end w-full">
+                    <button id="submitCropBtn" class="btn-toolbar-style btn-primary-override px-6 py-2 rounded-xl">
+                        <i class="fa-solid fa-check mr-2"></i> Submit
                     </button>
                 </div>
             </div>
@@ -418,6 +647,6 @@
     <script src="../injector.js"></script>
     <script src="../panic-key.js"></script>
     <script src="../url-changer.js" defer></script> 
-    <script type="module" src="settings.js"></script>
+    <script type="module" src="test.js"></script>
 </body>
 </html>
