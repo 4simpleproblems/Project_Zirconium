@@ -688,14 +688,17 @@ const applyCounterZoom = () => {
                     const userDoc = await db.collection('users').doc(user.uid).get();
                     currentUserData = userDoc.exists ? userDoc.data() : null; // Update global var
                     renderNavbar(user, currentUserData);
+                    updatePinButtonArea(); // <--- ADD THIS LINE
                 } catch (error) {
                     console.error("Error fetching user data:", error);
                     renderNavbar(user, null); // Render even if Firestore fails
+                    updatePinButtonArea(); // <--- ADD THIS LINE (also for error case)
                 }
             } else {
                 // User is signed out.
                 currentUserData = null;
                 renderNavbar(null, null);
+                updatePinButtonArea(); // <--- ADD THIS LINE
             }
 
             // --- START: Injection failure retry logic ---

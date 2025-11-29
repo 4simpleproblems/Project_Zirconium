@@ -402,6 +402,8 @@ let db;
         let currentScrollLeft = 0; 
         let hasScrolledToActiveTab = false; 
         let globalClickListenerAdded = false;
+        let authCheckCompleted = false; // <--- NEW FLAG
+        let isRedirecting = false;    // <--- NEW FLAG
 
         const PINNED_PAGE_KEY = 'navbar_pinnedPage';
         const PIN_BUTTON_HIDDEN_KEY = 'navbar_pinButtonHidden';
@@ -1102,12 +1104,17 @@ let db;
             currentIsPrivileged = isPrivilegedUser;
             renderNavbar(currentUser, currentUserData, allPages, currentIsPrivileged);
 
-            if (!user) {
+            // Set flag after the first check
+            if (!authCheckCompleted) {
+                authCheckCompleted = true;
+            }
+
+            // Only redirect if auth check is completed, user is logged out, and we are not already redirecting
+            if (authCheckCompleted && !user && !isRedirecting) {
                 const targetUrl = '../index.html'; 
-                const currentPathname = window.location.pathname;
-                const isEntryPoint = currentPathname.includes('index.html') || currentPathname.includes('authentication.html') || currentPathname === '/';
                 
                 console.log(`User logged out. Restricting access and redirecting to ${targetUrl}`);
+                isRedirecting = true; // Set flag to prevent multiple redirects
                 window.location.href = targetUrl;
             }
         });
