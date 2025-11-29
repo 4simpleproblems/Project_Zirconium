@@ -35,8 +35,8 @@
  * 27. **(NEW)** !important ADDED: Every CSS declaration in `injectStyles` now has `!important`.
  * 28. **(NEW)** GLIDE REMOVED: Scroll glide buttons are removed from HTML and all related JS logic has been removed/disabled.
  * 29. **(NEW)** FORCED LAYOUT: Tabs are forced to left-align, take up all available space, and scroll if they overflow.
- * * --- USER MODIFICATIONS APPLIED ---
  * 30. **(MODIFIED)** TAB CENTERING: The tabs within the scroll container are now **forced to be centered** using `justify-content: center !important`.
+ * 31. **(FIXED)** MORE BUTTON: The 'Show More/Less' button now correctly expands and collapses the extra menu items by removing `!important` from the `display: none` CSS rule for the dropdown section.
  */
 
 // =========================================================================
@@ -385,7 +385,7 @@ let db;
 
             /* NEW: Styles for the expandable "More" section */
             .auth-menu-more-section {
-                display: none !important; /* Hidden by default */
+                display: none; /* Hidden by default - REMOVED !important to allow JS override */
                 padding-top: 0.5rem !important;
                 margin-top: 0.5rem !important;
                 border-top: 1px solid var(--menu-divider) !important;
@@ -905,83 +905,37 @@ let db;
         }
 
         /**
-         * NEW: Encapsulates all listeners for the auth button, dropdown, and actions.
-         * This is separated so it can be re-called during a partial update.
-         * @param {object} user - The current Firebase user object (or null)
+         * NEW: Replaces the pin button area HTML and re-attaches its event listeners.
+         * Used for all pin interactions that do not require a full navbar re-render.
          */
-        const setupAuthToggleListeners = (user) => {
-            const toggleButton = document.getElementById('auth-toggle');
-            const menu = document.getElementById('auth-menu-container');
+        const updatePinButtonArea = () => {
+            const pinWrapper = document.getElementById('pin-area-wrapper');
+            const newPinHtml = getPinButtonHtml();
 
-            // Auth Toggle
-            if (toggleButton && menu) {
-                toggleButton.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    menu.classList.toggle('closed');
-                    menu.classList.toggle('open');
-                    // Close pin menu if open
-                    document.getElementById('pin-context-menu')?.classList.add('closed');
-                    document.getElementById('pin-context-menu')?.classList.remove('open');
-                    
-                    // Check marquees when menu becomes visible
-                    if (menu.classList.contains('open')) {
-                        checkMarquees();
-                    }
-                });
-            }
-
-            // More Button Toggle
-            const moreButton = document.getElementById('more-button');
-            const moreSection = document.getElementById('more-section');
-            const moreButtonIcon = document.getElementById('more-button-icon');
-            const moreButtonText = document.getElementById('more-button-text');
-
-            if (moreButton && moreSection) {
-                moreButton.addEventListener('click', () => {
-                    const isExpanded = moreSection.style.display === 'block';
-                    moreSection.style.display = isExpanded ? 'none' : 'block';
-                    moreButtonText.textContent = isExpanded ? 'Show More' : 'Show Less';
-                    moreButtonIcon.classList.toggle('fa-chevron-down', isExpanded);
-                    moreButtonIcon.classList.toggle('fa-chevron-up', !isExpanded);
-                });
-            }
-
-            // Auth Menu Action (Show Pin Button)
-            const showPinButton = document.getElementById('show-pin-button');
-            if (showPinButton) {
-                showPinButton.addEventListener('click', () => {
-                    localStorage.setItem(PIN_BUTTON_HIDDEN_KEY, 'false'); // 'false' string
-                    // UPDATED: Call partial update instead of full re-render
-                    updateAuthControlsArea();
-                });
-            }
-
-            if (user) {
-                const logoutButton = document.getElementById('logout-button');
-                if (logoutButton) {
-                    logoutButton.addEventListener('click', () => {
-                        auth.signOut().catch(err => console.error("Logout failed:", err));
-                    });
+            if (pinWrapper) {
+                 // Check if the pin button is now hidden, if so, remove the wrapper entirely
+                if (newPinHtml === '') {
+                    pinWrapper.remove();
+                } else {
+                    // Update the HTML content
+                    pinWrapper.outerHTML = newPinHtml;
+                }
+                // Need to re-attach listeners after DOM replacement
+                setupPinEventListeners();
+            } else {
+                // If wrapper was not found, it might be the initial render of the pin button 
+                // after it was hidden, so we need to find the parent and append.
+                const authButtonContainer = document.getElementById('auth-controls-wrapper');
+                if (authButtonContainer) {
+                    authButtonContainer.insertAdjacentHTML('afterbegin', newPinHtml);
+                    setupPinEventListeners();
                 }
             }
+            
+            // Ensure auth menu closes if it was open when the pin area was updated
+            document.getElementById('auth-menu-container')?.classList.add('closed');
+            document.getElementById('auth-menu-container')?.classList.remove('open');
         };
-
-        /**
-         * NEW: Replaces the auth/pin area HTML and re-attaches its event listeners.
-         * Used for all pin/auth-menu interactions that do not require a full navbar re-render.
-         */
-        const updateAuthControlsArea = () => {
-            const authWrapper = document.getElementById('auth-controls-wrapper');
-            if (!authWrapper) return;
-
-            // Get new HTML using the *current* global state
-            authWrapper.innerHTML = getAuthControlsHtml();
-
-            // Re-attach listeners for the new DOM elements
-            setupPinEventListeners();
-            setupAuthToggleListeners(currentUser); // Pass in the global user state
-        }
-
 
         /**
          * NEW: Checks for text overflow in marquee containers and activates animation.
