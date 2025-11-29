@@ -434,7 +434,7 @@ const DEFAULT_THEME = {
 
             return `
                 <div class="relative">
-                    <button id="auth-toggle" class="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-700 transition logged-out-auth-toggle">
+                    <button id="auth-toggle" class="w-10 h-10 rounded-full border flex items-center justify-center hover:bg-gray-700 transition logged-out-auth-toggle">
                         <i class="fa-solid fa-user"></i>
                     </button>
                     <div id="auth-menu-container" class="auth-menu-container closed">
@@ -499,7 +499,7 @@ const DEFAULT_THEME = {
 
             return `
                 <div class="relative">
-                    <button id="auth-toggle" class="w-8 h-8 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
+                    <button id="auth-toggle" class="w-10 h-10 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
                         ${avatarHtml}
                     </button>
                     <div id="auth-menu-container" class="auth-menu-container closed">

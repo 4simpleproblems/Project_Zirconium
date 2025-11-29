@@ -983,6 +983,11 @@
                         border-radius: 0.5rem;
                         background: #374151;
                     }
+                    /* Live preview scaling for orientation mode */
+                    .mac-preview-scaled {
+                        transition: transform 0.3s ease;
+                        transform-origin: center;
+                    }
                 </style>
                 <h2 class="text-3xl font-bold text-white mb-6">Personalization</h2>
                 
@@ -1016,7 +1021,7 @@
                                 
                                 <!-- MAC Modal -->
                                 <div id="mibi-mac-menu" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 hidden backdrop-blur-sm">
-                                    <div class="relative bg-[#1a1a1a] rounded-xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden border border-[#333]">
+                                    <div class="relative bg-black rounded-xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden border border-[#333]">
                                         
                                         <!-- Header -->
                                         <div class="flex justify-between items-center p-6 border-b border-[#333] bg-black">
@@ -1066,7 +1071,7 @@
                                             </div>
 
                                             <!-- RIGHT: Controls & Options -->
-                                            <div id="mac-controls-wrapper" class="w-1/2 flex flex-col bg-black transition-transform duration-500 ease-in-out">
+                                            <div id="mac-controls-wrapper" class="w-1/2 flex flex-col bg-black transition-transform duration-500 ease-in-out translate-x-0">
                                                 
                                                 <!-- Tabs -->
                                                 <div class="flex border-b border-[#333]">
@@ -1330,7 +1335,7 @@
                 Mibi_ASSETS.colors.forEach(color => {
                     const btn = document.createElement('button');
                     const isSelected = mibiAvatarState.bgColor === color;
-                    btn.className = `w-full aspect-square rounded-full shadow-sm transition-transform hover:scale-110 focus:outline-none border-2 ${isSelected ? 'border-white' : 'border-transparent'} hover:border-dashed hover:border-white`;
+                    btn.className = `w-12 h-12 rounded-full shadow-sm transition-transform hover:scale-110 focus:outline-none border-2 ${isSelected ? 'border-white' : 'border-transparent'} hover:border-dashed hover:border-white`;
                     btn.style.backgroundColor = color;
                     
                     btn.onclick = () => {
@@ -1342,7 +1347,7 @@
                 });
                 // Add custom picker
                 const customWrapper = document.createElement('div');
-                customWrapper.className = 'w-full aspect-square rounded-full bg-[#333] flex items-center justify-center cursor-pointer hover:bg-[#444] relative overflow-hidden border-2 border-transparent hover:border-dashed hover:border-white';
+                customWrapper.className = 'w-12 h-12 rounded-full bg-[#333] flex items-center justify-center cursor-pointer hover:bg-[#444] relative overflow-hidden border-2 border-transparent hover:border-dashed hover:border-white';
                 customWrapper.innerHTML = '<i class="fa-solid fa-eye-dropper text-white"></i><input type="color" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">';
                 const input = customWrapper.querySelector('input');
                 input.oninput = (e) => {
@@ -1438,9 +1443,10 @@
                 // Animate UI
                 previewWrapper.classList.remove('w-1/2');
                 previewWrapper.classList.add('w-full');
-                controlsWrapper.classList.add('translate-x-full', 'absolute', 'right-0'); // Slide out
-                controlsWrapper.classList.remove('w-1/2');
-                controlsWrapper.style.width = '50%'; // Keep width for smooth transition back
+                previewContainer.classList.add('mac-preview-scaled'); // Apply scale to preview
+                
+                controlsWrapper.classList.add('translate-x-full'); // Slide out
+                controlsWrapper.classList.remove('translate-x-0');
                 
                 // Show Sliders
                 slidersContainer.classList.remove('hidden', 'opacity-0');
@@ -1460,9 +1466,10 @@
                 // Revert UI
                 previewWrapper.classList.add('w-1/2');
                 previewWrapper.classList.remove('w-full');
-                controlsWrapper.classList.remove('translate-x-full', 'absolute', 'right-0');
-                controlsWrapper.classList.add('w-1/2');
-                controlsWrapper.style.width = '';
+                previewContainer.classList.remove('mac-preview-scaled'); // Remove scale from preview
+
+                controlsWrapper.classList.remove('translate-x-full');
+                controlsWrapper.classList.add('translate-x-0');
 
                 // Hide Sliders
                 slidersContainer.classList.add('hidden', 'opacity-0');
@@ -1474,6 +1481,7 @@
             
             // Preview Click -> Enter Mode
             previewContainer.addEventListener('click', (e) => {
+                // Only enter orientation mode if click is not on a slider handle during dragging
                 if (!isOrientationMode) {
                     enterOrientationMode();
                 }
@@ -1516,13 +1524,24 @@
             });
             
             // --- Slider Listeners ---
+            const snapThreshold = 5; // degrees/percent
             sizeSlider.addEventListener('input', (e) => {
-                mibiAvatarState.size = parseInt(e.target.value);
+                let value = parseInt(e.target.value);
+                if (Math.abs(value - 100) < snapThreshold) { // Snap to 100
+                    value = 100;
+                    e.target.value = 100; // Update visual slider position
+                }
+                mibiAvatarState.size = value;
                 updateMibiPreview();
             });
             
             rotationSlider.addEventListener('input', (e) => {
-                mibiAvatarState.rotation = parseInt(e.target.value);
+                let value = parseInt(e.target.value);
+                if (Math.abs(value - 0) < snapThreshold) { // Snap to 0
+                    value = 0;
+                    e.target.value = 0; // Update visual slider position
+                }
+                mibiAvatarState.rotation = value;
                 updateMibiPreview();
             });
 
