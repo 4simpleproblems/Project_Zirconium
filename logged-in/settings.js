@@ -3106,7 +3106,13 @@
                 let userData = {};
                 try {
                     const snap = await getDoc(userDocRef);
-                    if (snap.exists()) userData = snap.data();
+                    if (snap.exists()) {
+                        userData = snap.data();
+                        // Initialize mibiAvatarState with saved config if available
+                        if (userData.mibiConfig) {
+                            mibiAvatarState = { ...mibiAvatarState, ...userData.mibiConfig };
+                        }
+                    }
                 } catch (e) { console.error("Error fetching PFP settings:", e); }
 
                 const currentPfpType = userData.pfpType || 'google';
@@ -3492,11 +3498,31 @@
                 // 1. Fetch themes
                 const response = await fetch('../themes.json');
                 if (!response.ok) throw new Error('Failed to fetch themes.json');
-                const themes = await response.json();
+                let themes = await response.json(); // Use 'let' to reassign
                 
                 if (!themes || themes.length === 0) {
                      throw new Error('themes.json is empty or invalid');
                 }
+
+                // --- NEW: Sorting Logic ---
+                const orderedThemeNames = ['Dark', 'Light', 'Christmas'];
+                const sortedThemes = [];
+
+                // Add themes in the specified order first
+                orderedThemeNames.forEach(name => {
+                    const theme = themes.find(t => t.name === name);
+                    if (theme) {
+                        sortedThemes.push(theme);
+                        themes = themes.filter(t => t.name !== name); // Remove from original list
+                    }
+                });
+
+                // Sort remaining themes alphabetically by name
+                themes.sort((a, b) => a.name.localeCompare(b.name));
+
+                // Combine them
+                themes = [...sortedThemes, ...themes];
+                // --- END NEW: Sorting Logic ---
                 
                 // 2. Get currently saved theme to set the active state
                 let savedTheme = null;
