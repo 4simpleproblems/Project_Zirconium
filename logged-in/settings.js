@@ -1524,113 +1524,201 @@
 
                             
 
-                            // --- Orientation Mode Logic ---
+                                        // --- Orientation Mode Logic ---
+
+                            
 
                                         const enterOrientationMode = () => {
 
+                            
+
                                             if (isOrientationMode) return;
+
+                            
 
                                             isOrientationMode = true;
 
+                            
+
                                             
+
+                            
 
                                             // Animate UI
 
-                                            previewWrapper.classList.remove('w-1/2', 'flex-col', 'items-center', 'justify-center');
+                            
 
-                                            previewWrapper.classList.add('w-full', 'flex-row', 'justify-start', 'items-start', 'gap-x-12', 'pl-16'); // New layout for orientation mode
+                                            previewWrapper.classList.remove('w-1/2', 'flex-col', 'items-center', 'justify-center');
 
                             
 
-                                            // Ensure preview container retains its original size, remove dynamic sizing
+                                            previewWrapper.classList.add('w-full', 'flex-row', 'justify-start', 'items-start', 'gap-x-12', 'pl-16'); // Parent changes layout
+
+                            
+
+                            
+
+                            
+
+                                            // Ensure preview container has no dynamic sizing/margin changes for orientation mode
+
+                            
 
                                             previewContainer.style.transform = ''; // Remove scale
 
-                                            previewContainer.style.height = ''; // Remove fixed height
+                            
 
-                                            previewContainer.classList.remove('mt-16', 'w-2/3', 'flex-shrink-0'); // Remove dynamic sizing/margin
-
-                                            previewContainer.classList.add('h-64', 'md:h-80', 'aspect-square'); // Re-add default sizes with aspect-square
+                                            previewContainer.style.width = ''; // Remove fixed width
 
                             
 
-                                            // Explicitly set width to match computed height to guarantee square shape
+                                            previewContainer.style.height = ''; // Remove fixed height
 
-                                            requestAnimationFrame(() => { // Use rAF to ensure height is computed after class changes
+                            
 
-                                                const computedHeight = previewContainer.offsetHeight;
+                                            previewContainer.classList.remove('mt-16', 'w-2/3', 'flex-shrink-0'); // Remove dynamic sizing/margin
 
-                                                previewContainer.style.width = `${computedHeight}px`;
+                            
 
-                                            });
+                                            // No need to add back default classes as they are already in HTML
 
-                                            
+                            
+
+                            
+
+                            
 
                                             // Adjust sliders container for side-by-side layout, pushed to right
 
+                            
+
                                             slidersContainer.classList.remove('hidden', 'opacity-0', 'max-w-xs', 'w-1/3', 'ml-4');
+
+                            
 
                                             slidersContainer.classList.add('flex', 'opacity-100', 'ml-auto', 'mt-16', 'p-4'); // Sliders to the right, pushed down, with padding
 
+                            
+
                                             
+
+                            
 
                                             controlsWrapper.classList.add('translate-x-full', 'w-0', 'overflow-hidden', 'p-0'); // Slide out and collapse
 
+                            
+
                                             controlsWrapper.classList.remove('translate-x-0', 'w-1/2');
 
+                            
+
                                             
+
+                            
 
                                             // Hide "Click preview" text
 
+                            
+
                                             macPreviewLabel.classList.add('hidden');
 
+                            
+
                                             
+
+                            
 
                                             // Update Button
 
+                            
+
                                             confirmBtn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Confirm Orientation';
 
+                            
+
                                             
+
+                            
 
                                             // Sync sliders
 
+                            
+
                                             sizeSlider.value = mibiAvatarState.size;
+
+                            
 
                                             rotationSlider.value = mibiAvatarState.rotation;
 
+                            
+
                                         };
+
+                            
 
                                         
 
+                            
+
                                         const exitOrientationMode = () => {
+
+                            
 
                                             isOrientationMode = false;
 
+                            
+
                                             
+
+                            
 
                                             // Revert UI
 
+                            
+
                                             previewWrapper.classList.add('w-1/2', 'flex-col', 'items-center', 'justify-center'); // Revert to default layout
+
+                            
 
                                             previewWrapper.classList.remove('w-full', 'flex-row', 'justify-start', 'items-start', 'gap-x-12', 'pl-16');
 
+                            
+
                                             
 
-                                            // Restore preview container to default
+                            
+
+                                            // Restore preview container to default (no dynamic styles/classes)
+
+                            
 
                                             previewContainer.style.transform = '';
 
+                            
+
                                             previewContainer.style.width = ''; // Remove explicitly set width
 
+                            
+
                                             previewContainer.classList.remove('mt-16', 'w-2/3', 'flex-shrink-0'); // Ensure these are removed
+
+                            
 
                                             // Default width/height are handled by initial HTML classes `h-64 md:h-80 aspect-square rounded-full`
 
                             
 
+                            
+
+                            
+
                                             // Restore sliders container
 
+                            
+
                                             slidersContainer.classList.add('hidden', 'opacity-0', 'max-w-xs');
+
+                            
 
                                             slidersContainer.classList.remove('flex', 'opacity-100', 'ml-auto', 'mt-16', 'p-4'); // Remove dynamic positioning and padding
 
@@ -1638,21 +1726,43 @@
 
                             
 
+                            
+
+                            
+
+                            
+
                                             controlsWrapper.classList.remove('translate-x-full', 'w-0', 'overflow-hidden', 'p-0');
+
+                            
 
                                             controlsWrapper.classList.add('translate-x-0', 'w-1/2');
 
                             
 
+                            
+
+                            
+
                                             // Show "Click preview" text
+
+                            
 
                                             macPreviewLabel.classList.remove('hidden');
 
+                            
+
                                             
+
+                            
 
                                             // Update Button
 
+                            
+
                                             confirmBtn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Confirm Avatar';
+
+                            
 
                                         };
 
