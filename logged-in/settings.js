@@ -976,114 +976,71 @@
                                 <button id="open-mac-menu-btn" class="btn-toolbar-style btn-primary-override">
                                     <i class="fa-solid fa-paintbrush mr-2"></i> Open Mibi Avatar Creator
                                 </button>
-                                <p class="text-sm font-light text-gray-400 mb-4">
-                                    Create your custom Mibi Avatar!
-                                </p>
-                                <button id="open-mac-menu-btn" class="btn-toolbar-style btn-primary-override">
-                                    <i class="fa-solid fa-paintbrush mr-2"></i> Open Mibi Avatar Creator
-                                </button>
-                                <div id="mibi-mac-menu" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
-                                    <div class="relative bg-[#1a1a1a] p-6 rounded-lg shadow-xl w-11/12 max-w-4xl h-[80vh] flex flex-col overflow-hidden">
-                                        <!-- MAC Menu Header -->
-                                        <h3 class="text-2xl font-bold text-white mb-4 flex-shrink-0">Mibi Avatar Creator</h3>
+                                
+                                <!-- MAC Modal -->
+                                <div id="mibi-mac-menu" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 hidden backdrop-blur-sm">
+                                    <div class="relative bg-[#1a1a1a] rounded-xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden border border-[#333]">
                                         
-                                        <!-- Slide Container -->
-                                        <div id="mac-slide-container" class="relative flex-grow overflow-hidden">
-                                            <!-- Slide 1: Part Selection -->
-                                            <div id="mac-slide-1" class="mac-slide absolute inset-0 transition-transform duration-300 transform translate-x-0 flex items-center">
-                                                <!-- Container for Avatar Display and Toolbar -->
-                                                <div class="relative flex h-full w-full">
-                                                    <!-- Avatar Display Area -->
-                                                    <div id="mibi-avatar-display-area" class="relative flex-grow h-full flex items-center justify-center transition-all duration-300">
-                                                        <img id="mibi-head-base" src="../mibi-avatars/head.png" alt="Mibi Avatar Base" class="max-h-full max-w-full object-contain">
-                                                        <!-- Layers for eyes, mouth, hats -->
-                                                        <img id="mibi-eyes-layer" src="" alt="Mibi Eyes" class="absolute max-h-full max-w-full object-contain" style="display:none;">
-                                                        <img id="mibi-mouth-layer" src="" alt="Mibi Mouth" class="absolute max-h-full max-w-full object-contain" style="display:none;">
-                                                        <img id="mibi-hat-layer" src="" alt="Mibi Hat" class="absolute max-h-full max-w-full object-contain" style="display:none;">
-                                                    </div>
-
-                                                    <!-- Part Selection Toolbar (aligned right) -->
-                                                    <div id="mibi-part-toolbar" class="absolute right-0 h-full p-4 flex flex-col justify-start items-start
-                                                        bg-[#1a1a1a] rounded-r-lg shadow-xl border-t border-r border-b z-10 transition-all duration-300
-                                                        w-0 opacity-0 pointer-events-none">
-                                                        <div class="flex flex-col w-full mb-4">
-                                                            <button class="btn-toolbar-style w-full mb-2 bg-[#040404] hover:bg-[#252525] rounded-lg" data-part="eyes">
-                                                                <i class="fa-solid fa-eye mr-2"></i> Eyes
-                                                            </button>
-                                                            <button class="btn-toolbar-style w-full mb-2 bg-[#040404] hover:bg-[#252525] rounded-lg" data-part="mouths">
-                                                                <i class="fa-solid fa-mouth mr-2"></i> Mouths
-                                                            </button>
-                                                            <button class="btn-toolbar-style w-full mb-2 bg-[#040404] hover:bg-[#252525] rounded-lg" data-part="hats">
-                                                                <i class="fa-solid fa-hat-wizard mr-2"></i> Hats
-                                                            </button>
-                                                        </div>
-                                                        
-                                                        <!-- Part Selection Menu (Hats, Eyes, Mouths) - initially hidden -->
-                                                        <div id="mibi-selection-menu" class="hidden w-full flex-grow overflow-y-auto p-2 border-t border-[#252525] bg-[#040404] rounded-b-lg">
-                                                            <!-- Options will be dynamically loaded here -->
-                                                            <p class="text-sm text-gray-400">Select a part...</p>
-                                                        </div>
-                                                    </div>
+                                        <!-- Header -->
+                                        <div class="flex justify-between items-center p-6 border-b border-[#333] bg-[#151515]">
+                                            <h3 class="text-2xl font-bold text-white">Mibi Avatar Creator</h3>
+                                            <button id="mac-close-x-btn" class="text-gray-400 hover:text-white transition-colors">
+                                                <i class="fa-solid fa-xmark fa-xl"></i>
+                                            </button>
+                                        </div>
+                                        
+                                        <!-- Main Content Area (Split View) -->
+                                        <div class="flex flex-grow overflow-hidden">
+                                            
+                                            <!-- LEFT: Live Preview -->
+                                            <div class="w-1/2 flex flex-col items-center justify-center bg-[#0a0a0a] p-8 border-r border-[#333]">
+                                                <div class="relative w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden border-4 border-[#333] shadow-lg mb-6 transition-all duration-300" id="mac-preview-container">
+                                                    <!-- Avatar Layers -->
+                                                    <div id="mac-preview-bg" class="absolute inset-0 w-full h-full transition-colors duration-300"></div>
+                                                    <img id="mac-layer-head" src="../mibi-avatars/head.png" class="absolute inset-0 w-full h-full object-contain z-10">
+                                                    <img id="mac-layer-eyes" class="absolute inset-0 w-full h-full object-contain z-20 hidden">
+                                                    <img id="mac-layer-mouth" class="absolute inset-0 w-full h-full object-contain z-20 hidden">
+                                                    <img id="mac-layer-hat" class="absolute inset-0 w-full h-full object-contain z-30 hidden">
                                                 </div>
+                                                <p class="text-gray-500 text-sm font-mono">Live Preview</p>
                                             </div>
 
-                                            <!-- Slide 2: Background Color Selection -->
-                                            <div id="mac-slide-2" class="mac-slide absolute inset-0 transition-transform duration-300 transform translate-x-full hidden flex-col items-center justify-center p-4">
-                                                <h4 class="text-xl font-bold text-white mb-4">Select Background Color</h4>
-                                                <div id="mibi-slide2-preview" class="relative w-48 h-48 rounded-full overflow-hidden border-2 border-gray-500 mb-4">
-                                                    <!-- Mibi avatar preview will be rendered here -->
+                                            <!-- RIGHT: Controls & Options -->
+                                            <div class="w-1/2 flex flex-col bg-[#1a1a1a]">
+                                                
+                                                <!-- Tabs -->
+                                                <div class="flex border-b border-[#333]">
+                                                    <button class="mac-tab-btn flex-1 py-4 text-gray-400 hover:text-white hover:bg-[#252525] transition-colors border-b-2 border-transparent font-medium active-tab" data-tab="hats">
+                                                        <i class="fa-solid fa-hat-wizard mr-2"></i> Hats
+                                                    </button>
+                                                    <button class="mac-tab-btn flex-1 py-4 text-gray-400 hover:text-white hover:bg-[#252525] transition-colors border-b-2 border-transparent font-medium" data-tab="eyes">
+                                                        <i class="fa-solid fa-eye mr-2"></i> Eyes
+                                                    </button>
+                                                    <button class="mac-tab-btn flex-1 py-4 text-gray-400 hover:text-white hover:bg-[#252525] transition-colors border-b-2 border-transparent font-medium" data-tab="mouths">
+                                                        <i class="fa-solid fa-face-smile mr-2"></i> Mouths
+                                                    </button>
+                                                    <button class="mac-tab-btn flex-1 py-4 text-gray-400 hover:text-white hover:bg-[#252525] transition-colors border-b-2 border-transparent font-medium" data-tab="bg">
+                                                        <i class="fa-solid fa-palette mr-2"></i> Color
+                                                    </button>
                                                 </div>
-                                                <div id="mibi-color-palette" class="grid grid-cols-4 gap-4">
-                                                    <!-- Color options will be dynamically generated -->
-                                                    <div class="color-swatch w-12 h-12 rounded-full cursor-pointer bg-red-500" data-color="#EF4444"></div>
-                                                    <div class="color-swatch w-12 h-12 rounded-full cursor-pointer bg-orange-500" data-color="#F97316"></div>
-                                                    <div class="color-swatch w-12 h-12 rounded-full cursor-pointer bg-yellow-500" data-color="#F59E0B"></div>
-                                                    <div class="color-swatch w-12 h-12 rounded-full cursor-pointer bg-green-500" data-color="#22C55E"></div>
-                                                    <div class="color-swatch w-12 h-12 rounded-full cursor-pointer bg-blue-500" data-color="#3B82F6"></div>
-                                                    <div class="color-swatch w-12 h-12 rounded-full cursor-pointer bg-indigo-500" data-color="#6366F1"></div>
-                                                    <div class="color-swatch w-12 h-12 rounded-full cursor-pointer bg-purple-500" data-color="#A855F7"></div>
-                                                    <div class="color-swatch w-12 h-12 rounded-full cursor-pointer bg-gray-500 flex items-center justify-center" data-color="custom">
-                                                        <i class="fa-solid fa-plus text-white"></i>
-                                                    </div>
-                                                </div>
-                                                <input type="color" id="mibi-custom-color-picker" class="hidden mt-4" value="#ffffff">
-                                            </div>
 
-                                            <!-- Slide 3: Orientation/Size/Rotation -->
-                                            <div id="mac-slide-3" class="mac-slide absolute inset-0 transition-transform duration-300 transform translate-x-full hidden flex-col items-center justify-center p-4">
-                                                <h4 class="text-xl font-bold text-white mb-4">Adjust Orientation</h4>
-                                                <div class="flex flex-col md:flex-row w-full h-full items-center justify-center gap-8">
-                                                    <div id="mibi-final-preview-container" class="relative w-48 h-48 rounded-full overflow-hidden border-2 border-white flex-shrink-0 flex items-center justify-center">
-                                                        <!-- Mibi avatar preview will be rendered here -->
-                                                    </div>
-                                                    <div class="flex flex-col gap-4 w-full md:w-auto max-w-xs">
-                                                        <div>
-                                                            <label for="mibi-size-slider" class="block text-gray-400 text-sm font-light mb-2">Size</label>
-                                                            <input type="range" id="mibi-size-slider" min="50" max="150" value="100" class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer range-lg">
-                                                        </div>
-                                                        <div>
-                                                            <label for="mibi-rotation-slider" class="block text-gray-400 text-sm font-light mb-2">Rotation</label>
-                                                            <input type="range" id="mibi-rotation-slider" min="0" max="360" value="0" class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer range-lg">
-                                                        </div>
+                                                <!-- Options Grid (Scrollable) -->
+                                                <div class="flex-grow overflow-y-auto p-6 custom-scrollbar" id="mac-options-container">
+                                                    <!-- Dynamic Content Loaded Here -->
+                                                    <div class="grid grid-cols-3 gap-4" id="mac-grid">
+                                                        <!-- JS populates this -->
                                                     </div>
                                                 </div>
-                                            </div>
 
-                                            <!-- Slide 4: Confirm Avatar -->
-                                            <div id="mac-slide-4" class="mac-slide absolute inset-0 transition-transform duration-300 transform translate-x-full hidden flex-col items-center justify-center p-4">
-                                                <h4 class="text-xl font-bold text-white mb-4">Confirm Your Mibi Avatar</h4>
-                                                <div id="mibi-final-confirmation-preview" class="relative w-48 h-48 rounded-full overflow-hidden border-2 border-white flex items-center justify-center">
-                                                    <!-- Final avatar preview -->
-                                                </div>
                                             </div>
                                         </div>
                                         
-                                        <!-- MAC Menu Footer Buttons -->
-                                        <div class="flex justify-between items-center mt-4 flex-shrink-0">
-                                            <button id="mac-cancel-btn" class="btn-toolbar-style" style="padding: 0.5rem 0.75rem;">Cancel</button>
-                                            <button id="mac-next-btn" class="btn-toolbar-style btn-primary-override" style="padding: 0.5rem 0.75rem;">Next</button>
-                                            <button id="mac-back-btn" class="btn-toolbar-style hidden" style="padding: 0.5rem 0.75rem;">Back</button>
-                                            <button id="mac-confirm-btn" class="btn-toolbar-style btn-primary-override hidden" style="padding: 0.5rem 0.75rem;">Confirm Avatar</button>
+                                        <!-- Footer Actions -->
+                                        <div class="p-6 border-t border-[#333] bg-[#151515] flex justify-end gap-4">
+                                            <button id="mac-cancel-btn" class="btn-toolbar-style px-6 py-2">Cancel</button>
+                                            <button id="mac-confirm-btn" class="btn-toolbar-style btn-primary-override px-6 py-2">
+                                                <i class="fa-solid fa-check mr-2"></i> Confirm Avatar
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -1240,286 +1197,219 @@
             switchTab('general');
         };
 
-        // --- Mibi Avatar Creation (MAC) Menu Logic ---
-        let currentMacSlide = 1; // Global state for the current slide in MAC menu
+        // --- Mibi Avatar Creator (MAC) Logic ---
 
-        const showMacSlide = (slideNum) => {
-            const macMenu = document.getElementById('mibi-mac-menu');
-            if (!macMenu) return;
-
-            const slides = macMenu.querySelectorAll('.mac-slide');
-            slides.forEach((slide, index) => {
-                const targetSlide = index + 1;
-                if (targetSlide === slideNum) {
-                    slide.classList.remove('hidden');
-                    slide.classList.remove('translate-x-full', '-translate-x-full'); // Reset previous translations
-                    slide.classList.add('translate-x-0');
-                } else {
-                    slide.classList.add('hidden');
-                }
-            });
-
-            // Update button visibility
-            const macCancelBtn = document.getElementById('mac-cancel-btn');
-            const macNextBtn = document.getElementById('mac-next-btn');
-            const macBackBtn = document.getElementById('mac-back-btn');
-            const macConfirmBtn = document.getElementById('mac-confirm-btn');
-
-            if (slideNum === 1) {
-                macCancelBtn.textContent = 'Cancel';
-                macBackBtn.classList.add('hidden');
-                macNextBtn.classList.remove('hidden');
-                macConfirmBtn.classList.add('hidden');
-            } else if (slideNum === slides.length) { // Last slide (Confirm)
-                macCancelBtn.textContent = 'Back'; // Back button behavior for last slide
-                macBackBtn.classList.add('hidden'); // This button is functionally replaced by cancel
-                macNextBtn.classList.add('hidden');
-                macConfirmBtn.classList.remove('hidden');
-            } else {
-                macCancelBtn.textContent = 'Back';
-                macBackBtn.classList.add('hidden'); // Explicitly hide macBackBtn as macCancelBtn acts as Back
-                macNextBtn.classList.remove('hidden');
-                macConfirmBtn.classList.add('hidden');
-            }
-
-            // Update all avatar previews when switching slides
-            updateMibiAvatarPreview(); // This will now update all relevant previews
-        };
-
-        // Global state for Mibi Avatar parts
-        const mibiAvatarState = {
+        // Global state for Mibi Avatar parts (persisted in this scope)
+        let mibiAvatarState = {
             eyes: '',
             mouths: '',
             hats: '',
             bgColor: '#3B82F6', // Default blue
-            size: 100,
-            rotation: 0
+            // Removing rotation/size for simplicity as per request
+        };
+        
+        // Constants for Assets
+        const MIBI_ASSETS = {
+            eyes: ['default-eyes.png', 'glasses.png', 'odd.png'],
+            mouths: ['default-mouth.png', 'drool.png', 'meh.png', 'no-clue.png', 'sad.png', 'wow.png'],
+            hats: ['strawhat.png', 'tophat.png'],
+            colors: [
+                '#EF4444', '#F97316', '#F59E0B', '#22C55E', '#3B82F6', 
+                '#6366F1', '#A855F7', '#EC4899', '#000000', '#FFFFFF'
+            ]
         };
 
-        const updateMibiAvatarPreview = () => {
-            const mibiAvatarDisplayArea = document.getElementById('mibi-avatar-display-area'); // Main display area
-            const mibiHeadBase = document.getElementById('mibi-head-base');
-            const mibiEyesLayer = document.getElementById('mibi-eyes-layer');
-            const mibiMouthLayer = document.getElementById('mibi-mouth-layer');
-            const mibiHatLayer = document.getElementById('mibi-hat-layer');
-
-            if (!mibiAvatarDisplayArea || !mibiHeadBase || !mibiEyesLayer || !mibiMouthLayer || !mibiHatLayer) {
-                console.warn("Mibi Avatar preview elements not found.");
-                return;
-            }
-
-            // Apply background color to the display area (Slide 1, and eventually for previews)
-            mibiAvatarDisplayArea.style.backgroundColor = mibiAvatarState.bgColor;
-            mibiAvatarDisplayArea.style.transform = 'translateX(0)'; // Reset transform
-
-            // Update individual part layers
-            mibiEyesLayer.src = mibiAvatarState.eyes ? `../mibi-avatars/eyes/${mibiAvatarState.eyes}` : '';
-            mibiEyesLayer.style.display = mibiAvatarState.eyes ? 'block' : 'none';
-
-            mibiMouthLayer.src = mibiAvatarState.mouths ? `../mibi-avatars/mouths/${mibiAvatarState.mouths}` : '';
-            mibiMouthLayer.style.display = mibiAvatarState.mouths ? 'block' : 'none';
-
-            mibiHatLayer.src = mibiAvatarState.hats ? `../mibi-avatars/hats/${mibiAvatarState.hats}` : '';
-            mibiHatLayer.style.display = mibiAvatarState.hats ? 'block' : 'none';
-
-            // Apply size and rotation transformations to all layers
-            const transformStyle = `scale(${mibiAvatarState.size / 100}) rotate(${mibiAvatarState.rotation}deg)`;
-            mibiHeadBase.style.transform = transformStyle;
-            mibiEyesLayer.style.transform = transformStyle;
-            mibiMouthLayer.style.transform = transformStyle;
-            mibiHatLayer.style.transform = transformStyle;
-
-            // Update Slide 2, Slide 3 and Slide 4 previews
-            renderMibiAvatarToPreview(document.getElementById('mibi-slide2-preview'), mibiAvatarState); // NEW
-            renderMibiAvatarToPreview(document.getElementById('mibi-final-preview-container'), mibiAvatarState);
-            renderMibiAvatarToPreview(document.getElementById('mibi-final-confirmation-preview'), mibiAvatarState);
-        };
-
-        const renderMibiAvatarToPreview = (containerElement, avatarState) => {
-            if (!containerElement) return;
-
-            // Clear previous content
-            containerElement.innerHTML = '';
-            containerElement.style.backgroundColor = avatarState.bgColor;
-
-            const baseImg = document.createElement('img');
-            baseImg.src = '../mibi-avatars/head.png';
-            baseImg.alt = 'Mibi Avatar Base';
-            baseImg.className = 'absolute inset-0 w-full h-full object-contain';
-            baseImg.style.transform = `scale(${avatarState.size / 100}) rotate(${avatarState.rotation}deg)`;
-            containerElement.appendChild(baseImg);
-
-            if (avatarState.eyes) {
-                const eyesImg = document.createElement('img');
-                eyesImg.src = `../mibi-avatars/eyes/${avatarState.eyes}`;
-                eyesImg.alt = 'Mibi Eyes';
-                eyesImg.className = 'absolute inset-0 w-full h-full object-contain';
-                eyesImg.style.transform = `scale(${avatarState.size / 100}) rotate(${avatarState.rotation}deg)`;
-                containerElement.appendChild(eyesImg);
-            }
-            if (avatarState.mouths) {
-                const mouthImg = document.createElement('img');
-                mouthImg.src = `../mibi-avatars/mouths/${avatarState.mouths}`;
-                mouthImg.alt = 'Mibi Mouth';
-                mouthImg.className = 'absolute inset-0 w-full h-full object-contain';
-                mouthImg.style.transform = `scale(${avatarState.size / 100}) rotate(${avatarState.rotation}deg)`;
-                containerElement.appendChild(mouthImg);
-            }
-            if (avatarState.hats) {
-                const hatImg = document.createElement('img');
-                hatImg.src = `../mibi-avatars/hats/${avatarState.hats}`;
-                hatImg.alt = 'Mibi Hat';
-                hatImg.className = 'absolute inset-0 w-full h-full object-contain';
-                hatImg.style.transform = `scale(${avatarState.size / 100}) rotate(${avatarState.rotation}deg)`;
-            containerElement.appendChild(hatImg);
-            }
-        };
-
-        let currentActivePartSelection = null; // Keeps track of which part (eyes, mouths, hats) is currently selected in the toolbar
-
-        const loadMibiParts = async (partType) => {
-            const mibiSelectionMenu = document.getElementById('mibi-selection-menu');
-            const mibiAvatarDisplayArea = document.getElementById('mibi-avatar-display-area');
-            const mibiPartToolbar = document.getElementById('mibi-part-toolbar'); // Get toolbar reference
-
-            if (!mibiSelectionMenu || !mibiAvatarDisplayArea || !mibiPartToolbar) return;
-
-            // Toggle visibility of the selection menu and toolbar
-            if (currentActivePartSelection === partType) {
-                // Clicking the same part button again hides the selection menu and toolbar
-                mibiSelectionMenu.classList.add('hidden');
-                mibiPartToolbar.classList.remove('w-1/2', 'opacity-100', 'pointer-events-auto');
-                mibiPartToolbar.classList.add('w-0', 'opacity-0', 'pointer-events-none'); // Hide toolbar
-                mibiAvatarDisplayArea.classList.remove('w-1/2'); // Avatar takes full width
-                mibiAvatarDisplayArea.classList.add('w-full');
-                currentActivePartSelection = null;
-                return;
-            }
-
-            currentActivePartSelection = partType;
-            mibiSelectionMenu.innerHTML = '<i class="fa-solid fa-spinner fa-spin fa-2x text-gray-500 m-4"></i>';
-            mibiSelectionMenu.classList.remove('hidden');
+        const updateMibiPreview = () => {
+            const bgEl = document.getElementById('mac-preview-bg');
+            const eyesEl = document.getElementById('mac-layer-eyes');
+            const mouthEl = document.getElementById('mac-layer-mouth');
+            const hatEl = document.getElementById('mac-layer-hat');
             
-            // Show toolbar and adjust avatar display area
-            mibiPartToolbar.classList.remove('w-0', 'opacity-0', 'pointer-events-none');
-            mibiPartToolbar.classList.add('w-1/2', 'opacity-100', 'pointer-events-auto'); // Show toolbar
-            mibiAvatarDisplayArea.classList.remove('w-full');
-            mibiAvatarDisplayArea.classList.add('w-1/2'); // Avatar takes half width
+            if (!bgEl) return;
 
-            try {
-                // Simulate fetching directory contents
-                let partFiles = [];
-                if (partType === 'eyes') {
-                    partFiles = ['default-eyes.png', 'glasses.png', 'odd.png'];
-                } else if (partType === 'mouths') {
-                    partFiles = ['default-mouth.png', 'drool.png', 'meh.png', 'no-clue.png', 'sad.png', 'wow.png'];
-                } else if (partType === 'hats') {
-                    partFiles = ['strawhat.png', 'tophat.png'];
-                }
+            // Update BG
+            bgEl.style.backgroundColor = mibiAvatarState.bgColor;
+            
+            // Update Layers
+            if (mibiAvatarState.eyes) {
+                eyesEl.src = `../mibi-avatars/eyes/${mibiAvatarState.eyes}`;
+                eyesEl.classList.remove('hidden');
+            } else {
+                eyesEl.classList.add('hidden');
+            }
+            
+            if (mibiAvatarState.mouths) {
+                mouthEl.src = `../mibi-avatars/mouths/${mibiAvatarState.mouths}`;
+                mouthEl.classList.remove('hidden');
+            } else {
+                mouthEl.classList.add('hidden');
+            }
 
-                let partsHtml = partFiles.map(file => {
-                    if (file === 'ph') return ''; // Ignore placeholder file
-                    const partName = file.replace('.png', '');
-                    const isSelected = mibiAvatarState[partType] === file;
-                    return `
-                        <div class="mibi-part-option flex flex-col items-center justify-center p-2 cursor-pointer
-                                    ${isSelected ? 'border-2 border-blue-500 rounded-md' : ''}"
-                             data-part-file="${file}" data-part-type="${partType}">
-                            <img src="../mibi-avatars/${partType}/${file}" alt="${partName}" class="w-16 h-16 object-contain">
-                            <span class="text-xs text-gray-300 mt-1">${partName}</span>
-                        </div>
-                    `;
-                }).join('');
-                
-                // Add a "None" option for hats/eyes/mouths
-                partsHtml = `
-                    <div class="mibi-part-option flex flex-col items-center justify-center p-2 cursor-pointer"
-                         data-part-file="" data-part-type="${partType}">
-                        <i class="fa-solid fa-xmark fa-2x text-gray-400"></i>
-                        <span class="text-xs text-gray-300 mt-1">None</span>
-                    </div>
-                    ${partsHtml}
-                `;
+            if (mibiAvatarState.hats) {
+                hatEl.src = `../mibi-avatars/hats/${mibiAvatarState.hats}`;
+                hatEl.classList.remove('hidden');
+            } else {
+                hatEl.classList.add('hidden');
+            }
+        };
 
-                mibiSelectionMenu.innerHTML = `<div class="grid grid-cols-3 gap-2">${partsHtml}</div>`;
+        const renderMacGrid = (category) => {
+            const grid = document.getElementById('mac-grid');
+            grid.innerHTML = ''; // Clear existing
 
-                // Add event listeners for each part option
-                mibiSelectionMenu.querySelectorAll('.mibi-part-option').forEach(optionDiv => {
-                    optionDiv.addEventListener('click', () => {
-                        const selectedFile = optionDiv.dataset.partFile;
-                        mibiAvatarState[partType] = selectedFile;
-                        updateMibiAvatarPreview();
-
-                        // Update selection highlighting
-                        mibiSelectionMenu.querySelectorAll('.mibi-part-option').forEach(div => div.classList.remove('border-2', 'border-blue-500', 'rounded-md'));
-                        optionDiv.classList.add('border-2', 'border-blue-500', 'rounded-md');
-                    });
+            if (category === 'bg') {
+                // Color Palette
+                Mibi_ASSETS.colors.forEach(color => {
+                    const btn = document.createElement('button');
+                    btn.className = `w-full aspect-square rounded-full shadow-sm transition-transform hover:scale-110 focus:outline-none ring-2 ring-offset-2 ring-offset-[#1a1a1a]`;
+                    btn.style.backgroundColor = color;
+                    btn.style.setProperty('--tw-ring-color', mibiAvatarState.bgColor === color ? '#3B82F6' : 'transparent');
+                    
+                    btn.onclick = () => {
+                        mibiAvatarState.bgColor = color;
+                        updateMibiPreview();
+                        renderMacGrid('bg'); // Re-render to update selection ring
+                    };
+                    grid.appendChild(btn);
                 });
+                // Add custom picker
+                const customWrapper = document.createElement('div');
+                customWrapper.className = 'w-full aspect-square rounded-full bg-[#333] flex items-center justify-center cursor-pointer hover:bg-[#444] relative overflow-hidden';
+                customWrapper.innerHTML = '<i class="fa-solid fa-eye-dropper text-white"></i><input type="color" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">';
+                const input = customWrapper.querySelector('input');
+                input.oninput = (e) => {
+                    mibiAvatarState.bgColor = e.target.value;
+                    updateMibiPreview();
+                };
+                grid.appendChild(customWrapper);
 
-            } catch (error) {
-                console.error("Error loading Mibi parts:", error);
-                mibiSelectionMenu.innerHTML = `<p class="text-red-400">Error loading parts.</p>`;
+            } else {
+                // Asset Grid (Eyes, Mouths, Hats)
+                
+                // "None" Option
+                const noneBtn = document.createElement('div');
+                noneBtn.className = `bg-[#0a0a0a] rounded-lg p-2 flex flex-col items-center justify-center cursor-pointer border-2 hover:border-gray-500 transition-colors ${!mibiAvatarState[category] ? 'border-blue-500' : 'border-transparent'}`;
+                noneBtn.innerHTML = `<i class="fa-solid fa-ban fa-2x text-gray-500 mb-2"></i><span class="text-xs text-gray-400">None</span>`;
+                noneBtn.onclick = () => {
+                    mibiAvatarState[category] = '';
+                    updateMibiPreview();
+                    renderMacGrid(category);
+                };
+                grid.appendChild(noneBtn);
+
+                // Asset Options
+                const files = Mibi_ASSETS[category] || [];
+                files.forEach(file => {
+                    const item = document.createElement('div');
+                    const isSelected = mibiAvatarState[category] === file;
+                    item.className = `bg-[#0a0a0a] rounded-lg p-2 flex flex-col items-center justify-center cursor-pointer border-2 hover:border-gray-500 transition-colors ${isSelected ? 'border-blue-500' : 'border-transparent'}`;
+                    
+                    // Simplify name
+                    const name = file.replace('.png', '').replace(/-/g, ' ');
+                    
+                    item.innerHTML = `
+                        <img src="../mibi-avatars/${category}/${file}" class="w-16 h-16 object-contain mb-1">
+                        <span class="text-xs text-gray-400 capitalize">${name}</span>
+                    `;
+                    
+                    item.onclick = () => {
+                        mibiAvatarState[category] = file;
+                        updateMibiPreview();
+                        renderMacGrid(category);
+                    };
+                    grid.appendChild(item);
+                });
             }
         };
 
         const setupMacMenuListeners = () => {
-            const macMenu = document.getElementById('mibi-mac-menu');
-            if (!macMenu) return;
-
-            const macCancelBtn = document.getElementById('mac-cancel-btn');
-            const macNextBtn = document.getElementById('mac-next-btn');
-            const macBackBtn = document.getElementById('mac-back-btn'); // Though hidden, its logic might be used for debug/future
-            const macConfirmBtn = document.getElementById('mac-confirm-btn');
+            const openBtn = document.getElementById('open-mac-menu-btn');
+            const menu = document.getElementById('mibi-mac-menu');
+            const closeBtn = document.getElementById('mac-close-x-btn');
+            const cancelBtn = document.getElementById('mac-cancel-btn');
+            const confirmBtn = document.getElementById('mac-confirm-btn');
+            const tabBtns = document.querySelectorAll('.mac-tab-btn');
             const pfpModeSelect = document.getElementById('pfpModeSelect');
+            const pfpMessage = document.getElementById('pfpMessage');
 
-            // Part selection toolbar buttons
-            const partButtons = macMenu.querySelectorAll('#mibi-part-toolbar button[data-part]');
+            if (!openBtn || !menu) return;
 
-            partButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    const partType = button.dataset.part;
-                    loadMibiParts(partType);
-                });
+            // Correct typo in variable name for renderMacGrid usage
+            window.Mibi_ASSETS = MIBI_ASSETS; 
+
+            const openMenu = () => {
+                menu.classList.remove('hidden');
+                updateMibiPreview();
+                // Trigger click on first tab to load it
+                document.querySelector('.mac-tab-btn[data-tab="hats"]')?.click();
+            };
+
+            const closeMenu = () => {
+                menu.classList.add('hidden');
+            };
+
+            openBtn.onclick = openMenu;
+            closeBtn.onclick = closeMenu;
+            cancelBtn.onclick = closeMenu;
+
+            // Tab Switching Logic
+            tabBtns.forEach(btn => {
+                btn.onclick = () => {
+                    // Update UI
+                    tabBtns.forEach(b => {
+                        b.classList.remove('active-tab', 'text-white', 'border-blue-500');
+                        b.classList.add('text-gray-400', 'border-transparent');
+                    });
+                    btn.classList.add('active-tab', 'text-white', 'border-blue-500');
+                    btn.classList.remove('text-gray-400', 'border-transparent');
+                    
+                    // Load Content
+                    renderMacGrid(btn.dataset.tab);
+                };
             });
 
-            macCancelBtn.addEventListener('click', () => {
-                if (currentMacSlide === 1) {
-                    macMenu.classList.add('hidden'); // Close menu
-                    pfpModeSelect.value = 'google'; // Reset dropdown
-                    const mibiSettings = document.getElementById('pfpMibiSettings');
-                    mibiSettings.classList.add('hidden'); // Hide the container div
-                } else {
-                    currentMacSlide--;
-                    showMacSlide(currentMacSlide);
+            // Confirm Action
+            confirmBtn.onclick = async () => {
+                closeMenu();
+                showMessage(pfpMessage, '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Saving Mibi Avatar...', 'warning');
+                
+                try {
+                    const userDocRef = getUserDocRef(currentUser.uid);
+                    
+                    // Save to Firestore
+                    await updateDoc(userDocRef, {
+                        pfpType: 'mibi',
+                        mibiConfig: mibiAvatarState
+                    });
+                    
+                    // Update local dispatch for immediate feedback
+                    const newUserData = {
+                        pfpType: 'mibi',
+                        mibiConfig: mibiAvatarState
+                    };
+                    
+                    // Dispatch event so navigation bars update immediately
+                    window.dispatchEvent(new CustomEvent('pfp-updated', { detail: newUserData }));
+                    
+                    showMessage(pfpMessage, 'Mibi Avatar saved successfully!', 'success');
+                    
+                    // Update dropdown to reflect choice
+                    if (pfpModeSelect) {
+                        // Logic to handle the custom dropdown implementation if it exists
+                        pfpModeSelect.value = 'mibi';
+                        // Trigger change event if needed, or manually update custom dropdown UI
+                        const wrapper = pfpModeSelect.parentElement.querySelector('.custom-select-trigger');
+                         if (wrapper) {
+                             const option = Array.from(pfpModeSelect.options).find(o => o.value === 'mibi');
+                             if(option) wrapper.innerHTML = `<span>${option.textContent}</span><div class="arrow"></div>`;
+                         }
+                    }
+
+                } catch (error) {
+                    console.error("Error saving Mibi avatar:", error);
+                    showMessage(pfpMessage, 'Failed to save avatar. Please try again.', 'error');
                 }
-            });
-
-            macNextBtn.addEventListener('click', () => {
-                const slides = macMenu.querySelectorAll('.mac-slide');
-                if (currentMacSlide < slides.length) {
-                    currentMacSlide++;
-                    showMacSlide(currentMacSlide);
-                }
-            });
-
-            // The macBackBtn is hidden and its functionality is handled by macCancelBtn.
-            // This listener is mostly a placeholder as per current UI design but kept for completeness
-            macBackBtn.addEventListener('click', () => {
-                 if (currentMacSlide > 1) {
-                    currentMacSlide--;
-                    showMacSlide(currentMacSlide);
-                }
-            });
-
-
-            macConfirmBtn.addEventListener('click', () => {
-                // As per request: "it just closes, since this is a test menu"
-                macMenu.classList.add('hidden');
-                // Potentially save the mibiAvatarState here in future
-                pfpModeSelect.value = 'google'; // Reset dropdown, assuming 'google' is default
-                const mibiSettings = document.getElementById('pfpMibiSettings');
-                mibiSettings.classList.add('hidden'); // Hide the container div
-            });
+            };
         };
 
         // --- Utility: Custom Dropdown Setup ---

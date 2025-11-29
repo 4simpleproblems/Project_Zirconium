@@ -128,6 +128,16 @@ const DEFAULT_THEME = {
                 
                 if (currentUserData.pfpType === 'custom' && currentUserData.customPfp) {
                     newContent = `<img src="${currentUserData.customPfp}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
+                } else if (currentUserData.pfpType === 'mibi' && currentUserData.mibiConfig) {
+                    const { eyes, mouths, hats, bgColor } = currentUserData.mibiConfig;
+                    newContent = `
+                        <div class="w-full h-full relative overflow-hidden rounded-full" style="background-color: ${bgColor || '#3B82F6'}">
+                             <img src="/mibi-avatars/head.png" class="absolute inset-0 w-full h-full object-contain">
+                             ${eyes ? `<img src="/mibi-avatars/eyes/${eyes}" class="absolute inset-0 w-full h-full object-contain">` : ''}
+                             ${mouths ? `<img src="/mibi-avatars/mouths/${mouths}" class="absolute inset-0 w-full h-full object-contain">` : ''}
+                             ${hats ? `<img src="/mibi-avatars/hats/${hats}" class="absolute inset-0 w-full h-full object-contain">` : ''}
+                        </div>
+                    `;
                 } else if (currentUserData.pfpType === 'letter') {
                     const bg = currentUserData.letterAvatarColor || DEFAULT_THEME['avatar-gradient']; // Default from navigation.js
                     const textColor = getLetterAvatarTextColor(bg);
@@ -438,6 +448,16 @@ const DEFAULT_THEME = {
 
             if (pfpType === 'custom' && userData?.customPfp) {
                 avatarHtml = `<img src="${userData.customPfp}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
+            } else if (pfpType === 'mibi' && userData?.mibiConfig) {
+                const { eyes, mouths, hats, bgColor } = userData.mibiConfig;
+                avatarHtml = `
+                    <div class="w-full h-full relative overflow-hidden rounded-full" style="background-color: ${bgColor || '#3B82F6'}">
+                            <img src="/mibi-avatars/head.png" class="absolute inset-0 w-full h-full object-contain">
+                            ${eyes ? `<img src="/mibi-avatars/eyes/${eyes}" class="absolute inset-0 w-full h-full object-contain">` : ''}
+                            ${mouths ? `<img src="/mibi-avatars/mouths/${mouths}" class="absolute inset-0 w-full h-full object-contain">` : ''}
+                            ${hats ? `<img src="/mibi-avatars/hats/${hats}" class="absolute inset-0 w-full h-full object-contain">` : ''}
+                    </div>
+                `;
             } else if (pfpType === 'letter') {
                 const bg = userData?.pfpLetterBg || DEFAULT_THEME['avatar-gradient']; // Default from navigation.js
                 const textColor = getLetterAvatarTextColor(bg); // Use new helper
