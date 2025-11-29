@@ -277,6 +277,9 @@
             modal.style.display = "flex";
         }
         
+        let loadingPromiseResolve; // Function to resolve the loading promise
+        let loadingPromise = Promise.resolve(); // Initial resolved promise
+
         function showLoading(text = "Loading...") {
             const loadingOverlay = document.getElementById('loadingOverlay');
             const loadingText = document.getElementById('loadingText');
@@ -284,13 +287,23 @@
             loadingText.textContent = text;
             loadingOverlay.style.display = "flex";
             loadingOverlay.classList.add("active");
-            if (loadingTimeout) clearTimeout(loadingTimeout);
-            loadingTimeout = setTimeout(() => {
-                hideLoading();
-            }, 5000); // 5 second timeout
+            
+            // Create a new promise for the minimum loading duration
+            loadingPromise = new Promise(resolve => {
+                loadingPromiseResolve = resolve;
+                // Start a timer for the minimum display duration
+                // This is the 500ms minimum display time
+                if (loadingTimeout) clearTimeout(loadingTimeout); // Clear any previous timeout
+                loadingTimeout = setTimeout(() => {
+                    loadingPromiseResolve();
+                }, 500); 
+            });
         }
 
-        function hideLoading() {
+        async function hideLoading() {
+            // Ensure the minimum loading time has passed
+            await loadingPromise; 
+
             const loadingOverlay = document.getElementById('loadingOverlay');
             if (loadingTimeout) {
                 clearTimeout(loadingTimeout);
@@ -3721,10 +3734,7 @@
                 console.error(`Error loading tab ${tabId}:`, error);
                 mainView.innerHTML = `<p class="text-red-400">Error loading tab content.</p>`;
             } finally {
-                // Ensure spinner is shown for a minimum duration to avoid flickering
-                setTimeout(() => {
-                    hideLoading();
-                }, 500); // Minimum 500ms display time
+                await hideLoading();
             }
 
             // 3. New: Smoothly scroll the window back to the top (y=0)
