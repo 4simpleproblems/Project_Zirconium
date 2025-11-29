@@ -1259,5 +1259,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
             });
         }
         
-        // Use a short timeout to allow the rest of the script to run before auth check
-        setTimeout(() => { initializeAuth(); }, 100);
+                // Use a short timeout to allow the rest of the script to run before auth check
+                // Increased delay to ensure all functions are defined before initial auth check
+                setTimeout(() => { initializeAuth(); }, 500); 
