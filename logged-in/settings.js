@@ -50,6 +50,15 @@
         const mainView = document.getElementById('settings-main-view');
         let currentUser = null; // To store the authenticated user object
         
+        // Add click event listeners to sidebar tabs
+        sidebarTabs.forEach(tab => {
+            tab.addEventListener('click', (event) => {
+                event.preventDefault(); // Prevent default anchor behavior
+                const tabId = tab.id.replace('tab-', ''); // Extract tab ID from element ID
+                switchTab(tabId);
+            });
+        });
+        
         // --- NEW: Global var for loading overlay (from index.html) ---
         let loadingTimeout = null;
         
@@ -277,55 +286,8 @@
             modal.style.display = "flex";
         }
         
-        let loadingPromiseResolve; // Function to resolve the loading promise
-        let loadingPromise = Promise.resolve(); // Initial resolved promise
-        let dotAnimationInterval = null; // Interval for dot animation
-        let dotCount = 0; // Counter for dots
 
-        function showLoading(text = "Loading...") {
-            const loadingOverlay = document.getElementById('loadingOverlay');
-            const loadingTextElement = document.getElementById('loadingText');
-            
-            loadingTextElement.textContent = "Loading"; // Base text
-            loadingOverlay.style.display = "flex";
-            loadingOverlay.classList.add("active");
-            
-            // Start dot animation
-            if (dotAnimationInterval) clearInterval(dotAnimationInterval);
-            dotAnimationInterval = setInterval(() => {
-                dotCount = (dotCount % 3) + 1; // Cycle 1, 2, 3
-                loadingTextElement.textContent = "Loading" + ".".repeat(dotCount);
-            }, 300); // Update dots every 300ms
 
-            // Create a new promise for the minimum loading duration
-            loadingPromise = new Promise(resolve => {
-                loadingPromiseResolve = resolve;
-                // Start a timer for the minimum display duration
-                if (loadingTimeout) clearTimeout(loadingTimeout); // Clear any previous timeout
-                loadingTimeout = setTimeout(() => {
-                    loadingPromiseResolve();
-                }, 500); 
-            });
-        }
-
-        async function hideLoading() {
-            // Clear dot animation interval
-            if (dotAnimationInterval) {
-                clearInterval(dotAnimationInterval);
-                dotAnimationInterval = null;
-            }
-
-            // Ensure the minimum loading time has passed
-            await loadingPromise; 
-
-            const loadingOverlay = document.getElementById('loadingOverlay');
-            if (loadingTimeout) {
-                clearTimeout(loadingTimeout);
-                loadingTimeout = null;
-            }
-            loadingOverlay.classList.remove("active");
-            loadingOverlay.style.display = "none";
-        }
         
         // --- NEW: Core Data Functions (from index.html) ---
         
@@ -2409,9 +2371,6 @@
                 currentUser.providerData // Pass provider info
             );
             
-            // Ensure the DOM has rendered the new content before proceeding
-            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-
             // 2. Element References (Username Section)
             const viewMode = document.getElementById('viewMode');
             const editMode = document.getElementById('editMode');
@@ -3706,7 +3665,7 @@
         /**
          * Handles the switching of tabs and updating the main content view.
          */
-        async function switchTab(tabId, isInitialLoad = false) {
+        async function switchTab(tabId) {
             // 1. Update active class on sidebar tabs
             sidebarTabs.forEach(tab => {
                 tab.classList.remove('active');
@@ -3722,41 +3681,28 @@
             mainView.style.justifyContent = 'flex-start';
             mainView.style.alignItems = 'flex-start';
 
-            try {
-                if (tabId === 'general') {
-                    await loadGeneralTab(); 
-                }
-                else if (tabId === 'privacy') {
-                    mainView.innerHTML = getPrivacyContent(); 
-                    await loadPrivacyTab();
-                }
-                else if (tabId === 'personalization') {
-                    mainView.innerHTML = getPersonalizationContent(); 
-                    await loadPersonalizationTab();
-                }
-                else if (tabId === 'data') {
-                    mainView.innerHTML = getDataManagementContent(); 
-                    await loadDataTab();
-                }
-                else if (tabId === 'about') {
-                    mainView.innerHTML = getAboutContent();
-                } else {
-                    const content = tabContent[tabId];
-                    mainView.innerHTML = getComingSoonContent(content.title);
-                }
-
-                // Update URL hash AFTER content is loaded, if it's not the initial page load
-                if (!isInitialLoad) {
-                    window.history.replaceState(null, '', `#${tabId}`);
-                }
-
-            } catch (error) {
-                console.error(`Error loading tab ${tabId}:`, error);
-                mainView.innerHTML = `<p class="text-red-400">Error loading tab content.</p>`;
-            } 
-            // The finally block with hideLoading is now managed by handleHashChange for initial load.
-            // For tab clicks, no spinner is shown, so no hideLoading is needed here.
-
+            if (tabId === 'general') {
+                await loadGeneralTab(); 
+            }
+            else if (tabId === 'privacy') {
+                mainView.innerHTML = getPrivacyContent(); 
+                await loadPrivacyTab();
+            }
+            else if (tabId === 'personalization') {
+                mainView.innerHTML = getPersonalizationContent(); 
+                await loadPersonalizationTab();
+            }
+            else if (tabId === 'data') {
+                mainView.innerHTML = getDataManagementContent(); 
+                await loadDataTab();
+            }
+            else if (tabId === 'about') {
+                mainView.innerHTML = getAboutContent();
+            } else {
+                const content = tabContent[tabId];
+                mainView.innerHTML = getComingSoonContent(content.title);
+            }
+            
             // 3. New: Smoothly scroll the window back to the top (y=0)
             window.scrollTo({
                 top: 0,
@@ -3766,33 +3712,8 @@
 
         // --- Initialization on Load ---
         
-        // Function to handle tab switching based on URL hash (only for initial load now)
-        const handleHashChange = async () => {
-            const hash = window.location.hash.substring(1); // Remove '#'
-            const defaultTab = 'general';
-            let tabId = hash;
-
-            if (!Object.keys(tabContent).includes(hash)) {
-                tabId = defaultTab;
-                // Update URL to reflect the default tab, replacing the current history entry
-                window.history.replaceState(null, '', `#${defaultTab}`);
-            }
-            
-            // Show loading spinner only on initial page load
-            showLoading("Loading settings...");
-            try {
-                // Call switchTab with isInitialLoad = true
-                await switchTab(tabId, true); 
-            } catch (error) {
-                console.error("Error during initial tab load:", error);
-                mainView.innerHTML = `<p class="text-red-400">Error loading initial tab content.</p>`;
-            } finally {
-                await hideLoading();
-            }
-        };
-
         // Add event listeners for initial load
-        window.addEventListener('load', handleHashChange);
+        window.addEventListener('load', () => switchTab('general'));
 
 
         // --- AUTHENTICATION/REDIRECT LOGIC (Retained and Modified) ---
