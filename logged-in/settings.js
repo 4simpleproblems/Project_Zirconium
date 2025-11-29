@@ -1101,9 +1101,12 @@
                                         </div>
                                         
                                         <!-- Footer Actions -->
-                                        <div class="p-6 border-t border-[#333] bg-black flex justify-end gap-4">
-                                            <button id="mac-cancel-btn" class="btn-toolbar-style px-6 py-2">Cancel</button>
-                                            <button id="mac-confirm-btn" class="btn-toolbar-style btn-primary-override px-6 py-2">
+                                        <div class="p-6 border-t border-[#333] bg-black flex justify-end gap-4 items-center">
+                                            <button id="mac-reset-btn" class="btn-toolbar-style mr-auto px-4 py-2 rounded-xl" title="Reset Avatar">
+                                                <i class="fa-solid fa-rotate-left"></i>
+                                            </button>
+                                            <button id="mac-cancel-btn" class="btn-toolbar-style px-6 py-2 rounded-xl">Cancel</button>
+                                            <button id="mac-confirm-btn" class="btn-toolbar-style btn-primary-override px-6 py-2 rounded-xl">
                                                 <i class="fa-solid fa-check mr-2"></i> Confirm Avatar
                                             </button>
                                         </div>
@@ -1331,15 +1334,15 @@
             grid.innerHTML = ''; // Clear existing
 
             if (category === 'bg') {
-                // Switch to Flex for Colors (Rows, minimal space)
-                grid.className = 'flex flex-wrap gap-1 justify-start content-start';
+                // Switch to Flex for Colors (Single Row, scrollable if needed)
+                grid.className = 'flex flex-nowrap gap-1 items-center overflow-x-auto pb-2 custom-scrollbar';
 
                 // Color Palette
                 MIBI_ASSETS.colors.forEach(color => {
                     const btn = document.createElement('button');
                     const isSelected = mibiAvatarState.bgColor === color;
-                    // Style: Match X button (w-10 h-10, rounded-xl i.e. 0.75rem)
-                    btn.className = `w-10 h-10 rounded-xl shadow-sm transition-transform hover:scale-110 focus:outline-none border-2 ${isSelected ? 'border-white' : 'border-transparent'} hover:border-dashed hover:border-white`;
+                    // Style: Match X button (w-10 h-10, rounded-xl i.e. 0.75rem) + flex-shrink-0
+                    btn.className = `w-10 h-10 rounded-xl shadow-sm transition-transform hover:scale-110 focus:outline-none border-2 flex-shrink-0 ${isSelected ? 'border-white' : 'border-transparent'} hover:border-dashed hover:border-white`;
                     btn.style.backgroundColor = color;
                     
                     btn.onclick = () => {
@@ -1351,8 +1354,8 @@
                 });
                 // Add custom picker
                 const customWrapper = document.createElement('div');
-                // Match size and roundness
-                customWrapper.className = 'w-10 h-10 rounded-xl bg-[#333] flex items-center justify-center cursor-pointer hover:bg-[#444] relative overflow-hidden border-2 border-transparent hover:border-dashed hover:border-white';
+                // Match size and roundness + flex-shrink-0
+                customWrapper.className = 'w-10 h-10 rounded-xl bg-[#333] flex items-center justify-center cursor-pointer hover:bg-[#444] relative overflow-hidden border-2 border-transparent hover:border-dashed hover:border-white flex-shrink-0';
                 customWrapper.innerHTML = '<i class="fa-solid fa-eye-dropper text-white text-sm"></i><input type="color" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">';
                 const input = customWrapper.querySelector('input');
                 input.oninput = (e) => {
@@ -1407,6 +1410,7 @@
             const closeBtn = document.getElementById('mac-close-x-btn');
             const cancelBtn = document.getElementById('mac-cancel-btn');
             const confirmBtn = document.getElementById('mac-confirm-btn');
+            const resetBtn = document.getElementById('mac-reset-btn'); // NEW
             const tabBtns = document.querySelectorAll('.mac-tab-btn');
             const pfpModeSelect = document.getElementById('pfpModeSelect');
             const pfpMessage = document.getElementById('pfpMessage');
@@ -1424,6 +1428,7 @@
             window.Mibi_ASSETS = MIBI_ASSETS; 
             
             let isOrientationMode = false;
+            let currentTab = 'hats'; // Track current tab
 
             const openMenu = () => {
                 menu.classList.remove('hidden');
@@ -1435,8 +1440,9 @@
                 exitOrientationMode();
                 updateMibiPreview();
                 
-                // Trigger click on first tab to load it
-                document.querySelector('.mac-tab-btn[data-tab="hats"]')?.click();
+                // Trigger click on first tab (or current) to load it
+                // Default to Hats
+                document.querySelector(`.mac-tab-btn[data-tab="${currentTab}"]`)?.click();
             };
 
             const closeMenu = () => {
@@ -1453,11 +1459,10 @@
                 previewWrapper.classList.add('w-full');
                 
                 // Apply scale to preview container (make it smaller to avoid clipping)
-                // Using transform: scale(0.8) via a style or class. 
-                // Since mac-preview-scaled is just a transition class in CSS, we can add inline style or a utility class.
-                // Let's use a utility class 'scale-75' (Tailwind) or set style directly if not available. 
-                // But wait, transform-origin might need to be set.
                 previewContainer.style.transform = 'scale(0.75)'; 
+                // Push down to avoid top clipping
+                previewContainer.classList.add('mt-16');
+
                 
                 controlsWrapper.classList.add('translate-x-full', 'w-0', 'overflow-hidden', 'p-0'); // Slide out and collapse
                 controlsWrapper.classList.remove('translate-x-0', 'w-1/2');
@@ -1481,8 +1486,10 @@
                 previewWrapper.classList.add('w-1/2');
                 previewWrapper.classList.remove('w-full');
                 
-                // Remove scale
+                // Remove scale and margin
                 previewContainer.style.transform = '';
+                previewContainer.classList.remove('mt-16');
+
 
                 controlsWrapper.classList.remove('translate-x-full', 'w-0', 'overflow-hidden', 'p-0');
                 controlsWrapper.classList.add('translate-x-0', 'w-1/2');
@@ -1525,9 +1532,6 @@
                 const dy = e.clientY - startY;
                 
                 // Convert drag distance to percentage of container size
-                // Note: rect.width might be scaled now, so we should use the unscaled width if possible, 
-                // or just adjust sensitivity. With scale(0.75), rect.width is smaller, so movement is faster.
-                // That's probably fine, or we can divide by scale.
                 const scale = 0.75;
                 const deltaXPercent = (dx / (rect.width / scale)) * 100;
                 const deltaYPercent = (dy / (rect.height / scale)) * 100;
@@ -1577,6 +1581,31 @@
             openBtn.onclick = openMenu;
             closeBtn.onclick = closeMenu;
             cancelBtn.onclick = closeMenu;
+            
+            // --- Reset Button Logic ---
+            resetBtn.onclick = () => {
+                // Reset State to Defaults
+                mibiAvatarState = {
+                    eyes: MIBI_ASSETS.eyes[0], // Default eyes
+                    mouths: MIBI_ASSETS.mouths[0], // Default mouth
+                    hats: '',
+                    bgColor: '#FFFFFF', // Requested white default
+                    size: 100,
+                    rotation: 0,
+                    offsetX: 0,
+                    offsetY: 0
+                };
+                
+                // Update Visuals
+                updateMibiPreview();
+                
+                // Update Sliders
+                sizeSlider.value = 100;
+                rotationSlider.value = 0;
+                
+                // Re-render current tab (to update selection rings)
+                renderMacGrid(currentTab);
+            };
 
             // Tab Switching Logic
             tabBtns.forEach(btn => {
@@ -1589,6 +1618,9 @@
                     btn.classList.add('active-tab', 'text-white', 'border-blue-500');
                     btn.classList.remove('text-gray-400', 'border-transparent');
                     
+                    // Track Tab
+                    currentTab = btn.dataset.tab;
+
                     // Load Content
                     renderMacGrid(btn.dataset.tab);
                 };
