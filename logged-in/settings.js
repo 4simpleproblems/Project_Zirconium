@@ -1159,34 +1159,138 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
              `;
         }
         
-        // --- NEW: Loads data and adds event listeners for the Data tab ---
-        async function loadDataTab() {
-            // Get elements (buttons, modal)
-            const exportBtn = document.getElementById('exportDataBtn');
-            const importBtn = document.getElementById('importDataBtn');
-            const modal = document.getElementById('modalPrompt');
-            const modalClose = document.getElementById('modalClose');
-            
-            // Wire up buttons
-            if (exportBtn) exportBtn.addEventListener('click', downloadAllSaves);
-            if (importBtn) importBtn.addEventListener('click', handleFileUpload);
-            
-            // Wire up modal close events
-            if (modalClose) {
-                modalClose.addEventListener('click', () => {
-                    modal.style.display = "none";
-                });
-            }
-            // Use a new listener specific to this page
-            const modalBackground = document.getElementById('modalPrompt');
-            if (modalBackground) {
-                modalBackground.addEventListener('click', event => {
-                    if (event.target === modalBackground) {
-                        modal.style.display = "none";
-                    }
-                });
-            }
+        /**
+         * Generates the HTML for the "About" section.
+         */
+        function getAboutContent() {
+             return `
+                <h2 class="text-3xl font-bold text-white mb-6">About 4SP</h2>
+                
+                <div class="w-full">
+                    <div class="settings-box p-4 mb-4">
+                        <p class="text-sm font-light text-gray-400 mb-2">
+                            <strong>4SP</strong> is a web application designed to provide a suite of useful tools and features.
+                        </p>
+                        <p class="text-sm font-light text-gray-400">
+                            Developed with <i class="fa-solid fa-heart text-red-500"></i> by the 4SP Team.
+                        </p>
+                    </div>
+                </div>
+             `;
         }
+        
+        /**
+         * Generates the HTML for the "Data Management" section.
+         */
+        function getDataManagementContent() {
+            return `
+                <h2 class="text-3xl font-bold text-white mb-6">Data Management</h2>
+                
+                <div class="w-full">
+                    <h3 class="text-xl font-bold text-white mb-2">Export Data</h3>
+                    <div class="settings-box p-4 mb-8">
+                        <p class="text-sm font-light text-gray-400 mb-4">
+                            Download all your locally stored data (Local Storage & IndexedDB) as a JSON file.
+                            This includes custom settings, cached data, and other site-specific configurations.
+                            Your user account data (e.g., username, linked providers) is not included in this export.
+                        </p>
+                        <button id="exportDataBtn" class="btn-toolbar-style btn-primary-override w-48">
+                            <i class="fa-solid fa-download mr-2"></i> Export All Data
+                        </button>
+                    </div>
+
+                    <h3 class="text-xl font-bold text-white mb-2">Import Data</h3>
+                    <div class="settings-box p-4">
+                        <p class="text-sm font-light text-gray-400 mb-4">
+                            Upload a previously exported JSON file to restore your local data.
+                            <span class="text-red-400 font-bold">WARNING: This will overwrite your current local data.</span>
+                        </p>
+                        <button id="importDataBtn" class="btn-toolbar-style btn-primary-override w-48">
+                            <i class="fa-solid fa-upload mr-2"></i> Import Data
+                        </button>
+                    </div>
+                </div>
+                         `;
+                    }
+                    
+                    /**
+                     * Generates the HTML for the "Data Management" section.
+                     */
+                    function getDataManagementContent() {
+                        return `
+                            <h2 class="text-3xl font-bold text-white mb-6">Data Management</h2>
+                            
+                            <div class="w-full">
+                                <h3 class="text-xl font-bold text-white mb-2">Export Data</h3>
+                                <div class="settings-box p-4 mb-8">
+                                    <p class="text-sm font-light text-gray-400 mb-4">
+                                        Download all your locally stored data (Local Storage & IndexedDB) as a JSON file.
+                                        This includes custom settings, cached data, and other site-specific configurations.
+                                        Your user account data (e.g., username, linked providers) is not included in this export.
+                                    </p>
+                                    <button id="exportDataBtn" class="btn-toolbar-style btn-primary-override w-48">
+                                        <i class="fa-solid fa-download mr-2"></i> Export All Data
+                                    </button>
+                                </div>
+            
+                                <h3 class="text-xl font-bold text-white mb-2">Import Data</h3>
+                                <div class="settings-box p-4">
+                                    <p class="text-sm font-light text-gray-400 mb-4">
+                                        Upload a previously exported JSON file to restore your local data.
+                                        <span class="text-red-400 font-bold">WARNING: This will overwrite your current local data.</span>
+                                    </p>
+                                    <button id="importDataBtn" class="btn-toolbar-style btn-primary-override w-48">
+                                        <i class="fa-solid fa-upload mr-2"></i> Import Data
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }
+            
+            
+                    // --- NEW: Loads data and adds event listeners for the General tab ---
+                    async function loadGeneralTab() {
+                        mainView.innerHTML = getGeneralContent(
+                            currentUser.displayName,
+                            0, // Placeholder for changesRemaining
+                            0, // Placeholder for changesThisMonth
+                            'November', // Placeholder for currentMonthName
+                            currentUser.providerData.some(p => p.providerId === 'password'),
+                            currentUser.providerData
+                        );
+                        // TODO: Implement actual logic for general tab, like username editing, password change, account linking/unlinking
+                        // and data fetching for changesRemaining, changesThisMonth, currentMonthName.
+                    }
+            
+                    // --- NEW: Loads data and adds event listeners for the Data tab ---
+                    async function loadDataTab() {
+                        // Get elements (buttons, modal)
+                        const exportBtn = document.getElementById('exportDataBtn');
+                        const importBtn = document.getElementById('importDataBtn');
+                        const modal = document.getElementById('modalPrompt');
+                        const modalClose = document.getElementById('modalClose');
+                        
+                        // Wire up buttons
+                        if (exportBtn) exportBtn.addEventListener('click', downloadAllSaves);
+                        if (importBtn) importBtn.addEventListener('click', handleFileUpload);
+                        
+                        // Wire up modal close events
+                        if (modalClose) {
+                            modalClose.addEventListener('click', () => {
+                                modal.style.display = "none";
+                            });
+                        }
+                        // Use a new listener specific to this page
+                        const modalBackground = document.getElementById('modalPrompt');
+                        if (modalBackground) {
+                            modalBackground.addEventListener('click', event => {
+                                if (event.target === modalBackground) {
+                                    modal.style.display = "none";
+                                }
+                            });
+                        }
+                    }
+            
 
 
         /**
