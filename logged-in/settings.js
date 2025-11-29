@@ -984,7 +984,7 @@
                                         <!-- Header -->
                                         <div class="flex justify-between items-center p-6 border-b border-[#333] bg-black">
                                             <h3 class="text-2xl font-bold text-white">Mibi Avatar Creator</h3>
-                                            <button id="mac-close-x-btn" class="btn-toolbar-style px-3 py-1">
+                                            <button id="mac-close-x-btn" class="btn-toolbar-style w-10 h-10 flex items-center justify-center p-0">
                                                 <i class="fa-solid fa-xmark fa-xl"></i>
                                             </button>
                                         </div>
@@ -994,10 +994,12 @@
                                             
                                             <!-- LEFT: Live Preview -->
                                             <div id="mac-preview-wrapper" class="w-1/2 flex flex-col items-center justify-center bg-[#0a0a0a] p-8 border-r border-[#333] transition-all duration-500 ease-in-out z-10">
-                                                <div class="relative w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden border-4 border-[#333] shadow-lg mb-6 transition-all duration-300 hover:border-dashed hover:border-white cursor-pointer" id="mac-preview-container">
+                                                <div class="relative w-64 md:w-80 aspect-square rounded-full overflow-hidden border-4 border-[#333] shadow-lg mb-6 transition-all duration-300 hover:border-dashed hover:border-white cursor-pointer" id="mac-preview-container">
+                                                    <!-- Background (Static) -->
+                                                    <div id="mac-preview-bg" class="absolute inset-0 w-full h-full transition-colors duration-300"></div>
+                                                    
                                                     <!-- Avatar Layers Container (Rotates/Scales/Moves) -->
                                                     <div id="mac-layers-container" class="absolute inset-0 w-full h-full transition-transform duration-75 ease-out origin-center pointer-events-none">
-                                                        <div id="mac-preview-bg" class="absolute inset-0 w-full h-full transition-colors duration-300"></div>
                                                         <img id="mac-layer-head" src="../mibi-avatars/head.png" class="absolute inset-0 w-full h-full object-contain z-10">
                                                         <img id="mac-layer-eyes" class="absolute inset-0 w-full h-full object-contain z-20 hidden">
                                                         <img id="mac-layer-mouth" class="absolute inset-0 w-full h-full object-contain z-20 hidden">
@@ -1021,7 +1023,7 @@
                                             </div>
 
                                             <!-- RIGHT: Controls & Options -->
-                                            <div id="mac-controls-wrapper" class="w-1/2 flex flex-col bg-[#1a1a1a] transition-transform duration-500 ease-in-out">
+                                            <div id="mac-controls-wrapper" class="w-1/2 flex flex-col bg-black transition-transform duration-500 ease-in-out">
                                                 
                                                 <!-- Tabs -->
                                                 <div class="flex border-b border-[#333]">
@@ -1284,9 +1286,9 @@
                 // Color Palette
                 Mibi_ASSETS.colors.forEach(color => {
                     const btn = document.createElement('button');
-                    btn.className = `w-full aspect-square rounded-full shadow-sm transition-transform hover:scale-110 focus:outline-none ring-2 ring-offset-2 ring-offset-[#1a1a1a]`;
+                    const isSelected = mibiAvatarState.bgColor === color;
+                    btn.className = `w-full aspect-square rounded-full shadow-sm transition-transform hover:scale-110 focus:outline-none border-2 ${isSelected ? 'border-white' : 'border-transparent'} hover:border-dashed hover:border-white`;
                     btn.style.backgroundColor = color;
-                    btn.style.setProperty('--tw-ring-color', mibiAvatarState.bgColor === color ? '#3B82F6' : 'transparent');
                     
                     btn.onclick = () => {
                         mibiAvatarState.bgColor = color;
@@ -1297,7 +1299,7 @@
                 });
                 // Add custom picker
                 const customWrapper = document.createElement('div');
-                customWrapper.className = 'w-full aspect-square rounded-full bg-[#333] flex items-center justify-center cursor-pointer hover:bg-[#444] relative overflow-hidden';
+                customWrapper.className = 'w-full aspect-square rounded-full bg-[#333] flex items-center justify-center cursor-pointer hover:bg-[#444] relative overflow-hidden border-2 border-transparent hover:border-dashed hover:border-white';
                 customWrapper.innerHTML = '<i class="fa-solid fa-eye-dropper text-white"></i><input type="color" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">';
                 const input = customWrapper.querySelector('input');
                 input.oninput = (e) => {
