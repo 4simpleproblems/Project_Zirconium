@@ -129,13 +129,20 @@ const DEFAULT_THEME = {
                 if (currentUserData.pfpType === 'custom' && currentUserData.customPfp) {
                     newContent = `<img src="${currentUserData.customPfp}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
                 } else if (currentUserData.pfpType === 'mibi' && currentUserData.mibiConfig) {
-                    const { eyes, mouths, hats, bgColor } = currentUserData.mibiConfig;
+                    const { eyes, mouths, hats, bgColor, rotation, size, offsetX, offsetY } = currentUserData.mibiConfig;
+                    const scale = (size || 100) / 100;
+                    const rot = rotation || 0;
+                    const x = offsetX || 0;
+                    const y = offsetY || 0;
+
                     newContent = `
                         <div class="w-full h-full relative overflow-hidden rounded-full" style="background-color: ${bgColor || '#3B82F6'}">
-                             <img src="/mibi-avatars/head.png" class="absolute inset-0 w-full h-full object-contain">
-                             ${eyes ? `<img src="/mibi-avatars/eyes/${eyes}" class="absolute inset-0 w-full h-full object-contain">` : ''}
-                             ${mouths ? `<img src="/mibi-avatars/mouths/${mouths}" class="absolute inset-0 w-full h-full object-contain">` : ''}
-                             ${hats ? `<img src="/mibi-avatars/hats/${hats}" class="absolute inset-0 w-full h-full object-contain">` : ''}
+                             <div class="absolute inset-0 w-full h-full" style="transform: translate(${x}px, ${y}px) rotate(${rot}deg) scale(${scale}); transform-origin: center;">
+                                 <img src="/mibi-avatars/head.png" class="absolute inset-0 w-full h-full object-contain">
+                                 ${eyes ? `<img src="/mibi-avatars/eyes/${eyes}" class="absolute inset-0 w-full h-full object-contain">` : ''}
+                                 ${mouths ? `<img src="/mibi-avatars/mouths/${mouths}" class="absolute inset-0 w-full h-full object-contain">` : ''}
+                                 ${hats ? `<img src="/mibi-avatars/hats/${hats}" class="absolute inset-0 w-full h-full object-contain">` : ''}
+                             </div>
                         </div>
                     `;
                 } else if (currentUserData.pfpType === 'letter') {
@@ -449,13 +456,20 @@ const DEFAULT_THEME = {
             if (pfpType === 'custom' && userData?.customPfp) {
                 avatarHtml = `<img src="${userData.customPfp}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
             } else if (pfpType === 'mibi' && userData?.mibiConfig) {
-                const { eyes, mouths, hats, bgColor } = userData.mibiConfig;
+                const { eyes, mouths, hats, bgColor, rotation, size, offsetX, offsetY } = userData.mibiConfig;
+                const scale = (size || 100) / 100;
+                const rot = rotation || 0;
+                const x = offsetX || 0;
+                const y = offsetY || 0;
+                
                 avatarHtml = `
                     <div class="w-full h-full relative overflow-hidden rounded-full" style="background-color: ${bgColor || '#3B82F6'}">
-                            <img src="/mibi-avatars/head.png" class="absolute inset-0 w-full h-full object-contain">
-                            ${eyes ? `<img src="/mibi-avatars/eyes/${eyes}" class="absolute inset-0 w-full h-full object-contain">` : ''}
-                            ${mouths ? `<img src="/mibi-avatars/mouths/${mouths}" class="absolute inset-0 w-full h-full object-contain">` : ''}
-                            ${hats ? `<img src="/mibi-avatars/hats/${hats}" class="absolute inset-0 w-full h-full object-contain">` : ''}
+                            <div class="absolute inset-0 w-full h-full" style="transform: translate(${x}px, ${y}px) rotate(${rot}deg) scale(${scale}); transform-origin: center;">
+                                <img src="/mibi-avatars/head.png" class="absolute inset-0 w-full h-full object-contain">
+                                ${eyes ? `<img src="/mibi-avatars/eyes/${eyes}" class="absolute inset-0 w-full h-full object-contain">` : ''}
+                                ${mouths ? `<img src="/mibi-avatars/mouths/${mouths}" class="absolute inset-0 w-full h-full object-contain">` : ''}
+                                ${hats ? `<img src="/mibi-avatars/hats/${hats}" class="absolute inset-0 w-full h-full object-contain">` : ''}
+                            </div>
                     </div>
                 `;
             } else if (pfpType === 'letter') {

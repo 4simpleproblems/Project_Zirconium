@@ -982,31 +982,46 @@
                                     <div class="relative bg-[#1a1a1a] rounded-xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden border border-[#333]">
                                         
                                         <!-- Header -->
-                                        <div class="flex justify-between items-center p-6 border-b border-[#333] bg-[#151515]">
+                                        <div class="flex justify-between items-center p-6 border-b border-[#333] bg-black">
                                             <h3 class="text-2xl font-bold text-white">Mibi Avatar Creator</h3>
-                                            <button id="mac-close-x-btn" class="text-gray-400 hover:text-white transition-colors">
+                                            <button id="mac-close-x-btn" class="btn-toolbar-style px-3 py-1">
                                                 <i class="fa-solid fa-xmark fa-xl"></i>
                                             </button>
                                         </div>
                                         
                                         <!-- Main Content Area (Split View) -->
-                                        <div class="flex flex-grow overflow-hidden">
+                                        <div class="flex flex-grow overflow-hidden relative">
                                             
                                             <!-- LEFT: Live Preview -->
-                                            <div class="w-1/2 flex flex-col items-center justify-center bg-[#0a0a0a] p-8 border-r border-[#333]">
-                                                <div class="relative w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden border-4 border-[#333] shadow-lg mb-6 transition-all duration-300" id="mac-preview-container">
-                                                    <!-- Avatar Layers -->
-                                                    <div id="mac-preview-bg" class="absolute inset-0 w-full h-full transition-colors duration-300"></div>
-                                                    <img id="mac-layer-head" src="../mibi-avatars/head.png" class="absolute inset-0 w-full h-full object-contain z-10">
-                                                    <img id="mac-layer-eyes" class="absolute inset-0 w-full h-full object-contain z-20 hidden">
-                                                    <img id="mac-layer-mouth" class="absolute inset-0 w-full h-full object-contain z-20 hidden">
-                                                    <img id="mac-layer-hat" class="absolute inset-0 w-full h-full object-contain z-30 hidden">
+                                            <div id="mac-preview-wrapper" class="w-1/2 flex flex-col items-center justify-center bg-[#0a0a0a] p-8 border-r border-[#333] transition-all duration-500 ease-in-out z-10">
+                                                <div class="relative w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden border-4 border-[#333] shadow-lg mb-6 transition-all duration-300 hover:border-dashed hover:border-white cursor-pointer" id="mac-preview-container">
+                                                    <!-- Avatar Layers Container (Rotates/Scales/Moves) -->
+                                                    <div id="mac-layers-container" class="absolute inset-0 w-full h-full transition-transform duration-75 ease-out origin-center pointer-events-none">
+                                                        <div id="mac-preview-bg" class="absolute inset-0 w-full h-full transition-colors duration-300"></div>
+                                                        <img id="mac-layer-head" src="../mibi-avatars/head.png" class="absolute inset-0 w-full h-full object-contain z-10">
+                                                        <img id="mac-layer-eyes" class="absolute inset-0 w-full h-full object-contain z-20 hidden">
+                                                        <img id="mac-layer-mouth" class="absolute inset-0 w-full h-full object-contain z-20 hidden">
+                                                        <img id="mac-layer-hat" class="absolute inset-0 w-full h-full object-contain z-30 hidden">
+                                                    </div>
                                                 </div>
-                                                <p class="text-gray-500 text-sm font-mono">Live Preview</p>
+                                                
+                                                <div id="mac-sliders-container" class="hidden flex-col gap-6 w-full max-w-xs transition-opacity duration-300 opacity-0">
+                                                    <div class="flex flex-col gap-2">
+                                                        <label class="text-xs text-gray-400 uppercase tracking-wider font-bold">Size</label>
+                                                        <input type="range" id="mac-size-slider" min="50" max="150" value="100" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                                    </div>
+                                                    <div class="flex flex-col gap-2">
+                                                        <label class="text-xs text-gray-400 uppercase tracking-wider font-bold">Rotation</label>
+                                                        <input type="range" id="mac-rotation-slider" min="-180" max="180" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                                    </div>
+                                                    <p class="text-center text-gray-500 text-xs mt-2"><i class="fa-solid fa-hand-pointer mr-1"></i> Drag avatar to position</p>
+                                                </div>
+                                                
+                                                <p class="text-gray-500 text-sm font-mono mt-2" id="mac-preview-label">Click preview to adjust orientation</p>
                                             </div>
 
                                             <!-- RIGHT: Controls & Options -->
-                                            <div class="w-1/2 flex flex-col bg-[#1a1a1a]">
+                                            <div id="mac-controls-wrapper" class="w-1/2 flex flex-col bg-[#1a1a1a] transition-transform duration-500 ease-in-out">
                                                 
                                                 <!-- Tabs -->
                                                 <div class="flex border-b border-[#333]">
@@ -1036,7 +1051,7 @@
                                         </div>
                                         
                                         <!-- Footer Actions -->
-                                        <div class="p-6 border-t border-[#333] bg-[#151515] flex justify-end gap-4">
+                                        <div class="p-6 border-t border-[#333] bg-black flex justify-end gap-4">
                                             <button id="mac-cancel-btn" class="btn-toolbar-style px-6 py-2">Cancel</button>
                                             <button id="mac-confirm-btn" class="btn-toolbar-style btn-primary-override px-6 py-2">
                                                 <i class="fa-solid fa-check mr-2"></i> Confirm Avatar
@@ -1205,7 +1220,10 @@
             mouths: '',
             hats: '',
             bgColor: '#3B82F6', // Default blue
-            // Removing rotation/size for simplicity as per request
+            size: 100,
+            rotation: 0,
+            offsetX: 0,
+            offsetY: 0
         };
         
         // Constants for Assets
@@ -1221,15 +1239,20 @@
 
         const updateMibiPreview = () => {
             const bgEl = document.getElementById('mac-preview-bg');
+            const layersContainer = document.getElementById('mac-layers-container'); // New container for transforms
             const eyesEl = document.getElementById('mac-layer-eyes');
             const mouthEl = document.getElementById('mac-layer-mouth');
             const hatEl = document.getElementById('mac-layer-hat');
             
-            if (!bgEl) return;
+            if (!bgEl || !layersContainer) return;
 
             // Update BG
             bgEl.style.backgroundColor = mibiAvatarState.bgColor;
             
+            // Update Transforms
+            const scale = mibiAvatarState.size / 100;
+            layersContainer.style.transform = `translate(${mibiAvatarState.offsetX}px, ${mibiAvatarState.offsetY}px) rotate(${mibiAvatarState.rotation}deg) scale(${scale})`;
+
             // Update Layers
             if (mibiAvatarState.eyes) {
                 eyesEl.src = `../mibi-avatars/eyes/${mibiAvatarState.eyes}`;
@@ -1286,30 +1309,28 @@
             } else {
                 // Asset Grid (Eyes, Mouths, Hats)
                 
-                // "None" Option
-                const noneBtn = document.createElement('div');
-                noneBtn.className = `bg-[#0a0a0a] rounded-lg p-2 flex flex-col items-center justify-center cursor-pointer border-2 hover:border-gray-500 transition-colors ${!mibiAvatarState[category] ? 'border-blue-500' : 'border-transparent'}`;
-                noneBtn.innerHTML = `<i class="fa-solid fa-ban fa-2x text-gray-500 mb-2"></i><span class="text-xs text-gray-400">None</span>`;
-                noneBtn.onclick = () => {
-                    mibiAvatarState[category] = '';
-                    updateMibiPreview();
-                    renderMacGrid(category);
-                };
-                grid.appendChild(noneBtn);
+                // "None" Option - ONLY for Hats
+                if (category === 'hats') {
+                    const noneBtn = document.createElement('div');
+                    noneBtn.className = `bg-gray-800 rounded-xl p-2 flex flex-col items-center justify-center cursor-pointer border-2 hover:border-dashed hover:border-white transition-all ${!mibiAvatarState[category] ? 'border-white' : 'border-transparent'}`;
+                    noneBtn.innerHTML = `<i class="fa-solid fa-ban fa-2x text-gray-500"></i>`;
+                    noneBtn.onclick = () => {
+                        mibiAvatarState[category] = '';
+                        updateMibiPreview();
+                        renderMacGrid(category);
+                    };
+                    grid.appendChild(noneBtn);
+                }
 
                 // Asset Options
                 const files = Mibi_ASSETS[category] || [];
                 files.forEach(file => {
                     const item = document.createElement('div');
                     const isSelected = mibiAvatarState[category] === file;
-                    item.className = `bg-[#0a0a0a] rounded-lg p-2 flex flex-col items-center justify-center cursor-pointer border-2 hover:border-gray-500 transition-colors ${isSelected ? 'border-blue-500' : 'border-transparent'}`;
-                    
-                    // Simplify name
-                    const name = file.replace('.png', '').replace(/-/g, ' ');
+                    item.className = `bg-gray-800 rounded-xl p-2 flex flex-col items-center justify-center cursor-pointer border-2 hover:border-dashed hover:border-white transition-all ${isSelected ? 'border-white' : 'border-transparent'}`;
                     
                     item.innerHTML = `
-                        <img src="../mibi-avatars/${category}/${file}" class="w-16 h-16 object-contain mb-1">
-                        <span class="text-xs text-gray-400 capitalize">${name}</span>
+                        <img src="../mibi-avatars/${category}/${file}" class="w-16 h-16 object-contain">
                     `;
                     
                     item.onclick = () => {
@@ -1331,15 +1352,31 @@
             const tabBtns = document.querySelectorAll('.mac-tab-btn');
             const pfpModeSelect = document.getElementById('pfpModeSelect');
             const pfpMessage = document.getElementById('pfpMessage');
+            
+            // Orientation Mode Elements
+            const previewContainer = document.getElementById('mac-preview-container');
+            const previewWrapper = document.getElementById('mac-preview-wrapper'); // The w-1/2 container
+            const controlsWrapper = document.getElementById('mac-controls-wrapper'); // The w-1/2 menu container
+            const slidersContainer = document.getElementById('mac-sliders-container');
+            const sizeSlider = document.getElementById('mac-size-slider');
+            const rotationSlider = document.getElementById('mac-rotation-slider');
 
             if (!openBtn || !menu) return;
 
-            // Correct typo in variable name for renderMacGrid usage
             window.Mibi_ASSETS = MIBI_ASSETS; 
+            
+            let isOrientationMode = false;
 
             const openMenu = () => {
                 menu.classList.remove('hidden');
+                // Default selections if empty
+                if (!mibiAvatarState.eyes) mibiAvatarState.eyes = MIBI_ASSETS.eyes[0];
+                if (!mibiAvatarState.mouths) mibiAvatarState.mouths = MIBI_ASSETS.mouths[0];
+                
+                // Reset Orientation Mode state on open
+                exitOrientationMode();
                 updateMibiPreview();
+                
                 // Trigger click on first tab to load it
                 document.querySelector('.mac-tab-btn[data-tab="hats"]')?.click();
             };
@@ -1347,6 +1384,95 @@
             const closeMenu = () => {
                 menu.classList.add('hidden');
             };
+            
+            // --- Orientation Mode Logic ---
+            const enterOrientationMode = () => {
+                if (isOrientationMode) return;
+                isOrientationMode = true;
+                
+                // Animate UI
+                previewWrapper.classList.remove('w-1/2');
+                previewWrapper.classList.add('w-full');
+                controlsWrapper.classList.add('translate-x-full', 'absolute', 'right-0'); // Slide out
+                controlsWrapper.classList.remove('w-1/2');
+                controlsWrapper.style.width = '50%'; // Keep width for smooth transition back
+                
+                // Show Sliders
+                slidersContainer.classList.remove('hidden', 'opacity-0');
+                slidersContainer.classList.add('flex', 'opacity-100');
+                
+                // Update Button
+                confirmBtn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Confirm Orientation';
+                
+                // Sync sliders
+                sizeSlider.value = mibiAvatarState.size;
+                rotationSlider.value = mibiAvatarState.rotation;
+            };
+            
+            const exitOrientationMode = () => {
+                isOrientationMode = false;
+                
+                // Revert UI
+                previewWrapper.classList.add('w-1/2');
+                previewWrapper.classList.remove('w-full');
+                controlsWrapper.classList.remove('translate-x-full', 'absolute', 'right-0');
+                controlsWrapper.classList.add('w-1/2');
+                controlsWrapper.style.width = '';
+
+                // Hide Sliders
+                slidersContainer.classList.add('hidden', 'opacity-0');
+                slidersContainer.classList.remove('flex', 'opacity-100');
+                
+                // Update Button
+                confirmBtn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Confirm Avatar';
+            };
+            
+            // Preview Click -> Enter Mode
+            previewContainer.addEventListener('click', (e) => {
+                if (!isOrientationMode) {
+                    enterOrientationMode();
+                }
+            });
+            
+            // --- Drag Logic ---
+            let isDragging = false;
+            let startX, startY, initialOffsetX, initialOffsetY;
+            
+            previewContainer.addEventListener('mousedown', (e) => {
+                if (!isOrientationMode) return;
+                isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                initialOffsetX = mibiAvatarState.offsetX;
+                initialOffsetY = mibiAvatarState.offsetY;
+                previewContainer.style.cursor = 'grabbing';
+            });
+            
+            window.addEventListener('mousemove', (e) => {
+                if (!isDragging || !isOrientationMode) return;
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                mibiAvatarState.offsetX = initialOffsetX + dx;
+                mibiAvatarState.offsetY = initialOffsetY + dy;
+                updateMibiPreview();
+            });
+            
+            window.addEventListener('mouseup', () => {
+                isDragging = false;
+                if (previewContainer) previewContainer.style.cursor = isOrientationMode ? 'grab' : 'pointer';
+            });
+            
+            // --- Slider Listeners ---
+            sizeSlider.addEventListener('input', (e) => {
+                mibiAvatarState.size = parseInt(e.target.value);
+                updateMibiPreview();
+            });
+            
+            rotationSlider.addEventListener('input', (e) => {
+                mibiAvatarState.rotation = parseInt(e.target.value);
+                updateMibiPreview();
+            });
+
 
             openBtn.onclick = openMenu;
             closeBtn.onclick = closeMenu;
@@ -1370,6 +1496,11 @@
 
             // Confirm Action
             confirmBtn.onclick = async () => {
+                if (isOrientationMode) {
+                    exitOrientationMode();
+                    return;
+                }
+                
                 closeMenu();
                 showMessage(pfpMessage, '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Saving Mibi Avatar...', 'warning');
                 
