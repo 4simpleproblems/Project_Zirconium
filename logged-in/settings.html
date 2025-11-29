@@ -453,6 +453,40 @@
         .loading-overlay.active {
           display: flex;
         }
+        .loading-animation {
+          display: flex;
+          align-items: center;
+          margin-bottom: 20px;
+        }
+        .loading-bar {
+          background-color: rgba(255, 255, 255, 0.3);
+          width: 20px;
+          height: 40px;
+          margin-right: 5px;
+          border-radius: 10px;
+          animation: load ease infinite 5s;
+        }
+        .loading-bar:nth-child(2) {
+          animation-delay: 0.1s;
+        }
+        .loading-bar:nth-child(3) {
+          animation-delay: 0.2s;
+        }
+        .loading-bar:nth-child(4) {
+          animation-delay: 0.3s;
+        }
+        .loading-bar:nth-child(5) {
+          animation-delay: 0.4s;
+        }
+        @keyframes load {
+          0%,
+          100% {
+            transform: rotate(0deg);
+          }
+          50% {
+            transform: rotate(720deg) rotateX(180deg);
+          }
+        }
 
         
         /* --- Cropper Modal Styles --- */
@@ -570,6 +604,16 @@
         </div>
     </div>
 
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-animation">
+            <div class="loading-bar"></div>
+            <div class="loading-bar"></div>
+            <div class="loading-bar"></div>
+            <div class="loading-bar"></div>
+            <div class="loading-bar"></div>
+        </div>
+        <p id="loadingText">Loading...</p>
+    </div>
     
     
     <div id="cropperModal">
