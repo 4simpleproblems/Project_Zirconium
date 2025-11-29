@@ -30,6 +30,7 @@ const FIREBASE_CONFIG = {
 const PAGE_CONFIG_URL = '../page-identification.json';
 const PRIVILEGED_EMAIL = '4simpleproblems@gmail.com'; 
 const THEME_STORAGE_KEY = 'user-navbar-theme';
+const lightThemeNames = ['Light', 'Lavender', 'Rose Gold', 'Mint']; // Define light theme names
 
 const DEFAULT_THEME = {
     'logo-src': '/images/logo.png', 
@@ -42,6 +43,7 @@ const DEFAULT_THEME = {
     'menu-divider': '#374151',
     'menu-text': '#d1d5db',
     'menu-username-text': '#ffffff', 
+    'menu-email-text': '#9ca3af', // NEW: Default email text color 
     'menu-item-hover-bg': 'rgb(55 65 81)', 
     'menu-item-hover-text': '#ffffff',
     'glass-menu-bg': 'rgba(10, 10, 10, 0.8)',
@@ -74,13 +76,26 @@ window.applyTheme = (theme) => {
     const root = document.documentElement;
     if (!root) return;
     const themeToApply = theme && typeof theme === 'object' ? theme : DEFAULT_THEME;
+    
+    // Determine if it's a light theme
+    const isLightTheme = lightThemeNames.includes(themeToApply.name);
+
     for (const [key, value] of Object.entries(themeToApply)) {
         if (key !== 'logo-src' && key !== 'name') {
             root.style.setProperty(`--${key}`, value);
         }
     }
-    const usernameColor = themeToApply['menu-username-text'] || DEFAULT_THEME['menu-username-text'];
-    root.style.setProperty('--menu-username-text', usernameColor);
+
+    // Apply specific colors for light themes
+    if (isLightTheme) {
+        root.style.setProperty('--menu-username-text', '#000000'); // Black for username
+        root.style.setProperty('--menu-email-text', '#333333');   // Dark grey for email
+    } else {
+        // Revert to theme's default or global default
+        root.style.setProperty('--menu-username-text', themeToApply['menu-username-text'] || DEFAULT_THEME['menu-username-text']);
+        root.style.setProperty('--menu-email-text', themeToApply['menu-email-text'] || DEFAULT_THEME['menu-email-text']);
+    }
+
     const logoImg = document.getElementById('navbar-logo');
     if (logoImg) {
         let newLogoSrc;
@@ -263,7 +278,7 @@ let db;
                 transition: color 0.3s ease;
                 text-align: left !important; margin: 0 !important; font-weight: 400 !important;
             }
-            .auth-menu-email { text-align: left !important; margin: 0 !important; font-weight: 400 !important; }
+            .auth-menu-email { color: var(--menu-email-text); text-align: left !important; margin: 0 !important; font-weight: 400 !important; }
             .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
             .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
 

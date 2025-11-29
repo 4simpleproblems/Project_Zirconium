@@ -3509,11 +3509,51 @@
                 // 1. Fetch themes
                 const response = await fetch('../themes.json');
                 if (!response.ok) throw new Error('Failed to fetch themes.json');
-                const themes = await response.json();
+                let themes = await response.json(); // Changed to let for re-assignment
                 
                 if (!themes || themes.length === 0) {
                      throw new Error('themes.json is empty or invalid');
                 }
+
+                // --- NEW: Theme Sorting Logic ---
+                const fixedOrderNames = ['Dark', 'Light', 'Christmas'];
+                const lastLightThemeNames = ['Lavender', 'Rose Gold', 'Mint']; // These are the 3 light themes excluding 'Light'
+
+                let sortedThemes = [];
+                let darkTheme = null;
+                let lightTheme = null;
+                let christmasTheme = null;
+                let remainingLightThemes = [];
+                let otherThemes = [];
+
+                themes.forEach(theme => {
+                    if (theme.name === 'Dark') {
+                        darkTheme = theme;
+                    } else if (theme.name === 'Light') {
+                        lightTheme = theme;
+                    } else if (theme.name === 'Christmas') {
+                        christmasTheme = theme;
+                    } else if (lastLightThemeNames.includes(theme.name)) {
+                        remainingLightThemes.push(theme);
+                    } else {
+                        otherThemes.push(theme);
+                    }
+                });
+
+                // Sort 'otherThemes' alphabetically by name
+                otherThemes.sort((a, b) => a.name.localeCompare(b.name));
+                // Sort 'remainingLightThemes' alphabetically by name
+                remainingLightThemes.sort((a, b) => a.name.localeCompare(b.name));
+
+                // Assemble the sortedThemes array
+                if (darkTheme) sortedThemes.push(darkTheme);
+                if (lightTheme) sortedThemes.push(lightTheme);
+                if (christmasTheme) sortedThemes.push(christmasTheme);
+                sortedThemes = sortedThemes.concat(otherThemes);
+                sortedThemes = sortedThemes.concat(remainingLightThemes);
+
+                themes = sortedThemes.filter(Boolean); // Filter out any nulls if themes weren't found
+                // --- END NEW: Theme Sorting Logic ---
                 
                 // 2. Get currently saved theme to set the active state
                 let savedTheme = null;
@@ -3527,7 +3567,7 @@
                 const modifiedThemes = []; // Store themes with correct logo paths
                 let themeButtonsHtml = '';
                 
-                for (const theme of themes) {
+                for (const theme of themes) { // Iterate over the newly sorted 'themes'
                     // --- This is the logic requested by the user ---
                     // It modifies the theme object *in memory* before saving/applying
                     // We use root-relative paths as defined in navigation.js
@@ -3690,7 +3730,13 @@
         const handleHashChange = async () => {
             const hash = window.location.hash.substring(1); // Remove '#'
             const defaultTab = 'general';
-            const tabId = Object.keys(tabContent).includes(hash) ? hash : defaultTab;
+            let tabId = hash;
+
+            if (!Object.keys(tabContent).includes(hash)) {
+                tabId = defaultTab;
+                // Update URL to reflect the default tab, replacing the current history entry
+                window.history.replaceState(null, '', `#${defaultTab}`);
+            }
             
             await switchTab(tabId);
         };

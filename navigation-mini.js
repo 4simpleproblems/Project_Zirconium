@@ -37,6 +37,8 @@ const DEFAULT_THEME = {
 const PAGE_CONFIG_URL = '../page-identification.json'; // <--- NEW CONSTANT
 const PINNED_PAGE_KEY = 'navbar_pinnedPage';
 const PIN_BUTTON_HIDDEN_KEY = 'navbar_pinButtonHidden';
+const THEME_STORAGE_KEY = 'user-navbar-theme'; // Added for compatibility
+const lightThemeNames = ['Light', 'Lavender', 'Rose Gold', 'Mint']; // Added for compatibility
 
 /**
  * NEW FUNCTION: applyCounterZoom
@@ -560,6 +562,18 @@ const applyCounterZoom = () => {
             const email = user.email || 'No email';
             const initial = (userData?.letterAvatarText || username.charAt(0)).toUpperCase();
 
+            // Determine if a light theme is active
+            let currentTheme = null;
+            try {
+                currentTheme = JSON.parse(localStorage.getItem(THEME_STORAGE_KEY));
+            } catch (e) {
+                console.warn("Could not parse saved theme in navigation-mini.js.");
+            }
+            const isLightTheme = currentTheme && lightThemeNames.includes(currentTheme.name);
+
+            const usernameTextColorClass = isLightTheme ? 'text-black' : 'text-white';
+            const emailTextColorClass = isLightTheme ? 'text-gray-700' : 'text-gray-400'; // Near black/dark grey
+
             // --- NEW PROFILE PICTURE LOGIC ---
             let avatarHtml = '';
             const pfpType = userData?.pfpType || 'google'; // Default to 'google'
@@ -618,10 +632,10 @@ const applyCounterZoom = () => {
                         <div class="border-b border-gray-700 mb-2 flex items-center">
                             <div class="min-w-0 flex-1 overflow-hidden">
                                 <div class="marquee-container" id="username-marquee">
-                                    <p class="text-sm font-semibold text-white auth-menu-username marquee-content">${username}</p>
+                                    <p class="text-sm font-semibold ${usernameTextColorClass} auth-menu-username marquee-content">${username}</p>
                                 </div>
                                 <div class="marquee-container" id="email-marquee">
-                                    <p class="text-xs text-gray-400 auth-menu-email marquee-content">${email}</p>
+                                    <p class="text-xs ${emailTextColorClass} auth-menu-email marquee-content">${email}</p>
                                 </div>
                             </div>
                         </div>
