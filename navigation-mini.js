@@ -34,6 +34,7 @@ const DEFAULT_THEME = {
     'avatar-gradient': 'linear-gradient(135deg, #374151 0%, #111827 100%)',
 };
 
+const PAGE_CONFIG_URL = '../page-identification.json'; // <--- NEW CONSTANT
 const PINNED_PAGE_KEY = 'navbar_pinnedPage';
 const PIN_BUTTON_HIDDEN_KEY = 'navbar_pinButtonHidden';
 
@@ -71,6 +72,7 @@ const applyCounterZoom = () => {
     let auth, db;
     let currentUser = null;
     let currentUserData = null;
+    let allPages = {}; // <--- NEW GLOBAL VARIABLE
 
     // Stop execution if Firebase config is not provided
     if (!FIREBASE_CONFIG || !FIREBASE_CONFIG.apiKey) {
@@ -125,6 +127,17 @@ const applyCounterZoom = () => {
         try {
             // Load Font Awesome 6.5.2 CSS - **WAIT FOR IT TO BE ADDED TO HEAD**
             await loadCSS("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css");
+
+            // Fetch page-identification.json
+            try {
+                const response = await fetch(PAGE_CONFIG_URL);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                allPages = await response.json();
+            } catch (error) {
+                console.error("Failed to load page identification config:", error);
+                // Fallback if page-identification.json fails
+                allPages = { 'home': { name: "Home", url: "../index.html", icon: "fa-solid fa-house" } };
+            }
             
             // Sequentially load Firebase modules.
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
@@ -132,7 +145,7 @@ const applyCounterZoom = () => {
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js");
 
             // Now that scripts are loaded, we can use the `firebase` global object
-            initializeApp();
+            initializeApp(); // No longer passing pages here as allPages is global
             
             // We need to inject the styles and setup the container immediately
             // so the onAuthStateChanged listener can call renderNavbar successfully.
@@ -472,16 +485,25 @@ const applyCounterZoom = () => {
     };
 
     const getMiniPinButtonHtml = () => {
+        // Only show pin button if user is logged in
+        if (!currentUser) return ''; // <--- ADD THIS CHECK
+
         const pinnedPageKey = localStorage.getItem(PINNED_PAGE_KEY);
         const isPinButtonHidden = localStorage.getItem(PIN_BUTTON_HIDDEN_KEY) === 'true';
 
         // Only show pin button if a page is pinned and it's not hidden
         if (!pinnedPageKey || isPinButtonHidden) return '';
         
-        // Use a generic icon and always link to index.html for simplicity in mini-navbar
-        const pinButtonIcon = 'fa-solid fa-thumbtack';
-        const pinButtonUrl = '../index.html'; 
-        const pinButtonTitle = 'Go to pinned page';
+        // Use allPages to get the correct icon and URL
+        const pinnedPageData = allPages[pinnedPageKey];
+        if (!pinnedPageData) {
+            console.warn(`Pinned page data not found for key: ${pinnedPageKey}`);
+            return ''; // Don't show if data is missing
+        }
+
+        const pinButtonIcon = getIconClass(pinnedPageData.icon);
+        const pinButtonUrl = pinnedPageData.url; 
+        const pinButtonTitle = `Go to ${pinnedPageData.name}`;
 
         return `
             <div id="mini-pin-area-wrapper" class="relative flex-shrink-0 flex items-center">
@@ -589,7 +611,7 @@ const applyCounterZoom = () => {
             return `
                 ${getMiniPinButtonHtml()}
                 <div class="relative">
-                    <button id="auth-toggle" class="w-10 h-10 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
+                    <button id="auth-toggle" class="w-10 h-10 rounded-full border border-gray-600 overflow-hidden flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
                         ${avatarHtml}
                     </button>
                     <div id="auth-menu-container" class="auth-menu-container closed">
