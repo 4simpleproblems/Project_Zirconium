@@ -1576,143 +1576,43 @@
 
                             
 
-                                        const enterOrientationMode = () => {
+                                                    const enterOrientationMode = () => {
 
                             
 
-                                            if (isOrientationMode) return;
+                                                        if (isOrientationMode) return;
 
                             
 
-                                            isOrientationMode = true;
+                                                        isOrientationMode = true;
 
                             
 
-                                            
+                                                        
 
                             
 
-                                            // Snapshot state for revert
+                                                        // Snapshot state for revert
 
                             
 
-                                            orientationSnapshot = { ...mibiAvatarState };
+                                                        orientationSnapshot = { ...mibiAvatarState };
 
                             
 
-                                            
+                                                        
 
                             
 
-                                            // Animate UI
+                                                        // Animate UI
 
                             
 
-                                            previewWrapper.classList.remove('w-1/2', 'flex-col', 'items-center', 'justify-center');
+                                                        previewWrapper.classList.remove('w-1/2', 'flex-col', 'items-center', 'justify-center');
 
                             
 
-                                            previewWrapper.classList.add('w-full', 'flex-row', 'justify-start', 'items-start', 'gap-x-12', 'pl-16'); // Parent changes layout
-
-                            
-
-                            
-
-                            
-
-                                            // Ensure preview container has no dynamic sizing/margin changes for orientation mode
-
-                            
-
-                                            previewContainer.style.transform = ''; // Remove scale
-
-                            
-
-                                            previewContainer.style.width = ''; // Remove fixed width
-
-                            
-
-                                            previewContainer.style.height = ''; // Remove fixed height
-
-                            
-
-                                            previewContainer.classList.remove('mt-16', 'w-2/3', 'flex-shrink-0'); // Remove dynamic sizing/margin
-
-                            
-
-                                            // No need to add back default classes as they are already in HTML
-
-                            
-
-                            
-
-                            
-
-                                            // Adjust sliders container for side-by-side layout, filling remaining width
-
-                            
-
-                                            slidersContainer.classList.remove('hidden', 'opacity-0', 'max-w-xs', 'w-1/3', 'ml-4');
-
-                            
-
-                                            slidersContainer.classList.add('flex', 'opacity-100', 'flex-grow', 'mt-16', 'p-4'); // flex-grow lets it stretch
-
-                            
-
-                                            
-
-                            
-
-                                            controlsWrapper.classList.add('translate-x-full', 'w-0', 'overflow-hidden', 'p-0'); // Slide out and collapse
-
-                            
-
-                                            controlsWrapper.classList.remove('translate-x-0', 'w-1/2');
-
-                            
-
-                                            
-
-                            
-
-                                            // Hide "Click preview" text
-
-                            
-
-                                            macPreviewLabel.classList.add('hidden');
-
-                            
-
-                                            
-
-                            
-
-                                            // Update Button
-
-                            
-
-                                            confirmBtn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Confirm Orientation';
-
-                            
-
-                                            
-
-                            
-
-                                            // Sync sliders
-
-                            
-
-                                            sizeSlider.value = mibiAvatarState.size;
-
-                            
-
-                                            rotationSlider.value = mibiAvatarState.rotation;
-
-                            
-
-                                        };
+                                                        previewWrapper.classList.add('w-full', 'flex-row', 'justify-start', 'items-start', 'gap-x-12', 'pl-16'); // Parent changes layout
 
                             
 
@@ -1720,135 +1620,251 @@
 
                             
 
-                                        const exitOrientationMode = (shouldRevert = false) => {
+                                                        // Ensure preview container has no dynamic sizing/margin changes for orientation mode
 
                             
 
-                                            isOrientationMode = false;
+                                                        previewContainer.style.transform = ''; // Remove scale
 
                             
 
-                                            
+                                                        // Explicitly force width and height to be equal to fix pill bug
 
                             
 
-                                            if (shouldRevert && orientationSnapshot) {
+                                                        const computedHeight = previewContainer.offsetHeight; // Get current rendered height (from h-64/md:h-80)
 
                             
 
-                                                mibiAvatarState = { ...orientationSnapshot };
+                                                        previewContainer.style.width = `${computedHeight}px`;
 
                             
 
-                                                updateMibiPreview();
+                                                        previewContainer.style.height = `${computedHeight}px`;
 
                             
 
-                                            }
+                                                        
 
                             
 
-                                            orientationSnapshot = null;
+                                                        previewContainer.classList.remove('mt-16', 'w-2/3', 'flex-shrink-0'); // Remove dynamic sizing/margin
 
                             
 
-                                            
+                                                        // No need to add back default classes as they are already in HTML
 
                             
 
-                                            // Revert UI
+                                        
 
                             
 
-                                            previewWrapper.classList.add('w-1/2', 'flex-col', 'items-center', 'justify-center'); // Revert to default layout
+                                                        // Adjust sliders container for side-by-side layout, filling remaining width
 
                             
 
-                                            previewWrapper.classList.remove('w-full', 'flex-row', 'justify-start', 'items-start', 'gap-x-12', 'pl-16');
+                                                        slidersContainer.classList.remove('hidden', 'opacity-0', 'max-w-xs', 'w-1/3', 'ml-4');
 
                             
 
-                                            
+                                                        slidersContainer.classList.add('flex', 'opacity-100', 'flex-grow', 'mt-16', 'p-4'); // flex-grow lets it stretch
 
                             
 
-                                            // Restore preview container to default (no dynamic styles/classes)
+                                                        
 
                             
 
-                                            previewContainer.style.transform = '';
+                                                        controlsWrapper.classList.add('translate-x-full', 'w-0', 'overflow-hidden', 'p-0'); // Slide out and collapse
 
                             
 
-                                            previewContainer.style.width = ''; // Remove explicitly set width
+                                                        controlsWrapper.classList.remove('translate-x-0', 'w-1/2');
 
                             
 
-                                            previewContainer.classList.remove('mt-16', 'w-2/3', 'flex-shrink-0'); // Ensure these are removed
+                                                        
 
                             
 
-                                            // Default width/height are handled by initial HTML classes `h-64 md:h-80 aspect-square rounded-full`
+                                                        // Hide "Click preview" text
 
                             
 
-                            
+                                                        macPreviewLabel.classList.add('hidden');
 
                             
 
-                                            // Restore sliders container
+                                                        
 
                             
 
-                                            slidersContainer.classList.add('hidden', 'opacity-0', 'max-w-xs');
+                                                        // Update Button
 
                             
 
-                                            slidersContainer.classList.remove('flex', 'opacity-100', 'flex-grow', 'mt-16', 'p-4'); // Remove dynamic positioning and padding
+                                                        confirmBtn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Confirm Orientation';
 
                             
 
-                            
+                                                        
 
                             
 
-                            
+                                                        // Sync sliders
 
                             
 
-                                            controlsWrapper.classList.remove('translate-x-full', 'w-0', 'overflow-hidden', 'p-0');
+                                                        sizeSlider.value = mibiAvatarState.size;
 
                             
 
-                                            controlsWrapper.classList.add('translate-x-0', 'w-1/2');
+                                                        rotationSlider.value = mibiAvatarState.rotation;
 
                             
 
-                            
+                                                    };
 
                             
 
-                                            // Show "Click preview" text
+                                                    
 
                             
 
-                                            macPreviewLabel.classList.remove('hidden');
+                                                    const exitOrientationMode = (shouldRevert = false) => {
 
                             
 
-                                            
+                                                        isOrientationMode = false;
 
                             
 
-                                            // Update Button
+                                                        
 
                             
 
-                                            confirmBtn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Confirm Avatar';
+                                                        if (shouldRevert && orientationSnapshot) {
 
                             
 
-                                        };
+                                                            mibiAvatarState = { ...orientationSnapshot };
+
+                            
+
+                                                            updateMibiPreview();
+
+                            
+
+                                                        }
+
+                            
+
+                                                        orientationSnapshot = null;
+
+                            
+
+                                                        
+
+                            
+
+                                                        // Revert UI
+
+                            
+
+                                                        previewWrapper.classList.add('w-1/2', 'flex-col', 'items-center', 'justify-center'); // Revert to default layout
+
+                            
+
+                                                        previewWrapper.classList.remove('w-full', 'flex-row', 'justify-start', 'items-start', 'gap-x-12', 'pl-16');
+
+                            
+
+                                                        
+
+                            
+
+                                                        // Restore preview container to default (no dynamic styles/classes)
+
+                            
+
+                                                        previewContainer.style.transform = '';
+
+                            
+
+                                                        previewContainer.style.width = ''; // Remove explicitly set width
+
+                            
+
+                                                        previewContainer.style.height = ''; // Remove explicitly set height
+
+                            
+
+                                                        previewContainer.classList.remove('mt-16', 'w-2/3', 'flex-shrink-0'); // Ensure these are removed
+
+                            
+
+                                                        // Default width/height are handled by initial HTML classes `h-64 md:h-80 aspect-square rounded-full`
+
+                            
+
+                                        
+
+                            
+
+                                                        // Restore sliders container
+
+                            
+
+                                                        slidersContainer.classList.add('hidden', 'opacity-0', 'max-w-xs');
+
+                            
+
+                                                        slidersContainer.classList.remove('flex', 'opacity-100', 'flex-grow', 'mt-16', 'p-4'); // Remove dynamic positioning and padding
+
+                            
+
+                                        
+
+                            
+
+                                        
+
+                            
+
+                                                        controlsWrapper.classList.remove('translate-x-full', 'w-0', 'overflow-hidden', 'p-0');
+
+                            
+
+                                                        controlsWrapper.classList.add('translate-x-0', 'w-1/2');
+
+                            
+
+                                        
+
+                            
+
+                                                        // Show "Click preview" text
+
+                            
+
+                                                        macPreviewLabel.classList.remove('hidden');
+
+                            
+
+                                                        
+
+                            
+
+                                                        // Update Button
+
+                            
+
+                                                        confirmBtn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Confirm Avatar';
+
+                            
+
+                                                    };
 
                     
 
