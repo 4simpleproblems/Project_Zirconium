@@ -677,45 +677,6 @@ const applyCounterZoom = () => {
         // --- END MODIFICATION ---
     };
 
-    const setupEventListeners = (user) => {
-        const toggleButton = document.getElementById('auth-toggle');
-        const menu = document.getElementById('auth-menu-container');
-
-        if (toggleButton && menu) {
-            toggleButton.addEventListener('click', (e) => {
-                e.stopPropagation();
-                menu.classList.toggle('closed');
-                menu.classList.toggle('open');
-                
-                if (menu.classList.contains('open')) {
-                    checkMarquees();
-                }
-            });
-        }
-
-        document.addEventListener('click', (e) => {
-            if (menu && menu.classList.contains('open') && !menu.contains(e.target) && e.target !== toggleButton) {
-                menu.classList.add('closed');
-                menu.classList.remove('open');
-            }
-        });
-
-        if (user) {
-            const logoutButton = document.getElementById('logout-button');
-            if (logoutButton) {
-                // Use the globally available 'auth' reference
-                logoutButton.addEventListener('click', () => {
-                    auth.signOut().catch(err => console.error("Logout failed:", err));
-                });
-            }
-        }
-        // --- MODIFIED: RESIZE EVENT ---
-        // We now trigger both glider updates AND the counter-zoom logic
-        window.addEventListener('resize', () => {
-            applyCounterZoom(); // Re-calculate zoom scale on resize
-        });
-        // --- END MODIFICATION ---
-    };
 
     // --- 6. AUTH STATE LISTENER (MODIFIED) ---
     const setupAuthListener = () => {
