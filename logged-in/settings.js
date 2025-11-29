@@ -3691,30 +3691,37 @@
             // 2. Update the main view content and alignment
             mainView.style.justifyContent = 'flex-start';
             mainView.style.alignItems = 'flex-start';
+            
+            // Show loading spinner
+            showLoading("Loading settings...");
 
-            if (tabId === 'general') {
-                await loadGeneralTab(); 
-            }
-            else if (tabId === 'privacy') {
-                // NEW: Load Privacy Tab
-                mainView.innerHTML = getPrivacyContent(); // Render HTML first
-                await loadPrivacyTab(); // Then load data and add listeners
-            }
-            else if (tabId === 'personalization') {
-                // --- NEW: Load Personalization Tab ---
-                mainView.innerHTML = getPersonalizationContent(); // Render HTML
-                await loadPersonalizationTab(); // Load data and add listeners
-            }
-            else if (tabId === 'data') {
-                // --- NEW: Load Data Management Tab ---
-                mainView.innerHTML = getDataManagementContent(); // Render HTML
-                await loadDataTab(); // Load data and add listeners
-            }
-            else if (tabId === 'about') {
-                mainView.innerHTML = getAboutContent();
-            } else {
-                const content = tabContent[tabId];
-                mainView.innerHTML = getComingSoonContent(content.title);
+            try {
+                if (tabId === 'general') {
+                    await loadGeneralTab(); 
+                }
+                else if (tabId === 'privacy') {
+                    mainView.innerHTML = getPrivacyContent(); 
+                    await loadPrivacyTab();
+                }
+                else if (tabId === 'personalization') {
+                    mainView.innerHTML = getPersonalizationContent(); 
+                    await loadPersonalizationTab();
+                }
+                else if (tabId === 'data') {
+                    mainView.innerHTML = getDataManagementContent(); 
+                    await loadDataTab();
+                }
+                else if (tabId === 'about') {
+                    mainView.innerHTML = getAboutContent();
+                } else {
+                    const content = tabContent[tabId];
+                    mainView.innerHTML = getComingSoonContent(content.title);
+                }
+            } catch (error) {
+                console.error(`Error loading tab ${tabId}:`, error);
+                mainView.innerHTML = `<p class="text-red-400">Error loading tab content.</p>`;
+            } finally {
+                hideLoading();
             }
 
             // 3. New: Smoothly scroll the window back to the top (y=0)
