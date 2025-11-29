@@ -3624,7 +3624,12 @@
             sidebarTabs.forEach(tab => {
                 tab.classList.remove('active');
             });
-            document.getElementById(`tab-${tabId}`).classList.add('active');
+            const activeTabElement = document.getElementById(`tab-${tabId}`);
+            if (activeTabElement) { // Add null check
+                activeTabElement.classList.add('active');
+            } else {
+                console.error(`Error: Element with ID 'tab-${tabId}' not found for activation.`);
+            }
 
             // 2. Update the main view content and alignment
             mainView.style.justifyContent = 'flex-start';
@@ -3664,12 +3669,18 @@
 
         // --- Initialization on Load ---
         
-        // Add listener to each sidebar button
-        sidebarTabs.forEach(tab => {
-            tab.addEventListener('click', async () => {
-                await switchTab(tab.dataset.tab);
-            });
-        });
+        // Function to handle tab switching based on URL hash
+        const handleHashChange = async () => {
+            const hash = window.location.hash.substring(1); // Remove '#'
+            const defaultTab = 'general';
+            const tabId = Object.keys(tabContent).includes(hash) ? hash : defaultTab;
+            
+            await switchTab(tabId);
+        };
+
+        // Add event listeners for initial load and hash changes
+        window.addEventListener('load', handleHashChange);
+        window.addEventListener('hashchange', handleHashChange);
 
 
         // --- AUTHENTICATION/REDIRECT LOGIC (Retained and Modified) ---
@@ -3680,8 +3691,7 @@
                     window.location.href = '../authentication.html'; 
                 } else {
                     currentUser = user; 
-                    // Set initial state to 'General' (or the first tab)
-                    switchTab('general'); 
+                    // No longer calling switchTab here; handleHashChange will do it
                 }
             });
         }
