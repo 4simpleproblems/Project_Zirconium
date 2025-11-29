@@ -453,50 +453,25 @@
         .loading-overlay.active {
           display: flex;
         }
-        .loading-logo-container {
-            position: relative;
-            width: 80px; /* Adjust size as needed */
-            height: 80px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .loading-overlay {
+          display: none;
+          position: fixed;
+          z-index: 3000;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.8);
+          justify-content: flex-end; /* Align to bottom */
+          align-items: flex-end; /* Align to right */
+          padding: 20px; /* Padding from edges */
+          color: white;
         }
-
-        .loading-logo {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            position: relative;
-            z-index: 1; /* Ensure logo is above glow */
+        .loading-overlay.active {
+          display: flex;
         }
-
-        .loading-logo-glow {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            border-radius: 50%; /* Circular glow */
-            background: rgba(79, 70, 229, 0.7); /* Blue glow */
-            box-shadow: 0 0 15px 5px rgba(79, 70, 229, 0.7);
-            animation: pulse-glow 2s infinite ease-in-out;
-            z-index: 0;
-        }
-
-        @keyframes pulse-glow {
-            0% {
-                transform: scale(0.8);
-                opacity: 0.5;
-            }
-            50% {
-                transform: scale(1.1);
-                opacity: 1;
-            }
-            100% {
-                transform: scale(0.8);
-                opacity: 0.5;
-            }
+        .loading-text-container {
+            /* No specific styles needed here unless a background/border is desired */
         }
         
         /* --- Cropper Modal Styles --- */
@@ -614,11 +589,9 @@
         </div>
     </div>
     <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-logo-container">
-            <img src="../images/logo.png" alt="Loading Logo" class="loading-logo">
-            <div class="loading-logo-glow"></div>
+        <div class="loading-text-container">
+            <p id="loadingText" class="loading-dots-text">Loading</p>
         </div>
-        <p id="loadingText">Loading...</p>
     </div>
     
     

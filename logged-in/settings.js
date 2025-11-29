@@ -279,20 +279,28 @@
         
         let loadingPromiseResolve; // Function to resolve the loading promise
         let loadingPromise = Promise.resolve(); // Initial resolved promise
+        let dotAnimationInterval = null; // Interval for dot animation
+        let dotCount = 0; // Counter for dots
 
         function showLoading(text = "Loading...") {
             const loadingOverlay = document.getElementById('loadingOverlay');
-            const loadingText = document.getElementById('loadingText');
+            const loadingTextElement = document.getElementById('loadingText');
             
-            loadingText.textContent = text;
+            loadingTextElement.textContent = "Loading"; // Base text
             loadingOverlay.style.display = "flex";
             loadingOverlay.classList.add("active");
             
+            // Start dot animation
+            if (dotAnimationInterval) clearInterval(dotAnimationInterval);
+            dotAnimationInterval = setInterval(() => {
+                dotCount = (dotCount % 3) + 1; // Cycle 1, 2, 3
+                loadingTextElement.textContent = "Loading" + ".".repeat(dotCount);
+            }, 300); // Update dots every 300ms
+
             // Create a new promise for the minimum loading duration
             loadingPromise = new Promise(resolve => {
                 loadingPromiseResolve = resolve;
                 // Start a timer for the minimum display duration
-                // This is the 500ms minimum display time
                 if (loadingTimeout) clearTimeout(loadingTimeout); // Clear any previous timeout
                 loadingTimeout = setTimeout(() => {
                     loadingPromiseResolve();
@@ -301,6 +309,12 @@
         }
 
         async function hideLoading() {
+            // Clear dot animation interval
+            if (dotAnimationInterval) {
+                clearInterval(dotAnimationInterval);
+                dotAnimationInterval = null;
+            }
+
             // Ensure the minimum loading time has passed
             await loadingPromise; 
 
@@ -2395,6 +2409,9 @@
                 currentUser.providerData // Pass provider info
             );
             
+            // Ensure the DOM has rendered the new content before proceeding
+            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
             // 2. Element References (Username Section)
             const viewMode = document.getElementById('viewMode');
             const editMode = document.getElementById('editMode');
@@ -3689,7 +3706,7 @@
         /**
          * Handles the switching of tabs and updating the main content view.
          */
-        async function switchTab(tabId) {
+        async function switchTab(tabId, isInitialLoad = false) {
             // 1. Update active class on sidebar tabs
             sidebarTabs.forEach(tab => {
                 tab.classList.remove('active');
@@ -3704,9 +3721,6 @@
             // 2. Update the main view content and alignment
             mainView.style.justifyContent = 'flex-start';
             mainView.style.alignItems = 'flex-start';
-            
-            // Show loading spinner
-            showLoading("Loading settings...");
 
             try {
                 if (tabId === 'general') {
@@ -3730,12 +3744,18 @@
                     const content = tabContent[tabId];
                     mainView.innerHTML = getComingSoonContent(content.title);
                 }
+
+                // Update URL hash AFTER content is loaded, if it's not the initial page load
+                if (!isInitialLoad) {
+                    window.history.replaceState(null, '', `#${tabId}`);
+                }
+
             } catch (error) {
                 console.error(`Error loading tab ${tabId}:`, error);
                 mainView.innerHTML = `<p class="text-red-400">Error loading tab content.</p>`;
-            } finally {
-                await hideLoading();
-            }
+            } 
+            // The finally block with hideLoading is now managed by handleHashChange for initial load.
+            // For tab clicks, no spinner is shown, so no hideLoading is needed here.
 
             // 3. New: Smoothly scroll the window back to the top (y=0)
             window.scrollTo({
@@ -3746,7 +3766,7 @@
 
         // --- Initialization on Load ---
         
-        // Function to handle tab switching based on URL hash
+        // Function to handle tab switching based on URL hash (only for initial load now)
         const handleHashChange = async () => {
             const hash = window.location.hash.substring(1); // Remove '#'
             const defaultTab = 'general';
@@ -3758,12 +3778,21 @@
                 window.history.replaceState(null, '', `#${defaultTab}`);
             }
             
-            await switchTab(tabId);
+            // Show loading spinner only on initial page load
+            showLoading("Loading settings...");
+            try {
+                // Call switchTab with isInitialLoad = true
+                await switchTab(tabId, true); 
+            } catch (error) {
+                console.error("Error during initial tab load:", error);
+                mainView.innerHTML = `<p class="text-red-400">Error loading initial tab content.</p>`;
+            } finally {
+                await hideLoading();
+            }
         };
 
-        // Add event listeners for initial load and hash changes
+        // Add event listeners for initial load
         window.addEventListener('load', handleHashChange);
-        window.addEventListener('hashchange', handleHashChange);
 
 
         // --- AUTHENTICATION/REDIRECT LOGIC (Retained and Modified) ---
