@@ -326,6 +326,7 @@ let db;
         }
     };
 
+
     // --- 3. INJECT CSS STYLES (MOVED BEFORE INITIALIZEAPP) ---
     // This now uses CSS variables for all colors and transitions.
     // *** UPDATED to use px for fixed layout sizing ***
@@ -333,215 +334,215 @@ let db;
         const style = document.createElement('style');
         style.textContent = `
             /* Base Styles */
-            body { padding-top: 64px; } /* UPDATED */
+            body { padding-top: 64px !important; } /* UPDATED */
                         .auth-navbar {
-                            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
-                            background: var(--navbar-bg);
-                            border-bottom: 1px solid var(--navbar-border);
-                            height: 64px; /* UPDATED */
-                            transition: background-color 0.3s ease, border-color 0.3s ease;
+                            position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; z-index: 1000 !important;
+                            background: var(--navbar-bg) !important;
+                            border-bottom: 1px solid var(--navbar-border) !important;
+                            height: 64px !important; /* UPDATED */
+                            transition: background-color 0.3s ease, border-color 0.3s ease !important;
                         }
-                        .auth-navbar nav { padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; } /* UPDATED */
+                        .auth-navbar nav { padding: 0 1rem !important; height: 100% !important; display: flex !important; align-items: center !important; justify-content: space-between !important; gap: 1rem !important; position: relative !important; } /* UPDATED */
                         .initial-avatar {
-                            background: var(--avatar-gradient);
-                            font-family: sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white;
+                            background: var(--avatar-gradient) !important;
+                            font-family: sans-serif !important; text-transform: uppercase !important; display: flex !important; align-items: center !important; justify-content: center !important; color: white !important;
                         }
                         #auth-toggle {
-                            border-color: var(--avatar-border);
-                            transition: border-color 0.3s ease;
+                            border-color: var(--avatar-border) !important;
+                            transition: border-color 0.3s ease !important;
                         }
             
                         /* Auth Dropdown Menu Styles */
                         .auth-menu-container {
-                            position: absolute; right: 0; top: 50px; width: 16rem; /* UPDATED top from 50px */
-                            background: var(--menu-bg);
-                            border: 1px solid var(--menu-border);
-                            border-radius: 0.9rem; padding: 0.75rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2);
-                            transition: transform 0.2s ease-out, opacity 0.2s ease-out, background-color 0.3s ease, border-color 0.3s ease;
-                            transform-origin: top right; z-index: 1010;
+                            position: absolute !important; right: 0 !important; top: 50px !important; width: 16rem !important; /* UPDATED top from 50px */
+                            background: var(--menu-bg) !important;
+                            border: 1px solid var(--menu-border) !important;
+                            border-radius: 0.9rem !important; padding: 0.75rem !important; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2) !important;
+                            transition: transform 0.2s ease-out, opacity 0.2s ease-out, background-color 0.3s ease, border-color 0.3s ease !important;
+                            transform-origin: top right !important; z-index: 1010 !important;
                         }                        .auth-menu-container .border-b { /* User info divider */
-                            border-color: var(--menu-divider) !important;
-                            transition: border-color 0.3s ease;
+                            border-color: var(--menu-divider) !important !important;
+                            transition: border-color 0.3s ease !important;
                         }
                         /* --- USERNAME COLOR FIX --- (3/3) Added new style rule */
                                     .auth-menu-username {
-                                        color: var(--menu-username-text);
-                                        transition: color 0.3s ease;
-                                        text-align: left !important; /* Force left alignment */
-                                        margin: 0 !important;
-                                        font-weight: 400 !important;
+                                        color: var(--menu-username-text) !important;
+                                        transition: color 0.3s ease !important;
+                                        text-align: left !important !important; /* Force left alignment */
+                                        margin: 0 !important !important;
+                                        font-weight: 400 !important !important;
                                     }
                                     /* NEW: Force email left alignment */
                                     .auth-menu-email {
-                                        text-align: left !important;
-                                        margin: 0 !important;
-                                        font-weight: 400 !important;
-                                    }            .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
-            .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
+                                        text-align: left !important !important;
+                                        margin: 0 !important !important;
+                                        font-weight: 400 !important !important;
+                                    }            .auth-menu-container.open { opacity: 1 !important; transform: translateY(0) scale(1) !important; }
+            .auth-menu-container.closed { opacity: 0 !important; pointer-events: none !important; transform: translateY(-10px) scale(0.95) !important; }
 
             /* NEW: Styles for the expandable "More" section */
             .auth-menu-more-section {
-                display: none; /* Hidden by default */
-                padding-top: 0.5rem;
-                margin-top: 0.5rem;
-                border-top: 1px solid var(--menu-divider);
+                display: none !important; /* Hidden by default */
+                padding-top: 0.5rem !important;
+                margin-top: 0.5rem !important;
+                border-top: 1px solid var(--menu-divider) !important;
             }
 
             /* UPDATED: Dropdown button styling to match notes.html */
             .auth-menu-link, .auth-menu-button { 
-                display: flex; align-items: center; 
-                gap: 10px; /* Replaces margin on icons */
-                width: 100%; text-align: left; 
-                padding: 0.5rem 0.75rem; font-size: 0.875rem; color: var(--menu-text); border-radius: 0.7rem; 
-                transition: background-color 0.15s, color 0.15s; border: none; cursor: pointer;
+                display: flex !important; align-items: center !important; 
+                gap: 10px !important; /* Replaces margin on icons */
+                width: 100% !important; text-align: left !important; 
+                padding: 0.5rem 0.75rem !important; font-size: 0.875rem !important; color: var(--menu-text) !important; border-radius: 0.7rem !important; 
+                transition: background-color 0.15s, color 0.15s !important; border: none !important; cursor: pointer !important;
             }
             .auth-menu-link:hover, .auth-menu-button:hover { 
-                background-color: var(--menu-item-hover-bg); 
-                color: var(--menu-item-hover-text); 
+                background-color: var(--menu-item-hover-bg) !important; 
+                color: var(--menu-item-hover-text) !important; 
             }
 
             .logged-out-auth-toggle { 
-                background: var(--logged-out-icon-bg); 
-                border: 1px solid var(--logged-out-icon-border); 
-                transition: background-color 0.3s ease, border-color 0.3s ease;
+                background: var(--logged-out-icon-bg) !important; 
+                border: 1px solid var(--logged-out-icon-border) !important; 
+                transition: background-color 0.3s ease, border-color 0.3s ease !important;
             }
             .logged-out-auth-toggle i { 
-                color: var(--logged-out-icon-color); 
-                transition: color 0.3s ease;
+                color: var(--logged-out-icon-color) !important; 
+                transition: color 0.3s ease !important;
             }
 
             /* NEW: Glass Menu Style for Pin Context Menu */
             .glass-menu { 
-                background: var(--glass-menu-bg); 
-                backdrop-filter: blur(10px); 
-                -webkit-backdrop-filter: blur(10px); 
-                border: 1px solid var(--glass-menu-border);
-                transition: background-color 0.3s ease, border-color 0.3s ease;
+                background: var(--glass-menu-bg) !important; 
+                backdrop-filter: blur(10px) !important; 
+                -webkit-backdrop-filter: blur(10px) !important; 
+                border: 1px solid var(--glass-menu-border) !important;
+                transition: background-color 0.3s ease, border-color 0.3s ease !important;
             }
             /* Helper for icons in menus */
-            .auth-menu-link i.w-4, .auth-menu-button i.w-4 { width: 1rem; text-align: center; } 
+            .auth-menu-link i.w-4, .auth-menu-button i.w-4 { width: 1rem !important; text-align: center !important; } 
 
             /* Tab Wrapper and Glide Buttons */
-            .tab-wrapper { flex-grow: 1; display: flex; align-items: center; position: relative; min-width: 0; margin: 0 1rem; justify-content: center; } /* UPDATED: Added justify-content */
+            .tab-wrapper { flex-grow: 1 !important; display: flex !important; align-items: center !important; position: relative !important; min-width: 0 !important; margin: 0 1rem !important; justify-content: center !important; } /* UPDATED: Added justify-content */
             .tab-scroll-container { 
-                flex-grow: 1; display: flex; align-items: center; 
-                overflow-x: auto; -webkit-overflow-scrolling: touch; 
-                scrollbar-width: none; -ms-overflow-style: none; 
-                padding-bottom: 5px; margin-bottom: -5px; 
-                scroll-behavior: smooth;
-                max-width: 100%; /* UPDATED: ensure it doesn't overflow parent */
-                padding-left: 16px; /* MODIFICATION: Added to prevent first tab cutoff */
-                padding-right: 16px; /* MODIFICATION: Added for symmetry */
+                flex-grow: 1 !important; display: flex !important; align-items: center !important; 
+                overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; 
+                scrollbar-width: none !important; -ms-overflow-style: none !important; 
+                padding-bottom: 5px !important; margin-bottom: -5px !important; 
+                scroll-behavior: smooth !important;
+                max-width: 100% !important; /* UPDATED: ensure it doesn't overflow parent */
+                padding-left: 16px !important; /* MODIFICATION: Added to prevent first tab cutoff */
+                padding-right: 16px !important; /* MODIFICATION: Added for symmetry */
             }
-            .tab-scroll-container::-webkit-scrollbar { display: none; }
+            .tab-scroll-container::-webkit-scrollbar { display: none !important; }
             .scroll-glide-button {
-                position: absolute; top: 0; height: 100%; width: 64px; display: flex; align-items: center; justify-content: center; /* UPDATED width */
-                color: var(--glide-icon-color); font-size: 1.2rem; cursor: pointer; 
-                opacity: 1; 
-                transition: opacity 0.3s, color 0.3s ease; 
-                z-index: 10; pointer-events: auto;
+                position: absolute !important; top: 0 !important; height: 100% !important; width: 64px !important; display: flex !important; align-items: center !important; justify-content: center !important; /* UPDATED width */
+                color: var(--glide-icon-color) !important; font-size: 1.2rem !important; cursor: pointer !important; 
+                opacity: 1 !important; 
+                transition: opacity 0.3s, color 0.3s ease !important; 
+                z-index: 10 !important; pointer-events: auto !important;
             }
             #glide-left { 
-                left: 0; background: var(--glide-gradient-left); 
-                justify-content: flex-start; padding-left: 8px; /* UPDATED */
-                transition: opacity 0.3s, color 0.3s ease, background 0.3s ease;
+                left: 0 !important; background: var(--glide-gradient-left) !important; 
+                justify-content: flex-start !important; padding-left: 8px !important; /* UPDATED */
+                transition: opacity 0.3s, color 0.3s ease, background 0.3s ease !important;
             }
             #glide-right { 
-                right: 0; background: var(--glide-gradient-right); 
-                justify-content: flex-end; padding-right: 8px; /* UPDATED */
-                transition: opacity 0.3s, color 0.3s ease, background 0.3s ease;
+                right: 0 !important; background: var(--glide-gradient-right) !important; 
+                justify-content: flex-end !important; padding-right: 8px !important; /* UPDATED */
+                transition: opacity 0.3s, color 0.3s ease, background 0.3s ease !important;
             }
-            .scroll-glide-button.hidden { opacity: 0 !important; pointer-events: none !important; }
+            .scroll-glide-button.hidden { opacity: 0 !important !important; pointer-events: none !important !important; }
             
             .nav-tab { 
-                flex-shrink: 0; padding: 8px 12px; color: var(--tab-text); /* UPDATED */
-                font-size: 0.875rem; font-weight: 500; border-radius: 0.7rem; 
-                transition: all 0.2s, color 0.3s ease, border-color 0.3s ease, background-color 0.3s ease; 
-                text-decoration: none; line-height: 1.5; display: flex; align-items: center; margin-right: 8px; /* UPDATED */
-                border: 1px solid transparent; 
+                flex-shrink: 0 !important; padding: 8px 12px !important; color: var(--tab-text) !important; /* UPDATED */
+                font-size: 0.875rem !important; font-weight: 500 !important; border-radius: 0.7rem !important; 
+                transition: all 0.2s, color 0.3s ease, border-color 0.3s ease, background-color 0.3s ease !important; 
+                text-decoration: none !important; line-height: 1.5 !important; display: flex !important; align-items: center !important; margin-right: 8px !important; /* UPDATED */
+                border: 1px solid transparent !important; 
             }
             .nav-tab:not(.active):hover { 
-                color: var(--tab-hover-text); 
-                border-color: var(--tab-hover-border); 
-                background-color: var(--tab-hover-bg); 
+                color: var(--tab-hover-text) !important; 
+                border-color: var(--tab-hover-border) !important; 
+                background-color: var(--tab-hover-bg) !important; 
             }
             .nav-tab.active { 
-                color: var(--tab-active-text); 
-                border-color: var(--tab-active-border); 
-                background-color: var(--tab-active-bg); 
+                color: var(--tab-active-text) !important; 
+                border-color: var(--tab-active-border) !important; 
+                background-color: var(--tab-active-bg) !important; 
             }
             .nav-tab.active:hover { 
-                color: var(--tab-active-hover-text); 
-                border-color: var(--tab-active-hover-border); 
-                background-color: var(--tab-active-hover-bg); 
+                color: var(--tab-active-hover-text) !important; 
+                border-color: var(--tab-active-hover-border) !important; 
+                background-color: var(--tab-active-hover-bg) !important; 
             }
             
             /* Pin Button */
             #pin-button {
-                border-color: var(--pin-btn-border);
-                transition: background-color 0.2s, border-color 0.3s ease;
+                border-color: var(--pin-btn-border) !important;
+                transition: background-color 0.2s, border-color 0.3s ease !important;
             }
             #pin-button:hover {
-                background-color: var(--pin-btn-hover-bg);
+                background-color: var(--pin-btn-hover-bg) !important;
             }
             #pin-button-icon {
-                color: var(--pin-btn-icon-color);
-                transition: color 0.3s ease;
+                color: var(--pin-btn-icon-color) !important;
+                transition: color 0.3s ease !important;
             }
 
             /* NEW: Pin Hint Styles */
             .pin-hint-container {
-                position: absolute;
-                bottom: calc(100% + 10px); /* 10px above the button */
-                left: 50%;
-                transform: translateX(-50%) scale(0.8);
-                background: var(--hint-bg);
-                border: 1px solid var(--hint-border);
-                color: var(--hint-text);
-                padding: 0.5rem 1rem;
-                border-radius: 0.9rem;
-                box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-                opacity: 0;
-                pointer-events: none;
-                z-index: 1020;
-                transition: opacity 0.3s ease, transform 0.3s ease, background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
-                white-space: nowrap;
-                font-size: 0.875rem;
+                position: absolute !important;
+                bottom: calc(100% + 10px) !important; /* 10px above the button */
+                left: 50% !important;
+                transform: translateX(-50%) scale(0.8) !important;
+                background: var(--hint-bg) !important;
+                border: 1px solid var(--hint-border) !important;
+                color: var(--hint-text) !important;
+                padding: 0.5rem 1rem !important;
+                border-radius: 0.9rem !important;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.5) !important;
+                opacity: 0 !important;
+                pointer-events: none !important;
+                z-index: 1020 !important;
+                transition: opacity 0.3s ease, transform 0.3s ease, background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease !important;
+                white-space: nowrap !important;
+                font-size: 0.875rem !important;
             }
             .pin-hint-container.show {
-                opacity: 1;
-                transform: translateX(-50%) scale(1);
-                transition-delay: 0.2s; /* Slight delay on show */
+                opacity: 1 !important;
+                transform: translateX(-50%) scale(1) !important;
+                transition-delay: 0.2s !important; /* Slight delay on show */
             }
 
             /* --- Marquee Styles --- */
             .marquee-container {
-                overflow: hidden;
-                white-space: nowrap;
-                position: relative;
-                max-width: 100%;
+                overflow: hidden !important;
+                white-space: nowrap !important;
+                position: relative !important;
+                max-width: 100% !important;
             }
             
             /* Only apply mask and animation when active */
             .marquee-container.active {
-                mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
-                -webkit-mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+                mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%) !important;
+                -webkit-mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%) !important;
             }
             
             .marquee-content {
-                display: inline-block;
-                white-space: nowrap;
+                display: inline-block !important;
+                white-space: nowrap !important;
             }
             
             .marquee-container.active .marquee-content {
-                animation: marquee 10s linear infinite;
+                animation: marquee 10s linear infinite !important;
                 /* Make sure there is enough width for the scroll */
-                min-width: 100%; 
+                min-width: 100% !important; 
             }
             
             @keyframes marquee {
-                0% { transform: translateX(0); }
-                100% { transform: translateX(-50%); } /* Move half way (since content is duplicated) */
+                0% { transform: translateX(0) !important; }
+                100% { transform: translateX(-50%) !important; } /* Move half way (since content is duplicated) */
             }
         `;
         document.head.appendChild(style);
