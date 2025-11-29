@@ -1331,11 +1331,15 @@
             grid.innerHTML = ''; // Clear existing
 
             if (category === 'bg') {
+                // Switch to Flex for Colors (Rows, minimal space)
+                grid.className = 'flex flex-wrap gap-1 justify-start content-start';
+
                 // Color Palette
-                Mibi_ASSETS.colors.forEach(color => {
+                MIBI_ASSETS.colors.forEach(color => {
                     const btn = document.createElement('button');
                     const isSelected = mibiAvatarState.bgColor === color;
-                    btn.className = `w-12 h-12 rounded-full shadow-sm transition-transform hover:scale-110 focus:outline-none border-2 ${isSelected ? 'border-white' : 'border-transparent'} hover:border-dashed hover:border-white`;
+                    // Style: Match X button (w-10 h-10, rounded-xl i.e. 0.75rem)
+                    btn.className = `w-10 h-10 rounded-xl shadow-sm transition-transform hover:scale-110 focus:outline-none border-2 ${isSelected ? 'border-white' : 'border-transparent'} hover:border-dashed hover:border-white`;
                     btn.style.backgroundColor = color;
                     
                     btn.onclick = () => {
@@ -1347,8 +1351,9 @@
                 });
                 // Add custom picker
                 const customWrapper = document.createElement('div');
-                customWrapper.className = 'w-12 h-12 rounded-full bg-[#333] flex items-center justify-center cursor-pointer hover:bg-[#444] relative overflow-hidden border-2 border-transparent hover:border-dashed hover:border-white';
-                customWrapper.innerHTML = '<i class="fa-solid fa-eye-dropper text-white"></i><input type="color" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">';
+                // Match size and roundness
+                customWrapper.className = 'w-10 h-10 rounded-xl bg-[#333] flex items-center justify-center cursor-pointer hover:bg-[#444] relative overflow-hidden border-2 border-transparent hover:border-dashed hover:border-white';
+                customWrapper.innerHTML = '<i class="fa-solid fa-eye-dropper text-white text-sm"></i><input type="color" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">';
                 const input = customWrapper.querySelector('input');
                 input.oninput = (e) => {
                     mibiAvatarState.bgColor = e.target.value;
@@ -1357,13 +1362,15 @@
                 grid.appendChild(customWrapper);
 
             } else {
-                // Asset Grid (Eyes, Mouths, Hats)
+                // Reset to Grid for Assets
+                grid.className = 'grid grid-cols-3 gap-4';
                 
                 // "None" Option - ONLY for Hats
                 if (category === 'hats') {
                     const noneBtn = document.createElement('div');
-                    noneBtn.className = `bg-[#0a0a0a] rounded-xl p-2 flex flex-col items-center justify-center cursor-pointer border-2 hover:border-dashed hover:border-white transition-all ${!mibiAvatarState[category] ? 'border-white' : 'border-transparent'}`;
-                    noneBtn.innerHTML = `<i class="fa-solid fa-ban fa-2x text-gray-500"></i>`;
+                    // Light grey background (bg-gray-200), More rounded (rounded-2xl)
+                    noneBtn.className = `bg-gray-200 rounded-2xl p-2 flex flex-col items-center justify-center cursor-pointer border-2 hover:border-dashed hover:border-black transition-all ${!mibiAvatarState[category] ? 'border-black' : 'border-transparent'}`;
+                    noneBtn.innerHTML = `<i class="fa-solid fa-ban fa-2x text-gray-600"></i>`;
                     noneBtn.onclick = () => {
                         mibiAvatarState[category] = '';
                         updateMibiPreview();
@@ -1373,11 +1380,12 @@
                 }
 
                 // Asset Options
-                const files = Mibi_ASSETS[category] || [];
+                const files = MIBI_ASSETS[category] || [];
                 files.forEach(file => {
                     const item = document.createElement('div');
                     const isSelected = mibiAvatarState[category] === file;
-                    item.className = `bg-[#0a0a0a] rounded-xl p-2 flex flex-col items-center justify-center cursor-pointer border-2 hover:border-dashed hover:border-white transition-all ${isSelected ? 'border-white' : 'border-transparent'}`;
+                    // Light grey background (bg-gray-200), More rounded (rounded-2xl)
+                    item.className = `bg-gray-200 rounded-2xl p-2 flex flex-col items-center justify-center cursor-pointer border-2 hover:border-dashed hover:border-black transition-all ${isSelected ? 'border-black' : 'border-transparent'}`;
                     
                     item.innerHTML = `
                         <img src="../mibi-avatars/${category}/${file}" class="w-16 h-16 object-contain">
@@ -1445,8 +1453,8 @@
                 previewWrapper.classList.add('w-full');
                 previewContainer.classList.add('mac-preview-scaled'); // Apply scale to preview
                 
-                controlsWrapper.classList.add('translate-x-full'); // Slide out
-                controlsWrapper.classList.remove('translate-x-0');
+                controlsWrapper.classList.add('translate-x-full', 'w-0', 'overflow-hidden', 'p-0'); // Slide out and collapse
+                controlsWrapper.classList.remove('translate-x-0', 'w-1/2');
                 
                 // Show Sliders
                 slidersContainer.classList.remove('hidden', 'opacity-0');
@@ -1468,8 +1476,8 @@
                 previewWrapper.classList.remove('w-full');
                 previewContainer.classList.remove('mac-preview-scaled'); // Remove scale from preview
 
-                controlsWrapper.classList.remove('translate-x-full');
-                controlsWrapper.classList.add('translate-x-0');
+                controlsWrapper.classList.remove('translate-x-full', 'w-0', 'overflow-hidden', 'p-0');
+                controlsWrapper.classList.add('translate-x-0', 'w-1/2');
 
                 // Hide Sliders
                 slidersContainer.classList.add('hidden', 'opacity-0');
