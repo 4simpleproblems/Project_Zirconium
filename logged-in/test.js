@@ -277,47 +277,20 @@
             modal.style.display = "flex";
         }
         
-        let loadingPromiseResolve; // Function to resolve the loading promise
-        let loadingPromise = Promise.resolve(); // Initial resolved promise
-        let dotAnimationInterval = null; // Interval for dot animation
-        let dotCount = 0; // Counter for dots
-
         function showLoading(text = "Loading...") {
             const loadingOverlay = document.getElementById('loadingOverlay');
-            const loadingTextElement = document.getElementById('loadingText');
+            const loadingText = document.getElementById('loadingText');
             
-            loadingTextElement.textContent = "Loading"; // Base text
+            loadingText.textContent = text;
             loadingOverlay.style.display = "flex";
             loadingOverlay.classList.add("active");
-            
-            // Start dot animation
-            if (dotAnimationInterval) clearInterval(dotAnimationInterval);
-            dotAnimationInterval = setInterval(() => {
-                dotCount = (dotCount % 3) + 1; // Cycle 1, 2, 3
-                loadingTextElement.textContent = "Loading" + ".".repeat(dotCount);
-            }, 300); // Update dots every 300ms
-
-            // Create a new promise for the minimum loading duration
-            loadingPromise = new Promise(resolve => {
-                loadingPromiseResolve = resolve;
-                // Start a timer for the minimum display duration
-                if (loadingTimeout) clearTimeout(loadingTimeout); // Clear any previous timeout
-                loadingTimeout = setTimeout(() => {
-                    loadingPromiseResolve();
-                }, 500); 
-            });
+            if (loadingTimeout) clearTimeout(loadingTimeout);
+            loadingTimeout = setTimeout(() => {
+                hideLoading();
+            }, 5000); // 5 second timeout
         }
 
-        async function hideLoading() {
-            // Clear dot animation interval
-            if (dotAnimationInterval) {
-                clearInterval(dotAnimationInterval);
-                dotAnimationInterval = null;
-            }
-
-            // Ensure the minimum loading time has passed
-            await loadingPromise; 
-
+        function hideLoading() {
             const loadingOverlay = document.getElementById('loadingOverlay');
             if (loadingTimeout) {
                 clearTimeout(loadingTimeout);
@@ -2409,9 +2382,6 @@
                 currentUser.providerData // Pass provider info
             );
             
-            // Ensure the DOM has rendered the new content before proceeding
-            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-
             // 2. Element References (Username Section)
             const viewMode = document.getElementById('viewMode');
             const editMode = document.getElementById('editMode');
@@ -3176,7 +3146,7 @@
                     customSettings.classList.toggle('hidden', type !== 'custom');
                     // Hide the MAC menu overlay unless explicitly opened
                     macMenu.classList.add('hidden');
-                
+
                     // Update avatar preview based on type
                     if (type === 'custom' && userData.customPfp) {
                         customPfpPreview.src = userData.customPfp;
@@ -3192,18 +3162,13 @@
                         customPfpPlaceholder.style.color = ''; // Clear custom color
                     }
                 };
-                
+
                 // Init Custom Dropdown
                 const pfpDropdown = setupCustomDropdown(pfpModeSelect, async (type) => {
                     updatePfpUi(type);
                     // Auto-save type change
                     try {
-                        // If switching to Mibi, ensure current mibiAvatarState is saved
-                        if (type === 'mibi') {
-                            await updateDoc(userDocRef, { pfpType: type, mibiConfig: mibiAvatarState });
-                        } else {
-                            await updateDoc(userDocRef, { pfpType: type });
-                        }
+                        await updateDoc(userDocRef, { pfpType: type });
                         userData.pfpType = type; // Update local state
                         triggerNavbarUpdate();
                         showMessage(pfpMessage, 'Preference saved!', 'success');
@@ -3211,43 +3176,31 @@
                         showMessage(pfpMessage, 'Error saving preference.', 'error');
                     }
                 });
-                
+
                 if (!pfpDropdown) { // Defensive check
                     console.error("pfpDropdown could not be initialized.");
                     return; // Exit if dropdown failed to initialize
-                }
-                
-                // --- NEW: Load Mibi Avatar State from User Data ---
-                if (userData.mibiConfig) {
-                    // Merge loaded config into the global mibiAvatarState
-                    mibiAvatarState = { ...mibiAvatarState, ...userData.mibiConfig };
                 }
                 
                 // Add event listener for the Open Mibi Avatar Creator button
                 if (openMacMenuBtn) {
                     openMacMenuBtn.addEventListener('click', () => {
                         macMenu.classList.remove('hidden'); // Show the MAC menu overlay
-                        
-                        // Ensure MAC menu UI reflects the loaded mibiAvatarState when opened
-                        // This implicitly happens through openMenu which calls updateMibiPreview and renderMacGrid
-                        // But explicitly calling updateMibiPreview here ensures the preview is current upon opening
-                        updateMibiPreview(); 
-                
-                        // Reset to default tab if none was previously selected, or ensure current tab is active
-                        document.querySelector(`.mac-tab-btn[data-tab="${currentTab}"]`)?.click();
+                        currentMacSlide = 1; // Reset to first slide
+                        showMacSlide(currentMacSlide);
                     });
                 }
-                
+
                 // Set initial display based on saved settings
                 pfpDropdown.setValue(currentPfpType);
                 if (currentPfpType === 'custom') {
                     customSettings.classList.remove('hidden');
                 } else if (currentPfpType === 'mibi') {
                     mibiSettings.classList.remove('hidden'); // Ensure the container div for Mibi settings is visible
-                    updateMibiPreview(); // IMPORTANT: Update Mibi preview with loaded state
                 }
                 const uploadBtn = document.getElementById('uploadPfpBtn');
-                const fileInput = document.getElementById('pfpFileInput');                const cropperModal = document.getElementById('cropperModal');
+                const fileInput = document.getElementById('pfpFileInput');
+                const cropperModal = document.getElementById('cropperModal');
                 const cropperCanvas = document.getElementById('cropperCanvas');
                 const cancelCropBtn = document.getElementById('cancelCropBtn');
                 const submitCropBtn = document.getElementById('submitCropBtn');
@@ -3539,51 +3492,11 @@
                 // 1. Fetch themes
                 const response = await fetch('../themes.json');
                 if (!response.ok) throw new Error('Failed to fetch themes.json');
-                let themes = await response.json(); // Changed to let for re-assignment
+                const themes = await response.json();
                 
                 if (!themes || themes.length === 0) {
                      throw new Error('themes.json is empty or invalid');
                 }
-
-                // --- NEW: Theme Sorting Logic ---
-                const fixedOrderNames = ['Dark', 'Light', 'Christmas'];
-                const lastLightThemeNames = ['Lavender', 'Rose Gold', 'Mint']; // These are the 3 light themes excluding 'Light'
-
-                let sortedThemes = [];
-                let darkTheme = null;
-                let lightTheme = null;
-                let christmasTheme = null;
-                let remainingLightThemes = [];
-                let otherThemes = [];
-
-                themes.forEach(theme => {
-                    if (theme.name === 'Dark') {
-                        darkTheme = theme;
-                    } else if (theme.name === 'Light') {
-                        lightTheme = theme;
-                    } else if (theme.name === 'Christmas') {
-                        christmasTheme = theme;
-                    } else if (lastLightThemeNames.includes(theme.name)) {
-                        remainingLightThemes.push(theme);
-                    } else {
-                        otherThemes.push(theme);
-                    }
-                });
-
-                // Sort 'otherThemes' alphabetically by name
-                otherThemes.sort((a, b) => a.name.localeCompare(b.name));
-                // Sort 'remainingLightThemes' alphabetically by name
-                remainingLightThemes.sort((a, b) => a.name.localeCompare(b.name));
-
-                // Assemble the sortedThemes array
-                if (darkTheme) sortedThemes.push(darkTheme);
-                if (lightTheme) sortedThemes.push(lightTheme);
-                if (christmasTheme) sortedThemes.push(christmasTheme);
-                sortedThemes = sortedThemes.concat(otherThemes);
-                sortedThemes = sortedThemes.concat(remainingLightThemes);
-
-                themes = sortedThemes.filter(Boolean); // Filter out any nulls if themes weren't found
-                // --- END NEW: Theme Sorting Logic ---
                 
                 // 2. Get currently saved theme to set the active state
                 let savedTheme = null;
@@ -3597,7 +3510,7 @@
                 const modifiedThemes = []; // Store themes with correct logo paths
                 let themeButtonsHtml = '';
                 
-                for (const theme of themes) { // Iterate over the newly sorted 'themes'
+                for (const theme of themes) {
                     // --- This is the logic requested by the user ---
                     // It modifies the theme object *in memory* before saving/applying
                     // We use root-relative paths as defined in navigation.js
@@ -3706,56 +3619,41 @@
         /**
          * Handles the switching of tabs and updating the main content view.
          */
-        async function switchTab(tabId, isInitialLoad = false) {
+        async function switchTab(tabId) {
             // 1. Update active class on sidebar tabs
             sidebarTabs.forEach(tab => {
                 tab.classList.remove('active');
             });
-            const activeTabElement = document.getElementById(`tab-${tabId}`);
-            if (activeTabElement) { // Add null check
-                activeTabElement.classList.add('active');
-            } else {
-                console.error(`Error: Element with ID 'tab-${tabId}' not found for activation.`);
-            }
+            document.getElementById(`tab-${tabId}`).classList.add('active');
 
             // 2. Update the main view content and alignment
             mainView.style.justifyContent = 'flex-start';
             mainView.style.alignItems = 'flex-start';
 
-            try {
-                if (tabId === 'general') {
-                    await loadGeneralTab(); 
-                }
-                else if (tabId === 'privacy') {
-                    mainView.innerHTML = getPrivacyContent(); 
-                    await loadPrivacyTab();
-                }
-                else if (tabId === 'personalization') {
-                    mainView.innerHTML = getPersonalizationContent(); 
-                    await loadPersonalizationTab();
-                }
-                else if (tabId === 'data') {
-                    mainView.innerHTML = getDataManagementContent(); 
-                    await loadDataTab();
-                }
-                else if (tabId === 'about') {
-                    mainView.innerHTML = getAboutContent();
-                } else {
-                    const content = tabContent[tabId];
-                    mainView.innerHTML = getComingSoonContent(content.title);
-                }
-
-                // Update URL hash AFTER content is loaded, if it's not the initial page load
-                if (!isInitialLoad) {
-                    window.history.replaceState(null, '', `#${tabId}`);
-                }
-
-            } catch (error) {
-                console.error(`Error loading tab ${tabId}:`, error);
-                mainView.innerHTML = `<p class="text-red-400">Error loading tab content.</p>`;
-            } 
-            // The finally block with hideLoading is now managed by handleHashChange for initial load.
-            // For tab clicks, no spinner is shown, so no hideLoading is needed here.
+            if (tabId === 'general') {
+                await loadGeneralTab(); 
+            }
+            else if (tabId === 'privacy') {
+                // NEW: Load Privacy Tab
+                mainView.innerHTML = getPrivacyContent(); // Render HTML first
+                await loadPrivacyTab(); // Then load data and add listeners
+            }
+            else if (tabId === 'personalization') {
+                // --- NEW: Load Personalization Tab ---
+                mainView.innerHTML = getPersonalizationContent(); // Render HTML
+                await loadPersonalizationTab(); // Load data and add listeners
+            }
+            else if (tabId === 'data') {
+                // --- NEW: Load Data Management Tab ---
+                mainView.innerHTML = getDataManagementContent(); // Render HTML
+                await loadDataTab(); // Load data and add listeners
+            }
+            else if (tabId === 'about') {
+                mainView.innerHTML = getAboutContent();
+            } else {
+                const content = tabContent[tabId];
+                mainView.innerHTML = getComingSoonContent(content.title);
+            }
 
             // 3. New: Smoothly scroll the window back to the top (y=0)
             window.scrollTo({
@@ -3766,33 +3664,12 @@
 
         // --- Initialization on Load ---
         
-        // Function to handle tab switching based on URL hash (only for initial load now)
-        const handleHashChange = async () => {
-            const hash = window.location.hash.substring(1); // Remove '#'
-            const defaultTab = 'general';
-            let tabId = hash;
-
-            if (!Object.keys(tabContent).includes(hash)) {
-                tabId = defaultTab;
-                // Update URL to reflect the default tab, replacing the current history entry
-                window.history.replaceState(null, '', `#${defaultTab}`);
-            }
-            
-            // Show loading spinner only on initial page load
-            showLoading("Loading settings...");
-            try {
-                // Call switchTab with isInitialLoad = true
-                await switchTab(tabId, true); 
-            } catch (error) {
-                console.error("Error during initial tab load:", error);
-                mainView.innerHTML = `<p class="text-red-400">Error loading initial tab content.</p>`;
-            } finally {
-                await hideLoading();
-            }
-        };
-
-        // Add event listeners for initial load
-        window.addEventListener('load', handleHashChange);
+        // Add listener to each sidebar button
+        sidebarTabs.forEach(tab => {
+            tab.addEventListener('click', async () => {
+                await switchTab(tab.dataset.tab);
+            });
+        });
 
 
         // --- AUTHENTICATION/REDIRECT LOGIC (Retained and Modified) ---
@@ -3803,7 +3680,8 @@
                     window.location.href = '../authentication.html'; 
                 } else {
                     currentUser = user; 
-                    // No longer calling switchTab here; handleHashChange will do it
+                    // Set initial state to 'General' (or the first tab)
+                    switchTab('general'); 
                 }
             });
         }
