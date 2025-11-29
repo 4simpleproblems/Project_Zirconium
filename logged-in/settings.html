@@ -487,7 +487,6 @@
             transform: rotate(720deg) rotateX(180deg);
           }
         }
-
         
         /* --- Cropper Modal Styles --- */
         #cropperModal {
@@ -574,21 +573,21 @@
 
         <div id="settings-container">
             <nav id="settings-sidebar">
-                <a id="tab-general" href="#general" class="btn-toolbar-style settings-tab active">
+                <button id="tab-general" class="btn-toolbar-style settings-tab active" data-tab="general">
                     <i class="fa-solid fa-gear w-5"></i> <span>General</span>
-                </a>
-                <a id="tab-privacy" href="#privacy" class="btn-toolbar-style settings-tab">
+                </button>
+                <button id="tab-privacy" class="btn-toolbar-style settings-tab" data-tab="privacy">
                     <i class="fa-solid fa-shield-halved w-5"></i> <span>Privacy & Security</span>
-                </a>
-                <a id="tab-personalization" href="#personalization" class="btn-toolbar-style settings-tab">
+                </button>
+                <button id="tab-personalization" class="btn-toolbar-style settings-tab" data-tab="personalization">
                     <i class="fa-solid fa-palette w-5"></i> <span>Personalization</span>
-                </a>
-                <a id="tab-data" href="#data" class="btn-toolbar-style settings-tab">
+                </button>
+                <button id="tab-data" class="btn-toolbar-style settings-tab" data-tab="data">
                     <i class="fa-solid fa-database w-5"></i> <span>Data Management</span>
-                </a>
-                <a id="tab-about" href="#about" class="btn-toolbar-style settings-tab">
+                </button>
+                <button id="tab-about" class="btn-toolbar-style settings-tab" data-tab="about">
                     <i class="fa-solid fa-circle-info w-5"></i> <span>About 4SP</span>
-                </a>
+                </button>
             </nav>
 
             <div id="settings-main-view">
@@ -603,7 +602,6 @@
             <div class="modal-buttons" id="modalButtons"></div>
         </div>
     </div>
-
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-animation">
             <div class="loading-bar"></div>
