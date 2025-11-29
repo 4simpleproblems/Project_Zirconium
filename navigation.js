@@ -32,11 +32,6 @@
  * 24. **(FIXED)** INITIAL AVATAR CENTERING: Changed `w-8 h-8` to `w-full h-full` on the `initial-avatar` div to ensure perfect centering of the user's initial letter inside the button.
  * 25. **(NEW)** DROPDOWN STYLING: Updated dropdown buttons to match the "Notes" app style (gap, darker hover).
  * 26. **(UPDATED)** THEME LOGIC: Removed hardcoded theme name checks from `window.applyTheme`. Theme properties (like logo and colors) are now pulled *only* from the theme object, falling back to `DEFAULT_THEME`.
- * 27. **(NEW)** !important ADDED: Every CSS declaration in `injectStyles` now has `!important`.
- * 28. **(NEW)** GLIDE REMOVED: Scroll glide buttons are removed from HTML and all related JS logic has been removed/disabled.
- * 29. **(NEW)** FORCED LAYOUT: Tabs are forced to left-align, take up all available space, and scroll if they overflow.
- * 30. **(MODIFIED)** TAB CENTERING: The tabs within the scroll container are now **forced to be centered** using `justify-content: center !important`.
- * 31. **(FIXED)** MORE BUTTON: The 'Show More/Less' button now correctly expands and collapses the extra menu items by removing `!important` from the `display: none` CSS rule for the dropdown section.
  */
 
 // =========================================================================
@@ -284,6 +279,7 @@ let db;
                     </a>
 
                     <div class="tab-wrapper">
+                        <!-- Scroll glide buttons and tab scroll container will be dynamically added -->
                         <div class="tab-scroll-container flex justify-center items-center overflow-hidden">
                             <div class="nav-tab-placeholder"></div>
                             <div class="nav-tab-placeholder hidden sm:block"></div>
@@ -330,227 +326,222 @@ let db;
         }
     };
 
-    // --- 3. INJECT CSS STYLES (MODIFIED: ADDED !IMPORTANT TO ALL DECLARATIONS, FORCED CENTERING) ---
+    // --- 3. INJECT CSS STYLES (MOVED BEFORE INITIALIZEAPP) ---
     // This now uses CSS variables for all colors and transitions.
-    // *** UPDATED to use px for fixed layout sizing and ADDED !IMPORTANT ***
+    // *** UPDATED to use px for fixed layout sizing ***
     const injectStyles = () => {
         const style = document.createElement('style');
         style.textContent = `
             /* Base Styles */
-            body { padding-top: 64px !important; } /* UPDATED */
+            body { padding-top: 64px; } /* UPDATED */
                         .auth-navbar {
-                            position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; z-index: 1000 !important;
-                            background: var(--navbar-bg) !important;
-                            border-bottom: 1px solid var(--navbar-border) !important;
-                            height: 64px !important; /* UPDATED */
-                            transition: background-color 0.3s ease, border-color 0.3s ease !important;
+                            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+                            background: var(--navbar-bg);
+                            border-bottom: 1px solid var(--navbar-border);
+                            height: 64px; /* UPDATED */
+                            transition: background-color 0.3s ease, border-color 0.3s ease;
                         }
-                        .auth-navbar nav { padding: 0 1rem !important; height: 100% !important; display: flex !important; align-items: center !important; justify-content: space-between !important; gap: 1rem !important; position: relative !important; } /* UPDATED */
+                        .auth-navbar nav { padding: 0 1rem; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; } /* UPDATED */
                         .initial-avatar {
-                            background: var(--avatar-gradient) !important;
-                            font-family: sans-serif !important; text-transform: uppercase !important; display: flex !important; align-items: center !important; justify-content: center !important; color: white !important;
+                            background: var(--avatar-gradient);
+                            font-family: sans-serif; text-transform: uppercase; display: flex; align-items: center; justify-content: center; color: white;
                         }
                         #auth-toggle {
-                            border-color: var(--avatar-border) !important;
-                            transition: border-color 0.3s ease !important;
+                            border-color: var(--avatar-border);
+                            transition: border-color 0.3s ease;
                         }
             
                         /* Auth Dropdown Menu Styles */
                         .auth-menu-container {
-                            position: absolute !important; right: 0 !important; top: 50px !important; width: 16rem !important; /* UPDATED top from 50px */
-                            background: var(--menu-bg) !important;
-                            border: 1px solid var(--menu-border) !important;
-                            border-radius: 0.9rem !important; padding: 0.75rem !important; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2) !important;
-                            transition: transform 0.2s ease-out, opacity 0.2s ease-out, background-color 0.3s ease, border-color 0.3s ease !important;
-                            transform-origin: top right !important; z-index: 1010 !important;
+                            position: absolute; right: 0; top: 50px; width: 16rem; /* UPDATED top from 50px */
+                            background: var(--menu-bg);
+                            border: 1px solid var(--menu-border);
+                            border-radius: 0.9rem; padding: 0.75rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2);
+                            transition: transform 0.2s ease-out, opacity 0.2s ease-out, background-color 0.3s ease, border-color 0.3s ease;
+                            transform-origin: top right; z-index: 1010;
                         }                        .auth-menu-container .border-b { /* User info divider */
-                            border-color: var(--menu-divider) !important !important;
-                            transition: border-color 0.3s ease !important;
+                            border-color: var(--menu-divider) !important;
+                            transition: border-color 0.3s ease;
                         }
                         /* --- USERNAME COLOR FIX --- (3/3) Added new style rule */
                                     .auth-menu-username {
-                                        color: var(--menu-username-text) !important;
-                                        transition: color 0.3s ease !important;
-                                        text-align: left !important !important; /* Force left alignment */
-                                        margin: 0 !important !important;
-                                        font-weight: 400 !important !important;
+                                        color: var(--menu-username-text);
+                                        transition: color 0.3s ease;
+                                        text-align: left !important; /* Force left alignment */
+                                        margin: 0 !important;
+                                        font-weight: 400 !important;
                                     }
                                     /* NEW: Force email left alignment */
                                     .auth-menu-email {
-                                        text-align: left !important !important;
-                                        margin: 0 !important !important;
-                                        font-weight: 400 !important !important;
-                                    }            .auth-menu-container.open { opacity: 1 !important; transform: translateY(0) scale(1) !important; }
-            .auth-menu-container.closed { opacity: 0 !important; pointer-events: none !important; transform: translateY(-10px) scale(0.95) !important; }
+                                        text-align: left !important;
+                                        margin: 0 !important;
+                                        font-weight: 400 !important;
+                                    }            .auth-menu-container.open { opacity: 1; transform: translateY(0) scale(1); }
+            .auth-menu-container.closed { opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.95); }
 
             /* NEW: Styles for the expandable "More" section */
             .auth-menu-more-section {
-                display: none; /* Hidden by default - REMOVED !important to allow JS override */
-                padding-top: 0.5rem !important;
-                margin-top: 0.5rem !important;
-                border-top: 1px solid var(--menu-divider) !important;
+                display: none; /* Hidden by default */
+                padding-top: 0.5rem;
+                margin-top: 0.5rem;
+                border-top: 1px solid var(--menu-divider);
             }
 
             /* UPDATED: Dropdown button styling to match notes.html */
             .auth-menu-link, .auth-menu-button { 
-                display: flex !important; align-items: center !important; 
-                gap: 10px !important; /* Replaces margin on icons */
-                width: 100% !important; text-align: left !important; 
-                padding: 0.5rem 0.75rem !important; font-size: 0.875rem !important; color: var(--menu-text) !important; border-radius: 0.7rem !important; 
-                transition: background-color 0.15s, color 0.15s !important; border: none !important; cursor: pointer !important;
+                display: flex; align-items: center; 
+                gap: 10px; /* Replaces margin on icons */
+                width: 100%; text-align: left; 
+                padding: 0.5rem 0.75rem; font-size: 0.875rem; color: var(--menu-text); border-radius: 0.7rem; 
+                transition: background-color 0.15s, color 0.15s; border: none; cursor: pointer;
             }
             .auth-menu-link:hover, .auth-menu-button:hover { 
-                background-color: var(--menu-item-hover-bg) !important; 
-                color: var(--menu-item-hover-text) !important; 
+                background-color: var(--menu-item-hover-bg); 
+                color: var(--menu-item-hover-text); 
             }
 
             .logged-out-auth-toggle { 
-                background: var(--logged-out-icon-bg) !important; 
-                border: 1px solid var(--logged-out-icon-border) !important; 
-                transition: background-color 0.3s ease, border-color 0.3s ease !important;
+                background: var(--logged-out-icon-bg); 
+                border: 1px solid var(--logged-out-icon-border); 
+                transition: background-color 0.3s ease, border-color 0.3s ease;
             }
             .logged-out-auth-toggle i { 
-                color: var(--logged-out-icon-color) !important; 
-                transition: color 0.3s ease !important;
+                color: var(--logged-out-icon-color); 
+                transition: color 0.3s ease;
             }
 
             /* NEW: Glass Menu Style for Pin Context Menu */
             .glass-menu { 
-                background: var(--glass-menu-bg) !important; 
-                backdrop-filter: blur(10px) !important; 
-                -webkit-backdrop-filter: blur(10px) !important; 
-                border: 1px solid var(--glass-menu-border) !important;
-                transition: background-color 0.3s ease, border-color 0.3s ease !important;
+                background: var(--glass-menu-bg); 
+                backdrop-filter: blur(10px); 
+                -webkit-backdrop-filter: blur(10px); 
+                border: 1px solid var(--glass-menu-border);
+                transition: background-color 0.3s ease, border-color 0.3s ease;
             }
             /* Helper for icons in menus */
-            .auth-menu-link i.w-4, .auth-menu-button i.w-4 { width: 1rem !important; text-align: center !important; } 
+            .auth-menu-link i.w-4, .auth-menu-button i.w-4 { width: 1rem; text-align: center; } 
 
             /* Tab Wrapper and Glide Buttons */
-            /* UPDATED: Removed justify-content: center */
-            .tab-wrapper { flex-grow: 1 !important; display: flex !important; align-items: center !important; position: relative !important; min-width: 0 !important; margin: 0 1rem !important; } 
+            .tab-wrapper { flex-grow: 1; display: flex; align-items: center; position: relative; min-width: 0; margin: 0 1rem; justify-content: center; } /* UPDATED: Added justify-content */
             .tab-scroll-container { 
-                flex-grow: 1 !important; display: flex !important; align-items: center !important; 
-                overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; 
-                scrollbar-width: none !important; -ms-overflow-style: none !important; 
-                padding-bottom: 5px !important; margin-bottom: -5px !important; 
-                scroll-behavior: smooth !important;
-                max-width: 100% !important; /* UPDATED: ensure it doesn't overflow parent */
-                padding-left: 16px !important; /* MODIFICATION: Added to prevent first tab cutoff */
-                padding-right: 16px !important; /* MODIFICATION: Added for symmetry */
-                justify-content: center !important; /* FORCED CENTER-ALIGN */
+                flex-grow: 1; display: flex; align-items: center; 
+                overflow-x: auto; -webkit-overflow-scrolling: touch; 
+                scrollbar-width: none; -ms-overflow-style: none; 
+                padding-bottom: 5px; margin-bottom: -5px; 
+                scroll-behavior: smooth;
+                max-width: 100%; /* UPDATED: ensure it doesn't overflow parent */
+                padding-left: 16px; /* MODIFICATION: Added to prevent first tab cutoff */
+                padding-right: 16px; /* MODIFICATION: Added for symmetry */
             }
-            .tab-scroll-container::-webkit-scrollbar { display: none !important; }
-            /* Glide Button Styles Removed/Commented Out */
-            /*
+            .tab-scroll-container::-webkit-scrollbar { display: none; }
             .scroll-glide-button {
-                position: absolute !important; top: 0 !important; height: 100% !important; width: 64px !important; display: flex !important; align-items: center !important; justify-content: center !important; 
-                color: var(--glide-icon-color) !important; font-size: 1.2rem !important; cursor: pointer !important; 
-                opacity: 1 !important; 
-                transition: opacity 0.3s, color 0.3s ease !important; 
-                z-index: 10 !important; pointer-events: auto !important;
+                position: absolute; top: 0; height: 100%; width: 64px; display: flex; align-items: center; justify-content: center; /* UPDATED width */
+                color: var(--glide-icon-color); font-size: 1.2rem; cursor: pointer; 
+                opacity: 1; 
+                transition: opacity 0.3s, color 0.3s ease; 
+                z-index: 10; pointer-events: auto;
             }
             #glide-left { 
-                left: 0 !important; background: var(--glide-gradient-left) !important; 
-                justify-content: flex-start !important; padding-left: 8px !important; 
-                transition: opacity 0.3s, color 0.3s ease, background 0.3s ease !important;
+                left: 0; background: var(--glide-gradient-left); 
+                justify-content: flex-start; padding-left: 8px; /* UPDATED */
+                transition: opacity 0.3s, color 0.3s ease, background 0.3s ease;
             }
             #glide-right { 
-                right: 0 !important; background: var(--glide-gradient-right) !important; 
-                justify-content: flex-end !important; padding-right: 8px !important; 
-                transition: opacity 0.3s, color 0.3s ease, background 0.3s ease !important;
+                right: 0; background: var(--glide-gradient-right); 
+                justify-content: flex-end; padding-right: 8px; /* UPDATED */
+                transition: opacity 0.3s, color 0.3s ease, background 0.3s ease;
             }
-            .scroll-glide-button.hidden { opacity: 0 !important !important; pointer-events: none !important !important; }
-            */
+            .scroll-glide-button.hidden { opacity: 0 !important; pointer-events: none !important; }
             
             .nav-tab { 
-                flex-shrink: 0 !important; padding: 8px 12px !important; color: var(--tab-text) !important; /* UPDATED */
-                font-size: 0.875rem !important; font-weight: 500 !important; border-radius: 0.7rem !important; 
-                transition: all 0.2s, color 0.3s ease, border-color 0.3s ease, background-color 0.3s ease !important; 
-                text-decoration: none !important; line-height: 1.5 !important; display: flex !important; align-items: center !important; margin-right: 8px !important; /* UPDATED */
-                border: 1px solid transparent !important; 
+                flex-shrink: 0; padding: 8px 12px; color: var(--tab-text); /* UPDATED */
+                font-size: 0.875rem; font-weight: 500; border-radius: 0.7rem; 
+                transition: all 0.2s, color 0.3s ease, border-color 0.3s ease, background-color 0.3s ease; 
+                text-decoration: none; line-height: 1.5; display: flex; align-items: center; margin-right: 8px; /* UPDATED */
+                border: 1px solid transparent; 
             }
             .nav-tab:not(.active):hover { 
-                color: var(--tab-hover-text) !important; 
-                border-color: var(--tab-hover-border) !important; 
-                background-color: var(--tab-hover-bg) !important; 
+                color: var(--tab-hover-text); 
+                border-color: var(--tab-hover-border); 
+                background-color: var(--tab-hover-bg); 
             }
             .nav-tab.active { 
-                color: var(--tab-active-text) !important; 
-                border-color: var(--tab-active-border) !important; 
-                background-color: var(--tab-active-bg) !important; 
+                color: var(--tab-active-text); 
+                border-color: var(--tab-active-border); 
+                background-color: var(--tab-active-bg); 
             }
             .nav-tab.active:hover { 
-                color: var(--tab-active-hover-text) !important; 
-                border-color: var(--tab-active-hover-border) !important; 
-                background-color: var(--tab-active-hover-bg) !important; 
+                color: var(--tab-active-hover-text); 
+                border-color: var(--tab-active-hover-border); 
+                background-color: var(--tab-active-hover-bg); 
             }
             
             /* Pin Button */
             #pin-button {
-                border-color: var(--pin-btn-border) !important;
-                transition: background-color 0.2s, border-color 0.3s ease !important;
+                border-color: var(--pin-btn-border);
+                transition: background-color 0.2s, border-color 0.3s ease;
             }
             #pin-button:hover {
-                background-color: var(--pin-btn-hover-bg) !important;
+                background-color: var(--pin-btn-hover-bg);
             }
             #pin-button-icon {
-                color: var(--pin-btn-icon-color) !important;
-                transition: color 0.3s ease !important;
+                color: var(--pin-btn-icon-color);
+                transition: color 0.3s ease;
             }
 
             /* NEW: Pin Hint Styles */
             .pin-hint-container {
-                position: absolute !important;
-                bottom: calc(100% + 10px) !important; /* 10px above the button */
-                left: 50% !important;
-                transform: translateX(-50%) scale(0.8) !important;
-                background: var(--hint-bg) !important;
-                border: 1px solid var(--hint-border) !important;
-                color: var(--hint-text) !important;
-                padding: 0.5rem 1rem !important;
-                border-radius: 0.9rem !important;
-                box-shadow: 0 4px 10px rgba(0,0,0,0.5) !important;
-                opacity: 0 !important;
-                pointer-events: none !important;
-                z-index: 1020 !important;
-                transition: opacity 0.3s ease, transform 0.3s ease, background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease !important;
-                white-space: nowrap !important;
-                font-size: 0.875rem !important;
+                position: absolute;
+                bottom: calc(100% + 10px); /* 10px above the button */
+                left: 50%;
+                transform: translateX(-50%) scale(0.8);
+                background: var(--hint-bg);
+                border: 1px solid var(--hint-border);
+                color: var(--hint-text);
+                padding: 0.5rem 1rem;
+                border-radius: 0.9rem;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+                opacity: 0;
+                pointer-events: none;
+                z-index: 1020;
+                transition: opacity 0.3s ease, transform 0.3s ease, background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+                white-space: nowrap;
+                font-size: 0.875rem;
             }
             .pin-hint-container.show {
-                opacity: 1 !important;
-                transform: translateX(-50%) scale(1) !important;
-                transition-delay: 0.2s !important; /* Slight delay on show */
+                opacity: 1;
+                transform: translateX(-50%) scale(1);
+                transition-delay: 0.2s; /* Slight delay on show */
             }
 
             /* --- Marquee Styles --- */
             .marquee-container {
-                overflow: hidden !important;
-                white-space: nowrap !important;
-                position: relative !important;
-                max-width: 100% !important;
+                overflow: hidden;
+                white-space: nowrap;
+                position: relative;
+                max-width: 100%;
             }
             
             /* Only apply mask and animation when active */
             .marquee-container.active {
-                mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%) !important;
-                -webkit-mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%) !important;
+                mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+                -webkit-mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
             }
             
             .marquee-content {
-                display: inline-block !important;
-                white-space: nowrap !important;
+                display: inline-block;
+                white-space: nowrap;
             }
             
             .marquee-container.active .marquee-content {
-                animation: marquee 10s linear infinite !important;
+                animation: marquee 10s linear infinite;
                 /* Make sure there is enough width for the scroll */
-                min-width: 100% !important; 
+                min-width: 100%; 
             }
             
             @keyframes marquee {
-                0% { transform: translateX(0) !important; }
-                100% { transform: translateX(-50%) !important; } /* Move half way (since content is duplicated) */
+                0% { transform: translateX(0); }
+                100% { transform: translateX(-50%); } /* Move half way (since content is duplicated) */
             }
         `;
         document.head.appendChild(style);
@@ -810,7 +801,7 @@ let db;
             const loggedInView = (user, userData) => {
                 const username = userData?.username || user.displayName || 'User';
                 const email = user.email || 'No email';
-                const initial = (userData?.letterAvatarText || username.charAt(0)).toUpperCase();
+                const initial = (userData?.pfpLetters || username.charAt(0)).toUpperCase();
                 
                 // --- NEW PROFILE PICTURE LOGIC ---
                 let avatarHtml = '';
@@ -891,7 +882,7 @@ let db;
                                 <a href="https://buymeacoffee.com/4simpleproblems" class="auth-menu-link" target="_blank">
                                     <i class="fa-solid fa-mug-hot w-4"></i>
                                     Donate
-                            </a>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -905,37 +896,83 @@ let db;
         }
 
         /**
-         * NEW: Replaces the pin button area HTML and re-attaches its event listeners.
-         * Used for all pin interactions that do not require a full navbar re-render.
+         * NEW: Encapsulates all listeners for the auth button, dropdown, and actions.
+         * This is separated so it can be re-called during a partial update.
+         * @param {object} user - The current Firebase user object (or null)
          */
-        const updatePinButtonArea = () => {
-            const pinWrapper = document.getElementById('pin-area-wrapper');
-            const newPinHtml = getPinButtonHtml();
+        const setupAuthToggleListeners = (user) => {
+            const toggleButton = document.getElementById('auth-toggle');
+            const menu = document.getElementById('auth-menu-container');
 
-            if (pinWrapper) {
-                 // Check if the pin button is now hidden, if so, remove the wrapper entirely
-                if (newPinHtml === '') {
-                    pinWrapper.remove();
-                } else {
-                    // Update the HTML content
-                    pinWrapper.outerHTML = newPinHtml;
-                }
-                // Need to re-attach listeners after DOM replacement
-                setupPinEventListeners();
-            } else {
-                // If wrapper was not found, it might be the initial render of the pin button 
-                // after it was hidden, so we need to find the parent and append.
-                const authButtonContainer = document.getElementById('auth-controls-wrapper');
-                if (authButtonContainer) {
-                    authButtonContainer.insertAdjacentHTML('afterbegin', newPinHtml);
-                    setupPinEventListeners();
+            // Auth Toggle
+            if (toggleButton && menu) {
+                toggleButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    menu.classList.toggle('closed');
+                    menu.classList.toggle('open');
+                    // Close pin menu if open
+                    document.getElementById('pin-context-menu')?.classList.add('closed');
+                    document.getElementById('pin-context-menu')?.classList.remove('open');
+                    
+                    // Check marquees when menu becomes visible
+                    if (menu.classList.contains('open')) {
+                        checkMarquees();
+                    }
+                });
+            }
+
+            // More Button Toggle
+            const moreButton = document.getElementById('more-button');
+            const moreSection = document.getElementById('more-section');
+            const moreButtonIcon = document.getElementById('more-button-icon');
+            const moreButtonText = document.getElementById('more-button-text');
+
+            if (moreButton && moreSection) {
+                moreButton.addEventListener('click', () => {
+                    const isExpanded = moreSection.style.display === 'block';
+                    moreSection.style.display = isExpanded ? 'none' : 'block';
+                    moreButtonText.textContent = isExpanded ? 'Show More' : 'Show Less';
+                    moreButtonIcon.classList.toggle('fa-chevron-down', isExpanded);
+                    moreButtonIcon.classList.toggle('fa-chevron-up', !isExpanded);
+                });
+            }
+
+            // Auth Menu Action (Show Pin Button)
+            const showPinButton = document.getElementById('show-pin-button');
+            if (showPinButton) {
+                showPinButton.addEventListener('click', () => {
+                    localStorage.setItem(PIN_BUTTON_HIDDEN_KEY, 'false'); // 'false' string
+                    // UPDATED: Call partial update instead of full re-render
+                    updateAuthControlsArea();
+                });
+            }
+
+            if (user) {
+                const logoutButton = document.getElementById('logout-button');
+                if (logoutButton) {
+                    logoutButton.addEventListener('click', () => {
+                        auth.signOut().catch(err => console.error("Logout failed:", err));
+                    });
                 }
             }
-            
-            // Ensure auth menu closes if it was open when the pin area was updated
-            document.getElementById('auth-menu-container')?.classList.add('closed');
-            document.getElementById('auth-menu-container')?.classList.remove('open');
         };
+
+        /**
+         * NEW: Replaces the auth/pin area HTML and re-attaches its event listeners.
+         * Used for all pin/auth-menu interactions that do not require a full navbar re-render.
+         */
+        const updateAuthControlsArea = () => {
+            const authWrapper = document.getElementById('auth-controls-wrapper');
+            if (!authWrapper) return;
+
+            // Get new HTML using the *current* global state
+            authWrapper.innerHTML = getAuthControlsHtml();
+
+            // Re-attach listeners for the new DOM elements
+            setupPinEventListeners();
+            setupAuthToggleListeners(currentUser); // Pass in the global user state
+        }
+
 
         /**
          * NEW: Checks for text overflow in marquee containers and activates animation.
@@ -1029,12 +1066,13 @@ let db;
 
             // Populate the tab-wrapper
             if (tabWrapper) {
-                // Clear existing placeholder content and inject actual tabs. 
-                // GLIDE BUTTONS REMOVED as per user request.
+                // Clear existing placeholder content and inject actual tabs and glide buttons
                 tabWrapper.innerHTML = `
+                    <button id="glide-left" class="scroll-glide-button"><i class="fa-solid fa-chevron-left"></i></button>
                     <div class="tab-scroll-container">
                         ${tabsHtml}
                     </div>
+                    <button id="glide-right" class="scroll-glide-button"><i class="fa-solid fa-chevron-right"></i></button>
                 `;
             }
 
@@ -1043,17 +1081,36 @@ let db;
                 authControlsWrapper.innerHTML = authControlsHtml;
             }
             
-            // --- MODIFIED: Force tab-scroll-container to take up space and align CENTER ---
-            const tabContainer = tabWrapper.querySelector('.tab-scroll-container'); 
-            
-            if(tabContainer) {
-                // Force tabs to be space-filling, center-aligned, and scrollable if they overflow.
-                tabContainer.style.justifyContent = 'center'; // Force center align tabs
-                tabContainer.style.overflowX = 'auto'; // Allow scrolling if needed
-                tabContainer.style.flexGrow = '1'; // Force it to take up available space
+            // --- NEW: Handle tab centering and overflow based on tab count ---
+            const tabContainer = tabWrapper.querySelector('.tab-scroll-container'); // Need to re-query as it was just updated
+            const tabCount = tabContainer ? tabContainer.querySelectorAll('.nav-tab').length : 0;
+
+            // =================================================================
+            // ========= MODIFICATION (1/2) - Center Tab Container ========
+            // =================================================================
+            if (tabCount <= 9) {
+                // If 9 or fewer tabs, center them and disable scrolling
+                if(tabContainer) {
+                    tabContainer.style.justifyContent = 'center';
+                    tabContainer.style.overflowX = 'hidden';
+                    // NEW: Remove flex-grow to allow the container itself to be centered
+                    // by its parent's (tab-wrapper) justify-content: center.
+                    tabContainer.style.flexGrow = '0';
+                }
+            } else {
+                // If more than 9 tabs, align left and enable scrolling
+                if(tabContainer) {
+                    tabContainer.style.justifyContent = 'flex-start';
+                    tabContainer.style.overflowX = 'auto';
+                    // NEW: Restore flex-grow to allow the container to fill
+                    // the space and enable scrolling.
+                    tabContainer.style.flexGrow = '1';
+                }
             }
-            
-            // --- END MODIFIED ---
+            // =================================================================
+            // ====================== END MODIFICATION =========================
+            // =================================================================
+            // --- END NEW ---
 
             // --- 5. SETUP EVENT LISTENERS (Called after full render) ---
             setupEventListeners(user);
@@ -1067,16 +1124,70 @@ let db;
             window.applyTheme(savedTheme || DEFAULT_THEME); 
             // --- End theme apply ---
 
-            // --- Scroll Logic Modified to remove glide button checks and centering ---
-            // The scroll position is restored if a re-render occurred, but no centering is performed.
+            // const tabContainer = document.querySelector('.tab-scroll-container'); // Already defined above
+            
+            // Check if we need to restore scroll position (from a full re-render)
             if (currentScrollLeft > 0) {
                 const savedScroll = currentScrollLeft;
+                // Use requestAnimationFrame to ensure the DOM has painted the new content
+                // before setting the scroll, preventing the jump.
                 requestAnimationFrame(() => {
                     if (tabContainer) {
                         tabContainer.scrollLeft = savedScroll;
                     }
                     currentScrollLeft = 0; // Reset state after restoration
+                    // Nested frame to update arrows *after* scroll is applied
+                    requestAnimationFrame(() => {
+                        updateScrollGilders();
+                    });
                 });
+            // NEW: Only run centering logic if we are NOT restoring scroll AND we haven't scrolled yet.
+            } else if (!hasScrolledToActiveTab) { 
+                // If it's the first load, center the active tab.
+                const activeTab = document.querySelector('.nav-tab.active');
+                if (activeTab && tabContainer) {
+                    
+                    const centerOffset = (tabContainer.offsetWidth - activeTab.offsetWidth) / 2;
+                    const idealCenterScroll = activeTab.offsetLeft - centerOffset;
+                    
+                    const maxScroll = tabContainer.scrollWidth - tabContainer.offsetWidth;
+                    const extraRoomOnRight = maxScroll - idealCenterScroll;
+                    
+                    let scrollTarget;
+
+                    // =================================================================
+                    // ========= MODIFICATION 1 of 3 (Aggressive Set) ========
+                    // =================================================================
+                    if (idealCenterScroll > 0 && extraRoomOnRight < centerOffset) {
+                        // Snap all the way to the right by setting a value
+                        // *larger* than the max, forcing the browser to clamp.
+                        scrollTarget = maxScroll + 50;
+                    } else {
+                        scrollTarget = Math.max(0, idealCenterScroll);
+                    }
+                    // =================================================================
+                    // ====================== END MODIFICATION =========================
+                    // =================================================================
+
+                    // Set scroll and update gilders in the next frame to ensure
+                    // the scrollLeft value is processed by the browser first.
+                    requestAnimationFrame(() => {
+                        tabContainer.scrollLeft = scrollTarget;
+                        // Nested frame to update arrows *after* scroll is applied
+                        requestAnimationFrame(() => {
+                            updateScrollGilders();
+                        });
+                    });
+                    
+                    // IMPORTANT: Set flag to prevent future automatic centering
+                    hasScrolledToActiveTab = true; 
+                } else if (tabContainer) {
+                    // If no active tab (or no tabContainer), still need to update gilders
+                    // to ensure they are hidden correctly on a blank page.
+                    requestAnimationFrame(() => {
+                        updateScrollGilders();
+                    });
+                }
             }
             
             // --- NEW: Init Marquees ---
@@ -1084,7 +1195,103 @@ let db;
         };
 
 
-        // --- MODIFIED: Removed updateScrollGilders and forceScrollToRight functions ---
+        // =================================================================
+        // ========= MODIFICATION 2 of 3 (Tolerant Check) ========
+        // =================================================================
+        const updateScrollGilders = () => {
+            const container = document.querySelector('.tab-scroll-container');
+            const leftButton = document.getElementById('glide-left');
+            const rightButton = document.getElementById('glide-right');
+
+            // --- NEW: Check tab count. If 9 or less, hide gliders and exit. ---
+            const tabCount = document.querySelectorAll('.nav-tab').length;
+            // =================================================================
+            // ========= MODIFICATION (2/2) - Check Tab Container ========
+            // =================================================================
+            // Check if the container is *not* in scroll mode (flex-grow is 0)
+            const isNotScrolling = container && container.style.flexGrow === '0';
+            
+            if (tabCount <= 9 || isNotScrolling) {
+            // =================================================================
+            // ====================== END MODIFICATION =========================
+            // =================================================================
+                if (leftButton) leftButton.classList.add('hidden');
+                if (rightButton) rightButton.classList.add('hidden');
+                return; // Do not run the rest of the scroll logic
+            }
+            // --- END NEW ---
+
+            if (!container || !leftButton || !rightButton) return;
+            
+            const hasHorizontalOverflow = container.scrollWidth > container.offsetWidth + 2; // Add 2px tolerance
+
+            if (hasHorizontalOverflow) {
+                // Use a small tolerance
+                const isScrolledToLeft = container.scrollLeft <= 5;
+                
+                // Calculate max scroll and check against it with tolerance
+                const maxScrollLeft = container.scrollWidth - container.offsetWidth;
+
+                // NEW TOLERANCE LOGIC:
+                // Check if the current scroll position, *plus a 5px tolerance*,
+                // is greater than or equal to the max scroll. This handles
+                // browser sub-pixel rounding errors.
+                const isScrolledToRight = (container.scrollLeft + 5) >= maxScrollLeft;
+
+                // Explicitly add or remove the class
+                if (isScrolledToLeft) {
+                    leftButton.classList.add('hidden');
+                } else {
+                    leftButton.classList.remove('hidden');
+                }
+
+                if (isScrolledToRight) {
+                    rightButton.classList.add('hidden');
+                } else {
+                    rightButton.classList.remove('hidden');
+                }
+            } else {
+                // If there is no overflow, hide both buttons
+                leftButton.classList.add('hidden');
+                rightButton.classList.add('hidden');
+            }
+        };
+        // =================================================================
+        // ====================== END MODIFICATION =========================
+        // =================================================================
+
+
+        // =================================================================
+        // ========= MODIFICATION 3 of 3 (Aggressive Set) ========
+        // =================================================================
+        /**
+         * NEW: Forcefully scrolls the tab container all the way to the right
+         * and ensures the right arrow is hidden.
+         */
+        const forceScrollToRight = () => {
+            const tabContainer = document.querySelector('.tab-scroll-container');
+            if (!tabContainer) return;
+
+            // Calculate the maximum possible scroll position
+            const maxScroll = tabContainer.scrollWidth - tabContainer.offsetWidth;
+
+            // Use requestAnimationFrame to guarantee the scroll happens,
+            // and *then* the arrow visibility is updated.
+            requestAnimationFrame(() => {
+                // Set scrollLeft to a value *larger* than the max.
+                // The browser will automatically clamp this to the
+                // highest possible value, which is more reliable.
+                tabContainer.scrollLeft = maxScroll + 50;
+                
+                // Use a nested frame to update arrows *after* scroll is applied
+                requestAnimationFrame(() => {
+                    updateScrollGilders();
+                });
+            });
+        };
+        // =================================================================
+        // ====================== END MODIFICATION =========================
+        // =================================================================
         
         // Split setupEventListeners into main and pin-specific, 
         // as pin listeners need to be re-attached on partial update.
@@ -1167,16 +1374,17 @@ let db;
         }
 
         const setupEventListeners = (user) => {
-            // --- MODIFIED: Removed Scroll Glide Button setup and listeners ---
-            /*
+            // Scroll Glide Button setup
             const tabContainer = document.querySelector('.tab-scroll-container');
             const leftButton = document.getElementById('glide-left');
             const rightButton = document.getElementById('glide-right');
 
+            // Debounce resize, but NOT scroll
             const debouncedUpdateGilders = debounce(updateScrollGilders, 50);
 
             if (tabContainer) {
                 const scrollAmount = tabContainer.offsetWidth * 0.8; 
+                // UPDATED: Scroll listener is no longer debounced
                 tabContainer.addEventListener('scroll', updateScrollGilders);
                 window.addEventListener('resize', debouncedUpdateGilders);
                 
@@ -1191,7 +1399,6 @@ let db;
                     });
                 }
             }
-            */
 
             // --- NEW: Auth Toggle Listeners (Called on full render) ---
             setupAuthToggleListeners(user);
@@ -1232,7 +1439,7 @@ let db;
                     
                     // Generate new content
                     const username = currentUserData.username || currentUser?.displayName || 'User';
-                    const initial = (currentUserData.letterAvatarText) ? currentUserData.letterAvatarText : username.charAt(0).toUpperCase();
+                    const initial = (currentUserData.pfpLetters) ? currentUserData.pfpLetters : username.charAt(0).toUpperCase();
                     let newContent = '';
                     
                     if (currentUserData.pfpType === 'custom' && currentUserData.customPfp) {
@@ -1244,6 +1451,7 @@ let db;
                         newContent = `<div class="initial-avatar w-full h-full rounded-full font-semibold ${fontSizeClass}" style="background: ${bg}; color: ${textColor}">${initial}</div>`;
                     } else {
                         // 'google' or fallback
+                        // Try to find specific Google photo first if available in providerData
                         // Note: currentUser is available in this scope
                         const googleProvider = currentUser?.providerData.find(p => p.providerId === 'google.com');
                         const googlePhoto = googleProvider ? googleProvider.photoURL : null;
