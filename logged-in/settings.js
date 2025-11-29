@@ -1480,47 +1480,95 @@
 
                             
 
-                            let isOrientationMode = false;
+                                        let isOrientationMode = false;
 
-                            let currentTab = 'hats'; // Track current tab
+                            
 
-                
+                                        let currentTab = 'hats'; // Track current tab
 
-                            const openMenu = () => {
+                            
 
-                                menu.classList.remove('hidden');
+                                        let orientationSnapshot = null; // Store state for reverting
 
-                                // Default selections if empty
+                            
 
-                                if (!mibiAvatarState.eyes) mibiAvatarState.eyes = MIBI_ASSETS.eyes[0];
+                            
 
-                                if (!mibiAvatarState.mouths) mibiAvatarState.mouths = MIBI_ASSETS.mouths[0];
+                            
 
-                                
+                                        const openMenu = () => {
 
-                                // Reset Orientation Mode state on open
+                            
 
-                                exitOrientationMode();
+                                            menu.classList.remove('hidden');
 
-                                updateMibiPreview();
+                            
 
-                                
+                                            // Default selections if empty
 
-                                // Trigger click on first tab (or current) to load it
+                            
 
-                                // Default to Hats
+                                            if (!mibiAvatarState.eyes) mibiAvatarState.eyes = MIBI_ASSETS.eyes[0];
 
-                                document.querySelector(`.mac-tab-btn[data-tab="${currentTab}"]`)?.click();
+                            
 
-                            };
+                                            if (!mibiAvatarState.mouths) mibiAvatarState.mouths = MIBI_ASSETS.mouths[0];
 
-                
+                            
 
-                            const closeMenu = () => {
+                                            
 
-                                menu.classList.add('hidden');
+                            
 
-                            };
+                                            // Reset Orientation Mode state on open
+
+                            
+
+                                            exitOrientationMode(false); // Don't revert on initial open reset
+
+                            
+
+                                            updateMibiPreview();
+
+                            
+
+                                            
+
+                            
+
+                                            // Trigger click on first tab (or current) to load it
+
+                            
+
+                                            // Default to Hats
+
+                            
+
+                                            document.querySelector(`.mac-tab-btn[data-tab="${currentTab}"]`)?.click();
+
+                            
+
+                                        };
+
+                            
+
+                            
+
+                            
+
+                                        const closeMenu = () => {
+
+                            
+
+                                            menu.classList.add('hidden');
+
+                            
+
+                                        };
+
+                            
+
+                                        
 
                             
 
@@ -1537,6 +1585,18 @@
                             
 
                                             isOrientationMode = true;
+
+                            
+
+                                            
+
+                            
+
+                                            // Snapshot state for revert
+
+                            
+
+                                            orientationSnapshot = { ...mibiAvatarState };
 
                             
 
@@ -1588,7 +1648,7 @@
 
                             
 
-                                            // Adjust sliders container for side-by-side layout, pushed to right
+                                            // Adjust sliders container for side-by-side layout, filling remaining width
 
                             
 
@@ -1596,7 +1656,7 @@
 
                             
 
-                                            slidersContainer.classList.add('flex', 'opacity-100', 'ml-auto', 'mt-16', 'p-4'); // Sliders to the right, pushed down, with padding
+                                            slidersContainer.classList.add('flex', 'opacity-100', 'flex-grow', 'mt-16', 'p-4'); // flex-grow lets it stretch
 
                             
 
@@ -1660,11 +1720,35 @@
 
                             
 
-                                        const exitOrientationMode = () => {
+                                        const exitOrientationMode = (shouldRevert = false) => {
 
                             
 
                                             isOrientationMode = false;
+
+                            
+
+                                            
+
+                            
+
+                                            if (shouldRevert && orientationSnapshot) {
+
+                            
+
+                                                mibiAvatarState = { ...orientationSnapshot };
+
+                            
+
+                                                updateMibiPreview();
+
+                            
+
+                                            }
+
+                            
+
+                                            orientationSnapshot = null;
 
                             
 
@@ -1720,7 +1804,7 @@
 
                             
 
-                                            slidersContainer.classList.remove('flex', 'opacity-100', 'ml-auto', 'mt-16', 'p-4'); // Remove dynamic positioning and padding
+                                            slidersContainer.classList.remove('flex', 'opacity-100', 'flex-grow', 'mt-16', 'p-4'); // Remove dynamic positioning and padding
 
                             
 
@@ -1926,114 +2010,235 @@
 
                     
 
-                    cancelBtn.onclick = () => {
-
-                        if (isOrientationMode) {
-
-                            exitOrientationMode();
-
-                        } else {
-
-                            closeMenu();
-
-                        }
-
-                    };
+                                cancelBtn.onclick = () => {
 
                     
 
-                    // --- Reset Button Logic ---
+                                    if (isOrientationMode) {
 
-                    resetBtn.onclick = () => {
+                    
 
-                        // Reset State to Defaults
+                                        exitOrientationMode(true); // Revert changes
 
-                        mibiAvatarState = {
+                    
 
-                            eyes: MIBI_ASSETS.eyes[0], // Default eyes
+                                    } else {
 
-                            mouths: MIBI_ASSETS.mouths[0], // Default mouth
+                    
 
-                            hats: '',
+                                        closeMenu();
 
-                            bgColor: '#FFFFFF', // Requested white default
+                    
 
-                            size: 100,
+                                    }
 
-                            rotation: 0,
+                    
 
-                            offsetX: 0,
+                                };
 
-                            offsetY: 0
+                    
 
-                        };
+                                
 
-                        
+                    
 
-                        // Update Visuals
+                                // --- Reset Button Logic ---
 
-                        updateMibiPreview();
+                    
 
-                        
+                                resetBtn.onclick = () => {
 
-                        // Update Sliders
+                    
 
-                        sizeSlider.value = 100;
+                                    // Reset State to Defaults
 
-                        rotationSlider.value = 0;
+                    
 
-                        
+                                    mibiAvatarState = {
 
-                        // Re-render current tab (to update selection rings)
+                    
 
-                        renderMacGrid(currentTab);
+                                        eyes: MIBI_ASSETS.eyes[0], // Default eyes
 
-                    };
+                    
 
-        
+                                        mouths: MIBI_ASSETS.mouths[0], // Default mouth
 
-                    // Tab Switching Logic
+                    
 
-                    tabBtns.forEach(btn => {
+                                        hats: '',
 
-                        btn.onclick = () => {
+                    
 
-                            // Update UI
+                                        bgColor: '#FFFFFF', // Requested white default
 
-                            tabBtns.forEach(b => {
+                    
 
-                                b.classList.remove('active-tab', 'text-white', 'border-blue-500');
+                                        size: 100,
 
-                                b.classList.add('text-gray-400', 'border-transparent');
+                    
 
-                            });
+                                        rotation: 0,
 
-                            btn.classList.add('active-tab', 'text-white', 'border-blue-500');
+                    
 
-                            btn.classList.remove('text-gray-400', 'border-transparent');
+                                        offsetX: 0,
 
-                            
+                    
 
-                            // Track Tab
+                                        offsetY: 0
 
-                            currentTab = btn.dataset.tab;
+                    
 
-        
+                                    };
 
-                            // Load Content
+                    
 
-                            renderMacGrid(btn.dataset.tab);
+                                    
 
-                        };
+                    
 
-                    });
+                                    // Update Visuals
 
-            // Confirm Action
-            confirmBtn.onclick = async () => {
-                if (isOrientationMode) {
-                    exitOrientationMode();
-                    return;
-                }
+                    
+
+                                    updateMibiPreview();
+
+                    
+
+                                    
+
+                    
+
+                                    // Update Sliders
+
+                    
+
+                                    sizeSlider.value = 100;
+
+                    
+
+                                    rotationSlider.value = 0;
+
+                    
+
+                                    
+
+                    
+
+                                    // Re-render current tab (to update selection rings)
+
+                    
+
+                                    renderMacGrid(currentTab);
+
+                    
+
+                                };
+
+                    
+
+                    
+
+                    
+
+                                // Tab Switching Logic
+
+                    
+
+                                tabBtns.forEach(btn => {
+
+                    
+
+                                    btn.onclick = () => {
+
+                    
+
+                                        // Update UI
+
+                    
+
+                                        tabBtns.forEach(b => {
+
+                    
+
+                                            b.classList.remove('active-tab', 'text-white', 'border-blue-500');
+
+                    
+
+                                            b.classList.add('text-gray-400', 'border-transparent');
+
+                    
+
+                                        });
+
+                    
+
+                                        btn.classList.add('active-tab', 'text-white', 'border-blue-500');
+
+                    
+
+                                        btn.classList.remove('text-gray-400', 'border-transparent');
+
+                    
+
+                                        
+
+                    
+
+                                        // Track Tab
+
+                    
+
+                                        currentTab = btn.dataset.tab;
+
+                    
+
+                    
+
+                    
+
+                                        // Load Content
+
+                    
+
+                                        renderMacGrid(btn.dataset.tab);
+
+                    
+
+                                    };
+
+                    
+
+                                });
+
+                    
+
+                    
+
+                    
+
+                                // Confirm Action
+
+                    
+
+                                confirmBtn.onclick = async () => {
+
+                    
+
+                                    if (isOrientationMode) {
+
+                    
+
+                                        exitOrientationMode(false); // Keep changes
+
+                    
+
+                                        return;
+
+                    
+
+                                    }
                 
                 closeMenu();
                 showMessage(pfpMessage, '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Saving Mibi Avatar...', 'warning');
