@@ -34,6 +34,36 @@ const DEFAULT_THEME = {
     'avatar-gradient': 'linear-gradient(135deg, #374151 0%, #111827 100%)',
 };
 
+const PINNED_PAGE_KEY = 'navbar_pinnedPage';
+const PIN_BUTTON_HIDDEN_KEY = 'navbar_pinButtonHidden';
+
+/**
+ * NEW FUNCTION: applyCounterZoom
+ * This calculates the browser's current zoom level (devicePixelRatio) and applies
+ * an inverse scale transform to the navbar. This forces the navbar to appear the
+ * same physical size regardless of zoom.
+ */
+const applyCounterZoom = () => {
+    const navbar = document.querySelector('.auth-navbar');
+    if (!navbar) return;
+
+    // Get the current zoom ratio (e.g., 1.25 for 125% zoom)
+    // Default to 1 if undefined
+    const dpr = window.devicePixelRatio || 1;
+
+    // Calculate inverse scale (e.g., 0.8 for 125% zoom)
+    const scale = 1 / dpr;
+
+    // Apply scale.
+    // We use transform instead of 'zoom' property for better cross-browser support (Firefox)
+    navbar.style.transform = `scale(${scale})`;
+    
+    // Compensate Width:
+    // If we scale down to 0.5, the 100% width becomes 50% of screen.
+    // We need to double the width to fill the screen again.
+    navbar.style.width = `${dpr * 100}%`;
+};
+
 
 // --- Self-invoking function to encapsulate all logic ---
 (function() {
@@ -70,6 +100,25 @@ const DEFAULT_THEME = {
             link.onerror = resolve; // Resolve even on error to not block the app
             document.head.appendChild(link);
         });
+    };
+
+    const getIconClass = (iconName) => {
+        if (!iconName) return '';
+        const nameParts = iconName.trim().split(/\s+/).filter(p => p.length > 0);
+        let stylePrefix = 'fa-solid'; 
+        const stylePrefixes = ['fa-solid', 'fa-regular', 'fa-light', 'fa-thin', 'fa-brands'];
+        const existingPrefix = nameParts.find(p => stylePrefixes.includes(p));
+        if (existingPrefix) stylePrefix = existingPrefix;
+        const nameCandidate = nameParts.find(p => p.startsWith('fa-') && !stylePrefixes.includes(p));
+        let baseName = '';
+        if (nameCandidate) {
+            baseName = nameCandidate;
+        } else {
+            baseName = nameParts.find(p => !stylePrefixes.includes(p));
+            if (baseName && !baseName.startsWith('fa-')) baseName = `fa-${baseName}`;
+        }
+        if (baseName) return `${stylePrefix} ${baseName}`;
+        return '';
     };
 
     const run = async () => {
@@ -191,6 +240,8 @@ const DEFAULT_THEME = {
             
             .auth-navbar { 
                 position: fixed; top: 0; left: 0; right: 0; z-index: 1000; 
+                /* UPDATED: transform-origin ensures scaling happens from top-left corner */
+                transform-origin: top left;
                 background: #000000; /* Pure Black */
                 border-bottom: 1px solid rgb(31 41 55); height: 4rem; 
             }
@@ -420,6 +471,44 @@ const DEFAULT_THEME = {
         });
     };
 
+    const getMiniPinButtonHtml = () => {
+        const pinnedPageKey = localStorage.getItem(PINNED_PAGE_KEY);
+        const isPinButtonHidden = localStorage.getItem(PIN_BUTTON_HIDDEN_KEY) === 'true';
+
+        // Only show pin button if a page is pinned and it's not hidden
+        if (!pinnedPageKey || isPinButtonHidden) return '';
+        
+        // Use a generic icon and always link to index.html for simplicity in mini-navbar
+        const pinButtonIcon = 'fa-solid fa-thumbtack';
+        const pinButtonUrl = '../index.html'; 
+        const pinButtonTitle = 'Go to pinned page';
+
+        return `
+            <div id="mini-pin-area-wrapper" class="relative flex-shrink-0 flex items-center">
+                <a href="${pinButtonUrl}" id="mini-pin-button" class="w-10 h-10 rounded-full border border-gray-600 flex items-center justify-center hover:bg-gray-700 transition" title="${pinButtonTitle}">
+                    <i class="${pinButtonIcon}"></i>
+                </a>
+            </div>
+        `;
+    }
+
+    const updatePinButtonArea = () => {
+        const pinWrapper = document.getElementById('mini-pin-area-wrapper');
+        const newPinHtml = getMiniPinButtonHtml();
+        const authButtonContainer = document.getElementById('auth-controls-wrapper-mini');
+
+        if (pinWrapper) {
+            if (newPinHtml === '') {
+                pinWrapper.remove();
+            } else {
+                pinWrapper.outerHTML = newPinHtml;
+            }
+        } else if (authButtonContainer && newPinHtml !== '') {
+            // Prepend if the auth button container exists and we have a button to show
+            authButtonContainer.insertAdjacentHTML('afterbegin', newPinHtml);
+        }
+    };
+
     // --- 4. RENDER THE NAVBAR HTML (UPDATED) ---
     const renderNavbar = (user, userData) => {
         const container = document.getElementById('navbar-container');
@@ -498,6 +587,7 @@ const DEFAULT_THEME = {
             // --- END NEW LOGIC ---
 
             return `
+                ${getMiniPinButtonHtml()}
                 <div class="relative">
                     <button id="auth-toggle" class="w-10 h-10 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
                         ${avatarHtml}
@@ -530,10 +620,15 @@ const DEFAULT_THEME = {
                     <a href="/" class="flex items-center space-x-2">
                         <img src="${logoPath}" alt="4SP Logo" class="h-10 w-auto">
                     </a>
-                    ${user ? loggedInView(user, userData) : loggedOutView(currentPagePath)}
+                    <div id="auth-controls-wrapper-mini" class="flex items-center gap-3 flex-shrink-0">
+                        ${user ? loggedInView(user, userData) : loggedOutView(currentPagePath)}
+                    </div>
                 </nav>
             </header>
         `;
+
+        // Apply Counter Zoom immediately on creation
+        applyCounterZoom();
 
         // --- 5. SETUP EVENT LISTENERS ---
         setupEventListeners(user);
@@ -574,6 +669,52 @@ const DEFAULT_THEME = {
                 });
             }
         }
+        // --- MODIFIED: RESIZE EVENT ---
+        // We now trigger both glider updates AND the counter-zoom logic
+        window.addEventListener('resize', () => {
+            applyCounterZoom(); // Re-calculate zoom scale on resize
+        });
+        // --- END MODIFICATION ---
+    };
+
+    const setupEventListeners = (user) => {
+        const toggleButton = document.getElementById('auth-toggle');
+        const menu = document.getElementById('auth-menu-container');
+
+        if (toggleButton && menu) {
+            toggleButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                menu.classList.toggle('closed');
+                menu.classList.toggle('open');
+                
+                if (menu.classList.contains('open')) {
+                    checkMarquees();
+                }
+            });
+        }
+
+        document.addEventListener('click', (e) => {
+            if (menu && menu.classList.contains('open') && !menu.contains(e.target) && e.target !== toggleButton) {
+                menu.classList.add('closed');
+                menu.classList.remove('open');
+            }
+        });
+
+        if (user) {
+            const logoutButton = document.getElementById('logout-button');
+            if (logoutButton) {
+                // Use the globally available 'auth' reference
+                logoutButton.addEventListener('click', () => {
+                    auth.signOut().catch(err => console.error("Logout failed:", err));
+                });
+            }
+        }
+        // --- MODIFIED: RESIZE EVENT ---
+        // We now trigger both glider updates AND the counter-zoom logic
+        window.addEventListener('resize', () => {
+            applyCounterZoom(); // Re-calculate zoom scale on resize
+        });
+        // --- END MODIFICATION ---
     };
 
     // --- 6. AUTH STATE LISTENER (MODIFIED) ---

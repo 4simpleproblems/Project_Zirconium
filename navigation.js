@@ -1107,10 +1107,8 @@ let db;
                 const currentPathname = window.location.pathname;
                 const isEntryPoint = currentPathname.includes('index.html') || currentPathname.includes('authentication.html') || currentPathname === '/';
                 
-                if (!isEntryPoint) {
-                    console.log(`User logged out. Restricting access and redirecting to ${targetUrl}`);
-                    window.location.href = targetUrl;
-                }
+                console.log(`User logged out. Restricting access and redirecting to ${targetUrl}`);
+                window.location.href = targetUrl;
             }
         });
     };
