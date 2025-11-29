@@ -32,10 +32,11 @@
  * 24. **(FIXED)** INITIAL AVATAR CENTERING: Changed `w-8 h-8` to `w-full h-full` on the `initial-avatar` div to ensure perfect centering of the user's initial letter inside the button.
  * 25. **(NEW)** DROPDOWN STYLING: Updated dropdown buttons to match the "Notes" app style (gap, darker hover).
  * 26. **(UPDATED)** THEME LOGIC: Removed hardcoded theme name checks from `window.applyTheme`. Theme properties (like logo and colors) are now pulled *only* from the theme object, falling back to `DEFAULT_THEME`.
- * * --- USER MODIFICATIONS APPLIED ---
  * 27. **(NEW)** !important ADDED: Every CSS declaration in `injectStyles` now has `!important`.
  * 28. **(NEW)** GLIDE REMOVED: Scroll glide buttons are removed from HTML and all related JS logic has been removed/disabled.
  * 29. **(NEW)** FORCED LAYOUT: Tabs are forced to left-align, take up all available space, and scroll if they overflow.
+ * * --- USER MODIFICATIONS APPLIED ---
+ * 30. **(MODIFIED)** TAB CENTERING: The tabs within the scroll container are now **forced to be centered** using `justify-content: center !important`.
  */
 
 // =========================================================================
@@ -329,7 +330,7 @@ let db;
         }
     };
 
-    // --- 3. INJECT CSS STYLES (MODIFIED: ADDED !IMPORTANT TO ALL DECLARATIONS) ---
+    // --- 3. INJECT CSS STYLES (MODIFIED: ADDED !IMPORTANT TO ALL DECLARATIONS, FORCED CENTERING) ---
     // This now uses CSS variables for all colors and transitions.
     // *** UPDATED to use px for fixed layout sizing and ADDED !IMPORTANT ***
     const injectStyles = () => {
@@ -436,7 +437,7 @@ let db;
                 max-width: 100% !important; /* UPDATED: ensure it doesn't overflow parent */
                 padding-left: 16px !important; /* MODIFICATION: Added to prevent first tab cutoff */
                 padding-right: 16px !important; /* MODIFICATION: Added for symmetry */
-                justify-content: flex-start !important; /* FORCED LEFT-ALIGN */
+                justify-content: center !important; /* FORCED CENTER-ALIGN */
             }
             .tab-scroll-container::-webkit-scrollbar { display: none !important; }
             /* Glide Button Styles Removed/Commented Out */
@@ -890,7 +891,7 @@ let db;
                                 <a href="https://buymeacoffee.com/4simpleproblems" class="auth-menu-link" target="_blank">
                                     <i class="fa-solid fa-mug-hot w-4"></i>
                                     Donate
-                                </a>
+                            </a>
                             </div>
                         </div>
                     </div>
@@ -1088,12 +1089,12 @@ let db;
                 authControlsWrapper.innerHTML = authControlsHtml;
             }
             
-            // --- MODIFIED: Force tab-scroll-container to take up space and align left ---
+            // --- MODIFIED: Force tab-scroll-container to take up space and align CENTER ---
             const tabContainer = tabWrapper.querySelector('.tab-scroll-container'); 
             
             if(tabContainer) {
-                // Force tabs to be space-filling, left-aligned, and scrollable if they overflow.
-                tabContainer.style.justifyContent = 'flex-start'; // Force left align tabs
+                // Force tabs to be space-filling, center-aligned, and scrollable if they overflow.
+                tabContainer.style.justifyContent = 'center'; // Force center align tabs
                 tabContainer.style.overflowX = 'auto'; // Allow scrolling if needed
                 tabContainer.style.flexGrow = '1'; // Force it to take up available space
             }
@@ -1283,13 +1284,12 @@ let db;
                     if (currentUserData.pfpType === 'custom' && currentUserData.customPfp) {
                         newContent = `<img src="${currentUserData.customPfp}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
                     } else if (currentUserData.pfpType === 'letter') {
-                        const bg = currentUserData.letterAvatarColor || DEFAULT_THEME['avatar-gradient'];
+                        const bg = currentUserData.pfpLetterBg || DEFAULT_THEME['avatar-gradient'];
                         const textColor = getLetterAvatarTextColor(bg);
                         const fontSizeClass = initial.length >= 3 ? 'text-xs' : (initial.length === 2 ? 'text-sm' : 'text-base');
                         newContent = `<div class="initial-avatar w-full h-full rounded-full font-semibold ${fontSizeClass}" style="background: ${bg}; color: ${textColor}">${initial}</div>`;
                     } else {
                         // 'google' or fallback
-                        // Try to find specific Google photo first if available in providerData
                         // Note: currentUser is available in this scope
                         const googleProvider = currentUser?.providerData.find(p => p.providerId === 'google.com');
                         const googlePhoto = googleProvider ? googleProvider.photoURL : null;
