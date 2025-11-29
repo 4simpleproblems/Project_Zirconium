@@ -3146,7 +3146,7 @@
                     customSettings.classList.toggle('hidden', type !== 'custom');
                     // Hide the MAC menu overlay unless explicitly opened
                     macMenu.classList.add('hidden');
-
+                
                     // Update avatar preview based on type
                     if (type === 'custom' && userData.customPfp) {
                         customPfpPreview.src = userData.customPfp;
@@ -3162,13 +3162,18 @@
                         customPfpPlaceholder.style.color = ''; // Clear custom color
                     }
                 };
-
+                
                 // Init Custom Dropdown
                 const pfpDropdown = setupCustomDropdown(pfpModeSelect, async (type) => {
                     updatePfpUi(type);
                     // Auto-save type change
                     try {
-                        await updateDoc(userDocRef, { pfpType: type });
+                        // If switching to Mibi, ensure current mibiAvatarState is saved
+                        if (type === 'mibi') {
+                            await updateDoc(userDocRef, { pfpType: type, mibiConfig: mibiAvatarState });
+                        } else {
+                            await updateDoc(userDocRef, { pfpType: type });
+                        }
                         userData.pfpType = type; // Update local state
                         triggerNavbarUpdate();
                         showMessage(pfpMessage, 'Preference saved!', 'success');
@@ -3176,31 +3181,43 @@
                         showMessage(pfpMessage, 'Error saving preference.', 'error');
                     }
                 });
-
+                
                 if (!pfpDropdown) { // Defensive check
                     console.error("pfpDropdown could not be initialized.");
                     return; // Exit if dropdown failed to initialize
+                }
+                
+                // --- NEW: Load Mibi Avatar State from User Data ---
+                if (userData.mibiConfig) {
+                    // Merge loaded config into the global mibiAvatarState
+                    mibiAvatarState = { ...mibiAvatarState, ...userData.mibiConfig };
                 }
                 
                 // Add event listener for the Open Mibi Avatar Creator button
                 if (openMacMenuBtn) {
                     openMacMenuBtn.addEventListener('click', () => {
                         macMenu.classList.remove('hidden'); // Show the MAC menu overlay
-                        currentMacSlide = 1; // Reset to first slide
-                        showMacSlide(currentMacSlide);
+                        
+                        // Ensure MAC menu UI reflects the loaded mibiAvatarState when opened
+                        // This implicitly happens through openMenu which calls updateMibiPreview and renderMacGrid
+                        // But explicitly calling updateMibiPreview here ensures the preview is current upon opening
+                        updateMibiPreview(); 
+                
+                        // Reset to default tab if none was previously selected, or ensure current tab is active
+                        document.querySelector(`.mac-tab-btn[data-tab="${currentTab}"]`)?.click();
                     });
                 }
-
+                
                 // Set initial display based on saved settings
                 pfpDropdown.setValue(currentPfpType);
                 if (currentPfpType === 'custom') {
                     customSettings.classList.remove('hidden');
                 } else if (currentPfpType === 'mibi') {
                     mibiSettings.classList.remove('hidden'); // Ensure the container div for Mibi settings is visible
+                    updateMibiPreview(); // IMPORTANT: Update Mibi preview with loaded state
                 }
                 const uploadBtn = document.getElementById('uploadPfpBtn');
-                const fileInput = document.getElementById('pfpFileInput');
-                const cropperModal = document.getElementById('cropperModal');
+                const fileInput = document.getElementById('pfpFileInput');                const cropperModal = document.getElementById('cropperModal');
                 const cropperCanvas = document.getElementById('cropperCanvas');
                 const cancelCropBtn = document.getElementById('cancelCropBtn');
                 const submitCropBtn = document.getElementById('submitCropBtn');
