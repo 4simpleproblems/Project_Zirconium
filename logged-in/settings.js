@@ -990,41 +990,49 @@
                                         <!-- Slide Container -->
                                         <div id="mac-slide-container" class="relative flex-grow overflow-hidden">
                                             <!-- Slide 1: Part Selection -->
-                                            <div id="mac-slide-1" class="mac-slide absolute inset-0 transition-transform duration-300 transform translate-x-0 flex items-center justify-center">
-                                                <!-- Avatar Display Area -->
-                                                <div id="mibi-avatar-display-area" class="relative flex-shrink-0 w-1/2 h-full flex items-center justify-center transition-all duration-300">
-                                                    <img id="mibi-head-base" src="../mibi-avatars/head.png" alt="Mibi Avatar Base" class="max-h-full max-w-full object-contain">
-                                                    <!-- Layers for eyes, mouth, hats -->
-                                                    <img id="mibi-eyes-layer" src="" alt="Mibi Eyes" class="absolute max-h-full max-w-full object-contain" style="display:none;">
-                                                    <img id="mibi-mouth-layer" src="" alt="Mibi Mouth" class="absolute max-h-full max-w-full object-contain" style="display:none;">
-                                                    <img id="mibi-hat-layer" src="" alt="Mibi Hat" class="absolute max-h-full max-w-full object-contain" style="display:none;">
-                                                </div>
-
-                                                <!-- Part Selection Toolbar (aligned right) -->
-                                                <div id="mibi-part-toolbar" class="w-1/2 h-full p-4 flex flex-col justify-start items-start border-l border-[#252525]">
-                                                    <div class="flex flex-col w-full mb-4">
-                                                        <button class="btn-toolbar-style btn-primary-override w-full mb-2" data-part="eyes">
-                                                            <i class="fa-solid fa-eye mr-2"></i> Eyes
-                                                        </button>
-                                                        <button class="btn-toolbar-style btn-primary-override w-full mb-2" data-part="mouths">
-                                                            <i class="fa-solid fa-mouth mr-2"></i> Mouths
-                                                        </button>
-                                                        <button class="btn-toolbar-style btn-primary-override w-full mb-2" data-part="hats">
-                                                            <i class="fa-solid fa-hat-wizard mr-2"></i> Hats
-                                                        </button>
+                                            <div id="mac-slide-1" class="mac-slide absolute inset-0 transition-transform duration-300 transform translate-x-0 flex items-center">
+                                                <!-- Container for Avatar Display and Toolbar -->
+                                                <div class="relative flex h-full w-full">
+                                                    <!-- Avatar Display Area -->
+                                                    <div id="mibi-avatar-display-area" class="relative flex-grow h-full flex items-center justify-center transition-all duration-300">
+                                                        <img id="mibi-head-base" src="../mibi-avatars/head.png" alt="Mibi Avatar Base" class="max-h-full max-w-full object-contain">
+                                                        <!-- Layers for eyes, mouth, hats -->
+                                                        <img id="mibi-eyes-layer" src="" alt="Mibi Eyes" class="absolute max-h-full max-w-full object-contain" style="display:none;">
+                                                        <img id="mibi-mouth-layer" src="" alt="Mibi Mouth" class="absolute max-h-full max-w-full object-contain" style="display:none;">
+                                                        <img id="mibi-hat-layer" src="" alt="Mibi Hat" class="absolute max-h-full max-w-full object-contain" style="display:none;">
                                                     </div>
-                                                    
-                                                    <!-- Part Selection Menu (Hats, Eyes, Mouths) - initially hidden -->
-                                                    <div id="mibi-selection-menu" class="hidden w-full flex-grow overflow-y-auto p-2 border-t border-[#252525]">
-                                                        <!-- Options will be dynamically loaded here -->
-                                                        <p class="text-sm text-gray-400">Select a part...</p>
+
+                                                    <!-- Part Selection Toolbar (aligned right) -->
+                                                    <div id="mibi-part-toolbar" class="absolute right-0 h-full p-4 flex flex-col justify-start items-start
+                                                        bg-[#1a1a1a] rounded-r-lg shadow-xl border-t border-r border-b z-10 transition-all duration-300
+                                                        w-0 opacity-0 pointer-events-none">
+                                                        <div class="flex flex-col w-full mb-4">
+                                                            <button class="btn-toolbar-style w-full mb-2 bg-[#040404] hover:bg-[#252525] rounded-lg" data-part="eyes">
+                                                                <i class="fa-solid fa-eye mr-2"></i> Eyes
+                                                            </button>
+                                                            <button class="btn-toolbar-style w-full mb-2 bg-[#040404] hover:bg-[#252525] rounded-lg" data-part="mouths">
+                                                                <i class="fa-solid fa-mouth mr-2"></i> Mouths
+                                                            </button>
+                                                            <button class="btn-toolbar-style w-full mb-2 bg-[#040404] hover:bg-[#252525] rounded-lg" data-part="hats">
+                                                                <i class="fa-solid fa-hat-wizard mr-2"></i> Hats
+                                                            </button>
+                                                        </div>
+                                                        
+                                                        <!-- Part Selection Menu (Hats, Eyes, Mouths) - initially hidden -->
+                                                        <div id="mibi-selection-menu" class="hidden w-full flex-grow overflow-y-auto p-2 border-t border-[#252525] bg-[#040404] rounded-b-lg">
+                                                            <!-- Options will be dynamically loaded here -->
+                                                            <p class="text-sm text-gray-400">Select a part...</p>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
 
                                             <!-- Slide 2: Background Color Selection -->
-                                            <div id="mac-slide-2" class="mac-slide absolute inset-0 transition-transform duration-300 transform translate-x-full hidden flex-col items-center justify-center">
+                                            <div id="mac-slide-2" class="mac-slide absolute inset-0 transition-transform duration-300 transform translate-x-full hidden flex-col items-center justify-center p-4">
                                                 <h4 class="text-xl font-bold text-white mb-4">Select Background Color</h4>
+                                                <div id="mibi-slide2-preview" class="relative w-48 h-48 rounded-full overflow-hidden border-2 border-gray-500 mb-4">
+                                                    <!-- Mibi avatar preview will be rendered here -->
+                                                </div>
                                                 <div id="mibi-color-palette" class="grid grid-cols-4 gap-4">
                                                     <!-- Color options will be dynamically generated -->
                                                     <div class="color-swatch w-12 h-12 rounded-full cursor-pointer bg-red-500" data-color="#EF4444"></div>
@@ -1042,29 +1050,29 @@
                                             </div>
 
                                             <!-- Slide 3: Orientation/Size/Rotation -->
-                                            <div id="mac-slide-3" class="mac-slide absolute inset-0 transition-transform duration-300 transform translate-x-full hidden flex-col items-center justify-center">
+                                            <div id="mac-slide-3" class="mac-slide absolute inset-0 transition-transform duration-300 transform translate-x-full hidden flex-col items-center justify-center p-4">
                                                 <h4 class="text-xl font-bold text-white mb-4">Adjust Orientation</h4>
-                                                <div class="flex w-full h-full items-center justify-center gap-8">
-                                                    <div id="mibi-final-preview-container" class="relative w-48 h-48 rounded-full overflow-hidden border-dashed border-2 border-gray-500 flex-shrink-0">
+                                                <div class="flex flex-col md:flex-row w-full h-full items-center justify-center gap-8">
+                                                    <div id="mibi-final-preview-container" class="relative w-48 h-48 rounded-full overflow-hidden border-2 border-white flex-shrink-0 flex items-center justify-center">
                                                         <!-- Mibi avatar preview will be rendered here -->
                                                     </div>
-                                                    <div class="flex flex-col gap-4">
+                                                    <div class="flex flex-col gap-4 w-full md:w-auto max-w-xs">
                                                         <div>
                                                             <label for="mibi-size-slider" class="block text-gray-400 text-sm font-light mb-2">Size</label>
-                                                            <input type="range" id="mibi-size-slider" min="50" max="150" value="100" class="w-full">
+                                                            <input type="range" id="mibi-size-slider" min="50" max="150" value="100" class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer range-lg">
                                                         </div>
                                                         <div>
                                                             <label for="mibi-rotation-slider" class="block text-gray-400 text-sm font-light mb-2">Rotation</label>
-                                                            <input type="range" id="mibi-rotation-slider" min="0" max="360" value="0" class="w-full">
+                                                            <input type="range" id="mibi-rotation-slider" min="0" max="360" value="0" class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer range-lg">
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
 
                                             <!-- Slide 4: Confirm Avatar -->
-                                            <div id="mac-slide-4" class="mac-slide absolute inset-0 transition-transform duration-300 transform translate-x-full hidden flex-col items-center justify-center">
+                                            <div id="mac-slide-4" class="mac-slide absolute inset-0 transition-transform duration-300 transform translate-x-full hidden flex-col items-center justify-center p-4">
                                                 <h4 class="text-xl font-bold text-white mb-4">Confirm Your Mibi Avatar</h4>
-                                                <div id="mibi-final-confirmation-preview" class="w-32 h-32 rounded-full overflow-hidden border-2 border-white">
+                                                <div id="mibi-final-confirmation-preview" class="relative w-48 h-48 rounded-full overflow-hidden border-2 border-white flex items-center justify-center">
                                                     <!-- Final avatar preview -->
                                                 </div>
                                             </div>
@@ -1274,19 +1282,8 @@
                 macConfirmBtn.classList.add('hidden');
             }
 
-            // Avatar display sliding animation for first slide
-            const mibiAvatarDisplayArea = document.getElementById('mibi-avatar-display-area');
-            if (slideNum === 1) {
-                // Determine if part selection menu is open
-                const mibiSelectionMenu = document.getElementById('mibi-selection-menu');
-                if (mibiSelectionMenu && !mibiSelectionMenu.classList.contains('hidden')) {
-                    mibiAvatarDisplayArea.style.transform = 'translateX(-25%)'; // Slide left for part menu
-                } else {
-                    mibiAvatarDisplayArea.style.transform = 'translateX(0)'; // Center
-                }
-            } else {
-                mibiAvatarDisplayArea.style.transform = 'translateX(0)'; // Center for other slides (if visible)
-            }
+            // Update all avatar previews when switching slides
+            updateMibiAvatarPreview(); // This will now update all relevant previews
         };
 
         // Global state for Mibi Avatar parts
@@ -1313,7 +1310,8 @@
 
             // Apply background color to the display area (Slide 1, and eventually for previews)
             mibiAvatarDisplayArea.style.backgroundColor = mibiAvatarState.bgColor;
-            
+            mibiAvatarDisplayArea.style.transform = 'translateX(0)'; // Reset transform
+
             // Update individual part layers
             mibiEyesLayer.src = mibiAvatarState.eyes ? `../mibi-avatars/eyes/${mibiAvatarState.eyes}` : '';
             mibiEyesLayer.style.display = mibiAvatarState.eyes ? 'block' : 'none';
@@ -1331,7 +1329,8 @@
             mibiMouthLayer.style.transform = transformStyle;
             mibiHatLayer.style.transform = transformStyle;
 
-            // Update Slide 3 and Slide 4 previews
+            // Update Slide 2, Slide 3 and Slide 4 previews
+            renderMibiAvatarToPreview(document.getElementById('mibi-slide2-preview'), mibiAvatarState); // NEW
             renderMibiAvatarToPreview(document.getElementById('mibi-final-preview-container'), mibiAvatarState);
             renderMibiAvatarToPreview(document.getElementById('mibi-final-confirmation-preview'), mibiAvatarState);
         };
@@ -1381,14 +1380,18 @@
         const loadMibiParts = async (partType) => {
             const mibiSelectionMenu = document.getElementById('mibi-selection-menu');
             const mibiAvatarDisplayArea = document.getElementById('mibi-avatar-display-area');
+            const mibiPartToolbar = document.getElementById('mibi-part-toolbar'); // Get toolbar reference
 
-            if (!mibiSelectionMenu || !mibiAvatarDisplayArea) return;
+            if (!mibiSelectionMenu || !mibiAvatarDisplayArea || !mibiPartToolbar) return;
 
-            // Toggle visibility of the selection menu
+            // Toggle visibility of the selection menu and toolbar
             if (currentActivePartSelection === partType) {
-                // Clicking the same part button again hides the selection menu
+                // Clicking the same part button again hides the selection menu and toolbar
                 mibiSelectionMenu.classList.add('hidden');
-                mibiAvatarDisplayArea.style.transform = 'translateX(0)'; // Slide back to center
+                mibiPartToolbar.classList.remove('w-1/2', 'opacity-100', 'pointer-events-auto');
+                mibiPartToolbar.classList.add('w-0', 'opacity-0', 'pointer-events-none'); // Hide toolbar
+                mibiAvatarDisplayArea.classList.remove('w-1/2'); // Avatar takes full width
+                mibiAvatarDisplayArea.classList.add('w-full');
                 currentActivePartSelection = null;
                 return;
             }
@@ -1396,7 +1399,12 @@
             currentActivePartSelection = partType;
             mibiSelectionMenu.innerHTML = '<i class="fa-solid fa-spinner fa-spin fa-2x text-gray-500 m-4"></i>';
             mibiSelectionMenu.classList.remove('hidden');
-            mibiAvatarDisplayArea.style.transform = 'translateX(-25%)'; // Slide left smoothly
+            
+            // Show toolbar and adjust avatar display area
+            mibiPartToolbar.classList.remove('w-0', 'opacity-0', 'pointer-events-none');
+            mibiPartToolbar.classList.add('w-1/2', 'opacity-100', 'pointer-events-auto'); // Show toolbar
+            mibiAvatarDisplayArea.classList.remove('w-full');
+            mibiAvatarDisplayArea.classList.add('w-1/2'); // Avatar takes half width
 
             try {
                 // Simulate fetching directory contents
