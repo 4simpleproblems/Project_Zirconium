@@ -447,16 +447,16 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
             const keys = Object.keys(siteMapping);
             keys.sort((a, b) => b.length - a.length);
             for (const key of keys) {
-                const normalizedKey = key.replace(/^https?:\]\/\//, "");
+                const normalizedKey = key.replace(/^https?:\/\//, ""); // Fixed regex: removed '\]' and correctly escaped '/'
                 if (currentURL.includes(normalizedKey)) {
                     return normalizedKey;
                 }
             }
-            return window.location.host + window.location.pathname.replace(///\$/, "");
+            return window.location.host + window.location.pathname.replace(/\/$/, ""); // Fixed regex: correctly escaped '/'
         }
         
         function normalizeDomainKey(str) {
-            return str.replace(/^https?:\]\/\//, "").replace(///\$/, "");
+            return str.replace(/^https?:\/\//, "").replace(/\/$/, ""); // Fixed regex: removed '\]' and correctly escaped '/'
         }
         
         function replaceDomainsInData(dataObj, currentDomain) {
