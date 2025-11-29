@@ -1286,7 +1286,7 @@
             hats: ['strawhat.png', 'tophat.png', 'partyhat.png', 'halo.png', 'toiletpaper.png'],
             colors: [
                 '#EF4444', '#F97316', '#F59E0B', '#22C55E', '#3B82F6', 
-                '#6366F1', '#A855F7', '#EC4899', '#000000', '#FFFFFF'
+                '#6366F1', '#A855F7', '#EC4899', '#FFFFFF'
             ]
         };
 
@@ -1404,248 +1404,479 @@
             }
         };
 
-        const setupMacMenuListeners = () => {
-            const openBtn = document.getElementById('open-mac-menu-btn');
-            const menu = document.getElementById('mibi-mac-menu');
-            const closeBtn = document.getElementById('mac-close-x-btn');
-            const cancelBtn = document.getElementById('mac-cancel-btn');
-            const confirmBtn = document.getElementById('mac-confirm-btn');
-            const resetBtn = document.getElementById('mac-reset-btn'); // NEW
-            const tabBtns = document.querySelectorAll('.mac-tab-btn');
-            const pfpModeSelect = document.getElementById('pfpModeSelect');
-            const pfpMessage = document.getElementById('pfpMessage');
-            
-            // Orientation Mode Elements
-            const previewContainer = document.getElementById('mac-preview-container');
-            const previewWrapper = document.getElementById('mac-preview-wrapper'); // The w-1/2 container
-            const controlsWrapper = document.getElementById('mac-controls-wrapper'); // The w-1/2 menu container
-            const slidersContainer = document.getElementById('mac-sliders-container');
-            const sizeSlider = document.getElementById('mac-size-slider');
-            const rotationSlider = document.getElementById('mac-rotation-slider');
+                const setupMacMenuListeners = () => {
 
-            if (!openBtn || !menu) return;
+                    const openBtn = document.getElementById('open-mac-menu-btn');
 
-            window.Mibi_ASSETS = MIBI_ASSETS; 
-            
-            let isOrientationMode = false;
-            let currentTab = 'hats'; // Track current tab
+                    const menu = document.getElementById('mibi-mac-menu');
 
-            const openMenu = () => {
-                menu.classList.remove('hidden');
-                // Default selections if empty
-                if (!mibiAvatarState.eyes) mibiAvatarState.eyes = MIBI_ASSETS.eyes[0];
-                if (!mibiAvatarState.mouths) mibiAvatarState.mouths = MIBI_ASSETS.mouths[0];
-                
-                // Reset Orientation Mode state on open
-                exitOrientationMode();
-                updateMibiPreview();
-                
-                // Trigger click on first tab (or current) to load it
-                // Default to Hats
-                document.querySelector(`.mac-tab-btn[data-tab="${currentTab}"]`)?.click();
-            };
+                    const closeBtn = document.getElementById('mac-close-x-btn');
 
-            const closeMenu = () => {
-                menu.classList.add('hidden');
-            };
-            
-            // --- Orientation Mode Logic ---
-            const enterOrientationMode = () => {
-                if (isOrientationMode) return;
-                isOrientationMode = true;
-                
-                // Animate UI
-                previewWrapper.classList.remove('w-1/2', 'flex-col', 'items-center', 'justify-center');
-                previewWrapper.classList.add('w-full', 'flex-row', 'justify-center', 'items-start', 'gap-4'); // New layout for orientation mode
-                
-                // Apply scale to preview container (make it smaller to avoid clipping)
-                previewContainer.style.transform = 'scale(0.75)'; 
-                // Push down to avoid top clipping
-                previewContainer.classList.add('mt-16');
+                    const cancelBtn = document.getElementById('mac-cancel-btn');
 
-                // Adjust preview container size for side-by-side layout
-                previewContainer.classList.remove('w-64', 'h-64', 'md:w-80', 'md:h-80'); // Remove default sizes
-                previewContainer.classList.add('w-2/3', 'flex-shrink-0'); // Set new relative size for side-by-side
-                previewContainer.style.width = '250px'; // Set a fixed width for the preview circle itself
-                previewContainer.style.height = '250px';
-                
-                // Adjust sliders container for side-by-side layout
-                slidersContainer.classList.remove('hidden', 'opacity-0', 'max-w-xs');
-                slidersContainer.classList.add('flex', 'opacity-100', 'w-1/3', 'p-4', 'flex-shrink-0', 'ml-4', 'mt-16'); // Sliders to the right, pushed down
-                
-                controlsWrapper.classList.add('translate-x-full', 'w-0', 'overflow-hidden', 'p-0'); // Slide out and collapse
-                controlsWrapper.classList.remove('translate-x-0', 'w-1/2');
-                
-                // Update Button
-                confirmBtn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Confirm Orientation';
-                
-                // Sync sliders
-                sizeSlider.value = mibiAvatarState.size;
-                rotationSlider.value = mibiAvatarState.rotation;
-            };
-            
-            const exitOrientationMode = () => {
-                isOrientationMode = false;
-                
-                // Revert UI
-                previewWrapper.classList.add('w-1/2', 'flex-col', 'items-center', 'justify-center'); // Revert to default layout
-                previewWrapper.classList.remove('w-full', 'flex-row', 'justify-center', 'items-start', 'gap-4');
-                
-                // Remove scale and margin
-                previewContainer.style.transform = '';
-                previewContainer.classList.remove('mt-16');
+                    const confirmBtn = document.getElementById('mac-confirm-btn');
 
-                // Revert preview container size
-                previewContainer.classList.add('w-64', 'h-64', 'md:w-80', 'md:h-80'); // Re-add default sizes
-                previewContainer.classList.remove('w-2/3', 'flex-shrink-0');
-                previewContainer.style.width = ''; // Remove fixed width
-                previewContainer.style.height = '';
+                    const resetBtn = document.getElementById('mac-reset-btn'); // NEW
 
-                // Revert sliders container
-                slidersContainer.classList.add('hidden', 'opacity-0', 'max-w-xs');
-                slidersContainer.classList.remove('flex', 'opacity-100', 'w-1/3', 'p-4', 'flex-shrink-0', 'ml-4', 'mt-16');
+                    const tabBtns = document.querySelectorAll('.mac-tab-btn');
 
+                    const pfpModeSelect = document.getElementById('pfpModeSelect');
 
-                controlsWrapper.classList.remove('translate-x-full', 'w-0', 'overflow-hidden', 'p-0');
-                controlsWrapper.classList.add('translate-x-0', 'w-1/2');
+                    const pfpMessage = document.getElementById('pfpMessage');
 
-                // Hide Sliders
-                // slidersContainer.classList.add('hidden', 'opacity-0'); // already handled by previous classlist.remove
-                // slidersContainer.classList.remove('flex', 'opacity-100');
-                
-                // Update Button
-                confirmBtn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Confirm Avatar';
-            };
-            
-            // Preview Click -> Enter Mode
-            previewContainer.addEventListener('click', (e) => {
-                // Only enter orientation mode if click is not on a slider handle during dragging
-                if (!isOrientationMode) {
-                    enterOrientationMode();
-                }
-            });
-            
-            // --- Drag Logic ---
-            let isDragging = false;
-            let startX, startY, initialOffsetX, initialOffsetY;
-            
-            previewContainer.addEventListener('mousedown', (e) => {
-                if (!isOrientationMode) return;
-                isDragging = true;
-                startX = e.clientX;
-                startY = e.clientY;
-                initialOffsetX = mibiAvatarState.offsetX;
-                initialOffsetY = mibiAvatarState.offsetY;
-                previewContainer.style.cursor = 'grabbing';
-            });
-            
-            window.addEventListener('mousemove', (e) => {
-                if (!isDragging || !isOrientationMode) return;
-                
-                const rect = previewContainer.getBoundingClientRect();
-                const dx = e.clientX - startX;
-                const dy = e.clientY - startY;
-                
-                // Convert drag distance to percentage of container size
-                const scale = 0.75;
-                const deltaXPercent = (dx / (rect.width / scale)) * 100;
-                const deltaYPercent = (dy / (rect.height / scale)) * 100;
-                
-                let newX = initialOffsetX + deltaXPercent;
-                let newY = initialOffsetY + deltaYPercent;
-                
-                // Clamp values (e.g. -60 to 60)
-                const CLAMP_LIMIT = 60;
-                newX = Math.max(-CLAMP_LIMIT, Math.min(CLAMP_LIMIT, newX));
-                newY = Math.max(-CLAMP_LIMIT, Math.min(CLAMP_LIMIT, newY));
-
-                mibiAvatarState.offsetX = newX;
-                mibiAvatarState.offsetY = newY;
-                
-                updateMibiPreview();
-            });
-            
-            window.addEventListener('mouseup', () => {
-                isDragging = false;
-                if (previewContainer) previewContainer.style.cursor = isOrientationMode ? 'grab' : 'pointer';
-            });
-            
-            // --- Slider Listeners ---
-            const snapThreshold = 5; // degrees/percent
-            sizeSlider.addEventListener('input', (e) => {
-                let value = parseInt(e.target.value);
-                if (Math.abs(value - 100) < snapThreshold) { // Snap to 100
-                    value = 100;
-                    e.target.value = 100; // Update visual slider position
-                }
-                mibiAvatarState.size = value;
-                updateMibiPreview();
-            });
-            
-            rotationSlider.addEventListener('input', (e) => {
-                let value = parseInt(e.target.value);
-                if (Math.abs(value - 0) < snapThreshold) { // Snap to 0
-                    value = 0;
-                    e.target.value = 0; // Update visual slider position
-                }
-                mibiAvatarState.rotation = value;
-                updateMibiPreview();
-            });
-
-
-            openBtn.onclick = openMenu;
-            closeBtn.onclick = closeMenu;
-            cancelBtn.onclick = () => {
-                if (isOrientationMode) {
-                    exitOrientationMode();
-                } else {
-                    closeMenu();
-                }
-            };
-            
-            // --- Reset Button Logic ---
-            resetBtn.onclick = () => {
-                // Reset State to Defaults
-                mibiAvatarState = {
-                    eyes: MIBI_ASSETS.eyes[0], // Default eyes
-                    mouths: MIBI_ASSETS.mouths[0], // Default mouth
-                    hats: '',
-                    bgColor: '#FFFFFF', // Requested white default
-                    size: 100,
-                    rotation: 0,
-                    offsetX: 0,
-                    offsetY: 0
-                };
-                
-                // Update Visuals
-                updateMibiPreview();
-                
-                // Update Sliders
-                sizeSlider.value = 100;
-                rotationSlider.value = 0;
-                
-                // Re-render current tab (to update selection rings)
-                renderMacGrid(currentTab);
-            };
-
-            // Tab Switching Logic
-            tabBtns.forEach(btn => {
-                btn.onclick = () => {
-                    // Update UI
-                    tabBtns.forEach(b => {
-                        b.classList.remove('active-tab', 'text-white', 'border-blue-500');
-                        b.classList.add('text-gray-400', 'border-transparent');
-                    });
-                    btn.classList.add('active-tab', 'text-white', 'border-blue-500');
-                    btn.classList.remove('text-gray-400', 'border-transparent');
                     
-                    // Track Tab
-                    currentTab = btn.dataset.tab;
 
-                    // Load Content
-                    renderMacGrid(btn.dataset.tab);
-                };
-            });
+                    // Orientation Mode Elements
+
+                    const previewContainer = document.getElementById('mac-preview-container');
+
+                    const previewWrapper = document.getElementById('mac-preview-wrapper'); // The w-1/2 container
+
+                    const controlsWrapper = document.getElementById('mac-controls-wrapper'); // The w-1/2 menu container
+
+                    const slidersContainer = document.getElementById('mac-sliders-container');
+
+                    const sizeSlider = document.getElementById('mac-size-slider');
+
+                    const rotationSlider = document.getElementById('mac-rotation-slider');
+
+                    const macPreviewLabel = document.getElementById('mac-preview-label'); // NEW: Reference to the label
+
+        
+
+                    if (!openBtn || !menu) return;
+
+        
+
+                    window.Mibi_ASSETS = MIBI_ASSETS; 
+
+                    
+
+                    let isOrientationMode = false;
+
+                    let currentTab = 'hats'; // Track current tab
+
+        
+
+                    const openMenu = () => {
+
+                        menu.classList.remove('hidden');
+
+                        // Default selections if empty
+
+                        if (!mibiAvatarState.eyes) mibiAvatarState.eyes = MIBI_ASSETS.eyes[0];
+
+                        if (!mibiAvatarState.mouths) mibiAvatarState.mouths = MIBI_ASSETS.mouths[0];
+
+                        
+
+                        // Reset Orientation Mode state on open
+
+                        exitOrientationMode();
+
+                        updateMibiPreview();
+
+                        
+
+                        // Trigger click on first tab (or current) to load it
+
+                        // Default to Hats
+
+                        document.querySelector(`.mac-tab-btn[data-tab="${currentTab}"]`)?.click();
+
+                    };
+
+        
+
+                    const closeMenu = () => {
+
+                        menu.classList.add('hidden');
+
+                    };
+
+                    
+
+                    // --- Orientation Mode Logic ---
+
+                    const enterOrientationMode = () => {
+
+                        if (isOrientationMode) return;
+
+                        isOrientationMode = true;
+
+                        
+
+                        // Animate UI
+
+                        previewWrapper.classList.remove('w-1/2', 'flex-col', 'items-center', 'justify-center');
+
+                        previewWrapper.classList.add('w-full', 'flex-row', 'justify-start', 'items-start', 'gap-x-12', 'pl-16'); // New layout for orientation mode
+
+        
+
+                        // Ensure preview container retains its original size, remove dynamic sizing
+
+                        previewContainer.style.transform = ''; // Remove scale
+
+                        previewContainer.style.width = ''; // Remove fixed width
+
+                        previewContainer.style.height = ''; // Remove fixed height
+
+                        previewContainer.classList.remove('mt-16', 'w-2/3', 'flex-shrink-0'); // Remove dynamic sizing/margin
+
+                        previewContainer.classList.add('w-64', 'h-64', 'md:w-80', 'md:h-80'); // Re-add default sizes
+
+        
+
+                        // Adjust sliders container for side-by-side layout, pushed to right
+
+                        slidersContainer.classList.remove('hidden', 'opacity-0', 'max-w-xs', 'w-1/3', 'ml-4');
+
+                        slidersContainer.classList.add('flex', 'opacity-100', 'ml-auto', 'mt-16', 'p-4'); // Sliders to the right, pushed down, with padding
+
+                        
+
+                        controlsWrapper.classList.add('translate-x-full', 'w-0', 'overflow-hidden', 'p-0'); // Slide out and collapse
+
+                        controlsWrapper.classList.remove('translate-x-0', 'w-1/2');
+
+                        
+
+                        // Hide "Click preview" text
+
+                        macPreviewLabel.classList.add('hidden');
+
+                        
+
+                        // Update Button
+
+                        confirmBtn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Confirm Orientation';
+
+                        
+
+                        // Sync sliders
+
+                        sizeSlider.value = mibiAvatarState.size;
+
+                        rotationSlider.value = mibiAvatarState.rotation;
+
+                    };
+
+                    
+
+                    const exitOrientationMode = () => {
+
+                        isOrientationMode = false;
+
+                        
+
+                        // Revert UI
+
+                        previewWrapper.classList.add('w-1/2', 'flex-col', 'items-center', 'justify-center'); // Revert to default layout
+
+                        previewWrapper.classList.remove('w-full', 'flex-row', 'justify-start', 'items-start', 'gap-x-12', 'pl-16');
+
+                        
+
+                        // Restore preview container to default
+
+                        previewContainer.style.transform = '';
+
+                        previewContainer.classList.remove('mt-16', 'w-2/3', 'flex-shrink-0'); // Ensure these are removed
+
+                        // Default width/height are handled by initial HTML classes `w-64 h-64 md:w-80 md:h-80 rounded-full`
+
+        
+
+                        // Restore sliders container
+
+                        slidersContainer.classList.add('hidden', 'opacity-0', 'max-w-xs');
+
+                        slidersContainer.classList.remove('flex', 'opacity-100', 'ml-auto', 'mt-16', 'p-4'); // Remove dynamic positioning and padding
+
+        
+
+        
+
+                        controlsWrapper.classList.remove('translate-x-full', 'w-0', 'overflow-hidden', 'p-0');
+
+                        controlsWrapper.classList.add('translate-x-0', 'w-1/2');
+
+        
+
+                        // Show "Click preview" text
+
+                        macPreviewLabel.classList.remove('hidden');
+
+                        
+
+                        // Update Button
+
+                        confirmBtn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Confirm Avatar';
+
+                    };
+
+                    
+
+                    // Preview Click -> Enter Mode
+
+                    previewContainer.addEventListener('click', (e) => {
+
+                        // Only enter orientation mode if click is not on a slider handle during dragging
+
+                        if (!isOrientationMode) {
+
+                            enterOrientationMode();
+
+                        }
+
+                    });
+
+                    
+
+                    // --- Drag Logic ---
+
+                    let isDragging = false;
+
+                    let startX, startY, initialOffsetX, initialOffsetY;
+
+                    
+
+                    previewContainer.addEventListener('mousedown', (e) => {
+
+                        if (!isOrientationMode) return;
+
+                        isDragging = true;
+
+                        startX = e.clientX;
+
+                        startY = e.clientY;
+
+                        initialOffsetX = mibiAvatarState.offsetX;
+
+                        initialOffsetY = mibiAvatarState.offsetY;
+
+                        previewContainer.style.cursor = 'grabbing';
+
+                    });
+
+                    
+
+                    window.addEventListener('mousemove', (e) => {
+
+                        if (!isDragging || !isOrientationMode) return;
+
+                        
+
+                        const rect = previewContainer.getBoundingClientRect();
+
+                        const dx = e.clientX - startX;
+
+                        const dy = e.clientY - startY;
+
+                        
+
+                        // Convert drag distance to percentage of container size
+
+                        // Removed scale from here as preview is no longer scaled
+
+                        const deltaXPercent = (dx / rect.width) * 100;
+
+                        const deltaYPercent = (dy / rect.height) * 100;
+
+                        
+
+                        let newX = initialOffsetX + deltaXPercent;
+
+                        let newY = initialOffsetY + deltaYPercent;
+
+                        
+
+                        // Clamp values (e.g. -60 to 60)
+
+                        const CLAMP_LIMIT = 60;
+
+                        newX = Math.max(-CLAMP_LIMIT, Math.min(CLAMP_LIMIT, newX));
+
+                        newY = Math.max(-CLAMP_LIMIT, Math.min(CLAMP_LIMIT, newY));
+
+        
+
+                        mibiAvatarState.offsetX = newX;
+
+                        mibiAvatarState.offsetY = newY;
+
+                        
+
+                        updateMibiPreview();
+
+                    });
+
+                    
+
+                    window.addEventListener('mouseup', () => {
+
+                        isDragging = false;
+
+                        if (previewContainer) previewContainer.style.cursor = isOrientationMode ? 'grab' : 'pointer';
+
+                    });
+
+                    
+
+                    // --- Slider Listeners ---
+
+                    const snapThreshold = 5; // degrees/percent
+
+                    sizeSlider.addEventListener('input', (e) => {
+
+                        let value = parseInt(e.target.value);
+
+                        if (Math.abs(value - 100) < snapThreshold) { // Snap to 100
+
+                            value = 100;
+
+                            e.target.value = 100; // Update visual slider position
+
+                        }
+
+                        mibiAvatarState.size = value;
+
+                        updateMibiPreview();
+
+                    });
+
+                    
+
+                    rotationSlider.addEventListener('input', (e) => {
+
+                        let value = parseInt(e.target.value);
+
+                        if (Math.abs(value - 0) < snapThreshold) { // Snap to 0
+
+                            value = 0;
+
+                            e.target.value = 0; // Update visual slider position
+
+                        }
+
+                        mibiAvatarState.rotation = value;
+
+                        updateMibiPreview();
+
+                    });
+
+        
+
+        
+
+                    openBtn.onclick = openMenu;
+
+                    closeBtn.onclick = closeMenu;
+
+                    
+
+                    cancelBtn.onclick = () => {
+
+                        if (isOrientationMode) {
+
+                            exitOrientationMode();
+
+                        } else {
+
+                            closeMenu();
+
+                        }
+
+                    };
+
+                    
+
+                    // --- Reset Button Logic ---
+
+                    resetBtn.onclick = () => {
+
+                        // Reset State to Defaults
+
+                        mibiAvatarState = {
+
+                            eyes: MIBI_ASSETS.eyes[0], // Default eyes
+
+                            mouths: MIBI_ASSETS.mouths[0], // Default mouth
+
+                            hats: '',
+
+                            bgColor: '#FFFFFF', // Requested white default
+
+                            size: 100,
+
+                            rotation: 0,
+
+                            offsetX: 0,
+
+                            offsetY: 0
+
+                        };
+
+                        
+
+                        // Update Visuals
+
+                        updateMibiPreview();
+
+                        
+
+                        // Update Sliders
+
+                        sizeSlider.value = 100;
+
+                        rotationSlider.value = 0;
+
+                        
+
+                        // Re-render current tab (to update selection rings)
+
+                        renderMacGrid(currentTab);
+
+                    };
+
+        
+
+                    // Tab Switching Logic
+
+                    tabBtns.forEach(btn => {
+
+                        btn.onclick = () => {
+
+                            // Update UI
+
+                            tabBtns.forEach(b => {
+
+                                b.classList.remove('active-tab', 'text-white', 'border-blue-500');
+
+                                b.classList.add('text-gray-400', 'border-transparent');
+
+                            });
+
+                            btn.classList.add('active-tab', 'text-white', 'border-blue-500');
+
+                            btn.classList.remove('text-gray-400', 'border-transparent');
+
+                            
+
+                            // Track Tab
+
+                            currentTab = btn.dataset.tab;
+
+        
+
+                            // Load Content
+
+                            renderMacGrid(btn.dataset.tab);
+
+                        };
+
+                    });
 
             // Confirm Action
             confirmBtn.onclick = async () => {
