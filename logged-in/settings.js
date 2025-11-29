@@ -1455,21 +1455,26 @@
                 isOrientationMode = true;
                 
                 // Animate UI
-                previewWrapper.classList.remove('w-1/2');
-                previewWrapper.classList.add('w-full');
+                previewWrapper.classList.remove('w-1/2', 'flex-col', 'items-center', 'justify-center');
+                previewWrapper.classList.add('w-full', 'flex-row', 'justify-center', 'items-start', 'gap-4'); // New layout for orientation mode
                 
                 // Apply scale to preview container (make it smaller to avoid clipping)
                 previewContainer.style.transform = 'scale(0.75)'; 
                 // Push down to avoid top clipping
                 previewContainer.classList.add('mt-16');
 
+                // Adjust preview container size for side-by-side layout
+                previewContainer.classList.remove('w-64', 'h-64', 'md:w-80', 'md:h-80'); // Remove default sizes
+                previewContainer.classList.add('w-2/3', 'flex-shrink-0'); // Set new relative size for side-by-side
+                previewContainer.style.width = '250px'; // Set a fixed width for the preview circle itself
+                previewContainer.style.height = '250px';
+                
+                // Adjust sliders container for side-by-side layout
+                slidersContainer.classList.remove('hidden', 'opacity-0', 'max-w-xs');
+                slidersContainer.classList.add('flex', 'opacity-100', 'w-1/3', 'p-4', 'flex-shrink-0', 'ml-4', 'mt-16'); // Sliders to the right, pushed down
                 
                 controlsWrapper.classList.add('translate-x-full', 'w-0', 'overflow-hidden', 'p-0'); // Slide out and collapse
                 controlsWrapper.classList.remove('translate-x-0', 'w-1/2');
-                
-                // Show Sliders
-                slidersContainer.classList.remove('hidden', 'opacity-0');
-                slidersContainer.classList.add('flex', 'opacity-100');
                 
                 // Update Button
                 confirmBtn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Confirm Orientation';
@@ -1483,20 +1488,30 @@
                 isOrientationMode = false;
                 
                 // Revert UI
-                previewWrapper.classList.add('w-1/2');
-                previewWrapper.classList.remove('w-full');
+                previewWrapper.classList.add('w-1/2', 'flex-col', 'items-center', 'justify-center'); // Revert to default layout
+                previewWrapper.classList.remove('w-full', 'flex-row', 'justify-center', 'items-start', 'gap-4');
                 
                 // Remove scale and margin
                 previewContainer.style.transform = '';
                 previewContainer.classList.remove('mt-16');
+
+                // Revert preview container size
+                previewContainer.classList.add('w-64', 'h-64', 'md:w-80', 'md:h-80'); // Re-add default sizes
+                previewContainer.classList.remove('w-2/3', 'flex-shrink-0');
+                previewContainer.style.width = ''; // Remove fixed width
+                previewContainer.style.height = '';
+
+                // Revert sliders container
+                slidersContainer.classList.add('hidden', 'opacity-0', 'max-w-xs');
+                slidersContainer.classList.remove('flex', 'opacity-100', 'w-1/3', 'p-4', 'flex-shrink-0', 'ml-4', 'mt-16');
 
 
                 controlsWrapper.classList.remove('translate-x-full', 'w-0', 'overflow-hidden', 'p-0');
                 controlsWrapper.classList.add('translate-x-0', 'w-1/2');
 
                 // Hide Sliders
-                slidersContainer.classList.add('hidden', 'opacity-0');
-                slidersContainer.classList.remove('flex', 'opacity-100');
+                // slidersContainer.classList.add('hidden', 'opacity-0'); // already handled by previous classlist.remove
+                // slidersContainer.classList.remove('flex', 'opacity-100');
                 
                 // Update Button
                 confirmBtn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Confirm Avatar';
@@ -1580,7 +1595,13 @@
 
             openBtn.onclick = openMenu;
             closeBtn.onclick = closeMenu;
-            cancelBtn.onclick = closeMenu;
+            cancelBtn.onclick = () => {
+                if (isOrientationMode) {
+                    exitOrientationMode();
+                } else {
+                    closeMenu();
+                }
+            };
             
             // --- Reset Button Logic ---
             resetBtn.onclick = () => {
@@ -2666,7 +2687,7 @@
                 }
 
                 // Set initial display based on saved settings
-                pfpModeSelect.value = currentPfpType;
+                pfpDropdown.setValue(currentPfpType);
                 if (currentPfpType === 'custom') {
                     customSettings.classList.remove('hidden');
                 } else if (currentPfpType === 'mibi') {
