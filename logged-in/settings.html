@@ -453,39 +453,50 @@
         .loading-overlay.active {
           display: flex;
         }
-        .loading-animation {
-          display: flex;
-          align-items: center;
-          margin-bottom: 20px;
+        .loading-logo-container {
+            position: relative;
+            width: 80px; /* Adjust size as needed */
+            height: 80px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .loading-bar {
-          background-color: rgba(255, 255, 255, 0.3);
-          width: 20px;
-          height: 40px;
-          margin-right: 5px;
-          border-radius: 10px;
-          animation: load ease infinite 5s;
+
+        .loading-logo {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            position: relative;
+            z-index: 1; /* Ensure logo is above glow */
         }
-        .loading-bar:nth-child(2) {
-          animation-delay: 0.1s;
+
+        .loading-logo-glow {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%; /* Circular glow */
+            background: rgba(79, 70, 229, 0.7); /* Blue glow */
+            box-shadow: 0 0 15px 5px rgba(79, 70, 229, 0.7);
+            animation: pulse-glow 2s infinite ease-in-out;
+            z-index: 0;
         }
-        .loading-bar:nth-child(3) {
-          animation-delay: 0.2s;
-        }
-        .loading-bar:nth-child(4) {
-          animation-delay: 0.3s;
-        }
-        .loading-bar:nth-child(5) {
-          animation-delay: 0.4s;
-        }
-        @keyframes load {
-          0%,
-          100% {
-            transform: rotate(0deg);
-          }
-          50% {
-            transform: rotate(720deg) rotateX(180deg);
-          }
+
+        @keyframes pulse-glow {
+            0% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+            50% {
+                transform: scale(1.1);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
         }
         
         /* --- Cropper Modal Styles --- */
@@ -603,12 +614,9 @@
         </div>
     </div>
     <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-animation">
-            <div class="loading-bar"></div>
-            <div class="loading-bar"></div>
-            <div class="loading-bar"></div>
-            <div class="loading-bar"></div>
-            <div class="loading-bar"></div>
+        <div class="loading-logo-container">
+            <img src="../images/logo.png" alt="Loading Logo" class="loading-logo">
+            <div class="loading-logo-glow"></div>
         </div>
         <p id="loadingText">Loading...</p>
     </div>

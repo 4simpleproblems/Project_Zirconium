@@ -3721,7 +3721,10 @@
                 console.error(`Error loading tab ${tabId}:`, error);
                 mainView.innerHTML = `<p class="text-red-400">Error loading tab content.</p>`;
             } finally {
-                hideLoading();
+                // Ensure spinner is shown for a minimum duration to avoid flickering
+                setTimeout(() => {
+                    hideLoading();
+                }, 500); // Minimum 500ms display time
             }
 
             // 3. New: Smoothly scroll the window back to the top (y=0)
