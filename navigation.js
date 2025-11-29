@@ -30,7 +30,7 @@ const FIREBASE_CONFIG = {
 const PAGE_CONFIG_URL = '../page-identification.json';
 const PRIVILEGED_EMAIL = '4simpleproblems@gmail.com'; 
 const THEME_STORAGE_KEY = 'user-navbar-theme';
-const lightThemeNames = ['Light', 'Lavender', 'Rose Gold', 'Mint']; // Define light theme names
+const lightThemeNames = ['Light', 'Lavender', 'Rose Gold', 'Mint', 'Pink']; // Define light theme names
 
 const DEFAULT_THEME = {
     'logo-src': '/images/logo.png', 
@@ -109,6 +109,18 @@ window.applyTheme = (theme) => {
         if (currentSrc !== expectedSrc) {
             logoImg.src = newLogoSrc;
         }
+
+        // --- NEW: Logo Tinting Logic ---
+        const noFilterThemes = ['Dark', 'Light', 'Christmas', ...lightThemeNames]; // Light themes already use logo-dark.png or are specifically styled
+
+        if (noFilterThemes.includes(themeToApply.name)) {
+            logoImg.style.filter = ''; // Clear any filter
+        } else {
+            // Apply a subtle tinting effect for other themes
+            // This can be adjusted based on desired visual outcome
+            logoImg.style.filter = 'brightness(0.9) contrast(1.1) saturate(1.2)'; 
+        }
+        // --- END NEW: Logo Tinting Logic ---
     }
 };
 

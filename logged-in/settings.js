@@ -3492,7 +3492,7 @@
             if (!themePickerContainer) return;
             
             // From navigation.js
-            const lightThemeNames = ['Light', 'Lavender', 'Rose Gold', 'Mint'];
+            const lightThemeNames = ['Light', 'Lavender', 'Rose Gold', 'Mint', 'Pink'];
 
             try {
                 // 1. Fetch themes
