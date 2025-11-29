@@ -137,7 +137,7 @@ const DEFAULT_THEME = {
 
                     newContent = `
                         <div class="w-full h-full relative overflow-hidden rounded-full" style="background-color: ${bgColor || '#3B82F6'}">
-                             <div class="absolute inset-0 w-full h-full" style="transform: translate(${x}px, ${y}px) rotate(${rot}deg) scale(${scale}); transform-origin: center;">
+                             <div class="absolute inset-0 w-full h-full" style="transform: translate(${x}%, ${y}%) rotate(${rot}deg) scale(${scale}); transform-origin: center;">
                                  <img src="/mibi-avatars/head.png" class="absolute inset-0 w-full h-full object-contain">
                                  ${eyes ? `<img src="/mibi-avatars/eyes/${eyes}" class="absolute inset-0 w-full h-full object-contain">` : ''}
                                  ${mouths ? `<img src="/mibi-avatars/mouths/${mouths}" class="absolute inset-0 w-full h-full object-contain">` : ''}
@@ -464,7 +464,7 @@ const DEFAULT_THEME = {
                 
                 avatarHtml = `
                     <div class="w-full h-full relative overflow-hidden rounded-full" style="background-color: ${bgColor || '#3B82F6'}">
-                            <div class="absolute inset-0 w-full h-full" style="transform: translate(${x}px, ${y}px) rotate(${rot}deg) scale(${scale}); transform-origin: center;">
+                            <div class="absolute inset-0 w-full h-full" style="transform: translate(${x}%, ${y}%) rotate(${rot}deg) scale(${scale}); transform-origin: center;">
                                 <img src="/mibi-avatars/head.png" class="absolute inset-0 w-full h-full object-contain">
                                 ${eyes ? `<img src="/mibi-avatars/eyes/${eyes}" class="absolute inset-0 w-full h-full object-contain">` : ''}
                                 ${mouths ? `<img src="/mibi-avatars/mouths/${mouths}" class="absolute inset-0 w-full h-full object-contain">` : ''}

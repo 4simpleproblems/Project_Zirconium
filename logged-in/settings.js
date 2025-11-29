@@ -1251,9 +1251,9 @@
             // Update BG
             bgEl.style.backgroundColor = mibiAvatarState.bgColor;
             
-            // Update Transforms
+            // Update Transforms (using percentages for translate)
             const scale = mibiAvatarState.size / 100;
-            layersContainer.style.transform = `translate(${mibiAvatarState.offsetX}px, ${mibiAvatarState.offsetY}px) rotate(${mibiAvatarState.rotation}deg) scale(${scale})`;
+            layersContainer.style.transform = `translate(${mibiAvatarState.offsetX}%, ${mibiAvatarState.offsetY}%) rotate(${mibiAvatarState.rotation}deg) scale(${scale})`;
 
             // Update Layers
             if (mibiAvatarState.eyes) {
@@ -1314,7 +1314,7 @@
                 // "None" Option - ONLY for Hats
                 if (category === 'hats') {
                     const noneBtn = document.createElement('div');
-                    noneBtn.className = `bg-gray-800 rounded-xl p-2 flex flex-col items-center justify-center cursor-pointer border-2 hover:border-dashed hover:border-white transition-all ${!mibiAvatarState[category] ? 'border-white' : 'border-transparent'}`;
+                    noneBtn.className = `bg-[#0a0a0a] rounded-xl p-2 flex flex-col items-center justify-center cursor-pointer border-2 hover:border-dashed hover:border-white transition-all ${!mibiAvatarState[category] ? 'border-white' : 'border-transparent'}`;
                     noneBtn.innerHTML = `<i class="fa-solid fa-ban fa-2x text-gray-500"></i>`;
                     noneBtn.onclick = () => {
                         mibiAvatarState[category] = '';
@@ -1329,7 +1329,7 @@
                 files.forEach(file => {
                     const item = document.createElement('div');
                     const isSelected = mibiAvatarState[category] === file;
-                    item.className = `bg-gray-800 rounded-xl p-2 flex flex-col items-center justify-center cursor-pointer border-2 hover:border-dashed hover:border-white transition-all ${isSelected ? 'border-white' : 'border-transparent'}`;
+                    item.className = `bg-[#0a0a0a] rounded-xl p-2 flex flex-col items-center justify-center cursor-pointer border-2 hover:border-dashed hover:border-white transition-all ${isSelected ? 'border-white' : 'border-transparent'}`;
                     
                     item.innerHTML = `
                         <img src="../mibi-avatars/${category}/${file}" class="w-16 h-16 object-contain">
@@ -1452,10 +1452,18 @@
             
             window.addEventListener('mousemove', (e) => {
                 if (!isDragging || !isOrientationMode) return;
+                
+                const rect = previewContainer.getBoundingClientRect();
                 const dx = e.clientX - startX;
                 const dy = e.clientY - startY;
-                mibiAvatarState.offsetX = initialOffsetX + dx;
-                mibiAvatarState.offsetY = initialOffsetY + dy;
+                
+                // Convert drag distance to percentage of container size
+                const deltaXPercent = (dx / rect.width) * 100;
+                const deltaYPercent = (dy / rect.height) * 100;
+                
+                mibiAvatarState.offsetX = initialOffsetX + deltaXPercent;
+                mibiAvatarState.offsetY = initialOffsetY + deltaYPercent;
+                
                 updateMibiPreview();
             });
             
