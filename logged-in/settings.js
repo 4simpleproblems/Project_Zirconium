@@ -1577,154 +1577,53 @@
                             
 
                                                     const enterOrientationMode = () => {
-
-                            
-
-                                                        if (isOrientationMode) return;
-
-                            
-
-                                                        isOrientationMode = true;
-
-                            
-
-                                                        
-
-                            
-
-                                                        // Snapshot state for revert
-
-                            
-
-                                                        orientationSnapshot = { ...mibiAvatarState };
-
-                            
-
-                                                        
-
-                            
-
-                                                        // Animate UI
-
-                            
-
-                                                        previewWrapper.classList.remove('w-1/2', 'flex-col', 'items-center', 'justify-center');
-
-                            
-
-                                                        previewWrapper.classList.add('w-full', 'flex-row', 'justify-start', 'items-start', 'gap-x-12', 'pl-16'); // Parent changes layout
-
-                            
-
-                                        
-
-                            
-
-                                                        // Ensure preview container has no dynamic sizing/margin changes for orientation mode
-
-                            
-
-                                                        previewContainer.style.transform = ''; // Remove scale
-
-                            
-
-                                                        // Explicitly force width and height to be equal to fix pill bug
-
-                            
-
-                                                        const computedHeight = previewContainer.offsetHeight; // Get current rendered height (from h-64/md:h-80)
-
-                            
-
-                                                        previewContainer.style.width = `${computedHeight}px`;
-
-                            
-
-                                                        previewContainer.style.height = `${computedHeight}px`;
-
-                            
-
-                                                        
-
-                            
-
-                                                        previewContainer.classList.remove('mt-16', 'w-2/3', 'flex-shrink-0'); // Remove dynamic sizing/margin
-
-                            
-
-                                                        // No need to add back default classes as they are already in HTML
-
-                            
-
-                                        
-
-                            
-
-                                                        // Adjust sliders container for side-by-side layout, filling remaining width
-
-                            
-
-                                                        slidersContainer.classList.remove('hidden', 'opacity-0', 'max-w-xs', 'w-1/3', 'ml-4');
-
-                            
-
-                                                        slidersContainer.classList.add('flex', 'opacity-100', 'flex-grow', 'mt-16', 'p-4'); // flex-grow lets it stretch
-
-                            
-
-                                                        
-
-                            
-
-                                                        controlsWrapper.classList.add('translate-x-full', 'w-0', 'overflow-hidden', 'p-0'); // Slide out and collapse
-
-                            
-
-                                                        controlsWrapper.classList.remove('translate-x-0', 'w-1/2');
-
-                            
-
-                                                        
-
-                            
-
-                                                        // Hide "Click preview" text
-
-                            
-
-                                                        macPreviewLabel.classList.add('hidden');
-
-                            
-
-                                                        
-
-                            
-
-                                                        // Update Button
-
-                            
-
-                                                        confirmBtn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Confirm Orientation';
-
-                            
-
-                                                        
-
-                            
-
-                                                        // Sync sliders
-
-                            
-
-                                                        sizeSlider.value = mibiAvatarState.size;
-
-                            
-
-                                                        rotationSlider.value = mibiAvatarState.rotation;
-
-                            
-
-                                                    };
+    if (isOrientationMode) return;
+    isOrientationMode = true;
+
+    // Snapshot state for revert
+    orientationSnapshot = { ...mibiAvatarState };
+
+    // Animate UI
+    // Parent changes layout to row
+    previewWrapper.classList.remove('w-1/2', 'flex-col', 'items-center', 'justify-center');
+    previewWrapper.classList.add('w-full', 'flex-row', 'justify-start', 'items-start', 'gap-x-12', 'pl-16'); 
+
+    // Explicitly force width and height to be equal to fix pill bug
+    const computedHeight = previewContainer.offsetHeight; 
+    
+    // --- FIX START ---
+    previewContainer.style.width = `${computedHeight}px`;
+    previewContainer.style.height = `${computedHeight}px`;
+    // Add min-width to prevent flexbox crushing
+    previewContainer.style.minWidth = `${computedHeight}px`; 
+    previewContainer.style.minHeight = `${computedHeight}px`;
+    // --- FIX END ---
+
+    previewContainer.style.transform = ''; 
+
+    // --- FIX START ---
+    // DO NOT remove 'flex-shrink-0'. We remove 'w-2/3' and margins, but KEEP flex-shrink-0
+    previewContainer.classList.remove('mt-16', 'w-2/3'); 
+    previewContainer.classList.add('flex-shrink-0'); // Explicitly force it not to shrink
+    // --- FIX END ---
+
+    // Adjust sliders container
+    slidersContainer.classList.remove('hidden', 'opacity-0', 'max-w-xs', 'w-1/3', 'ml-4');
+    slidersContainer.classList.add('flex', 'opacity-100', 'flex-grow', 'mt-16', 'p-4'); 
+
+    controlsWrapper.classList.add('translate-x-full', 'w-0', 'overflow-hidden', 'p-0'); 
+    controlsWrapper.classList.remove('translate-x-0', 'w-1/2');
+
+    // Hide "Click preview" text
+    macPreviewLabel.classList.add('hidden');
+
+    // Update Button
+    confirmBtn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Confirm Orientation';
+
+    // Sync sliders
+    sizeSlider.value = mibiAvatarState.size;
+    rotationSlider.value = mibiAvatarState.rotation;
+};
 
                             
 
@@ -1798,11 +1697,15 @@
 
                                                         previewContainer.style.height = ''; // Remove explicitly set height
 
+
+                                                        previewContainer.style.minWidth = ''; // Clear min-width
+                                                        previewContainer.style.minHeight = ''; // Clear min-height
+
                             
 
                                                         previewContainer.classList.remove('mt-16', 'w-2/3', 'flex-shrink-0'); // Ensure these are removed
 
-                            
+                                                        previewContainer.classList.add('flex-shrink-0');
 
                                                         // Default width/height are handled by initial HTML classes `h-64 md:h-80 aspect-square rounded-full`
 
