@@ -32,6 +32,10 @@
  * 24. **(FIXED)** INITIAL AVATAR CENTERING: Changed `w-8 h-8` to `w-full h-full` on the `initial-avatar` div to ensure perfect centering of the user's initial letter inside the button.
  * 25. **(NEW)** DROPDOWN STYLING: Updated dropdown buttons to match the "Notes" app style (gap, darker hover).
  * 26. **(UPDATED)** THEME LOGIC: Removed hardcoded theme name checks from `window.applyTheme`. Theme properties (like logo and colors) are now pulled *only* from the theme object, falling back to `DEFAULT_THEME`.
+ * * --- USER MODIFICATIONS APPLIED ---
+ * 27. **(NEW)** !important ADDED: Every CSS declaration in `injectStyles` now has `!important`.
+ * 28. **(NEW)** GLIDE REMOVED: Scroll glide buttons are removed from HTML and all related JS logic has been removed/disabled.
+ * 29. **(NEW)** FORCED LAYOUT: Tabs are forced to left-align, take up all available space, and scroll if they overflow.
  */
 
 // =========================================================================
@@ -279,7 +283,6 @@ let db;
                     </a>
 
                     <div class="tab-wrapper">
-                        <!-- Scroll glide buttons and tab scroll container will be dynamically added -->
                         <div class="tab-scroll-container flex justify-center items-center overflow-hidden">
                             <div class="nav-tab-placeholder"></div>
                             <div class="nav-tab-placeholder hidden sm:block"></div>
@@ -326,10 +329,9 @@ let db;
         }
     };
 
-
-    // --- 3. INJECT CSS STYLES (MOVED BEFORE INITIALIZEAPP) ---
+    // --- 3. INJECT CSS STYLES (MODIFIED: ADDED !IMPORTANT TO ALL DECLARATIONS) ---
     // This now uses CSS variables for all colors and transitions.
-    // *** UPDATED to use px for fixed layout sizing ***
+    // *** UPDATED to use px for fixed layout sizing and ADDED !IMPORTANT ***
     const injectStyles = () => {
         const style = document.createElement('style');
         style.textContent = `
@@ -423,7 +425,8 @@ let db;
             .auth-menu-link i.w-4, .auth-menu-button i.w-4 { width: 1rem !important; text-align: center !important; } 
 
             /* Tab Wrapper and Glide Buttons */
-            .tab-wrapper { flex-grow: 1 !important; display: flex !important; align-items: center !important; position: relative !important; min-width: 0 !important; margin: 0 1rem !important; justify-content: center !important; } /* UPDATED: Added justify-content */
+            /* UPDATED: Removed justify-content: center */
+            .tab-wrapper { flex-grow: 1 !important; display: flex !important; align-items: center !important; position: relative !important; min-width: 0 !important; margin: 0 1rem !important; } 
             .tab-scroll-container { 
                 flex-grow: 1 !important; display: flex !important; align-items: center !important; 
                 overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; 
@@ -433,10 +436,13 @@ let db;
                 max-width: 100% !important; /* UPDATED: ensure it doesn't overflow parent */
                 padding-left: 16px !important; /* MODIFICATION: Added to prevent first tab cutoff */
                 padding-right: 16px !important; /* MODIFICATION: Added for symmetry */
+                justify-content: flex-start !important; /* FORCED LEFT-ALIGN */
             }
             .tab-scroll-container::-webkit-scrollbar { display: none !important; }
+            /* Glide Button Styles Removed/Commented Out */
+            /*
             .scroll-glide-button {
-                position: absolute !important; top: 0 !important; height: 100% !important; width: 64px !important; display: flex !important; align-items: center !important; justify-content: center !important; /* UPDATED width */
+                position: absolute !important; top: 0 !important; height: 100% !important; width: 64px !important; display: flex !important; align-items: center !important; justify-content: center !important; 
                 color: var(--glide-icon-color) !important; font-size: 1.2rem !important; cursor: pointer !important; 
                 opacity: 1 !important; 
                 transition: opacity 0.3s, color 0.3s ease !important; 
@@ -444,15 +450,16 @@ let db;
             }
             #glide-left { 
                 left: 0 !important; background: var(--glide-gradient-left) !important; 
-                justify-content: flex-start !important; padding-left: 8px !important; /* UPDATED */
+                justify-content: flex-start !important; padding-left: 8px !important; 
                 transition: opacity 0.3s, color 0.3s ease, background 0.3s ease !important;
             }
             #glide-right { 
                 right: 0 !important; background: var(--glide-gradient-right) !important; 
-                justify-content: flex-end !important; padding-right: 8px !important; /* UPDATED */
+                justify-content: flex-end !important; padding-right: 8px !important; 
                 transition: opacity 0.3s, color 0.3s ease, background 0.3s ease !important;
             }
             .scroll-glide-button.hidden { opacity: 0 !important !important; pointer-events: none !important !important; }
+            */
             
             .nav-tab { 
                 flex-shrink: 0 !important; padding: 8px 12px !important; color: var(--tab-text) !important; /* UPDATED */
@@ -1067,13 +1074,12 @@ let db;
 
             // Populate the tab-wrapper
             if (tabWrapper) {
-                // Clear existing placeholder content and inject actual tabs and glide buttons
+                // Clear existing placeholder content and inject actual tabs. 
+                // GLIDE BUTTONS REMOVED as per user request.
                 tabWrapper.innerHTML = `
-                    <button id="glide-left" class="scroll-glide-button"><i class="fa-solid fa-chevron-left"></i></button>
                     <div class="tab-scroll-container">
                         ${tabsHtml}
                     </div>
-                    <button id="glide-right" class="scroll-glide-button"><i class="fa-solid fa-chevron-right"></i></button>
                 `;
             }
 
@@ -1082,36 +1088,17 @@ let db;
                 authControlsWrapper.innerHTML = authControlsHtml;
             }
             
-            // --- NEW: Handle tab centering and overflow based on tab count ---
-            const tabContainer = tabWrapper.querySelector('.tab-scroll-container'); // Need to re-query as it was just updated
-            const tabCount = tabContainer ? tabContainer.querySelectorAll('.nav-tab').length : 0;
-
-            // =================================================================
-            // ========= MODIFICATION (1/2) - Center Tab Container ========
-            // =================================================================
-            if (tabCount <= 9) {
-                // If 9 or fewer tabs, center them and disable scrolling
-                if(tabContainer) {
-                    tabContainer.style.justifyContent = 'center';
-                    tabContainer.style.overflowX = 'hidden';
-                    // NEW: Remove flex-grow to allow the container itself to be centered
-                    // by its parent's (tab-wrapper) justify-content: center.
-                    tabContainer.style.flexGrow = '0';
-                }
-            } else {
-                // If more than 9 tabs, align left and enable scrolling
-                if(tabContainer) {
-                    tabContainer.style.justifyContent = 'flex-start';
-                    tabContainer.style.overflowX = 'auto';
-                    // NEW: Restore flex-grow to allow the container to fill
-                    // the space and enable scrolling.
-                    tabContainer.style.flexGrow = '1';
-                }
+            // --- MODIFIED: Force tab-scroll-container to take up space and align left ---
+            const tabContainer = tabWrapper.querySelector('.tab-scroll-container'); 
+            
+            if(tabContainer) {
+                // Force tabs to be space-filling, left-aligned, and scrollable if they overflow.
+                tabContainer.style.justifyContent = 'flex-start'; // Force left align tabs
+                tabContainer.style.overflowX = 'auto'; // Allow scrolling if needed
+                tabContainer.style.flexGrow = '1'; // Force it to take up available space
             }
-            // =================================================================
-            // ====================== END MODIFICATION =========================
-            // =================================================================
-            // --- END NEW ---
+            
+            // --- END MODIFIED ---
 
             // --- 5. SETUP EVENT LISTENERS (Called after full render) ---
             setupEventListeners(user);
@@ -1125,70 +1112,16 @@ let db;
             window.applyTheme(savedTheme || DEFAULT_THEME); 
             // --- End theme apply ---
 
-            // const tabContainer = document.querySelector('.tab-scroll-container'); // Already defined above
-            
-            // Check if we need to restore scroll position (from a full re-render)
+            // --- Scroll Logic Modified to remove glide button checks and centering ---
+            // The scroll position is restored if a re-render occurred, but no centering is performed.
             if (currentScrollLeft > 0) {
                 const savedScroll = currentScrollLeft;
-                // Use requestAnimationFrame to ensure the DOM has painted the new content
-                // before setting the scroll, preventing the jump.
                 requestAnimationFrame(() => {
                     if (tabContainer) {
                         tabContainer.scrollLeft = savedScroll;
                     }
                     currentScrollLeft = 0; // Reset state after restoration
-                    // Nested frame to update arrows *after* scroll is applied
-                    requestAnimationFrame(() => {
-                        updateScrollGilders();
-                    });
                 });
-            // NEW: Only run centering logic if we are NOT restoring scroll AND we haven't scrolled yet.
-            } else if (!hasScrolledToActiveTab) { 
-                // If it's the first load, center the active tab.
-                const activeTab = document.querySelector('.nav-tab.active');
-                if (activeTab && tabContainer) {
-                    
-                    const centerOffset = (tabContainer.offsetWidth - activeTab.offsetWidth) / 2;
-                    const idealCenterScroll = activeTab.offsetLeft - centerOffset;
-                    
-                    const maxScroll = tabContainer.scrollWidth - tabContainer.offsetWidth;
-                    const extraRoomOnRight = maxScroll - idealCenterScroll;
-                    
-                    let scrollTarget;
-
-                    // =================================================================
-                    // ========= MODIFICATION 1 of 3 (Aggressive Set) ========
-                    // =================================================================
-                    if (idealCenterScroll > 0 && extraRoomOnRight < centerOffset) {
-                        // Snap all the way to the right by setting a value
-                        // *larger* than the max, forcing the browser to clamp.
-                        scrollTarget = maxScroll + 50;
-                    } else {
-                        scrollTarget = Math.max(0, idealCenterScroll);
-                    }
-                    // =================================================================
-                    // ====================== END MODIFICATION =========================
-                    // =================================================================
-
-                    // Set scroll and update gilders in the next frame to ensure
-                    // the scrollLeft value is processed by the browser first.
-                    requestAnimationFrame(() => {
-                        tabContainer.scrollLeft = scrollTarget;
-                        // Nested frame to update arrows *after* scroll is applied
-                        requestAnimationFrame(() => {
-                            updateScrollGilders();
-                        });
-                    });
-                    
-                    // IMPORTANT: Set flag to prevent future automatic centering
-                    hasScrolledToActiveTab = true; 
-                } else if (tabContainer) {
-                    // If no active tab (or no tabContainer), still need to update gilders
-                    // to ensure they are hidden correctly on a blank page.
-                    requestAnimationFrame(() => {
-                        updateScrollGilders();
-                    });
-                }
             }
             
             // --- NEW: Init Marquees ---
@@ -1196,103 +1129,7 @@ let db;
         };
 
 
-        // =================================================================
-        // ========= MODIFICATION 2 of 3 (Tolerant Check) ========
-        // =================================================================
-        const updateScrollGilders = () => {
-            const container = document.querySelector('.tab-scroll-container');
-            const leftButton = document.getElementById('glide-left');
-            const rightButton = document.getElementById('glide-right');
-
-            // --- NEW: Check tab count. If 9 or less, hide gliders and exit. ---
-            const tabCount = document.querySelectorAll('.nav-tab').length;
-            // =================================================================
-            // ========= MODIFICATION (2/2) - Check Tab Container ========
-            // =================================================================
-            // Check if the container is *not* in scroll mode (flex-grow is 0)
-            const isNotScrolling = container && container.style.flexGrow === '0';
-            
-            if (tabCount <= 9 || isNotScrolling) {
-            // =================================================================
-            // ====================== END MODIFICATION =========================
-            // =================================================================
-                if (leftButton) leftButton.classList.add('hidden');
-                if (rightButton) rightButton.classList.add('hidden');
-                return; // Do not run the rest of the scroll logic
-            }
-            // --- END NEW ---
-
-            if (!container || !leftButton || !rightButton) return;
-            
-            const hasHorizontalOverflow = container.scrollWidth > container.offsetWidth + 2; // Add 2px tolerance
-
-            if (hasHorizontalOverflow) {
-                // Use a small tolerance
-                const isScrolledToLeft = container.scrollLeft <= 5;
-                
-                // Calculate max scroll and check against it with tolerance
-                const maxScrollLeft = container.scrollWidth - container.offsetWidth;
-
-                // NEW TOLERANCE LOGIC:
-                // Check if the current scroll position, *plus a 5px tolerance*,
-                // is greater than or equal to the max scroll. This handles
-                // browser sub-pixel rounding errors.
-                const isScrolledToRight = (container.scrollLeft + 5) >= maxScrollLeft;
-
-                // Explicitly add or remove the class
-                if (isScrolledToLeft) {
-                    leftButton.classList.add('hidden');
-                } else {
-                    leftButton.classList.remove('hidden');
-                }
-
-                if (isScrolledToRight) {
-                    rightButton.classList.add('hidden');
-                } else {
-                    rightButton.classList.remove('hidden');
-                }
-            } else {
-                // If there is no overflow, hide both buttons
-                leftButton.classList.add('hidden');
-                rightButton.classList.add('hidden');
-            }
-        };
-        // =================================================================
-        // ====================== END MODIFICATION =========================
-        // =================================================================
-
-
-        // =================================================================
-        // ========= MODIFICATION 3 of 3 (Aggressive Set) ========
-        // =================================================================
-        /**
-         * NEW: Forcefully scrolls the tab container all the way to the right
-         * and ensures the right arrow is hidden.
-         */
-        const forceScrollToRight = () => {
-            const tabContainer = document.querySelector('.tab-scroll-container');
-            if (!tabContainer) return;
-
-            // Calculate the maximum possible scroll position
-            const maxScroll = tabContainer.scrollWidth - tabContainer.offsetWidth;
-
-            // Use requestAnimationFrame to guarantee the scroll happens,
-            // and *then* the arrow visibility is updated.
-            requestAnimationFrame(() => {
-                // Set scrollLeft to a value *larger* than the max.
-                // The browser will automatically clamp this to the
-                // highest possible value, which is more reliable.
-                tabContainer.scrollLeft = maxScroll + 50;
-                
-                // Use a nested frame to update arrows *after* scroll is applied
-                requestAnimationFrame(() => {
-                    updateScrollGilders();
-                });
-            });
-        };
-        // =================================================================
-        // ====================== END MODIFICATION =========================
-        // =================================================================
+        // --- MODIFIED: Removed updateScrollGilders and forceScrollToRight functions ---
         
         // Split setupEventListeners into main and pin-specific, 
         // as pin listeners need to be re-attached on partial update.
@@ -1375,17 +1212,16 @@ let db;
         }
 
         const setupEventListeners = (user) => {
-            // Scroll Glide Button setup
+            // --- MODIFIED: Removed Scroll Glide Button setup and listeners ---
+            /*
             const tabContainer = document.querySelector('.tab-scroll-container');
             const leftButton = document.getElementById('glide-left');
             const rightButton = document.getElementById('glide-right');
 
-            // Debounce resize, but NOT scroll
             const debouncedUpdateGilders = debounce(updateScrollGilders, 50);
 
             if (tabContainer) {
                 const scrollAmount = tabContainer.offsetWidth * 0.8; 
-                // UPDATED: Scroll listener is no longer debounced
                 tabContainer.addEventListener('scroll', updateScrollGilders);
                 window.addEventListener('resize', debouncedUpdateGilders);
                 
@@ -1400,6 +1236,7 @@ let db;
                     });
                 }
             }
+            */
 
             // --- NEW: Auth Toggle Listeners (Called on full render) ---
             setupAuthToggleListeners(user);
