@@ -26,7 +26,8 @@
             getDocs,
             serverTimestamp,
             deleteDoc, // NEW FIREBASE IMPORT
-            setDoc
+            setDoc,
+            writeBatch
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
         // --- Import Firebase Config (Assumed to exist in a relative file) ---
@@ -3010,22 +3011,73 @@
 
             const performAccountDeletion = async () => {
                 showMessage(deleteMessage, '', 'success');
-                showMessage(deleteMessage, '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Deleting account...', 'warning');
+                showMessage(deleteMessage, '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Deleting account and all traces...', 'warning');
 
                 try {
-                    // Delete user's Firestore document first (to prevent orphaned data)
-                    await deleteDoc(userDocRef); 
+                    const uid = auth.currentUser.uid;
                     
-                    // Delete Firebase Auth user
+                    // --- 1. Firestore Cleanup (Batch) ---
+                    const batch = writeBatch(db);
+                    
+                    // A. User Profile
+                    batch.delete(doc(db, 'users', uid));
+                    
+                    // B. Admin & Ban Records (Try to delete, no error if missing)
+                    batch.delete(doc(db, 'admins', uid));
+                    batch.delete(doc(db, 'bans', uid));
+                    
+                    // C. Friend Code
+                    // Note: We assume appId is '4sp-default-app' based on project conventions
+                    const appId = '4sp-default-app';
+                    const friendCodesQuery = query(
+                        collection(db, 'artifacts', appId, 'public', 'data', 'friend_codes'), 
+                        where('userId', '==', uid)
+                    );
+                    const friendCodesSnap = await getDocs(friendCodesQuery);
+                    friendCodesSnap.forEach(d => batch.delete(d.ref));
+
+                    // D. Daily Photos
+                    const photosQuery = query(
+                        collection(db, 'daily_photos'),
+                        where('creatorUid', '==', uid)
+                    );
+                    const photosSnap = await getDocs(photosQuery);
+                    photosSnap.forEach(d => batch.delete(d.ref));
+
+                    // Commit Firestore Changes
+                    await batch.commit();
+
+                    // --- 2. Local Storage Cleanup ---
+                    localStorage.clear();
+
+                    // --- 3. IndexedDB Cleanup ---
+                    try {
+                        if (window.indexedDB && window.indexedDB.databases) {
+                            const dbs = await window.indexedDB.databases();
+                            for (const dbInfo of dbs) {
+                                if (dbInfo.name) {
+                                    window.indexedDB.deleteDatabase(dbInfo.name);
+                                }
+                            }
+                        } else {
+                            // Fallback for browsers without databases() API
+                            const knownDBs = ['userLocalSettingsDB', '4spNotesDB', '4spCountdownDB'];
+                            knownDBs.forEach(name => window.indexedDB.deleteDatabase(name));
+                        }
+                    } catch (e) {
+                        console.warn("IndexedDB cleanup partial error:", e);
+                    }
+                    
+                    // --- 4. Auth Deletion ---
                     await deleteUser(auth.currentUser);
 
-                    // Sign out and redirect to authentication page
+                    // --- 5. Sign Out & Redirect ---
                     await signOut(auth);
                     window.location.href = '../authentication.html';
 
                 } catch (error) {
                     console.error("Error deleting account:", error);
-                    let msg = "Failed to delete account. Please try again or sign in again.";
+                    let msg = "Failed to delete account completely. Please try again or sign in again.";
                     if (error.code === 'auth/requires-recent-login') {
                         msg = 'Deletion failed: Please sign out and sign in again immediately to proceed with deletion.';
                     }
