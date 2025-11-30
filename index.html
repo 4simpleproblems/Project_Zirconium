@@ -29,6 +29,41 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
+        .carousel-button {
+            width: 40px; /* Adjust as needed */
+            height: 40px; /* Adjust as needed */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%; /* Make it a perfect circle */
+            border: none;
+            cursor: pointer;
+            backdrop-filter: blur(8px) saturate(180%); /* Blur and saturate */
+            -webkit-backdrop-filter: blur(8px) saturate(180%); /* For Safari */
+            transition: background-color 0.3s ease;
+        }
+
+        /* Section-specific hues */
+        .carousel-button-purple-hue {
+            background-color: rgba(139, 92, 246, 0.3); /* purple-500 with transparency */
+        }
+        .carousel-button-purple-hue:hover {
+            background-color: rgba(139, 92, 246, 0.5);
+        }
+
+        .carousel-button-blue-hue {
+            background-color: rgba(96, 165, 250, 0.3); /* blue-400 with transparency */
+        }
+        .carousel-button-blue-hue:hover {
+            background-color: rgba(96, 165, 250, 0.5);
+        }
+
+        .carousel-button-green-hue {
+            background-color: rgba(52, 211, 153, 0.3); /* green-400 with transparency */
+        }
+        .carousel-button-green-hue:hover {
+            background-color: rgba(52, 211, 153, 0.5);
+        }
     </style>
 
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-1D4F692C1Q"></script>
@@ -90,9 +125,21 @@
 
             <div class="lg:grid lg:grid-cols-2 lg:gap-12 items-center">
 
-                <div class="relative p-8 rounded-3xl border border-blue-800/50 overflow-hidden shadow-2xl bg-gray-900 h-40 flex items-center justify-center order-1 lg:order-1 mb-6 lg:mb-0">
-                   <i class="fas fa-tasks text-7xl text-blue-400 z-10"></i>
-                    <p class="absolute bottom-4 right-4 text-xs text-blue-500/50 z-10">Notes, Countdowns, and Task Lists</p>
+                <div class="relative w-full h-64 overflow-hidden rounded-3xl border border-blue-800/50 shadow-2xl bg-gray-900 flex items-center justify-center order-1 lg:order-1 mb-6 lg:mb-0">
+                    <div class="image-carousel-container relative w-full h-full">
+                        <!-- Images -->
+                        <img src="doc-images/notes.png" alt="Notes feature (aspect ratio: 16:9)" class="carousel-image absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-in-out opacity-100">
+                        <img src="doc-images/countdowns.png" alt="Countdowns feature (aspect ratio: 16:9)" class="carousel-image absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-in-out opacity-0">
+                        <img src="doc-images/dictionary.png" alt="Dictionary feature (aspect ratio: 16:9)" class="carousel-image absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-in-out opacity-0">
+
+                        <!-- Navigation Buttons -->
+                        <button class="carousel-button carousel-button-blue-hue prev-button absolute top-1/2 left-4 -translate-y-1/2 p-2 text-white z-20">
+                            <i class="fas fa-arrow-left"></i>
+                        </button>
+                        <button class="carousel-button carousel-button-blue-hue next-button absolute top-1/2 right-4 -translate-y-1/2 p-2 text-white z-20">
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="lg:pl-4 order-2 lg:order-2 mb-6 lg:mb-0">
@@ -131,10 +178,10 @@
                         <img src="doc-images/index.png" alt="Tab Disguise Preset feature" class="carousel-image absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-in-out opacity-0">
 
                         <!-- Navigation Buttons -->
-                        <button class="carousel-button prev-button absolute top-1/2 left-4 -translate-y-1/2 bg-white/20 backdrop-blur-sm rounded-full p-2 text-white hover:bg-white/30 transition z-20">
+                        <button class="carousel-button carousel-button-purple-hue prev-button absolute top-1/2 left-4 -translate-y-1/2 p-2 text-white z-20">
                             <i class="fas fa-arrow-left"></i>
                         </button>
-                        <button class="carousel-button next-button absolute top-1/2 right-4 -translate-y-1/2 bg-white/20 backdrop-blur-sm rounded-full p-2 text-white hover:bg-white/30 transition z-20">
+                        <button class="carousel-button carousel-button-purple-hue next-button absolute top-1/2 right-4 -translate-y-1/2 p-2 text-white z-20">
                             <i class="fas fa-arrow-right"></i>
                         </button>
                     </div>
