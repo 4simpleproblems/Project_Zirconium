@@ -140,9 +140,9 @@ function renderBanVisuals(banData) {
         banTimestamp = `on ${date.toLocaleDateString()} at ${date.toLocaleTimeString()}`;
     }
 
-    // Update Content (Idempotent: typically fast enough to just set innerHTML)
+    // Update Content (One line title)
     messageBox.innerHTML = `
-        <h1 style="font-size: 4rem; color: #ffffff; margin: 0 0 20px 0; font-weight: 800; line-height: 1;">Access<br>Denied</h1>
+        <h1 style="font-size: 4rem; color: #ffffff; margin: 0 0 20px 0; font-weight: 800; line-height: 1; white-space: nowrap;">Access Denied</h1>
         <p style="font-size: 1.25rem; margin: 0 0 10px 0; color: #ef4444; font-weight: 500;">Account Suspended</p>
         <div style="width: 50px; height: 4px; background-color: #ef4444; margin-bottom: 20px;"></div>
         <p style="font-size: 1rem; margin: 0 0 10px 0; color: #d1d5db; max-width: 500px; line-height: 1.6;">
@@ -162,33 +162,39 @@ function renderBanVisuals(banData) {
         homeButton.href = '../index.html';
         homeButton.innerHTML = `<i class="fa-solid fa-house"></i>`;
         
-        // Styles
+        // Styles - Matching "btn-toolbar-style" from notes.html
         homeButton.style.position = 'fixed';
         homeButton.style.bottom = '60px';
         homeButton.style.right = '60px';
         homeButton.style.zIndex = '2147483647';
-        homeButton.style.width = '60px';
-        homeButton.style.height = '60px';
-        homeButton.style.display = 'flex';
+        
+        // btn-toolbar-style replication
+        homeButton.style.display = 'inline-flex';
         homeButton.style.alignItems = 'center';
         homeButton.style.justifyContent = 'center';
-        homeButton.style.fontSize = '24px';
-        homeButton.style.color = 'white';
+        homeButton.style.padding = '0.5rem 1rem';
+        homeButton.style.backgroundColor = 'transparent'; // var(--menu-bg, #0000000)
+        homeButton.style.border = '1px solid #333'; // var(--menu-border, #333)
+        homeButton.style.borderRadius = '0.75rem';
+        homeButton.style.color = '#d1d5db'; // var(--menu-text, #d1d5db)
+        homeButton.style.fontSize = '20px'; // Adjusted size for icon
         homeButton.style.textDecoration = 'none';
-        homeButton.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
-        homeButton.style.backdropFilter = 'blur(10px)';
-        homeButton.style.webkitBackdropFilter = 'blur(10px)';
-        homeButton.style.borderRadius = '50%';
-        homeButton.style.border = '1px solid rgba(255, 255, 255, 0.1)';
-        homeButton.style.transition = 'all 0.3s ease';
+        homeButton.style.cursor = 'pointer';
+        homeButton.style.transition = 'all 0.2s';
+        
+        // Size adjustments
+        homeButton.style.width = '50px';
+        homeButton.style.height = '50px';
 
         homeButton.onmouseover = () => { 
-            homeButton.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'; 
-            homeButton.style.transform = 'scale(1.1)';
+            homeButton.style.backgroundColor = '#000000'; // var(--menu-bg)
+            homeButton.style.borderColor = '#fff'; 
+            homeButton.style.color = '#ffffff'; 
         };
         homeButton.onmouseout = () => { 
-            homeButton.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'; 
-            homeButton.style.transform = 'scale(1)';
+            homeButton.style.backgroundColor = 'transparent'; 
+            homeButton.style.borderColor = '#333';
+            homeButton.style.color = '#d1d5db'; 
         };
 
         document.body.appendChild(homeButton);
