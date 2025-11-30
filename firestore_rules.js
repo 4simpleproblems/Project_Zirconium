@@ -14,7 +14,7 @@ service cloud.firestore {
 
     // Helper function for username validation
     function isValidUsername(username) {
-      return username is string && username.matches(/^[a-zA-Z0-9.,\-+_!?$\ \\]{6,24}$/);
+      return username is string && username.matches(/^[a-zA-Z0-9.,\\-_!?$]{6,24}$/);
     }
 
     // =========================================================================
@@ -159,52 +159,52 @@ service cloud.firestore {
       // Authenticated users can read their own posts or posts from their friends
       allow read: if isAuthenticated() && (isCreator() || isFriendOfCreator());
 
-      allow update: if isAuthenticated() && (
-        // Creator can update title
-        (isCreator() && request.resource.data.title is string && request.resource.data.title.size() <= 48
-         && request.resource.data.creatorUid == resource.data.creatorUid
-         && request.resource.data.creatorUsername == resource.data.creatorUsername
-         && request.resource.data.createdAt == resource.data.createdAt
-         && request.resource.data.imageBase64 == resource.data.imageBase64
-         && request.resource.data.hearts == resource.data.hearts
-         && request.resource.data.comments == resource.data.comments
-        )
-        // Any authenticated user who can read the post can heart/unheart it
-        || (
-            (isCreator() || isFriendOfCreator()) // User must be able to read the post
-            && request.resource.data.keys().hasAll(['hearts'])
-            && request.resource.data.hearts is list
-            // Allow adding one heart
-            && (request.resource.data.hearts.size() == resource.data.hearts.size() + 1 && request.auth.uid in request.resource.data.hearts && !(request.auth.uid in resource.data.hearts))
-            // Allow removing one heart
-            || (request.resource.data.hearts.size() == resource.data.hearts.size() - 1 && !(request.auth.uid in request.resource.data.hearts) && (request.auth.uid in resource.data.hearts))
-            // Ensure no other fields are changed
-            && request.resource.data.title == resource.data.title
-            && request.resource.data.comments == resource.data.comments
-            && request.resource.data.creatorUid == resource.data.creatorUid
-            && request.resource.data.creatorUsername == resource.data.creatorUsername
-            && request.resource.data.createdAt == resource.data.createdAt
-            && request.resource.data.imageBase64 == resource.data.imageBase64
-        )
-        // Any authenticated user who can read the post can add a comment
-        || (
-            (isCreator() || isFriendOfCreator()) // User must be able to read the post
-            && request.resource.data.keys().hasAll(['comments'])
-            && request.resource.data.comments is list
-            && request.resource.data.comments.size() == resource.data.comments.size() + 1
-            && request.resource.data.comments[-1].uid == request.auth.uid
-            && request.resource.data.comments[-1].username is string
-            && request.resource.data.comments[-1].text is string
-            && request.resource.data.comments[-1].timestamp == request.time
-            // Ensure no other fields are changed
-            && request.resource.data.title == resource.data.title
-            && request.resource.data.hearts == resource.data.hearts
-            && request.resource.data.creatorUid == resource.data.creatorUid
-            && request.resource.data.creatorUsername == resource.data.creatorUsername
-            && request.resource.data.createdAt == resource.data.createdAt
-            && request.resource.data.imageBase64 == resource.data.imageBase64
-        )
-      );
+      // Allow creator to update title only (no other changes)
+      allow update: if isAuthenticated() && isCreator()
+                        && request.resource.data.title != resource.data.title
+                        && request.resource.data.size() == resource.data.size() // No new fields added/removed
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title'])
+                        // Ensure other fields are not changed
+                        && request.resource.data.creatorUid == resource.data.creatorUid
+                        && request.resource.data.creatorUsername == resource.data.creatorUsername
+                        && request.resource.data.createdAt == resource.data.createdAt
+                        && request.resource.data.imageBase64 == resource.data.imageBase64
+                        && request.resource.data.hearts == resource.data.hearts
+                        && request.resource.data.comments == resource.data.comments;
+
+      // Allow any authenticated user who can read the post to add/remove a heart
+      allow update: if isAuthenticated() && (isCreator() || isFriendOfCreator())
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['hearts'])
+                        && request.resource.data.hearts is list
+                        // Check if a single UID was added or removed from the hearts array
+                        && (
+                            (request.resource.data.hearts.size() == resource.data.hearts.size() + 1 && request.auth.uid in request.resource.data.hearts && !(request.auth.uid in resource.data.hearts))
+                            || (request.resource.data.hearts.size() == resource.data.hearts.size() - 1 && !(request.auth.uid in request.resource.data.hearts) && (request.auth.uid in resource.data.hearts))
+                        )
+                        // Ensure no other fields are changed
+                        && request.resource.data.title == resource.data.title
+                        && request.resource.data.comments == resource.data.comments
+                        && request.resource.data.creatorUid == resource.data.creatorUid
+                        && request.resource.data.creatorUsername == resource.data.creatorUsername
+                        && request.resource.data.createdAt == resource.data.createdAt
+                        && request.resource.data.imageBase64 == resource.data.imageBase64;
+
+      // Allow any authenticated user who can read the post to add a comment
+      allow update: if isAuthenticated() && (isCreator() || isFriendOfCreator())
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['comments'])
+                        && request.resource.data.comments is list
+                        && request.resource.data.comments.size() == resource.data.comments.size() + 1
+                        && request.resource.data.comments[-1].uid == request.auth.uid
+                        && request.resource.data.comments[-1].username is string
+                        && request.resource.data.comments[-1].text is string
+                        && request.resource.data.comments[-1].timestamp == request.time
+                        // Ensure no other fields are changed
+                        && request.resource.data.title == resource.data.title
+                        && request.resource.data.hearts == resource.data.hearts
+                        && request.resource.data.creatorUid == resource.data.creatorUid
+                        && request.resource.data.creatorUsername == resource.data.creatorUsername
+                        && request.resource.data.createdAt == resource.data.createdAt
+                        && request.resource.data.imageBase64 == resource.data.imageBase64;
 
       allow delete: if isAuthenticated() && isCreator();
     }
