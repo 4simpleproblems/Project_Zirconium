@@ -631,7 +631,7 @@
                 const showSetPrimaryButton = !isPrimary && primaryProviderId === null && id !== 'password';
 
                 // Determine if icon is an image or a FontAwesome icon
-                let iconHtml = config.icon.startsWith('<i') ? config.icon : `<img src="${config.icon}" alt="${config.name} Icon" class="w-6 h-6 mr-3">`;
+                let iconHtml = config.icon.startsWith('<i') ? config.icon : `<img src="${config.icon}" alt="${config.name} Icon" class="h-6 w-auto mr-3">`;
 
                 return `
                     <div class="flex justify-between items-center px-4 py-4 border-b border-[#252525] last:border-b-0">
@@ -665,7 +665,7 @@
                 .filter(id => id !== 'password' && !linkedIds.includes(id))
                 .map(id => {
                     const config = PROVIDER_CONFIG[id];
-                    let iconHtml = config.icon.startsWith('<i') ? config.icon : `<img src="${config.icon}" alt="${config.name} Icon" class="w-6 h-6 mr-3">`;
+                    let iconHtml = config.icon.startsWith('<i') ? config.icon : `<img src="${config.icon}" alt="${config.name} Icon" class="h-6 w-auto mr-3">`;
 
                     return `
                         <div class="flex justify-between items-center px-4 py-4 border-b border-[#252525] last:border-b-0">
