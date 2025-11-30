@@ -33,6 +33,7 @@ const THEME_STORAGE_KEY = 'user-navbar-theme';
 const lightThemeNames = ['Light', 'Lavender', 'Rose Gold', 'Mint', 'Pink']; // Define light theme names
 
 const DEFAULT_THEME = {
+    'name': 'Dark', // <--- ADD THIS LINE
     'logo-src': '/images/logo.png', 
     'navbar-bg': '#000000',
     'navbar-border': 'rgb(31 41 55)',
@@ -111,16 +112,23 @@ window.applyTheme = (theme) => {
         }
 
         // --- NEW: Logo Tinting Logic ---
-        const noFilterThemes = ['Dark', 'Light', 'Christmas', ...lightThemeNames]; // Light themes already use logo-dark.png or are specifically styled
+const noFilterThemes = ['Dark', 'Light', 'Christmas'];
 
-        if (noFilterThemes.includes(themeToApply.name)) {
-            logoImg.style.filter = ''; // Clear any filter
-        } else {
-            // Apply a subtle tinting effect for other themes
-            // This can be adjusted based on desired visual outcome
-            logoImg.style.filter = 'brightness(0.9) contrast(1.1) saturate(1.2)'; 
-        }
-        // --- END NEW: Logo Tinting Logic ---
+if (noFilterThemes.includes(themeToApply.name)) {
+    // Reset styles for themes that don't need tinting
+    logoImg.style.filter = ''; 
+    logoImg.style.transform = '';
+} else {
+    // 1. Get the highlight color from the theme (e.g., the tab text color)
+    // You can choose 'navbar-border' or 'tab-active-text' depending on preference
+    const tintColor = themeToApply['tab-active-text'] || '#ffffff';
+
+    // 2. Create a colored shadow 100px to the right, and move the actual image 100px to the left
+    // This hides the white image and shows only the colored shadow
+    logoImg.style.filter = `drop-shadow(100px 0 0 ${tintColor})`;
+    logoImg.style.transform = 'translateX(-100px)';
+}
+// --- END NEW: Logo Tinting Logic ---
     }
 };
 
@@ -205,7 +213,7 @@ let db;
         container.innerHTML = `
             <header class="auth-navbar">
                 <nav>
-                    <a href="/" class="flex items-center space-x-2 flex-shrink-0">
+                    <a href="/" class="flex items-center space-x-2 flex-shrink-0 overflow-hidden relative">
                         <img src="${logoPath}" alt="4SP Logo" class="h-10 w-auto" id="navbar-logo">
                     </a>
                     <div class="tab-wrapper">
@@ -1147,6 +1155,9 @@ let db;
         });
     };
 
+    if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', run);
-
+} else {
+    run();
+}
 })();
