@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="dist/output.css">
 
     <script src="navigation-mini.js" defer></script>
 
@@ -28,6 +28,79 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+        }
+        /* Carousel Styling */
+        .carousel-container {
+            position: relative;
+            height: 200px; /* Or a fixed height, adjust as needed */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .carousel-image {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Adjust as needed */
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        .carousel-image.active {
+            opacity: 1;
+        }
+
+        /* Carousel Arrows */
+        .carousel-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: rgba(0, 0, 0, 0.4); /* Blurred black background */
+            backdrop-filter: blur(5px); /* Blur effect */
+            -webkit-backdrop-filter: blur(5px); /* Safari compatibility */
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            padding: 0.5rem;
+            border-radius: 50%; /* Circular */
+            width: 40px; /* Fixed width */
+            height: 40px; /* Fixed height */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 20;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .carousel-arrow:hover {
+            background-color: rgba(0, 0, 0, 0.6);
+        }
+        .carousel-arrow.left { left: 1rem; }
+        .carousel-arrow.right { right: 1rem; }
+        .carousel-arrow:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .carousel-pagination {
+            position: absolute;
+            bottom: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 0.5rem;
+            z-index: 20;
+        }
+        .dot {
+            width: 8px;
+            height: 8px;
+            background-color: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .dot.active {
+            background-color: white;
         }
     </style>
 
@@ -83,17 +156,21 @@
                     </a>
                 </div>
 
-                <div class="relative p-8 rounded-3xl border border-green-800/50 overflow-hidden shadow-2xl bg-gray-900 h-40 flex items-center justify-center order-1 lg:order-2 mb-6 lg:mb-0">
-                    <i class="fas fa-volume-up text-7xl text-green-400 z-10"></i>
-                    <p class="absolute bottom-4 left-4 text-xs text-green-500/50 z-10">Low-Latency Audio</p>
+                <div class="relative p-0 rounded-3xl border border-green-800/50 overflow-hidden shadow-2xl bg-gray-900 flex items-center justify-center order-1 lg:order-2 mb-6 lg:mb-0">
+                    <img src="doc-images/soundboard.png" alt="Soundboard Preview" class="w-full h-auto object-cover rounded-3xl">
                 </div>
             </div>
 
             <div class="lg:grid lg:grid-cols-2 lg:gap-12 items-center">
 
-                <div class="relative p-8 rounded-3xl border border-blue-800/50 overflow-hidden shadow-2xl bg-gray-900 h-40 flex items-center justify-center order-1 lg:order-1 mb-6 lg:mb-0">
-                   <i class="fas fa-tasks text-7xl text-blue-400 z-10"></i>
-                    <p class="absolute bottom-4 right-4 text-xs text-blue-500/50 z-10">Notes, Countdowns, and Task Lists</p>
+                <div id="productivity-carousel" class="relative p-0 rounded-3xl border border-blue-800/50 overflow-hidden shadow-2xl bg-gray-900 flex items-center justify-center order-1 lg:order-1 mb-6 lg:mb-0 carousel-container">
+                    <img src="doc-images/notes.png" alt="Notes App Preview" class="w-full h-auto object-cover rounded-3xl carousel-image active">
+                    <img src="doc-images/countdowns.png" alt="Countdowns App Preview" class="w-full h-auto object-cover rounded-3xl carousel-image">
+                    <img src="doc-images/dictionary.png" alt="Dictionary App Preview" class="w-full h-auto object-cover rounded-3xl carousel-image">
+                    
+                    <button class="carousel-arrow left" aria-label="Previous image"><i class="fas fa-chevron-left"></i></button>
+                    <button class="carousel-arrow right" aria-label="Next image"><i class="fas fa-chevron-right"></i></button>
+                    <div class="carousel-pagination"></div>
                 </div>
 
                 <div class="lg:pl-4 order-2 lg:order-2 mb-6 lg:mb-0">
@@ -113,20 +190,25 @@
             <div class="lg:grid lg:grid-cols-2 lg:gap-12 items-center">
                 <div class="lg:pr-4 order-2 lg:order-1 mb-6 lg:mb-0">
                     <span class="text-sm font-light text-purple-400 uppercase tracking-widest mb-2 block">Stealth & Utility</span>
-                    <h3 class="text-4xl font-light mb-3 mt-2">QOL & Discreet Features</h3>
+                    <h3 class="text-4xl font-light mb-3 mt-2">QOL & Personalization features</h3>
                     <p class="text-xl text-gray-400 mb-5 font-light">
                         Quality-of-Life tools designed to help you manage distractions instantly and discreetly, without drawing unwanted attention.
                     </p>
                     <ul class="space-y-2 text-lg text-gray-300">
                         <li class="flex items-center"><i class="fas fa-eye-slash fa-fw w-5 mr-3 text-purple-500"></i><span class="font-light mr-2">Tab Disguising:</span>Instantly change the tab title/favicon to blend in.</li>
-                        <li class="flex items-center"><i class="fas fa-bolt fa-fw w-5 mr-3 text-purple-500"></i><span class="font-light mr-2">Panic Keys:</span>A quick key combination to redirect.</li>
-                        <li class="flex items-center"><i class="fas fa-palette fa-fw w-5 mr-3 text-purple-500"></i><span class="font-light mr-2">Customizable UI:</span>Adjust themes for maximum personalization.</li>
+                        <li class="flex items-center"><i class="fas fa-thumbtack fa-fw w-5 mr-3 text-purple-500"></i><span class="font-light mr-2">Pin Button:</span>Quick access to your most-used tools.</li>
+                        <li class="flex items-center"><i class="fas fa-palette fa-fw w-5 mr-3 text-purple-500"></i><span class="font-light mr-2">Theme Changing:</span>Personalize your experience with custom color schemes.</li>
                     </ul>
                 </div>
 
-                <div class="relative p-8 rounded-3xl border border-purple-800/50 overflow-hidden shadow-2xl bg-gray-900 h-40 flex items-center justify-center order-1 lg:order-2 mb-6 lg:mb-0">
-                    <i class="fas fa-user-secret text-7xl text-purple-400 z-10"></i>
-                    <p class="absolute bottom-4 left-4 text-xs text-purple-500/50 z-10">Discretion and Quick Hiding</p>
+                <div id="qol-carousel" class="relative p-0 rounded-3xl border border-purple-800/50 overflow-hidden shadow-2xl bg-gray-900 flex items-center justify-center order-1 lg:order-2 mb-6 lg:mb-0 carousel-container">
+                    <img src="doc-images/settings.png" alt="Settings Tab Disguise Preview" class="w-full h-auto object-cover rounded-3xl carousel-image active">
+                    <img src="doc-images/dashboard.png" alt="Dashboard Pin Button Preview" class="w-full h-auto object-cover rounded-3xl carousel-image">
+                    <img src="doc-images/settings.png" alt="Settings Theme Change Preview" class="w-full h-auto object-cover rounded-3xl carousel-image">
+                    
+                    <button class="carousel-arrow left" aria-label="Previous image"><i class="fas fa-chevron-left"></i></button>
+                    <button class="carousel-arrow right" aria-label="Next image"><i class="fas fa-chevron-right"></i></button>
+                    <div class="carousel-pagination"></div>
                 </div>
             </div>
         </section>
@@ -297,6 +379,88 @@
             if (releaseCtaContainer) {
                 releaseCtaContainer.style.display = 'block';
             }
+        });
+    </script>
+    <script>
+        class Carousel {
+            constructor(elementId) {
+                this.container = document.getElementById(elementId);
+                this.images = Array.from(this.container.querySelectorAll('.carousel-image'));
+                this.prevButton = this.container.querySelector('.carousel-arrow.left');
+                this.nextButton = this.container.querySelector('.carousel-arrow.right');
+                this.paginationContainer = this.container.querySelector('.carousel-pagination');
+                this.currentIndex = 0;
+
+                if (this.images.length === 0) return; // No images, no carousel
+
+                this.createPagination();
+                this.updateCarousel();
+                this.addEventListeners();
+            }
+
+            createPagination() {
+                if (!this.paginationContainer) return;
+                this.images.forEach((_, index) => {
+                    const dot = document.createElement('div');
+                    dot.classList.add('dot');
+                    dot.addEventListener('click', () => this.goToSlide(index));
+                    this.paginationContainer.appendChild(dot);
+                });
+            }
+
+            updateCarousel() {
+                this.images.forEach((img, index) => {
+                    img.classList.toggle('active', index === this.currentIndex);
+                });
+
+                if (this.paginationContainer) {
+                    Array.from(this.paginationContainer.children).forEach((dot, index) => {
+                        dot.classList.toggle('active', index === this.currentIndex);
+                    });
+                }
+
+                if (this.prevButton) {
+                    this.prevButton.disabled = this.currentIndex === 0;
+                }
+                if (this.nextButton) {
+                    this.nextButton.disabled = this.currentIndex === this.images.length - 1;
+                }
+            }
+
+            addEventListeners() {
+                if (this.prevButton) {
+                    this.prevButton.addEventListener('click', () => this.prevSlide());
+                }
+                if (this.nextButton) {
+                    this.nextButton.addEventListener('click', () => this.nextSlide());
+                }
+            }
+
+            nextSlide() {
+                if (this.currentIndex < this.images.length - 1) {
+                    this.currentIndex++;
+                    this.updateCarousel();
+                }
+            }
+
+            prevSlide() {
+                if (this.currentIndex > 0) {
+                    this.currentIndex--;
+                    this.updateCarousel();
+                }
+            }
+
+            goToSlide(index) {
+                if (index >= 0 && index < this.images.length) {
+                    this.currentIndex = index;
+                    this.updateCarousel();
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            new Carousel('productivity-carousel');
+            new Carousel('qol-carousel');
         });
     </script>
 </body>
