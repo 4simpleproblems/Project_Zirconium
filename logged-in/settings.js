@@ -27,6 +27,10 @@
             serverTimestamp,
             deleteDoc // NEW FIREBASE IMPORT
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { 
+            getFunctions, 
+            httpsCallable 
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
         
         // --- Import Firebase Config (Assumed to exist in a relative file) ---
         import { firebaseConfig } from "../firebase-config.js"; 
@@ -44,6 +48,7 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        const functions = getFunctions(app); // Initialize Functions
 
         // --- Global State and Element References ---
         const sidebarTabs = document.querySelectorAll('.settings-tab');
@@ -65,6 +70,7 @@
             'privacy': { title: 'Privacy & Security', icon: 'fa-shield-halved' },
             'personalization': { title: 'Personalization', icon: 'fa-palette' },
             'data': { title: 'Data Management', icon: 'fa-database' },
+            'admin': { title: 'Banned Users (Admin)', icon: 'fa-gavel' },
             'about': { title: 'About 4SP', icon: 'fa-circle-info' },
         };
         
@@ -1188,6 +1194,253 @@
                     </div>
                 </div>
             `;
+        }
+
+
+        /**
+         * NEW: Generates the HTML for the "Admin" section.
+         */
+        function getAdminContent() {
+            return `
+                <h2 class="text-3xl font-bold text-white mb-6">Admin Dashboard</h2>
+                
+                <div class="w-full">
+                    <!-- Stats / Quick Actions -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                        <div class="settings-box p-4 flex items-center gap-4 bg-red-900/10 border-red-700/30">
+                            <div class="p-3 rounded-full bg-red-900/20 text-red-400">
+                                <i class="fa-solid fa-user-slash fa-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-400">Banned Users</p>
+                                <p class="text-2xl font-bold text-white" id="admin-banned-count">-</p>
+                            </div>
+                        </div>
+                        <div class="settings-box p-4 flex items-center gap-4 bg-blue-900/10 border-blue-700/30">
+                            <div class="p-3 rounded-full bg-blue-900/20 text-blue-400">
+                                <i class="fa-solid fa-users fa-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-400">Total Users</p>
+                                <p class="text-2xl font-bold text-white" id="admin-total-count">-</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 class="text-xl font-bold text-white mb-4">User Management</h3>
+                    
+                    <div class="settings-box p-4 mb-4">
+                        <div class="flex gap-2 mb-4">
+                            <input type="text" id="admin-user-search" placeholder="Search by Username, Email, or UID..." class="input-text-style flex-grow">
+                            <button id="admin-refresh-btn" class="btn-toolbar-style">
+                                <i class="fa-solid fa-arrows-rotate"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="text-gray-400 border-b border-[#252525]">
+                                        <th class="p-3 font-medium">User</th>
+                                        <th class="p-3 font-medium">UID</th>
+                                        <th class="p-3 font-medium">Status</th>
+                                        <th class="p-3 font-medium text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-users-list">
+                                    <tr>
+                                        <td colspan="4" class="p-8 text-center text-gray-500">
+                                            <i class="fa-solid fa-spinner fa-spin fa-2x mb-2"></i>
+                                            <p>Loading users...</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div id="adminMessage" class="general-message-area text-sm"></div>
+                </div>
+                
+                <!-- Ban Modal -->
+                <div id="adminBanModal" class="modal">
+                    <div class="modal-content text-left">
+                        <span class="modal-close" id="adminBanClose">&times;</span>
+                        <h3 class="text-xl font-bold text-white mb-4">Ban User</h3>
+                        <p id="banTargetName" class="text-gray-400 mb-4">Target: ...</p>
+                        
+                        <label class="block text-gray-400 text-sm font-light mb-2">Duration</label>
+                        <select id="banDuration" class="input-select-style mb-4">
+                            <option value="1d">1 Day</option>
+                            <option value="7d">7 Days</option>
+                            <option value="permanent">Indefinite (Permanent)</option>
+                        </select>
+                        
+                        <label class="block text-gray-400 text-sm font-light mb-2">Reason</label>
+                        <textarea id="banReason" class="input-text-style mb-4 h-24" placeholder="Violation of terms..."></textarea>
+                        
+                        <div class="flex justify-end gap-2">
+                            <button class="btn-toolbar-style" id="adminBanCancel">Cancel</button>
+                            <button class="btn-toolbar-style btn-primary-override-danger" id="adminBanConfirm">
+                                <i class="fa-solid fa-gavel mr-2"></i> Ban User
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        /**
+         * NEW: Loads data and adds event listeners for the Admin tab.
+         */
+        async function loadAdminTab() {
+            const listContainer = document.getElementById('admin-users-list');
+            const searchInput = document.getElementById('admin-user-search');
+            const refreshBtn = document.getElementById('admin-refresh-btn');
+            const adminMessage = document.getElementById('adminMessage');
+            
+            const banModal = document.getElementById('adminBanModal');
+            const banClose = document.getElementById('adminBanClose');
+            const banCancel = document.getElementById('adminBanCancel');
+            const banConfirm = document.getElementById('adminBanConfirm');
+            const banTargetName = document.getElementById('banTargetName');
+            const banDuration = document.getElementById('banDuration');
+            const banReason = document.getElementById('banReason');
+            
+            let allUsers = []; // Store fetched users locally for filtering
+            let targetUserForBan = null;
+
+            // --- Helper: Render User List ---
+            const renderList = (users) => {
+                if (users.length === 0) {
+                    listContainer.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-gray-500">No users found.</td></tr>`;
+                    return;
+                }
+                
+                listContainer.innerHTML = users.map(user => {
+                    const isBanned = user.banned;
+                    const statusHtml = isBanned 
+                        ? `<span class="text-red-400 bg-red-900/20 px-2 py-1 rounded text-xs font-bold">BANNED</span>` 
+                        : `<span class="text-green-400 bg-green-900/20 px-2 py-1 rounded text-xs font-bold">ACTIVE</span>`;
+                    
+                    const banBtnHtml = isBanned
+                        ? `<button class="btn-toolbar-style text-xs py-1 px-3" onclick="window.handleAdminUnban('${user.uid}')"><i class="fa-solid fa-lock-open mr-1"></i> Unban</button>`
+                        : `<button class="btn-toolbar-style btn-primary-override-danger text-xs py-1 px-3" onclick="window.handleAdminBan('${user.uid}', '${user.username || 'User'}')"><i class="fa-solid fa-gavel mr-1"></i> Ban</button>`;
+                        
+                    // Make sure username is safe
+                    const safeUsername = user.username ? user.username.replace(/</g, "&lt;") : 'No Username';
+                    const safeEmail = user.email ? user.email.replace(/</g, "&lt;") : 'No Email';
+                    
+                    return `
+                        <tr class="border-b border-[#252525] hover:bg-[#1a1a1a] transition-colors">
+                            <td class="p-3">
+                                <div class="flex flex-col">
+                                    <span class="font-medium text-white">${safeUsername}</span>
+                                    <span class="text-xs text-gray-500">${safeEmail}</span>
+                                </div>
+                            </td>
+                            <td class="p-3 text-xs text-gray-500 font-mono">${user.uid}</td>
+                            <td class="p-3">${statusHtml}</td>
+                            <td class="p-3 text-right">
+                                <div class="flex justify-end gap-2">
+                                    ${banBtnHtml}
+                                    <!-- <button class="btn-toolbar-style text-xs py-1 px-3" onclick="window.handleAdminDelete('${user.uid}')"><i class="fa-solid fa-trash"></i></button> -->
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+                
+                // Update stats
+                document.getElementById('admin-total-count').textContent = users.length;
+                document.getElementById('admin-banned-count').textContent = users.filter(u => u.banned).length;
+            };
+
+            // --- Fetch Users ---
+            const fetchUsers = async () => {
+                listContainer.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-gray-500"><i class="fa-solid fa-spinner fa-spin fa-2x mb-2"></i><p>Loading users...</p></td></tr>`;
+                try {
+                    // Call Cloud Function
+                    const getAllUsersFn = httpsCallable(functions, 'getAllUsers');
+                    const result = await getAllUsersFn();
+                    allUsers = result.data.users || [];
+                    renderList(allUsers);
+                } catch (error) {
+                    console.error("Error fetching users:", error);
+                    listContainer.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-red-400">Error loading users: ${error.message}</td></tr>`;
+                }
+            };
+            
+            // --- Search Logic ---
+            searchInput.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase();
+                const filtered = allUsers.filter(u => 
+                    (u.username && u.username.toLowerCase().includes(term)) ||
+                    (u.email && u.email.toLowerCase().includes(term)) ||
+                    (u.uid && u.uid.toLowerCase().includes(term))
+                );
+                renderList(filtered);
+            });
+            
+            refreshBtn.addEventListener('click', fetchUsers);
+            
+            // --- Ban/Unban Handlers (Attached to Window for inline onclick access) ---
+            window.handleAdminBan = (uid, username) => {
+                targetUserForBan = uid;
+                banTargetName.textContent = `Target: ${username} (${uid})`;
+                banReason.value = ''; // Reset
+                banModal.style.display = 'flex';
+            };
+            
+            window.handleAdminUnban = async (uid) => {
+                if (!confirm("Are you sure you want to unban this user?")) return;
+                
+                showMessage(adminMessage, `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Unbanning user...`, 'warning');
+                try {
+                    const unbanUserFn = httpsCallable(functions, 'unbanUser');
+                    await unbanUserFn({ uid });
+                    showMessage(adminMessage, 'User unbanned successfully.', 'success');
+                    fetchUsers(); // Refresh list
+                } catch (error) {
+                    console.error("Unban error:", error);
+                    showMessage(adminMessage, `Failed to unban: ${error.message}`, 'error');
+                }
+            };
+            
+            // --- Ban Modal Actions ---
+            const closeBanModal = () => { banModal.style.display = 'none'; };
+            banClose.onclick = closeBanModal;
+            banCancel.onclick = closeBanModal;
+            
+            banConfirm.onclick = async () => {
+                const duration = banDuration.value;
+                const reason = banReason.value.trim();
+                
+                if (!reason) {
+                    alert("Please provide a reason.");
+                    return;
+                }
+                
+                closeBanModal();
+                showMessage(adminMessage, `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Banning user...`, 'warning');
+                
+                try {
+                    const banUserFn = httpsCallable(functions, 'banUser');
+                    await banUserFn({ 
+                        uid: targetUserForBan, 
+                        duration: duration, 
+                        reason: reason 
+                    });
+                    showMessage(adminMessage, 'User banned successfully.', 'success');
+                    fetchUsers(); // Refresh list
+                } catch (error) {
+                    console.error("Ban error:", error);
+                    showMessage(adminMessage, `Failed to ban: ${error.message}`, 'error');
+                }
+            };
+
+            // Initial Fetch
+            await fetchUsers();
         }
 
 
@@ -3674,6 +3927,11 @@
                 mainView.innerHTML = getDataManagementContent(); // Render HTML
                 await loadDataTab(); // Load data and add listeners
             }
+            else if (tabId === 'admin') {
+                // --- NEW: Load Admin Tab ---
+                mainView.innerHTML = getAdminContent();
+                await loadAdminTab();
+            }
             else if (tabId === 'about') {
                 mainView.innerHTML = getAboutContent();
             } else {
@@ -3700,12 +3958,30 @@
 
         // --- AUTHENTICATION/REDIRECT LOGIC (Retained and Modified) ---
         function initializeAuth() {
-            onAuthStateChanged(auth, (user) => {
+            onAuthStateChanged(auth, async (user) => {
                 if (!user) {
                     // No user is logged in, redirect to authentication.html (path corrected)
                     window.location.href = '../authentication.html'; 
                 } else {
                     currentUser = user; 
+                    
+                    // --- NEW: Check Admin Status ---
+                    try {
+                        // For now, we'll assume the Cloud Function 'checkAdmin' exists.
+                        const checkAdminFn = httpsCallable(functions, 'checkAdmin');
+                        // We don't await this to block the initial render, but we update UI when it returns
+                        checkAdminFn().then(result => {
+                            if (result.data && result.data.isAdmin) {
+                                const adminTab = document.getElementById('tab-admin');
+                                if (adminTab) adminTab.classList.remove('hidden');
+                            }
+                        }).catch(e => {
+                            console.log("Admin check skipped or failed:", e);
+                        });
+                    } catch (e) {
+                        console.log("Admin check initialization error:", e);
+                    }
+
                     // Set initial state to 'General' (or the first tab)
                     switchTab('general'); 
                 }

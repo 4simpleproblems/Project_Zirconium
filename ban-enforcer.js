@@ -168,9 +168,9 @@ function showBanScreen(banData) {
         }
 
         // --- 2. Apply visible styles to the shield ---
-        shield.style.backgroundColor = 'rgba(10, 10, 10, 0.75)';
-        shield.style.backdropFilter = 'blur(14px)';
-        shield.style.webkitBackdropFilter = 'blur(14px)';
+        shield.style.backgroundColor = 'rgba(0, 0, 0, 0.95)'; // Darker, more opaque background
+        shield.style.backdropFilter = 'blur(10px)';
+        shield.style.webkitBackdropFilter = 'blur(10px)';
 
         // --- 3. Find or create the message box ---
         let messageBox = document.getElementById(messageId);
@@ -192,26 +192,32 @@ function showBanScreen(banData) {
             }
 
             // **MODIFICATION**: Update the innerHTML with the new message format.
+            // TEXT ON BOTTOM LEFT
             messageBox.innerHTML = `
-                <h1 style="font-size: 2.3em; color: #fc0324; margin: 0 0 10px 0; font-weight: bold;">Access Denied</h1>
-                <p style="font-size: 1.1em; margin: 0 0 15px 0; line-height: 1.4; color: #e0e0e0;">Your account has been suspended from this service.</p>
-                <p style="font-size: 1em; margin: 0 0 20px 0; color: #bdbdbd;"><strong>Reason:</strong> ${reason}</p>
-                <p style="font-size: 0.8em; color: #9e9e9e;">An administrator has banned you ${banTimestamp}. If you believe this is an error, please contact 4simpleproblems+support@gmail.com</p>
+                <h1 style="font-size: 4rem; color: #ffffff; margin: 0 0 20px 0; font-weight: 800; line-height: 1;">Access<br>Denied</h1>
+                <p style="font-size: 1.25rem; margin: 0 0 10px 0; color: #ef4444; font-weight: 500;">Account Suspended</p>
+                <div style="width: 50px; height: 4px; background-color: #ef4444; margin-bottom: 20px;"></div>
+                <p style="font-size: 1rem; margin: 0 0 10px 0; color: #d1d5db; max-width: 500px; line-height: 1.6;">
+                    <strong>Reason:</strong> ${reason}
+                </p>
+                <p style="font-size: 0.85rem; color: #6b7280; margin-top: 20px;">
+                    Banned by administrator ${banTimestamp}.<br>
+                    ID: ${banData.uid || 'UNKNOWN'}
+                </p>
             `;
             document.body.appendChild(messageBox);
         }
 
         // --- 4. Apply styles to the message box ---
         messageBox.style.position = 'fixed';
-        messageBox.style.bottom = '40px';
-        messageBox.style.right = '40px';
-        messageBox.style.maxWidth = '600px';
-        messageBox.style.textAlign = 'right';
+        // BOTTOM LEFT POSITIONING
+        messageBox.style.bottom = '60px';
+        messageBox.style.left = '60px';
+        messageBox.style.textAlign = 'left';
         messageBox.style.color = '#ffffff';
-        messageBox.style.fontFamily = "'PrimaryFont', Arial, sans-serif"; // Assumes font is loaded elsewhere or is a fallback
-        // **MODIFICATION**: Ensure z-index is higher than the shield.
+        messageBox.style.fontFamily = "'Geist', sans-serif"; // Use Geist font
         messageBox.style.zIndex = '2147483647';
-        messageBox.style.textShadow = '0 2px 8px rgba(0,0,0,0.7)';
+        messageBox.style.textShadow = '0 4px 12px rgba(0,0,0,0.5)';
 
         // --- 5. Ensure scrolling remains locked ---
         if (document.documentElement.style.overflow !== 'hidden') {
@@ -235,30 +241,39 @@ function showBanScreen(banData) {
 
             // Apply styles
             homeButton.style.position = 'fixed';
-            homeButton.style.top = '10px';
-            homeButton.style.right = '10px';
+            // BOTTOM RIGHT POSITIONING
+            homeButton.style.bottom = '60px';
+            homeButton.style.right = '60px';
+            homeButton.style.top = 'auto'; // Reset top
+            
             // **MODIFICATION**: Ensure z-index is higher than the shield.
             homeButton.style.zIndex = '2147483647';
-            homeButton.style.width = '45px';
-            homeButton.style.height = '45px';
+            homeButton.style.width = '60px';
+            homeButton.style.height = '60px';
             homeButton.style.display = 'flex';
             homeButton.style.alignItems = 'center';
             homeButton.style.justifyContent = 'center';
-            homeButton.style.fontSize = '22.5px';
+            homeButton.style.fontSize = '24px';
             homeButton.style.color = 'white';
             homeButton.style.textDecoration = 'none';
             
-            // Frosted glass effect
-            homeButton.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
+            // Minimalist / Clean style
+            homeButton.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
             homeButton.style.backdropFilter = 'blur(10px)';
             homeButton.style.webkitBackdropFilter = 'blur(10px)'; // For Safari
-            homeButton.style.borderRadius = '10px';
-            homeButton.style.border = '1px solid rgba(255, 255, 255, 0.2)';
-            homeButton.style.transition = 'background-color 0.3s ease';
+            homeButton.style.borderRadius = '50%'; // Circular
+            homeButton.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+            homeButton.style.transition = 'all 0.3s ease';
 
             // Hover effect for better UX
-            homeButton.onmouseover = () => { homeButton.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'; };
-            homeButton.onmouseout = () => { homeButton.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'; };
+            homeButton.onmouseover = () => { 
+                homeButton.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'; 
+                homeButton.style.transform = 'scale(1.1)';
+            };
+            homeButton.onmouseout = () => { 
+                homeButton.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'; 
+                homeButton.style.transform = 'scale(1)';
+            };
 
             document.body.appendChild(homeButton);
         }
@@ -273,20 +288,23 @@ function showBanScreen(banData) {
         document.head.appendChild(faLink);
     }
 
-    // Inject the custom font (if not already loaded globally)
-    // This is safe to run multiple times if the guard needs to reconstruct the page.
-    if (!document.querySelector('style[data-font="primary"]')) {
-        const fontStyle = document.createElement('style');
-        fontStyle.setAttribute('data-font', 'primary'); // Mark the style tag
-        fontStyle.textContent = `
-            @font-face {
-                font-family: 'PrimaryFont';
-                src: url('../fonts/primary.woff') format('woff');
-                font-weight: normal;
-                font-style: normal;
-            }
-        `;
-        document.head.appendChild(fontStyle);
+    // Inject the custom font (Geist)
+    if (!document.querySelector('link[href*="fonts.googleapis.com/css2?family=Geist"]')) {
+        const preconnect1 = document.createElement('link');
+        preconnect1.rel = 'preconnect';
+        preconnect1.href = 'https://fonts.googleapis.com';
+        document.head.appendChild(preconnect1);
+
+        const preconnect2 = document.createElement('link');
+        preconnect2.rel = 'preconnect';
+        preconnect2.href = 'https://fonts.gstatic.com';
+        preconnect2.crossOrigin = 'anonymous';
+        document.head.appendChild(preconnect2);
+
+        const fontLink = document.createElement('link');
+        fontLink.rel = 'stylesheet';
+        fontLink.href = 'https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap';
+        document.head.appendChild(fontLink);
     }
 
     // Run the enforcement function for the first time.
