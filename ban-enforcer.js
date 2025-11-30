@@ -235,35 +235,75 @@ function lockPageAsBanned(banData) {
 
 // --- 3. Auth & Firestore Listener ---
 document.addEventListener('DOMContentLoaded', () => {
-    if (typeof firebase === 'undefined') {
-        console.error("Ban Enforcer: Firebase not found. Unlocking as failsafe.");
-        unlockPage();
-        return;
-    }
+    
+    // Helper to safely get Firestore or wait for it
+    const waitForFirestore = (callback) => {
+        const maxRetries = 20;
+        let attempts = 0;
 
-    firebase.auth().onAuthStateChanged(user => {
-        if (user) {
-            console.log("Debug: User logged in. Listening for ban status...");
-            const db = firebase.firestore();
-            
-            // Real-time listener
-            db.collection('bans').doc(user.uid).onSnapshot(doc => {
-                if (doc.exists) {
-                    console.warn("Debug: User is BANNED.");
-                    lockPageAsBanned(doc.data());
+        const check = () => {
+            if (typeof firebase !== 'undefined' && typeof firebase.firestore === 'function') {
+                callback(firebase.firestore());
+            } else {
+                attempts++;
+                if (attempts < maxRetries) {
+                    setTimeout(check, 200); // Wait 200ms and try again
                 } else {
-                    console.log("Debug: User is NOT banned.");
+                    console.error("Ban Enforcer: Firestore failed to load. Unlocking.");
                     unlockPage();
                 }
-            }, error => {
-                console.error("Debug: Ban listener error.", error);
-                // In case of error (e.g., permission denied), we might typically unlock
-                // OR lock if we want fail-secure. Defaulting to unlock to prevent accidental lockouts due to network.
+            }
+        };
+        check();
+    };
+
+    if (typeof firebase === 'undefined') {
+        // If Firebase object itself is missing, we might be loading completely async.
+        // We'll try waiting a bit, otherwise fail safe.
+        const checkFirebase = () => {
+            if (typeof firebase !== 'undefined') {
+                initListener();
+            } else {
+                // Retry a few times or just unlock
+                setTimeout(() => {
+                    if (typeof firebase !== 'undefined') initListener();
+                    else { 
+                        console.error("Ban Enforcer: Firebase not found after wait. Unlocking.");
+                        unlockPage(); 
+                    }
+                }, 1000);
+            }
+        };
+        checkFirebase();
+    } else {
+        initListener();
+    }
+
+    function initListener() {
+        firebase.auth().onAuthStateChanged(user => {
+            if (user) {
+                console.log("Debug: User logged in. Waiting for Firestore...");
+                
+                waitForFirestore((dbInstance) => {
+                    // Real-time listener
+                    dbInstance.collection('bans').doc(user.uid).onSnapshot(doc => {
+                        if (doc.exists) {
+                            console.warn("Debug: User is BANNED.");
+                            lockPageAsBanned(doc.data());
+                        } else {
+                            console.log("Debug: User is NOT banned.");
+                            unlockPage();
+                        }
+                    }, error => {
+                        console.error("Debug: Ban listener error.", error);
+                        unlockPage();
+                    });
+                });
+
+            } else {
+                console.log("Debug: No user. Page unlocked.");
                 unlockPage();
-            });
-        } else {
-            console.log("Debug: No user. Page unlocked.");
-            unlockPage();
-        }
-    });
+            }
+        });
+    }
 });
