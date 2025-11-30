@@ -1136,6 +1136,15 @@ let db;
             }
             currentUser = user;
             currentUserData = userData;
+
+            // --- NEW: Apply Theme from Firestore ---
+            if (userData && userData.navbarTheme) {
+                window.applyTheme(userData.navbarTheme);
+                // Sync to local storage for future page loads
+                localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(userData.navbarTheme));
+            }
+            // ---------------------------------------
+
             currentIsPrivileged = isPrivilegedUser;
             renderNavbar(currentUser, currentUserData, allPages, currentIsPrivileged);
 

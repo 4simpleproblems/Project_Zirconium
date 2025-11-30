@@ -3876,16 +3876,15 @@
                 // 4. Add event listeners
                 const themeButtons = themePickerContainer.querySelectorAll('.theme-button');
                 themeButtons.forEach(button => {
-                    button.addEventListener('click', () => {
+                    button.addEventListener('click', async () => {
                         const themeName = button.dataset.themeName;
                         const themeToApply = modifiedThemes.find(t => t.name === themeName);
                         
                         if (themeToApply) {
-                            // 1. Save to localStorage
+                            // 1. Save to localStorage (Backup/Fast Load)
                             localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(themeToApply));
                             
-                            // === MODIFICATION START ===
-                            // 2. Apply theme for live preview (ENABLED per user request)
+                            // 2. Apply theme for live preview
                             if (window.applyTheme) {
                                 window.applyTheme(themeToApply);
                             } else {
@@ -3893,13 +3892,24 @@
                                 showMessage(themeMessage, 'Error applying theme preview.', 'error');
                                 return;
                             }
-                            // === MODIFICATION END ===
+
+                            // 3. Save to Firestore (Persistence)
+                            if (currentUser) {
+                                try {
+                                    const userDocRef = getUserDocRef(currentUser.uid);
+                                    // Ensure we're only saving valid data
+                                    await updateDoc(userDocRef, { navbarTheme: themeToApply });
+                                } catch (error) {
+                                    console.error("Error saving theme to Firestore:", error);
+                                    // Don't block UI feedback for this
+                                }
+                            }
                             
-                            // 3. Update active class
+                            // 4. Update active class
                             themeButtons.forEach(btn => btn.classList.remove('active'));
                             button.classList.add('active');
                             
-                            // 4. Show success message
+                            // 5. Show success message
                             showMessage(themeMessage, `${themeToApply.name} theme applied!`, 'success');
                         }
                     });
