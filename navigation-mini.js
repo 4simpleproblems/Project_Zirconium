@@ -625,7 +625,7 @@ const applyCounterZoom = () => {
             return `
                 ${getMiniPinButtonHtml()}
                 <div class="relative">
-                    <button id="auth-toggle" class="w-10 h-10 rounded-full border border-gray-600 overflow-hidden flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
+                    <button id="auth-toggle" class="w-10 h-10 rounded-full border border-gray-600 overflow-hidden flex items-center justify-center">
                         ${avatarHtml}
                     </button>
                     <div id="auth-menu-container" class="auth-menu-container closed">

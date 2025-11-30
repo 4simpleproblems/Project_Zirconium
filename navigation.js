@@ -479,7 +479,7 @@ let db;
                     <a href="${pinButtonUrl}" id="pin-button" class="w-10 h-10 rounded-full border flex items-center justify-center hover:bg-gray-700 transition" title="${pinButtonTitle}">
                         <i id="pin-button-icon" class="${pinButtonIcon}"></i>
                     </a>
-                    <div id="pin-context-menu" class="auth-menu-container glass-menu closed" style="width: 12rem;">
+                    <div id="pin-context-menu" class="auth-menu-container closed" style="width: 12rem;">
                         ${repinOption}
                         ${removeOrHideOption}
                     </div>
@@ -638,7 +638,7 @@ let db;
                 
                 return `
                     <div id="auth-button-container" class="relative flex-shrink-0 flex items-center">
-                        <button id="auth-toggle" class="w-10 h-10 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500">
+                        <button id="auth-toggle" class="w-10 h-10 rounded-full border border-gray-600 overflow-hidden">
                             ${avatarHtml}
                         </button>
                         <div id="auth-menu-container" class="auth-menu-container closed">
