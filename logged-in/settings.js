@@ -1312,21 +1312,27 @@
 
             // --- Helper: Render User List ---
             const renderList = (users) => {
-                if (users.length === 0) {
+                // Filter out admins
+                const filteredUsers = users.filter(user => !user.isAdmin);
+
+                if (filteredUsers.length === 0) {
                     listContainer.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-gray-500">No users found.</td></tr>`;
                     return;
                 }
                 
-                listContainer.innerHTML = users.map(user => {
+                listContainer.innerHTML = filteredUsers.map(user => {
                     const isBanned = user.banned;
                     const statusHtml = isBanned 
                         ? `<span class="text-red-400 bg-red-900/20 px-2 py-1 rounded text-xs font-bold">BANNED</span>` 
                         : `<span class="text-green-400 bg-green-900/20 px-2 py-1 rounded text-xs font-bold">ACTIVE</span>`;
                     
+                    // Square button style: w-10 h-10 flex justify-center items-center p-0
                     const banBtnHtml = isBanned
-                        ? `<button class="btn-toolbar-style text-xs py-1 px-3" onclick="window.handleAdminUnban('${user.uid}')"><i class="fa-solid fa-lock-open mr-1"></i> Unban</button>`
-                        : `<button class="btn-toolbar-style btn-primary-override-danger text-xs py-1 px-3" onclick="window.handleAdminBan('${user.uid}', '${user.username || 'User'}')"><i class="fa-solid fa-gavel mr-1"></i> Ban</button>`;
-                        
+                        ? `<button class="btn-toolbar-style w-10 h-10 flex items-center justify-center p-0" onclick="window.handleAdminUnban('${user.uid}')" title="Unban User"><i class="fa-solid fa-lock-open"></i></button>`
+                        : `<button class="btn-toolbar-style btn-primary-override-danger w-10 h-10 flex items-center justify-center p-0" onclick="window.handleAdminBan('${user.uid}', '${user.username || 'User'}')" title="Ban User"><i class="fa-solid fa-gavel"></i></button>`;
+                    
+                    const makeAdminBtnHtml = `<button class="btn-toolbar-style btn-primary-override w-10 h-10 flex items-center justify-center p-0" onclick="window.handleMakeAdmin('${user.uid}', '${user.username || 'User'}')" title="Make Admin"><i class="fa-solid fa-user-shield"></i></button>`;
+
                     // Make sure username is safe
                     const safeUsername = user.username ? user.username.replace(/</g, "&lt;") : 'No Username';
                     const safeEmail = user.email ? user.email.replace(/</g, "&lt;") : 'No Email';
@@ -1343,8 +1349,8 @@
                             <td class="p-3">${statusHtml}</td>
                             <td class="p-3 text-right">
                                 <div class="flex justify-end gap-2">
+                                    ${makeAdminBtnHtml}
                                     ${banBtnHtml}
-                                    <!-- <button class="btn-toolbar-style text-xs py-1 px-3" onclick="window.handleAdminDelete('${user.uid}')"><i class="fa-solid fa-trash"></i></button> -->
                                 </div>
                             </td>
                         </tr>
@@ -1352,8 +1358,8 @@
                 }).join('');
                 
                 // Update stats
-                document.getElementById('admin-total-count').textContent = users.length;
-                document.getElementById('admin-banned-count').textContent = users.filter(u => u.banned).length;
+                document.getElementById('admin-total-count').textContent = filteredUsers.length;
+                document.getElementById('admin-banned-count').textContent = filteredUsers.filter(u => u.banned).length;
             };
 
             // --- Fetch Users ---
@@ -1384,7 +1390,7 @@
             
             refreshBtn.addEventListener('click', fetchUsers);
             
-            // --- Ban/Unban Handlers (Attached to Window for inline onclick access) ---
+            // --- Handlers (Attached to Window) ---
             window.handleAdminBan = (uid, username) => {
                 targetUserForBan = uid;
                 banTargetName.textContent = `Target: ${username} (${uid})`;
@@ -1404,6 +1410,21 @@
                 } catch (error) {
                     console.error("Unban error:", error);
                     showMessage(adminMessage, `Failed to unban: ${error.message}`, 'error');
+                }
+            };
+
+            window.handleMakeAdmin = async (uid, username) => {
+                if (!confirm(`Are you sure you want to make ${username} an admin? They will gain access to this dashboard.`)) return;
+
+                showMessage(adminMessage, `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Granting admin privileges...`, 'warning');
+                try {
+                    const addAdminFn = httpsCallable(functions, 'addAdmin');
+                    await addAdminFn({ uid });
+                    showMessage(adminMessage, `${username} is now an admin.`, 'success');
+                    fetchUsers(); // Refresh list (they should disappear from the list)
+                } catch (error) {
+                    console.error("Add Admin error:", error);
+                    showMessage(adminMessage, `Failed to add admin: ${error.message}`, 'error');
                 }
             };
             
