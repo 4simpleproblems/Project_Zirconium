@@ -14,7 +14,7 @@ service cloud.firestore {
 
     // Helper function for username validation
     function isValidUsername(username) {
-      return username is string && username.matches(/^[a-zA-Z0-9.,\\-_!?$]{6,24}$/);
+      return username is string && username.matches(/^[a-zA-Z0-9.,_!?-]{6,24}$/);
     }
 
     // =========================================================================
