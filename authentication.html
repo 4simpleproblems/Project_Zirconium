@@ -228,7 +228,8 @@
             OAuthProvider,
             signInWithPopup,
             setPersistence,
-            browserLocalPersistence
+            browserLocalPersistence,
+            getAdditionalUserInfo
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { 
             getFirestore, 
@@ -472,6 +473,7 @@
                 try {
                     const result = await signInWithPopup(auth, provider);
                     const user = result.user;
+                    const additionalInfo = getAdditionalUserInfo(result);
                     const userDoc = await getDoc(getUserDocRef(user.uid));
                     const providerName = provider.providerId.split('.')[0];
 
@@ -482,10 +484,9 @@
                     } else {
                         // New user -> Create account
                         
-
+                        let rawUsername = additionalInfo?.username || user.displayName || user.email.split('@')[0] || 'User';
+                        let username = rawUsername.replace(/[^a-zA-Z0-9]/g, '').slice(0, 16);
                         
-                        let username = (user.displayName || user.email.split('@')[0] || 'User')
-                            .replace(/[^a-zA-Z0-9]/g, '').slice(0, 16);
                         if (username.length < 6) username = `User${user.uid.substring(0, 8)}`;
                         if (await checkProfanity(username)) username = `User${user.uid.substring(0, 8)}`;
                         
