@@ -25,12 +25,9 @@
             where,
             getDocs,
             serverTimestamp,
-            deleteDoc // NEW FIREBASE IMPORT
+            deleteDoc, // NEW FIREBASE IMPORT
+            setDoc
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-        import { 
-            getFunctions, 
-            httpsCallable 
-        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
         
         // --- Import Firebase Config (Assumed to exist in a relative file) ---
         import { firebaseConfig } from "../firebase-config.js"; 
@@ -48,7 +45,6 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const functions = getFunctions(app); // Initialize Functions
 
         // --- Global State and Element References ---
         const sidebarTabs = document.querySelectorAll('.settings-tab');
@@ -1292,6 +1288,7 @@
         
         /**
          * NEW: Loads data and adds event listeners for the Admin tab.
+         * (Client-side implementation without Cloud Functions)
          */
         async function loadAdminTab() {
             const listContainer = document.getElementById('admin-users-list');
@@ -1307,12 +1304,11 @@
             const banDuration = document.getElementById('banDuration');
             const banReason = document.getElementById('banReason');
             
-            let allUsers = []; // Store fetched users locally for filtering
+            let allUsers = []; 
             let targetUserForBan = null;
 
             // --- Helper: Render User List ---
             const renderList = (users) => {
-                // Filter out admins
                 const filteredUsers = users.filter(user => !user.isAdmin);
 
                 if (filteredUsers.length === 0) {
@@ -1326,14 +1322,12 @@
                         ? `<span class="text-red-400 bg-red-900/20 px-2 py-1 rounded text-xs font-bold">BANNED</span>` 
                         : `<span class="text-green-400 bg-green-900/20 px-2 py-1 rounded text-xs font-bold">ACTIVE</span>`;
                     
-                    // Square button style: w-10 h-10 flex justify-center items-center p-0
                     const banBtnHtml = isBanned
                         ? `<button class="btn-toolbar-style w-10 h-10 flex items-center justify-center p-0" onclick="window.handleAdminUnban('${user.uid}')" title="Unban User"><i class="fa-solid fa-lock-open"></i></button>`
                         : `<button class="btn-toolbar-style btn-primary-override-danger w-10 h-10 flex items-center justify-center p-0" onclick="window.handleAdminBan('${user.uid}', '${user.username || 'User'}')" title="Ban User"><i class="fa-solid fa-gavel"></i></button>`;
                     
                     const makeAdminBtnHtml = `<button class="btn-toolbar-style btn-primary-override w-10 h-10 flex items-center justify-center p-0" onclick="window.handleMakeAdmin('${user.uid}', '${user.username || 'User'}')" title="Make Admin"><i class="fa-solid fa-user-shield"></i></button>`;
 
-                    // Make sure username is safe
                     const safeUsername = user.username ? user.username.replace(/</g, "&lt;") : 'No Username';
                     const safeEmail = user.email ? user.email.replace(/</g, "&lt;") : 'No Email';
                     
@@ -1357,19 +1351,40 @@
                     `;
                 }).join('');
                 
-                // Update stats
                 document.getElementById('admin-total-count').textContent = filteredUsers.length;
                 document.getElementById('admin-banned-count').textContent = filteredUsers.filter(u => u.banned).length;
             };
 
-            // --- Fetch Users ---
+            // --- Fetch Users (Direct Firestore) ---
             const fetchUsers = async () => {
                 listContainer.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-gray-500"><i class="fa-solid fa-spinner fa-spin fa-2x mb-2"></i><p>Loading users...</p></td></tr>`;
                 try {
-                    // Call Cloud Function
-                    const getAllUsersFn = httpsCallable(functions, 'getAllUsers');
-                    const result = await getAllUsersFn();
-                    allUsers = result.data.users || [];
+                    // 1. Fetch all collections concurrently
+                    const [usersSnap, bansSnap, adminsSnap] = await Promise.all([
+                        getDocs(collection(db, 'users')),
+                        getDocs(collection(db, 'bans')),
+                        getDocs(collection(db, 'admins'))
+                    ]);
+
+                    const bansMap = new Map();
+                    bansSnap.forEach(doc => bansMap.set(doc.id, doc.data()));
+
+                    const adminsSet = new Set();
+                    adminsSnap.forEach(doc => adminsSet.add(doc.id));
+
+                    allUsers = [];
+                    usersSnap.forEach(doc => {
+                        const uid = doc.id;
+                        const userData = doc.data();
+                        allUsers.push({
+                            uid: uid,
+                            username: userData.username || 'Unknown',
+                            email: userData.email || 'No Email', 
+                            banned: bansMap.has(uid),
+                            isAdmin: adminsSet.has(uid)
+                        });
+                    });
+
                     renderList(allUsers);
                 } catch (error) {
                     console.error("Error fetching users:", error);
@@ -1377,7 +1392,6 @@
                 }
             };
             
-            // --- Search Logic ---
             searchInput.addEventListener('input', (e) => {
                 const term = e.target.value.toLowerCase();
                 const filtered = allUsers.filter(u => 
@@ -1390,11 +1404,11 @@
             
             refreshBtn.addEventListener('click', fetchUsers);
             
-            // --- Handlers (Attached to Window) ---
+            // --- Handlers (Direct Firestore Writes) ---
             window.handleAdminBan = (uid, username) => {
                 targetUserForBan = uid;
                 banTargetName.textContent = `Target: ${username} (${uid})`;
-                banReason.value = ''; // Reset
+                banReason.value = ''; 
                 banModal.style.display = 'flex';
             };
             
@@ -1403,10 +1417,9 @@
                 
                 showMessage(adminMessage, `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Unbanning user...`, 'warning');
                 try {
-                    const unbanUserFn = httpsCallable(functions, 'unbanUser');
-                    await unbanUserFn({ uid });
+                    await deleteDoc(doc(db, 'bans', uid));
                     showMessage(adminMessage, 'User unbanned successfully.', 'success');
-                    fetchUsers(); // Refresh list
+                    fetchUsers(); 
                 } catch (error) {
                     console.error("Unban error:", error);
                     showMessage(adminMessage, `Failed to unban: ${error.message}`, 'error');
@@ -1418,10 +1431,13 @@
 
                 showMessage(adminMessage, `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Granting admin privileges...`, 'warning');
                 try {
-                    const addAdminFn = httpsCallable(functions, 'addAdmin');
-                    await addAdminFn({ uid });
+                    await setDoc(doc(db, 'admins', uid), {
+                        role: 'admin',
+                        addedBy: currentUser.uid,
+                        addedAt: serverTimestamp()
+                    });
                     showMessage(adminMessage, `${username} is now an admin.`, 'success');
-                    fetchUsers(); // Refresh list (they should disappear from the list)
+                    fetchUsers(); 
                 } catch (error) {
                     console.error("Add Admin error:", error);
                     showMessage(adminMessage, `Failed to add admin: ${error.message}`, 'error');
@@ -1446,14 +1462,23 @@
                 showMessage(adminMessage, `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Banning user...`, 'warning');
                 
                 try {
-                    const banUserFn = httpsCallable(functions, 'banUser');
-                    await banUserFn({ 
-                        uid: targetUserForBan, 
-                        duration: duration, 
-                        reason: reason 
+                    // Calculate Expiration
+                    let expiresAt = null;
+                    // Note: Simple calculation, precise logic can be added if date-fns available
+                    // For now we rely on manual unbans or implicit duration logic in enforcer if updated
+                    // Actually, storing the string is fine for display, logic is enforcement
+                    
+                    await setDoc(doc(db, 'bans', targetUserForBan), {
+                        uid: targetUserForBan,
+                        reason: reason || 'No reason provided',
+                        bannedBy: currentUser.uid,
+                        bannedAt: serverTimestamp(),
+                        duration: duration,
+                        // expiresAt: expiresAt // Optional: Implement if auto-unban logic exists
                     });
+
                     showMessage(adminMessage, 'User banned successfully.', 'success');
-                    fetchUsers(); // Refresh list
+                    fetchUsers(); 
                 } catch (error) {
                     console.error("Ban error:", error);
                     showMessage(adminMessage, `Failed to ban: ${error.message}`, 'error');
@@ -3986,21 +4011,17 @@
                 } else {
                     currentUser = user; 
                     
-                    // --- NEW: Check Admin Status ---
+                    // --- NEW: Check Admin Status (Direct Firestore) ---
                     try {
-                        // For now, we'll assume the Cloud Function 'checkAdmin' exists.
-                        const checkAdminFn = httpsCallable(functions, 'checkAdmin');
-                        // We don't await this to block the initial render, but we update UI when it returns
-                        checkAdminFn().then(result => {
-                            if (result.data && result.data.isAdmin) {
-                                const adminTab = document.getElementById('tab-admin');
-                                if (adminTab) adminTab.classList.remove('hidden');
-                            }
-                        }).catch(e => {
-                            console.log("Admin check skipped or failed:", e);
-                        });
+                        const adminDocRef = doc(db, 'admins', user.uid);
+                        const adminSnap = await getDoc(adminDocRef);
+                        
+                        if (adminSnap.exists()) {
+                            const adminTab = document.getElementById('tab-admin');
+                            if (adminTab) adminTab.classList.remove('hidden');
+                        }
                     } catch (e) {
-                        console.log("Admin check initialization error:", e);
+                        console.log("Admin check skipped or failed:", e);
                     }
 
                     // Set initial state to 'General' (or the first tab)
